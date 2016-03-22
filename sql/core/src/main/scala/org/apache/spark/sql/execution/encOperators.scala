@@ -50,9 +50,10 @@ case class EncFilter(condition: Expression, child: SparkPlan)
 
   @transient lazy val conditionEvaluator = newPredicate(condition, child.output)
 
-  def execute() = child.execute().mapPartitions { iter =>
+  override def doExecute() = child.execute().mapPartitions { iter =>
     val predicateId = QED.enclaveRegisterPredicate(condition)
-    iter.filter(QED.enclaveEvalPredicate(predicateId, _, ???))
+    val schemaTypes = schema.map(_.dataType)
+    iter.filter(QED.enclaveEvalPredicate(predicateId, _, schemaTypes))
   }
 
   private[sql] override lazy val metrics = Map(
