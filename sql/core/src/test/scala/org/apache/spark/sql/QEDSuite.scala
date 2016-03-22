@@ -17,29 +17,16 @@
 
 package org.apache.spark.sql
 
-import scala.collection.mutable
+import org.apache.spark.sql.test.SharedSQLContext
+import org.apache.spark.sql.functions.lit
 
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
-import org.apache.spark.sql.types.DataType
+class QEDSuite extends QueryTest with SharedSQLContext {
+  import testImplicits._
 
-object QED {
-  val predicates = mutable.Map[Int, (InternalRow) => Boolean]()
-  var nextPredicateId = 0
-
-  // TODO
-  def enclaveRegisterPredicate(pred: Expression, inputSchema: Seq[Attribute]): Int = {
-    val curPredicateId = nextPredicateId
-    nextPredicateId += 1
-    predicates(curPredicateId) = GeneratePredicate.generate(pred, inputSchema)
-    curPredicateId
-  }
-
-  // TODO
-  def enclaveEvalPredicate(
-      predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
-    predicates(predOpcode)(row)
+  test("filter+show") {
+    val data = Seq(("hello", 2), ("world", 1))
+    val words = sparkContext.makeRDD(data).toDF("word", "count")
+    val filtered = words.encFilter($"count" > lit(1))
+    assert(words.collect === data.map(Row.fromTuple))
   }
 }
