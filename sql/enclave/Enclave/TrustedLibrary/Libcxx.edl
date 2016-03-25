@@ -1,0 +1,20 @@
+/* Libcxx.edl - EDL sample for trusted C++ library. */
+
+enclave {
+    
+    /* 
+     * A subset of the C++03 standard is supported.
+     */
+
+    trusted {
+        /*
+         * Throw/catch exception inside the enclave.
+         */
+        public void ecall_exception(void);
+
+        /*
+         * Utilize <map> inside the enclave.
+         */
+        public void ecall_map(void);
+    };
+};

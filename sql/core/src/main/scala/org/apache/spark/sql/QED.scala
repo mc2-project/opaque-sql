@@ -25,7 +25,15 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
 import org.apache.spark.sql.types.DataType
 
+import sun.misc.{BASE64Encoder, BASE64Decoder}
+
 object QED {
+  System.loadLibrary("SGXEnclave")
+
+  val sgx = new SGXEnclave()
+  val encoder = new BASE64Encoder()
+  val decoder = new BASE64Decoder()
+
   val predicates = mutable.Map[Int, (InternalRow) => Boolean]()
   var nextPredicateId = 0
 
@@ -41,5 +49,24 @@ object QED {
   def enclaveEvalPredicate(
       predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
     predicates(predOpcode)(row)
+
+    // turn base64 into binary representation first
+    for (v <- row.toSeq(schema)) {
+      
+    }
+  }
+
+  def encodeData(value: Array[Byte]): String = {
+    val encoded = encoder.encode(value)
+    encoded
+  }
+
+  def decodeData(value: String): Array[Byte] = {
+    val decoded = decoder.decodeBuffer(value)
+    decoded
+  }
+
+  def genAndWriteData() = {
+    // write this hard-coded set of columns to text file, in csv format
   }
 }

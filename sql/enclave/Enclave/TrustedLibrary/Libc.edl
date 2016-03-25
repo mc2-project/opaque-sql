@@ -1,0 +1,23 @@
+/* Libc.edl - EDL sample for trusted C library. */
+
+enclave {
+    
+    from "sgx_tstdc.edl" import sgx_oc_cpuidex;
+
+    /* 
+     * A subset of the C99 standard is supported as well as SGX customized functions: 
+     *  sgx_cpuid, etc.
+     */
+
+    trusted {
+        /*
+         * Utilize malloc/free in enclave.
+         */
+        public void ecall_malloc_free(void);
+
+        /*
+         * Utilize SGX version __cpuid() in enclave.
+         */
+        public void ecall_sgx_cpuid([in, out] int cpuinfo[4], int leaf);
+    };
+};
