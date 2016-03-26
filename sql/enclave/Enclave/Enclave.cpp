@@ -108,17 +108,31 @@ void decrypt(const uint8_t *iv, const uint8_t *ciphertext, uint32_t length,
   
 }
 
-void ecall_encrypt(uint8_t *plaintext, uint32_t length,
+void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 		   uint8_t *ciphertext, uint32_t cipher_length) {
 
   // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-  assert(cipher_length == length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  assert(cipher_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
   uint8_t *iv_ptr = ciphertext;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = ciphertext + SGX_AESGCM_IV_SIZE + length;
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
   
-  encrypt(plaintext, length, iv, &mac_ptr);
+  encrypt(plaintext, plaintext_length, iv_ptr, ciphertext, mac_ptr);
 }
 
+void ecall_decrypt(uint8_t *ciphertext, 
+		   uint32_t cipher_length,
+		   uint8_t *mac,
+		   uint8_t *plaintext,
+		   uint32_t plaintext_length) {
+
+  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+  assert(cipher_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  uint8_t *iv_ptr = ciphertext;
+  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
+  
+  decrypt(iv_ptr, ciphertext_ptr, plaintext_length, mac_ptr, plaintext);
+}
 
 // returns the number of attributes for this row
 uint32_t get_num_col(uint8_t *row) {

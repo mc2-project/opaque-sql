@@ -28,7 +28,8 @@ enclave {
      */
      trusted {
      	     public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
-     };
+	     public void ecall_encrypt([in, size=length] uint8_t *plaintext, uint32_t length, [out, size=length] uint8_t *ciphertext, uint32_t cipher_length);
+};
 
     untrusted {
         void ocall_print_string([in, string] const char *str);

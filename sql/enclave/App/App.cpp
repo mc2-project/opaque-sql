@@ -405,9 +405,15 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(JNIEnv
 									  jbyteArray plaintext) {
 
   const jsize length = env->GetArrayLength(plaintext);
-  jbyte plaintext_ptr = env->GetByteArrayElements(plaintext, NULL);
-
+  jbyte *ptr = env->GetByteArrayElements(plaintext, false);
   
+  uint8_t *plaintext_ptr = (uint8_t *) ptr;
+  
+  env->ReleaseByteArrayElements(plaintext, ptr, 0);
+
+//   jbyteArray out_array;
+//   out_array = env->NewByteArray(length);
+
 
 }
 
