@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include "sgx_tcrypto.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -36,6 +37,13 @@ extern "C" {
 
   void printf(const char *fmt, ...);
   int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length);
+  void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
+		     uint8_t *ciphertext, uint32_t cipher_length);
+  
+  void ecall_decrypt(uint8_t *ciphertext, 
+		     uint32_t cipher_length,
+		     uint8_t *plaintext,
+		     uint32_t plaintext_length);
 
 #if defined(__cplusplus)
 }

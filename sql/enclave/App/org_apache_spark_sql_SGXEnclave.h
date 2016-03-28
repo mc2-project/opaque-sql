@@ -47,6 +47,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt
   (JNIEnv *, jobject, jlong, jbyteArray);
 
+/*
+ * Class:     org_apache_spark_sql_SGXEnclave
+ * Method:    Test
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
+  (JNIEnv *, jobject, jlong);
+
 #ifdef __cplusplus
 }
 #endif

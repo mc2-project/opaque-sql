@@ -42,7 +42,8 @@
 #include "sgx_status.h"
 #include "App.h"
 #include "Enclave_u.h"
-#include "SGX.h"
+#include "org_apache_spark_sql_SGXEnclave.h"
+#include "sgx_tcrypto.h"
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -319,10 +320,10 @@ JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(JNIEnv
   sgx_launch_token_t token = {0};
   int updated = 0;
 
-  ret = sgx_create_enclave("enclave.signed.so", SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
+  ret = sgx_create_enclave("/home/wzheng/sparksgx/enclave.signed.so", SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
 
   if (ret != SGX_SUCCESS) {
-    printf("Error: failed to create enclave, %#x\n", ret);
+    print_error_message(ret);
   }
   
   return eid;
@@ -385,7 +386,8 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *e
 
 
   const jsize length = env->GetArrayLength(row);
-  jbyte *row_ptr = env->GetByteArrayElements(row, NULL);
+  jboolean if_copy = false;
+  jbyte *row_ptr = env->GetByteArrayElements(row, &if_copy);
 
   int ret = 0;
   sgx_status_t status = ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length);
@@ -404,17 +406,27 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(JNIEnv
 									  jlong eid, 
 									  jbyteArray plaintext) {
 
-  const jsize length = env->GetArrayLength(plaintext);
-  jbyte *ptr = env->GetByteArrayElements(plaintext, false);
+  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
   
   uint8_t *plaintext_ptr = (uint8_t *) ptr;
+
+  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  jbyteArray ciphertext = env->NewByteArray(clength);
+  uint8_t *ciphertext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
+
+  uint8_t ciphertext_copy[100];
   
+  printf("plength is %u\n", plength);
+
+  ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength);
+
+  env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
+
   env->ReleaseByteArrayElements(plaintext, ptr, 0);
 
-//   jbyteArray out_array;
-//   out_array = env->NewByteArray(length);
-
-
+  return ciphertext;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv *env, 
@@ -422,8 +434,43 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
 									  jlong eid, 
 									  jbyteArray ciphertext) {
 
+  uint32_t clength = (uint32_t) env->GetArrayLength(ciphertext);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(ciphertext, &if_copy);
   
+  uint8_t *ciphertext_ptr = (uint8_t *) ptr;
+ 
+  const jsize plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+  jbyteArray plaintext = env->NewByteArray(plength);
 
+  uint8_t plaintext_copy[100];
+  
+  printf("plength is %u\n", plength);
+
+  ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength);
+
+  env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
+
+  env->ReleaseByteArrayElements(ciphertext, ptr, 0);
+
+  return plaintext;
+}
+
+JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEnv *env, jobject obj, jlong eid) {
+  int input = 0;
+  //ecall_test_int(eid, &input);
+  printf("Test!\n");
+}
+
+
+void print_bytes(uint8_t *ptr, uint32_t len) {
+  
+  for (int i = 0; i < len; i++) {
+    printf("%u", *(ptr + i));
+    printf(" - ");
+  }
+
+  printf("\n");
 }
 
 
@@ -454,6 +501,16 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
+    char *plaintext_str = "Helloworld123456";
+    uint8_t *plaintext = (uint8_t *) plaintext_str;
+    uint8_t ciphertext[100];
+    uint8_t decrypt[100];
+
+    ecall_encrypt(global_eid, plaintext, 10, ciphertext, (10 + 12 + 16));
+    ecall_decrypt(global_eid, ciphertext, (10 + 12 + 16), decrypt, 10);
+
+    print_bytes(plaintext, 10);
+    print_bytes(decrypt, 10);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

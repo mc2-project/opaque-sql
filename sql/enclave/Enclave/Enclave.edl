@@ -27,8 +27,10 @@ enclave {
      *  [string]: specifies 'str' is a NULL terminated buffer.
      */
      trusted {
-     	     public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
-	     public void ecall_encrypt([in, size=length] uint8_t *plaintext, uint32_t length, [out, size=length] uint8_t *ciphertext, uint32_t cipher_length);
+         public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
+	 public void ecall_encrypt([in, size=length] uint8_t *plaintext, uint32_t length, [out, size=cipher_length] uint8_t *ciphertext, uint32_t cipher_length);
+	 public void ecall_decrypt([in, size=ciphertext_length] uint8_t *ciphertext, uint32_t ciphertext_length, [out, size=plaintext_length] uint8_t *plaintext, uint32_t plaintext_length);
+	 public void ecall_test_int([in, size=1] int *ptr);
 };
 
     untrusted {

@@ -99,7 +99,7 @@ Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefau
 
 Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
 
-App_SO_Name := libSGX.so
+App_SO_Name := libSGXEnclave.so
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
 Enclave_Config_File := Enclave/Enclave.config.xml

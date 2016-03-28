@@ -29,7 +29,6 @@
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "sgx_trts.h"
-#include "sgx_tcrypto.h"
 
 /* 
  * printf: 
@@ -49,6 +48,16 @@ void printf(const char *fmt, ...)
     ocall_print_string(buf);
 }
 
+void print_bytes(uint8_t *ptr, uint32_t len) {
+  
+  for (int i = 0; i < len; i++) {
+    printf("%u", *(ptr + i));
+    printf(" - ");
+  }
+
+  printf("\n");
+}
+
 
 // encrypt() and decrypt() should be called from enclave code only
 void encrypt(uint8_t *plaintext, uint32_t length, 
@@ -61,13 +70,13 @@ void encrypt(uint8_t *plaintext, uint32_t length,
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
 
-  sgx_status_t rand_status = sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
+  //sgx_status_t rand_status = sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
   sgx_status_t status = sgx_rijndael128GCM_encrypt(key,
-						   plaintext, length,
-						   ciphertext,
-						   iv, SGX_AESGCM_IV_SIZE,
-						   NULL, 0,
-						   mac);
+  						   plaintext, length,
+  						   ciphertext,
+  						   iv, SGX_AESGCM_IV_SIZE,
+  						   NULL, 0,
+  						   mac);
   switch(status) {
   case SGX_ERROR_INVALID_PARAMETER:
     break;
@@ -77,6 +86,7 @@ void encrypt(uint8_t *plaintext, uint32_t length,
     break;
   }
   
+  assert(status == SGX_SUCCESS);
 }
 
 
@@ -97,15 +107,29 @@ void decrypt(const uint8_t *iv, const uint8_t *ciphertext, uint32_t length,
 						   iv, SGX_AESGCM_IV_SIZE,
 						   NULL, 0,
 						   mac);
-  switch(status) {
-  case SGX_ERROR_INVALID_PARAMETER:
-    break;
-  case SGX_ERROR_OUT_OF_MEMORY:
-    break;
-  case SGX_ERROR_UNEXPECTED:
-    break;
+
+  if (status != SGX_SUCCESS) {
+    switch(status) {
+    case SGX_ERROR_INVALID_PARAMETER:
+      printf("Decrypt: invalid parameter\n");
+      break;
+
+    case SGX_ERROR_OUT_OF_MEMORY:
+      printf("Decrypt: out of enclave memory\n");
+      break;
+
+    case SGX_ERROR_UNEXPECTED:
+      printf("Decrypt: unexpected error\n");
+      break;
+
+    case SGX_ERROR_MAC_MISMATCH:
+      printf("Decrypt: MAC mismatch\n");
+      break;
+
+    default:
+      printf("Decrypt: other error %#08x\n", status);
+    }
   }
-  
 }
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
@@ -113,23 +137,25 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 
   // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
   assert(cipher_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+
   uint8_t *iv_ptr = ciphertext;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
-  
-  encrypt(plaintext, plaintext_length, iv_ptr, ciphertext, mac_ptr);
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+
+  encrypt(plaintext, plaintext_length, iv_ptr, ciphertext_ptr, mac_ptr);
 }
 
 void ecall_decrypt(uint8_t *ciphertext, 
-		   uint32_t cipher_length,
-		   uint8_t *mac,
+		   uint32_t ciphertext_length,
 		   uint8_t *plaintext,
 		   uint32_t plaintext_length) {
 
   // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-  assert(cipher_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  assert(ciphertext_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+
   uint8_t *iv_ptr = ciphertext;
-  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
   
   decrypt(iv_ptr, ciphertext_ptr, plaintext_length, mac_ptr, plaintext);
 }
@@ -190,4 +216,14 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   }
 
   return ret;
+}
+
+
+void ecall_test_int(int *ptr) {
+  *ptr = *ptr + 1;
+}
+
+
+ecall_oblivious_sort(int op_code, uint8_t input, uint32_t input_length) {
+
 }

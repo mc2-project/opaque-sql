@@ -29,4 +29,6 @@ class SGXEnclave extends java.io.Serializable {
     enclave_id: Long, plaintext: Array[Byte]): Array[Byte]
   @native def Decrypt(
     enclave_id: Long, ciphertext: Array[Byte]): Array[Byte]
+
+  @native def Test(eid: Long)
 }
