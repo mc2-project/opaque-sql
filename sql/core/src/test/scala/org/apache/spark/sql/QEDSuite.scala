@@ -19,11 +19,13 @@ package org.apache.spark.sql
 
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.functions.lit
+import scala.util.Random
 
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
   System.load("/home/wzheng/sparksgx/libSGXEnclave.so")
+  val enclave = new SGXEnclave()
 
   // test("filter+show") {
   //   val data = Seq(("hello", 2), ("world", 1))
@@ -32,8 +34,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //   assert(words.collect === data.map(Row.fromTuple))
   // }
 
-  test("JNI") {
-
+  test("JNIEncrypt") {
 
     def byteArrayToString(x: Array[Byte]) = {
       val loc = x.indexOf(0)
@@ -45,7 +46,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         new String(x, 0, loc, "UTF-8") // or appropriate encoding
     }
 
-    val enclave = new SGXEnclave()
     val eid = enclave.StartEnclave()
 
     // Test encryption and decryption
@@ -66,4 +66,23 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
+
+  test("JNIObliviousSort") {
+
+    val eid = enclave.StartEnclave()
+
+    val len = 1000
+    var number_list = (1 to len).toList
+    val random_number_list = Random.shuffle(number_list).toArray
+
+    val sorted = enclave.ObliviousSort(eid, random_number_list)
+
+    for (i <- 0 to random_number_list.length - 1) {
+      assert(number_list(i) == sorted(i))
+    }
+
+    enclave.StopEnclave(eid)
+
+  }
+
 }

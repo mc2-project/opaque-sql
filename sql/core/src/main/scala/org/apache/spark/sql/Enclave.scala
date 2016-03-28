@@ -31,4 +31,6 @@ class SGXEnclave extends java.io.Serializable {
     enclave_id: Long, ciphertext: Array[Byte]): Array[Byte]
 
   @native def Test(eid: Long)
+
+  @native def ObliviousSort(enclave_id: Long, input: Array[Int]): Array[Int]
 }

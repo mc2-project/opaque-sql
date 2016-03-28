@@ -52,6 +52,7 @@ sgx_status_t ecall_filter_single_row(sgx_enclave_id_t eid, int* retval, int op_c
 sgx_status_t ecall_encrypt(sgx_enclave_id_t eid, uint8_t* plaintext, uint32_t length, uint8_t* ciphertext, uint32_t cipher_length);
 sgx_status_t ecall_decrypt(sgx_enclave_id_t eid, uint8_t* ciphertext, uint32_t ciphertext_length, uint8_t* plaintext, uint32_t plaintext_length);
 sgx_status_t ecall_test_int(sgx_enclave_id_t eid, int* ptr);
+sgx_status_t ecall_oblivious_sort_int(sgx_enclave_id_t eid, int* input, uint32_t input_len);
 sgx_status_t ecall_type_char(sgx_enclave_id_t eid, char val);
 sgx_status_t ecall_type_int(sgx_enclave_id_t eid, int val);
 sgx_status_t ecall_type_float(sgx_enclave_id_t eid, float val);

@@ -40,6 +40,7 @@ int ecall_filter_single_row(int op_code, uint8_t* row, uint32_t length);
 void ecall_encrypt(uint8_t* plaintext, uint32_t length, uint8_t* ciphertext, uint32_t cipher_length);
 void ecall_decrypt(uint8_t* ciphertext, uint32_t ciphertext_length, uint8_t* plaintext, uint32_t plaintext_length);
 void ecall_test_int(int* ptr);
+void ecall_oblivious_sort_int(int* input, uint32_t input_len);
 void ecall_type_char(char val);
 void ecall_type_int(int val);
 void ecall_type_float(float val);

@@ -463,15 +463,31 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 }
 
 
-void print_bytes(uint8_t *ptr, uint32_t len) {
-  
-  for (int i = 0; i < len; i++) {
-    printf("%u", *(ptr + i));
-    printf(" - ");
-  }
+JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
+									       jobject obj, 
+									       jlong eid, 
+									       jintArray input) {
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy = false;
+  jint *ptr = env->GetIntArrayElements(input, &if_copy);
 
-  printf("\n");
+  int *input_copy = (int *) malloc(input_len * sizeof(int));
+
+  for (int i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+    //printf("input_copy is %u\n", input_copy[i]);
+  }
+  
+  ecall_oblivious_sort_int(eid, input_copy, input_len);
+
+  jintArray ret = env->NewIntArray(input_len);
+  env->SetIntArrayRegion(ret, 0, input_len, input_copy);
+  
+  env->ReleaseIntArrayElements(input, ptr, 0);
+  
+  return ret;
 }
+
 
 
 /* Application entry */
@@ -501,16 +517,15 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
-    char *plaintext_str = "Helloworld123456";
-    uint8_t *plaintext = (uint8_t *) plaintext_str;
-    uint8_t ciphertext[100];
-    uint8_t decrypt[100];
+    
+    int input[8] = {3, 4, 5, 1, 2, 6, 8, 7};
+    
+    ecall_oblivious_sort_int(global_eid, input, 8);
 
-    ecall_encrypt(global_eid, plaintext, 10, ciphertext, (10 + 12 + 16));
-    ecall_decrypt(global_eid, ciphertext, (10 + 12 + 16), decrypt, 10);
+    for (int i = 0; i < 8; i++) {
+      printf("%u\n", input[i]);
+    }
 
-    print_bytes(plaintext, 10);
-    print_bytes(decrypt, 10);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

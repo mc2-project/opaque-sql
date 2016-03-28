@@ -55,6 +55,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt
 JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
   (JNIEnv *, jobject, jlong);
 
+/*
+ * Class:     org_apache_spark_sql_SGXEnclave
+ * Method:    ObliviousSort
+ * Signature: (J[I)[I
+ */
+JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
+  (JNIEnv *, jobject, jlong, jintArray);
+
 #ifdef __cplusplus
 }
 #endif
