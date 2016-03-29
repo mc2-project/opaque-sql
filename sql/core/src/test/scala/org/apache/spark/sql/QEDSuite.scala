@@ -38,13 +38,12 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new SGXEnclave()
   }
 
-  test("filter+show") {
-    val data = Seq(("hello", 2), ("world", 1))
+  test("encFilter") {
+    val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
     val words = sparkContext.makeRDD(data).toDF("word", "count")
-    val filtered = words.encFilter($"count" > lit(1))
-    filtered.explain(true)
+    val filtered = words.encFilter($"count" < lit(3))
     assert(words.collect === data.map(Row.fromTuple))
-    assert(filtered.collect === data.filter(_._2 > 1).map(Row.fromTuple))
+    assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
   }
 
   test("JNIEncrypt", SGXTest) {

@@ -211,7 +211,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
     int *value_ptr = (int *) attr_ptr;
 
-    if (*value_ptr >= 3) {
+    if (*value_ptr <= 3) {
       ret = 0;
     }
 
