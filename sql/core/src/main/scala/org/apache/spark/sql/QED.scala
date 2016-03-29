@@ -18,6 +18,7 @@
 package org.apache.spark.sql
 
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 import scala.collection.mutable
 
@@ -32,14 +33,13 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 
 object QED {
-  try {
-    System.loadLibrary("SGXEnclave")
-  } catch {
-    case e: UnsatisfiedLinkError =>
-      println(e)
+  val sgx = {
+    System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+    new SGXEnclave()
   }
+  val eid = new ThreadLocal[Long]
+  eid.set(sgx.StartEnclave())
 
-  val sgx = new SGXEnclave()
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()
 
@@ -48,10 +48,15 @@ object QED {
 
   // TODO
   def enclaveRegisterPredicate(pred: Expression, inputSchema: Seq[Attribute]): Int = {
-    val curPredicateId = nextPredicateId
-    nextPredicateId += 1
-    predicates(curPredicateId) = GeneratePredicate.generate(pred, inputSchema)
-    curPredicateId
+    if (sgx == null) {
+      val curPredicateId = nextPredicateId
+      nextPredicateId += 1
+      predicates(curPredicateId) = GeneratePredicate.generate(pred, inputSchema)
+      curPredicateId
+    } else {
+      // TODO: register arbitrary predicates with the enclave
+      0
+    }
   }
 
   // TODO
@@ -59,6 +64,7 @@ object QED {
       predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
     // Serialize row with # columns (4 bytes), column 1 length (4 bytes), column 1 contents, etc.
     val buf = ByteBuffer.allocate(100)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
     buf.putInt(schema.length)
     for ((t, i) <- schema.zip(0 until schema.length)) t match {
       case IntegerType =>
@@ -74,10 +80,8 @@ object QED {
     buf.flip()
     val rowBytes = new Array[Byte](buf.limit())
     buf.get(rowBytes)
-    println(rowBytes.mkString(" "))
 
-    // For now, just evaluate the predicate in untrusted space
-    predicates(predOpcode)(row)
+    sgx.Filter(eid.get, predOpcode, rowBytes)
   }
 
   def encodeData(value: Array[Byte]): String = {

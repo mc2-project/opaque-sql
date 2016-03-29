@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <cstdlib>
 
 #ifdef _MSC_VER
 # include <Shlobj.h>
@@ -320,7 +321,7 @@ JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(JNIEnv
   sgx_launch_token_t token = {0};
   int updated = 0;
 
-  ret = sgx_create_enclave("/home/wzheng/sparksgx/enclave.signed.so", SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
+  ret = sgx_create_enclave(std::getenv("LIBENCLAVESIGNED_PATH"), SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
 
   if (ret != SGX_SUCCESS) {
     print_error_message(ret);

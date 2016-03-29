@@ -33,15 +33,10 @@ object SGXTest extends Tag("org.apache.spark.sql.SGXTest")
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
-  val enclave =
-    try {
-      System.load("/home/wzheng/sparksgx/libSGXEnclave.so")
-      new SGXEnclave()
-    } catch {
-      case e: UnsatisfiedLinkError =>
-        println(e)
-        null
-    }
+  val enclave = {
+    System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+    new SGXEnclave()
+  }
 
   test("filter+show") {
     val data = Seq(("hello", 2), ("world", 1))
