@@ -389,6 +389,8 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *e
   jboolean if_copy = false;
   jbyte *row_ptr = env->GetByteArrayElements(row, &if_copy);
 
+  printf("Row's length is %u\n", length);
+
   int ret = 0;
   sgx_status_t status = ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length);
   if (status != SGX_SUCCESS) {
@@ -517,11 +519,11 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
-    
-    int value = 5;
-    
+
+    int value[3] = {1, 4, 167};
+
     int ret = 0;
-    sgx_status_t status = ecall_filter_single_row(global_eid, &ret, 0, (uint8_t *) &value, 4);
+    sgx_status_t status = ecall_filter_single_row(global_eid, &ret, -1, (uint8_t *) value, 12);
 
 
     /* Destroy the enclave */

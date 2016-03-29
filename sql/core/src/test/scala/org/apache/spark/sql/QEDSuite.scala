@@ -24,6 +24,7 @@ import org.scalatest.Tag
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 
 // Exclude SGX tests with build/sbt sql/test:test-only org.apache.spark.sql.QEDSuite -- -l org.apache.spark.sql.SGXTest
@@ -105,13 +106,23 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   test("JNIFilterSingleRow", SGXTest) {
     val eid = enclave.StartEnclave()
 
-    val filter_number : Int = 5
-    val filter_number_bytes = ByteBuffer.allocate(4).putInt(filter_number).array();
+    val filter_number : Int = 177
+    val buffer = ByteBuffer.allocate(12)
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
 
-    assert(filter_number_bytes.length == 4)
+    buffer.putInt(1) // for number of columns
+    buffer.putInt(4) // for length
+    buffer.putInt(filter_number)
 
-    val ret = enclave.Filter(eid, 0, filter_number_bytes)
-    assert(ret == true)
+    buffer.flip()
+    val byte_array = new Array[Byte](buffer.limit())
+    buffer.get(byte_array)
+
+    assert(byte_array.length == 12)
+
+    println(byte_array.mkString(" "))
+
+    val ret = enclave.Filter(eid, -1, byte_array)
 
     enclave.StopEnclave(eid)
   }

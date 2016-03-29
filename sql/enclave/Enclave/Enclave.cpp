@@ -190,8 +190,11 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
   uint32_t num_cols = get_num_col(row);
   if (num_cols == 0) {
+    printf("Number of columns: 0\n");    
     return 0;
   }
+
+  printf("Number of columns: %u\n", num_cols);
 
   uint8_t *row_ptr = row + 4;
   
@@ -206,13 +209,25 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     // TODO: decrypt value here
     // value should be int
 
-    int *value_ptr = (int *) row_ptr;
+    int *value_ptr = (int *) attr_ptr;
 
     if (*value_ptr >= 3) {
       ret = 0;
     }
 
-  } else {
+  } else if (op_code == -1) {
+    // this is for test only
+
+    uint8_t *attr_ptr = NULL;
+    uint32_t attr_len = 0;
+    
+    row_ptr = get_attr(&attr_ptr, &attr_len, row_ptr, row, length);
+
+    int *value_ptr = (int *) attr_ptr;
+
+    printf("Input value is %u\n", *value_ptr);
+    printf("Attr len is  is %u\n", attr_len);
+
     ret = 0;
   }
 
