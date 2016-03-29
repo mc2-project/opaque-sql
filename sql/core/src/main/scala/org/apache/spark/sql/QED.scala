@@ -17,18 +17,28 @@
 
 package org.apache.spark.sql
 
+import java.io.ByteArrayOutputStream
+import java.io.ObjectOutputStream
+
 import scala.collection.mutable
+
+import sun.misc.{BASE64Encoder, BASE64Decoder}
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
 import org.apache.spark.sql.types.DataType
-
-import sun.misc.{BASE64Encoder, BASE64Decoder}
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.types.StringType
 
 object QED {
-  System.loadLibrary("SGXEnclave")
+  try {
+    System.loadLibrary("SGXEnclave")
+  } catch {
+    case e: UnsatisfiedLinkError =>
+      println(e)
+  }
 
   val sgx = new SGXEnclave()
   val encoder = new BASE64Encoder()
@@ -48,12 +58,27 @@ object QED {
   // TODO
   def enclaveEvalPredicate(
       predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
-    predicates(predOpcode)(row)
-
-    // turn base64 into binary representation first
-    for (v <- row.toSeq(schema)) {
-      
+    // Serialize row with # columns (4 bytes), column 1 length (4 bytes), column 1 contents, etc.
+    val baos = new ByteArrayOutputStream
+    val oos = new ObjectOutputStream(baos)
+    oos.writeInt(schema.length)
+    for ((t, i) <- schema.zip(0 until schema.length)) t match {
+      case IntegerType =>
+        oos.writeInt(t.defaultSize)
+        oos.writeInt(row.getInt(i))
+      case StringType =>
+        val x = row.getUTF8String(i)
+        oos.writeInt(x.numBytes())
+        oos.write(x.getBytes())
+      case _ =>
+        throw new Exception("Can't yet handle " + t)
     }
+    oos.close()
+    val rowBytes = baos.toByteArray
+    println(rowBytes.mkString(" "))
+
+    // For now, just evaluate the predicate in untrusted space
+    predicates(predOpcode)(row)
   }
 
   def encodeData(value: Array[Byte]): String = {

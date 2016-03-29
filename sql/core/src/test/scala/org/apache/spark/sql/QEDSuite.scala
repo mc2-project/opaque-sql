@@ -20,21 +20,34 @@ package org.apache.spark.sql
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.functions.lit
 import scala.util.Random
+import org.scalatest.Tag
+
+// Exclude SGX tests with build/sbt sql/test:test-only org.apache.spark.sql.QEDSuite -- -l org.apache.spark.sql.SGXTest
+object SGXTest extends Tag("org.apache.spark.sql.SGXTest")
 
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
-  System.load("/home/wzheng/sparksgx/libSGXEnclave.so")
-  val enclave = new SGXEnclave()
+  val enclave =
+    try {
+      System.load("/home/wzheng/sparksgx/libSGXEnclave.so")
+      new SGXEnclave()
+    } catch {
+      case e: UnsatisfiedLinkError =>
+        println(e)
+        null
+    }
 
-  // test("filter+show") {
-  //   val data = Seq(("hello", 2), ("world", 1))
-  //   val words = sparkContext.makeRDD(data).toDF("word", "count")
-  //   val filtered = words.encFilter($"count" > lit(1))
-  //   assert(words.collect === data.map(Row.fromTuple))
-  // }
+  test("filter+show") {
+    val data = Seq(("hello", 2), ("world", 1))
+    val words = sparkContext.makeRDD(data).toDF("word", "count")
+    val filtered = words.encFilter($"count" > lit(1))
+    filtered.explain(true)
+    assert(words.collect === data.map(Row.fromTuple))
+    assert(filtered.collect === data.filter(_._2 > 1).map(Row.fromTuple))
+  }
 
-  test("JNIEncrypt") {
+  test("JNIEncrypt", SGXTest) {
 
     def byteArrayToString(x: Array[Byte]) = {
       val loc = x.indexOf(0)
@@ -67,7 +80,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIObliviousSort") {
+  test("JNIObliviousSort", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
