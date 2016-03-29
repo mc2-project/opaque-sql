@@ -21,6 +21,10 @@ import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.functions.lit
 import scala.util.Random
 import org.scalatest.Tag
+import java.io.ByteArrayOutputStream
+import java.io.ObjectOutputStream
+import java.nio.ByteBuffer
+
 
 // Exclude SGX tests with build/sbt sql/test:test-only org.apache.spark.sql.QEDSuite -- -l org.apache.spark.sql.SGXTest
 object SGXTest extends Tag("org.apache.spark.sql.SGXTest")
@@ -96,6 +100,20 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
 
+  }
+
+  test("JNIFilterSingleRow", SGXTest) {
+    val eid = enclave.StartEnclave()
+
+    val filter_number : Int = 5
+    val filter_number_bytes = ByteBuffer.allocate(4).putInt(filter_number).array();
+
+    assert(filter_number_bytes.length == 4)
+
+    val ret = enclave.Filter(eid, 0, filter_number_bytes)
+    assert(ret == true)
+
+    enclave.StopEnclave(eid)
   }
 
 }

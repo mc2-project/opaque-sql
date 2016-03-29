@@ -44,7 +44,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt
  * Method:    Decrypt
  * Signature: (J[B)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt 
   (JNIEnv *, jobject, jlong, jbyteArray);
 
 /*

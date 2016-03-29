@@ -518,13 +518,10 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
     
-    int input[8] = {3, 4, 5, 1, 2, 6, 8, 7};
+    int value = 5;
     
-    ecall_oblivious_sort_int(global_eid, input, 8);
-
-    for (int i = 0; i < 8; i++) {
-      printf("%u\n", input[i]);
-    }
+    int ret = 0;
+    sgx_status_t status = ecall_filter_single_row(global_eid, &ret, 0, (uint8_t *) &value, 4);
 
 
     /* Destroy the enclave */
