@@ -17,8 +17,7 @@
 
 package org.apache.spark.sql
 
-import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
+import java.nio.ByteBuffer
 
 import scala.collection.mutable
 
@@ -59,22 +58,22 @@ object QED {
   def enclaveEvalPredicate(
       predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
     // Serialize row with # columns (4 bytes), column 1 length (4 bytes), column 1 contents, etc.
-    val baos = new ByteArrayOutputStream
-    val oos = new ObjectOutputStream(baos)
-    oos.writeInt(schema.length)
+    val buf = ByteBuffer.allocate(100)
+    buf.putInt(schema.length)
     for ((t, i) <- schema.zip(0 until schema.length)) t match {
       case IntegerType =>
-        oos.writeInt(t.defaultSize)
-        oos.writeInt(row.getInt(i))
+        buf.putInt(t.defaultSize)
+        buf.putInt(row.getInt(i))
       case StringType =>
         val x = row.getUTF8String(i)
-        oos.writeInt(x.numBytes())
-        oos.write(x.getBytes())
+        buf.putInt(x.numBytes())
+        buf.put(x.getBytes())
       case _ =>
         throw new Exception("Can't yet handle " + t)
     }
-    oos.close()
-    val rowBytes = baos.toByteArray
+    buf.flip()
+    val rowBytes = new Array[Byte](buf.limit())
+    buf.get(rowBytes)
     println(rowBytes.mkString(" "))
 
     // For now, just evaluate the predicate in untrusted space
