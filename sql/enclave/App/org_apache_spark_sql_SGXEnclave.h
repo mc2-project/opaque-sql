@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
  * Signature: (J[I)[I
  */
 JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
-  (JNIEnv *, jobject, jlong, jintArray);
+(JNIEnv *, jobject, jint, jlong, jintArray);
 
 #ifdef __cplusplus
 }

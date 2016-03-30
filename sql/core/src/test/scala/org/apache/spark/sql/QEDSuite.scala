@@ -38,73 +38,74 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new SGXEnclave()
   }
 
-  test("encFilter") {
-    val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
-    val words = sparkContext.makeRDD(data).toDF("word", "count")
-    val filtered = words.encFilter($"count" < lit(3))
-    assert(words.collect === data.map(Row.fromTuple))
-    assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
-  }
+  // test("encFilter") {
+  //   val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
+  //   val words = sparkContext.makeRDD(data).toDF("word", "count")
+  //   val filtered = words.encFilter($"count" < lit(3))
+  //   assert(words.collect === data.map(Row.fromTuple))
+  //   assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
+  // }
 
-  test("JNIEncrypt", SGXTest) {
+  // test("JNIEncrypt", SGXTest) {
 
-    def byteArrayToString(x: Array[Byte]) = {
-      val loc = x.indexOf(0)
-      if (-1 == loc)
-        new String(x)
-      else if (0 == loc)
-        ""
-      else
-        new String(x, 0, loc, "UTF-8") // or appropriate encoding
-    }
+  //   def byteArrayToString(x: Array[Byte]) = {
+  //     val loc = x.indexOf(0)
+  //     if (-1 == loc)
+  //       new String(x)
+  //     else if (0 == loc)
+  //       ""
+  //     else
+  //       new String(x, 0, loc, "UTF-8") // or appropriate encoding
+  //   }
 
-    val eid = enclave.StartEnclave()
+  //   val eid = enclave.StartEnclave()
 
-    // Test encryption and decryption
+  //   // Test encryption and decryption
 
-    val plaintext = "Hello world!1234"
-    val plaintext_bytes = plaintext.getBytes
-    val ciphertext = enclave.Encrypt(eid, plaintext_bytes)
+  //   val plaintext = "Hello world!1234"
+  //   val plaintext_bytes = plaintext.getBytes
+  //   val ciphertext = enclave.Encrypt(eid, plaintext_bytes)
 
-    val decrypted = enclave.Decrypt(eid, ciphertext)
+  //   val decrypted = enclave.Decrypt(eid, ciphertext)
 
-    println("decrypted's length is " + decrypted.length)
+  //   println("decrypted's length is " + decrypted.length)
 
-    assert(plaintext_bytes.length == decrypted.length)
+  //   assert(plaintext_bytes.length == decrypted.length)
 
-    for (idx <- 0 to plaintext_bytes.length - 1) {
-      assert(plaintext_bytes(idx) == decrypted(idx))
-    }
+  //   for (idx <- 0 to plaintext_bytes.length - 1) {
+  //     assert(plaintext_bytes(idx) == decrypted(idx))
+  //   }
 
-    enclave.StopEnclave(eid)
-  }
+  //   enclave.StopEnclave(eid)
+  // }
 
-  test("JNIObliviousSort", SGXTest) {
+  // test("JNIObliviousSort", SGXTest) {
 
-    val eid = enclave.StartEnclave()
+  //   val eid = enclave.StartEnclave()
 
-    val len = 1000
-    var number_list = (1 to len).toList
-    val random_number_list = Random.shuffle(number_list).toArray
+  //   val len = 1000
+  //   var number_list = (1 to len).toList
+  //   val random_number_list = Random.shuffle(number_list).toArray
 
-    val sorted = enclave.ObliviousSort(eid, random_number_list)
+  //   val sorted = enclave.ObliviousSort(eid, random_number_list)
 
-    for (i <- 0 to random_number_list.length - 1) {
-      assert(number_list(i) == sorted(i))
-    }
+  //   for (i <- 0 to random_number_list.length - 1) {
+  //     assert(number_list(i) == sorted(i))
+  //   }
 
-    enclave.StopEnclave(eid)
+  //   enclave.StopEnclave(eid)
 
-  }
+  // }
 
   test("JNIFilterSingleRow", SGXTest) {
     val eid = enclave.StartEnclave()
 
-    val filter_number : Int = 177
-    val buffer = ByteBuffer.allocate(12)
+    val filter_number : Int = 1233
+    val buffer = ByteBuffer.allocate(9)
     buffer.order(ByteOrder.LITTLE_ENDIAN)
+    val t : Byte = 1
 
-    buffer.putInt(1) // for number of columns
+    buffer.put(t)
     buffer.putInt(4) // for length
     buffer.putInt(filter_number)
 
@@ -112,11 +113,25 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val byte_array = new Array[Byte](buffer.limit())
     buffer.get(byte_array)
 
-    assert(byte_array.length == 12)
+    println("Bytes array's length " + byte_array.length)
 
-    println(byte_array.mkString(" "))
 
-    val ret = enclave.Filter(eid, -1, byte_array)
+    // then encrypt this buffer
+    val enc_bytes = enclave.Encrypt(eid, byte_array)
+
+    val new_buffer = ByteBuffer.allocate(1024)
+    new_buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+    val enc_buffer_size = enc_bytes.length
+    new_buffer.putInt(1) // for number of columns
+    new_buffer.putInt(enc_buffer_size)
+    new_buffer.put(enc_bytes)
+
+    new_buffer.flip()
+    val enc_byte_array = new Array[Byte](new_buffer.limit())
+    new_buffer.get(enc_byte_array)
+
+    val ret = enclave.Filter(eid, -1, enc_byte_array)
 
     enclave.StopEnclave(eid)
   }

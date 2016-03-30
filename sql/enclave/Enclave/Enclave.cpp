@@ -61,23 +61,29 @@ void print_bytes(uint8_t *ptr, uint32_t len) {
 
 
 // encrypt() and decrypt() should be called from enclave code only
-void encrypt(uint8_t *plaintext, uint32_t length, 
-	     uint8_t *iv, uint8_t *ciphertext,
-	     sgx_aes_gcm_128bit_tag_t *mac) {
-  // encrypt using a global key
-  // TODO: fix this; should use key obtained from client 
+
+// encrypt using a global key
+// TODO: fix this; should use key obtained from client 
+void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
+			 uint8_t *ciphertext) {
   
   // key size is 12 bytes/128 bits
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
 
+  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+
+  uint8_t *iv_ptr = ciphertext;
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+
   //sgx_status_t rand_status = sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
   sgx_status_t status = sgx_rijndael128GCM_encrypt(key,
-  						   plaintext, length,
-  						   ciphertext,
-  						   iv, SGX_AESGCM_IV_SIZE,
-  						   NULL, 0,
-  						   mac);
+												   plaintext, plaintext_length,
+												   ciphertext_ptr,
+												   iv_ptr, SGX_AESGCM_IV_SIZE,
+												   NULL, 0,
+												   mac_ptr);
   switch(status) {
   case SGX_ERROR_INVALID_PARAMETER:
     break;
@@ -86,28 +92,36 @@ void encrypt(uint8_t *plaintext, uint32_t length,
   case SGX_ERROR_UNEXPECTED:
     break;
   }
-  
+
   assert(status == SGX_SUCCESS);
 }
 
 
-void decrypt(const uint8_t *iv, const uint8_t *ciphertext, uint32_t length, 
-	     const sgx_aes_gcm_128bit_tag_t *mac,
-	     uint8_t *plaintext) {
+void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, 
+			 uint8_t *plaintext) {
 
-  // encrypt using a global key
+  // decrypt using a global key
   // TODO: fix this; should use key obtained from client 
   
   // key size is 12 bytes/128 bits
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
 
+  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+
+  uint32_t plaintext_length = ciphertext_length - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+
+  uint8_t *iv_ptr = (uint8_t *) ciphertext;
+  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+
+
   sgx_status_t status = sgx_rijndael128GCM_decrypt(key,
-						   ciphertext, length,
-						   plaintext,
-						   iv, SGX_AESGCM_IV_SIZE,
-						   NULL, 0,
-						   mac);
+												   ciphertext_ptr, plaintext_length,
+												   plaintext,
+												   iv_ptr, SGX_AESGCM_IV_SIZE,
+												   NULL, 0,
+												   mac_ptr);
 
   if (status != SGX_SUCCESS) {
     switch(status) {
@@ -136,29 +150,29 @@ void decrypt(const uint8_t *iv, const uint8_t *ciphertext, uint32_t length,
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 		   uint8_t *ciphertext, uint32_t cipher_length) {
 
-  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-  assert(cipher_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  // // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+  assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
-  uint8_t *iv_ptr = ciphertext;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  // uint8_t *iv_ptr = ciphertext;
+  // sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  // uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
-  encrypt(plaintext, plaintext_length, iv_ptr, ciphertext_ptr, mac_ptr);
+  encrypt(plaintext, plaintext_length, ciphertext);
 }
 
 void ecall_decrypt(uint8_t *ciphertext, 
-		   uint32_t ciphertext_length,
-		   uint8_t *plaintext,
-		   uint32_t plaintext_length) {
+				   uint32_t ciphertext_length,
+				   uint8_t *plaintext,
+				   uint32_t plaintext_length) {
 
-  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-  assert(ciphertext_length == plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  // // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+  assert(ciphertext_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
-  uint8_t *iv_ptr = ciphertext;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-  
-  decrypt(iv_ptr, ciphertext_ptr, plaintext_length, mac_ptr, plaintext);
+  // uint8_t *iv_ptr = ciphertext;
+  // sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  // uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+
+  decrypt(ciphertext, ciphertext_length, plaintext);
 }
 
 // returns the number of attributes for this row
@@ -167,25 +181,41 @@ uint32_t get_num_col(uint8_t *row) {
   return *num_col_ptr;
 }
 
-uint8_t *get_attr(uint8_t **attr_ptr, uint32_t *attr_len, 
-		  uint8_t *row_ptr, uint8_t *row, uint32_t length) {
+uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len, 
+					  uint8_t *row_ptr, uint8_t *row, uint32_t length) {
   if (row_ptr >= row + length) {
     return NULL;
   }
 
   uint8_t *ret_row_ptr = row_ptr;
 
-  *attr_ptr = row_ptr + 4;
-  *attr_len = * ((uint32_t *) row_ptr);
+  *enc_attr_ptr = row_ptr + 4;
+  *enc_attr_len = * ((uint32_t *) row_ptr);
 
-  ret_row_ptr += 4 + *attr_len;
+  ret_row_ptr += 4 + *enc_attr_len;
   return ret_row_ptr;
 }
 
+
+void get_attr(uint8_t *dec_attr_ptr,
+			  uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr) {
+
+  // given a pointer to the encrypted attribute, return the type, attr len, attr pointer
+  assert(dec_attr_ptr != NULL);
+  *type = *dec_attr_ptr;
+
+  uint32_t *attr_len_ptr = (uint32_t *) (dec_attr_ptr + 1);
+  *attr_len = *(dec_attr_ptr + 1);
+  
+  *attr_ptr  = (dec_attr_ptr + 1 + *attr_len);
+}
+
+
 int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
-  // row is in format of [num cols][attr1 size][attr1][attr2 size][attr2] ...
-  // num cols is 4 bytes; attr size is also 4 bytes
+  // row is in format of [num cols][enc_attr1 size][enc_attr1][enc_attr2 size][enc_attr2] ...
+  // enc_attr's format is [type][len of plaintext attr][plaintext attr]
+  // num cols is 4 bytes; size is also 4 bytes
   int ret = 1;
 
   uint32_t num_cols = get_num_col(row);
@@ -197,18 +227,30 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   printf("Number of columns: %u\n", num_cols);
 
   uint8_t *row_ptr = row + 4;
-  
+
+  const size_t decrypted_data_len = 1024;
+  uint8_t decrypted_data[decrypted_data_len];
+
+
+  uint8_t *enc_attr_ptr = NULL;
+  uint32_t enc_attr_len = 0;
+
+  uint8_t attr_type = 0;
+  uint32_t attr_len = 0;
+  uint8_t *attr_ptr = NULL;
+
   if (op_code == 0) {
-    // find the second row
-    uint8_t *attr_ptr = NULL;
-    uint32_t attr_len = 0;
+    // find the second attribute
+		
+    row_ptr = get_enc_attr(&enc_attr_ptr, &enc_attr_len, row_ptr, row, length);
+    row_ptr = get_enc_attr(&enc_attr_ptr, &enc_attr_len, row_ptr, row, length);
 
-    row_ptr = get_attr(&attr_ptr, &attr_len, row_ptr, row, length);
-    row_ptr = get_attr(&attr_ptr, &attr_len, row_ptr, row, length);
+	decrypt(enc_attr_ptr, enc_attr_len, decrypted_data);
 
-    // TODO: decrypt value here
-    // value should be int
+	get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
+	
 
+	// since op_code is 0, number should be "integer"
     int *value_ptr = (int *) attr_ptr;
 
     if (*value_ptr <= 3) {
@@ -218,16 +260,15 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   } else if (op_code == -1) {
     // this is for test only
 
-    uint8_t *attr_ptr = NULL;
-    uint32_t attr_len = 0;
+	row_ptr = get_enc_attr(&enc_attr_ptr, &enc_attr_len, row_ptr, row, length);
+	decrypt(enc_attr_ptr, enc_attr_len, decrypted_data);
+	get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
     
-    row_ptr = get_attr(&attr_ptr, &attr_len, row_ptr, row, length);
-
     int *value_ptr = (int *) attr_ptr;
 
     printf("Input value is %u\n", *value_ptr);
     printf("Attr len is  is %u\n", attr_len);
-
+	
     ret = 0;
   }
 
@@ -270,7 +311,7 @@ int pow_2(int value) {
 
 // TODO: this sorts integers only... put in custom comparison operators!
 // TODO: how to make the write oblivious?
-void osort_with_index(int *input, int low_idx, uint32_t len) {
+void osort_with_index_int(int *input, int low_idx, uint32_t len) {
 
   //printf("low_idx: %u, len: %u\n", low_idx, len);
   
@@ -341,14 +382,104 @@ void osort_with_index(int *input, int low_idx, uint32_t len) {
 
 // only sorts integers!
 void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
-  osort_with_index(input, 0, input_len);
+  osort_with_index_int(input, 0, input_len);
+}
+
+
+struct Integer {
+  int value;
+};
+
+struct String {
+  uint32_t length;
+  char *buffer;
+};
+
+
+// input_length is the length of input in bytes
+// len is the number of records
+void osort_with_index(int op_code, uint8_t *input, uint32_t input_length, int low_idx, uint32_t len) {
+
+  // First, iterate through and decrypt the data
+  // Then store the decrypted data in a list of objects (based on the given op_code)
+
+
+  
+  int log_len = log_2(len) + 1;
+  int offset = low_idx;
+
+  int swaps = 0;
+  int min_val = 0;
+  int max_val = 0;
+  
+  for (int stage = 1; stage <= log_len; stage++) {
+    //printf("stage = %i\n", stage);
+    for (int stage_i = stage; stage_i >= 1; stage_i--) {
+      //printf("stage_i = %i\n", stage_i);
+      int part_size = pow_2(stage_i);
+      //printf("part_size = %i\n", part_size);
+      int part_size_half = part_size / 2;
+
+      if (stage_i == stage) {
+	for (int i = offset; i <= (offset + len - 1); i += part_size) {
+	  for (int j = 1; j <= part_size_half; j++) {
+	    int idx = i + j - 1;
+	    int pair_idx = i + part_size - j;
+
+	    if (pair_idx < offset + len) {
+
+	      int idx_value = *(input + idx);
+	      int pair_idx_value = *(input + pair_idx);
+
+	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
+	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
+
+	      *(input + idx) = min_val;
+	      *(input + pair_idx) = max_val;
+
+	    }
+	  }
+	}
+
+      } else {	
+
+	for (int i = offset; i <= (offset + len - 1); i += part_size) {
+	  for (int j = 1; j <= part_size_half; j++) {
+	    int idx = i + j - 1;
+	    int pair_idx = idx + part_size_half;
+
+ 	    if (pair_idx < offset + len) {
+	      int idx_value = *(input + idx);
+	      int pair_idx_value = *(input + pair_idx);
+
+	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
+	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
+
+	      *(input + idx) = min_val;
+	      *(input + pair_idx) = max_val;
+
+	    }
+
+	  }
+	}
+
+      }
+
+    }
+  }
+
+}
+
+void get_next_row() {
+
 }
 
 // TODO: format of this input array?
 void ecall_oblivious_sort(int op_code, uint8_t input, uint32_t buffer_length, uint32_t list_length) {
   if (op_code == 1) {
     // list of integers
-    int *integer_list = (int *) malloc(sizeof(int) * list_length);
+
+	
 
     // sort in two loops
     

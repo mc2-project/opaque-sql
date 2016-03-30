@@ -466,10 +466,12 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 }
 
 
+// the op_code allows the internal sort code to decide which comparator to use
 JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
-									       jobject obj, 
-									       jlong eid, 
-									       jintArray input) {
+																			   jobject obj, 
+																			   jlong eid,
+																			   jint op_code, 
+																			   jintArray input) {
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jint *ptr = env->GetIntArrayElements(input, &if_copy);
@@ -480,7 +482,8 @@ JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(J
     input_copy[i] = *(ptr + i);
     //printf("input_copy is %u\n", input_copy[i]);
   }
-  
+
+  // TODO: replace with regular oblivious sort; also needs to take in an opcode
   ecall_oblivious_sort_int(eid, input_copy, input_len);
 
   jintArray ret = env->NewIntArray(input_len);
