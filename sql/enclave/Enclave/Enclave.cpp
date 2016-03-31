@@ -74,6 +74,9 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
 
   uint8_t *iv_ptr = ciphertext;
+  // generate random IV
+  sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
+  
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
@@ -386,24 +389,83 @@ void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
 }
 
 
-struct Integer {
+typedef struct Integer {
   int value;
-};
+} Integer;
 
-struct String {
+typedef struct String {
   uint32_t length;
   char *buffer;
-};
+} String;
 
+
+// -1 means value1 < value2
+// 0 means value1 == value2
+// 1 means value1 > value2
+template<typename T>
+int compare(T *value1, T *value2) {
+  assert(false);
+}
+
+template<>
+int compare<Integer>(Integer *value1, Integer *value2) {
+  if (value1->value < value2->value) {
+	return -1;
+  } else if (value1->value > value2->value) {
+	return 1;
+  } else {
+	return 0;
+  }
+}
+
+template<>
+int compare<String>(String *value1, String *value2) {
+  // not yet implemented!
+  assert(false);
+}
+
+template<typename T>
+void compare_and_swap(T *value1, T* value2) {
+  assert(false);
+ 
+}
+
+// TODO: to make this completely oblivious, we would need to swap even if
+// you don't need to! How to simulate this?
+template<>
+void compare_and_swap<Integer>(Integer *value1, Integer *value2) {
+  int comp = compare<Integer>(value1, value2);
+  
+  if (comp == 1) {
+	int temp = value1->value;
+	value1->value = value2->value;
+	value2->value = temp;
+  }
+}
+
+template<>
+void compare_and_swap<String>(String *value1, String *value2) {
+  int comp = compare<String>(value1, value2);
+  
+  if (comp == 1) {
+	uint32_t temp_len = value1->length;
+	char *temp_buf = value1->buffer;
+	value1->length = value2->length;
+	value1->buffer = value2->buffer;
+	value2->length = temp_len;
+	value2->buffer = temp_buf;
+  }
+}
 
 // input_length is the length of input in bytes
 // len is the number of records
-void osort_with_index(int op_code, uint8_t *input, uint32_t input_length, int low_idx, uint32_t len) {
+template<typename T>
+void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx, uint32_t len) {
 
   // First, iterate through and decrypt the data
   // Then store the decrypted data in a list of objects (based on the given op_code)
 
-
+  
   
   int log_len = log_2(len) + 1;
   int offset = low_idx;
@@ -421,47 +483,38 @@ void osort_with_index(int op_code, uint8_t *input, uint32_t input_length, int lo
       int part_size_half = part_size / 2;
 
       if (stage_i == stage) {
-	for (int i = offset; i <= (offset + len - 1); i += part_size) {
-	  for (int j = 1; j <= part_size_half; j++) {
-	    int idx = i + j - 1;
-	    int pair_idx = i + part_size - j;
+		for (int i = offset; i <= (offset + len - 1); i += part_size) {
+		  for (int j = 1; j <= part_size_half; j++) {
+			int idx = i + j - 1;
+			int pair_idx = i + part_size - j;
 
-	    if (pair_idx < offset + len) {
+			if (pair_idx < offset + len) {
 
-	      int idx_value = *(input + idx);
-	      int pair_idx_value = *(input + pair_idx);
+			  T *idx_value = input + idx;
+			  T *pair_idx_value = input + pair_idx;
 
-	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
-	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
-
-	      *(input + idx) = min_val;
-	      *(input + pair_idx) = max_val;
-
-	    }
-	  }
-	}
+			  compare_and_swap<T>(idx_value, pair_idx_value);
+			}
+		  }
+		}
 
       } else {	
 
-	for (int i = offset; i <= (offset + len - 1); i += part_size) {
-	  for (int j = 1; j <= part_size_half; j++) {
-	    int idx = i + j - 1;
-	    int pair_idx = idx + part_size_half;
+		for (int i = offset; i <= (offset + len - 1); i += part_size) {
+		  for (int j = 1; j <= part_size_half; j++) {
+			int idx = i + j - 1;
+			int pair_idx = idx + part_size_half;
 
- 	    if (pair_idx < offset + len) {
-	      int idx_value = *(input + idx);
-	      int pair_idx_value = *(input + pair_idx);
+			if (pair_idx < offset + len) {
+			  T *idx_value = input + idx;
+			  T *pair_idx_value = input + pair_idx;
 
-	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
-	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
+			  compare_and_swap<T>(idx_value, pair_idx_value);
 
-	      *(input + idx) = min_val;
-	      *(input + pair_idx) = max_val;
+			}
 
-	    }
-
-	  }
-	}
+		  }
+		}
 
       }
 
@@ -470,18 +523,64 @@ void osort_with_index(int op_code, uint8_t *input, uint32_t input_length, int lo
 
 }
 
-void get_next_row() {
+void get_next_row(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
 
+  *enc_value_len = *( (uint32_t *)(*ptr) );
+  *enc_value_ptr = *ptr + 4;
+
+  *ptr = *ptr + 4 + *enc_value_len;
+  
 }
 
 // TODO: format of this input array?
-void ecall_oblivious_sort(int op_code, uint8_t input, uint32_t buffer_length, uint32_t list_length) {
+void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
+						  int low_idx, uint32_t list_length) {
+  // iterate through all data, and then decrypt
+
+  // op_code = 1 means it's a list of integers
   if (op_code == 1) {
-    // list of integers
+	Integer * data = (Integer *) malloc(sizeof(Integer) * list_length);
 
+	uint8_t *input_ptr = input;
+	uint8_t *data_ptr = (uint8_t *) data;
+
+	uint8_t *enc_value_ptr = NULL;
+	uint32_t enc_value_len = 0;
+
+	while (1) {
+	  get_next_row(&input_ptr, &enc_value_ptr, &enc_value_len);
+
+	  if (input_ptr == NULL) {
+		break;
+	  }
+	  
+	  decrypt(enc_value_ptr, enc_value_len, data_ptr);
+	  data_ptr += 4;
+	}
+
+
+	//void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx, uint32_t len)
+	osort_with_index<Integer>(op_code, data, sizeof(Integer) * list_length, low_idx, list_length);
+
+	// need to re-encrypt the data!
+	// since none of the data has changed, let's try re-using the input
+
+	uint32_t enc_size = 4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+	input_ptr = input;
+	data_ptr = (uint8_t *) data;
+
+	uint32_t *size_ptr = (uint32_t *) data_ptr;
+
+	for (uint32_t i = 0; i < list_length; i++) {
+	  size_ptr = (uint32_t *) input_ptr;
+	  *size_ptr = enc_size;
+	  encrypt(data_ptr, 4, input_ptr + 4);
+
+	  data_ptr += 4;
+	  input_ptr += enc_size + 4;
+	}
 	
+  } else {
 
-    // sort in two loops
-    
   }
 }

@@ -484,7 +484,7 @@ JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(J
   }
 
   // TODO: replace with regular oblivious sort; also needs to take in an opcode
-  ecall_oblivious_sort_int(eid, input_copy, input_len);
+  ecall_oblivious_sort(eid, input_copy, input_len);
 
   jintArray ret = env->NewIntArray(input_len);
   env->SetIntArrayRegion(ret, 0, input_len, input_copy);
