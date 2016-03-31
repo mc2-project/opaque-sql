@@ -59,56 +59,56 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt(filtered.collect) === data.filter(_._2 > 3))
   }
 
-  // test("JNIEncrypt", SGXTest) {
+  test("JNIEncrypt", SGXTest) {
 
-  //   def byteArrayToString(x: Array[Byte]) = {
-  //     val loc = x.indexOf(0)
-  //     if (-1 == loc)
-  //       new String(x)
-  //     else if (0 == loc)
-  //       ""
-  //     else
-  //       new String(x, 0, loc, "UTF-8") // or appropriate encoding
-  //   }
+    def byteArrayToString(x: Array[Byte]) = {
+      val loc = x.indexOf(0)
+      if (-1 == loc)
+        new String(x)
+      else if (0 == loc)
+        ""
+      else
+        new String(x, 0, loc, "UTF-8") // or appropriate encoding
+    }
 
-  //   val eid = enclave.StartEnclave()
+    val eid = enclave.StartEnclave()
 
-  //   // Test encryption and decryption
+    // Test encryption and decryption
 
-  //   val plaintext = "Hello world!1234"
-  //   val plaintext_bytes = plaintext.getBytes
-  //   val ciphertext = enclave.Encrypt(eid, plaintext_bytes)
+    val plaintext = "Hello world!1234"
+    val plaintext_bytes = plaintext.getBytes
+    val ciphertext = enclave.Encrypt(eid, plaintext_bytes)
 
-  //   val decrypted = enclave.Decrypt(eid, ciphertext)
+    val decrypted = enclave.Decrypt(eid, ciphertext)
 
-  //   println("decrypted's length is " + decrypted.length)
+    println("decrypted's length is " + decrypted.length)
 
-  //   assert(plaintext_bytes.length == decrypted.length)
+    assert(plaintext_bytes.length == decrypted.length)
 
-  //   for (idx <- 0 to plaintext_bytes.length - 1) {
-  //     assert(plaintext_bytes(idx) == decrypted(idx))
-  //   }
+    for (idx <- 0 to plaintext_bytes.length - 1) {
+      assert(plaintext_bytes(idx) == decrypted(idx))
+    }
 
-  //   enclave.StopEnclave(eid)
-  // }
+    enclave.StopEnclave(eid)
+  }
 
-  // test("JNIObliviousSort", SGXTest) {
+  test("JNIObliviousSort", SGXTest) {
 
-  //   val eid = enclave.StartEnclave()
+    val eid = enclave.StartEnclave()
 
-  //   val len = 1000
-  //   var number_list = (1 to len).toList
-  //   val random_number_list = Random.shuffle(number_list).toArray
+    val len = 1000
+    var number_list = (1 to len).toList
+    val random_number_list = Random.shuffle(number_list).toArray
 
-  //   val sorted = enclave.ObliviousSort(eid, random_number_list)
+    val sorted = enclave.ObliviousSort(eid, random_number_list)
 
-  //   for (i <- 0 to random_number_list.length - 1) {
-  //     assert(number_list(i) == sorted(i))
-  //   }
+    for (i <- 0 to random_number_list.length - 1) {
+      assert(number_list(i) == sorted(i))
+    }
 
-  //   enclave.StopEnclave(eid)
+    enclave.StopEnclave(eid)
 
-  // }
+  }
 
   test("JNIFilterSingleRow", SGXTest) {
     val eid = enclave.StartEnclave()
