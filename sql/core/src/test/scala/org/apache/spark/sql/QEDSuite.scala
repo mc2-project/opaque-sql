@@ -38,13 +38,26 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new SGXEnclave()
   }
 
-  // test("encFilter") {
-  //   val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
-  //   val words = sparkContext.makeRDD(data).toDF("word", "count")
-  //   val filtered = words.encFilter($"count" < lit(3))
-  //   assert(words.collect === data.map(Row.fromTuple))
-  //   assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
-  // }
+  test("encFilter") {
+    val (enclave, eid) = QED.initEnclave()
+    val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
+    val encrypted = data.map {
+      case (word, count) =>
+        (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
+    }
+    def decrypt(rows: Array[Row]): Array[(String, Int)] = {
+      rows.map {
+        case Row(wordEnc: Array[Byte], countEnc: Array[Byte]) =>
+          (QED.decrypt[String](enclave, eid, wordEnc), QED.decrypt[Int](enclave, eid, countEnc))
+      }
+    }
+
+    val words = sparkContext.makeRDD(encrypted).toDF("word", "count")
+    assert(decrypt(words.collect) === data)
+
+    val filtered = words.encFilter($"count") // TODO: make enc versions of each operator
+    assert(decrypt(filtered.collect) === data.filter(_._2 > 3))
+  }
 
   // test("JNIEncrypt", SGXTest) {
 

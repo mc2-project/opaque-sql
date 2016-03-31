@@ -49,9 +49,10 @@ case class EncFilter(condition: Expression, child: SparkPlan)
   }
 
   override def doExecute() = child.execute().mapPartitions { iter =>
-    val predicateId = QED.enclaveRegisterPredicate(condition, child.output)
+    val (enclave, eid) = QED.initEnclave()
+    val predicateId = QED.enclaveRegisterPredicate(enclave, eid, condition, child.output)
     val schemaTypes = child.output.map(_.dataType)
-    iter.filter(QED.enclaveEvalPredicate(predicateId, _, schemaTypes))
+    iter.filter(QED.enclaveEvalPredicate(enclave, eid, predicateId, _, schemaTypes))
   }
 
   private[sql] override lazy val metrics = Map(

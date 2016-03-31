@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.sql.types.BinaryType
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -33,55 +35,85 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 
 object QED {
-  val sgx = {
+  def initEnclave(): (SGXEnclave, Long) = {
     System.load(System.getenv("LIBSGXENCLAVE_PATH"))
-    new SGXEnclave()
+    val enclave = new SGXEnclave()
+    val eid = enclave.StartEnclave()
+    (enclave, eid)
   }
-  val eid = new ThreadLocal[Long]
-  eid.set(sgx.StartEnclave())
 
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()
 
-  val predicates = mutable.Map[Int, (InternalRow) => Boolean]()
-  var nextPredicateId = 0
-
-  // TODO
-  def enclaveRegisterPredicate(pred: Expression, inputSchema: Seq[Attribute]): Int = {
-    if (sgx == null) {
-      val curPredicateId = nextPredicateId
-      nextPredicateId += 1
-      predicates(curPredicateId) = GeneratePredicate.generate(pred, inputSchema)
-      curPredicateId
-    } else {
-      // TODO: register arbitrary predicates with the enclave
-      0
-    }
+  def enclaveRegisterPredicate(
+      enclave: SGXEnclave, eid: Long, pred: Expression, inputSchema: Seq[Attribute]): Int = {
+    // TODO: register arbitrary predicates with the enclave
+    0
   }
 
-  // TODO
   def enclaveEvalPredicate(
+      enclave: SGXEnclave, eid: Long,
       predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
     // Serialize row with # columns (4 bytes), column 1 length (4 bytes), column 1 contents, etc.
     val buf = ByteBuffer.allocate(100)
     buf.order(ByteOrder.LITTLE_ENDIAN)
     buf.putInt(schema.length)
     for ((t, i) <- schema.zip(0 until schema.length)) t match {
-      case IntegerType =>
-        buf.putInt(t.defaultSize)
-        buf.putInt(row.getInt(i))
-      case StringType =>
-        val x = row.getUTF8String(i)
-        buf.putInt(x.numBytes())
-        buf.put(x.getBytes())
+      case BinaryType =>
+        // This is really the only valid type since it represents an encrypted field. All other
+        // cleartext types are only for debugging.
+        val bytes = row.getBinary(i)
+        println("Field %d has %d bytes".format(i, bytes.length))
+        buf.putInt(bytes.length)
+        buf.put(bytes)
       case _ =>
-        throw new Exception("Can't yet handle " + t)
+        throw new Exception("Type %s is not encrypted".format(t))
     }
     buf.flip()
     val rowBytes = new Array[Byte](buf.limit())
     buf.get(rowBytes)
 
-    sgx.Filter(eid.get, predOpcode, rowBytes)
+    val ret = enclave.Filter(eid, predOpcode, rowBytes)
+    println("Filter result = " + ret)
+    ret
+  }
+
+  def encrypt[T](enclave: SGXEnclave, eid: Long, field: T): Array[Byte] = {
+    val buf = ByteBuffer.allocate(100)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    field match {
+      case x: Int =>
+        buf.put(1: Byte)
+        buf.putInt(4)
+        buf.putInt(x)
+      case s: String =>
+        buf.put(2: Byte)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
+    }
+    buf.flip()
+    val bytes = new Array[Byte](buf.limit)
+    buf.get(bytes)
+    enclave.Encrypt(eid, bytes)
+  }
+
+  def decrypt[T](enclave: SGXEnclave, eid: Long, bytes: Array[Byte]): T = {
+    val buf = ByteBuffer.wrap(enclave.Decrypt(eid, bytes))
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    val tpe = buf.get()
+    val size = buf.getInt()
+    val result = tpe match {
+      case 1 =>
+        assert(size == 4)
+        buf.getInt()
+      case 2 =>
+        val sBytes = new Array[Byte](size)
+        buf.get(sBytes)
+        assert(!buf.hasRemaining)
+        new String(sBytes, "UTF-8")
+    }
+    result.asInstanceOf[T]
   }
 
   def encodeData(value: Array[Byte]): String = {
