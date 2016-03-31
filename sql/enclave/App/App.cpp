@@ -467,16 +467,19 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 
 
 // the op_code allows the internal sort code to decide which comparator to use
-JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
 																			   jobject obj, 
 																			   jlong eid,
-																			   jint op_code, 
-																			   jintArray input) {
+																			   jint op_code,
+																			   jbyteArray input,
+																			   jint offset,
+																			   jint num_items) {
+
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
-  jint *ptr = env->GetIntArrayElements(input, &if_copy);
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
-  int *input_copy = (int *) malloc(input_len * sizeof(int));
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
 
   for (int i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -484,12 +487,12 @@ JNIEXPORT jintArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(J
   }
 
   // TODO: replace with regular oblivious sort; also needs to take in an opcode
-  ecall_oblivious_sort(eid, input_copy, input_len);
+  ecall_oblivious_sort(eid, op_code, input_copy, input_len, offset, (uint32_t) num_items);
 
-  jintArray ret = env->NewIntArray(input_len);
-  env->SetIntArrayRegion(ret, 0, input_len, input_copy);
+  jbyteArray ret = env->NewByteArray(input_len);
+  env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
   
-  env->ReleaseIntArrayElements(input, ptr, 0);
+  env->ReleaseByteArrayElements(input, ptr, 0);
   
   return ret;
 }
