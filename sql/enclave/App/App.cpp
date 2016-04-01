@@ -421,7 +421,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(JNIEnv
 
   uint8_t ciphertext_copy[100];
   
-  printf("plength is %u\n", plength);
+  //printf("Encrypt(): plength is %u\n", plength);
 
   ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength);
 
@@ -448,7 +448,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
 
   uint8_t plaintext_copy[100];
   
-  printf("plength is %u\n", plength);
+  //printf("Decrypt(): plength is %u\n", plength);
 
   ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength);
 
@@ -486,7 +486,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     //printf("input_copy is %u\n", input_copy[i]);
   }
 
-  // TODO: replace with regular oblivious sort; also needs to take in an opcode
   ecall_oblivious_sort(eid, op_code, input_copy, input_len, offset, (uint32_t) num_items);
 
   jbyteArray ret = env->NewByteArray(input_len);

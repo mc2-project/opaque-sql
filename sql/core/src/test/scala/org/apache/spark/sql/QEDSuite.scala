@@ -94,16 +94,68 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("JNIObliviousSort", SGXTest) {
 
+    println("Starting JNIObliviousSort")
+
     val eid = enclave.StartEnclave()
 
-    val len = 1000
+    val len = 20
     var number_list = (1 to len).toList
     val random_number_list = Random.shuffle(number_list).toArray
 
-    val sorted = enclave.ObliviousSort(eid, random_number_list)
+    // encrypt these numbers
+    val enc_size = (12 + 16 + 4 + 4) * len
+    val single_enc_size = 12 + 16 + 4
+    val buffer = ByteBuffer.allocate(enc_size)
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
 
-    for (i <- 0 to random_number_list.length - 1) {
-      assert(number_list(i) == sorted(i))
+    val temp_buffer = ByteBuffer.allocate(4)
+    temp_buffer.order(ByteOrder.LITTLE_ENDIAN)
+    val temp_array = Array.fill[Byte](4)(0)
+
+    for (v <- random_number_list) {
+      temp_buffer.clear()
+      temp_buffer.putInt(v)
+      temp_buffer.flip()
+      temp_buffer.get(temp_array)
+
+      val enc_bytes = enclave.Encrypt(eid, temp_array)
+      if (enc_bytes.length != single_enc_size) {
+        println("enc_bytes' length is " + enc_bytes.length)
+        assert(enc_bytes.length == single_enc_size)
+      }
+
+      buffer.putInt(single_enc_size)
+      buffer.put(enc_bytes)
+    }
+
+    buffer.flip()
+    val enc_data = new Array[Byte](buffer.limit())
+    buffer.get(enc_data)
+
+    val enc_sorted = enclave.ObliviousSort(eid, 1, enc_data, 0, len)
+
+    // decrypt enc_sorted
+    var low_index = 4
+    var sorted_numbers = Array.fill[Int](len)(0)
+
+    for (i <- 1 to len) {
+      val enc_number_bytes = enc_sorted.slice(low_index, single_enc_size + low_index)
+      //println("slice is from " + low_index + " to " + low_index + single_enc_size)
+      assert(enc_number_bytes.length == single_enc_size)
+
+      val dec_number_bytes = enclave.Decrypt(eid, enc_number_bytes)
+      temp_buffer.clear()
+      val buf = ByteBuffer.wrap(dec_number_bytes)
+      buf.order(ByteOrder.LITTLE_ENDIAN)
+      val dec_number = buf.getInt
+      sorted_numbers(i - 1) = dec_number
+
+      low_index += single_enc_size + 4
+    }
+
+    for (i <- 1 to len) {
+      println(sorted_numbers(i - 1))
+      assert(number_list(i-1) == sorted_numbers(i-1))
     }
 
     enclave.StopEnclave(eid)

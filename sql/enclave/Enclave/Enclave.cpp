@@ -435,11 +435,15 @@ void compare_and_swap(T *value1, T* value2) {
 template<>
 void compare_and_swap<Integer>(Integer *value1, Integer *value2) {
   int comp = compare<Integer>(value1, value2);
+
+  //printf("Comparing two integers, value1's value is %u, value2's value is %u\n", value1->value, value2->value);
   
   if (comp == 1) {
 	int temp = value1->value;
 	value1->value = value2->value;
 	value2->value = temp;
+
+	//printf("Swapping %u and %u\n", value1->value, value2->value);
   }
 }
 
@@ -525,7 +529,8 @@ void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx,
 
 void get_next_row(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
 
-  *enc_value_len = *( (uint32_t *)(*ptr) );
+  uint32_t *enc_value_len_ptr = (uint32_t *) *ptr;
+  *enc_value_len = *enc_value_len_ptr;
   *enc_value_ptr = *ptr + 4;
 
   *ptr = *ptr + 4 + *enc_value_len;
@@ -540,6 +545,9 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
   // op_code = 1 means it's a list of integers
   if (op_code == 1) {
 	Integer * data = (Integer *) malloc(sizeof(Integer) * list_length);
+	if (data == NULL) {
+	  printf("data is NULL!\n");
+	}
 
 	uint8_t *input_ptr = input;
 	uint8_t *data_ptr = (uint8_t *) data;
@@ -547,12 +555,10 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint8_t *enc_value_ptr = NULL;
 	uint32_t enc_value_len = 0;
 
-	while (1) {
+	for (uint32_t i = 0; i < list_length; i++) {
 	  get_next_row(&input_ptr, &enc_value_ptr, &enc_value_len);
 
-	  if (input_ptr == NULL) {
-		break;
-	  }
+	  //printf("enc_value_len is %u\n", enc_value_len);
 	  
 	  decrypt(enc_value_ptr, enc_value_len, data_ptr);
 	  data_ptr += 4;
@@ -580,7 +586,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  input_ptr += enc_size + 4;
 	}
 	
-  } else {
-
+  } else if (op_code == 2) {
+	// this needs to sort a row of data
   }
 }
