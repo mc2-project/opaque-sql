@@ -399,6 +399,16 @@ typedef struct String {
 } String;
 
 
+typedef struct Record {
+  uint32_t num_cols;
+  // data in the format of [attr1][attr2] ...
+  // Attribute's format is [type][size][data]
+  uint8_t *data;
+  // this is the attribute used for sort-based comparison/join
+  // pointer is to the start of "type"
+  uint8_t *sort_attribute;
+} Record;
+
 // -1 means value1 < value2
 // 0 means value1 == value2
 // 1 means value1 > value2
@@ -527,13 +537,43 @@ void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx,
 
 }
 
-void get_next_row(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
+void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
 
   uint32_t *enc_value_len_ptr = (uint32_t *) *ptr;
   *enc_value_len = *enc_value_len_ptr;
   *enc_value_ptr = *ptr + 4;
 
   *ptr = *ptr + 4 + *enc_value_len;
+  
+}
+
+
+// advance pointer to the next row
+// return pointer to current row, as well as the overall length
+void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
+  // a row should be in the format of [num_col][enc_attr1 len][enc_attr1][enc_attr2 len][enc_attr2]...
+  uint32_t num_cols = * ( (uint32_t *) *ptr);
+  uint8_t *enc_attr_ptr = *ptr;
+  uint32_t enc_attr_len = 0;
+  uint32_t len = 0;
+
+  // move past the column number
+  enc_attr_ptr += 4;
+  len = 4;
+
+  for (uint32_t i = 0; i < num_cols; i++) {
+	enc_attr_len = * ((uint32_t *) enc_attr_ptr);
+	enc_attr_ptr += 4 + enc_attr_len;
+	len += 4 + enc_attr_len;
+  }
+
+  *enc_row_ptr = *ptr;
+  *ptr = enc_attr_ptr;
+  *enc_row_len = len;
+}
+
+void point_to_attribute(uint8_t *row, uint8_t **attr_ptr, uint32_t col) {
+  // format should be in [num_col][enc_attr1 len][enc_attr1][enc_attr2 len][enc_attr2]...
   
 }
 
@@ -556,7 +596,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint32_t enc_value_len = 0;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  get_next_row(&input_ptr, &enc_value_ptr, &enc_value_len);
+	  get_next_value(&input_ptr, &enc_value_ptr, &enc_value_len);
 
 	  //printf("enc_value_len is %u\n", enc_value_len);
 	  
@@ -585,8 +625,37 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  data_ptr += 4;
 	  input_ptr += enc_size + 4;
 	}
+
+	free(data);
 	
   } else if (op_code == 2) {
 	// this needs to sort a row of data
+
+	int sort_attr_num = 1;
+
+	Record *data = (Record *) malloc(sizeof(Record) * list_length);
+	if (data == NULL) {
+	  printf("Could not allocate enough data\n");
+	}
+
+	uint8_t *input_ptr = input;
+	uint8_t *data_ptr = (uint8_t *) data;
+
+	uint8_t *enc_row_ptr = NULL;
+	uint32_t enc_row_len = 0;
+
+	for (uint32_t i = 0; i < list_length; i++) {
+	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
+	  data[i].num_cols = *( (uint32_t *) enc_row_ptr);
+	  uint32_t plaintext_data_size = enc_row_len - (4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 1) * list_length;;
+	  data[i].data = (uint8_t *) malloc(plaintext_data_size);
+	  data[i].sort_attribute = NULL;
+	  decrypt(enc_row_ptr, enc_row_len, data[i].data);
+	  
+	  // iterate to the correct sort attribute
+	  
+	  
+	}
+
   }
 }
