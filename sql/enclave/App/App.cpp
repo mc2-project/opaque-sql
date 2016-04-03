@@ -490,7 +490,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
-  
+
   env->ReleaseByteArrayElements(input, ptr, 0);
   
   return ret;

@@ -118,6 +118,8 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
+  //printf("Decrypt: ciphertext_length is %u\n", ciphertext_length);
+
 
   sgx_status_t status = sgx_rijndael128GCM_decrypt(key,
 												   ciphertext_ptr, plaintext_length,
@@ -414,8 +416,16 @@ typedef struct Record {
 // 1 means value1 > value2
 template<typename T>
 int compare(T *value1, T *value2) {
+  printf("compare(): Type not supported\n");
   assert(false);
 }
+
+template<typename T>
+void compare_and_swap(T *value1, T* value2) {
+  printf("compare_and_swap(): Type not supported\n");
+  assert(false);
+}
+
 
 template<>
 int compare<Integer>(Integer *value1, Integer *value2) {
@@ -428,34 +438,25 @@ int compare<Integer>(Integer *value1, Integer *value2) {
   }
 }
 
-template<>
-int compare<String>(String *value1, String *value2) {
-  // not yet implemented!
-  assert(false);
-}
-
-template<typename T>
-void compare_and_swap(T *value1, T* value2) {
-  assert(false);
- 
-}
-
 // TODO: to make this completely oblivious, we would need to swap even if
 // you don't need to! How to simulate this?
 template<>
 void compare_and_swap<Integer>(Integer *value1, Integer *value2) {
   int comp = compare<Integer>(value1, value2);
 
-  //printf("Comparing two integers, value1's value is %u, value2's value is %u\n", value1->value, value2->value);
-  
   if (comp == 1) {
 	int temp = value1->value;
 	value1->value = value2->value;
 	value2->value = temp;
-
-	//printf("Swapping %u and %u\n", value1->value, value2->value);
   }
 }
+
+template<>
+int compare<String>(String *value1, String *value2) {
+  // not yet implemented!
+  assert(false);
+}
+
 
 template<>
 void compare_and_swap<String>(String *value1, String *value2) {
@@ -470,6 +471,58 @@ void compare_and_swap<String>(String *value1, String *value2) {
 	value2->buffer = temp_buf;
   }
 }
+
+
+/** start Record functions **/
+template<>
+int compare<Record>(Record *value1, Record *value2) {
+  uint8_t type1 = *(value1->sort_attribute);
+  uint8_t type2 = *(value2->sort_attribute);
+
+  //printf("Comparing %p and %p, type 1 is %u, type 2 is %u\n", value1->sort_attribute, value2->sort_attribute, type1, type2);
+
+  assert(type1 == type2);
+
+  switch(type1) {
+  case 1:
+	{
+	  // Integer
+	  Integer *int1 = (Integer *) (value1->sort_attribute + 5);
+	  Integer *int2 = (Integer *) (value2->sort_attribute + 5);
+	  return compare<Integer>(int1, int2);
+	}
+	break;
+  case 2:
+	{
+	  // String
+	  String *str1 = (String *) (value1->sort_attribute + 1);
+	  String *str2 = (String *) (value2->sort_attribute + 1);
+	  return compare<String>(str1, str2);
+	}
+	break;
+  }
+}
+
+template<>
+void compare_and_swap<Record>(Record *value1, Record *value2) {
+  int comp = compare<Record>(value1, value2);
+  
+  if (comp == 1) {
+	uint32_t num_cols = value1->num_cols;
+	uint8_t *data = value1->data;
+	uint8_t *sort_attribute = value1->sort_attribute;
+	// swap
+	value1->num_cols = value2->num_cols;
+	value1->data = value2->data;
+	value1->sort_attribute = value2->sort_attribute;
+ 	value2->num_cols = num_cols;
+	value2->data = data;
+	value2->sort_attribute = sort_attribute;
+
+  }
+}
+
+/** end Record functions **/
 
 // input_length is the length of input in bytes
 // len is the number of records
@@ -572,11 +625,6 @@ void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
   *enc_row_len = len;
 }
 
-void point_to_attribute(uint8_t *row, uint8_t **attr_ptr, uint32_t col) {
-  // format should be in [num_col][enc_attr1 len][enc_attr1][enc_attr2 len][enc_attr2]...
-  
-}
-
 // TODO: format of this input array?
 void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 						  int low_idx, uint32_t list_length) {
@@ -631,7 +679,9 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
   } else if (op_code == 2) {
 	// this needs to sort a row of data
 
-	int sort_attr_num = 1;
+	//printf("Must sort rows\n");
+
+	uint32_t sort_attr_num = 2;
 
 	Record *data = (Record *) malloc(sizeof(Record) * list_length);
 	if (data == NULL) {
@@ -644,18 +694,104 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint8_t *enc_row_ptr = NULL;
 	uint32_t enc_row_len = 0;
 
+
+	uint8_t *enc_value_ptr = NULL;
+	uint32_t enc_value_len = 0;
+	uint8_t *value_ptr = NULL;
+	uint32_t value_len = 0;
+
+	uint8_t *data_ptr_ = NULL;
+
 	for (uint32_t i = 0; i < list_length; i++) {
 	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	  data[i].num_cols = *( (uint32_t *) enc_row_ptr);
-	  uint32_t plaintext_data_size = enc_row_len - (4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 1) * list_length;;
+	  // 4 * data[i].num_cols represents the 4 bytes for each encrypted value
+	  // the extra 4 represents the 4 bytes used to store number of columns
+	  uint32_t plaintext_data_size = enc_row_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 4) * data[i].num_cols - 4;
 	  data[i].data = (uint8_t *) malloc(plaintext_data_size);
 	  data[i].sort_attribute = NULL;
-	  decrypt(enc_row_ptr, enc_row_len, data[i].data);
-	  
-	  // iterate to the correct sort attribute
-	  
-	  
+
+	  data_ptr_ = data[i].data;
+	  enc_row_ptr += 4;
+	  enc_value_ptr = enc_row_ptr;
+
+	  printf("Data item %u; has %u columns\n", i, data[i].num_cols);
+	  printf("plaintext_data_size: %u\n", plaintext_data_size);
+
+	  // iterate through encrypted attributes, 
+	  for (uint32_t j = 0; j < data[i].num_cols; j++) {
+
+		assert(enc_value_ptr <= input_ptr);
+		// [enc len]encrypted{[value type][value len][value]}
+
+		enc_value_len = *( (uint32_t *) enc_value_ptr);
+		enc_value_ptr += 4;
+		// value_len includes the type's length as well
+		value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+
+		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
+		
+		decrypt(enc_value_ptr, enc_value_len, data_ptr_);
+
+		if (j + 1 == sort_attr_num) {
+		  data[i].sort_attribute = data_ptr_;
+		}
+
+		enc_value_ptr += enc_value_len;
+		data_ptr_ += value_len;
+
+	  }
+	}
+	
+	osort_with_index<Record>(op_code, data, sizeof(Record) * list_length, low_idx, list_length);
+
+	//printf("Sorted data\n");
+	
+	// TODO: need to return enrypted result
+
+	input_ptr = input;
+	value_ptr = NULL;
+	value_len = 0;
+
+	for (uint32_t i = 0; i < list_length; i++) {
+
+	  value_ptr = data[i].data;
+	  print_bytes(value_ptr, 5);
+	  *( (uint32_t *) input_ptr) = data[i].num_cols;
+	  input_ptr += 4;
+
+	  //printf("Num cols is %u\n", data[i].num_cols);
+
+	  // need to encrypt each attribute separately
+	  for (uint32_t c = 0; c < data[i].num_cols; c++) {
+
+		value_len = *( (uint32_t *) (value_ptr + 1) ) + 5;
+
+		*( (uint32_t *)  input_ptr) = value_len + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+		input_ptr += 4;
+
+		encrypt(value_ptr, value_len, input_ptr);
+		input_ptr += value_len + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+
+		//printf("attr's length is %u\n", value_len);
+
+		value_ptr += value_len;
+	  }
 	}
 
+	//printf("Encrypted data\n");
+
+	//printf("Encrypted data's length is %u\n", (input_ptr - input));
+
+
+	// TODO: free data, including record pointers
+
+	for (uint32_t i = 0; i < list_length; i++) {
+	  free(data[i].data);
+	}
+
+	free(data);
+
+	//printf("Freed data\n");
   }
 }

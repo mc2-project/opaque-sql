@@ -92,9 +92,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIObliviousSort", SGXTest) {
-
-    println("Starting JNIObliviousSort")
+  test("JNIObliviousSort1", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
@@ -156,6 +154,96 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     for (i <- 1 to len) {
       println(sorted_numbers(i - 1))
       assert(number_list(i-1) == sorted_numbers(i-1))
+    }
+
+    enclave.StopEnclave(eid)
+
+  }
+
+  test("JNIObliviousSortRow", SGXTest) {
+
+    def byte_to_int(array: Array[Byte], index: Int) = {
+      val int_bytes = array.slice(index, index + 4)
+      val buf = ByteBuffer.wrap(int_bytes)
+      buf.order(ByteOrder.LITTLE_ENDIAN)
+      buf.getInt
+    }
+
+    def byte_to_string(array: Array[Byte], index: Int, length: Int) = {
+      val string_bytes = array.slice(index, index + length)
+      new String(string_bytes)
+    }
+
+
+    val eid = enclave.StartEnclave()
+
+    val data = Seq(("test1", 10), ("hello", 1), ("world", 4), ("foo", 2), ("test2", 3) )
+
+    val encrypted = data.map {
+      case (word, count) =>
+        (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
+    }
+
+    var total_size = 0
+    for (v <- encrypted) {
+      // for num columns
+      total_size += 4
+      total_size += 4 * 2
+      total_size += v._1.length
+      total_size += v._2.length
+
+      println("v1's length is " + v._1.length + ", v2's length is " + v._2.length)
+    }
+
+    val buffer = ByteBuffer.allocate(total_size)
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+    for (v <- encrypted) {
+      buffer.putInt(2)
+      buffer.putInt(v._1.length)
+      buffer.put(v._1)
+      buffer.putInt(v._2.length)
+      buffer.put(v._2)
+    }
+
+
+    buffer.flip()
+    val encrypted_data = new Array[Byte](buffer.limit())
+    buffer.get(encrypted_data)
+
+    println("Encrypted_data's size is " + encrypted_data.length)
+
+    val sorted_encrypted_data = enclave.ObliviousSort(eid, 2, encrypted_data, 0, data.length)
+
+    var low_index = 0
+    for (i <- 1 to data.length) {
+      val num_cols = byte_to_int(sorted_encrypted_data, low_index)
+      low_index += 4
+
+      println("num_cols is " + num_cols)
+
+      for (c <- 1 to num_cols) {
+        val enc_value_len = byte_to_int(sorted_encrypted_data, low_index)
+        //println("enc_value_len is " + enc_value_len)
+        low_index += 4
+        val enc_value = sorted_encrypted_data.slice(low_index, low_index + enc_value_len)
+        val dec_value = enclave.Decrypt(eid, enc_value)
+        //println("Size of dec_value: " + dec_value.length)
+
+        // for (v <- dec_value) {
+        //   print(v + " - " )
+        // }
+        // println("")
+
+
+        if (dec_value(0) == 1.toByte) {
+          println("Row " + i + ", column " + c + ": " + byte_to_int(dec_value, 5))
+        } else if (dec_value(0) == 2.toByte) {
+          println("Row " + i + ", column " + c + ": " + byte_to_string(dec_value, 5, byte_to_int(dec_value, 1)))
+        }
+
+        low_index += enc_value_len
+      }
     }
 
     enclave.StopEnclave(eid)
