@@ -29,13 +29,16 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
-#include "sgx_tcrypto.h"
+
+#include "util.h"
+#include "Aggregate.h"
+#include "Crypto.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-  void printf(const char *fmt, ...);
+  //void printf(const char *fmt, ...);
   int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length);
   void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 		     uint8_t *ciphertext, uint32_t cipher_length);
