@@ -1,18 +1,20 @@
 package oblivious_sort
 
-import scala.math.BigInt
-import scala.util.Random
-import scala.math._
-import scala.collection.mutable.PriorityQueue
-import scala.collection.mutable.Map
-import scala.collection.mutable.SynchronizedSet
 import java.lang.ThreadLocal
 import java.net.URLEncoder
-import scala.collection.mutable.ArrayBuffer
 
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.Map
+import scala.collection.mutable.PriorityQueue
+import scala.collection.mutable.SynchronizedSet
+import scala.math.BigInt
+import scala.math._
+import scala.reflect.ClassTag
+import scala.util.Random
+
+import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
-import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 
 object ObliviousSort extends java.io.Serializable {
@@ -29,11 +31,11 @@ object ObliviousSort extends java.io.Serializable {
     result
   }
 
-  class Value(r: Int, c: Int, v: Int) extends java.io.Serializable {
+  class Value[A](r: Int, c: Int, v: A) extends java.io.Serializable {
+    def this(r: Int, c: Int) = this(r, c, null.asInstanceOf[A])
     var row: Int = r
     var column: Int = c
-    var value: Int = v
-
+    var value: A = v
   }
 
   def log2(i: Int): Int = {
@@ -41,7 +43,9 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   // this function performs an oblivious sort on an array of (column, (row, value))
-  def OSortSingleMachine_WithIndex(values: Array[Value], low_idx: Int, len: Int) = {
+  // TODO(ankurdave): Do this in the enclave
+  def OSortSingleMachine_WithIndex[A: Ordering](
+      values: Array[Value[A]], low_idx: Int, len: Int) = {
 
     val log_len = log2(len) + 1
     val offset = low_idx
@@ -50,8 +54,10 @@ object ObliviousSort extends java.io.Serializable {
 
     println("Array's length is " + len)
     var swaps = 0
-    var min_val = 0
-    var max_val = 0
+    var min_val = null.asInstanceOf[A]
+    var max_val = null.asInstanceOf[A]
+
+    val ord = implicitly[Ordering[A]]
 
     for (stage <- 1 to log_len) {
       for (stage_i <- stage to 1 by -1) {
@@ -68,8 +74,8 @@ object ObliviousSort extends java.io.Serializable {
 
               if (pair_idx < offset + len) {
 
-                min_val = math.min(values(idx).value, values(pair_idx).value)
-                max_val = math.max(values(idx).value, values(pair_idx).value)
+                min_val = ord.min(values(idx).value, values(pair_idx).value)
+                max_val = ord.max(values(idx).value, values(pair_idx).value)
 
                 if (min_val != values(idx).value) {
                   swaps += 1
@@ -91,8 +97,8 @@ object ObliviousSort extends java.io.Serializable {
 
               if (pair_idx < offset + len) {
 
-                min_val = math.min(values(idx).value, values(pair_idx).value)
-                max_val = math.max(values(idx).value, values(pair_idx).value)
+                min_val = ord.min(values(idx).value, values(pair_idx).value)
+                max_val = ord.max(values(idx).value, values(pair_idx).value)
 
                 if (min_val != values(idx).value) {
                   swaps += 1
@@ -113,7 +119,7 @@ object ObliviousSort extends java.io.Serializable {
     println("Total swaps: " + swaps)
   }
 
-  def Transpose(value: Value, r: Int, s: Int) = {
+  def Transpose(value: Value[_], r: Int, s: Int): Unit = {
     val row = value.row
     val column = value.column
 
@@ -126,13 +132,13 @@ object ObliviousSort extends java.io.Serializable {
     value.column = new_column
   }
 
-  def ColumnSortParFunction1(index: Int, it: Iterator[(Int, Int)],
-    numPartitions: Int, r: Int, s: Int): Iterator[Value] = {
+  def ColumnSortParFunction1[A: Ordering](index: Int, it: Iterator[(A, Int)],
+    numPartitions: Int, r: Int, s: Int): Iterator[Value[A]] = {
 
     val rounds = s / numPartitions
-    var ret_result = Array.empty[Value]
+    var ret_result = Array.empty[Value[A]]
     time("Column sort 1-- array allocation time") {
-      ret_result = Array.fill[Value](r * rounds)(new Value(0, 0, 0))
+      ret_result = Array.fill[Value[A]](r * rounds)(new Value[A](0, 0))
     }
 
     println("Ret_result's array size is " + (r * rounds))
@@ -172,7 +178,8 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortStep3(key: (Int, Iterable[(Int, Int)]), r: Int, s: Int): Iterator[Value] = {
+  def ColumnSortStep3[A: Ordering](
+      key: (Int, Iterable[(Int, A)]), r: Int, s: Int): Iterator[Value[A]] = {
 
     var len = 0
     var i = 0
@@ -196,7 +203,7 @@ object ObliviousSort extends java.io.Serializable {
       i += 1
     }
 
-    var ret_result = Array.fill[Value](len)(new Value(0, 0, 0))
+    var ret_result = Array.fill[Value[A]](len)(new Value[A](0, 0))
     var counter = 0
 
     for (v <- key._2) {
@@ -250,15 +257,16 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortFinal(key: (Int, Iterable[(Int, Int)]), r: Int, s: Int): Iterator[(Int, (Int, Int))] = {
-    var result = Array.empty[Value]
+  def ColumnSortFinal[A: Ordering](
+      key: (Int, Iterable[(Int, A)]), r: Int, s: Int): Iterator[(Int, (Int, A))] = {
+    var result = Array.empty[Value[A]]
     var num_columns = 0
     var min_col = 0
 
     println("ColumnSortFinal: column is " + key._1 + ", length is " + key._2.toArray.length)
 
     if (key._1 == 1 || key._1 == NumMachines) {
-      result = Array.fill[Value](r * Multiplier * NumCores + r)(new Value(0, 0, 0))
+      result = Array.fill[Value[A]](r * Multiplier * NumCores + r)(new Value[A](0, 0))
       num_columns = Multiplier * NumCores + 1
       if (key._1 == 1) {
         min_col = 1
@@ -266,7 +274,7 @@ object ObliviousSort extends java.io.Serializable {
         min_col = Multiplier * NumCores * (NumMachines - 1)
       }
     } else {
-      result = Array.fill[Value](r * Multiplier * NumCores + 2 * r)(new Value(0, 0, 0))
+      result = Array.fill[Value[A]](r * Multiplier * NumCores + 2 * r)(new Value[A](0, 0))
       num_columns = Multiplier * NumCores + 2
       min_col = Multiplier * NumCores * (key._1 - 1) 
     }
@@ -351,7 +359,7 @@ object ObliviousSort extends java.io.Serializable {
       }
     }
 
-    var final_result = ArrayBuffer.empty[(Int, (Int, Int))]
+    var final_result = ArrayBuffer.empty[(Int, (Int, A))]
     var final_offset = r
     if (key._1 == 1) {
       final_offset = 0
@@ -381,9 +389,11 @@ object ObliviousSort extends java.io.Serializable {
 
   }
 
-  // TODO(ankurdave): Take a list of Rows instead of (Int, Int)
   // this sorting algorithm is taken from "Tight Bounds on the Complexity of Parallel Sorting"
-  def ColumnSort(sc: SparkContext, data: RDD[(Int, Int)], r_input: Int = 0, s_input: Int = 0): RDD[(Int, (Int, Int))] = {
+  def ColumnSort[A: Ordering: ClassTag](
+      sc: SparkContext, data: RDD[A], r_input: Int = 0, s_input: Int = 0)
+    : RDD[A] = {
+
     // let len be N
     // divide N into r * s, where s is the number of machines, and r is the size of the 
     // constraints: s | r; r >= 2 * (s-1)^2
@@ -404,7 +414,8 @@ object ObliviousSort extends java.io.Serializable {
     // TODO: for now do an assert; in the future, need to pad with dummy values
     assert(r >= 2 * math.pow(s, 2).toInt)
 
-    val par_data = data.repartition(NumCores * NumMachines)
+    val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
+      .repartition(NumCores * NumMachines)
     par_data.count
 
     val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s))
@@ -416,7 +427,7 @@ object ObliviousSort extends java.io.Serializable {
 
     val count = par_data_final.count
 
-    par_data_final
+    par_data_final.map(_._2._2)
   }
 
   def GenRandomData(offset: Int, len: Int): Seq[(Int, Int)] ={

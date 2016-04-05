@@ -76,6 +76,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("ColumnSort") {
+    val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
+    // s=8, r=1024/8 = 128
+    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd, 128, 8)
+    val s = sorted.collect
+    assert(s === s.sorted)
   }
 
   test("JNIEncrypt", SGXTest) {
