@@ -981,7 +981,7 @@ class Dataset[T] private[sql](
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
   def encFilter(condition: Column): Dataset[T] = withTypedPlan {
-    EncFilter(condition.expr, logicalPlan)
+    EncFilter(condition.expr, Permute(logicalPlan))
   }
 
   /**

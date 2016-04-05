@@ -116,6 +116,10 @@ object QED {
     result.asInstanceOf[T]
   }
 
+  def addRandomSortKey() = {
+    ???
+  }
+
   def encodeData(value: Array[Byte]): String = {
     val encoded = encoder.encode(value)
     encoded

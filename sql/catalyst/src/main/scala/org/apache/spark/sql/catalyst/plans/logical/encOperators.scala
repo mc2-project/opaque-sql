@@ -31,3 +31,8 @@ case class EncFilter(condition: Expression, child: LogicalPlan)
   override protected def validConstraints: Set[Expression] =
     child.constraints.union(splitConjunctivePredicates(condition).toSet)
 }
+
+case class Permute(child: LogicalPlan) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+  override def maxRows: Option[Long] = child.maxRows
+}

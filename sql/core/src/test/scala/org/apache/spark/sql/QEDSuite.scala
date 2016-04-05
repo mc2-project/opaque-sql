@@ -17,15 +17,18 @@
 
 package org.apache.spark.sql
 
-import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.functions.lit
-import scala.util.Random
-import org.scalatest.Tag
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import scala.util.Random
+
+import oblivious_sort.ObliviousSort
+import org.scalatest.Tag
+
+import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.test.SharedSQLContext
 
 // Exclude SGX tests with build/sbt sql/test:test-only org.apache.spark.sql.QEDSuite -- -l org.apache.spark.sql.SGXTest
 object SGXTest extends Tag("org.apache.spark.sql.SGXTest")
@@ -70,6 +73,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val filtered = words.encFilter($"count") // TODO: make enc versions of each operator
     assert(decrypt(filtered.collect) === data.filter(_._2 > 3))
+  }
+
+  test("ColumnSort") {
   }
 
   test("JNIEncrypt", SGXTest) {

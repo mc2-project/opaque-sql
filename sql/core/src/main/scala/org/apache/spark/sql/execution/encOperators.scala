@@ -60,3 +60,13 @@ case class EncFilter(condition: Expression, child: SparkPlan)
 
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
 }
+
+case class Permute(child: SparkPlan) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+
+  override def doExecute() = {
+    // val childRDD = child.execute()
+    // ObliviousSort.ColumnSort(childRDD.context, childRDD)
+    child.execute()
+  }
+}
