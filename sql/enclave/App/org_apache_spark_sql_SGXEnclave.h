@@ -62,6 +62,15 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
  */
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
   (JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jint);
+  
+/*
+ * Class:     org_apache_spark_sql_SGXEnclave
+ * Method:    ObliviousSort
+ * Signature: (JI[BII)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID
+(JNIEnv *, jobject, jlong);
+  
 
 #ifdef __cplusplus
 }

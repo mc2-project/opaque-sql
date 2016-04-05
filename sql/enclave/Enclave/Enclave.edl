@@ -35,6 +35,7 @@ enclave {
 
 	 public void ecall_oblivious_sort(int op_code, [in,out, size=buffer_length] uint8_t *input, uint32_t buffer_length,
 	 		int low_idx, uint32_t list_length);
+	 public void ecall_random_id([in, out, size=length]uint8_t *ptr, uint32_t length);
 };
 
     untrusted {

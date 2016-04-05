@@ -470,41 +470,6 @@ void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx,
 
 }
 
-void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
-
-  uint32_t *enc_value_len_ptr = (uint32_t *) *ptr;
-  *enc_value_len = *enc_value_len_ptr;
-  *enc_value_ptr = *ptr + 4;
-
-  *ptr = *ptr + 4 + *enc_value_len;
-  
-}
-
-
-// advance pointer to the next row
-// return pointer to current row, as well as the overall length
-void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
-  // a row should be in the format of [num_col][enc_attr1 len][enc_attr1][enc_attr2 len][enc_attr2]...
-  uint32_t num_cols = * ( (uint32_t *) *ptr);
-  uint8_t *enc_attr_ptr = *ptr;
-  uint32_t enc_attr_len = 0;
-  uint32_t len = 0;
-
-  // move past the column number
-  enc_attr_ptr += 4;
-  len = 4;
-
-  for (uint32_t i = 0; i < num_cols; i++) {
-	enc_attr_len = * ((uint32_t *) enc_attr_ptr);
-	enc_attr_ptr += 4 + enc_attr_len;
-	len += 4 + enc_attr_len;
-  }
-
-  *enc_row_ptr = *ptr;
-  *ptr = enc_attr_ptr;
-  *enc_row_len = len;
-}
-
 // TODO: format of this input array?
 void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 						  int low_idx, uint32_t list_length) {
@@ -577,7 +542,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	uint8_t *enc_value_ptr = NULL;
 	uint32_t enc_value_len = 0;
-	uint8_t *value_ptr = NULL;
+ 	uint8_t *value_ptr = NULL;
 	uint32_t value_len = 0;
 
 	uint8_t *data_ptr_ = NULL;
@@ -585,6 +550,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	for (uint32_t i = 0; i < list_length; i++) {
 	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	  data[i].num_cols = *( (uint32_t *) enc_row_ptr);
+	  
 	  // 4 * data[i].num_cols represents the 4 bytes for each encrypted value
 	  // the extra 4 represents the 4 bytes used to store number of columns
 	  uint32_t plaintext_data_size = enc_row_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 4) * data[i].num_cols - 4;
@@ -595,8 +561,8 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  enc_row_ptr += 4;
 	  enc_value_ptr = enc_row_ptr;
 
-	  printf("Data item %u; has %u columns\n", i, data[i].num_cols);
-	  printf("plaintext_data_size: %u\n", plaintext_data_size);
+	  //printf("Data item %u; has %u columns\n", i, data[i].num_cols);
+	  //printf("plaintext_data_size: %u\n", plaintext_data_size);
 
 	  // iterate through encrypted attributes, 
 	  for (uint32_t j = 0; j < data[i].num_cols; j++) {
@@ -674,4 +640,9 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	//printf("Freed data\n");
   }
+}
+
+// TODO: return encrypted random identifier
+void ecall_random_id(uint8_t *ptr, uint32_t length) {
+  sgx_status_t rand_status = sgx_read_rand(ptr, length);
 }

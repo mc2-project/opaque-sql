@@ -497,6 +497,26 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 }
 
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(JNIEnv *env,
+																		   jobject obj,
+																		   jlong eid) {
+
+  // size should be SGX
+  const uint32_t length = SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 8;
+  jbyteArray ret = env->NewByteArray(length);
+  jboolean if_copy;
+  jbyte *ptr = env->GetByteArrayElements(ret, &if_copy);
+
+  uint8_t buf[length];
+  ecall_random_id(eid, buf, length);
+
+  env->SetByteArrayRegion(ret, 0, length, (jbyte *) buf);
+
+  return ret;
+
+}
+
+
 
 /* Application entry */
 //SGX_CDECL

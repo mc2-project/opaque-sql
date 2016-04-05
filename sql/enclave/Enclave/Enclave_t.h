@@ -42,6 +42,7 @@ void ecall_decrypt(uint8_t* ciphertext, uint32_t ciphertext_length, uint8_t* pla
 void ecall_test_int(int* ptr);
 void ecall_oblivious_sort_int(int* input, uint32_t input_len);
 void ecall_oblivious_sort(int op_code, uint8_t* input, uint32_t buffer_length, int low_idx, uint32_t list_length);
+void ecall_random_id(uint8_t* ptr, uint32_t length);
 void ecall_type_char(char val);
 void ecall_type_int(int val);
 void ecall_type_float(float val);

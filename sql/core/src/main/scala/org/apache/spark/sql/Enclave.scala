@@ -39,4 +39,7 @@ class SGXEnclave extends java.io.Serializable {
     offset: Int,
     num_items: Int
   ): Array[Byte]
+
+  // returns an encrypted random ID
+  @native def RandomID(eid: Long): Array[Byte]
 }
