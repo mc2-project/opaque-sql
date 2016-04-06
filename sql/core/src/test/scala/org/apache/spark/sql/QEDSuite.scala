@@ -289,4 +289,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
+
+  test("JNIAggregation", SGXTest) {
+    
+  }
+
 }

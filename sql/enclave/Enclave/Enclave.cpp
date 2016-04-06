@@ -654,6 +654,4 @@ void ecall_scan_aggregation_count_distinct(int op_code,
 										   uint8_t *agg_row, uint32_t agg_row_buffer_length,
 										   uint8_t *output_rows, uint32_t output_rows_length) {
   scan_aggregation_count_distinct(op_code, input_rows, input_rows_length, num_rows, agg_row, agg_row_buffer_length, output_rows, output_rows_length);
-
 }
-

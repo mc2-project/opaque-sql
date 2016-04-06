@@ -11,6 +11,11 @@
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
 
+// defines an upper bound on the size of the aggregation value
+// includes the encryption
+#define PARTIAL_AGG_UPPER_BOUND (4 + 12 + 16 + 128) // this only includes the partial aggregation
+#define AGG_UPPER_BOUND (4 + 12 + 16 + 2048) // this includes the sort attribute as well as the partial aggregation
+#define ROW_UPPER_BOUND (2048)
 
 
 void scan_aggregation_count_distinct(int op_code,

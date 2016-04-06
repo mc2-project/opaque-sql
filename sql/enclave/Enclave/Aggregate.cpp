@@ -34,14 +34,10 @@
 
 // 6. Reduce-side final aggregate
 
+
+
 // TODO: should we set all aggregate statistics to be the AGG_UPPER_BOUND?
-
-// defines an upper bound on the size of the aggregation value
-// includes the encryption
-
-#define PARTIAL_SUM_UPPER_BOUND (4 + 12 + 16 + 128) // this only includes the partial aggregation
-#define AGG_UPPER_BOUND (4 + 12 + 16 + 2048) // this includes the sort attribute as well as the partial aggregation
-#define ROW_UPPER_BOUND (2048)
+// TODO: change the [in] pointers to [user_check]
 
 
 class aggregate_data {
@@ -582,9 +578,10 @@ void allocate_agg_final_result(uint8_t *enc_result_size,
 							   uint32_t enc_result_size_length,
 							   uint32_t *result_size,
 							   uint8_t *result_set) {
-  decrypt(enc_result_size, enc_result_size_length, result_size);
+  decrypt(enc_result_size, enc_result_size_length, (uint8_t *) result_size);
   // allocate result set
-  result_set = (uint8_t *) (*result_size * AGG_UPPER_BOUND);
+  uint32_t size = *result_size;
+  result_set = (uint8_t *) malloc(size * AGG_UPPER_BOUND);
 }
 
 
