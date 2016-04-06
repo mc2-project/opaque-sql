@@ -94,3 +94,8 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
     }
   }
 }
+
+
+uint32_t enc_size(uint32_t plaintext_size) {
+  return plaintext_size + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+}

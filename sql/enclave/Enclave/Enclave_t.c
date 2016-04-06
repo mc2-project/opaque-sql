@@ -69,6 +69,17 @@ typedef struct ms_ecall_random_id_t {
 	uint32_t ms_length;
 } ms_ecall_random_id_t;
 
+typedef struct ms_ecall_scan_aggregation_count_distinct_t {
+	int ms_op_code;
+	uint8_t* ms_input_rows;
+	uint32_t ms_input_rows_length;
+	uint32_t ms_num_rows;
+	uint8_t* ms_agg_row;
+	uint32_t ms_agg_row_buffer_length;
+	uint8_t* ms_output_rows;
+	uint32_t ms_output_rows_length;
+} ms_ecall_scan_aggregation_count_distinct_t;
+
 typedef struct ms_ecall_type_char_t {
 	char ms_val;
 } ms_ecall_type_char_t;
@@ -483,6 +494,66 @@ err:
 	if (_in_ptr) {
 		memcpy(_tmp_ptr, _in_ptr, _len_ptr);
 		free(_in_ptr);
+	}
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pms)
+{
+	ms_ecall_scan_aggregation_count_distinct_t* ms = SGX_CAST(ms_ecall_scan_aggregation_count_distinct_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	uint8_t* _tmp_input_rows = ms->ms_input_rows;
+	uint32_t _tmp_input_rows_length = ms->ms_input_rows_length;
+	size_t _len_input_rows = _tmp_input_rows_length;
+	uint8_t* _in_input_rows = NULL;
+	uint8_t* _tmp_agg_row = ms->ms_agg_row;
+	uint32_t _tmp_agg_row_buffer_length = ms->ms_agg_row_buffer_length;
+	size_t _len_agg_row = _tmp_agg_row_buffer_length;
+	uint8_t* _in_agg_row = NULL;
+	uint8_t* _tmp_output_rows = ms->ms_output_rows;
+	uint32_t _tmp_output_rows_length = ms->ms_output_rows_length;
+	size_t _len_output_rows = _tmp_output_rows_length;
+	uint8_t* _in_output_rows = NULL;
+
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_scan_aggregation_count_distinct_t));
+	CHECK_UNIQUE_POINTER(_tmp_input_rows, _len_input_rows);
+	CHECK_UNIQUE_POINTER(_tmp_agg_row, _len_agg_row);
+	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
+
+	if (_tmp_input_rows != NULL) {
+		_in_input_rows = (uint8_t*)malloc(_len_input_rows);
+		if (_in_input_rows == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_input_rows, _tmp_input_rows, _len_input_rows);
+	}
+	if (_tmp_agg_row != NULL) {
+		_in_agg_row = (uint8_t*)malloc(_len_agg_row);
+		if (_in_agg_row == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_agg_row, _tmp_agg_row, _len_agg_row);
+	}
+	if (_tmp_output_rows != NULL) {
+		if ((_in_output_rows = (uint8_t*)malloc(_len_output_rows)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_output_rows, 0, _len_output_rows);
+	}
+	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length);
+err:
+	if (_in_input_rows) free(_in_input_rows);
+	if (_in_agg_row) free(_in_agg_row);
+	if (_in_output_rows) {
+		memcpy(_tmp_output_rows, _in_output_rows, _len_output_rows);
+		free(_in_output_rows);
 	}
 
 	return status;
@@ -1118,9 +1189,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_consumer(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[41];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[42];
 } g_ecall_table = {
-	41,
+	42,
 	{
 		{(void*)(uintptr_t)sgx_ecall_filter_single_row, 0},
 		{(void*)(uintptr_t)sgx_ecall_encrypt, 0},
@@ -1129,6 +1200,7 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_ecall_oblivious_sort_int, 0},
 		{(void*)(uintptr_t)sgx_ecall_oblivious_sort, 0},
 		{(void*)(uintptr_t)sgx_ecall_random_id, 0},
+		{(void*)(uintptr_t)sgx_ecall_scan_aggregation_count_distinct, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_char, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_int, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_float, 0},
@@ -1168,22 +1240,22 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[12][41];
+	uint8_t entry_table[12][42];
 } g_dyn_entry_table = {
 	12,
 	{
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 

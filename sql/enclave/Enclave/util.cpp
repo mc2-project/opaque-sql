@@ -67,3 +67,22 @@ int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
   }
   return 0;
 }
+
+void cpy(uint8_t *dest, uint8_t *src, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+	*(dest + i) = *(src + i);
+  }
+}
+
+// basically a memset 0
+void clear(uint8_t *dest, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+	*(dest + i) = 0;
+  }
+}
+
+void write_dummy(uint8_t *dest, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+	*(dest + i) = 0;
+  }
+}

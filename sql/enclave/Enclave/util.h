@@ -20,4 +20,9 @@ void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len);
 
 // cmp should return 0 if equal, and -1 if not equal
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len);
+void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
+void clear(uint8_t *dest, uint32_t len);
+
+void write_dummy(uint8_t *dest, uint32_t len);
+
 #endif // UTIL_H

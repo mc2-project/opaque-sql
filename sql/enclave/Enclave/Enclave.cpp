@@ -646,3 +646,14 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 void ecall_random_id(uint8_t *ptr, uint32_t length) {
   sgx_status_t rand_status = sgx_read_rand(ptr, length);
 }
+
+// Aggregation
+void ecall_scan_aggregation_count_distinct(int op_code,
+										   uint8_t *input_rows, uint32_t input_rows_length,
+										   uint32_t num_rows,
+										   uint8_t *agg_row, uint32_t agg_row_buffer_length,
+										   uint8_t *output_rows, uint32_t output_rows_length) {
+  scan_aggregation_count_distinct(op_code, input_rows, input_rows_length, num_rows, agg_row, agg_row_buffer_length, output_rows, output_rows_length);
+
+}
+
