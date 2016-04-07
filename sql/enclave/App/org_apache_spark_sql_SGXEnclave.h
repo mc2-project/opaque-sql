@@ -7,70 +7,82 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    StartEnclave
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    StartEnclave
+   * Signature: ()J
+   */
+  JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave
   (JNIEnv *, jobject);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    StopEnclave
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    StopEnclave
+   * Signature: (J)V
+   */
+  JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave
   (JNIEnv *, jobject, jlong);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    Filter
- * Signature: (JI[B)Z
- */
-JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Filter
+   * Signature: (JI[B)Z
+   */
+  JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter
   (JNIEnv *, jobject, jlong, jint, jbyteArray);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    Encrypt
- * Signature: (J[B)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Encrypt
+   * Signature: (J[B)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt
   (JNIEnv *, jobject, jlong, jbyteArray);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    Decrypt
- * Signature: (J[B)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Decrypt
+   * Signature: (J[B)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt
   (JNIEnv *, jobject, jlong, jbyteArray);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    Test
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Test
+   * Signature: (J)V
+   */
+  JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_Test
   (JNIEnv *, jobject, jlong);
 
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    ObliviousSort
- * Signature: (JI[BII)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    ObliviousSort
+   * Signature: (JI[BII)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
   (JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jint);
   
-/*
- * Class:     org_apache_spark_sql_SGXEnclave
- * Method:    ObliviousSort
- * Signature: (JI[BII)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID
-(JNIEnv *, jobject, jlong);
-  
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    RandomID
+   * Signature: (JI[BII)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID
+  (JNIEnv *, jobject, jlong);
+
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Aggregate
+   * Signature: (JI[BII)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIEnv *, 
+																			  jobject, 
+																			  jlong,
+																			  jint,
+																			  jbyteArray,
+																			  jint,
+																			  jbyteArray);
 
 #ifdef __cplusplus
 }

@@ -580,11 +580,8 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
 
-    int value[3] = {1, 4, 167};
 
-    int ret = 0;
-    sgx_status_t status = ecall_filter_single_row(global_eid, &ret, -1, (uint8_t *) value, 12);
-
+	ecall_test(global_eid);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

@@ -86,3 +86,13 @@ void write_dummy(uint8_t *dest, uint32_t len) {
 	*(dest + i) = 0;
   }
 }
+
+
+int test_dummy(uint8_t *src, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+	if (*(src + i) != 0) {
+	  return -1;
+	}
+  }
+  return 0;
+}

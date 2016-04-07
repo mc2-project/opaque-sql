@@ -24,5 +24,6 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 void clear(uint8_t *dest, uint32_t len);
 
 void write_dummy(uint8_t *dest, uint32_t len);
+int test_dummy(uint8_t *src, uint32_t len);
 
 #endif // UTIL_H

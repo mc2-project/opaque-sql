@@ -12,17 +12,19 @@
 #define AGGREGATE_H
 
 // defines an upper bound on the size of the aggregation value
-// includes the encryption
-#define PARTIAL_AGG_UPPER_BOUND (4 + 12 + 16 + 128) // this only includes the partial aggregation
-#define AGG_UPPER_BOUND (4 + 12 + 16 + 2048) // this includes the sort attribute as well as the partial aggregation
+// only the plaintext size
+#define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
 #define ROW_UPPER_BOUND (2048)
+#define AGG_UPPER_BOUND (4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 
+class agg_stats_data;
 
 void scan_aggregation_count_distinct(int op_code,
 									 uint8_t *input_rows, uint32_t input_rows_length,
 									 uint32_t num_rows,
 									 uint8_t *agg_row, uint32_t agg_row_buffer_length,
 									 uint8_t *output_rows, uint32_t output_rows_length);
+void agg_test();
 
 #endif // AGGREGATE_H
 

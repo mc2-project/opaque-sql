@@ -50,6 +50,9 @@ class aggregate_data {
   virtual uint32_t ret_length() {}
   virtual void ret_result(uint8_t *result) {}
   virtual void ret_dummy_result(uint8_t *result) {}
+  virtual void ret_result_print() {}
+
+  virtual void copy_data(aggregate_data *data) {}
 };
 
 class aggregate_data_sum : public aggregate_data {
@@ -66,7 +69,7 @@ class aggregate_data_sum : public aggregate_data {
   void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {
 	switch(data_type) {
 
-	case 1: // int
+ 	case 1: // int
 	  {
 		uint32_t *int_data_ptr = NULL;
 		assert(data_len == 4);
@@ -107,6 +110,19 @@ class aggregate_data_sum : public aggregate_data {
 	result_ptr += 4;
 	uint32_t cur_value = *( (uint32_t *) result_ptr);
 	*( (uint32_t *) result_ptr) = cur_value + (sum - sum);
+  }
+
+  void ret_result_print() {
+	printf("Current result is %u\n", sum);
+  }
+
+  void copy_data(aggregate_data *data) {
+
+	// only copy if the data is of the same type
+	if (dynamic_cast<aggregate_data_sum *>(data) != NULL) {
+	  this->sum = dynamic_cast<aggregate_data_sum *> (data)->sum;
+	}
+
   }
 
   uint32_t sum;
@@ -186,31 +202,121 @@ class aggregate_data_avg : public aggregate_data {
 };
 
 
+// should be decrypted attribute
+void print_attribute(const char *attr_name, uint8_t *value_ptr) {
+  uint8_t attr_type = *value_ptr;
+  uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
+  printf("%s: type is %u, attr_len is %u\n", attr_name, attr_type, attr_len);
+  if (attr_type == 1) {
+	printf("Attr: %u\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+  } else if (attr_type == 2) {
+	printf("Attr: %.*s\n", attr_len, (char *) (value_ptr + 1 + 4));
+  }
+}
+
+class agg_stats_data {
+
+public:
+  agg_stats_data(int op_code) {
+	buffer = (uint8_t *) malloc(AGG_UPPER_BOUND);
+	distinct_entries = (uint32_t *) buffer;
+	*distinct_entries = 0;
+	sort_attr = buffer + 4;
+	printf("op_code is %u\n", op_code);
+	agg = buffer + 4 + ROW_UPPER_BOUND;
+	
+	if (op_code == 1) {
+	  agg_data = new aggregate_data_sum;
+	} else {
+	  agg_data = NULL;
+	  assert(false);
+	}
+  }
+
+  ~agg_stats_data() {
+	delete agg_data;
+	free(buffer);
+  }
+
+  void serialize(uint8_t *buf) {
+	// serialize the sort
+  }
+  
+  void inc_distinct() {
+	*distinct_entries += 1;
+  }
+
+  void set_sort_attr(uint8_t *in_sort_attr, uint32_t in_sort_attr_len) {
+	cpy(sort_attr, in_sort_attr, in_sort_attr_len);
+  }
+
+  uint32_t sort_attr_len() {
+	uint32_t *ptr = (uint32_t *) (sort_attr + 1);
+	return *ptr;
+  }
+
+  uint32_t agg_attr_len() {
+	uint32_t *ptr = (uint32_t *) (agg + 1);
+	return *ptr;
+  }
+
+  // this assumes that the appropriate information has been copied into agg
+  void aggregate() {
+	agg_data->agg(*agg, agg+1+this->agg_attr_len(), this->agg_attr_len());
+  }
+
+  // this flushes agg_data's information into agg
+  void flush_agg() {
+	agg_data->ret_result(this->agg);
+  }
+
+  uint32_t total_agg_len() {
+	return agg_data->ret_length();
+  }
+
+  // copies 
+  void copy_agg(agg_stats_data *data) {
+	agg_data->copy_data(data->agg_data);
+	cpy(this->sort_attr, data->sort_attr, ROW_UPPER_BOUND);
+	cpy(this->agg, data->agg, PARTIAL_AGG_UPPER_BOUND);
+  }
+  
+  int cmp_sort_attr(agg_stats_data *data) {
+	if (data->sort_attr_len() != this->sort_attr_len()) {
+	  return -1;
+	}
+	return cmp(data->sort_attr, this->sort_attr, this->sort_attr_len() + 1 + 4);
+  }
+
+  // flush all paramters into buffer
+  void flush_all() {
+	this->flush_agg();
+  }
+
+  void print() {
+	printf("Distinct entries: %u\n", *distinct_entries);
+	print_attribute("sort attr", sort_attr);
+	print_attribute("agg attr", agg);
+  }
+
+  // public parameters
+  uint32_t *distinct_entries;
+  // the sort attribute could consist of multiple attributes
+  uint8_t *sort_attr;
+  uint8_t *agg;
+
+  // underlying buffer: [distinct entries][sort attr][agg]
+  uint8_t *buffer;
+  
+  aggregate_data *agg_data;
+};
+
+
 enum AGGTYPE {
   SUM,
   COUNT,
   AVG
 };
-
-// return 
-aggregate_data get_aggregate_data(int op_code) {
-
-  switch(op_code) {
-  case 1:
-	{
-	  return aggregate_data_sum();
-	}
-	break;
-
-  case 2:
-	break;
-
-  default:
-	break;
-  }
-
-}
-
 
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
 					uint32_t attr_num,
@@ -290,62 +396,49 @@ void scan_aggregation_count_distinct(int op_code,
   // agg_row is initially encrypted
   // [agg_row length]enc{agg_row}
   // after decryption, agg_row's should only contain
-  // 1. the sort attribute for the previous variable ([type][len][attribute])
-  // 2. 4 bytes for # of distinct entries so far
-  // 3. current partial aggregate result ([type][len][attribute])
-  
-  uint8_t *current_agg = (uint8_t *) malloc(AGG_UPPER_BOUND);
-  uint8_t *temp_buffer = (uint8_t *) malloc(AGG_UPPER_BOUND);
+  // 1. 4 bytes for # of distinct entries so far
+  // 2. current partial aggregate result ([type][len][attribute]); size should be fixed to PARTIAL_AGG_UPPER_BOUND
+  // 3. 1. the sort attribute for the previous variable ([type][len][attribute])
+  agg_stats_data current_agg(op_code);
+  agg_stats_data prev_agg(op_code);
   
   uint8_t *prev_row = NULL;
   uint8_t *current_row = NULL;
   
   uint32_t agg_attribute_num = 1;
+  uint32_t sort_attribute_num = 1;
 
   // this op_code decides the aggregation function
   // as well as the aggregation column
   switch(op_code) {
   case 1:
-	agg_attribute_num = 2;
+	sort_attribute_num = 2;
+	agg_attribute_num = 3;
 	break;
 
   default:
 	break;
   }
-
-  aggregate_data agg_data = get_aggregate_data(op_code);
-  agg_data.reset();
+  
+  current_agg.agg_data->reset();
 
   // aggregate attributes point to the columns being aggregated
   // sort attributes point to the GROUP BY attributes
-  // TODO: support multicolumn aggregation?
-  uint8_t *sort_attribute_type = NULL;
-  uint8_t *sort_attribute = NULL;
-  uint32_t *sort_attribute_len = 0;
-  
-  uint32_t *distinct_entries = NULL;
-  
-  uint8_t *agg_attribute_type = NULL;  
-  uint8_t *agg_attribute = NULL;
-  uint32_t *agg_attribute_len = 0;
 
   int dummy = -1;
 
   uint32_t agg_row_length = *( (uint32_t *) agg_row);
   uint8_t *agg_row_ptr = agg_row + 4;
-							   
-  decrypt(agg_row_ptr, agg_row_length, current_agg);
-  if (*current_agg != 0) {
- 	set_agg_pointers(current_agg,
-					 &sort_attribute_type, &sort_attribute_len, &sort_attribute,
-					 &distinct_entries,
-					 &agg_attribute_type, &agg_attribute_len, &agg_attribute);
-	
-	agg_data.agg(*agg_attribute_type, agg_attribute, *agg_attribute_len);
-  } else {
+
+  if (test_dummy(agg_row_ptr, agg_row_length) == 0) {
+	// copy the entire agg_row_ptr to curreng_agg
+	cpy(current_agg.agg, agg_row_ptr, agg_row_length);
 	dummy = 0;
-  } // else this is a dummy encrypted row!
-	 
+  } else {
+	decrypt(agg_row_ptr, agg_row_length, current_agg.agg);
+	current_agg.aggregate();
+  }
+
   // returned row's structure should be appended with
   // [enc agg len]enc{[agg type][agg len][aggregation]}
   uint8_t *input_ptr = input_rows;
@@ -366,91 +459,92 @@ void scan_aggregation_count_distinct(int op_code,
   for (uint32_t r = 0; r < num_rows; r++) {
 	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
+
+	printf("Record %u, num cols is %u\n", r, num_cols);
 	enc_row_ptr += 4;
 
 	if (r == 0 && dummy == 0) {
-	  // if the dummy is empty, is is the very first row of the current partition
+	  // if the dummy is empty, it is the very first row of the current partition
 	  // put down marker for the previous row
 	  prev_row_ptr = enc_row_ptr;
 	  prev_row_len = enc_row_len;
 
+	  current_agg.inc_distinct();
+	  
 	  // also copy the attribute information into current_agg
+	  find_attribute(enc_row_ptr, enc_row_len, num_cols,
+					 sort_attribute_num,
+					 &enc_value_ptr, &enc_value_len);
+	  decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
+
 	  find_attribute(enc_row_ptr, enc_row_len, num_cols,
 					 agg_attribute_num,
 					 &enc_value_ptr, &enc_value_len);
+	  decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
+
+	  current_agg.aggregate();
 	  
-	  decrypt(enc_value_ptr, enc_value_len, current_agg);
-
-	  set_agg_pointers(current_agg,
-					   &sort_attribute_type, &sort_attribute_len, &sort_attribute,
-					   &distinct_entries,
-					   &agg_attribute_type, &agg_attribute_len, &agg_attribute);
-
 	  // cleanup
 	  enc_row_ptr += enc_row_len;
 
 	  continue;
 	}
 
+	// copy current_agg to prev_agg
+	prev_agg.copy_agg(&current_agg);
+
 	// should output the previous row with the partial aggregate information
 	*( (uint32_t *) output_rows_ptr) = prev_row_len;
 	output_rows_ptr += 4;
 	cpy(output_rows_ptr, prev_row_ptr, prev_row_len);
 	output_rows_ptr += prev_row_len;
-	// now encrypt the partial aggregate
-	uint32_t partial_agg_len = agg_data.ret_length();
-	agg_data.ret_result(temp_buffer);
-	*( (uint32_t *) output_rows_ptr) = partial_agg_len;
-	encrypt(temp_buffer, partial_agg_len, output_rows_ptr);
-	output_rows_ptr += enc_size(partial_agg_len);
+	
+	// now encrypt the partial aggregate and write back
+	uint32_t partial_agg_len = prev_agg.agg_data->ret_length();
+	prev_agg.flush_agg();
+	prev_agg.agg_data->ret_result_print();
+	
+	*( (uint32_t *) output_rows_ptr) = prev_agg.agg_data->ret_length();
+	encrypt(prev_agg.agg, PARTIAL_AGG_UPPER_BOUND, output_rows_ptr);
+	output_rows_ptr += enc_size(PARTIAL_AGG_UPPER_BOUND);
 
+	// integrate with the current row
+ 	find_attribute(enc_row_ptr, enc_row_len, num_cols,
+				   sort_attribute_num,
+				   &enc_value_ptr, &enc_value_len);
+	decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
 
 	find_attribute(enc_row_ptr, enc_row_len, num_cols,
 				   agg_attribute_num,
 				   &enc_value_ptr, &enc_value_len);
-	decrypt(enc_value_ptr, enc_value_len, current_agg);
-
-	set_agg_pointers(current_agg,
-					 &sort_attribute_type, &sort_attribute_len, &sort_attribute,
-					 &distinct_entries,
-					 &agg_attribute_type, &agg_attribute_len, &agg_attribute);	
+	decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
 
 
 	// update the partial aggregate
-	if (cmp(agg_attribute, value_ptr, value_len) == 0) {
-	  agg_data.agg(value_type, value_ptr, value_len);
+	if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
+	  current_agg.aggregate();
 	} else {
-	  agg_data.reset();
-	  agg_data.agg(value_type, value_ptr, value_len);
+	  current_agg.inc_distinct();
+	  current_agg.agg_data->reset();
+	  current_agg.aggregate();
 	}
-
 
 	// cleanup
 	prev_row_ptr = enc_row_ptr;
 	prev_row_len = enc_row_len;
 	
 	enc_row_ptr += enc_row_len;
-	
   }
 
-  // first, update current_agg with the agg_data
-  uint32_t agg_data_len = agg_data.ret_length();
-  set_agg_pointers(current_agg,
-				   &sort_attribute_type, &sort_attribute_len, &sort_attribute,
-				   &distinct_entries,
-				   &agg_attribute_type, &agg_attribute_len, &agg_attribute);
-  *((uint32_t *) agg_attribute_len) = agg_data.ret_length();
-  agg_data.ret_result(agg_attribute);
+  // For testing only: print current_agg's information
+  current_agg.print();
 
+  /// TODO: write back to agg_row, including both sort attribute & aggregation attribute
   // then write current_agg into agg_row
-  uint32_t ca_size = current_agg_size(current_agg);
-  encrypt(current_agg, ca_size, agg_row_ptr);
-  agg_row_ptr -= 4;
-  *( (uint32_t *) agg_row_ptr) = enc_size(ca_size);
-
-
-  free(current_agg);
-  free(temp_buffer);
+  uint32_t ca_size = enc_size(AGG_UPPER_BOUND);
+  printf("ca_size is %u\n", ca_size);
+  encrypt(current_agg.buffer, AGG_UPPER_BOUND, agg_row_ptr + 4);
+  *( (uint32_t *) agg_row_ptr) = enc_size(AGG_UPPER_BOUND);
 }
 
 
@@ -489,14 +583,13 @@ void process_boundary_records(int op_code,
   uint8_t *agg_attribute2 = NULL;
   uint32_t *agg_attribute_len2 = 0;
 
-  // agg_data for partial aggregation info
-  aggregate_data agg_data = get_aggregate_data(op_code);
-
   // get next agg
   uint8_t *prev_agg = (uint8_t *) malloc(AGG_UPPER_BOUND);
   uint32_t prev_agg_len = 0;
   uint8_t *current_agg = (uint8_t *) malloc(AGG_UPPER_BOUND);
   uint32_t current_agg_len = 0;
+
+  aggregate_data_sum agg_data;
 
   // in this scan, we must count the number of distinct items
   // a.k.a. the size of the aggregation result
@@ -613,4 +706,8 @@ void agg_final_result_oblivious_epc(aggregate_data data, uint32_t offset,
   uint8_t *agg_attribute_ptr = NULL;
   set_agg_attribute_ptr(result_set_ptr, &agg_attribute_ptr);
   data.ret_result(agg_attribute_ptr);
+}
+
+void agg_test() {
+  agg_stats_data current_agg(1);
 }

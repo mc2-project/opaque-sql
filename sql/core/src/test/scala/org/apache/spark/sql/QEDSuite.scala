@@ -33,11 +33,24 @@ object SGXTest extends Tag("org.apache.spark.sql.SGXTest")
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
+  def byte_to_int(array: Array[Byte], index: Int) = {
+    val int_bytes = array.slice(index, index + 4)
+    val buf = ByteBuffer.wrap(int_bytes)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    buf.getInt
+  }
+
+  def byte_to_string(array: Array[Byte], index: Int, length: Int) = {
+    val string_bytes = array.slice(index, index + length)
+    new String(string_bytes)
+  }
+
   val enclave = {
     System.load(System.getenv("LIBSGXENCLAVE_PATH"))
     new SGXEnclave()
   }
 
+  /*
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
     val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
@@ -162,19 +175,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("JNIObliviousSortRow", SGXTest) {
 
-    def byte_to_int(array: Array[Byte], index: Int) = {
-      val int_bytes = array.slice(index, index + 4)
-      val buf = ByteBuffer.wrap(int_bytes)
-      buf.order(ByteOrder.LITTLE_ENDIAN)
-      buf.getInt
-    }
-
-    def byte_to_string(array: Array[Byte], index: Int, length: Int) = {
-      val string_bytes = array.slice(index, index + length)
-      new String(string_bytes)
-    }
-
-
     val eid = enclave.StartEnclave()
 
     val data = Seq(("test1", 10), ("hello", 1), ("world", 4), ("foo", 2), ("test2", 3) )
@@ -288,10 +288,56 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-
+*/
 
   test("JNIAggregation", SGXTest) {
-    
+
+    val eid = enclave.StartEnclave()
+
+    // make sure this is sorted data, i.e. sorted on the aggregation attribute
+    val data = Seq((1, "A", 10), (2, "A", 1), (3, "X", 4), (4, "X", 2), (5, "W", 3))
+
+    val encrypted = data.map {
+      case (identifier, word, count) =>
+        (QED.encrypt(enclave, eid, identifier),
+          QED.encrypt(enclave, eid, word),
+          QED.encrypt(enclave, eid, count))
+    }
+
+    var total_size = 0
+    for (row <- encrypted) {
+      // for num columns
+      total_size += 4
+      total_size += 4
+      total_size += row._1.length
+      total_size += 4
+      total_size += row._2.length
+      total_size += 4
+      total_size += row._3.length
+    }
+
+    val buffer = ByteBuffer.allocate(total_size)
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+    for (row <- encrypted) {
+      buffer.putInt(3)
+      buffer.putInt(row._1.length)
+      buffer.put(row._1)
+      buffer.putInt(row._2.length)
+      buffer.put(row._2)
+      buffer.putInt(row._3.length)
+      buffer.put(row._3)
+    }
+
+    buffer.flip()
+    val encrypted_data = new Array[Byte](buffer.limit())
+    buffer.get(encrypted_data)
+
+    // should input dummy row
+    val agg_row = Array.fill[Byte](4 + 12 + 16 + 4 + 2048 + 128)(0)
+    enclave.Aggregate(eid, 1, encrypted_data, data.length, agg_row)
+
+    enclave.StopEnclave(eid)
   }
 
 }
