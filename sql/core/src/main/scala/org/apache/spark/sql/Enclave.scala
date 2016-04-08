@@ -49,4 +49,11 @@ class SGXEnclave extends java.io.Serializable {
     input_rows: Array[Byte],
     num_rows: Int,
     agg_row: Array[Byte]): Array[Byte]
+
+  @native def ProcessBoundary(
+    eid: Long,
+    op_code: Int,
+    agg_rows: Array[Byte],
+    num_agg_rows: Int
+  ): Array[Byte]
 }

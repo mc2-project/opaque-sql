@@ -78,8 +78,19 @@ typedef struct ms_ecall_scan_aggregation_count_distinct_t {
 	uint32_t ms_agg_row_buffer_length;
 	uint8_t* ms_output_rows;
 	uint32_t ms_output_rows_length;
+	uint32_t* ms_actual_size;
+	int ms_flag;
 } ms_ecall_scan_aggregation_count_distinct_t;
 
+
+typedef struct ms_ecall_process_boundary_records_t {
+	int ms_op_code;
+	uint8_t* ms_rows;
+	uint32_t ms_rows_size;
+	uint32_t ms_num_rows;
+	uint8_t* ms_out_agg_rows;
+	uint32_t ms_out_agg_row_size;
+} ms_ecall_process_boundary_records_t;
 
 typedef struct ms_ecall_type_char_t {
 	char ms_val;
@@ -516,11 +527,15 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 	uint32_t _tmp_output_rows_length = ms->ms_output_rows_length;
 	size_t _len_output_rows = _tmp_output_rows_length;
 	uint8_t* _in_output_rows = NULL;
+	uint32_t* _tmp_actual_size = ms->ms_actual_size;
+	size_t _len_actual_size = sizeof(*_tmp_actual_size);
+	uint32_t* _in_actual_size = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_scan_aggregation_count_distinct_t));
 	CHECK_UNIQUE_POINTER(_tmp_input_rows, _len_input_rows);
 	CHECK_UNIQUE_POINTER(_tmp_agg_row, _len_agg_row);
 	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
+	CHECK_UNIQUE_POINTER(_tmp_actual_size, _len_actual_size);
 
 	if (_tmp_input_rows != NULL) {
 		_in_input_rows = (uint8_t*)malloc(_len_input_rows);
@@ -548,13 +563,25 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 
 		memset((void*)_in_output_rows, 0, _len_output_rows);
 	}
-	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length);
+	if (_tmp_actual_size != NULL) {
+		if ((_in_actual_size = (uint32_t*)malloc(_len_actual_size)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_actual_size, 0, _len_actual_size);
+	}
+	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length, _in_actual_size, ms->ms_flag);
 err:
 	if (_in_input_rows) free(_in_input_rows);
 	if (_in_agg_row) free(_in_agg_row);
 	if (_in_output_rows) {
 		memcpy(_tmp_output_rows, _in_output_rows, _len_output_rows);
 		free(_in_output_rows);
+	}
+	if (_in_actual_size) {
+		memcpy(_tmp_actual_size, _in_actual_size, _len_actual_size);
+		free(_in_actual_size);
 	}
 
 	return status;
@@ -565,6 +592,51 @@ static sgx_status_t SGX_CDECL sgx_ecall_test(void* pms)
 	sgx_status_t status = SGX_SUCCESS;
 	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
 	ecall_test();
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_process_boundary_records(void* pms)
+{
+	ms_ecall_process_boundary_records_t* ms = SGX_CAST(ms_ecall_process_boundary_records_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	uint8_t* _tmp_rows = ms->ms_rows;
+	uint32_t _tmp_rows_size = ms->ms_rows_size;
+	size_t _len_rows = _tmp_rows_size;
+	uint8_t* _in_rows = NULL;
+	uint8_t* _tmp_out_agg_rows = ms->ms_out_agg_rows;
+	uint32_t _tmp_out_agg_row_size = ms->ms_out_agg_row_size;
+	size_t _len_out_agg_rows = _tmp_out_agg_row_size;
+	uint8_t* _in_out_agg_rows = NULL;
+
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_process_boundary_records_t));
+	CHECK_UNIQUE_POINTER(_tmp_rows, _len_rows);
+	CHECK_UNIQUE_POINTER(_tmp_out_agg_rows, _len_out_agg_rows);
+
+	if (_tmp_rows != NULL) {
+		_in_rows = (uint8_t*)malloc(_len_rows);
+		if (_in_rows == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_rows, _tmp_rows, _len_rows);
+	}
+	if (_tmp_out_agg_rows != NULL) {
+		if ((_in_out_agg_rows = (uint8_t*)malloc(_len_out_agg_rows)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_out_agg_rows, 0, _len_out_agg_rows);
+	}
+	ecall_process_boundary_records(ms->ms_op_code, _in_rows, _tmp_rows_size, ms->ms_num_rows, _in_out_agg_rows, _tmp_out_agg_row_size);
+err:
+	if (_in_rows) free(_in_rows);
+	if (_in_out_agg_rows) {
+		memcpy(_tmp_out_agg_rows, _in_out_agg_rows, _len_out_agg_rows);
+		free(_in_out_agg_rows);
+	}
+
 	return status;
 }
 
@@ -1198,9 +1270,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_consumer(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[43];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[44];
 } g_ecall_table = {
-	43,
+	44,
 	{
 		{(void*)(uintptr_t)sgx_ecall_filter_single_row, 0},
 		{(void*)(uintptr_t)sgx_ecall_encrypt, 0},
@@ -1211,6 +1283,7 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_ecall_random_id, 0},
 		{(void*)(uintptr_t)sgx_ecall_scan_aggregation_count_distinct, 0},
 		{(void*)(uintptr_t)sgx_ecall_test, 0},
+		{(void*)(uintptr_t)sgx_ecall_process_boundary_records, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_char, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_int, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_float, 0},
@@ -1250,22 +1323,22 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[12][43];
+	uint8_t entry_table[12][44];
 } g_dyn_entry_table = {
 	12,
 	{
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 

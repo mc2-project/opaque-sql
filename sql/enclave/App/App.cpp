@@ -534,23 +534,61 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   uint8_t *agg_row_ptr = (uint8_t *) env->GetByteArrayElements(agg_row, &if_copy);
 
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t output_rows_length = input_rows_length + num_rows * (4 + 12 + 16 + 128);
+  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+  
+  uint32_t actual_size = 0;
   
   ecall_scan_aggregation_count_distinct(eid, op_code,
 										input_rows_ptr, input_rows_length,
 										num_rows,
 										agg_row_ptr, agg_row_length,
-										output_rows, output_rows_length);
+										output_rows, output_rows_length,
+										&actual_size,
+										1);
 
-  jbyteArray ret = env->NewByteArray(output_rows_length);
-  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+  jbyteArray ret = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
   free(output_rows);
 
   return ret;
 }
 
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(JNIEnv *env, 
+																				  jobject obj, 
+																				  jlong eid,
+																				  jint op_code,
+																				  jbyteArray rows,
+																				  jint num_rows) {
+  
+  jboolean if_copy;
+  
+  uint32_t rows_length = (uint32_t) env->GetArrayLength(rows);
+  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
+  
+  
+  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
+  uint32_t out_agg_rows_length = rows_length;
+  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
+  ecall_process_boundary_records(eid, op_code,
+								 rows_ptr, rows_length,
+								 num_rows,
+								 out_agg_rows, out_agg_rows_length);
+  
+
+  jbyteArray ret = env->NewByteArray(out_agg_rows_length);
+  env->SetByteArrayRegion(ret, 0, out_agg_rows_length, (jbyte *) out_agg_rows);
+
+  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
+
+  free(out_agg_rows);
+
+  return ret;
+}
 
 /* Application entry */
 //SGX_CDECL

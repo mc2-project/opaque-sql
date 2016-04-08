@@ -84,6 +84,18 @@ extern "C" {
 																			  jint,
 																			  jbyteArray);
 
+  /*
+   * Class:     org_apache_spark_sql_SGXEnclave
+   * Method:    Aggregate
+   * Signature: (JI[BII)[B
+   */
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(JNIEnv *, 
+																					jobject, 
+																					jlong,
+																					jint,
+																					jbyteArray,
+																					jint);
+
 #ifdef __cplusplus
 }
 #endif
