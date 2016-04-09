@@ -532,20 +532,34 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
 
   uint32_t agg_row_length = (uint32_t) env->GetArrayLength(agg_row);
   uint8_t *agg_row_ptr = (uint8_t *) env->GetByteArrayElements(agg_row, &if_copy);
-
-  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
-  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   
   uint32_t actual_size = 0;
+  int flag = op_code < 100 ? 1 : 2;
+  int real_op_code = op_code % 100;
+
+
+  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
   
-  ecall_scan_aggregation_count_distinct(eid, op_code,
+  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
+  uint8_t *output_rows = NULL;
+
+  if (op_code < 100) {
+	output_rows = (uint8_t *) malloc(output_rows_length);
+  } else {
+	// TODO: change this hard-coded buffer
+	uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+	output_rows_length = 7  * real_size;
+	output_rows = (uint8_t *) malloc(output_rows_length);
+  }
+
+  
+  ecall_scan_aggregation_count_distinct(eid, real_op_code,
 										input_rows_ptr, input_rows_length,
 										num_rows,
 										agg_row_ptr, agg_row_length,
 										output_rows, output_rows_length,
 										&actual_size,
-										1);
+										flag);
 
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
@@ -555,6 +569,16 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   free(output_rows);
 
   return ret;
+}
+
+void print_bytes_(uint8_t *ptr, uint32_t len) {
+  
+  for (int i = 0; i < len; i++) {
+    printf("%u", *(ptr + i));
+    printf(" - ");
+  }
+
+  printf("\n");
 }
 
 
@@ -572,13 +596,15 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   
   
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t out_agg_rows_length = rows_length;
-  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
-  ecall_process_boundary_records(eid, op_code,
-								 rows_ptr, rows_length,
-								 num_rows,
-								 out_agg_rows, out_agg_rows_length);
+  uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+  uint32_t out_agg_rows_length = real_size * num_rows;
   
+  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
+  
+  ecall_process_boundary_records(eid, op_code,
+  								 rows_ptr, rows_length,
+  								 num_rows,
+  								 out_agg_rows, out_agg_rows_length);
 
   jbyteArray ret = env->NewByteArray(out_agg_rows_length);
   env->SetByteArrayRegion(ret, 0, out_agg_rows_length, (jbyte *) out_agg_rows);

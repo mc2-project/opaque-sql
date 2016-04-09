@@ -344,9 +344,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val enc_data3 = encrypt_and_serialize(data_3)
 
     // should input dummy row
-    val agg_row1 = Array.fill[Byte](4 + 12 + 16 + 4 + 2048 + 128)(0)
-    val agg_row2 = Array.fill[Byte](4 + 12 + 16 + 4 + 2048 + 128)(0)
-    val agg_row3 = Array.fill[Byte](4 + 12 + 16 + 4 + 2048 + 128)(0)
+    val agg_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128
+    val agg_row1 = Array.fill[Byte](agg_size)(0)
+    val agg_row2 = Array.fill[Byte](agg_size)(0)
+    val agg_row3 = Array.fill[Byte](agg_size)(0)
 
     val ret_agg_row1 = enclave.Aggregate(eid, 1, enc_data1, data_1.length, agg_row1)
     val ret_agg_row2 = enclave.Aggregate(eid, 1, enc_data2, data_2.length, agg_row2)
@@ -364,7 +365,17 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val agg_row_value = new Array[Byte](agg_row_buffer.limit())
     agg_row_buffer.get(agg_row_value)
 
-    enclave.ProcessBoundary(eid, 1, agg_row_value, 3)
+    val step_2_values = enclave.ProcessBoundary(eid, 1, agg_row_value, 3)
+
+    // split these values
+    val new_agg_row1 = step_2_values.slice(0, agg_size)
+    val new_agg_row2 = step_2_values.slice(agg_size, agg_size * 2)
+    val new_agg_row3 = step_2_values.slice(agg_size * 2, agg_size * 3)
+
+    val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
+    val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
+    val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
+
 
     enclave.StopEnclave(eid)
   }

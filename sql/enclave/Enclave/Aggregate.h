@@ -35,5 +35,8 @@ void process_boundary_records(int op_code,
 
 void agg_test();
 
+void agg_final_result(agg_stats_data *data, uint32_t offset,
+					  uint8_t *result_set, uint32_t result_size);
+
 #endif // AGGREGATE_H
 
