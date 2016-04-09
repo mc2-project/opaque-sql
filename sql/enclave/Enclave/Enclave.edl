@@ -48,7 +48,11 @@ enclave {
 									[in, size=rows_size] uint8_t *rows, uint32_t rows_size,
 									uint32_t num_rows,
 									[out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size);
-    };
+	  public void ecall_final_aggregation(int op_code,
+							 [in, size=agg_rows_length] uint8_t *agg_rows, uint32_t agg_rows_length,
+							 uint32_t num_rows,
+							 [out, size=ret_length] uint8_t *ret, uint32_t ret_length);
+	};
 
     untrusted {
         void ocall_print_string([in, string] const char *str);

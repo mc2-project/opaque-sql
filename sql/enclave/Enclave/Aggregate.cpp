@@ -894,13 +894,42 @@ void agg_final_result_oblivious_epc(agg_stats_data *data, uint32_t offset,
 }
 
 
-// assume input is a sorted set of agg information
-void final_aggregation() {
+// The final aggregation step does not need to be fully oblivious
+void final_aggregation(int op_code,
+					   uint8_t *agg_rows, uint32_t agg_rows_length,
+					   uint32_t num_rows,
+					   uint8_t *ret, uint32_t ret_length) {
+  // iterate through all rows
+  uint8_t *output_rows_ptr = ret;
+  uint8_t *enc_row_ptr = agg_rows;
+  uint32_t enc_row_len = 0;
+
+
+  uint8_t value_type = 0;
+  uint32_t value_len = 0;
+  uint8_t *value_ptr = NULL;
+
+  agg_stats_data current_agg(op_code);
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+
+	enc_row_len = *( (uint32_t *) enc_row_ptr);
+	enc_row_ptr += 4;
+	decrypt(enc_row_ptr, enc_row_len, current_agg.buffer);
+
+	current_agg.aggregate();
+	enc_row_ptr += enc_row_len;
+  }
+
+  current_agg.flush_all();
+  current_agg.print();
   
+  *( (uint32_t *) output_rows_ptr) = enc_size(AGG_UPPER_BOUND);
+  encrypt(current_agg.buffer, AGG_UPPER_BOUND, ret);
 }
 
 void agg_test() {
   agg_stats_data current_agg(1);
 }
 
-
+//void fake_write(int a) { asm volatile ("mov %0 %0" : =m(a)::); }

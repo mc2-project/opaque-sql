@@ -678,3 +678,15 @@ void ecall_process_boundary_records(int op_code,
 						   num_rows,
 						   out_agg_rows, out_agg_row_size);
 }
+
+
+void ecall_final_aggregation(int op_code,
+							 uint8_t *agg_rows, uint32_t agg_rows_length,
+							 uint32_t num_rows,
+							 uint8_t *ret, uint32_t ret_length) {
+  final_aggregation(op_code,
+					agg_rows, agg_rows_length,
+					num_rows,
+					ret, ret_length);
+  
+}

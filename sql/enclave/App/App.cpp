@@ -616,6 +616,42 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   return ret;
 }
 
+
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregation(JNIEnv *env, 
+																				   jobject obj, 
+																				   jlong eid,
+																				   jint op_code,
+																				   jbyteArray rows,
+																				   jint num_rows) {
+  
+  jboolean if_copy;
+  
+  uint32_t rows_length = (uint32_t) env->GetArrayLength(rows);
+  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
+  
+  
+  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
+  uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+  uint32_t out_agg_rows_length = real_size * 1;
+  
+  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
+  
+  ecall_process_boundary_records(eid, op_code,
+  								 rows_ptr, rows_length,
+  								 num_rows,
+  								 out_agg_rows, out_agg_rows_length);
+
+  jbyteArray ret = env->NewByteArray(out_agg_rows_length);
+  env->SetByteArrayRegion(ret, 0, out_agg_rows_length, (jbyte *) out_agg_rows);
+
+  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
+
+  free(out_agg_rows);
+
+  return ret;
+}
+
 /* Application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])

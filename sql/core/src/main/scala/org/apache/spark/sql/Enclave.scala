@@ -56,4 +56,11 @@ class SGXEnclave extends java.io.Serializable {
     agg_rows: Array[Byte],
     num_agg_rows: Int
   ): Array[Byte]
+
+  @native def FinalAggregation(
+    eid: Long,
+    op_code: Int,
+    rows: Array[Byte],
+    num_rows: Int
+  ): Array[Byte]
 }

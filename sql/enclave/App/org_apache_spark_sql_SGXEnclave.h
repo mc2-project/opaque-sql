@@ -96,7 +96,15 @@ extern "C" {
 																					jbyteArray,
 																					jint);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregation(JNIEnv *, 
+																					 jobject, 
+																					 jlong,
+																					 jint,
+																					 jbyteArray,
+																					 jint);
+
 #ifdef __cplusplus
 }
 #endif
 #endif
+

@@ -38,5 +38,10 @@ void agg_test();
 void agg_final_result(agg_stats_data *data, uint32_t offset,
 					  uint8_t *result_set, uint32_t result_size);
 
+
+void final_aggregation(int op_code,
+					   uint8_t *agg_rows, uint32_t agg_rows_length,
+					   uint32_t num_rows,
+					   uint8_t *ret, uint32_t ret_length);
 #endif // AGGREGATE_H
 
