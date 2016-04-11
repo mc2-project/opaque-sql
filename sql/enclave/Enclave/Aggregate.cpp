@@ -370,31 +370,6 @@ enum AGGTYPE {
   AVG
 };
 
-void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
-					uint32_t attr_num,
-					uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
-
-  uint8_t *enc_value_ptr_ = row;
-  uint32_t enc_value_len_ = 0;
-
-  for (uint32_t j = 0; j < num_cols; j++) {
-	// [enc len]encrypted{[value type][value len][value]}
-
-	enc_value_len_ = *( (uint32_t *) enc_value_ptr_);
-	enc_value_ptr_ += 4;
-	  
-	// found aggregate attribute
-	if (j + 1 == attr_num) {
-	  *enc_value_ptr = enc_value_ptr_;
-	  *enc_value_len = enc_value_len_;
-	  return;
-	}
-	
-	enc_value_ptr_ += enc_value_len_;
-
-  }
-}
-
 uint32_t current_agg_size(uint8_t *current_agg) {
   // return the size of this buffer
   uint8_t *ptr = current_agg;

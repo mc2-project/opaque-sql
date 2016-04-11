@@ -96,3 +96,40 @@ int test_dummy(uint8_t *src, uint32_t len) {
   }
   return 0;
 }
+
+
+void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
+					uint32_t attr_num,
+					uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
+
+  uint8_t *enc_value_ptr_ = row;
+  uint32_t enc_value_len_ = 0;
+
+  for (uint32_t j = 0; j < num_cols; j++) {
+	// [enc len]encrypted{[value type][value len][value]}
+
+	enc_value_len_ = *( (uint32_t *) enc_value_ptr_);
+	enc_value_ptr_ += 4;
+	  
+	// found aggregate attribute
+	if (j + 1 == attr_num) {
+	  *enc_value_ptr = enc_value_ptr_;
+	  *enc_value_len = enc_value_len_;
+	  return;
+	}
+	
+	enc_value_ptr_ += enc_value_len_;
+
+  }
+}
+
+// return the upper bound size for a certain type
+uint32_t get_value_bound(int type) {
+  if (type == INT) {
+	return INT_UPPER_BOUND;
+  } else if (type == STRING) {
+	return STRING_UPPER_BOUND;
+  } else {
+	return 0;
+  }
+}

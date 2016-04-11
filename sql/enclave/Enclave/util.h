@@ -26,4 +26,32 @@ void clear(uint8_t *dest, uint32_t len);
 void write_dummy(uint8_t *dest, uint32_t len);
 int test_dummy(uint8_t *src, uint32_t len);
 
+void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
+					uint32_t attr_num,
+					uint8_t **enc_value_ptr, uint32_t *enc_value_len);
+
+
+// defines an upper bound on the size of the aggregation value
+// only the plaintext size
+#define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
+#define ROW_UPPER_BOUND (2048)
+// distinct items, offset, sort attribute, aggregation attribute
+#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
+
+enum TYPE {
+  DUMMY = 0,
+  INT = 1,
+  STRING = 2
+};
+
+#define TYPE_SIZE (1)
+#define HEADER_SIZE (TYPE_SIZE + 4)
+
+#define INT_UPPER_BOUND (4)
+#define STRING_UPPER_BOUND (1024)
+
+
+#define TABLE_ID_SIZE (128)
+#define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
+
 #endif // UTIL_H

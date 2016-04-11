@@ -7,6 +7,7 @@
 #include "sgx_trts.h"
 #include "math.h"
 #include "Crypto.h"
+#include "util.h"
 
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
