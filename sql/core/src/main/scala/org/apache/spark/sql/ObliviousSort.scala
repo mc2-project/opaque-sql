@@ -74,10 +74,12 @@ object ObliviousSort extends java.io.Serializable {
 
               if (pair_idx < offset + len) {
 
-                min_val = ord.min(values(idx).value, values(pair_idx).value)
-                max_val = ord.max(values(idx).value, values(pair_idx).value)
-
-                if (min_val != values(idx).value) {
+                if (ord.lteq(values(idx).value, values(pair_idx).value)) {
+                  min_val = values(idx).value
+                  max_val = values(pair_idx).value
+                } else {
+                  min_val = values(pair_idx).value
+                  max_val = values(idx).value
                   swaps += 1
                 }
 
@@ -97,10 +99,12 @@ object ObliviousSort extends java.io.Serializable {
 
               if (pair_idx < offset + len) {
 
-                min_val = ord.min(values(idx).value, values(pair_idx).value)
-                max_val = ord.max(values(idx).value, values(pair_idx).value)
-
-                if (min_val != values(idx).value) {
+                if (ord.lteq(values(idx).value, values(pair_idx).value)) {
+                  min_val = values(idx).value
+                  max_val = values(pair_idx).value
+                } else {
+                  min_val = values(pair_idx).value
+                  max_val = values(idx).value
                   swaps += 1
                 }
 
@@ -442,4 +446,3 @@ object ObliviousSort extends java.io.Serializable {
   }
 
 }
-

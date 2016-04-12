@@ -116,8 +116,8 @@ object QED {
     result.asInstanceOf[T]
   }
 
-  def addRandomSortKey() = {
-    ???
+  def randomId(enclave: SGXEnclave, eid: Long): Array[Byte] = {
+    enclave.RandomID(eid)
   }
 
   def encodeData(value: Array[Byte]): String = {

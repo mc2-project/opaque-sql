@@ -17,7 +17,12 @@
 
 package org.apache.spark.sql.execution
 
+import scala.math.Ordering
+import scala.reflect.classTag
+
+import oblivious_sort.ObliviousSort
 import org.apache.spark.sql.QED
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
@@ -65,8 +70,14 @@ case class Permute(child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
   override def doExecute() = {
-    // val childRDD = child.execute()
-    // ObliviousSort.ColumnSort(childRDD.context, childRDD)
-    child.execute()
+    // val (enclave, eid) = QED.initEnclave()
+    val childRDD = child.execute().map(row => (// QED.randomId(enclave, eid).toSeq
+      1
+      , row))
+    // TODO: this is insecure - need to sort using a comparator that decrypts and compares within the enclave
+    // implicit val ord = Ordering.by[(Seq[Byte], InternalRow), Seq[Byte]](_._1)(
+    //   scala.math.Ordering.Implicits.seqDerivedOrdering[Seq, Byte])
+    implicit val ord = Ordering.by[(Int, InternalRow), Int](_._1)
+    ObliviousSort.ColumnSort(childRDD.context, childRDD).map(_._2)
   }
 }

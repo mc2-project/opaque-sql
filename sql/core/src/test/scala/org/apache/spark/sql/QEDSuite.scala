@@ -56,7 +56,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
-    val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
+    val data = for (i <- 0 until 1024) yield ("foo", i)
     val encrypted = data.map {
       case (word, count) =>
         (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
@@ -72,13 +72,19 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt(words.collect) === data)
 
     val filtered = words.encFilter($"count") // TODO: make enc versions of each operator
-    assert(decrypt(filtered.collect) === data.filter(_._2 > 3))
+    assert(decrypt(filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
   test("ColumnSort") {
     val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
-    // s=8, r=1024/8 = 128
-    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd, 128, 8)
+    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)
+    val s = sorted.collect
+    assert(s === s.sorted)
+  }
+
+  test("ColumnSort with comparator") {
+    val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
+    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)
     val s = sorted.collect
     assert(s === s.sorted)
   }
