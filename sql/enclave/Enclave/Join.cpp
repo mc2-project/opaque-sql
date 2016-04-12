@@ -22,15 +22,35 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
 // This pre-processing pads all rows to ROW_UPPER_BOUND, and then encrypt the entire thing
 // This is necessary because we do not want to leak the distribution of table 1 and table 2 after
 // the sort operation
-void join_sort_preprocess(uint8_t *table_id, 
+// Also adds a tabld ID for indicating whether this row belongs to the primary key table
+void join_sort_preprocess(int op_code,
+						  uint8_t *table_id, 
 						  uint8_t *input_row, uint32_t input_row_len,
 						  uint8_t *output_row, uint32_t output_row_len) {
+
   uint8_t temp[JOIN_ROW_UPPER_BOUND];
   uint8_t *temp_ptr = temp;
   // decrypt each attribute, copy to temp, then encrypt the entire row to output_row
   // (including the number of columns!)
 
-  cpy(temp_ptr, table_id, TABLE_ID_SIZE);
+  uint8_t primary_table[TABLE_ID_SIZE];
+  uint8_t foreign_table[TABLE_ID_SIZE];
+
+  get_table_indicator(primary_table, foreign_table);
+	
+  int if_primary = 0;
+  
+  if (op_code == 3) {
+	char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
+	if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
+  }
+
+  if (if_primary == 0) {
+	cpy(temp_ptr, primary_table, TABLE_ID_SIZE);
+  } else {
+	cpy(temp_ptr, foreign_table, TABLE_ID_SIZE);
+  }
+
   temp_ptr += TABLE_ID_SIZE;
 
   uint8_t *enc_row_ptr = input_row;
@@ -47,7 +67,7 @@ void join_sort_preprocess(uint8_t *table_id,
   
   for (uint32_t i = 0; i < num_cols; i++) {
 	find_attribute(enc_row_ptr, enc_row_len, num_cols,
-				   i, &enc_value_ptr, &enc_value_len);
+				   i + 1, &enc_value_ptr, &enc_value_len);
 
 	decrypt(enc_value_ptr, enc_value_len, temp_ptr);
 	temp_ptr += dec_size(enc_value_len);
@@ -125,7 +145,7 @@ void get_join_attribute(int op_code,
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
   
-  if (op_code == 1) {
+  if (op_code == 3) {
 	if (if_primary == 0) {
 	  // attribute number is 2nd column
 	  for (uint32_t i = 0; i < num_cols; i++) {
@@ -173,7 +193,7 @@ void join_merge_row(int op_code,
   uint32_t primary_row_cols = 0;
   uint32_t secondary_row_cols = 0;
   
-  if (op_code == 1) {
+  if (op_code == 3) {
 	primary_row_cols = 3;
 	secondary_row_cols = 2;
 	
@@ -279,7 +299,7 @@ void sort_merge_join(int op_code,
   // constructs a final row with final num cols = 
   // (num cols of table P + num cols of table f)
   // each attribute will be empty, but type is specified
-  if (op_code == 1) {
+  if (op_code == 3) {
 	*( (uint32_t *) dummy_row_ptr) = 5;
 	dummy_row_ptr += 4;
 	int types[5] = {INT, STRING, INT, INT, INT};

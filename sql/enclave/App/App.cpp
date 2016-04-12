@@ -675,7 +675,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
 
   // try to call on each row individually
 
-  ecall_join_sort_preprocess(eid, enc_table_id_ptr, 
+  ecall_join_sort_preprocess(eid,
+							 op_code,
+							 enc_table_id_ptr, 
 							 input_rows_ptr, input_rows_length,
 							 num_rows, 
 							 output_rows_ptr, output_rows_length);

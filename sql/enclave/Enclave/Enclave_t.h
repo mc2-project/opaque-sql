@@ -52,7 +52,7 @@ void ecall_final_aggregation(int op_code, uint8_t* agg_rows, uint32_t agg_rows_l
 void ecall_scan_collect_last_primary(int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output, uint32_t output_length, uint8_t* enc_table_p, uint8_t* enc_table_f);
 void ecall_process_join_boundary(uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output_rows, uint32_t output_rows_size, uint8_t* enc_table_p, uint8_t* enc_table_f);
 void ecall_sort_merge_join(int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* join_row, uint32_t join_row_length, uint8_t* output_rows, uint32_t output_rows_length, uint8_t* enc_table_p, uint8_t* enc_table_f);
-void ecall_join_sort_preprocess(uint8_t* table_id, uint8_t* input_row, uint32_t input_row_len, uint32_t num_rows, uint8_t* output_row, uint32_t output_row_len);
+void ecall_join_sort_preprocess(int op_code, uint8_t* table_id, uint8_t* input_row, uint32_t input_row_len, uint32_t num_rows, uint8_t* output_row, uint32_t output_row_len);
 void ecall_type_char(char val);
 void ecall_type_int(int val);
 void ecall_type_float(float val);

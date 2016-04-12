@@ -110,6 +110,7 @@ typedef struct ms_ecall_sort_merge_join_t {
 } ms_ecall_sort_merge_join_t;
 
 typedef struct ms_ecall_join_sort_preprocess_t {
+	int ms_op_code;
 	uint8_t* ms_table_id;
 	uint8_t* ms_input_row;
 	uint32_t ms_input_row_len;
@@ -578,10 +579,11 @@ sgx_status_t ecall_sort_merge_join(sgx_enclave_id_t eid, int op_code, uint8_t* i
 	return status;
 }
 
-sgx_status_t ecall_join_sort_preprocess(sgx_enclave_id_t eid, uint8_t* table_id, uint8_t* input_row, uint32_t input_row_len, uint32_t num_rows, uint8_t* output_row, uint32_t output_row_len)
+sgx_status_t ecall_join_sort_preprocess(sgx_enclave_id_t eid, int op_code, uint8_t* table_id, uint8_t* input_row, uint32_t input_row_len, uint32_t num_rows, uint8_t* output_row, uint32_t output_row_len)
 {
 	sgx_status_t status;
 	ms_ecall_join_sort_preprocess_t ms;
+	ms.ms_op_code = op_code;
 	ms.ms_table_id = table_id;
 	ms.ms_input_row = input_row;
 	ms.ms_input_row_len = input_row_len;

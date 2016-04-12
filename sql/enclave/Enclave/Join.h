@@ -11,7 +11,8 @@
 #ifndef JOIN_H
 #define JOIN_H
 
-void join_sort_preprocess(uint8_t *table_id, 
+void join_sort_preprocess(int op_code,
+						  uint8_t *table_id, 
 						  uint8_t *input_row, uint32_t input_row_len,
 						  uint8_t *output_row, uint32_t output_row_len);
 

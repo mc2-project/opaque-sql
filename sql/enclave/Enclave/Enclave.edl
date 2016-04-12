@@ -74,10 +74,11 @@ enclave {
 									   [in, sizefunc=enc_table_id_size] uint8_t *enc_table_p,
 									   [in, sizefunc=enc_table_id_size] uint8_t *enc_table_f);
 									   
-	 public void ecall_join_sort_preprocess([in, sizefunc=enc_table_id_size] uint8_t *table_id,
+	 public void ecall_join_sort_preprocess(int op_code,
+	                                        [in, sizefunc=enc_table_id_size] uint8_t *table_id,
 	                                        [user_check] uint8_t *input_row, uint32_t input_row_len,
 											uint32_t num_rows,
-											[in, out, sizefunc=join_row_size] uint8_t *output_row, uint32_t output_row_len);
+											[out, size=output_row_len] uint8_t *output_row, uint32_t output_row_len);
 	};
 
     untrusted {

@@ -55,4 +55,9 @@ enum TYPE {
 #define TABLE_ID_SIZE (8)
 #define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
 
+void get_table_indicator(uint8_t *primary_table,
+						 uint8_t *foreign_table);
+
+void print_attribute(const char *attr_name, uint8_t *value_ptr);
+
 #endif // UTIL_H

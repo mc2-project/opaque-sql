@@ -108,6 +108,7 @@ extern "C" {
 																					   jlong,
 																					   jint,
 																					   jbyteArray,
+																					   jbyteArray,
 																					   jint);
 
 #ifdef __cplusplus

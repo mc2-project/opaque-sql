@@ -206,19 +206,6 @@ class aggregate_data_avg : public aggregate_data {
   uint64_t count;
 };
 
-
-// should be decrypted attribute
-void print_attribute(const char *attr_name, uint8_t *value_ptr) {
-  uint8_t attr_type = *value_ptr;
-  uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
-  printf("[%s: type is %u, attr_len is %u; ", attr_name, attr_type, attr_len);
-  if (attr_type == 1) {
-	printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
-  } else if (attr_type == 2) {
-	printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
-  }
-}
-
 class agg_stats_data {
 
 public:

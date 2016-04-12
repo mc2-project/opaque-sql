@@ -290,6 +290,11 @@ typedef struct Record {
   uint8_t *sort_attribute;
 } Record;
 
+typedef struct JoinRecord {
+  int if_primary;
+  Record record;
+} JoinRecord;
+
 // -1 means value1 < value2
 // 0 means value1 == value2
 // 1 means value1 > value2
@@ -305,6 +310,12 @@ void compare_and_swap(T *value1, T* value2) {
   assert(false);
 }
 
+
+template<typename T>
+void swap(T *value1, T* value2) {
+  printf("swap(): Type not supported\n");
+  assert(false);
+}
 
 template<>
 int compare<Integer>(Integer *value1, Integer *value2) {
@@ -336,7 +347,6 @@ int compare<String>(String *value1, String *value2) {
   assert(false);
 }
 
-
 template<>
 void compare_and_swap<String>(String *value1, String *value2) {
   int comp = compare<String>(value1, value2);
@@ -351,8 +361,21 @@ void compare_and_swap<String>(String *value1, String *value2) {
   }
 }
 
-
 /** start Record functions **/
+template<>
+void swap<Record>(Record *value1, Record* value2) {
+  uint32_t num_cols = value1->num_cols;
+  uint8_t *data = value1->data;
+  uint8_t *sort_attribute = value1->sort_attribute;
+  // swap
+  value1->num_cols = value2->num_cols;
+  value1->data = value2->data;
+  value1->sort_attribute = value2->sort_attribute;
+  value2->num_cols = num_cols;
+  value2->data = data;
+  value2->sort_attribute = sort_attribute;
+}
+
 template<>
 int compare<Record>(Record *value1, Record *value2) {
   uint8_t type1 = *(value1->sort_attribute);
@@ -382,26 +405,52 @@ int compare<Record>(Record *value1, Record *value2) {
   }
 }
 
+
 template<>
 void compare_and_swap<Record>(Record *value1, Record *value2) {
   int comp = compare<Record>(value1, value2);
   
   if (comp == 1) {
-	uint32_t num_cols = value1->num_cols;
-	uint8_t *data = value1->data;
-	uint8_t *sort_attribute = value1->sort_attribute;
-	// swap
-	value1->num_cols = value2->num_cols;
-	value1->data = value2->data;
-	value1->sort_attribute = value2->sort_attribute;
- 	value2->num_cols = num_cols;
-	value2->data = data;
-	value2->sort_attribute = sort_attribute;
-
+	swap<Record>(value1, value2);
   }
 }
 
 /** end Record functions **/
+
+/** Begin JoinRecord **/
+
+template<>
+int compare<JoinRecord>(JoinRecord *value1, JoinRecord *value2) {
+
+  int ret = compare<Record>(&(value1->record), &(value2->record));
+  
+  if (ret == 0) {
+	// compare the table type
+	// only one of them should be primary
+	if (value1->if_primary == 0) {
+	  return -1;
+	} else if (value2->if_primary == 0) {
+	  return 1;
+	} else {
+	  // this means both are foreign tables
+	  return 0;
+	}
+  }
+}
+
+template<>
+void compare_and_swap<JoinRecord>(JoinRecord *value1, JoinRecord *value2) {
+  int comp = compare<JoinRecord>(value1, value2);
+  
+  if (comp == 1) {
+	int if_primary = value1->if_primary;
+	value1->if_primary = value2->if_primary;
+	value2->if_primary = if_primary;
+	swap<Record>(&(value1->record), &(value2->record));
+  }
+}
+
+/** End JoinRecord **/
 
 // input_length is the length of input in bytes
 // len is the number of records
@@ -523,8 +572,6 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
   } else if (op_code == 2) {
 	// this needs to sort a row of data
 
-	//printf("Must sort rows\n");
-
 	uint32_t sort_attr_num = 2;
 
 	Record *data = (Record *) malloc(sizeof(Record) * list_length);
@@ -638,6 +685,81 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	free(data);
 
 	//printf("Freed data\n");
+  } else if (op_code == 3) {
+	// get the primary/foreign table indicators
+	uint8_t primary_table[TABLE_ID_SIZE];
+	uint8_t foreign_table[TABLE_ID_SIZE];
+	get_table_indicator(primary_table, foreign_table);
+	
+	// this is a sort used for sort-merge join!
+	// that means there are two different join attributes:
+	// one for the primary key table, the other the foreign key table
+	
+	uint32_t sort_attr_num_p = 2;
+	uint32_t sort_attr_num_f = 2;
+	
+	JoinRecord *data = (JoinRecord *) malloc(sizeof(JoinRecord) * list_length);
+	if (data == NULL) {
+	  printf("Could not allocate enough data\n");
+	  assert(false);
+	}
+
+	// allocate memory for record
+	uint8_t *input_ptr = input;
+	uint8_t *data_ptr = (uint8_t *) data;
+
+	uint8_t *data_ptr_ = NULL;
+	uint8_t *table_id = NULL;
+	uint8_t *value_ptr = NULL;
+	uint32_t value_len = 0;
+	
+	for (uint32_t i = 0; i < list_length; i++) {
+	  // allocate JOIN_ROW_UPPER_BOUND
+	  Record record = data[i].record;
+	  record.data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
+	  decrypt(input_ptr, enc_size(JOIN_ROW_UPPER_BOUND), record.data);
+	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+	  
+	  table_id = record.data;
+	  data_ptr_ = record.data + TABLE_ID_SIZE;
+	  record.num_cols = *( (uint32_t *) data_ptr_);
+	  value_ptr = data_ptr_;
+
+	  // identify the join attribute
+	  for (uint32_t j = 0; j < record.num_cols; j++) {
+		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE));
+		
+		if (cmp(table_id, primary_table, TABLE_ID_SIZE) == 0) {
+		  if (j + 1 == sort_attr_num_p) {
+			record.sort_attribute = value_ptr;
+		  }
+		} else {
+		  if (j + 1 == sort_attr_num_p) {
+			record.sort_attribute = value_ptr;		  
+		  }
+		}
+
+		value_ptr += value_len + HEADER_SIZE;
+	  }
+
+	}
+
+	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord) * list_length, low_idx, list_length);
+
+	// Produce encrypted output rows
+	input_ptr = input;
+	for (uint32_t i = 0; i < list_length; i++) {
+	  // simply encrypt the entire row all at once
+	  encrypt(data[i].record.data, JOIN_ROW_UPPER_BOUND, input_ptr);
+	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+	}
+
+	// free data
+	for (uint32_t i = 0; i < list_length; i++) {
+	  free(data[i].record.data);
+	}
+
+	free(data);
   }
 }
 
@@ -700,11 +822,13 @@ size_t enc_table_id_size(const uint8_t *enc_table_id) {
 }
 
 size_t join_row_size(const uint8_t *join_row) {
+  printf("Enc join row size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
   return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
 }
 
 
-void ecall_join_sort_preprocess(uint8_t *table_id, 
+void ecall_join_sort_preprocess(int op_code,
+								uint8_t *table_id, 
 								uint8_t *input_row, uint32_t input_row_len,
 								uint32_t num_rows,
 								uint8_t *output_row, uint32_t output_row_len) {
@@ -719,9 +843,9 @@ void ecall_join_sort_preprocess(uint8_t *table_id,
   for (uint32_t i = 0; i < num_rows; i++) {
 	get_next_row(&input_row_ptr, &enc_row_ptr, &enc_row_len);
 	
-	join_sort_preprocess(table_id, 
-						 input_row_ptr, input_row_len,
-						 output_row_ptr, output_row_len);
+	join_sort_preprocess(op_code, table_id, 
+						 enc_row_ptr, enc_row_len,
+						 output_row_ptr, enc_size(JOIN_ROW_UPPER_BOUND));
 
 	output_row_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
   }

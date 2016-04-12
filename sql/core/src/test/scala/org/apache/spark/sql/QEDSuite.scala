@@ -288,7 +288,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-*/
+
 
   test("JNIAggregation", SGXTest) {
 
@@ -378,7 +378,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-
+   */
 
   test("JNIJoin", SGXTest) {
     val eid = enclave.StartEnclave()
@@ -423,15 +423,17 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       encrypted_data
     }
 
-    val table_p_data = Seq((1, "A", 10), (2, "C", 20), (3, "D", 30), (4, "E", 1))
-    val table_f_data = Seq((100, "A", 1), (100, "A", 1), (0, "B", 1), (0, "B", 1), (200, "C", 1), (200, "C", 1), (300, "D", 1), (400, "E", 1))
+    val table_p_data = Seq((1, "A", 10), (2, "C", 20), (3, "D", 30))
+    val table_f_data = Seq((100, "A", 1), (100, "A", 1), (0, "B", 1), (200, "C", 1), (200, "C", 1), (300, "D", 1))
 
     val buffer = ByteBuffer.allocate(128)
     buffer.order(ByteOrder.LITTLE_ENDIAN)
     val enc_table_id = new Array[Byte](8)
 
-    buffer.putInt(1234)
-    buffer.putInt(4321)
+    val table_name: String = "aaaaaaaa"
+    for (v <- table_name) {
+      buffer.putChar(v)
+    }
     buffer.flip()
     buffer.get(enc_table_id)
     val enc_table_p_id = enclave.Encrypt(eid, enc_table_id)
@@ -446,6 +448,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val enc_table_p = encrypt_and_serialize(table_p_data)
     val enc_table_f = encrypt_and_serialize(table_f_data)
+
+    val processed_table_p = enclave.JoinSortPreprocess(eid, 3, enc_table_p_id, enc_table_p, table_p_data.length)
+    val processed_table_f = enclave.JoinSortPreprocess(eid, 3, enc_table_f_id, enc_table_f, table_f_data.length)
+
+    // merge the two buffers together
+    val processed_rows = processed_table_p ++ processed_table_f
+
+    //val sorted_rows = enclave.ObliviousSort(eid, 3, processed_rows, 0, table_p_data.length + table_f_data.length)
+
+
 
     enclave.StopEnclave(eid)
   }
