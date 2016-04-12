@@ -381,6 +381,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
 
   test("JNIJoin", SGXTest) {
+    val eid = enclave.StartEnclave()
+
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
       val encrypted = data.map {
         case (identifier, word, count) =>
@@ -421,8 +423,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       encrypted_data
     }
 
-    val eid = enclave.StartEnclave()
-
     val table_p_data = Seq((1, "A", 10), (2, "C", 20), (3, "D", 30), (4, "E", 1))
     val table_f_data = Seq((100, "A", 1), (100, "A", 1), (0, "B", 1), (0, "B", 1), (200, "C", 1), (200, "C", 1), (300, "D", 1), (400, "E", 1))
 
@@ -434,7 +434,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     buffer.putInt(4321)
     buffer.flip()
     buffer.get(enc_table_id)
-    val enc_table_p_id = enclave.Encrypt(enc_table_id)
+    val enc_table_p_id = enclave.Encrypt(eid, enc_table_id)
 
     buffer.clear()
 
@@ -442,10 +442,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     buffer.putInt(5432)
     buffer.flip()
     buffer.get(enc_table_id)
-    val enc_table_f_id = enclave.Encrypt(enc_table_id)
+    val enc_table_f_id = enclave.Encrypt(eid, enc_table_id)
 
     val enc_table_p = encrypt_and_serialize(table_p_data)
-    val enc_table_f = encrypte_and_serialize(table_f_data)
+    val enc_table_f = encrypt_and_serialize(table_f_data)
 
     enclave.StopEnclave(eid)
   }
