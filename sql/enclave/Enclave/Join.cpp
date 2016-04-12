@@ -75,7 +75,7 @@ void join_sort_preprocess(int op_code,
 
   uint32_t total_len = (uint32_t) (temp_ptr - temp);
 
-  encrypt(temp, ROW_UPPER_BOUND, output_row);
+  encrypt(temp, JOIN_ROW_UPPER_BOUND, output_row);
 }
 
 class join_attribute {

@@ -428,23 +428,22 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val buffer = ByteBuffer.allocate(128)
     buffer.order(ByteOrder.LITTLE_ENDIAN)
-    val enc_table_id = new Array[Byte](8)
+    val enc_table_p_id = new Array[Byte](8)
+    val enc_table_f_id = new Array[Byte](8)
 
-    val table_name: String = "aaaaaaaa"
-    for (v <- table_name) {
-      buffer.putChar(v)
+    for (i <- 1 to 8) {
+      buffer.put("a".getBytes)
     }
     buffer.flip()
-    buffer.get(enc_table_id)
-    val enc_table_p_id = enclave.Encrypt(eid, enc_table_id)
+    buffer.get(enc_table_p_id)
 
     buffer.clear()
 
-    buffer.putInt(2345)
-    buffer.putInt(5432)
+    for (i <- 1 to 8) {
+      buffer.put("b".getBytes)
+    }
     buffer.flip()
-    buffer.get(enc_table_id)
-    val enc_table_f_id = enclave.Encrypt(eid, enc_table_id)
+    buffer.get(enc_table_f_id)
 
     val enc_table_p = encrypt_and_serialize(table_p_data)
     val enc_table_f = encrypt_and_serialize(table_f_data)
@@ -455,9 +454,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     // merge the two buffers together
     val processed_rows = processed_table_p ++ processed_table_f
 
-    //val sorted_rows = enclave.ObliviousSort(eid, 3, processed_rows, 0, table_p_data.length + table_f_data.length)
+    println("processed_rows' length is " + processed_rows.length)
 
-
+    val sorted_rows = enclave.ObliviousSort(eid, 3, processed_rows, 0, table_p_data.length + table_f_data.length)
 
     enclave.StopEnclave(eid)
   }

@@ -59,5 +59,6 @@ void get_table_indicator(uint8_t *primary_table,
 						 uint8_t *foreign_table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
-
+void print_row(const char *row_name, uint8_t *row_ptr);
+void print_join_row(const char *row_name, uint8_t *row_ptr);
 #endif // UTIL_H

@@ -276,7 +276,7 @@ typedef struct Integer {
 
 typedef struct String {
   uint32_t length;
-  char *buffer;
+  uint8_t *buffer;
 } String;
 
 
@@ -343,8 +343,29 @@ void compare_and_swap<Integer>(Integer *value1, Integer *value2) {
 
 template<>
 int compare<String>(String *value1, String *value2) {
-  // not yet implemented!
-  assert(false);
+  // String comparison is lexicographic order
+  uint32_t min_size = value1->length < value2->length ? value1->length : value2->length;
+  // printf("value1's length is %u\n", value1->length);
+  // printf("value2's length is %u\n", value2->length);
+  // print_bytes(value1->buffer, value1->length);
+  // print_bytes(value2->buffer, value2->length);
+  int ret = 0;
+  for (uint32_t i = 0; i < min_size; i++) {
+	if (*(value1->buffer+i) < *(value2->buffer+i)) {
+	  return -1;
+	} else if (*(value1->buffer+i) > *(value2->buffer+i)) {
+	  return 1;
+	}
+  }
+
+  if (value1->length < value2->length) {
+	return -1;
+  } else if (value1->length > value2->length) {
+	return 1;
+  }
+
+  // these two strings are exactly equal!
+  return ret;
 }
 
 template<>
@@ -353,7 +374,7 @@ void compare_and_swap<String>(String *value1, String *value2) {
   
   if (comp == 1) {
 	uint32_t temp_len = value1->length;
-	char *temp_buf = value1->buffer;
+	uint8_t *temp_buf = value1->buffer;
 	value1->length = value2->length;
 	value1->buffer = value2->buffer;
 	value2->length = temp_len;
@@ -389,16 +410,18 @@ int compare<Record>(Record *value1, Record *value2) {
   case 1:
 	{
 	  // Integer
-	  Integer *int1 = (Integer *) (value1->sort_attribute + 5);
-	  Integer *int2 = (Integer *) (value2->sort_attribute + 5);
+	  Integer *int1 = (Integer *) (value1->sort_attribute + HEADER_SIZE);
+	  Integer *int2 = (Integer *) (value2->sort_attribute + HEADER_SIZE);
 	  return compare<Integer>(int1, int2);
 	}
 	break;
   case 2:
 	{
 	  // String
-	  String *str1 = (String *) (value1->sort_attribute + 1);
-	  String *str2 = (String *) (value2->sort_attribute + 1);
+	  String *str1 = (String *) (value1->sort_attribute + TYPE_SIZE);
+	  str1->buffer = (value1->sort_attribute + HEADER_SIZE);
+	  String *str2 = (String *) (value2->sort_attribute + TYPE_SIZE);
+	  str2->buffer = (value2->sort_attribute + HEADER_SIZE);
 	  return compare<String>(str1, str2);
 	}
 	break;
@@ -422,7 +445,13 @@ void compare_and_swap<Record>(Record *value1, Record *value2) {
 template<>
 int compare<JoinRecord>(JoinRecord *value1, JoinRecord *value2) {
 
+  // printf("Comparing two records %u and %d\n", value1->if_primary, value2->if_primary);
+  // print_attribute("1", (value1->record).sort_attribute);
+  // print_attribute("2", (value2->record).sort_attribute);
+  //print_join_row("1", (value1->record).data);
+  //print_join_row("2", (value2->record).data);
   int ret = compare<Record>(&(value1->record), &(value2->record));
+  //printf("Result is %u\n", ret);
   
   if (ret == 0) {
 	// compare the table type
@@ -436,6 +465,7 @@ int compare<JoinRecord>(JoinRecord *value1, JoinRecord *value2) {
 	  return 0;
 	}
   }
+  return ret;
 }
 
 template<>
@@ -715,27 +745,35 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	
 	for (uint32_t i = 0; i < list_length; i++) {
 	  // allocate JOIN_ROW_UPPER_BOUND
-	  Record record = data[i].record;
-	  record.data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
-	  decrypt(input_ptr, enc_size(JOIN_ROW_UPPER_BOUND), record.data);
-	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+	  Record *record = &(data[i].record);
 	  
-	  table_id = record.data;
-	  data_ptr_ = record.data + TABLE_ID_SIZE;
-	  record.num_cols = *( (uint32_t *) data_ptr_);
-	  value_ptr = data_ptr_;
+	  record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
+	  decrypt(input_ptr, enc_size(JOIN_ROW_UPPER_BOUND), record->data);
+	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+
+	  table_id = record->data;
+	  data_ptr_ = record->data + TABLE_ID_SIZE;
+	  record->num_cols = *( (uint32_t *) data_ptr_);
+	  
+	  value_ptr = record->data + TABLE_ID_SIZE + 4;
+	  
+	  data[i].if_primary = cmp(table_id, primary_table, TABLE_ID_SIZE);
+
+	  //printf("Num cols is %u, if_primary: %d\n", record->num_cols, data[i].if_primary);
 
 	  // identify the join attribute
-	  for (uint32_t j = 0; j < record.num_cols; j++) {
+	  for (uint32_t j = 0; j < record->num_cols; j++) {
 		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE));
 		
-		if (cmp(table_id, primary_table, TABLE_ID_SIZE) == 0) {
+		if (data[i].if_primary == 0) {
 		  if (j + 1 == sort_attr_num_p) {
-			record.sort_attribute = value_ptr;
+			record->sort_attribute = value_ptr;
+			//print_attribute("primary table", record->sort_attribute);
 		  }
 		} else {
 		  if (j + 1 == sort_attr_num_p) {
-			record.sort_attribute = value_ptr;		  
+			record->sort_attribute = value_ptr;
+			//print_attribute("foreign table", record->sort_attribute);
 		  }
 		}
 
@@ -746,10 +784,13 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord) * list_length, low_idx, list_length);
 
+	printf("Sorting is done\n");
+
 	// Produce encrypted output rows
 	input_ptr = input;
 	for (uint32_t i = 0; i < list_length; i++) {
 	  // simply encrypt the entire row all at once
+	  //print_join_row("Join row ", data[i].record.data);
 	  encrypt(data[i].record.data, JOIN_ROW_UPPER_BOUND, input_ptr);
 	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	}

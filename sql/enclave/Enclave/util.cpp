@@ -155,3 +155,34 @@ void print_attribute(const char *attr_name, uint8_t *value_ptr) {
 	printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
   }
 }
+
+// this function prints out a plaintext row
+void print_row(const char *row_name, uint8_t *row_ptr) {
+  uint32_t num_cols = *( (uint32_t *) row_ptr);
+  uint8_t *value_ptr = row_ptr + 4;
+  printf("===============\n");
+  printf("Row %s\n", row_name);
+  for (uint32_t i = 0; i < num_cols; i++) {
+	print_attribute("", value_ptr);
+	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+  }
+  printf("===============\n");
+}
+
+// this function prints out a plaintext join row
+void print_join_row(const char *row_name, uint8_t *row_ptr) {
+  uint8_t *table_id = row_ptr;
+  printf("===============\n");
+  printf("Table id: ");
+  print_bytes(table_id, TABLE_ID_SIZE);
+  
+  uint32_t num_cols = *( (uint32_t *) (row_ptr + TABLE_ID_SIZE));
+  uint8_t *value_ptr = row_ptr + TABLE_ID_SIZE + 4;
+  
+  printf("Row %s\n", row_name);
+  for (uint32_t i = 0; i < num_cols; i++) {
+	print_attribute("", value_ptr);
+	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+  }
+  printf("===============\n");  
+}
