@@ -33,6 +33,7 @@
 #include "util.h"
 #include "Aggregate.h"
 #include "Crypto.h"
+#include "Join.h"
 
 #if defined(__cplusplus)
 extern "C" {

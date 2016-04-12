@@ -652,6 +652,47 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
   return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(JNIEnv *env, 
+																					 jobject obj, 
+																					 jlong eid,
+																					 jint op_code,
+																					 jbyteArray enc_table_id,
+																					 jbyteArray input_rows,
+																					 jint num_rows) {
+  jboolean if_copy;
+  
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+  uint32_t row_length = 0;
+  
+  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
+  uint32_t single_row_length = 12 + 16 + 8 + 2048;
+  uint32_t output_rows_length = single_row_length * num_rows;
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+  uint8_t *output_rows_ptr = output_rows;
+
+  uint8_t *enc_table_id_ptr = (uint8_t *) env->GetByteArrayElements(enc_table_id, &if_copy);
+
+  // try to call on each row individually
+
+  ecall_join_sort_preprocess(eid, enc_table_id_ptr, 
+							 input_rows_ptr, input_rows_length,
+							 num_rows, 
+							 output_rows_ptr, output_rows_length);
+
+   
+  jbyteArray ret = env->NewByteArray(output_rows_length);
+  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;  
+}
+
+
+
 /* Application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])

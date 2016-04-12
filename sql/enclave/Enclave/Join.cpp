@@ -22,9 +22,9 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
 // This pre-processing pads all rows to ROW_UPPER_BOUND, and then encrypt the entire thing
 // This is necessary because we do not want to leak the distribution of table 1 and table 2 after
 // the sort operation
-uint32_t join_sort_preprocess(uint8_t *table_id, 
-							  uint8_t *input_row, uint32_t input_row_len,
-							  uint8_t *output_row, uint32_t output_row_len) {
+void join_sort_preprocess(uint8_t *table_id, 
+						  uint8_t *input_row, uint32_t input_row_len,
+						  uint8_t *output_row, uint32_t output_row_len) {
   uint8_t temp[JOIN_ROW_UPPER_BOUND];
   uint8_t *temp_ptr = temp;
   // decrypt each attribute, copy to temp, then encrypt the entire row to output_row
@@ -117,10 +117,10 @@ public:
 };
 
 // given a decrypted row and an opcode, extract the join attribute
-void get_current_join_attribute(int op_code,
-								uint32_t num_cols, uint8_t *row,
-								int if_primary,
-								join_attribute *join_attr) {
+void get_join_attribute(int op_code,
+						uint32_t num_cols, uint8_t *row,
+						int if_primary,
+						join_attribute *join_attr) {
   join_attr->reset();
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
@@ -158,6 +158,50 @@ void get_current_join_attribute(int op_code,
 }
 
 
+// join two rows together
+// based on the op_code, de-duplicate the join columns
+// assume that output row has enough buffer size
+void join_merge_row(int op_code,
+					uint8_t *primary_row, uint8_t *secondary_row,
+					uint8_t *output_row) {
+
+  uint8_t *input_ptr = primary_row;
+  uint8_t *output_row_ptr = output_row;
+
+  uint32_t value_len = 0;
+
+  uint32_t primary_row_cols = 0;
+  uint32_t secondary_row_cols = 0;
+  
+  if (op_code == 1) {
+	primary_row_cols = 3;
+	secondary_row_cols = 2;
+	
+	// primary row has 3 columns, other row has 2 columns
+	// p_row's 2nd column = row's 1st column
+	*( (uint32_t *) output_row_ptr) = 3 + 2 - 1;
+	output_row_ptr += 4;
+
+	// first write out primary_row
+	for (uint32_t i = 0; i < primary_row_cols; i++) {
+	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE; 
+	  cpy(output_row_ptr, input_ptr, value_len);
+	  output_row_ptr += value_len;
+	}
+
+	// now, write out the other row
+	input_ptr = secondary_row;
+	for (uint32_t i = 0; i < secondary_row_cols; i++) {
+	  if (i != 0) {
+		value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+		cpy(output_row_ptr, input_ptr, value_len);
+		output_row_ptr += value_len;
+	  }
+	}	
+		
+  }
+}
+
 // Join in enclave: assumes that the records have been sorted
 // by the join attribute already
 // This method takes in a temporay row (which could be a dummy row)
@@ -181,6 +225,7 @@ void get_current_join_attribute(int op_code,
 void sort_merge_join(int op_code,
 					 uint8_t *input_rows, uint32_t input_rows_length,
 					 uint32_t num_rows,
+					 uint8_t *join_row, uint32_t join_row_length,
 					 uint8_t *output_rows, uint32_t output_rows_length,
 					 uint8_t *enc_table_p, uint8_t *enc_table_f) {
 
@@ -218,6 +263,18 @@ void sort_merge_join(int op_code,
   uint8_t *dummy_row_ptr = dummy_row;
   uint32_t dummy_row_len = 0;
 
+  uint8_t *merge_row = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND * 2);
+
+  uint32_t num_cols = 0;
+
+  decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
+  assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
+  num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
+  get_join_attribute(op_code, num_cols,
+							 primary_row + TABLE_ID_SIZE, 0,
+							 &primary_join_attr);
+    
+
   // construct dummy rows
   // constructs a final row with final num cols = 
   // (num cols of table P + num cols of table f)
@@ -252,14 +309,14 @@ void sort_merge_join(int op_code,
 	current_table = current_row_ptr;
 	current_row_ptr += TABLE_ID_SIZE;
 	
-	uint32_t num_cols = *( (uint32_t *) current_row_ptr);
+	num_cols = *( (uint32_t *) current_row_ptr);
 	printf("Record %u, num cols is %u\n", r, num_cols);
 	current_row_ptr += 4;
 
 	int if_primary = cmp(table_p, current_table, TABLE_ID_SIZE);
-	get_current_join_attribute(op_code, num_cols,
-							   current_row_ptr, if_primary,
-							   &current_join_attr);
+	get_join_attribute(op_code, num_cols,
+					   current_row_ptr, if_primary,
+					   &current_join_attr);
 
 
 	if (if_primary == 0) {
@@ -281,17 +338,17 @@ void sort_merge_join(int op_code,
 		output_rows_ptr += encrypt_and_write_row(dummy_row, output_rows_ptr);
 	  } else {
 		// need to do a real join
-		// write out the primary row (need to re-encrypt)
-		// first, write out the 
-		
-		
+		join_merge_row(op_code, primary_row, current_row, merge_row);
+		output_rows_ptr += encrypt_and_write_row(merge_row, output_rows_ptr);
 	  }
 	}
 	
   }
   
   free(dummy_row);
+  free(join_row);
 }
+
 
 
 // do a scan of all of the encrypted rows
@@ -399,3 +456,4 @@ void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
   }
   
 }
+

@@ -45,13 +45,14 @@ enum TYPE {
 };
 
 #define TYPE_SIZE (1)
-#define HEADER_SIZE (TYPE_SIZE + 4)
+#define LEN_SIZE (4)
+#define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
 
 #define INT_UPPER_BOUND (4)
 #define STRING_UPPER_BOUND (1024)
 
 
-#define TABLE_ID_SIZE (128)
+#define TABLE_ID_SIZE (8)
 #define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
 
 #endif // UTIL_H

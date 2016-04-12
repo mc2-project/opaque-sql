@@ -63,4 +63,14 @@ class SGXEnclave extends java.io.Serializable {
     rows: Array[Byte],
     num_rows: Int
   ): Array[Byte]
+
+  @native def JoinSortPreprocess(
+    op_code: Int,
+    enc_table_id: Array[Byte],
+    input_rows: Array[Byte],
+    num_rows: Int
+  ): Array[Byte]
+
+
+
 }

@@ -30,7 +30,6 @@
 #include "Enclave_t.h"  /* print_string */
 #include "sgx_trts.h"
 #include "math.h"
-#include "util.h"
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 		   uint8_t *ciphertext, uint32_t cipher_length) {
@@ -647,7 +646,11 @@ void ecall_random_id(uint8_t *ptr, uint32_t length) {
   sgx_status_t rand_status = sgx_read_rand(ptr, length);
 }
 
-// Aggregation
+void ecall_test() {
+  agg_test();
+}
+
+/**** BEGIN Aggregation ****/
 void ecall_scan_aggregation_count_distinct(int op_code,
 										   uint8_t *input_rows, uint32_t input_rows_length,
 										   uint32_t num_rows,
@@ -662,11 +665,6 @@ void ecall_scan_aggregation_count_distinct(int op_code,
 								  actual_size,
 								  flag);
 }
-
-void ecall_test() {
-  agg_test();
-}
-
 
 void ecall_process_boundary_records(int op_code,
 									uint8_t *rows, uint32_t rows_size,
@@ -690,3 +688,83 @@ void ecall_final_aggregation(int op_code,
 					ret, ret_length);
   
 }
+
+/**** END Aggregation ****/
+
+
+
+/**** BEGIN Join ****/
+
+size_t enc_table_id_size(const uint8_t *enc_table_id) {
+  return (size_t) (enc_size(TABLE_ID_SIZE));
+}
+
+size_t join_row_size(const uint8_t *join_row) {
+  return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
+}
+
+
+void ecall_join_sort_preprocess(uint8_t *table_id, 
+								uint8_t *input_row, uint32_t input_row_len,
+								uint32_t num_rows,
+								uint8_t *output_row, uint32_t output_row_len) {
+
+  // pre-process the rows, make a call to join_sort_preprocess for each row
+  uint8_t *input_row_ptr = input_row;
+  uint8_t *enc_row_ptr = NULL;
+  uint32_t enc_row_len = 0;
+
+  uint8_t *output_row_ptr = output_row;
+  
+  for (uint32_t i = 0; i < num_rows; i++) {
+	get_next_row(&input_row_ptr, &enc_row_ptr, &enc_row_len);
+	
+	join_sort_preprocess(table_id, 
+						 input_row_ptr, input_row_len,
+						 output_row_ptr, output_row_len);
+
+	output_row_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+  }
+}
+
+void ecall_scan_collect_last_primary(int op_code,
+									 uint8_t *input_rows, uint32_t input_rows_length,
+									 uint32_t num_rows,
+									 uint8_t *output, uint32_t output_length,
+									 uint8_t *enc_table_p, uint8_t *enc_table_f) {
+  
+  scan_collect_last_primary(op_code,
+							input_rows, input_rows_length, num_rows,
+							output, output_length,
+							enc_table_p, enc_table_f);
+}
+
+void ecall_process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
+								 uint32_t num_rows,
+								 uint8_t *output_rows, uint32_t output_rows_size,
+								 uint8_t *enc_table_p, uint8_t *enc_table_f) {
+  
+  process_join_boundary(input_rows, input_rows_length,
+						num_rows,
+						output_rows, output_rows_size,
+						enc_table_p, enc_table_f);
+	
+}
+
+
+void ecall_sort_merge_join(int op_code,
+						   uint8_t *input_rows, uint32_t input_rows_length,
+						   uint32_t num_rows,
+						   uint8_t *join_row, uint32_t join_row_length,
+						   uint8_t *output_rows, uint32_t output_rows_length,
+						   uint8_t *enc_table_p, uint8_t *enc_table_f) {
+  
+  sort_merge_join(op_code,
+				  input_rows, input_rows_length, num_rows,
+				  join_row, join_row_length,
+				  output_rows, output_rows_length,
+				  enc_table_p, enc_table_f);
+}
+
+/**** END Join ****/
+

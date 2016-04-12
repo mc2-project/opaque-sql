@@ -376,7 +376,76 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
     val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
 
+    enclave.StopEnclave(eid)
+  }
 
+
+  test("JNIJoin", SGXTest) {
+    def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
+      val encrypted = data.map {
+        case (identifier, word, count) =>
+          (QED.encrypt(enclave, eid, identifier),
+            QED.encrypt(enclave, eid, word),
+            QED.encrypt(enclave, eid, count))
+      }
+
+      var total_size = 0
+      for (row <- encrypted) {
+        // for num columns
+        total_size += 4
+        total_size += 4
+        total_size += row._1.length
+        total_size += 4
+        total_size += row._2.length
+        total_size += 4
+        total_size += row._3.length
+      }
+
+      val buffer = ByteBuffer.allocate(total_size)
+      buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+      for (row <- encrypted) {
+        buffer.putInt(3)
+        buffer.putInt(row._1.length)
+        buffer.put(row._1)
+        buffer.putInt(row._2.length)
+        buffer.put(row._2)
+        buffer.putInt(row._3.length)
+        buffer.put(row._3)
+      }
+
+      buffer.flip()
+      val encrypted_data = new Array[Byte](buffer.limit())
+      buffer.get(encrypted_data)
+
+      encrypted_data
+    }
+
+    val eid = enclave.StartEnclave()
+
+    val table_p_data = Seq((1, "A", 10), (2, "C", 20), (3, "D", 30), (4, "E", 1))
+    val table_f_data = Seq((100, "A", 1), (100, "A", 1), (0, "B", 1), (0, "B", 1), (200, "C", 1), (200, "C", 1), (300, "D", 1), (400, "E", 1))
+
+    val buffer = ByteBuffer.allocate(128)
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
+    val enc_table_id = new Array[Byte](8)
+
+    buffer.putInt(1234)
+    buffer.putInt(4321)
+    buffer.flip()
+    buffer.get(enc_table_id)
+    val enc_table_p_id = enclave.Encrypt(enc_table_id)
+
+    buffer.clear()
+
+    buffer.putInt(2345)
+    buffer.putInt(5432)
+    buffer.flip()
+    buffer.get(enc_table_id)
+    val enc_table_f_id = enclave.Encrypt(enc_table_id)
+
+    val enc_table_p = encrypt_and_serialize(table_p_data)
+    val enc_table_f = encrypte_and_serialize(table_f_data)
 
     enclave.StopEnclave(eid)
   }
