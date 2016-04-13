@@ -7,6 +7,7 @@
 #include "sgx_trts.h"
 #include "math.h"
 #include "Crypto.h"
+#include "InternalTypes.h"
 
 #ifndef JOIN_H
 #define JOIN_H

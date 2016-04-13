@@ -50,7 +50,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new SGXEnclave()
   }
 
-  /*
+
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
     val data = Seq(("hello", 1), ("world", 4), ("foo", 2))
@@ -289,7 +289,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-
   test("JNIAggregation", SGXTest) {
 
     val eid = enclave.StartEnclave()
@@ -378,7 +377,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-   */
+
 
   test("JNIJoin", SGXTest) {
     val eid = enclave.StartEnclave()

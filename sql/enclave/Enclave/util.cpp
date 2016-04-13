@@ -186,3 +186,39 @@ void print_join_row(const char *row_name, uint8_t *row_ptr) {
   }
   printf("===============\n");  
 }
+
+
+// returns the number of attributes for this row
+uint32_t get_num_col(uint8_t *row) {
+  uint32_t *num_col_ptr = (uint32_t *) row;
+  return *num_col_ptr;
+}
+
+uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len, 
+					  uint8_t *row_ptr, uint8_t *row, uint32_t length) {
+  if (row_ptr >= row + length) {
+    return NULL;
+  }
+
+  uint8_t *ret_row_ptr = row_ptr;
+
+  *enc_attr_ptr = row_ptr + 4;
+  *enc_attr_len = * ((uint32_t *) row_ptr);
+
+  ret_row_ptr += 4 + *enc_attr_len;
+  return ret_row_ptr;
+}
+
+
+void get_attr(uint8_t *dec_attr_ptr,
+			  uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr) {
+
+  // given a pointer to the encrypted attribute, return the type, attr len, attr pointer
+  assert(dec_attr_ptr != NULL);
+  *type = *dec_attr_ptr;
+
+  uint32_t *attr_len_ptr = (uint32_t *) (dec_attr_ptr + 1);
+  *attr_len = *(dec_attr_ptr + 1);
+  
+  *attr_ptr  = (dec_attr_ptr + 1 + *attr_len);
+}

@@ -1,8 +1,11 @@
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
+#include <assert.h>
+
 #include "Enclave_t.h"  /* print_string */
 #include "define.h"
+#include "InternalTypes.h"
 
 #ifndef UTIL_H
 #define UTIL_H
@@ -31,36 +34,16 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
 					uint32_t attr_num,
 					uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 
-/*
-// defines an upper bound on the size of the aggregation value
-// only the plaintext size
-#define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
-#define ROW_UPPER_BOUND (2048)
-// distinct items, offset, sort attribute, aggregation attribute
-#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
-
-enum TYPE {
-  DUMMY = 0,
-  INT = 1,
-  STRING = 2
-};
-
-#define TYPE_SIZE (1)
-#define LEN_SIZE (4)
-#define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
-
-#define INT_UPPER_BOUND (4)
-#define STRING_UPPER_BOUND (1024)
-
-
-#define TABLE_ID_SIZE (8)
-#define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
-*/
-
 void get_table_indicator(uint8_t *primary_table,
 						 uint8_t *foreign_table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
 void print_row(const char *row_name, uint8_t *row_ptr);
 void print_join_row(const char *row_name, uint8_t *row_ptr);
+
+uint32_t get_num_col(uint8_t *row);
+uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len, 
+					  uint8_t *row_ptr, uint8_t *row, uint32_t length);
+void get_attr(uint8_t *dec_attr_ptr,
+			  uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr);
 #endif // UTIL_H

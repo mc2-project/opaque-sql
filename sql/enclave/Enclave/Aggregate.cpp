@@ -691,10 +691,10 @@ void process_boundary_records(int op_code,
 		  prev_agg.flush_all();
 		  prev_agg.set_distinct(distinct_items);
 		  prev_agg.set_offset(0);
-		  printf("Writing out %u, distinct items is %u, agg_enc_size: %u\n", i, distinct_items, agg_enc_size);
+		  //printf("Writing out %u, distinct items is %u, agg_enc_size: %u\n", i, distinct_items, agg_enc_size);
 		  prev_agg.print();
-		  encrypt(prev_agg.buffer, agg_enc_size, out_agg_rows_ptr);
-		  out_agg_rows_ptr += enc_size(agg_enc_size);
+		  encrypt(prev_agg.buffer, AGG_UPPER_BOUND, out_agg_rows_ptr);
+		  out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
 		}
 
 
@@ -771,11 +771,11 @@ void process_boundary_records(int op_code,
 		prev_agg.flush_all();
 		prev_agg.set_distinct(distinct_items);
 		prev_agg.set_offset(offset);
-		printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
+		//printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
 		prev_agg.print();
 		
-		encrypt(prev_agg.buffer, agg_enc_size, out_agg_rows_ptr);
-		out_agg_rows_ptr += enc_size(agg_enc_size);
+		encrypt(prev_agg.buffer, AGG_UPPER_BOUND, out_agg_rows_ptr);
+		out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
 	  }
 
 	  // copy current_agg into prev_agg
@@ -788,9 +788,9 @@ void process_boundary_records(int op_code,
 	}
   }
 
-  printf("Is in enclave? %u\n", sgx_is_within_enclave(out_agg_rows, (size_t ) (out_agg_rows_ptr - out_agg_rows)));
+  // printf("Is in enclave? %u\n", sgx_is_within_enclave(out_agg_rows, (size_t ) (out_agg_rows_ptr - out_agg_rows)));
   
-  printf("Return process_boundary, %p\n", out_agg_rows_ptr);
+  // printf("Return process_boundary, %p\n", out_agg_rows_ptr);
 }
 
 

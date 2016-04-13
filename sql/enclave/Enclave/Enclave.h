@@ -34,6 +34,8 @@
 #include "Aggregate.h"
 #include "Crypto.h"
 #include "Join.h"
+#include "Filter.h"
+#include "InternalTypes.h"
 
 #if defined(__cplusplus)
 extern "C" {
