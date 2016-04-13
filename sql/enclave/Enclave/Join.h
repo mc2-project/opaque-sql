@@ -19,8 +19,7 @@ void join_sort_preprocess(int op_code,
 void scan_collect_last_primary(int op_code,
 							   uint8_t *input_rows, uint32_t input_rows_length,
 							   uint32_t num_rows,
-							   uint8_t *output, uint32_t output_length,
-							   uint8_t *enc_table_p, uint8_t *enc_table_f);
+							   uint8_t *output, uint32_t output_length);
 
 void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
 						   uint32_t num_rows,
@@ -31,7 +30,6 @@ void sort_merge_join(int op_code,
 					 uint8_t *input_rows, uint32_t input_rows_length,
 					 uint32_t num_rows,
 					 uint8_t *join_row, uint32_t join_row_length,
-					 uint8_t *output, uint32_t output_length,
-					 uint8_t *enc_table_p, uint8_t *enc_table_f);
+					 uint8_t *output, uint32_t output_length);
 
 #endif

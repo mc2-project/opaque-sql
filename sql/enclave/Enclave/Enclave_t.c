@@ -108,8 +108,6 @@ typedef struct ms_ecall_scan_collect_last_primary_t {
 	uint32_t ms_num_rows;
 	uint8_t* ms_output;
 	uint32_t ms_output_length;
-	uint8_t* ms_enc_table_p;
-	uint8_t* ms_enc_table_f;
 } ms_ecall_scan_collect_last_primary_t;
 
 typedef struct ms_ecall_process_join_boundary_t {
@@ -131,8 +129,6 @@ typedef struct ms_ecall_sort_merge_join_t {
 	uint32_t ms_join_row_length;
 	uint8_t* ms_output_rows;
 	uint32_t ms_output_rows_length;
-	uint8_t* ms_enc_table_p;
-	uint8_t* ms_enc_table_f;
 } ms_ecall_sort_merge_join_t;
 
 typedef struct ms_ecall_join_sort_preprocess_t {
@@ -747,17 +743,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_collect_last_primary(void* pms)
 	uint32_t _tmp_output_length = ms->ms_output_length;
 	size_t _len_output = _tmp_output_length;
 	uint8_t* _in_output = NULL;
-	uint8_t* _tmp_enc_table_p = ms->ms_enc_table_p;
-	size_t _len_enc_table_p = ((_tmp_enc_table_p) ? enc_table_id_size(_tmp_enc_table_p) : 0);
-	uint8_t* _in_enc_table_p = NULL;
-	uint8_t* _tmp_enc_table_f = ms->ms_enc_table_f;
-	size_t _len_enc_table_f = ((_tmp_enc_table_f) ? enc_table_id_size(_tmp_enc_table_f) : 0);
-	uint8_t* _in_enc_table_f = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_scan_collect_last_primary_t));
 	CHECK_UNIQUE_POINTER(_tmp_output, _len_output);
-	CHECK_UNIQUE_POINTER(_tmp_enc_table_p, _len_enc_table_p);
-	CHECK_UNIQUE_POINTER(_tmp_enc_table_f, _len_enc_table_f);
 
 	if (_tmp_output != NULL) {
 		if ((_in_output = (uint8_t*)malloc(_len_output)) == NULL) {
@@ -767,44 +755,12 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_collect_last_primary(void* pms)
 
 		memset((void*)_in_output, 0, _len_output);
 	}
-	if (_tmp_enc_table_p != NULL) {
-		_in_enc_table_p = (uint8_t*)malloc(_len_enc_table_p);
-		if (_in_enc_table_p == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_enc_table_p, _tmp_enc_table_p, _len_enc_table_p);
-
-		/* check whether the pointer is modified. */
-		if (enc_table_id_size(_in_enc_table_p) != _len_enc_table_p) {
-			status = SGX_ERROR_INVALID_PARAMETER;
-			goto err;
-		}
-	}
-	if (_tmp_enc_table_f != NULL) {
-		_in_enc_table_f = (uint8_t*)malloc(_len_enc_table_f);
-		if (_in_enc_table_f == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_enc_table_f, _tmp_enc_table_f, _len_enc_table_f);
-
-		/* check whether the pointer is modified. */
-		if (enc_table_id_size(_in_enc_table_f) != _len_enc_table_f) {
-			status = SGX_ERROR_INVALID_PARAMETER;
-			goto err;
-		}
-	}
-	ecall_scan_collect_last_primary(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_output, _tmp_output_length, _in_enc_table_p, _in_enc_table_f);
+	ecall_scan_collect_last_primary(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_output, _tmp_output_length);
 err:
 	if (_in_output) {
 		memcpy(_tmp_output, _in_output, _len_output);
 		free(_in_output);
 	}
-	if (_in_enc_table_p) free(_in_enc_table_p);
-	if (_in_enc_table_f) free(_in_enc_table_f);
 
 	return status;
 }
@@ -892,18 +848,10 @@ static sgx_status_t SGX_CDECL sgx_ecall_sort_merge_join(void* pms)
 	uint32_t _tmp_output_rows_length = ms->ms_output_rows_length;
 	size_t _len_output_rows = _tmp_output_rows_length;
 	uint8_t* _in_output_rows = NULL;
-	uint8_t* _tmp_enc_table_p = ms->ms_enc_table_p;
-	size_t _len_enc_table_p = ((_tmp_enc_table_p) ? enc_table_id_size(_tmp_enc_table_p) : 0);
-	uint8_t* _in_enc_table_p = NULL;
-	uint8_t* _tmp_enc_table_f = ms->ms_enc_table_f;
-	size_t _len_enc_table_f = ((_tmp_enc_table_f) ? enc_table_id_size(_tmp_enc_table_f) : 0);
-	uint8_t* _in_enc_table_f = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_sort_merge_join_t));
 	CHECK_UNIQUE_POINTER(_tmp_join_row, _len_join_row);
 	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
-	CHECK_UNIQUE_POINTER(_tmp_enc_table_p, _len_enc_table_p);
-	CHECK_UNIQUE_POINTER(_tmp_enc_table_f, _len_enc_table_f);
 
 	if (_tmp_join_row != NULL) {
 		_in_join_row = (uint8_t*)malloc(_len_join_row);
@@ -928,45 +876,13 @@ static sgx_status_t SGX_CDECL sgx_ecall_sort_merge_join(void* pms)
 
 		memset((void*)_in_output_rows, 0, _len_output_rows);
 	}
-	if (_tmp_enc_table_p != NULL) {
-		_in_enc_table_p = (uint8_t*)malloc(_len_enc_table_p);
-		if (_in_enc_table_p == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_enc_table_p, _tmp_enc_table_p, _len_enc_table_p);
-
-		/* check whether the pointer is modified. */
-		if (enc_table_id_size(_in_enc_table_p) != _len_enc_table_p) {
-			status = SGX_ERROR_INVALID_PARAMETER;
-			goto err;
-		}
-	}
-	if (_tmp_enc_table_f != NULL) {
-		_in_enc_table_f = (uint8_t*)malloc(_len_enc_table_f);
-		if (_in_enc_table_f == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_enc_table_f, _tmp_enc_table_f, _len_enc_table_f);
-
-		/* check whether the pointer is modified. */
-		if (enc_table_id_size(_in_enc_table_f) != _len_enc_table_f) {
-			status = SGX_ERROR_INVALID_PARAMETER;
-			goto err;
-		}
-	}
-	ecall_sort_merge_join(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_join_row, ms->ms_join_row_length, _in_output_rows, _tmp_output_rows_length, _in_enc_table_p, _in_enc_table_f);
+	ecall_sort_merge_join(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_join_row, ms->ms_join_row_length, _in_output_rows, _tmp_output_rows_length);
 err:
 	if (_in_join_row) free(_in_join_row);
 	if (_in_output_rows) {
 		memcpy(_tmp_output_rows, _in_output_rows, _len_output_rows);
 		free(_in_output_rows);
 	}
-	if (_in_enc_table_p) free(_in_enc_table_p);
-	if (_in_enc_table_f) free(_in_enc_table_f);
 
 	return status;
 }

@@ -2,21 +2,30 @@
 
 
 uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
-						   uint8_t *output_row_ptr) {
+							   uint8_t *output_row_ptr) {
   // write out num_cols
+  printf("Encrypting and formatting row\n");
   uint32_t num_cols = *( (uint32_t *) input_row_ptr);
+  printf("num cols is %u\n", num_cols);
   uint32_t value_len = 0;
   *((uint32_t *) output_row_ptr) = num_cols;
-  uint32_t offset = 4;
+  
+  uint32_t input_offset = 4;
+  uint32_t output_offset = 0;
+  
   for (uint32_t i = 0; i < num_cols; i++) {
-	value_len = *((uint32_t *) (output_row_ptr + offset + TYPE_SIZE));
+	value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE));
 	*((uint32_t *) output_row_ptr) = enc_size(value_len + HEADER_SIZE);
-	offset += HEADER_SIZE;
-	encrypt(input_row_ptr, value_len, output_row_ptr + offset);
-	offset += value_len + HEADER_SIZE;
+	output_offset += HEADER_SIZE;
+
+	printf("[%u] value_len is %u\n", i, value_len);
+	encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
+	
+	input_offset += value_len + HEADER_SIZE;
+	output_offset += enc_size(value_len + HEADER_SIZE);
   }
 
-  return offset;
+  return output_offset;
 }
 
 // This pre-processing pads all rows to ROW_UPPER_BOUND, and then encrypt the entire thing
@@ -150,7 +159,7 @@ void get_join_attribute(int op_code,
 	  // attribute number is 2nd column
 	  for (uint32_t i = 0; i < num_cols; i++) {
 		total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-		if (i == 2) {
+		if (i + 1 == 2) {
 		  join_attr->new_attribute(row_ptr, total_value_len);
 		} else {
 		  // TODO: dummy write
@@ -162,7 +171,7 @@ void get_join_attribute(int op_code,
 	  // attribute number is 1st column
 	  for (uint32_t i = 0; i < num_cols; i++) {
 		total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-		if (i == 1) {
+		if (i + 1 == 2) {
 		  join_attr->new_attribute(row_ptr, total_value_len);
 		} else {
 		  // TODO: dummy write
@@ -192,33 +201,39 @@ void join_merge_row(int op_code,
 
   uint32_t primary_row_cols = 0;
   uint32_t secondary_row_cols = 0;
+  uint32_t secondary_join_attr = 0;
   
   if (op_code == 3) {
-	primary_row_cols = 3;
-	secondary_row_cols = 2;
+	primary_row_cols = *( (uint32_t *) primary_row);
+	secondary_row_cols =  *( (uint32_t *) secondary_row);
+	secondary_join_attr = 2;
 	
 	// primary row has 3 columns, other row has 2 columns
 	// p_row's 2nd column = row's 1st column
-	*( (uint32_t *) output_row_ptr) = 3 + 2 - 1;
+	*( (uint32_t *) output_row_ptr) = primary_row_cols + secondary_row_cols - 1;
 	output_row_ptr += 4;
 
+	input_ptr += 4;
 	// first write out primary_row
 	for (uint32_t i = 0; i < primary_row_cols; i++) {
-	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE; 
+	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
 	  cpy(output_row_ptr, input_ptr, value_len);
+	  input_ptr += value_len;
 	  output_row_ptr += value_len;
 	}
 
-	// now, write out the other row
+	// now, write out the other row, skipping the duplicate columns
 	input_ptr = secondary_row;
+	input_ptr += 4;
+
 	for (uint32_t i = 0; i < secondary_row_cols; i++) {
-	  if (i != 0) {
-		value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+	  if (i + 1 != secondary_join_attr) {
 		cpy(output_row_ptr, input_ptr, value_len);
 		output_row_ptr += value_len;
 	  }
-	}	
-		
+	  input_ptr += value_len;
+	}
   }
 }
 
@@ -246,16 +261,15 @@ void sort_merge_join(int op_code,
 					 uint8_t *input_rows, uint32_t input_rows_length,
 					 uint32_t num_rows,
 					 uint8_t *join_row, uint32_t join_row_length,
-					 uint8_t *output_rows, uint32_t output_rows_length,
-					 uint8_t *enc_table_p, uint8_t *enc_table_f) {
+					 uint8_t *output_rows, uint32_t output_rows_length) {
 
 
   // iterate through the sorted rows and output join
   // output should be 2 * ROW_UPPER_BOUND
   // there should be one output per input
   
-  uint32_t agg_attribute_num = 1;
-  uint32_t sort_attribute_num = 1;
+  uint32_t agg_attribute_num = 2;
+  uint32_t sort_attribute_num = 2;
 
   uint8_t *input_ptr = input_rows;
   uint8_t *output_rows_ptr = output_rows;
@@ -268,6 +282,9 @@ void sort_merge_join(int op_code,
   // table_f joins on foreign key
   uint8_t table_p[TABLE_ID_SIZE];
   uint8_t table_f[TABLE_ID_SIZE];
+  // decrypt the table IDs
+  get_table_indicator(table_p, table_f);
+  
   uint8_t *current_table = NULL;
 
   join_attribute primary_join_attr;
@@ -287,14 +304,19 @@ void sort_merge_join(int op_code,
 
   uint32_t num_cols = 0;
 
-  decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
-  assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
-  num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
-  get_join_attribute(op_code, num_cols,
-							 primary_row + TABLE_ID_SIZE, 0,
-							 &primary_join_attr);
-    
 
+  // check to see if this is a dummy row
+  if (test_dummy(join_row, enc_size(JOIN_ROW_UPPER_BOUND)) != 0) {
+	decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
+	assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
+	num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
+	get_join_attribute(op_code, num_cols,
+					   primary_row + TABLE_ID_SIZE, 0,
+					   &primary_join_attr);
+  } else {
+	printf("Join row is a dummy!\n");
+  }
+  
   // construct dummy rows
   // constructs a final row with final num cols = 
   // (num cols of table P + num cols of table f)
@@ -303,11 +325,22 @@ void sort_merge_join(int op_code,
 	*( (uint32_t *) dummy_row_ptr) = 5;
 	dummy_row_ptr += 4;
 	int types[5] = {INT, STRING, INT, INT, INT};
-	for (uint32_t i = 0; i < 2; i++) {
-	  uint32_t upper_bound = types[i];
+	uint32_t upper_bound = 0;
+	
+	for (uint32_t i = 0; i < 5; i++) {
+	  uint32_t t = types[i];
 	  // instead of writing back the correct type, we need to write a dummy type
 	  *dummy_row_ptr = DUMMY;
-	  dummy_row_ptr += 1;
+	  dummy_row_ptr += TYPE_SIZE;
+	  
+	  if (t == INT) {
+		upper_bound = INT_UPPER_BOUND;
+	  } else if (t == STRING) {
+		upper_bound = STRING_UPPER_BOUND;
+	  } else {
+		upper_bound = 0;
+	  }
+
 	  *( (uint32_t *) dummy_row_ptr) = upper_bound;
 	  dummy_row_ptr += 4;
 	  dummy_row_ptr += upper_bound;
@@ -315,10 +348,6 @@ void sort_merge_join(int op_code,
   }
 
   dummy_row_ptr = dummy_row;
-
-  // decrypt the table IDs
-  decrypt(enc_table_p, enc_size(TABLE_ID_SIZE), table_p);
-  decrypt(enc_table_f, enc_size(TABLE_ID_SIZE), table_f);
 
   for (uint32_t r = 0; r < num_rows; r++) {
 	// these rows are completely encrypted, need to decrypt first
@@ -333,11 +362,14 @@ void sort_merge_join(int op_code,
 	printf("Record %u, num cols is %u\n", r, num_cols);
 	current_row_ptr += 4;
 
+	print_bytes(current_table, TABLE_ID_SIZE);
+
 	int if_primary = cmp(table_p, current_table, TABLE_ID_SIZE);
 	get_join_attribute(op_code, num_cols,
 					   current_row_ptr, if_primary,
 					   &current_join_attr);
-
+	printf("if_primary: %u\n", if_primary);
+	print_attribute("Current join attr", current_join_attr.buffer);
 
 	if (if_primary == 0) {
 	  if (primary_join_attr.compare(&current_join_attr) != 0) {
@@ -358,15 +390,17 @@ void sort_merge_join(int op_code,
 		output_rows_ptr += encrypt_and_write_row(dummy_row, output_rows_ptr);
 	  } else {
 		// need to do a real join
-		join_merge_row(op_code, primary_row, current_row, merge_row);
+		join_merge_row(op_code, primary_row, current_row + TABLE_ID_SIZE, merge_row);
 		output_rows_ptr += encrypt_and_write_row(merge_row, output_rows_ptr);
+		//print_row("Join row: ", merge_row);
 	  }
 	}
+
+	input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	
   }
   
   free(dummy_row);
-  free(join_row);
 }
 
 
@@ -376,18 +410,16 @@ void sort_merge_join(int op_code,
 void scan_collect_last_primary(int op_code,
 							   uint8_t *input_rows, uint32_t input_rows_length,
 							   uint32_t num_rows,
-							   uint8_t *output, uint32_t output_length,
-							   uint8_t *enc_table_p, uint8_t *enc_table_f) {
+							   uint8_t *output, uint32_t output_length) {
 
-  // table_p is the table that is joining on primary key
-  // table_f joins on foreign key
-  uint8_t table_p[TABLE_ID_SIZE];
-  uint8_t table_f[TABLE_ID_SIZE];
+  // primary_table is the table that is joining on primary key
+  // foreign_table joins on foreign key
+  uint8_t primary_table[TABLE_ID_SIZE];
+  uint8_t foreign_table[TABLE_ID_SIZE];
+  get_table_indicator(primary_table, foreign_table);  
+
   uint8_t *current_table = NULL;
 
-  // decrypt the table IDs
-  decrypt(enc_table_p, enc_size(TABLE_ID_SIZE), table_p);
-  decrypt(enc_table_f, enc_size(TABLE_ID_SIZE), table_f);
 
   uint8_t *input_rows_ptr = input_rows;
   
@@ -399,7 +431,7 @@ void scan_collect_last_primary(int op_code,
   // clear the primary row, and write table_f's table ID in there
   // later, during the boundary record processing, it's easy to tell whether this is a dummy record
   write_dummy(primary_row, JOIN_ROW_UPPER_BOUND);
-  cpy(primary_row, table_f, TABLE_ID_SIZE);
+  cpy(primary_row, foreign_table, TABLE_ID_SIZE);
   
   for (uint32_t r = 0; r < num_rows; r++) {
 	decrypt(input_rows_ptr, enc_size(JOIN_ROW_UPPER_BOUND), current_row);
@@ -410,8 +442,8 @@ void scan_collect_last_primary(int op_code,
 	// table ID
 	current_table = current_row_ptr;
 	current_row_ptr += TABLE_ID_SIZE;
-	
-	if (cmp(current_table, table_p, TABLE_ID_SIZE) == 0) {
+
+	if (cmp(current_table, primary_table, TABLE_ID_SIZE) == 0) {
 	  cpy(primary_row, current_row, JOIN_ROW_UPPER_BOUND);
 	} else {
 	  // do a dummy write
@@ -421,6 +453,7 @@ void scan_collect_last_primary(int op_code,
   }
 
   // return the last primary row, if there is any!
+  print_join_row("Join row", primary_row);
   encrypt(primary_row, JOIN_ROW_UPPER_BOUND, output);
 }
 

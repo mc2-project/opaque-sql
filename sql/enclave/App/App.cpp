@@ -45,6 +45,7 @@
 #include "Enclave_u.h"
 #include "org_apache_spark_sql_SGXEnclave.h"
 #include "sgx_tcrypto.h"
+#include "define.h"
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -596,7 +597,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   
   
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+  //uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+  uint32_t real_size = ENC_HEADER_SIZE + AGG_UPPER_BOUND;
   uint32_t out_agg_rows_length = real_size * num_rows;
   
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
@@ -632,8 +634,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
   
   
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
-  uint32_t out_agg_rows_length = real_size * 1;
+  uint32_t real_size = ENC_HEADER_SIZE + AGG_UPPER_BOUND;
+  uint32_t out_agg_rows_length = real_size * num_rows;
   
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
   
@@ -665,8 +667,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
   uint32_t row_length = 0;
   
-  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t single_row_length = 12 + 16 + 8 + 2048;
+  uint32_t single_row_length = ENC_JOIN_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
@@ -693,7 +694,73 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   return ret;  
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *env, 
+																						 jobject obj, 
+																						 jlong eid,
+																						 jint op_code,
+																						 jbyteArray input_rows,
+																						 jint num_rows) {
+  jboolean if_copy;
 
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  uint32_t output_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
+  uint8_t *output = (uint8_t *) malloc(output_length);
+  
+  ecall_scan_collect_last_primary(eid,
+								  op_code,
+								  input_rows_ptr, input_rows_length,
+  								  num_rows,
+  								  output, output_length);
+
+  jbyteArray ret = env->NewByteArray(output_length);
+  env->SetByteArrayRegion(ret, 0, output_length, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output);
+
+  return ret;
+}
+
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *env, 
+																				jobject obj, 
+																				jlong eid,
+																				jint op_code,
+																				jbyteArray input_rows,
+																				jint num_rows) {
+
+  jboolean if_copy;
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  uint32_t output_length = (ENC_HEADER_SIZE + 2 * JOIN_ROW_UPPER_BOUND) * num_rows;
+  uint8_t *output = (uint8_t *) malloc(output_length);
+
+  uint8_t join_row[ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND];
+  uint32_t join_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
+  memset(join_row, 0, join_row_length);
+
+  ecall_sort_merge_join(eid,
+						op_code,
+						input_rows_ptr, input_rows_length,
+						num_rows,
+						join_row, join_row_length,
+						output, output_length);
+
+  jbyteArray ret = env->NewByteArray(output_length);
+  env->SetByteArrayRegion(ret, 0, output_length, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output);
+
+  return ret;
+	
+}
 
 /* Application entry */
 //SGX_CDECL

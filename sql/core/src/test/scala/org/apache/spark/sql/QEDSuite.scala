@@ -424,7 +424,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     }
 
     val table_p_data = Seq((1, "A", 10), (2, "C", 20), (3, "D", 30))
-    val table_f_data = Seq((100, "A", 1), (100, "A", 1), (0, "B", 1), (200, "C", 1), (200, "C", 1), (300, "D", 1))
+    val table_f_data = Seq((100, "A", 1), (100, "A", 2), (0, "B", 1), (200, "C", 1), (200, "C", 2), (300, "D", 1))
 
     val buffer = ByteBuffer.allocate(128)
     buffer.order(ByteOrder.LITTLE_ENDIAN)
@@ -457,6 +457,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     println("processed_rows' length is " + processed_rows.length)
 
     val sorted_rows = enclave.ObliviousSort(eid, 3, processed_rows, 0, table_p_data.length + table_f_data.length)
+
+    //val join_row = enclave.ScanCollectLastPrimary(eid, 3, sorted_rows, table_p_data.length + table_f_data.length);
+
+    val joined_rows = enclave.SortMergeJoin(eid, 3, sorted_rows, table_p_data.length + table_f_data.length)
+    
 
     enclave.StopEnclave(eid)
   }

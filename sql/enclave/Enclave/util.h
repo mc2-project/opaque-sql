@@ -2,6 +2,7 @@
 #include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
 #include "Enclave_t.h"  /* print_string */
+#include "define.h"
 
 #ifndef UTIL_H
 #define UTIL_H
@@ -30,7 +31,7 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
 					uint32_t attr_num,
 					uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 
-
+/*
 // defines an upper bound on the size of the aggregation value
 // only the plaintext size
 #define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
@@ -54,6 +55,7 @@ enum TYPE {
 
 #define TABLE_ID_SIZE (8)
 #define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
+*/
 
 void get_table_indicator(uint8_t *primary_table,
 						 uint8_t *foreign_table);

@@ -3,8 +3,9 @@
 enclave {
     
     include "user_types.h" /* buffer_t */
-    include "jni.h"
-    include "jni_md.h"
+    //include "jni.h"
+    //include "jni_md.h"
+	//include "define.h"
 
     /* Import ECALL/OCALL from sub-directory EDLs.
      *  [from]: specifies the location of EDL file. 
@@ -56,9 +57,7 @@ enclave {
 	 public void ecall_scan_collect_last_primary(int op_code,
 									             [user_check] uint8_t *input_rows, uint32_t input_rows_length,
 									             uint32_t num_rows,
-									             [out, size=output_length] uint8_t *output, uint32_t output_length,
-									             [in, sizefunc=enc_table_id_size] uint8_t *enc_table_p,
-												 [in, sizefunc=enc_table_id_size] uint8_t *enc_table_f);
+									             [out, size=output_length] uint8_t *output, uint32_t output_length);
 
 	 public void ecall_process_join_boundary([user_check] uint8_t *input_rows, uint32_t input_rows_length,
 						                     uint32_t num_rows,
@@ -70,9 +69,7 @@ enclave {
 						               [user_check] uint8_t *input_rows, uint32_t input_rows_length,
 									   uint32_t num_rows,
 									   [in, sizefunc=join_row_size] uint8_t *join_row, uint32_t join_row_length,
-									   [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length,
-									   [in, sizefunc=enc_table_id_size] uint8_t *enc_table_p,
-									   [in, sizefunc=enc_table_id_size] uint8_t *enc_table_f);
+									   [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length);
 									   
 	 public void ecall_join_sort_preprocess(int op_code,
 	                                        [in, sizefunc=enc_table_id_size] uint8_t *table_id,

@@ -392,6 +392,7 @@ void swap<Record>(Record *value1, Record* value2) {
   value1->num_cols = value2->num_cols;
   value1->data = value2->data;
   value1->sort_attribute = value2->sort_attribute;
+  
   value2->num_cols = num_cols;
   value2->data = data;
   value2->sort_attribute = sort_attribute;
@@ -418,11 +419,14 @@ int compare<Record>(Record *value1, Record *value2) {
   case 2:
 	{
 	  // String
-	  String *str1 = (String *) (value1->sort_attribute + TYPE_SIZE);
-	  str1->buffer = (value1->sort_attribute + HEADER_SIZE);
-	  String *str2 = (String *) (value2->sort_attribute + TYPE_SIZE);
-	  str2->buffer = (value2->sort_attribute + HEADER_SIZE);
-	  return compare<String>(str1, str2);
+	  String str1;
+	  str1.length = *( (uint32_t *) (value1->sort_attribute + TYPE_SIZE));
+	  str1.buffer = (value1->sort_attribute + HEADER_SIZE);
+	  
+	  String str2;
+	  str2.length = *( (uint32_t*) (value2->sort_attribute + TYPE_SIZE));
+	  str2.buffer = (value2->sort_attribute + HEADER_SIZE);
+	  return compare<String>(&str1, &str2);
 	}
 	break;
   }
@@ -784,8 +788,6 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord) * list_length, low_idx, list_length);
 
-	printf("Sorting is done\n");
-
 	// Produce encrypted output rows
 	input_ptr = input;
 	for (uint32_t i = 0; i < list_length; i++) {
@@ -895,13 +897,11 @@ void ecall_join_sort_preprocess(int op_code,
 void ecall_scan_collect_last_primary(int op_code,
 									 uint8_t *input_rows, uint32_t input_rows_length,
 									 uint32_t num_rows,
-									 uint8_t *output, uint32_t output_length,
-									 uint8_t *enc_table_p, uint8_t *enc_table_f) {
-  
+									 uint8_t *output, uint32_t output_length) {
   scan_collect_last_primary(op_code,
-							input_rows, input_rows_length, num_rows,
-							output, output_length,
-							enc_table_p, enc_table_f);
+							input_rows, input_rows_length,
+							num_rows,
+							output, output_length);
 }
 
 void ecall_process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
@@ -921,14 +921,12 @@ void ecall_sort_merge_join(int op_code,
 						   uint8_t *input_rows, uint32_t input_rows_length,
 						   uint32_t num_rows,
 						   uint8_t *join_row, uint32_t join_row_length,
-						   uint8_t *output_rows, uint32_t output_rows_length,
-						   uint8_t *enc_table_p, uint8_t *enc_table_f) {
+						   uint8_t *output_rows, uint32_t output_rows_length) {
   
   sort_merge_join(op_code,
 				  input_rows, input_rows_length, num_rows,
 				  join_row, join_row_length,
-				  output_rows, output_rows_length,
-				  enc_table_p, enc_table_f);
+				  output_rows, output_rows_length);
 }
 
 /**** END Join ****/

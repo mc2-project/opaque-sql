@@ -111,6 +111,20 @@ extern "C" {
 																					   jbyteArray,
 																					   jint);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *, 
+																						   jobject, 
+																						   jlong,
+																						   jint,
+																						   jbyteArray,
+																						   jint);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *, 
+																				  jobject, 
+																				  jlong,
+																				  jint,
+																				  jbyteArray,
+																				  jint);
+	
 #ifdef __cplusplus
 }
 #endif
