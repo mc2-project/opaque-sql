@@ -1,4 +1,4 @@
-#include <stdarg.h>
+//#include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
 #include <sgx_tcrypto.h>

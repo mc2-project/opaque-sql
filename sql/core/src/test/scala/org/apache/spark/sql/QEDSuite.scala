@@ -89,6 +89,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(s === s.sorted)
   }
 
+
   test("JNIEncrypt", SGXTest) {
 
     def byteArrayToString(x: Array[Byte]) = {
@@ -190,6 +191,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   }
 
+
   test("JNIObliviousSortRow", SGXTest) {
 
     val eid = enclave.StartEnclave()
@@ -257,6 +259,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
           println("Row " + i + ", column " + c + ": " + byte_to_int(dec_value, 5))
         } else if (dec_value(0) == 2.toByte) {
           println("Row " + i + ", column " + c + ": " + byte_to_string(dec_value, 5, byte_to_int(dec_value, 1)))
+        } else {
+          println("Unidentifiable type!\n");
         }
 
         low_index += enc_value_len
@@ -266,6 +270,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
 
   }
+
 
   test("JNIFilterSingleRow", SGXTest) {
     val eid = enclave.StartEnclave()

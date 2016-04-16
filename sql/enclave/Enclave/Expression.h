@@ -1,0 +1,36 @@
+#ifndef EXPRESSION_H
+#define EXPRESSION_H
+
+#include <stdarg.h>
+#include <stdio.h>      /* vsnprintf */
+#include <stdint.h>
+
+#include "sgx_trts.h"
+#include "math.h"
+#include "define.h"
+
+#include "InternalTypes.h"
+
+// A list of all of the UDFs
+enum EXPRESSION {
+  IDENTITY,                 // place holder for the identity function
+  PREFIX,                   // prefix of a single string
+  INTEGER_SUM,                      // sum of multiple columns
+  COMPARE,
+  BD2,
+  TEST
+};
+
+enum EVAL_MODE {
+  PROJECT,
+  SORT,
+  AGG,
+  JOIN
+};
+
+void evaluate_expr(GenericType **input_attr, uint32_t num_input_attr,
+				   GenericType **output_attr, uint32_t num_output_attr,
+				   uint32_t expression,
+				   int mode);
+
+#endif

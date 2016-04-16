@@ -20,8 +20,6 @@ void print_bytes(uint8_t *ptr, uint32_t len) {
   printf("\n");
 }
 
-
-
 void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
 
   uint32_t *enc_value_len_ptr = (uint32_t *) *ptr;
@@ -97,6 +95,33 @@ int test_dummy(uint8_t *src, uint32_t len) {
   return 0;
 }
 
+// assume that the entire row has been decrypted
+void find_plaintext_attribute(uint8_t *row, uint32_t num_cols,
+							  uint32_t attr_num,
+							  uint8_t **value_ptr,
+							  uint32_t *len) {
+  
+  uint8_t *value_ptr_ = row;
+  uint32_t value_len_ = 0;
+
+  for (uint32_t j = 0; j < num_cols; j++) {
+	// [value type][value len][value]
+
+	value_len_ = *( (uint32_t *) (value_ptr_ + TYPE_SIZE));
+	  
+	// found aggregate attribute
+	if (j + 1 == attr_num) {
+	  *value_ptr = value_ptr_;
+	  *len = value_len_ + HEADER_SIZE;
+	  return;
+	}
+	
+	value_ptr_ += value_len_ + HEADER_SIZE;
+
+  }
+  
+}
+
 
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
 					uint32_t attr_num,
@@ -123,6 +148,7 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
   }
 }
 
+
 // return the upper bound size for a certain type
 uint32_t get_value_bound(int type) {
   if (type == INT) {
@@ -142,6 +168,12 @@ void get_table_indicator(uint8_t *primary_table,
   
   cpy(primary_table, (uint8_t *) primary_table_, TABLE_ID_SIZE);
   cpy(foreign_table, (uint8_t *) foreign_table_, TABLE_ID_SIZE);
+}
+
+int is_table_primary(uint8_t *table_id) {
+  char primary_table_[TABLE_ID_SIZE+1] = "11111111";
+
+  return cmp(table_id, (uint8_t *) primary_table_, TABLE_ID_SIZE);
 }
 
 // should be decrypted attribute

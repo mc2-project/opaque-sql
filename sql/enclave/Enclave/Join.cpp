@@ -18,7 +18,7 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
 	*((uint32_t *) output_row_ptr) = enc_size(value_len + HEADER_SIZE);
 	output_offset += HEADER_SIZE;
 
-	printf("[%u] value_len is %u\n", i, value_len);
+	//printf("[%u] value_len is %u\n", i, value_len);
 	encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
 	
 	input_offset += value_len + HEADER_SIZE;

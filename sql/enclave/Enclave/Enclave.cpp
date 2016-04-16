@@ -173,12 +173,10 @@ void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
 // input_length is the length of input in bytes
 // len is the number of records
 template<typename T>
-void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx, uint32_t len) {
+void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx, uint32_t len) {
 
   // First, iterate through and decrypt the data
   // Then store the decrypted data in a list of objects (based on the given op_code)
-
-  
   
   int log_len = log_2(len) + 1;
   int offset = low_idx;
@@ -203,10 +201,10 @@ void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx,
 
 			if (pair_idx < offset + len) {
 
-			  T *idx_value = input + idx;
-			  T *pair_idx_value = input + pair_idx;
+			  T *idx_value = input[idx];
+			  T *pair_idx_value = input[pair_idx];
 
-			  compare_and_swap<T>(idx_value, pair_idx_value);
+			  idx_value->compare_and_swap(pair_idx_value);
 			}
 		  }
 		}
@@ -219,10 +217,10 @@ void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx,
 			int pair_idx = idx + part_size_half;
 
 			if (pair_idx < offset + len) {
-			  T *idx_value = input + idx;
-			  T *pair_idx_value = input + pair_idx;
+			  T *idx_value = input[idx];
+			  T *pair_idx_value = input[pair_idx];
 
-			  compare_and_swap<T>(idx_value, pair_idx_value);
+			  idx_value->compare_and_swap(pair_idx_value);
 
 			}
 
@@ -243,7 +241,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
   // op_code = 1 means it's a list of integers
   if (op_code == 1) {
-	Integer * data = (Integer *) malloc(sizeof(Integer) * list_length);
+	Integer **data = (Integer **) malloc(sizeof(Integer *) * list_length);
 	if (data == NULL) {
 	  printf("data is NULL!\n");
 	}
@@ -256,21 +254,17 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	for (uint32_t i = 0; i < list_length; i++) {
 	  get_next_value(&input_ptr, &enc_value_ptr, &enc_value_len);
-
-	  //printf("enc_value_len is %u\n", enc_value_len);
+	  data[i] = new Integer;
 	  
-	  decrypt(enc_value_ptr, enc_value_len, data_ptr);
-	  data_ptr += 4;
+	  decrypt(enc_value_ptr, enc_value_len, (uint8_t *) (&(data[i]->value)));
 	}
 
-
-	//void osort_with_index(int op_code, T *input, uint32_t input_length, int low_idx, uint32_t len)
 	osort_with_index<Integer>(op_code, data, sizeof(Integer) * list_length, low_idx, list_length);
 
 	// need to re-encrypt the data!
 	// since none of the data has changed, let's try re-using the input
 
-	uint32_t enc_size = 4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+	uint32_t enc_data_size = enc_size(4);
 	input_ptr = input;
 	data_ptr = (uint8_t *) data;
 
@@ -278,21 +272,27 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	for (uint32_t i = 0; i < list_length; i++) {
 	  size_ptr = (uint32_t *) input_ptr;
-	  *size_ptr = enc_size;
-	  encrypt(data_ptr, 4, input_ptr + 4);
+	  *size_ptr = enc_data_size;
 
-	  data_ptr += 4;
-	  input_ptr += enc_size + 4;
+	  encrypt(( (uint8_t *) &(data[i]->value)), 4, input_ptr + 4);
+
+	  input_ptr += enc_data_size + 4;
+	}
+
+	for (uint32_t i = 0; i < list_length; i++) {
+	  delete data[i];
 	}
 
 	free(data);
-	
+
   } else if (op_code == 2) {
 	// this needs to sort a row of data
 
+	printf("op_code 2 called\n");
+
 	uint32_t sort_attr_num = 2;
 
-	Record *data = (Record *) malloc(sizeof(Record) * list_length);
+	SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
 	if (data == NULL) {
 	  printf("Could not allocate enough data\n");
 	}
@@ -312,50 +312,55 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint8_t *data_ptr_ = NULL;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
-	  data[i].num_cols = *( (uint32_t *) enc_row_ptr);
+	  printf("list length is %u\n", list_length);
 	  
-	  // 4 * data[i].num_cols represents the 4 bytes for each encrypted value
-	  // the extra 4 represents the 4 bytes used to store number of columns
-	  uint32_t plaintext_data_size = enc_row_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 4) * data[i].num_cols - 4;
-	  data[i].data = (uint8_t *) malloc(plaintext_data_size);
-	  data[i].sort_attribute = NULL;
+	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
+	  
+	  printf("Got next row\n");
 
-	  data_ptr_ = data[i].data;
+	  data[i] = new SortRecord;
+	  SortRecord *rec = data[i];
+
+	  uint32_t columns = *( (uint32_t *) enc_row_ptr);
+
 	  enc_row_ptr += 4;
+	  
 	  enc_value_ptr = enc_row_ptr;
 
-	  //printf("Data item %u; has %u columns\n", i, data[i].num_cols);
-	  //printf("plaintext_data_size: %u\n", plaintext_data_size);
+	  printf("Data item %u; has %u columns\n", i, columns);
 
 	  // iterate through encrypted attributes, 
-	  for (uint32_t j = 0; j < data[i].num_cols; j++) {
+	  for (uint32_t j = 0; j < columns; j++) {
 
 		assert(enc_value_ptr <= input_ptr);
 		// [enc len]encrypted{[value type][value len][value]}
 
 		enc_value_len = *( (uint32_t *) enc_value_ptr);
 		enc_value_ptr += 4;
-		// value_len includes the type's length as well
-		value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
-
-		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
 		
-		decrypt(enc_value_ptr, enc_value_len, data_ptr_);
-
-		if (j + 1 == sort_attr_num) {
-		  data[i].sort_attribute = data_ptr_;
-		}
+		// value_len includes the type's length as well
+		//value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
+		//decrypt(enc_value_ptr, enc_value_len, data_ptr_);
+		
+		rec->consume_encrypted_attribute(enc_value_ptr, enc_value_len);
 
 		enc_value_ptr += enc_value_len;
 		data_ptr_ += value_len;
 
 	  }
+	  
+	  rec->set_sort_attributes(op_code);
+
+	  rec->sort_attributes->init();
+	  rec->sort_attributes->evaluate();
+
+	  //rec->sort_attributes->print();
 	}
 	
-	osort_with_index<Record>(op_code, data, sizeof(Record) * list_length, low_idx, list_length);
+	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-	//printf("Sorted data\n");
+	printf("Sorted data\n");
 	
 	// TODO: need to return enrypted result
 
@@ -365,31 +370,30 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	for (uint32_t i = 0; i < list_length; i++) {
 
-	  value_ptr = data[i].data;
-	  print_bytes(value_ptr, 5);
-	  *( (uint32_t *) input_ptr) = data[i].num_cols;
+	  value_ptr = data[i]->row;
+	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
 	  input_ptr += 4;
 
-	  //printf("Num cols is %u\n", data[i].num_cols);
+	  //printf("Num cols is %u\n", data[i]->num_cols);
 
 	  // need to encrypt each attribute separately
-	  for (uint32_t c = 0; c < data[i].num_cols; c++) {
+	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
 
-		value_len = *( (uint32_t *) (value_ptr + 1) ) + 5;
+		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
 
-		*( (uint32_t *)  input_ptr) = value_len + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+		*( (uint32_t *)  input_ptr) = enc_size(value_len);
 		input_ptr += 4;
 
-		encrypt(value_ptr, value_len, input_ptr);
-		input_ptr += value_len + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+		print_attribute("", value_ptr);
 
-		//printf("attr's length is %u\n", value_len);
+		encrypt(value_ptr, value_len, input_ptr);
+		input_ptr += enc_size(value_len);
 
 		value_ptr += value_len;
 	  }
 	}
 
-	//printf("Encrypted data\n");
+	printf("Encrypted data\n");
 
 	//printf("Encrypted data's length is %u\n", (input_ptr - input));
 
@@ -397,7 +401,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	// TODO: free data, including record pointers
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  free(data[i].data);
+	  delete data[i];
 	}
 
 	free(data);
@@ -416,7 +420,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint32_t sort_attr_num_p = 2;
 	uint32_t sort_attr_num_f = 2;
 	
-	JoinRecord *data = (JoinRecord *) malloc(sizeof(JoinRecord) * list_length);
+	JoinRecord **data = (JoinRecord **) malloc(sizeof(JoinRecord *) * list_length);
 	if (data == NULL) {
 	  printf("Could not allocate enough data\n");
 	  assert(false);
@@ -433,57 +437,37 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	
 	for (uint32_t i = 0; i < list_length; i++) {
 	  // allocate JOIN_ROW_UPPER_BOUND
-	  Record *record = &(data[i].record);
+	  //JoinRecord *record = &(data[i].record);
+	  //record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
+
+	  data[i] = new JoinRecord;
+	  JoinRecord *record = data[i];
 	  
-	  record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
-	  decrypt(input_ptr, enc_size(JOIN_ROW_UPPER_BOUND), record->data);
+	  record->consume_encrypted_row(input_ptr);
 	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 
-	  table_id = record->data;
-	  data_ptr_ = record->data + TABLE_ID_SIZE;
-	  record->num_cols = *( (uint32_t *) data_ptr_);
-	  
-	  value_ptr = record->data + TABLE_ID_SIZE + 4;
-	  
-	  data[i].if_primary = cmp(table_id, primary_table, TABLE_ID_SIZE);
+	  record->set_join_attributes(op_code);
 
-	  //printf("Num cols is %u, if_primary: %d\n", record->num_cols, data[i].if_primary);
+	  record->join_attributes->init();
+	  record->join_attributes->evaluate();
 
-	  // identify the join attribute
-	  for (uint32_t j = 0; j < record->num_cols; j++) {
-		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE));
-		
-		if (data[i].if_primary == 0) {
-		  if (j + 1 == sort_attr_num_p) {
-			record->sort_attribute = value_ptr;
-			//print_attribute("primary table", record->sort_attribute);
-		  }
-		} else {
-		  if (j + 1 == sort_attr_num_p) {
-			record->sort_attribute = value_ptr;
-			//print_attribute("foreign table", record->sort_attribute);
-		  }
-		}
-
-		value_ptr += value_len + HEADER_SIZE;
-	  }
-
+	  //record->join_attributes->print();
 	}
 
-	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord) * list_length, low_idx, list_length);
+	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
 
 	// Produce encrypted output rows
 	input_ptr = input;
 	for (uint32_t i = 0; i < list_length; i++) {
 	  // simply encrypt the entire row all at once
-	  //print_join_row("Join row ", data[i].record.data);
-	  encrypt(data[i].record.data, JOIN_ROW_UPPER_BOUND, input_ptr);
+	  //print_join_row("Join row ", data[i]->row);
+	  encrypt(data[i]->row, JOIN_ROW_UPPER_BOUND, input_ptr);
 	  input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	}
 
 	// free data
 	for (uint32_t i = 0; i < list_length; i++) {
-	  free(data[i].record.data);
+	  free(data[i]);
 	}
 
 	free(data);
