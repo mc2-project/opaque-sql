@@ -74,6 +74,14 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt(filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
+  test("encPermute") {
+    val array = (0 until 1024).toArray
+    val sorted = sparkContext.makeRDD(array).toDF("x")
+    val permuted = sorted.encPermute().collect.map(_.getInt(0))
+    assert(permuted !== array)
+    assert(permuted.sorted === array)
+  }
+
   test("ColumnSort") {
     val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
     val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)

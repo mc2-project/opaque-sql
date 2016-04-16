@@ -984,6 +984,10 @@ class Dataset[T] private[sql](
     EncFilter(condition.expr, Permute(logicalPlan))
   }
 
+  def encPermute(): Dataset[T] = withTypedPlan {
+    Permute(logicalPlan)
+  }
+
   /**
    * Filters rows using the given condition.
    * {{{
