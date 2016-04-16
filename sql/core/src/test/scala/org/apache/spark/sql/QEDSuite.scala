@@ -53,7 +53,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new SGXEnclave()
   }
 
-
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
     val data = for (i <- 0 until 1024) yield ("foo", i)
@@ -76,13 +75,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("ColumnSort") {
-    val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
-    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)
-    val s = sorted.collect
-    assert(s === s.sorted)
-  }
-
-  test("ColumnSort with comparator") {
     val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
     val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)
     val s = sorted.collect

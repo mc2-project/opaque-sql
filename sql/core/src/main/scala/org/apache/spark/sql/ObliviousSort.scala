@@ -8,7 +8,6 @@ import scala.collection.mutable.Map
 import scala.collection.mutable.PriorityQueue
 import scala.collection.mutable.SynchronizedSet
 import scala.math.BigInt
-import scala.math._
 import scala.reflect.ClassTag
 import scala.util.Random
 
