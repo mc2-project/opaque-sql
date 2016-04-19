@@ -22,7 +22,9 @@ class GenericType;
 enum TYPE {
   DUMMY = 0,
   INT = 1,
-  STRING = 2
+  STRING = 2,
+  FLOAT = 3,
+  DATE = 4
 };
 
 enum CONSUME_MODE {
@@ -35,8 +37,8 @@ class GenericType {
  public:
   virtual ~GenericType() {}
 
-  virtual int compare(GenericType *v) { return 12345; }
-  virtual void swap(GenericType *v) {}
+  virtual int compare(GenericType *v) = 0;
+  virtual void swap(GenericType *v) = 0;
 
   virtual void consume(uint8_t *input, int mode) { }
   virtual void flush(uint8_t *output) {}
@@ -44,6 +46,8 @@ class GenericType {
   virtual void evaluate() {}
 
   virtual void print() {}
+
+  virtual void reset() = 0;
 };
 
 class Integer : public GenericType {
@@ -67,9 +71,13 @@ class Integer : public GenericType {
 
   void copy_attr(Integer *attr);
 
-  int value;
-
   void print();
+
+  void reset() {
+	value = 0;
+  }
+
+  int value;
 };
 
 class String : public GenericType {
@@ -90,11 +98,69 @@ class String : public GenericType {
 
   void copy_attr(String *attr, int mode);
 
+  void reset();
+
   void print();
   
   uint32_t length;
   uint8_t *data;
   int if_alloc;
+};
+
+class Float : public GenericType {
+ public:
+  Float();
+  Float(float v);
+
+  ~Float() {}
+
+  int compare(GenericType *v);
+  void swap(GenericType *v);
+
+  void alloc(uint8_t *buffer);
+
+  void consume(uint8_t *input, int mode);
+
+  void flush(uint8_t *output);
+
+  void copy_attr(Float *attr, int mode);
+
+  void reset() {
+	this->value = 0;
+  }
+
+  void print();
+
+  float value;
+};
+
+class Date : public GenericType {
+
+ public:
+  Date();
+  Date(uint64_t date);
+
+  ~Date() {}
+
+  int compare(GenericType *v);
+  void swap(GenericType *v);
+
+  void alloc(uint8_t *buffer);
+
+  void consume(uint8_t *input, int mode);
+
+  void flush(uint8_t *output);
+
+  void copy_attr(Date *attr, int mode);
+
+  void reset() {
+	this->date = 0;
+  }
+
+  void print();
+
+  uint64_t date;
+
 };
 
 // This class is able to group together attributes, and execute evaluation on these attributes
@@ -116,7 +182,7 @@ class GroupedAttributes {
   }
 
   // using the op_code, initialize the GroupedAttributes information
-  void init();
+  virtual void init();
 
   // given the expression, evaluate that on the sort attributes
   void evaluate();
@@ -152,8 +218,27 @@ class SortAttributes : public GroupedAttributes {
   GroupedAttributes(op_code, row_ptr, num_cols) { }
 
   int compare(SortAttributes *attr);
+
+  void init();
   
   void evaluate();
+};
+
+class AggSortAttributes : public GroupedAttributes {
+ public:
+ AggSortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+  GroupedAttributes(op_code, row_ptr, num_cols) { }
+
+  int compare(AggSortAttributes *attr);
+
+  void init();
+  
+  // re-initialize: op_code should be the same, num cols the same
+  // but row_pointer is different
+  void re_init(uint8_t *new_row_ptr);
+  
+  void evaluate();
+
 };
 
 class JoinAttributes : public GroupedAttributes {
@@ -163,6 +248,8 @@ class JoinAttributes : public GroupedAttributes {
   
   int compare(JoinAttributes *attr);
   void swap(JoinAttributes *attr);
+
+  void init();
   
   void evaluate();
 
@@ -212,6 +299,10 @@ class Record {
 	num_cols += 1;
   }
 
+  // given a row with a set of encrypted attributes
+  // assume that the row_ptr is set correctly
+  uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
+
   void swap(Record *rec) {
 	uint32_t num_cols_ = num_cols;
 	uint8_t *row_ = row;
@@ -252,9 +343,13 @@ class JoinRecord : public Record {
  public:
  JoinRecord() : Record(JOIN_ROW_UPPER_BOUND) {
 	row_ptr += TABLE_ID_SIZE;
+	join_attributes = NULL;
   }
 
   ~JoinRecord() {
+	if (join_attributes != NULL) {
+	  delete join_attributes;
+	}
   }
 
   // sets data directly
@@ -273,9 +368,15 @@ class JoinRecord : public Record {
 
 class SortRecord : public Record {
  public:
-  SortRecord() { }
+  SortRecord() {
+	sort_attributes = NULL;
+  }
 
-  ~SortRecord() { }
+  ~SortRecord() {
+	if (sort_attributes != NULL) {
+	  delete sort_attributes;
+	}
+  }
 
   void set_sort_attributes(int op_code) {
 	sort_attributes = new SortAttributes(op_code, row, num_cols);
@@ -292,8 +393,42 @@ class SortRecord : public Record {
 };
 
 class AggRecord : public Record {
-  SortAttributes *sort_attributes;
-  ProjectAttributes *project_attributes;
+ public:
+ AggRecord() : Record(AGG_UPPER_BOUND) {
+	agg_sort_attributes = NULL;
+	row_ptr = row + 4 + 4;
+  }
+
+  ~AggRecord() {
+	if (agg_sort_attributes != NULL) {
+	  delete agg_sort_attributes;
+	}
+  }
+
+  uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
+  
+  void set_agg_sort_attributes(int op_code);
+
+  void consume_enc_agg_record(uint8_t *input, uint32_t len);
+
+  void reset_row_ptr() {
+	row_ptr = row + 4 + 4;
+  }
+
+  void reset();
+
+  int compare(AggRecord *rec);
+
+  void copy(AggRecord *rec, int mode);
+
+  void print();
+
+  void flush();
+
+
+  // Format of row is
+  // [distinct entries (4 bytes)] [offset (4 bytes)] [number of columns] [attr1 type][attr1 len][attr1]...
+  AggSortAttributes *agg_sort_attributes;
 };
 
 #endif

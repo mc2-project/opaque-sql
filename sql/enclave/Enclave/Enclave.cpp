@@ -94,74 +94,7 @@ int pow_2(int value) {
 
 // TODO: this sorts integers only... put in custom comparison operators!
 // TODO: how to make the write oblivious?
-void osort_with_index_int(int *input, int low_idx, uint32_t len) {
-
-  //printf("low_idx: %u, len: %u\n", low_idx, len);
-  
-  int log_len = log_2(len) + 1;
-  int offset = low_idx;
-
-  int swaps = 0;
-  int min_val = 0;
-  int max_val = 0;
-  
-  for (int stage = 1; stage <= log_len; stage++) {
-    //printf("stage = %i\n", stage);
-    for (int stage_i = stage; stage_i >= 1; stage_i--) {
-      //printf("stage_i = %i\n", stage_i);
-      int part_size = pow_2(stage_i);
-      //printf("part_size = %i\n", part_size);
-      int part_size_half = part_size / 2;
-
-      if (stage_i == stage) {
-	for (int i = offset; i <= (offset + len - 1); i += part_size) {
-	  for (int j = 1; j <= part_size_half; j++) {
-	    int idx = i + j - 1;
-	    int pair_idx = i + part_size - j;
-
-	    if (pair_idx < offset + len) {
-
-	      int idx_value = *(input + idx);
-	      int pair_idx_value = *(input + pair_idx);
-
-	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
-	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
-
-	      *(input + idx) = min_val;
-	      *(input + pair_idx) = max_val;
-
-	    }
-	  }
-	}
-
-      } else {	
-
-	for (int i = offset; i <= (offset + len - 1); i += part_size) {
-	  for (int j = 1; j <= part_size_half; j++) {
-	    int idx = i + j - 1;
-	    int pair_idx = idx + part_size_half;
-
- 	    if (pair_idx < offset + len) {
-	      int idx_value = *(input + idx);
-	      int pair_idx_value = *(input + pair_idx);
-
-	      min_val = idx_value < pair_idx_value ? idx_value : pair_idx_value;
-	      max_val = idx_value > pair_idx_value ? idx_value : pair_idx_value;
-
-	      *(input + idx) = min_val;
-	      *(input + pair_idx) = max_val;
-
-	    }
-
-	  }
-	}
-
-      }
-
-    }
-  }
-
-}
+void osort_with_index_int(int *input, int low_idx, uint32_t len) { }
 
 // only sorts integers!
 void ecall_oblivious_sort_int(int *input, uint32_t input_len) {

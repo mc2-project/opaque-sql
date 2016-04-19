@@ -2,6 +2,7 @@
 
 #include "sgx_trts.h" /* for sgx_ocalloc, sgx_is_outside_enclave */
 
+#include <errno.h>
 #include <string.h> /* for memcpy etc */
 #include <stdlib.h> /* for malloc/free etc */
 
@@ -13,16 +14,6 @@
 #define CHECK_UNIQUE_POINTER(ptr, siz) do {	\
 	if ((ptr) && ! sgx_is_outside_enclave((ptr), (siz)))	\
 		return SGX_ERROR_INVALID_PARAMETER;\
-} while (0)
-
-/* sgx_ocfree() just restores the original outside stack pointer. */
-#define OCALLOC(val, type, len) do {	\
-	void* __tmp = sgx_ocalloc(len);	\
-	if (__tmp == NULL) {	\
-		sgx_ocfree();	\
-		return SGX_ERROR_UNEXPECTED;\
-	}			\
-	(val) = (type)__tmp;	\
 } while (0)
 
 
@@ -1651,11 +1642,23 @@ sgx_status_t SGX_CDECL ocall_print_string(const char* str)
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_str = str ? strlen(str) + 1 : 0;
 
-	ms_ocall_print_string_t* ms;
-	OCALLOC(ms, ms_ocall_print_string_t*, sizeof(*ms));
+	ms_ocall_print_string_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_print_string_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (str != NULL && sgx_is_within_enclave(str, _len_str)) ? _len_str : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_print_string_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_print_string_t));
 
 	if (str != NULL && sgx_is_within_enclave(str, _len_str)) {
-		OCALLOC(ms->ms_str, char*, _len_str);
+		ms->ms_str = (char*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_str);
 		memcpy((void*)ms->ms_str, str, _len_str);
 	} else if (str == NULL) {
 		ms->ms_str = NULL;
@@ -1675,8 +1678,18 @@ sgx_status_t SGX_CDECL ocall_pointer_user_check(int* val)
 {
 	sgx_status_t status = SGX_SUCCESS;
 
-	ms_ocall_pointer_user_check_t* ms;
-	OCALLOC(ms, ms_ocall_pointer_user_check_t*, sizeof(*ms));
+	ms_ocall_pointer_user_check_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_pointer_user_check_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_pointer_user_check_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_pointer_user_check_t));
 
 	ms->ms_val = SGX_CAST(int*, val);
 	status = sgx_ocall(1, ms);
@@ -1691,11 +1704,23 @@ sgx_status_t SGX_CDECL ocall_pointer_in(int* val)
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_val = sizeof(*val);
 
-	ms_ocall_pointer_in_t* ms;
-	OCALLOC(ms, ms_ocall_pointer_in_t*, sizeof(*ms));
+	ms_ocall_pointer_in_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_pointer_in_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (val != NULL && sgx_is_within_enclave(val, _len_val)) ? _len_val : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_pointer_in_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_pointer_in_t));
 
 	if (val != NULL && sgx_is_within_enclave(val, _len_val)) {
-		OCALLOC(ms->ms_val, int*, _len_val);
+		ms->ms_val = (int*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_val);
 		memcpy(ms->ms_val, val, _len_val);
 	} else if (val == NULL) {
 		ms->ms_val = NULL;
@@ -1716,11 +1741,23 @@ sgx_status_t SGX_CDECL ocall_pointer_out(int* val)
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_val = sizeof(*val);
 
-	ms_ocall_pointer_out_t* ms;
-	OCALLOC(ms, ms_ocall_pointer_out_t*, sizeof(*ms));
+	ms_ocall_pointer_out_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_pointer_out_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (val != NULL && sgx_is_within_enclave(val, _len_val)) ? _len_val : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_pointer_out_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_pointer_out_t));
 
 	if (val != NULL && sgx_is_within_enclave(val, _len_val)) {
-		OCALLOC(ms->ms_val, int*, _len_val);
+		ms->ms_val = (int*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_val);
 		memset(ms->ms_val, 0, _len_val);
 	} else if (val == NULL) {
 		ms->ms_val = NULL;
@@ -1742,11 +1779,23 @@ sgx_status_t SGX_CDECL ocall_pointer_in_out(int* val)
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_val = sizeof(*val);
 
-	ms_ocall_pointer_in_out_t* ms;
-	OCALLOC(ms, ms_ocall_pointer_in_out_t*, sizeof(*ms));
+	ms_ocall_pointer_in_out_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_ocall_pointer_in_out_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (val != NULL && sgx_is_within_enclave(val, _len_val)) ? _len_val : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_ocall_pointer_in_out_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_pointer_in_out_t));
 
 	if (val != NULL && sgx_is_within_enclave(val, _len_val)) {
-		OCALLOC(ms->ms_val, int*, _len_val);
+		ms->ms_val = (int*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_val);
 		memcpy(ms->ms_val, val, _len_val);
 	} else if (val == NULL) {
 		ms->ms_val = NULL;
@@ -1769,11 +1818,24 @@ sgx_status_t SGX_CDECL memccpy(void** retval, void* dest, const void* src, int v
 	size_t _len_dest = len;
 	size_t _len_src = len;
 
-	ms_memccpy_t* ms;
-	OCALLOC(ms, ms_memccpy_t*, sizeof(*ms));
+	ms_memccpy_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_memccpy_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (dest != NULL && sgx_is_within_enclave(dest, _len_dest)) ? _len_dest : 0;
+	ocalloc_size += (src != NULL && sgx_is_within_enclave(src, _len_src)) ? _len_src : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_memccpy_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_memccpy_t));
 
 	if (dest != NULL && sgx_is_within_enclave(dest, _len_dest)) {
-		OCALLOC(ms->ms_dest, void*, _len_dest);
+		ms->ms_dest = (void*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_dest);
 		memcpy(ms->ms_dest, dest, _len_dest);
 	} else if (dest == NULL) {
 		ms->ms_dest = NULL;
@@ -1783,7 +1845,8 @@ sgx_status_t SGX_CDECL memccpy(void** retval, void* dest, const void* src, int v
 	}
 	
 	if (src != NULL && sgx_is_within_enclave(src, _len_src)) {
-		OCALLOC(ms->ms_src, void*, _len_src);
+		ms->ms_src = (void*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_src);
 		memcpy((void*)ms->ms_src, src, _len_src);
 	} else if (src == NULL) {
 		ms->ms_src = NULL;
@@ -1816,11 +1879,23 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_cpuinfo = 4 * sizeof(*cpuinfo);
 
-	ms_sgx_oc_cpuidex_t* ms;
-	OCALLOC(ms, ms_sgx_oc_cpuidex_t*, sizeof(*ms));
+	ms_sgx_oc_cpuidex_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_sgx_oc_cpuidex_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (cpuinfo != NULL && sgx_is_within_enclave(cpuinfo, _len_cpuinfo)) ? _len_cpuinfo : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_sgx_oc_cpuidex_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_oc_cpuidex_t));
 
 	if (cpuinfo != NULL && sgx_is_within_enclave(cpuinfo, _len_cpuinfo)) {
-		OCALLOC(ms->ms_cpuinfo, int*, _len_cpuinfo);
+		ms->ms_cpuinfo = (int*)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_cpuinfo);
 		memcpy(ms->ms_cpuinfo, cpuinfo, _len_cpuinfo);
 	} else if (cpuinfo == NULL) {
 		ms->ms_cpuinfo = NULL;
@@ -1843,8 +1918,18 @@ sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const 
 {
 	sgx_status_t status = SGX_SUCCESS;
 
-	ms_sgx_thread_wait_untrusted_event_ocall_t* ms;
-	OCALLOC(ms, ms_sgx_thread_wait_untrusted_event_ocall_t*, sizeof(*ms));
+	ms_sgx_thread_wait_untrusted_event_ocall_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_sgx_thread_wait_untrusted_event_ocall_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_sgx_thread_wait_untrusted_event_ocall_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_wait_untrusted_event_ocall_t));
 
 	ms->ms_self = SGX_CAST(void*, self);
 	status = sgx_ocall(8, ms);
@@ -1859,8 +1944,18 @@ sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const v
 {
 	sgx_status_t status = SGX_SUCCESS;
 
-	ms_sgx_thread_set_untrusted_event_ocall_t* ms;
-	OCALLOC(ms, ms_sgx_thread_set_untrusted_event_ocall_t*, sizeof(*ms));
+	ms_sgx_thread_set_untrusted_event_ocall_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_sgx_thread_set_untrusted_event_ocall_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_sgx_thread_set_untrusted_event_ocall_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_set_untrusted_event_ocall_t));
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
 	status = sgx_ocall(9, ms);
@@ -1875,8 +1970,18 @@ sgx_status_t SGX_CDECL sgx_thread_setwait_untrusted_events_ocall(int* retval, co
 {
 	sgx_status_t status = SGX_SUCCESS;
 
-	ms_sgx_thread_setwait_untrusted_events_ocall_t* ms;
-	OCALLOC(ms, ms_sgx_thread_setwait_untrusted_events_ocall_t*, sizeof(*ms));
+	ms_sgx_thread_setwait_untrusted_events_ocall_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_sgx_thread_setwait_untrusted_events_ocall_t);
+	void *__tmp = NULL;
+
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_sgx_thread_setwait_untrusted_events_ocall_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_setwait_untrusted_events_ocall_t));
 
 	ms->ms_waiter = SGX_CAST(void*, waiter);
 	ms->ms_self = SGX_CAST(void*, self);
@@ -1893,11 +1998,23 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_waiters = total * sizeof(*waiters);
 
-	ms_sgx_thread_set_multiple_untrusted_events_ocall_t* ms;
-	OCALLOC(ms, ms_sgx_thread_set_multiple_untrusted_events_ocall_t*, sizeof(*ms));
+	ms_sgx_thread_set_multiple_untrusted_events_ocall_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_sgx_thread_set_multiple_untrusted_events_ocall_t);
+	void *__tmp = NULL;
+
+	ocalloc_size += (waiters != NULL && sgx_is_within_enclave(waiters, _len_waiters)) ? _len_waiters : 0;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_sgx_thread_set_multiple_untrusted_events_ocall_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_sgx_thread_set_multiple_untrusted_events_ocall_t));
 
 	if (waiters != NULL && sgx_is_within_enclave(waiters, _len_waiters)) {
-		OCALLOC(ms->ms_waiters, void**, _len_waiters);
+		ms->ms_waiters = (void**)__tmp;
+		__tmp = (void *)((size_t)__tmp + _len_waiters);
 		memcpy((void*)ms->ms_waiters, waiters, _len_waiters);
 	} else if (waiters == NULL) {
 		ms->ms_waiters = NULL;

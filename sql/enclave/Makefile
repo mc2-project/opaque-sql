@@ -81,7 +81,7 @@ ifneq ($(SGX_MODE), HW)
 else
 	Trts_Library_Name := sgx_trts
 	Service_Library_Name := sgx_tservice
-	Crypto_Library_Name := sgx_tcrypto_opt
+	Crypto_Library_Name := sgx_tcrypto
 endif
 
 Enclave_Cpp_Files := Enclave/util.cpp Enclave/InternalTypes.cpp Enclave/Expression.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)

@@ -51,7 +51,27 @@ void evaluate_join(GenericType **input_attr, uint32_t num_input_attr,
 void evaluate_agg(GenericType **input_attr, uint32_t num_input_attr,
 				  GenericType **output_attr, uint32_t num_output_attr,
 				  uint32_t expression) {
-
+  
+  switch (expression) {
+  case IDENTITY:
+	{
+	  // don't have to copy
+	  for (uint32_t i = 0; i < num_output_attr; i++) {
+		if (dynamic_cast<Integer *>(input_attr[i]) != NULL) {
+		  dynamic_cast<Integer *>(output_attr[i])->copy_attr(dynamic_cast<Integer *>(input_attr[i]));
+		} else if (dynamic_cast<String *>(input_attr[i]) != NULL) {
+		  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
+		}
+	  }
+	}
+	break;
+  case BD2:
+	{
+	  
+	}
+	break;
+  }
+  
 }
 
 void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
