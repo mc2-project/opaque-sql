@@ -988,6 +988,11 @@ class Dataset[T] private[sql](
     Permute(logicalPlan)
   }
 
+  def encGroupByWithSum(groupByCol: Column, sumCol: Column): DataFrame = withPlan {
+    EncAggregateWithSum(
+      UnresolvedAlias(groupByCol.expr), sumCol.named, EncSort(groupByCol.expr, logicalPlan))
+  }
+
   /**
    * Filters rows using the given condition.
    * {{{

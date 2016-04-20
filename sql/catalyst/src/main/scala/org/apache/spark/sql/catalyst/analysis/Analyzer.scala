@@ -181,6 +181,10 @@ class Analyzer(
       case Aggregate(groups, aggs, child) if child.resolved && hasUnresolvedAlias(aggs) =>
         Aggregate(groups, assignAliases(aggs), child)
 
+      case EncAggregateWithSum(groupingExpression, sumExpression, child)
+          if child.resolved && hasUnresolvedAlias(Seq(groupingExpression)) =>
+        EncAggregateWithSum(assignAliases(Seq(groupingExpression)).head, sumExpression, child)
+
       case g: GroupingSets if g.child.resolved && hasUnresolvedAlias(g.aggregations) =>
         g.copy(aggregations = assignAliases(g.aggregations))
 

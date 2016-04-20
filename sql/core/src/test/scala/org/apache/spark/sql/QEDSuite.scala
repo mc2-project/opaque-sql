@@ -83,6 +83,27 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(permuted.sorted === array)
   }
 
+  test("encGroupByWithSum") {
+    val (enclave, eid) = QED.initEnclave()
+    val data = for (i <- 0 until 1024) yield (if (i % 2 == 0) "foo" else "bar", i)
+    val encrypted = data.map {
+      case (word, count) =>
+        (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
+    }
+    def decrypt(rows: Array[Row]): Array[(String, Int)] = {
+      rows.map {
+        case Row(wordEnc: Array[Byte], countEnc: Array[Byte]) =>
+          (QED.decrypt[String](enclave, eid, wordEnc), QED.decrypt[Int](enclave, eid, countEnc))
+      }
+    }
+
+    val words = sparkContext.makeRDD(encrypted).toDF("word", "count")
+
+    val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
+    assert(decrypt(summed.collect).sorted ===
+      data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
+  }
+
   test("ColumnSort") {
     val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
     val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)

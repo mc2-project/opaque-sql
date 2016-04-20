@@ -19,6 +19,7 @@ package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 
 case class EncFilter(condition: Expression, child: LogicalPlan)
@@ -34,5 +35,21 @@ case class EncFilter(condition: Expression, child: LogicalPlan)
 
 case class Permute(child: LogicalPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
+  override def maxRows: Option[Long] = child.maxRows
+}
+
+case class EncSort(sortExpr: Expression, child: LogicalPlan) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+  override def maxRows: Option[Long] = child.maxRows
+}
+
+case class EncAggregateWithSum(
+    groupingExpression: NamedExpression,
+    sumExpression: NamedExpression,
+    child: LogicalPlan)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] =
+    Seq(groupingExpression.toAttribute, sumExpression.toAttribute)
   override def maxRows: Option[Long] = child.maxRows
 }

@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
+import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
@@ -76,12 +77,34 @@ case class Permute(child: SparkPlan) extends UnaryNode {
       rowIter.map(row =>
         (QED.randomId(enclave, eid).toSeq, row.toSeq(schema)))
     }
-    // TODO: this is insecure - need to sort using a comparator that decrypts and compares within the enclave
+    // TODO: this is insecure - need to sort whole partitions in the enclave
     implicit val ord = Ordering.by[(Seq[Byte], Seq[Any]), Seq[Byte]](_._1)(
       scala.math.Ordering.Implicits.seqDerivedOrdering[Seq, Byte])
     ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { pairIter =>
       val converter = UnsafeProjection.create(schema)
       pairIter.map(pair => converter(InternalRow.fromSeq(pair._2)))
     }
+  }
+}
+
+case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+
+  override def doExecute() = {
+    ???
+  }
+}
+
+case class EncAggregateWithSum(
+    groupingExpression: NamedExpression,
+    sumExpression: NamedExpression,
+    child: SparkPlan)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] =
+    Seq(groupingExpression.toAttribute, sumExpression.toAttribute)
+
+  override def doExecute() = {
+    ???
   }
 }

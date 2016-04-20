@@ -400,6 +400,10 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.EncFilter(condition, planLater(child)) :: Nil
       case logical.Permute(child) =>
         execution.Permute(planLater(child)) :: Nil
+      case logical.EncSort(sortExpr, child) =>
+        execution.EncSort(sortExpr, planLater(child)) :: Nil
+      case logical.EncAggregateWithSum(groupingExpressions, sumExpression, child) =>
+        execution.EncAggregateWithSum(groupingExpressions, sumExpression, planLater(child)) :: Nil
       case e @ logical.Expand(_, _, child) =>
         execution.Expand(e.projections, e.output, planLater(child)) :: Nil
       case logical.Window(windowExprs, partitionSpec, orderSpec, child) =>
