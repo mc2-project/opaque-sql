@@ -33,7 +33,8 @@ void scan_aggregation_count_distinct(int op_code,
 void process_boundary_records(int op_code,
 							  uint8_t *rows, uint32_t rows_size,
 							  uint32_t num_rows,
-							  uint8_t *out_agg_rows, uint32_t out_agg_row_size);
+							  uint8_t *out_agg_rows, uint32_t out_agg_row_size,
+							  uint32_t *actual_out_agg_row_size);
 
 void agg_test();
 

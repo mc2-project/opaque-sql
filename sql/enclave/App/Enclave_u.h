@@ -55,7 +55,7 @@ sgx_status_t ecall_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint8_t* in
 sgx_status_t ecall_random_id(sgx_enclave_id_t eid, uint8_t* ptr, uint32_t length);
 sgx_status_t ecall_scan_aggregation_count_distinct(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* agg_row, uint32_t agg_row_buffer_length, uint8_t* output_rows, uint32_t output_rows_length, uint32_t* actual_size, int flag);
 sgx_status_t ecall_test(sgx_enclave_id_t eid);
-sgx_status_t ecall_process_boundary_records(sgx_enclave_id_t eid, int op_code, uint8_t* rows, uint32_t rows_size, uint32_t num_rows, uint8_t* out_agg_rows, uint32_t out_agg_row_size);
+sgx_status_t ecall_process_boundary_records(sgx_enclave_id_t eid, int op_code, uint8_t* rows, uint32_t rows_size, uint32_t num_rows, uint8_t* out_agg_rows, uint32_t out_agg_row_size, uint32_t* actual_out_agg_row_size);
 sgx_status_t ecall_final_aggregation(sgx_enclave_id_t eid, int op_code, uint8_t* agg_rows, uint32_t agg_rows_length, uint32_t num_rows, uint8_t* ret, uint32_t ret_length);
 sgx_status_t ecall_scan_collect_last_primary(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output, uint32_t output_length);
 sgx_status_t ecall_process_join_boundary(sgx_enclave_id_t eid, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output_rows, uint32_t output_rows_size, uint8_t* enc_table_p, uint8_t* enc_table_f);

@@ -89,7 +89,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val s = sorted.collect
     assert(s === s.sorted)
   }
-
+/*
   test("JNIEncrypt", SGXTest) {
 
     def byteArrayToString(x: Array[Byte]) = {
@@ -310,7 +310,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-
+*/
 
   test("JNIAggregation", SGXTest) {
 
@@ -391,20 +391,19 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val step_2_values = enclave.ProcessBoundary(eid, 1, agg_row_value, 3)
 
-    // split these values
-    val new_agg_row1 = step_2_values.slice(0, agg_size)
-    val new_agg_row2 = step_2_values.slice(agg_size, agg_size * 2)
-    val new_agg_row3 = step_2_values.slice(agg_size * 2, agg_size * 3)
+    // // split these values
+    // val new_agg_row1 = step_2_values.slice(0, agg_size)
+    // val new_agg_row2 = step_2_values.slice(agg_size, agg_size * 2)
+    // val new_agg_row3 = step_2_values.slice(agg_size * 2, agg_size * 3)
 
-    val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
-    val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
-    val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
-
+    // val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
+    // val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
+    // val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
 
     enclave.StopEnclave(eid)
   }
 
-
+/*
   test("JNIJoin", SGXTest) {
     val eid = enclave.StartEnclave()
 
@@ -490,6 +489,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     enclave.StopEnclave(eid)
   }
-
+ */
 
 }

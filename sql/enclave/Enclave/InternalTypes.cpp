@@ -753,9 +753,32 @@ void AggRecord::set_agg_sort_attributes(int op_code) {
 
 uint32_t AggRecord::consume_all_encrypted_attributes(uint8_t *input_row) {
   row_ptr += 4;
-  Record::consume_all_encrypted_attributes(input_row);
+  uint32_t ret = Record::consume_all_encrypted_attributes(input_row);
   row_ptr -= 4;
   *( (uint32_t *) row_ptr) = this->num_cols;
+  return ret;
+}
+
+// only the attributes!
+uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
+  uint8_t *input_ptr = this->row + 4 + 4 + 4;
+  uint8_t *output_ptr = output;
+  uint32_t value_len = 0;
+  
+  *( (uint32_t *) (output_ptr)) = this->num_cols;
+  output_ptr += 4;
+
+  for (uint32_t i = 0; i < this->num_cols; i++) {
+	value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
+	*( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
+	
+	encrypt(input_ptr, value_len + HEADER_SIZE, output_ptr + 4);
+	
+	input_ptr += value_len + HEADER_SIZE;
+	output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
+  }
+
+  return (output_ptr - output);
 }
 
 void AggRecord::flush() {

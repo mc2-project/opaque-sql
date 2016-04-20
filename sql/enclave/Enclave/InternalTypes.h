@@ -24,7 +24,12 @@ enum TYPE {
   INT = 1,
   STRING = 2,
   FLOAT = 3,
-  DATE = 4
+  DATE = 4,
+
+  PARTIAL_AGG_INT = 5,
+  FINAL_AGG_INT = 6,
+  PARTIAL_AGG_FLOAT = 7,
+  FINAL_AGG_FLOAT = 8
 };
 
 enum CONSUME_MODE {
@@ -406,6 +411,8 @@ class AggRecord : public Record {
   }
 
   uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
+
+  uint32_t flush_encrypt_all_attributes(uint8_t *output);
   
   void set_agg_sort_attributes(int op_code);
 

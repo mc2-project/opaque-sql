@@ -48,7 +48,8 @@ enclave {
 	 public void ecall_process_boundary_records(int op_code,
 									[in, size=rows_size] uint8_t *rows, uint32_t rows_size,
 									uint32_t num_rows,
-									[out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size);
+									[out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size,
+									[out, size=4] uint32_t *actual_out_agg_row_size);
 	 public void ecall_final_aggregation(int op_code,
 							 [in, size=agg_rows_length] uint8_t *agg_rows, uint32_t agg_rows_length,
 							 uint32_t num_rows,

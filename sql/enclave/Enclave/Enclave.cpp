@@ -435,12 +435,14 @@ void ecall_scan_aggregation_count_distinct(int op_code,
 void ecall_process_boundary_records(int op_code,
 									uint8_t *rows, uint32_t rows_size,
 									uint32_t num_rows,
-									uint8_t *out_agg_rows, uint32_t out_agg_row_size) {
+									uint8_t *out_agg_rows, uint32_t out_agg_row_size,
+									uint32_t *actual_out_agg_row_size) {
 
   process_boundary_records(op_code,
 						   rows, rows_size,
 						   num_rows,
-						   out_agg_rows, out_agg_row_size);
+						   out_agg_rows, out_agg_row_size,
+						   actual_out_agg_row_size);
 }
 
 

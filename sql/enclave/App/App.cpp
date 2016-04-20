@@ -338,46 +338,6 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(JNIEnv *
   }
 }
 
-// JNIEXPORT jintArray JNICALL Java_map_1test_SGX_IncByOne(JNIEnv *env, jobject obj, jlong eid, jintArray in_array) {
-
-//   const jsize length = env->GetArrayLength(in_array);
-
-//   jintArray out_array;
-//   out_array = env->NewIntArray(length);
-
-//   printf("in array's length: %u\n", length);
-
-//   jint *in_array_ptr= env->GetIntArrayElements(in_array, NULL);
-//   jint *out_array_ptr= env->GetIntArrayElements(out_array, NULL);
-
-//   const size_t data_size = 32 * 1024;
-
-//   int *in_data = (int *) malloc(data_size * sizeof(int));
-//   int *out_data = (int *) malloc(data_size * sizeof(int));
-
-//   int num_rounds = (length - 1) / data_size + 1;
-//   printf("num_rounds is %u\n", num_rounds);
-
-//   for (int r = 0; r < num_rounds; r++) {
-
-//     size_t round_length = (length - data_size * r) > data_size ? data_size : length - data_size * r;
-
-//     for (int i = 0; i < round_length; i++) {
-//       in_data[i] = in_array_ptr[data_size * r + i];
-//     }
-
-//     ecall_sparkmap(eid, in_data, out_data, round_length);
-
-//     env->SetIntArrayRegion(out_array, r * data_size, round_length, out_data);
-//   }
-
-//   env->ReleaseIntArrayElements(in_array, in_array_ptr, 0);
-//   //env->ReleaseIntArrayElements(out_array, out_array_ptr, 0);
-  
-//   return out_array;
-// }
-
-
 // read a chunk of buffer from the scala program
 
 JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *env, 
@@ -599,18 +559,21 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
   //uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
   uint32_t single_row_size = 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND;
+  single_row_size += ENC_HEADER_SIZE + ROW_UPPER_BOUND;
   uint32_t out_agg_rows_length = single_row_size * num_rows;
   printf("single row size is %u\n", single_row_size);
   
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
+  uint32_t actual_out_agg_rows_size = 0;
   
   ecall_process_boundary_records(eid, op_code,
   								 rows_ptr, rows_length,
   								 num_rows,
-  								 out_agg_rows, out_agg_rows_length);
+  								 out_agg_rows, out_agg_rows_length,
+								 &actual_out_agg_rows_size);
 
-  jbyteArray ret = env->NewByteArray(out_agg_rows_length);
-  env->SetByteArrayRegion(ret, 0, out_agg_rows_length, (jbyte *) out_agg_rows);
+  jbyteArray ret = env->NewByteArray(actual_out_agg_rows_size);
+  env->SetByteArrayRegion(ret, 0, actual_out_agg_rows_size, (jbyte *) out_agg_rows);
 
   env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
 
@@ -627,6 +590,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
 																				   jint op_code,
 																				   jbyteArray rows,
 																				   jint num_rows) {
+  /*
   
   jboolean if_copy;
   
@@ -653,6 +617,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
   free(out_agg_rows);
 
   return ret;
+  */
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(JNIEnv *env, 

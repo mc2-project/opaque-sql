@@ -65,6 +65,7 @@ typedef struct ms_ecall_process_boundary_records_t {
 	uint32_t ms_num_rows;
 	uint8_t* ms_out_agg_rows;
 	uint32_t ms_out_agg_row_size;
+	uint32_t* ms_actual_out_agg_row_size;
 } ms_ecall_process_boundary_records_t;
 
 typedef struct ms_ecall_final_aggregation_t {
@@ -510,7 +511,7 @@ sgx_status_t ecall_test(sgx_enclave_id_t eid)
 	return status;
 }
 
-sgx_status_t ecall_process_boundary_records(sgx_enclave_id_t eid, int op_code, uint8_t* rows, uint32_t rows_size, uint32_t num_rows, uint8_t* out_agg_rows, uint32_t out_agg_row_size)
+sgx_status_t ecall_process_boundary_records(sgx_enclave_id_t eid, int op_code, uint8_t* rows, uint32_t rows_size, uint32_t num_rows, uint8_t* out_agg_rows, uint32_t out_agg_row_size, uint32_t* actual_out_agg_row_size)
 {
 	sgx_status_t status;
 	ms_ecall_process_boundary_records_t ms;
@@ -520,6 +521,7 @@ sgx_status_t ecall_process_boundary_records(sgx_enclave_id_t eid, int op_code, u
 	ms.ms_num_rows = num_rows;
 	ms.ms_out_agg_rows = out_agg_rows;
 	ms.ms_out_agg_row_size = out_agg_row_size;
+	ms.ms_actual_out_agg_row_size = actual_out_agg_row_size;
 	status = sgx_ecall(eid, 9, &ocall_table_Enclave, &ms);
 	return status;
 }

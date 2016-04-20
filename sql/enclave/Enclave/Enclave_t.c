@@ -81,6 +81,7 @@ typedef struct ms_ecall_process_boundary_records_t {
 	uint32_t ms_num_rows;
 	uint8_t* ms_out_agg_rows;
 	uint32_t ms_out_agg_row_size;
+	uint32_t* ms_actual_out_agg_row_size;
 } ms_ecall_process_boundary_records_t;
 
 typedef struct ms_ecall_final_aggregation_t {
@@ -647,10 +648,14 @@ static sgx_status_t SGX_CDECL sgx_ecall_process_boundary_records(void* pms)
 	uint32_t _tmp_out_agg_row_size = ms->ms_out_agg_row_size;
 	size_t _len_out_agg_rows = _tmp_out_agg_row_size;
 	uint8_t* _in_out_agg_rows = NULL;
+	uint32_t* _tmp_actual_out_agg_row_size = ms->ms_actual_out_agg_row_size;
+	size_t _len_actual_out_agg_row_size = 4;
+	uint32_t* _in_actual_out_agg_row_size = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_process_boundary_records_t));
 	CHECK_UNIQUE_POINTER(_tmp_rows, _len_rows);
 	CHECK_UNIQUE_POINTER(_tmp_out_agg_rows, _len_out_agg_rows);
+	CHECK_UNIQUE_POINTER(_tmp_actual_out_agg_row_size, _len_actual_out_agg_row_size);
 
 	if (_tmp_rows != NULL) {
 		_in_rows = (uint8_t*)malloc(_len_rows);
@@ -669,12 +674,24 @@ static sgx_status_t SGX_CDECL sgx_ecall_process_boundary_records(void* pms)
 
 		memset((void*)_in_out_agg_rows, 0, _len_out_agg_rows);
 	}
-	ecall_process_boundary_records(ms->ms_op_code, _in_rows, _tmp_rows_size, ms->ms_num_rows, _in_out_agg_rows, _tmp_out_agg_row_size);
+	if (_tmp_actual_out_agg_row_size != NULL) {
+		if ((_in_actual_out_agg_row_size = (uint32_t*)malloc(_len_actual_out_agg_row_size)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_actual_out_agg_row_size, 0, _len_actual_out_agg_row_size);
+	}
+	ecall_process_boundary_records(ms->ms_op_code, _in_rows, _tmp_rows_size, ms->ms_num_rows, _in_out_agg_rows, _tmp_out_agg_row_size, _in_actual_out_agg_row_size);
 err:
 	if (_in_rows) free(_in_rows);
 	if (_in_out_agg_rows) {
 		memcpy(_tmp_out_agg_rows, _in_out_agg_rows, _len_out_agg_rows);
 		free(_in_out_agg_rows);
+	}
+	if (_in_actual_out_agg_row_size) {
+		memcpy(_tmp_actual_out_agg_row_size, _in_actual_out_agg_row_size, _len_actual_out_agg_row_size);
+		free(_in_actual_out_agg_row_size);
 	}
 
 	return status;
