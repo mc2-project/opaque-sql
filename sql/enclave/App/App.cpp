@@ -351,7 +351,7 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *e
   jboolean if_copy = false;
   jbyte *row_ptr = env->GetByteArrayElements(row, &if_copy);
 
-  printf("Row's length is %u\n", length);
+  // printf("Row's length is %u\n", length);
 
   int ret = 0;
   sgx_status_t status = ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length);

@@ -13,7 +13,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     return 0;
   }
 
-  printf("Number of columns: %u\n", num_cols);
+  // printf("Number of columns: %u\n", num_cols);
 
   uint8_t *row_ptr = row + 4;
 

@@ -30,6 +30,8 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
+import org.apache.spark.sql.types.BinaryType
+import org.apache.spark.sql.types.StructField
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
@@ -75,14 +77,14 @@ case class Permute(child: SparkPlan) extends UnaryNode {
     val childRDD = child.execute().mapPartitions { rowIter =>
       val (enclave, eid) = QED.initEnclave()
       rowIter.map(row =>
-        (QED.randomId(enclave, eid).toSeq, row.toSeq(schema)))
+        InternalRow.fromSeq(row.toSeq(schema) :+ QED.randomId(enclave, eid)).encSerialize)
     }
-    // TODO: this is insecure - need to sort whole partitions in the enclave
-    implicit val ord = Ordering.by[(Seq[Byte], Seq[Any]), Seq[Byte]](_._1)(
-      scala.math.Ordering.Implicits.seqDerivedOrdering[Seq, Byte])
-    ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { pairIter =>
+    // TODO: pass opcode to signal sorting on random id
+    ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
-      pairIter.map(pair => converter(InternalRow.fromSeq(pair._2)))
+      val schemaWithRandomId = schema.add(StructField("randomId", BinaryType, true))
+      serRowIter.map(serRow => converter(
+        InternalRow.fromSeq(InternalRow.fromSerialized(serRow).toSeq(schemaWithRandomId).init)))
     }
   }
 }
@@ -92,6 +94,7 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
 
   override def doExecute() = {
     val childRDD = child.execute().map(_.encSerialize)
+    // TODO: pass opcode to signal sorting on sortExpr
     ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       serRowIter.map(serRow => converter(InternalRow.fromSerialized(serRow)))
