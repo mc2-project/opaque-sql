@@ -686,7 +686,7 @@ void SortRecord::swap(SortRecord *rec) {
 
 void SortRecord::compare_and_swap(SortRecord *rec) {
   if (this->compare(rec) == 1) {
-	printf("Swapping\n");
+    //printf("Swapping\n");
 	this->swap(rec);
   }
 }

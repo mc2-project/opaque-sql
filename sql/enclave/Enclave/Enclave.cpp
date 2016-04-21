@@ -245,11 +245,11 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint8_t *data_ptr_ = NULL;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  printf("list length is %u\n", list_length);
+      // printf("list length is %u\n", list_length);
 	  
 	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	  
-	  printf("Got next row\n");
+      // printf("Got next row\n");
 
 	  data[i] = new SortRecord;
 	  SortRecord *rec = data[i];
@@ -260,7 +260,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  
 	  enc_value_ptr = enc_row_ptr;
 
-	  printf("Data item %u; has %u columns\n", i, columns);
+      // printf("Data item %u; has %u columns\n", i, columns);
 
 	  // iterate through encrypted attributes, 
 	  for (uint32_t j = 0; j < columns; j++) {
@@ -317,7 +317,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		*( (uint32_t *)  input_ptr) = enc_size(value_len);
 		input_ptr += 4;
 
-		print_attribute("", value_ptr);
+        // print_attribute("", value_ptr);
 
 		encrypt(value_ptr, value_len, input_ptr);
 		input_ptr += enc_size(value_len);
