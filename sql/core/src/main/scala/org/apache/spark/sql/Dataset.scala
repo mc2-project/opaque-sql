@@ -993,6 +993,10 @@ class Dataset[T] private[sql](
       UnresolvedAlias(groupByCol.expr), sumCol.named, EncSort(groupByCol.expr, logicalPlan))
   }
 
+  def encSort(col: Column): DataFrame = withPlan {
+    EncSort(col.expr, logicalPlan)
+  }
+
   /**
    * Filters rows using the given condition.
    * {{{

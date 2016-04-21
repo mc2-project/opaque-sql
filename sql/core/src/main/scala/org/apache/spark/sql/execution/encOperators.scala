@@ -91,7 +91,11 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
   override def doExecute() = {
-    ???
+    val childRDD = child.execute().map(_.encSerialize)
+    ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
+      val converter = UnsafeProjection.create(schema)
+      serRowIter.map(serRow => converter(InternalRow.fromSerialized(serRow)))
+    }
   }
 }
 

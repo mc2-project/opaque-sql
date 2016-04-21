@@ -48,11 +48,23 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new String(string_bytes)
   }
 
+  def encrypt[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = rows.map {
+    case (a, b) => (QED.encrypt(enclave, eid, a), QED.encrypt(enclave, eid, b))
+  }
+
+  def decrypt[A, B](rows: Array[Row]): Array[(A, B)] = {
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc), QED.decrypt[B](enclave, eid, bEnc))
+    }
+  }
+
   val enclave = {
     System.load(System.getenv("LIBSGXENCLAVE_PATH"))
     new SGXEnclave()
   }
 
+  val eid = enclave.StartEnclave()
 
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
@@ -104,11 +116,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
-  test("ColumnSort") {
-    val rdd = sparkContext.makeRDD(ObliviousSort.GenRandomData(0, 1024))
-    val sorted = ObliviousSort.ColumnSort(sparkContext, rdd)
-    val s = sorted.collect
-    assert(s === s.sorted)
+  test("encSort") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
+    val sorted = sparkContext.makeRDD(encrypt(data)).toDF("str", "x").encSort($"str").collect
+    assert(decrypt[String, Int](sorted) === data.sortBy(_._2))
   }
 /*
   test("JNIEncrypt", SGXTest) {

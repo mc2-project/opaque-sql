@@ -17,6 +17,9 @@
 
 package org.apache.spark.sql.catalyst
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -58,6 +61,28 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
   }
 
   def toSeq(schema: StructType): Seq[Any] = toSeq(schema.map(_.dataType))
+
+  def encSerializedSize: Int =
+    4 + 4 * numFields + (0 until numFields).map(i => getBinary(i).length).sum
+
+  def encSerialize(buf: ByteBuffer): Unit = {
+    buf.putInt(numFields)
+    for (i <- 0 until numFields) {
+      val field = getBinary(i)
+      buf.putInt(field.length)
+      buf.put(field)
+    }
+  }
+
+  def encSerialize(): Array[Byte] = {
+    val buf = ByteBuffer.allocate(encSerializedSize)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    encSerialize(buf)
+    buf.flip()
+    val serialized = new Array[Byte](buf.limit())
+    buf.get(serialized)
+    serialized
+  }
 }
 
 object InternalRow {
@@ -70,6 +95,34 @@ object InternalRow {
    * This method can be used to construct a [[InternalRow]] from a [[Seq]] of values.
    */
   def fromSeq(values: Seq[Any]): InternalRow = new GenericInternalRow(values.toArray)
+
+  def fromSerialized(b: Array[Byte]): InternalRow = {
+    val buf = ByteBuffer.wrap(b)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    val numFields = buf.getInt()
+    val fields = new Array[Array[Byte]](numFields)
+    for (i <- 0 until numFields) {
+      val fieldLength = buf.getInt()
+      val field = new Array[Byte](fieldLength)
+      buf.get(field)
+      fields(i) = field
+    }
+    new GenericInternalRow(fields.asInstanceOf[Array[Any]])
+  }
+
+  def readSerialized(buf: ByteBuffer): Array[Byte] = {
+    val buf2 = buf.duplicate()
+    buf2.order(ByteOrder.LITTLE_ENDIAN)
+    val numFields = buf2.getInt()
+    for (i <- 0 until numFields) {
+      val fieldLength = buf2.getInt()
+      val field = new Array[Byte](fieldLength)
+      buf2.get(field)
+    }
+    val rowBytes = new Array[Byte](buf2.position - buf.position)
+    buf.get(rowBytes)
+    rowBytes
+  }
 
   /** Returns an empty [[InternalRow]]. */
   val empty = apply()
