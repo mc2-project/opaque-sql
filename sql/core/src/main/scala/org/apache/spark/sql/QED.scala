@@ -140,6 +140,28 @@ object QED {
     decoded
   }
 
+  def concatRows(rows: Array[Array[Byte]]): Array[Byte] = {
+    val totalBytes = rows.map(_.length).sum
+    val buf = ByteBuffer.allocate(totalBytes)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    for (row <- rows) {
+      buf.put(row)
+    }
+    buf.flip()
+    val allRows = new Array[Byte](buf.limit())
+    buf.get(allRows)
+    allRows
+  }
+
+  def unconcatRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
+    val buf = ByteBuffer.wrap(concatRows)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    new Iterator[Array[Byte]] {
+      override def hasNext = buf.hasRemaining
+      override def next() = InternalRow.readSerialized(buf)
+    }
+  }
+
   def genAndWriteData() = {
     // write this hard-coded set of columns to text file, in csv format
   }

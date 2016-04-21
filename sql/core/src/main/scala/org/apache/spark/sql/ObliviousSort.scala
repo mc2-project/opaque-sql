@@ -53,32 +53,19 @@ object ObliviousSort extends java.io.Serializable {
     val offset = low_idx
 
     // Concatenate encrypted rows into a buffer
-    val nev = values.filter(_.value.length != 0)
-    val numRows = nev.length
-    val totalBytes = nev.map(_.value.length).sum
-    val buf = ByteBuffer.allocate(totalBytes)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    for (row <- nev) {
-      buf.put(row.value)
-    }
-    buf.flip()
-    val allRows = new Array[Byte](buf.limit())
-    buf.get(allRows)
+    val nonEmptyRows = values.map(_.value).filter(_.length != 0)
+    val concatRows = QED.concatRows(nonEmptyRows)
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
-    println(s"Sorting $numRows rows out of ${values.length}, totalBytes=$totalBytes")
-    val allRowsSorted = enclave.ObliviousSort(eid, 2, allRows, 0, numRows)
+    val allRowsSorted = enclave.ObliviousSort(eid, 2, concatRows, 0, nonEmptyRows.length)
     enclave.StopEnclave(eid)
 
     // Copy rows back into values
-    val buf2 = ByteBuffer.allocate(totalBytes)
-    buf2.order(ByteOrder.LITTLE_ENDIAN)
-    buf2.put(allRowsSorted)
-    buf2.flip()
+    val sortedRowIter = QED.unconcatRows(allRowsSorted)
     for (row <- values) {
-      if (buf2.hasRemaining) {
-        row.value = InternalRow.readSerialized(buf2)
+      if (sortedRowIter.hasNext) {
+        row.value = sortedRowIter.next()
       } else {
         row.value = new Array[Byte](0)
       }
