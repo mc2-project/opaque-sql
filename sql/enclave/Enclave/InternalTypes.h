@@ -277,6 +277,12 @@ class ProjectAttributes : public GroupedAttributes {
 
   }
 
+  ~ProjectAttributes() {}
+
+  void init();
+
+  void re_init(uint8_t *new_row_ptr);
+
   void evaluate();
 
 };
@@ -329,17 +335,24 @@ class Record {
 
 class ProjectRecord : public Record {
   ProjectRecord () {
-	
+	project_attributes = NULL;
+	num_cols = 0;
+	row_ptr = row;
   }
 
   ~ProjectRecord() {
 	delete project_attributes;
   }
 
-  void set_project_attributes(int op_code) {
-	project_attributes = new ProjectAttributes(op_code, row, num_cols);
-	project_attributes->evaluate();
-  }
+  void clear();
+
+  void init();
+  void re_init();
+  void evaluate();
+
+  void set_project_attributes(int op_code);
+
+  uint32_t flush_encrypt_eval_attributes(uint8_t *output);
 
   ProjectAttributes *project_attributes;
 };

@@ -59,8 +59,6 @@ void Integer::print() {
 
 /*** INTEGER ***/
 
-
-
 /*** STRING ***/
 String::String() {
   data = NULL;
@@ -413,6 +411,51 @@ void GroupedAttributes::print() {
 /*** GROUPED ATTRIBUTES ***/
 
 
+/*** PROJECT ATTRIBUTES ***/
+
+void ProjectAttributes::init() {
+  uint8_t *sort_pointer = NULL;
+  uint32_t len = 0;
+
+  // Set "attributes" in the correct place to point to row
+  // For JoinAttributes, can look at the different columns for primary & foreign key tables
+  if (op_code == 10) {
+	// for Big Data Benchmark query #2
+	expression = BD2;
+
+	num_attr = 1;
+	num_eval_attr = 1;
+
+  }
+
+}
+
+
+void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
+  uint8_t *sort_pointer = NULL;
+  uint32_t len = 0;
+
+  if (this->op_code == 10) {
+	attributes[0]->reset();
+
+	find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
+
+	attributes[0]->consume(sort_pointer, NO_COPY);
+	attributes[0]->print();
+  }
+}
+
+
+void ProjectAttributes::evaluate() {
+  evaluate_expr(attributes, num_attr,
+				eval_attributes, num_eval_attr,
+				expression, PROJECT);
+}
+
+
+/*** PROJECT ATTRIBUTES ***/
+
+
 /*** JOIN ATTRIBUTES ***/
 
 int JoinAttributes::compare(JoinAttributes *attr) {
@@ -607,15 +650,7 @@ int AggSortAttributes::compare(AggSortAttributes *attr) {
 /*** AGG SORT ATTR ***/
 
 
-/*** PROJECT ATTRIBUTES ***/
-
-void ProjectAttributes::evaluate() {
-  evaluate_expr(attributes, num_attr,
-				eval_attributes, num_eval_attr,
-				expression, PROJECT);
-}
-
-/*** PROJECT ATTRIBUTES ***/
+/*** RECORD ***/
 
 // given a row with a set of encrypted attributes
 // assume that the row_ptr is set correctly
@@ -638,6 +673,57 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   return total_len;
 }
 
+/*** RECORD ***/
+
+
+/*** PROJECT RECORD  ***/
+
+void ProjectRecord::clear() {
+  this->num_cols = 0;
+}
+
+void ProjectRecord::set_project_attributes(int op_code) {
+  
+  if (project_attributes == NULL) {
+	project_attributes = new ProjectAttributes(op_code, row, num_cols);
+	project_attributes->init();
+	project_attributes->evaluate();
+  } else {
+	project_attributes->re_init(this->row + 4);
+	project_attributes->evaluate();
+  }
+
+}
+
+// only the attributes!
+uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
+  uint8_t *output_ptr = output;
+  uint32_t value_len = 0;
+  
+  ProjectAttributes *attrs = this->project_attributes;
+
+  *( (uint32_t *) (output_ptr)) = attrs->num_eval_attr;
+  output_ptr += 4;
+
+  uint8_t temp[ROW_UPPER_BOUND];
+
+  for (uint32_t i = 0; i < attrs->num_eval_attr; i++) {
+	
+	attrs->eval_attributes[i]->flush(temp);
+	
+	value_len = *( (uint32_t *) (temp + TYPE_SIZE));
+	*( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
+	
+	encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
+	
+	output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
+  }
+
+  return (output_ptr - output);
+}
+
+
+/*** PROJECT RECORD  ***/
 
 /*** JOIN RECORD  ***/
 
