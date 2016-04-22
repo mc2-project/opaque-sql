@@ -130,7 +130,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     println(decrypt3(words.encSort($"word").collect).toSeq)
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
-    assert(decrypt4[Int, String, Int, Int](summed.collect).sorted ===
+    assert(decrypt4[Int, String, Int, Int](summed.collect) ===
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 

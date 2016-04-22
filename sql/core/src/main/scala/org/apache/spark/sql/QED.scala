@@ -17,8 +17,6 @@
 
 package org.apache.spark.sql
 
-import org.apache.spark.sql.types.BinaryType
-
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -29,7 +27,9 @@ import sun.misc.{BASE64Encoder, BASE64Decoder}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
+import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
@@ -140,26 +140,67 @@ object QED {
     decoded
   }
 
-  def concatRows(rows: Array[Array[Byte]]): Array[Byte] = {
-    val totalBytes = rows.map(_.length).sum
+  def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
+    val totalBytes = arrays.map(_.length).sum
     val buf = ByteBuffer.allocate(totalBytes)
     buf.order(ByteOrder.LITTLE_ENDIAN)
-    for (row <- rows) {
-      buf.put(row)
+    for (a <- arrays) {
+      buf.put(a)
     }
     buf.flip()
-    val allRows = new Array[Byte](buf.limit())
-    buf.get(allRows)
-    allRows
+    val all = new Array[Byte](buf.limit())
+    buf.get(all)
+    all
   }
 
-  def unconcatRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
+  def readRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
     val buf = ByteBuffer.wrap(concatRows)
     buf.order(ByteOrder.LITTLE_ENDIAN)
     new Iterator[Array[Byte]] {
       override def hasNext = buf.hasRemaining
-      override def next() = InternalRow.readSerialized(buf)
+      override def next() = readRow(buf)
     }
+  }
+
+  def parseRows(concatRows: Array[Byte]): Iterator[InternalRow] = {
+    val buf = ByteBuffer.wrap(concatRows)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    new Iterator[InternalRow] {
+      override def hasNext = buf.hasRemaining
+      override def next() = parseRow(buf)
+    }
+  }
+
+  def readRow(buf: ByteBuffer): Array[Byte] = {
+    val buf2 = buf.duplicate()
+    buf2.order(ByteOrder.LITTLE_ENDIAN)
+    val numFields = buf2.getInt()
+    for (i <- 0 until numFields) {
+      val fieldLength = buf2.getInt()
+      val field = new Array[Byte](fieldLength)
+      buf2.get(field)
+    }
+    val rowBytes = new Array[Byte](buf2.position - buf.position)
+    buf.get(rowBytes)
+    rowBytes
+  }
+
+  def parseRow(bytes: Array[Byte]): InternalRow = {
+    val buf = ByteBuffer.wrap(bytes)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    parseRow(buf)
+  }
+
+  def parseRow(buf: ByteBuffer): InternalRow = {
+    val numFields = buf.getInt()
+    val fields = new Array[Array[Byte]](numFields)
+    for (i <- 0 until numFields) {
+      val fieldLength = buf.getInt()
+      val field = new Array[Byte](fieldLength)
+      buf.get(field)
+      fields(i) = field
+    }
+    new GenericInternalRow(fields.asInstanceOf[Array[Any]])
   }
 
   def splitBytes(bytes: Array[Byte], numSplits: Int): Array[Array[Byte]] = {

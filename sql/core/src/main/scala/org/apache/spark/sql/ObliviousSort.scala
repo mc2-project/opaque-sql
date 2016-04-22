@@ -54,7 +54,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // Concatenate encrypted rows into a buffer
     val nonEmptyRows = values.map(_.value).filter(_.length != 0)
-    val concatRows = QED.concatRows(nonEmptyRows)
+    val concatRows = QED.concatByteArrays(nonEmptyRows)
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
@@ -62,7 +62,7 @@ object ObliviousSort extends java.io.Serializable {
     enclave.StopEnclave(eid)
 
     // Copy rows back into values
-    val sortedRowIter = QED.unconcatRows(allRowsSorted)
+    val sortedRowIter = QED.readRows(allRowsSorted)
     for (row <- values) {
       if (sortedRowIter.hasNext) {
         row.value = sortedRowIter.next()

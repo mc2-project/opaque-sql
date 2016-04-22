@@ -86,7 +86,7 @@ case class Permute(child: SparkPlan) extends UnaryNode {
       val converter = UnsafeProjection.create(schema)
       val schemaWithRandomId = schema.add(StructField("randomId", BinaryType, true))
       serRowIter.map(serRow => converter(
-        InternalRow.fromSeq(InternalRow.fromSerialized(serRow).toSeq(schemaWithRandomId).init)))
+        InternalRow.fromSeq(QED.parseRow(serRow).toSeq(schemaWithRandomId).init)))
     }
   }
 }
@@ -99,7 +99,7 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
     // TODO: pass opcode to signal sorting on sortExpr
     ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
-      serRowIter.map(serRow => converter(InternalRow.fromSerialized(serRow)))
+      serRowIter.map(serRow => converter(QED.parseRow(serRow)))
     }
   }
 }
@@ -116,10 +116,9 @@ case class EncAggregateWithSum(
     // Process boundaries
     val boundaries = child.execute().mapPartitions { rowIter =>
       val rows = rowIter.map(_.copy).toArray
-      val concatRows = QED.concatRows(rows.map(_.encSerialize))
+      val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
       val (enclave, eid) = QED.initEnclave()
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
-      println(s"enclave.Aggregate($eid, 1, concatRows, ${rows.length}, new Array[Byte](aggSize))")
       val boundary = enclave.Aggregate(eid, 1, concatRows, rows.length, new Array[Byte](aggSize))
       enclave.StopEnclave(eid)
       Iterator(boundary)
@@ -127,9 +126,8 @@ case class EncAggregateWithSum(
 
     val boundariesCollected = boundaries.collect
     val (enclave, eid) = QED.initEnclave()
-    println(s"Calling enclave.ProcessBoundary($eid, 1, ${QED.concatRows(boundariesCollected).length}, ${boundariesCollected.length})")
     val processedBoundariesConcat = enclave.ProcessBoundary(
-      eid, 1, QED.concatRows(boundariesCollected), boundariesCollected.length)
+      eid, 1, QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
     enclave.StopEnclave(eid)
 
     // Send processed boundaries to partitions and generate partial aggregates
@@ -138,7 +136,7 @@ case class EncAggregateWithSum(
     val partialAggregates = child.execute().zipPartitions(processedBoundariesRDD) {
       (rowIter, boundaryIter) =>
         val rows = rowIter.map(_.copy).toArray
-        val concatRows = QED.concatRows(rows.map(_.encSerialize))
+        val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
         val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
         val boundaryArray = boundaryIter.toArray
         assert(boundaryArray.length == 1)
@@ -151,9 +149,9 @@ case class EncAggregateWithSum(
         Iterator(partialAgg)
     }
 
-    partialAggregates.mapPartitions { serRowIter =>
+    partialAggregates.flatMap { serRows =>
       val converter = UnsafeProjection.create(schema)
-      serRowIter.map(serRow => converter(InternalRow.fromSerialized(serRow)))
+      QED.parseRows(serRows).map(converter)
     }
   }
 }

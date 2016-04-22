@@ -96,34 +96,6 @@ object InternalRow {
    */
   def fromSeq(values: Seq[Any]): InternalRow = new GenericInternalRow(values.toArray)
 
-  def fromSerialized(b: Array[Byte]): InternalRow = {
-    val buf = ByteBuffer.wrap(b)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    val numFields = buf.getInt()
-    val fields = new Array[Array[Byte]](numFields)
-    for (i <- 0 until numFields) {
-      val fieldLength = buf.getInt()
-      val field = new Array[Byte](fieldLength)
-      buf.get(field)
-      fields(i) = field
-    }
-    new GenericInternalRow(fields.asInstanceOf[Array[Any]])
-  }
-
-  def readSerialized(buf: ByteBuffer): Array[Byte] = {
-    val buf2 = buf.duplicate()
-    buf2.order(ByteOrder.LITTLE_ENDIAN)
-    val numFields = buf2.getInt()
-    for (i <- 0 until numFields) {
-      val fieldLength = buf2.getInt()
-      val field = new Array[Byte](fieldLength)
-      buf2.get(field)
-    }
-    val rowBytes = new Array[Byte](buf2.position - buf.position)
-    buf.get(rowBytes)
-    rowBytes
-  }
-
   /** Returns an empty [[InternalRow]]. */
   val empty = apply()
 }
