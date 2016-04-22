@@ -82,7 +82,7 @@ case class Permute(child: SparkPlan) extends UnaryNode {
         InternalRow.fromSeq(row.toSeq(schema) :+ QED.randomId(enclave, eid)).encSerialize)
     }
     // TODO: pass opcode to signal sorting on random id
-    ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
+    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 50).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       val schemaWithRandomId = schema.add(StructField("randomId", BinaryType, true))
       serRowIter.map(serRow => converter(
@@ -97,7 +97,7 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
   override def doExecute() = {
     val childRDD = child.execute().map(_.encSerialize)
     // TODO: pass opcode to signal sorting on sortExpr
-    ObliviousSort.ColumnSort(childRDD.context, childRDD).mapPartitions { serRowIter =>
+    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 50).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       serRowIter.map(serRow => converter(QED.parseRow(serRow)))
     }
@@ -131,7 +131,7 @@ case class EncAggregateWithSum(
       eid, 1, QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
     enclave.StopEnclave(eid)
 
-    // Send processed boundaries to partitions and generate partial aggregates
+    // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries)
     val partialAggregates = child.execute().zipPartitions(processedBoundariesRDD) {
@@ -147,10 +147,13 @@ case class EncAggregateWithSum(
         val partialAgg = enclave.Aggregate(eid, 101, concatRows, rows.length, boundaryRecord)
         assert(partialAgg.nonEmpty)
         enclave.StopEnclave(eid)
-        Iterator(partialAgg)
+        QED.readRows(partialAgg)
     }
 
-    partialAggregates.flatMap { serRows =>
+    // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
+    val sortedAggregates = ObliviousSort.ColumnSort(partialAggregates.context, partialAggregates, opcode = 51)
+
+    sortedAggregates.flatMap { serRows =>
       val converter = UnsafeProjection.create(schema)
       QED.parseRows(serRows).map(converter)
     }

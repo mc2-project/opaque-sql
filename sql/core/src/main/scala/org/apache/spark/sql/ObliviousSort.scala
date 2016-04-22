@@ -47,7 +47,7 @@ object ObliviousSort extends java.io.Serializable {
 
   // this function performs an oblivious sort on an array of (column, (row, value))
   def OSortSingleMachine_WithIndex(
-      values: Array[Value], low_idx: Int, len: Int) = {
+      values: Array[Value], low_idx: Int, len: Int, opcode: Int) = {
 
     val log_len = log2(len) + 1
     val offset = low_idx
@@ -58,7 +58,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
-    val allRowsSorted = enclave.ObliviousSort(eid, 50, concatRows, 0, nonEmptyRows.length)
+    val allRowsSorted = enclave.ObliviousSort(eid, opcode, concatRows, 0, nonEmptyRows.length)
     enclave.StopEnclave(eid)
 
     // Copy rows back into values
@@ -86,7 +86,7 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def ColumnSortParFunction1(index: Int, it: Iterator[(Array[Byte], Int)],
-      numPartitions: Int, r: Int, s: Int): Iterator[Value] = {
+      numPartitions: Int, r: Int, s: Int, opcode: Int): Iterator[Value] = {
 
     val rounds = s / numPartitions
     var ret_result = Array.empty[Value]
@@ -109,7 +109,7 @@ object ObliviousSort extends java.io.Serializable {
       for (rnd <- 0 to rounds - 1) {
 
         time("Column sort, step 1") {
-          OSortSingleMachine_WithIndex(ret_result, rnd * array_len, array_len)
+          OSortSingleMachine_WithIndex(ret_result, rnd * array_len, array_len, opcode)
         }
 
         // add result to ret_result
@@ -132,7 +132,7 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def ColumnSortStep3[A: Ordering](
-      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int): Iterator[Value] = {
+      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: Int): Iterator[Value] = {
 
     var len = 0
     var i = 0
@@ -168,7 +168,7 @@ object ObliviousSort extends java.io.Serializable {
     println(s"Filled counter $counter vs. len $len")
 
     time("Column sort, step 3") {
-      OSortSingleMachine_WithIndex(ret_result, 0, r)
+      OSortSingleMachine_WithIndex(ret_result, 0, r, opcode)
     }
 
 
@@ -212,7 +212,7 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortFinal(key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int)
+  def ColumnSortFinal(key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: Int)
     : Iterator[(Int, (Int, Array[Byte]))] = {
 
     var result = Array.empty[Value]
@@ -269,15 +269,15 @@ object ObliviousSort extends java.io.Serializable {
 
           if (i == NumCores && key._1 < NumMachines) {
             // also sort the last piece
-            OSortSingleMachine_WithIndex(result, NumCores * (Multiplier * r), r)
+            OSortSingleMachine_WithIndex(result, NumCores * (Multiplier * r), r, opcode)
             println("[" + key._1 + " - 1] Sorting from " + NumCores * (Multiplier * r) + " for len " + r)
           } else if (i == 1 && key._1 > 1) {
             // also want to sort the first piece
-            OSortSingleMachine_WithIndex(result, 0, r)
+            OSortSingleMachine_WithIndex(result, 0, r, opcode)
             println("[" + key._1 + " - 2] Sorting from 0 for len" + r)
           }
 
-          OSortSingleMachine_WithIndex(result, (i - 1) * (Multiplier * r) + offset, Multiplier * r)
+          OSortSingleMachine_WithIndex(result, (i - 1) * (Multiplier * r) + offset, Multiplier * r, opcode)
           println("[" + key._1 + " - 3] Sorting " + (i - 1) * (Multiplier * r) + offset + " for len " +  Multiplier * r)
         }
       }
@@ -301,7 +301,7 @@ object ObliviousSort extends java.io.Serializable {
           if (!(key._1 == 1 && i == 1) && !(key._1 == NumMachines && i == NumCores + 1)) {
             val low_index = (i - 1) * (Multiplier * r) + offset
             println("Sorting array from " + low_index + " for length " + 2 * r + ", for column " + key._1 + ", total length: " + result.length)
-            OSortSingleMachine_WithIndex(result, low_index, 2 * r)
+            OSortSingleMachine_WithIndex(result, low_index, 2 * r, opcode)
           }
         }
       }
@@ -347,7 +347,7 @@ object ObliviousSort extends java.io.Serializable {
 
   // this sorting algorithm is taken from "Tight Bounds on the Complexity of Parallel Sorting"
   def ColumnSort(
-      sc: SparkContext, data: RDD[Array[Byte]], r_input: Int = 0, s_input: Int = 0)
+      sc: SparkContext, data: RDD[Array[Byte]], opcode: Int, r_input: Int = 0, s_input: Int = 0)
     : RDD[Array[Byte]] = {
 
     // let len be N
@@ -374,11 +374,11 @@ object ObliviousSort extends java.io.Serializable {
       .repartition(NumCores * NumMachines)
     par_data.count
 
-    val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s))
+    val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
 
     /* Alternative */
-    val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortStep3(x, r, s))
-    val par_data_final = par_data_intermediate.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortFinal(x, r, s))
+    val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortStep3(x, r, s, opcode))
+    val par_data_final = par_data_intermediate.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortFinal(x, r, s, opcode))
     /* End Alternative */
 
     val count = par_data_final.count
