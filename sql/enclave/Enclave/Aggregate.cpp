@@ -335,6 +335,11 @@ public:
 	agg_data->agg(*(data->agg), (data->agg)+1+len, len);
   }
 
+  void reset_aggregate() {
+	agg_data->reset();
+	agg_data->agg(*agg, agg+HEADER_SIZE, this->agg_attr_len());
+  }
+
   // this flushes agg_data's information into agg
   void flush_agg() {
 	agg_data->ret_result(this->agg);
@@ -580,13 +585,13 @@ void scan_aggregation_count_distinct(int op_code,
 	decrypted_row.reset_row_ptr();
     agg_row_ptr += decrypted_row.consume_all_encrypted_attributes(agg_row_ptr + agg_row_length);
     decrypted_row.set_agg_sort_attributes(op_code);
-    // decrypted_row.print();
+    //decrypted_row.print();
 	
   } else {
 	current_agg.clear();
 	dummy = 0;
   }
-  // current_agg.print();
+  //current_agg.print();
 	
   // returned row's structure should be appended with
   // [enc agg len]enc{[agg type][agg len][aggregation]}
@@ -647,9 +652,9 @@ void scan_aggregation_count_distinct(int op_code,
 	}
 
     // copy current_agg to prev_agg
-    // printf("Before copy_agg\n");
+    //printf("Before copy_agg\n");
     prev_agg.copy_agg(&current_agg);
-    // prev_agg.print();
+    //prev_agg.print();
 
 	// should output the previous row with the partial aggregate information
 	if ((flag == 1 && r == 1)) {
@@ -694,10 +699,10 @@ void scan_aggregation_count_distinct(int op_code,
 	// update the partial aggregate
 	if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
 	  current_agg.aggregate();
-	  
+
 	  if (flag == 2 && mode == HIGH_AGG) {
-		//printf("-------------------------------------- OUTPUT --------------------------------------\n");
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
+		//printf("-------------------------------------- OUTPUT --------------------------------------\n");
 		//prev_agg.print();
 		//printf("-------------------------------------- END OUTPUT --------------------------------------\n");
 	  }
@@ -708,7 +713,7 @@ void scan_aggregation_count_distinct(int op_code,
 	  current_agg.aggregate();
 	  ++offset;
 
-	  if (flag == 2 && mode == HIGH_AGG) {
+	  if (flag == 2 && mode == HIGH_AGG && r > 0) {
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
 		// printf("-------------------------------------- OUTPUT final --------------------------------------\n");
 		// prev_agg.print();
@@ -738,11 +743,12 @@ void scan_aggregation_count_distinct(int op_code,
   } else if (flag == 2) {
 	if (mode == HIGH_AGG) {
 	  // compare current_agg with decrypted row
-	  if (current_agg.cmp_sort_attr(&decrypted_row) == 0) {
+	  if ((current_agg.cmp_sort_attr(&decrypted_row) == 0) && (offset < distinct_items - 1)) {
 		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, -1);
 	  } else {
 		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, 0);
 		// printf("-------------------------------------- OUTPUT (final) --------------------------------------\n");
+		// current_agg.flush_all();
 		// current_agg.print();
 		// printf("-------------------------------------- END OUTPUT --------------------------------------\n");
       }
@@ -801,6 +807,7 @@ void process_boundary_records(int op_code,
   // agg_row attribute
   agg_stats_data prev_agg(op_code);
   agg_stats_data current_agg(op_code);
+  agg_stats_data dummy_agg(op_code);
 
   // in this scan, we must count the number of distinct items
   // a.k.a. the size of the aggregation result
@@ -854,7 +861,6 @@ void process_boundary_records(int op_code,
           // prev_agg.print();
 		  encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
 		  out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
-
 		}
 
 		decrypted_row.reset_row_ptr();
@@ -864,6 +870,7 @@ void process_boundary_records(int op_code,
 		//decrypt(enc_agg_ptr, enc_agg_len, prev_agg.rec->row);
 		prev_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
 		prev_agg.rec->set_agg_sort_attributes(op_code);
+		prev_agg.reset_aggregate();
 
 		if (round == 0) {
 		  distinct_items = prev_agg.distinct();
@@ -881,13 +888,13 @@ void process_boundary_records(int op_code,
 
 	  // write first row of next partition to output 
 	  if (round == 1) {
-		out_agg_rows_ptr += decrypted_row.flush_encrypt_all_attributes(out_agg_rows_ptr);
+	  	out_agg_rows_ptr += decrypted_row.flush_encrypt_all_attributes(out_agg_rows_ptr);
 	  }
 
 	  // decrypt into current_agg
-	  //decrypt(enc_agg_ptr, enc_agg_len, current_agg.row);
 	  current_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
+	  current_agg.reset_aggregate();
 	  
 	  if (round == 0) {
 		distinct_items += current_agg.distinct();
@@ -896,9 +903,9 @@ void process_boundary_records(int op_code,
 
 	  // To find the number of distinct records:
 	  // compare the first row with prev_agg
-	  ret = prev_agg.rec->compare(&decrypted_row);
+	  int if_distinct_ = prev_agg.rec->compare(&decrypted_row);
 
-	  if (ret == 0) {
+	  if (if_distinct_ == 0) {
 		if (round == 0) {
 		  --distinct_items;
 		}
@@ -911,26 +918,7 @@ void process_boundary_records(int op_code,
 
 	  single_distinct_items = current_agg.distinct();
 
-	  // compare sort attributes current and previous agg
-	  ret = prev_agg.cmp_sort_attr(&current_agg);
 
-      // printf("ret is %u\n", ret);
-
-	  if (ret == 0) {
-		// these two attributes are the same -- we have something that spans multiple machines
-		// must aggregate the partial aggregations
-		current_agg.aggregate();
-		prev_agg.aggregate();
-		prev_agg.aggregate(&current_agg);
-		prev_agg.flush_all();
-		current_agg.copy_agg(&prev_agg);
-	  }
-	
-	  if (ret == 0 || i == 1) {
-		// clear prev_agg
-		prev_agg.clear();
-	  }
-	  
 	  if (round == 1) {
 		// only write out for the second round
 		// write prev_agg into out_agg_rows
@@ -939,25 +927,36 @@ void process_boundary_records(int op_code,
 		prev_agg.flush_all();
 		prev_agg.set_distinct(distinct_items);
 		prev_agg.set_offset(offset);
-		//printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
-        // prev_agg.print();
 
-		// before outputting the agg_row
 		encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
 		out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
+		  
+		printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
+		prev_agg.print();
 	  }
 
-	  // copy current_agg into prev_agg
-	  prev_agg.copy_agg(&current_agg);
+	  // compare sort attributes current and previous agg
+	  ret = prev_agg.cmp_sort_attr(&current_agg);
+	  
+	  if (ret == 0) {
+		// these two attributes are the same -- we have something that spans multiple machines
+		// must aggregate the partial aggregations
+		current_agg.aggregate(&prev_agg);
+		current_agg.flush_all();
+	  }
 
+	  prev_agg.copy_agg(&current_agg);
+	  //prev_agg.aggregate();
+		
 	  input_ptr = enc_agg_ptr + enc_agg_len;
 	}
+
 	if (round == 0) {
       // printf("Distinct items is %u\n", distinct_items);
 	}
+
   }
 
-  // write first row of next partition to output 
   out_agg_rows_ptr += decrypted_row.flush_encrypt_all_attributes(out_agg_rows_ptr);
 
   *actual_out_agg_row_size = (out_agg_rows_ptr - out_agg_rows);

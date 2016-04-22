@@ -364,7 +364,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIAggregation", SGXTest) {
+  ignore("JNIAggregation", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
@@ -409,51 +409,53 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     }
 
     // make sure this is sorted data, i.e. sorted on the aggregation attribute
-    val data_1 = Seq((1, "A", 1), (2, "A", 1), (3, "B", 1), (4, "B", 1), (5, "C", 1))
-    val data_2 = Seq((6, "C", 1), (7, "C", 1), (8, "C", 1), (9, "C", 1), (10, "C", 1))
-    val data_3 = Seq((11, "C", 1), (12, "D", 1), (13, "E", 1), (14, "F", 1), (15, "G", 1))
+    // val data_1 = Seq((1, "A", 1), (2, "A", 1), (3, "B", 1), (4, "B", 1), (5, "C", 1))
+    // val data_2 = Seq((6, "C", 1), (7, "C", 1), (8, "C", 1), (9, "C", 1), (10, "C", 1))
+    // val data_3 = Seq((11, "D", 1), (12, "D", 1), (13, "E", 1), (14, "F", 1), (15, "G", 1))
+
+    val data_1 = Seq((1, "A", 1), (2, "A", 1), (3, "B", 1), (4, "B", 1), (5, "B", 1))
+    val data_2 = Seq((6, "B", 1), (7, "B", 1), (8, "C", 1), (9, "C", 1), (10, "C", 1))
 
     val enc_data1 = encrypt_and_serialize(data_1)
     val enc_data2 = encrypt_and_serialize(data_2)
-    val enc_data3 = encrypt_and_serialize(data_3)
+    //val enc_data3 = encrypt_and_serialize(data_3)
 
     // should input dummy row
     val agg_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128
     val agg_row1 = Array.fill[Byte](agg_size)(0)
     val agg_row2 = Array.fill[Byte](agg_size)(0)
-    val agg_row3 = Array.fill[Byte](agg_size)(0)
+    //val agg_row3 = Array.fill[Byte](agg_size)(0)
 
     val ret_agg_row1 = enclave.Aggregate(eid, 1, enc_data1, data_1.length, agg_row1)
     val ret_agg_row2 = enclave.Aggregate(eid, 1, enc_data2, data_2.length, agg_row2)
-    val ret_agg_row3 = enclave.Aggregate(eid, 1, enc_data3, data_3.length, agg_row3)
+    //val ret_agg_row3 = enclave.Aggregate(eid, 1, enc_data3, data_3.length, agg_row3)
 
 
     // aggregate the agg_row's together
-    val agg_row_buffer = ByteBuffer.allocate(ret_agg_row1.length + ret_agg_row2.length + ret_agg_row3.length)
+    //val agg_row_buffer = ByteBuffer.allocate(ret_agg_row1.length + ret_agg_row2.length + ret_agg_row3.length)
+    val agg_row_buffer = ByteBuffer.allocate(ret_agg_row1.length + ret_agg_row2.length)
     agg_row_buffer.order(ByteOrder.LITTLE_ENDIAN)
 
     agg_row_buffer.put(ret_agg_row1)
     agg_row_buffer.put(ret_agg_row2)
-    agg_row_buffer.put(ret_agg_row3)
+    //agg_row_buffer.put(ret_agg_row3)
 
     agg_row_buffer.flip()
     val agg_row_value = new Array[Byte](agg_row_buffer.limit())
     agg_row_buffer.get(agg_row_value)
 
 
-    val step_2_values = enclave.ProcessBoundary(eid, 1, agg_row_value, 3)
+    val step_2_values = enclave.ProcessBoundary(eid, 1, agg_row_value, 2)
 
     // split these values
-    val slices = QED.splitBytes(step_2_values, 3)
+    val slices = QED.splitBytes(step_2_values, 2)
     val new_agg_row1 = slices(0)
     val new_agg_row2 = slices(1)
-    val new_agg_row3 = slices(2)
+    //val new_agg_row3 = slices(2)
 
     val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
     val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
-    val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
-
-    
+    //val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
 
     enclave.StopEnclave(eid)
   }
