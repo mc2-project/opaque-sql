@@ -696,7 +696,10 @@ void scan_aggregation_count_distinct(int op_code,
 	  current_agg.aggregate();
 	  
 	  if (flag == 2 && mode == HIGH_AGG) {
+		//printf("-------------------------------------- OUTPUT --------------------------------------\n");
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
+		//prev_agg.print();
+		//printf("-------------------------------------- END OUTPUT --------------------------------------\n");
 	  }
 
 	} else {
@@ -707,6 +710,9 @@ void scan_aggregation_count_distinct(int op_code,
 
 	  if (flag == 2 && mode == HIGH_AGG) {
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
+		// printf("-------------------------------------- OUTPUT final --------------------------------------\n");
+		// prev_agg.print();
+		// printf("-------------------------------------- END OUTPUT --------------------------------------\n");
 	  }
 	}
 
@@ -733,9 +739,12 @@ void scan_aggregation_count_distinct(int op_code,
 	if (mode == HIGH_AGG) {
 	  // compare current_agg with decrypted row
 	  if (current_agg.cmp_sort_attr(&decrypted_row) == 0) {
-		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
+		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, -1);
 	  } else {
-		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
+		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, 0);
+		// printf("-------------------------------------- OUTPUT (final) --------------------------------------\n");
+		// current_agg.print();
+		// printf("-------------------------------------- END OUTPUT --------------------------------------\n");
       }
       *actual_output_rows_length = output_rows_ptr - output_rows;
 	}
@@ -745,7 +754,7 @@ void scan_aggregation_count_distinct(int op_code,
   // finally, output cardinality in plaintext
   // TODO: could even to tiered padding here!
   if (flag == 2) {
-	*cardinality = distinct_items;
+	//*cardinality = distinct_items;
   }
   
 }

@@ -509,7 +509,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   } else {
 	// TODO: change this hard-coded buffer
 	uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
-    output_rows_length = 4 + num_rows  * real_size;
+    output_rows_length = num_rows  * real_size;
 	output_rows = (uint8_t *) malloc(4 + output_rows_length);
   }
 
@@ -523,8 +523,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
 										flag,
 										(uint32_t *) output_rows);
 
-  jbyteArray ret = env->NewByteArray(actual_size + 4);
-  env->SetByteArrayRegion(ret, 0, actual_size + 4, (jbyte *) output_rows);
+  jbyteArray ret = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) (output_rows + 4));
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
