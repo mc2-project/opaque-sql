@@ -102,12 +102,9 @@ object QED {
     val tpe = buf.get()
     val size = buf.getInt()
     val result = tpe match {
-      case 1 | 6 =>
+      case 1 =>
         assert(size == 4)
         buf.getInt()
-      case 5 => // partial aggregate
-        assert(size == 4)
-        buf.getInt() + 100000 // TODO: sort and filter these out, then remove this case
       case 2 =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)

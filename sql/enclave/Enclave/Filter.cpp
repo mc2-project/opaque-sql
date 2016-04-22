@@ -50,6 +50,16 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
       ret = 0;
     }
 
+  } else if (op_code == 2) {
+    // Filter out rows with a dummy attribute in the 4th column. Such rows represent partial aggregates
+    find_attribute(row_ptr, length, num_cols, 4, &enc_value_ptr, &enc_value_len);
+    decrypt(enc_value_ptr, enc_value_len, decrypted_data);
+    get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
+
+    if (attr_type == DUMMY) {
+      ret = 0;
+    }
+
   } else if (op_code == -1) {
     // this is for test only
 
@@ -65,6 +75,9 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     printf("Attr len is  is %u\n", attr_len);
 	
     ret = 0;
+  } else {
+    printf("Error in ecall_filter_single_row: unexpected op code %d\n", op_code);
+    assert(false);
   }
 
   return ret;

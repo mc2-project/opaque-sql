@@ -219,7 +219,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
 
-  } else if (op_code == 2 || op_code == 50) {
+  } else if (op_code == 2 || op_code == 50 || op_code == 51) {
     // Sorting rows
 	// this needs to sort a row of data
 
@@ -407,6 +407,9 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	}
 
 	free(data);
+  } else {
+    printf("Error in ecall_oblivious_sort: unexpected op code %d\n", op_code);
+    assert(false);
   }
 }
 

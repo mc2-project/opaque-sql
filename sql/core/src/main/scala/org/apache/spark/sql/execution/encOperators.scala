@@ -153,7 +153,13 @@ case class EncAggregateWithSum(
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = ObliviousSort.ColumnSort(partialAggregates.context, partialAggregates, opcode = 51)
 
-    sortedAggregates.flatMap { serRows =>
+    // Filter out the non-final aggregates
+    val finalAggregates = sortedAggregates.mapPartitions { serRows =>
+      val (enclave, eid) = QED.initEnclave()
+      serRows.filter(serRow => enclave.Filter(eid, 2, serRow))
+    }
+
+    finalAggregates.flatMap { serRows =>
       val converter = UnsafeProjection.create(schema)
       QED.parseRows(serRows).map(converter)
     }
