@@ -383,6 +383,10 @@ public:
 	this->rec->reset();
   }
 
+  bool is_dummy() {
+    return *(rec->row + 4 + 4 + 4) == 0;
+  }
+
   void print() {
 	if (*(rec->row + 4 + 4 + 4) == 0) {
 	  printf("==============\n");
@@ -558,15 +562,21 @@ void scan_aggregation_count_distinct(int op_code,
 	  
 	  printf("offset is %u, distinct_items is %u\n", offset, distinct_items);
 	  
-	  if (mode == LOW_AGG) {
+      if (mode == LOW_AGG || current_agg.is_dummy()) {
 		dummy = 0;
 		current_agg.clear();
-	  }
+      } else {
+        printf("Before set_agg_sort_attributes\n");
+        current_agg.rec->num_cols = *( (uint32_t *) (current_agg.rec->row + 8));
+        current_agg.rec->set_agg_sort_attributes(op_code);
+        printf("After set_agg_sort_attributes\n");
+      }
 	}
 
 	decrypted_row.reset_row_ptr();
-	agg_row_ptr += decrypted_row.consume_all_encrypted_attributes(agg_row_ptr);
-	decrypted_row.set_agg_sort_attributes(op_code);
+    agg_row_ptr += decrypted_row.consume_all_encrypted_attributes(agg_row_ptr + agg_row_length);
+    decrypted_row.set_agg_sort_attributes(op_code);
+    decrypted_row.print();
 	
   } else {
 	current_agg.clear();
