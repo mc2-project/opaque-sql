@@ -629,7 +629,6 @@ void scan_aggregation_count_distinct(int op_code,
 	  current_agg.rec->reset_row_ptr();
       current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
       printf("num cols is %u\n", current_agg.rec->num_cols);
-	  print_row("", current_agg.rec->row + 4 + 4);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
 
 	  find_attribute(enc_row_ptr, enc_row_len, num_cols,
@@ -639,7 +638,7 @@ void scan_aggregation_count_distinct(int op_code,
 
 	  current_agg.aggregate();
 	  current_agg.flush_agg();
-	  current_agg.print();
+
 	  // cleanup
 	  enc_row_ptr += enc_row_len;
 

@@ -397,12 +397,12 @@ void GroupedAttributes::swap(GroupedAttributes *attr) {
 }
 
 void GroupedAttributes::print() {
-  //printf("Original attributes\n");
+  printf("Original attributes:  ");
   for (uint32_t i = 0; i < num_attr; i++) {
 	attributes[i]->print();
   }
 
-  //printf("Evaluated attributes\n");
+  printf("Evaluated attributes:  ");
   for (uint32_t i = 0; i < num_eval_attr; i++) {
 	eval_attributes[i]->print();
   }
@@ -682,7 +682,7 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
 	enc_len = *( (uint32_t *) (input_row_ptr));
 	input_row_ptr += 4;
 	decrypt(input_row_ptr, enc_len, row_ptr);
-	  
+	
 	input_row_ptr += enc_len;
 	row_ptr += dec_size(enc_len);
 	total_len += enc_len;
@@ -834,6 +834,9 @@ void AggRecord::print() {
 	print_attribute("", value_ptr);
 	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
   }
+
+  printf("Agg attributes:\n");
+  agg_sort_attributes->print();
   //printf("===============\n");
 }
 
@@ -858,9 +861,9 @@ void AggRecord::set_agg_sort_attributes(int op_code) {
 }
 
 uint32_t AggRecord::consume_all_encrypted_attributes(uint8_t *input_row) {
-  row_ptr += 4;
+  row_ptr = this->row + 4 + 4 + 4;
   uint32_t ret = Record::consume_all_encrypted_attributes(input_row);
-  row_ptr -= 4;
+  row_ptr = this->row + 4 + 4;
   *( (uint32_t *) row_ptr) = this->num_cols;
   return ret;
 }
