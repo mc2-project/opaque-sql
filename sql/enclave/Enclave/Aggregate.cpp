@@ -87,7 +87,7 @@ class aggregate_data_sum : public aggregate_data {
 		assert(data_len == 4);
 		int_data_ptr = (uint32_t *) data;
 		sum += *int_data_ptr;
-		printf("Rolling sum is %u, took in data %u\n", sum, *int_data_ptr);
+        // printf("Rolling sum is %u, took in data %u\n", sum, *int_data_ptr);
 	  }
 	  break;
 	default: // cannot handle sum of other types!
@@ -351,9 +351,9 @@ public:
 	//cpy(this->agg, data->agg, PARTIAL_AGG_UPPER_BOUND);
 	//this->flush_all();
 
-	agg_data->copy_data(data->agg_data);
-	this->rec->copy(data->rec, COPY);
-	this->flush_all();
+    agg_data->copy_data(data->agg_data);
+    this->rec->copy(data->rec, COPY);
+    this->flush_all();
   }
   
   int cmp_sort_attr(agg_stats_data *data) {
@@ -502,6 +502,7 @@ void scan_aggregation_count_distinct(int op_code,
 									 uint32_t *actual_output_rows_length,
 									 int flag) {
 
+  printf("In scan_aggregation_count_distinct(flag=%d)\n", flag);
   // agg_row is initially encrypted
   // [agg_row length]enc{agg_row}
   // after decryption, agg_row's should only contain
@@ -554,9 +555,9 @@ void scan_aggregation_count_distinct(int op_code,
 	  // copy the entire agg_row_ptr to curreng_agg
 	  cpy(current_agg.agg, agg_row_ptr, agg_row_length);
 	  dummy = 0;
-	} else {
-	  decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
-	  current_agg.aggregate();
+    } else {
+      decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
+      current_agg.aggregate();
 	  offset = current_agg.offset();
 	  distinct_items = current_agg.distinct();
 	  
@@ -582,6 +583,7 @@ void scan_aggregation_count_distinct(int op_code,
 	current_agg.clear();
 	dummy = 0;
   }
+  current_agg.print();
 	
   // returned row's structure should be appended with
   // [enc agg len]enc{[agg type][agg len][aggregation]}
@@ -606,11 +608,11 @@ void scan_aggregation_count_distinct(int op_code,
 	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
-	printf("Record %u, num cols is %u\n", r, num_cols);
+    printf("Record %u, num cols is %u, dummy=%d\n", r, num_cols, dummy);
 	enc_row_ptr += 4;
 
-	if (r == 0 && dummy == 0) {
-	  // if the dummy is empty, it is the very first row of the current partition
+    if (r == 0 && dummy == 0) {
+      // if the dummy is empty, it is the very first row of the current partition
 	  // put down marker for the previous row
 	  prev_row_ptr = enc_row_ptr - 4; 
 	  prev_row_len = enc_row_len;
@@ -624,8 +626,8 @@ void scan_aggregation_count_distinct(int op_code,
 	  // decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
 
 	  current_agg.rec->reset_row_ptr();
-	  current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
-	  printf("num cols is %u\n", current_agg.rec->num_cols);
+      current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
+      printf("num cols is %u\n", current_agg.rec->num_cols);
 	  print_row("", current_agg.rec->row + 4 + 4);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
 
@@ -643,8 +645,10 @@ void scan_aggregation_count_distinct(int op_code,
 	  continue;
 	}
 
-	// copy current_agg to prev_agg
-	prev_agg.copy_agg(&current_agg);
+    // copy current_agg to prev_agg
+    printf("Before copy_agg\n");
+    prev_agg.copy_agg(&current_agg);
+    prev_agg.print();
 
 	// should output the previous row with the partial aggregate information
 	if ((flag == 1 && r == 1)) {
@@ -678,7 +682,7 @@ void scan_aggregation_count_distinct(int op_code,
 
 	current_agg.rec->reset_row_ptr();
 	current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
-	current_agg.rec->set_agg_sort_attributes(op_code);
+    current_agg.rec->set_agg_sort_attributes(op_code);
 
 	find_attribute(enc_row_ptr, enc_row_len, num_cols,
 				   agg_attribute_num,
@@ -805,7 +809,9 @@ void process_boundary_records(int op_code,
 	
 	for (uint32_t i = 0; i < num_rows; i++) {
 
-	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
+      printf("round=%u, i=%u, get_next_row(...)\n", round, i);
+      get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
+      printf("Got next row\n");
 	  uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
 	  printf("Record %u, num cols is %u, enc_row_len is %u\n", i, num_cols, enc_row_len);

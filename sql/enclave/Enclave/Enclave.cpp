@@ -290,7 +290,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  rec->sort_attributes->init();
 	  rec->sort_attributes->evaluate();
 
-	  //rec->sort_attributes->print();
+      // rec->sort_attributes->print();
 	}
 	
 	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
