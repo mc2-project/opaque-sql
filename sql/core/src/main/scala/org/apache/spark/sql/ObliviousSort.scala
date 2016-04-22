@@ -23,8 +23,8 @@ import org.apache.spark.sql.catalyst.InternalRow
 object ObliviousSort extends java.io.Serializable {
 
   // TODO(ankurdave): Use SparkContext to determine these
-  val NumMachines = 1
-  val NumCores = 2
+  val NumMachines = 2
+  val NumCores = 1
   val Multiplier = 1
 
   def time[A](desc: String)(f: => A): A = {
@@ -58,7 +58,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
-    val allRowsSorted = enclave.ObliviousSort(eid, 2, concatRows, 0, nonEmptyRows.length)
+    val allRowsSorted = enclave.ObliviousSort(eid, 50, concatRows, 0, nonEmptyRows.length)
     enclave.StopEnclave(eid)
 
     // Copy rows back into values

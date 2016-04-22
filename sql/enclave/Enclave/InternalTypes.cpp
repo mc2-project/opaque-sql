@@ -571,6 +571,24 @@ void SortAttributes::init() {
 	num_attr = 1;
 	num_eval_attr = 1;
 
+  } else if (op_code == 50) {
+    expression = IDENTITY;
+
+    num_attr = 1;
+    num_eval_attr = 1;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+    attributes[0] = new String;
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    eval_attributes[0] = new String;
+
+    num_eval_attr = num_attr;
+
   }
 }
 

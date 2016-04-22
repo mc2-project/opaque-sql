@@ -54,9 +54,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   def encrypt1[A](rows: Seq[A]): Seq[Array[Byte]] = rows.map {
     a => QED.encrypt(enclave, eid, a)
   }
-  def encrypt[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = rows.map {
+  def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = rows.map {
     case (a, b) => (QED.encrypt(enclave, eid, a), QED.encrypt(enclave, eid, b))
   }
+  def encrypt3[A, B, C](rows: Seq[(A, B, C)]): Seq[(Array[Byte], Array[Byte], Array[Byte])] =
+    rows.map {
+      case (a, b, c) =>
+        (QED.encrypt(enclave, eid, a),
+          QED.encrypt(enclave, eid, b),
+          QED.encrypt(enclave, eid, c))
+    }
 
   def decrypt1[A](rows: Seq[Row]): Seq[A] = {
     rows.map {
@@ -64,10 +71,18 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         QED.decrypt[A](enclave, eid, aEnc)
     }
   }
-  def decrypt[A, B](rows: Seq[Row]): Seq[(A, B)] = {
+  def decrypt2[A, B](rows: Seq[Row]): Seq[(A, B)] = {
     rows.map {
       case Row(aEnc: Array[Byte], bEnc: Array[Byte]) =>
         (QED.decrypt[A](enclave, eid, aEnc), QED.decrypt[B](enclave, eid, bEnc))
+    }
+  }
+  def decrypt3[A, B, C](rows: Seq[Row]): Seq[(A, B, C)] = {
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc))
     }
   }
 
@@ -81,22 +96,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
     val data = for (i <- 0 until 256) yield ("foo", i)
-    val encrypted = data.map {
-      case (word, count) =>
-        (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
-    }
-    def decrypt(rows: Array[Row]): Array[(String, Int)] = {
-      rows.map {
-        case Row(wordEnc: Array[Byte], countEnc: Array[Byte]) =>
-          (QED.decrypt[String](enclave, eid, wordEnc), QED.decrypt[Int](enclave, eid, countEnc))
-      }
-    }
-
-    val words = sparkContext.makeRDD(encrypted).toDF("word", "count")
-    assert(decrypt(words.collect) === data)
+    val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
+    assert(decrypt2(words.collect) === data)
 
     val filtered = words.encFilter($"count") // TODO: make enc versions of each operator
-    assert(decrypt(filtered.collect).sorted === data.filter(_._2 > 3).sorted)
+    assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
   test("encPermute") {
@@ -112,29 +116,19 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   ignore("encGroupByWithSum") {
     val (enclave, eid) = QED.initEnclave()
-    val data = for (i <- 0 until 256) yield (if (i % 2 == 0) "foo" else "bar", i)
-    val encrypted = data.map {
-      case (word, count) =>
-        (QED.encrypt(enclave, eid, word), QED.encrypt(enclave, eid, count))
-    }
-    def decrypt(rows: Array[Row]): Array[(String, Int)] = {
-      rows.map {
-        case Row(wordEnc: Array[Byte], countEnc: Array[Byte]) =>
-          (QED.decrypt[String](enclave, eid, wordEnc), QED.decrypt[Int](enclave, eid, countEnc))
-      }
-    }
-
-    val words = sparkContext.makeRDD(encrypted).toDF("word", "count")
+    val data = for (i <- 0 until 256) yield (i, (i%3)match{case 0=>"A";case 1=>"B";case 2=>"C"}, 1)
+    val words = sparkContext.makeRDD(encrypt3(data)).toDF("id", "word", "count")
+    println(decrypt3(words.encSort($"word").collect).toSeq)
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
-    assert(decrypt(summed.collect).sorted ===
-      data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
+    assert(decrypt3[Int, String, Int](summed.collect).sorted ===
+      data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-    val sorted = sparkContext.makeRDD(encrypt(data)).toDF("str", "x").encSort($"str").collect
-    assert(decrypt[String, Int](sorted) === data.sortBy(_._2))
+    val sorted = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"str").collect
+    assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 /*
   test("JNIEncrypt", SGXTest) {
@@ -438,14 +432,15 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val step_2_values = enclave.ProcessBoundary(eid, 1, agg_row_value, 3)
 
-    // // split these values
-    // val new_agg_row1 = step_2_values.slice(0, agg_size)
-    // val new_agg_row2 = step_2_values.slice(agg_size, agg_size * 2)
-    // val new_agg_row3 = step_2_values.slice(agg_size * 2, agg_size * 3)
+    // split these values
+    val slices = QED.splitBytes(step_2_values, 3)
+    val new_agg_row1 = slices(0)
+    val new_agg_row2 = slices(1)
+    val new_agg_row3 = slices(2)
 
-    // val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
-    // val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
-    // val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
+    val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
+    val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
+    val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
 
     enclave.StopEnclave(eid)
   }

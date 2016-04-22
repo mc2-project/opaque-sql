@@ -22,6 +22,7 @@ import scala.reflect.classTag
 
 import oblivious_sort.ObliviousSort
 import org.apache.spark.sql.QED
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -32,6 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
 import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.StructType
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
@@ -112,6 +114,50 @@ case class EncAggregateWithSum(
     Seq(groupingExpression.toAttribute, sumExpression.toAttribute)
 
   override def doExecute() = {
-    ???
+    // Process boundaries
+    val boundaries = child.execute().mapPartitions { rowIter =>
+      val rows = rowIter.map(_.copy).toArray
+      val concatRows = QED.concatRows(rows.map(_.encSerialize))
+      val (enclave, eid) = QED.initEnclave()
+      val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
+      println(s"enclave.Aggregate($eid, 1, concatRows, ${rows.length}, new Array[Byte](aggSize))")
+      val boundary = enclave.Aggregate(eid, 1, concatRows, rows.length, new Array[Byte](aggSize))
+      enclave.StopEnclave(eid)
+      Iterator(boundary)
+    }
+
+    val boundariesCollected = boundaries.collect
+    val (enclave, eid) = QED.initEnclave()
+    println(s"Calling enclave.ProcessBoundary($eid, 1, ${QED.concatRows(boundariesCollected).length}, ${boundariesCollected.length})")
+    val processedBoundariesConcat = enclave.ProcessBoundary(
+      eid, 1, QED.concatRows(boundariesCollected), boundariesCollected.length)
+
+    // Send processed boundaries to partitions and generate partial aggregates
+    val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
+    val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries)
+    val partialAggregates = child.execute().zipPartitions(processedBoundariesRDD) {
+      (rowIter, boundaryIter) =>
+        val rows = rowIter.map(_.copy).toArray
+        val concatRows = QED.concatRows(rows.map(_.encSerialize))
+        val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
+        val boundaryArray = boundaryIter.toArray
+        assert(boundaryArray.length == 1)
+        val boundaryRecord = boundaryArray.head
+        assert(boundaryRecord.length >= aggSize)
+        val (enclave, eid) = QED.initEnclave()
+        val partialAgg = enclave.Aggregate(eid, 101, concatRows, rows.length, boundaryRecord)
+        enclave.StopEnclave(eid)
+        Iterator(partialAgg)
+    }
+
+    // Merge partial aggregates to form final aggregate
+    val partialAggregatesCollected = partialAggregates.collect
+    val finalAggregates = enclave.FinalAggregation(
+      eid, 1, QED.concatRows(partialAggregatesCollected), partialAggregatesCollected.length)
+    enclave.StopEnclave(eid)
+
+    val finalAggregatesRows =
+      QED.unconcatRows(finalAggregates).map(InternalRow.fromSerialized).toSeq
+    sparkContext.parallelize(finalAggregatesRows)
   }
 }

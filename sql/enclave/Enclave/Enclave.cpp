@@ -174,6 +174,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
   // op_code = 1 means it's a list of integers
   if (op_code == 1) {
+    // Sorting integers (test only)
 	Integer **data = (Integer **) malloc(sizeof(Integer *) * list_length);
 	if (data == NULL) {
 	  printf("data is NULL!\n");
@@ -218,7 +219,8 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
 
-  } else if (op_code == 2) {
+  } else if (op_code == 2 || op_code == 50) {
+    // Sorting rows
 	// this needs to sort a row of data
 
 	printf("op_code 2 called\n");
@@ -341,6 +343,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	//printf("Freed data\n");
   } else if (op_code == 3) {
+    // Sorting for Join
 	// get the primary/foreign table indicators
 	uint8_t primary_table[TABLE_ID_SIZE];
 	uint8_t foreign_table[TABLE_ID_SIZE];

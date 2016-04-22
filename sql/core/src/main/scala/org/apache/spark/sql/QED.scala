@@ -162,6 +162,12 @@ object QED {
     }
   }
 
+  def splitBytes(bytes: Array[Byte], numSplits: Int): Array[Array[Byte]] = {
+    val splitSize = bytes.length / numSplits
+    assert(numSplits * splitSize == bytes.length)
+    bytes.grouped(splitSize).toArray
+  }
+
   def genAndWriteData() = {
     // write this hard-coded set of columns to text file, in csv format
   }
