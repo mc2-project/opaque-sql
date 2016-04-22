@@ -84,9 +84,8 @@ case class Permute(child: SparkPlan) extends UnaryNode {
     // TODO: pass opcode to signal sorting on random id
     ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 50).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
-      val schemaWithRandomId = schema.add(StructField("randomId", BinaryType, true))
       serRowIter.map(serRow => converter(
-        InternalRow.fromSeq(QED.parseRow(serRow).toSeq(schemaWithRandomId).init)))
+        InternalRow.fromSeq(QED.parseRow(serRow).init)))
     }
   }
 }
@@ -99,7 +98,7 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
     // TODO: pass opcode to signal sorting on sortExpr
     ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 50).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
-      serRowIter.map(serRow => converter(QED.parseRow(serRow)))
+      serRowIter.map(serRow => converter(InternalRow.fromSeq(QED.parseRow(serRow))))
     }
   }
 }
@@ -160,7 +159,7 @@ case class EncAggregateWithSum(
 
     finalAggregates.flatMap { serRows =>
       val converter = UnsafeProjection.create(output, child.output ++ aggOutputs)
-      QED.parseRows(serRows).map(converter)
+      QED.parseRows(serRows).map(fields => converter(InternalRow.fromSeq(fields)))
     }
   }
 }

@@ -162,10 +162,10 @@ object QED {
     }
   }
 
-  def parseRows(concatRows: Array[Byte]): Iterator[InternalRow] = {
+  def parseRows(concatRows: Array[Byte]): Iterator[Array[Array[Byte]]] = {
     val buf = ByteBuffer.wrap(concatRows)
     buf.order(ByteOrder.LITTLE_ENDIAN)
-    new Iterator[InternalRow] {
+    new Iterator[Array[Array[Byte]]] {
       override def hasNext = buf.hasRemaining
       override def next() = parseRow(buf)
     }
@@ -185,13 +185,13 @@ object QED {
     rowBytes
   }
 
-  def parseRow(bytes: Array[Byte]): InternalRow = {
+  def parseRow(bytes: Array[Byte]): Array[Array[Byte]] = {
     val buf = ByteBuffer.wrap(bytes)
     buf.order(ByteOrder.LITTLE_ENDIAN)
     parseRow(buf)
   }
 
-  def parseRow(buf: ByteBuffer): InternalRow = {
+  def parseRow(buf: ByteBuffer): Array[Array[Byte]] = {
     val numFields = buf.getInt()
     val fields = new Array[Array[Byte]](numFields)
     for (i <- 0 until numFields) {
@@ -200,7 +200,7 @@ object QED {
       buf.get(field)
       fields(i) = field
     }
-    new GenericInternalRow(fields.asInstanceOf[Array[Any]])
+    fields
   }
 
   def splitBytes(bytes: Array[Byte], numSplits: Int): Array[Array[Byte]] = {
