@@ -903,9 +903,14 @@ void process_boundary_records(int op_code,
 
 	  // To find the number of distinct records:
 	  // compare the first row with prev_agg
-	  int if_distinct_ = prev_agg.rec->compare(&decrypted_row);
+	  int not_distinct_ = prev_agg.rec->compare(&decrypted_row);
 
-	  if (if_distinct_ == 0) {
+	  // if (round == 1) {
+	  // 	printf("not_distinct_ is %u\n", not_distinct_);
+	  // 	decrypted_row.print();
+	  // }
+
+	  if (not_distinct_ == 0) {
 		if (round == 0) {
 		  --distinct_items;
 		}
