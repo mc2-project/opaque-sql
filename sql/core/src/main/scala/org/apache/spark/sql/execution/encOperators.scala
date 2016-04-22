@@ -146,7 +146,7 @@ case class EncAggregateWithSum(
         assert(partialAgg.nonEmpty)
         enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
-    }
+    }.cache()
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = ObliviousSort.ColumnSort(partialAggregates.context, partialAggregates, opcode = 51)
