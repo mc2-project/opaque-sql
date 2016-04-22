@@ -117,9 +117,9 @@ class aggregate_data_sum : public aggregate_data {
   uint32_t flush(uint8_t *output, int if_final) {
 	uint8_t *result_ptr = output;
 	if (if_final == 0) {
-	  *result_ptr = FINAL_AGG_INT;
+	  *result_ptr = INT;
 	} else {
-	  *result_ptr = PARTIAL_AGG_INT;
+	  *result_ptr = DUMMY;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -184,9 +184,9 @@ class aggregate_data_count : public aggregate_data {
   uint32_t flush(uint8_t *output, int if_final) {
 	uint8_t *result_ptr = output;
 	if (if_final == 0) {
-	  *result_ptr = FINAL_AGG_INT;
+	  *result_ptr = INT;
 	} else {
-	  *result_ptr = PARTIAL_AGG_INT;
+	  *result_ptr = DUMMY;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -247,9 +247,9 @@ class aggregate_data_avg : public aggregate_data {
   uint32_t flush(uint8_t *output, int if_final) {
 	uint8_t *result_ptr = output;
 	if (if_final == 0) {
-	  *result_ptr = FINAL_AGG_FLOAT;
+	  *result_ptr = FLOAT;
 	} else {
-	  *result_ptr = PARTIAL_AGG_FLOAT;
+	  *result_ptr = DUMMY;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -408,8 +408,8 @@ public:
 	// simply output all records from rec, and also flush agg_data's value as an extra row
 	uint8_t temp[PARTIAL_AGG_UPPER_BOUND];
 	uint32_t ret = rec->flush_encrypt_all_attributes(output);
-
     *((uint32_t*) output) = rec->num_cols + 1;
+	
     uint32_t len = agg_data->flush(temp, if_final);
 	*( (uint32_t *) (output + ret) ) = enc_size(len);
 	encrypt(temp, len, output + ret + 4);
@@ -557,7 +557,8 @@ void scan_aggregation_count_distinct(int op_code,
 	  cpy(current_agg.agg, agg_row_ptr, agg_row_length);
 	  dummy = 0;
     } else {
-      decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
+      //decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
+	  current_agg.rec->consume_enc_agg_record(agg_row_ptr, agg_row_length);
       current_agg.aggregate();
 	  offset = current_agg.offset();
 	  distinct_items = current_agg.distinct();
@@ -568,10 +569,10 @@ void scan_aggregation_count_distinct(int op_code,
 		dummy = 0;
 		current_agg.clear();
       } else {
-        printf("Before set_agg_sort_attributes\n");
-        current_agg.rec->num_cols = *( (uint32_t *) (current_agg.rec->row + 8));
+        //printf("Before set_agg_sort_attributes\n");
+		//current_agg.rec->num_cols = *( (uint32_t *) (current_agg.rec->row + 8));
         current_agg.rec->set_agg_sort_attributes(op_code);
-        printf("After set_agg_sort_attributes\n");
+        //printf("After set_agg_sort_attributes\n");
       }
 	}
 

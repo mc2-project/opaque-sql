@@ -1,8 +1,35 @@
 #include "InternalTypes.h"
 
+GenericType *create_attr(uint8_t *attr) {
+  uint8_t type = *attr;
+  switch (type) {
+
+  case DUMMY:
+	{
+	  return new Dummy;
+	}
+	break;
+
+  case INT:
+	{
+	  return new Integer;
+	}
+	break;
+
+  case STRING:
+	{
+	  return new String;
+	}
+	break;
+
+  }
+}
+
+
 /*** INTEGER ***/
 Integer::Integer() {
   value = 0;
+  type_ = INT;
 }
 
 Integer::Integer(int v) {
@@ -64,6 +91,7 @@ String::String() {
   data = NULL;
   length = 0;
   if_alloc = -1;
+  type_ = STRING;
 }
 
 String::~String() {
@@ -196,6 +224,7 @@ void String::print() {
 
 Float::Float() {
   value = 0;
+  type_ = FLOAT;
 }
 
 Float::Float(float v) {
@@ -251,6 +280,7 @@ void Float::print() {
 
 Date::Date() {
   date = 0;
+  type_ = DATE;
 }
 
 Date::Date(uint64_t date) {
@@ -364,10 +394,6 @@ int GroupedAttributes::compare(GroupedAttributes *attr) {
   int ret = 0;
   for (uint32_t i = 0; i < num_eval_attr; i++) {
 	ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
-	
-	// this->eval_attributes[i]->print();
-	// attr->eval_attributes[i]->print();
-	// printf("ret is %d\n", eval_attributes[i]->compare((attr->eval_attributes)[i]));
 	
 	if (ret != 0) {	  
 	  return ret;
@@ -589,6 +615,30 @@ void SortAttributes::init() {
 
     num_eval_attr = num_attr;
 
+  } else if (op_code == 51) {
+	// this sort is the last step of aggregation
+
+	num_attr = 2;
+	num_eval_attr = 2;
+
+	// first, sort based on the aggregation attribute's type
+	// if not dummy, sort based on the agg sort attribute
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+	find_plaintext_attribute(row, num_cols,
+							 4, &sort_pointer, &len);
+
+	attributes[0] = create_attr(sort_pointer);
+	eval_attributes[0] = create_attr(sort_pointer);
+	
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+	
+    attributes[1] = create_attr(sort_pointer);
+	eval_attributes[1] = create_attr(sort_pointer);
+    attributes[1]->consume(sort_pointer, NO_COPY);
   }
 }
 
@@ -599,6 +649,32 @@ void SortAttributes::evaluate() {
 }
 
 int SortAttributes::compare(SortAttributes *attr) {
+  if (op_code == 51) {
+
+	int ret = 0;
+	for (uint32_t i = 0; i < num_eval_attr; i++) {
+	  if (i == 0) {
+		uint8_t type1 = this->eval_attributes[0]->type_;
+		uint8_t type2 = attr->eval_attributes[0]->type_;
+
+		if (type1 == DUMMY) {
+		  return -1;
+		} else if (type2 == DUMMY) {
+		  return 1;
+		}
+
+	  } else {
+		ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
+		
+		if (ret != 0) {	  
+		  return ret;
+		}
+	  }
+	}
+
+  }
+
+  
   int ret = GroupedAttributes::compare(attr);
   return ret;
 }
@@ -893,5 +969,5 @@ uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
 void AggRecord::flush() {
   *( (uint32_t *) (row + 4 + 4)) = this->num_cols;
 }
-
+ 
 /*** AGG SORT RECORD  ***/

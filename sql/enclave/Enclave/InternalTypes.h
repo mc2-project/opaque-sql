@@ -53,6 +53,29 @@ class GenericType {
   virtual void print() {}
 
   virtual void reset() = 0;
+
+  uint8_t type_;
+};
+
+class Dummy : public GenericType {
+ public:
+  
+  Dummy() {
+	type_ = DUMMY;
+  }
+
+  ~Dummy() {}
+
+  int compare(GenericType *v) {
+	return -1;
+  }
+
+  void swap(GenericType *v) {
+	// do nothing
+  }
+
+  void reset() { }
+  
 };
 
 class Integer : public GenericType {
@@ -167,6 +190,11 @@ class Date : public GenericType {
   uint64_t date;
 
 };
+
+
+// given an attribute in serialized form (i.e. buffer form)
+// return the appropriate GenericType
+GenericType *create_attr(uint8_t *attr);
 
 // This class is able to group together attributes, and execute evaluation on these attributes
 // assume that the buffer_ptr is [attr type][attr len][attr] [attr type][attr len][attr]...
