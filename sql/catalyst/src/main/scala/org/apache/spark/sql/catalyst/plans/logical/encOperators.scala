@@ -52,6 +52,6 @@ case class EncAggregateWithSum(
   extends UnaryNode {
 
   override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
-  override def output: Seq[Attribute] = child.output ++ aggOutputs
+  override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
   override def maxRows: Option[Long] = child.maxRows
 }

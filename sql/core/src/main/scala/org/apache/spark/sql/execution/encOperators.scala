@@ -108,10 +108,9 @@ case class EncAggregateWithSum(
     groupingExpression: NamedExpression,
     sumExpression: NamedExpression,
     aggOutputs: Seq[Attribute],
+    output: Seq[Attribute],
     child: SparkPlan)
   extends UnaryNode {
-
-  override def output: Seq[Attribute] = child.output ++ aggOutputs
 
   override def doExecute() = {
     // Process boundaries
@@ -160,7 +159,7 @@ case class EncAggregateWithSum(
     }
 
     finalAggregates.flatMap { serRows =>
-      val converter = UnsafeProjection.create(schema)
+      val converter = UnsafeProjection.create(output, child.output ++ aggOutputs)
       QED.parseRows(serRows).map(converter)
     }
   }
