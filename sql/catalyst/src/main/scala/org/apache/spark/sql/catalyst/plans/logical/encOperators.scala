@@ -49,7 +49,6 @@ case class EncAggregateWithSum(
     child: LogicalPlan)
   extends UnaryNode {
 
-  override def output: Seq[Attribute] =
-    Seq(groupingExpression.toAttribute, sumExpression.toAttribute)
+  override def output: Seq[Attribute] = child.output :+ sumExpression.toAttribute
   override def maxRows: Option[Long] = child.maxRows
 }

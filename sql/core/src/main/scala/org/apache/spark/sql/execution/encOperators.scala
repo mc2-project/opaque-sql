@@ -110,8 +110,7 @@ case class EncAggregateWithSum(
     child: SparkPlan)
   extends UnaryNode {
 
-  override def output: Seq[Attribute] =
-    Seq(groupingExpression.toAttribute, sumExpression.toAttribute)
+  override def output: Seq[Attribute] = child.output :+ sumExpression.toAttribute
 
   override def doExecute() = {
     // Process boundaries
@@ -131,6 +130,7 @@ case class EncAggregateWithSum(
     println(s"Calling enclave.ProcessBoundary($eid, 1, ${QED.concatRows(boundariesCollected).length}, ${boundariesCollected.length})")
     val processedBoundariesConcat = enclave.ProcessBoundary(
       eid, 1, QED.concatRows(boundariesCollected), boundariesCollected.length)
+    enclave.StopEnclave(eid)
 
     // Send processed boundaries to partitions and generate partial aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
@@ -146,18 +146,14 @@ case class EncAggregateWithSum(
         assert(boundaryRecord.length >= aggSize)
         val (enclave, eid) = QED.initEnclave()
         val partialAgg = enclave.Aggregate(eid, 101, concatRows, rows.length, boundaryRecord)
+        assert(partialAgg.nonEmpty)
         enclave.StopEnclave(eid)
         Iterator(partialAgg)
     }
 
-    // Merge partial aggregates to form final aggregate
-    val partialAggregatesCollected = partialAggregates.collect
-    val finalAggregates = enclave.FinalAggregation(
-      eid, 1, QED.concatRows(partialAggregatesCollected), partialAggregatesCollected.length)
-    enclave.StopEnclave(eid)
-
-    val finalAggregatesRows =
-      QED.unconcatRows(finalAggregates).map(InternalRow.fromSerialized).toSeq
-    sparkContext.parallelize(finalAggregatesRows)
+    partialAggregates.mapPartitions { serRowIter =>
+      val converter = UnsafeProjection.create(schema)
+      serRowIter.map(serRow => converter(InternalRow.fromSerialized(serRow)))
+    }
   }
 }

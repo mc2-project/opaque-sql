@@ -85,6 +85,15 @@ class QEDSuite extends QueryTest with SharedSQLContext {
           QED.decrypt[C](enclave, eid, cEnc))
     }
   }
+  def decrypt4[A, B, C, D](rows: Seq[Row]): Seq[(A, B, C, D)] = {
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc),
+          QED.decrypt[D](enclave, eid, dEnc))
+    }
+  }
 
   val enclave = {
     System.load(System.getenv("LIBSGXENCLAVE_PATH"))
@@ -121,7 +130,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     println(decrypt3(words.encSort($"word").collect).toSeq)
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
-    assert(decrypt3[Int, String, Int](summed.collect).sorted ===
+    assert(decrypt4[Int, String, Int, Int](summed.collect).sorted ===
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 

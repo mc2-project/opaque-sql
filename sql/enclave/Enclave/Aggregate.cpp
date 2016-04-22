@@ -408,8 +408,9 @@ public:
 	// simply output all records from rec, and also flush agg_data's value as an extra row
 	uint8_t temp[PARTIAL_AGG_UPPER_BOUND];
 	uint32_t ret = rec->flush_encrypt_all_attributes(output);
-	
-	uint32_t len = agg_data->flush(temp, if_final);
+
+    *((uint32_t*) output) = rec->num_cols + 1;
+    uint32_t len = agg_data->flush(temp, if_final);
 	*( (uint32_t *) (output + ret) ) = enc_size(len);
 	encrypt(temp, len, output + ret + 4);
 
@@ -735,7 +736,8 @@ void scan_aggregation_count_distinct(int op_code,
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
 	  } else {
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
-	  }
+      }
+      *actual_output_rows_length = output_rows_ptr - output_rows;
 	}
   }
 
