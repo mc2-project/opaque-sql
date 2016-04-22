@@ -501,7 +501,8 @@ void scan_aggregation_count_distinct(int op_code,
 									 uint8_t *agg_row, uint32_t agg_row_buffer_length,
 									 uint8_t *output_rows, uint32_t output_rows_length,
 									 uint32_t *actual_output_rows_length,
-									 int flag) {
+									 int flag,
+									 uint32_t *cardinality) {
 
   printf("In scan_aggregation_count_distinct(flag=%d)\n", flag);
   // agg_row is initially encrypted
@@ -629,7 +630,6 @@ void scan_aggregation_count_distinct(int op_code,
 
 	  current_agg.rec->reset_row_ptr();
       current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
-      printf("num cols is %u\n", current_agg.rec->num_cols);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
 
 	  find_attribute(enc_row_ptr, enc_row_len, num_cols,
@@ -741,6 +741,12 @@ void scan_aggregation_count_distinct(int op_code,
 	}
   }
 
+
+  // finally, output cardinality in plaintext
+  // TODO: could even to tiered padding here!
+  if (flag == 2) {
+	*cardinality = distinct_items;
+  }
   
 }
 

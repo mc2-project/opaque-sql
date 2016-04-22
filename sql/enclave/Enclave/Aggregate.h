@@ -28,7 +28,8 @@ void scan_aggregation_count_distinct(int op_code,
 									 uint8_t *agg_row, uint32_t agg_row_buffer_length,
 									 uint8_t *output_rows, uint32_t output_rows_length,
 									 uint32_t *actual_output_rows_length,
-									 int flag);
+									 int flag,
+									 uint32_t *cardinality);
 
 void process_boundary_records(int op_code,
 							  uint8_t *rows, uint32_t rows_size,

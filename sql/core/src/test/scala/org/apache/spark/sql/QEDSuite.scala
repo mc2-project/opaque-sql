@@ -123,7 +123,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt1[Int](permuted).sorted === array)
   }
 
-  test("encGroupByWithSum") {
+  ignore("encGroupByWithSum") {
     val (enclave, eid) = QED.initEnclave()
     val data = for (i <- 0 until 256) yield (i, (i%3)match{case 0=>"A";case 1=>"B";case 2=>"C"}, 1)
     val words = sparkContext.makeRDD(encrypt3(data), 2).toDF("id", "word", "count")
@@ -361,7 +361,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIAggregation", SGXTest) {
+  test("JNIAggregation", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
@@ -449,6 +449,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val partial_result_1 = enclave.Aggregate(eid, 101, enc_data1, data_1.length, new_agg_row1)
     val partial_result_2 = enclave.Aggregate(eid, 101, enc_data2, data_2.length, new_agg_row2)
     val partial_result_3 = enclave.Aggregate(eid, 101, enc_data3, data_3.length, new_agg_row3)
+
+    
 
     enclave.StopEnclave(eid)
   }

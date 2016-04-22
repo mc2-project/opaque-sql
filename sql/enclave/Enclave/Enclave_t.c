@@ -71,6 +71,7 @@ typedef struct ms_ecall_scan_aggregation_count_distinct_t {
 	uint32_t ms_output_rows_length;
 	uint32_t* ms_actual_size;
 	int ms_flag;
+	uint32_t* ms_cardinality;
 } ms_ecall_scan_aggregation_count_distinct_t;
 
 
@@ -571,12 +572,16 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 	uint32_t* _tmp_actual_size = ms->ms_actual_size;
 	size_t _len_actual_size = sizeof(*_tmp_actual_size);
 	uint32_t* _in_actual_size = NULL;
+	uint32_t* _tmp_cardinality = ms->ms_cardinality;
+	size_t _len_cardinality = sizeof(*_tmp_cardinality);
+	uint32_t* _in_cardinality = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_scan_aggregation_count_distinct_t));
 	CHECK_UNIQUE_POINTER(_tmp_input_rows, _len_input_rows);
 	CHECK_UNIQUE_POINTER(_tmp_agg_row, _len_agg_row);
 	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
 	CHECK_UNIQUE_POINTER(_tmp_actual_size, _len_actual_size);
+	CHECK_UNIQUE_POINTER(_tmp_cardinality, _len_cardinality);
 
 	if (_tmp_input_rows != NULL) {
 		_in_input_rows = (uint8_t*)malloc(_len_input_rows);
@@ -612,7 +617,15 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 
 		memset((void*)_in_actual_size, 0, _len_actual_size);
 	}
-	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length, _in_actual_size, ms->ms_flag);
+	if (_tmp_cardinality != NULL) {
+		if ((_in_cardinality = (uint32_t*)malloc(_len_cardinality)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_cardinality, 0, _len_cardinality);
+	}
+	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length, _in_actual_size, ms->ms_flag, _in_cardinality);
 err:
 	if (_in_input_rows) free(_in_input_rows);
 	if (_in_agg_row) free(_in_agg_row);
@@ -623,6 +636,10 @@ err:
 	if (_in_actual_size) {
 		memcpy(_tmp_actual_size, _in_actual_size, _len_actual_size);
 		free(_in_actual_size);
+	}
+	if (_in_cardinality) {
+		memcpy(_tmp_cardinality, _in_cardinality, _len_cardinality);
+		free(_in_cardinality);
 	}
 
 	return status;

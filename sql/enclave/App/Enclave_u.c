@@ -55,6 +55,7 @@ typedef struct ms_ecall_scan_aggregation_count_distinct_t {
 	uint32_t ms_output_rows_length;
 	uint32_t* ms_actual_size;
 	int ms_flag;
+	uint32_t* ms_cardinality;
 } ms_ecall_scan_aggregation_count_distinct_t;
 
 
@@ -486,7 +487,7 @@ sgx_status_t ecall_random_id(sgx_enclave_id_t eid, uint8_t* ptr, uint32_t length
 	return status;
 }
 
-sgx_status_t ecall_scan_aggregation_count_distinct(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* agg_row, uint32_t agg_row_buffer_length, uint8_t* output_rows, uint32_t output_rows_length, uint32_t* actual_size, int flag)
+sgx_status_t ecall_scan_aggregation_count_distinct(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* agg_row, uint32_t agg_row_buffer_length, uint8_t* output_rows, uint32_t output_rows_length, uint32_t* actual_size, int flag, uint32_t* cardinality)
 {
 	sgx_status_t status;
 	ms_ecall_scan_aggregation_count_distinct_t ms;
@@ -500,6 +501,7 @@ sgx_status_t ecall_scan_aggregation_count_distinct(sgx_enclave_id_t eid, int op_
 	ms.ms_output_rows_length = output_rows_length;
 	ms.ms_actual_size = actual_size;
 	ms.ms_flag = flag;
+	ms.ms_cardinality = cardinality;
 	status = sgx_ecall(eid, 7, &ocall_table_Enclave, &ms);
 	return status;
 }
