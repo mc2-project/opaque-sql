@@ -223,7 +223,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
     // Sorting rows
 	// this needs to sort a row of data
 
-	printf("op_code 2 called\n");
+    // printf("op_code 2 called\n");
 
 	uint32_t sort_attr_num = 2;
 
@@ -295,7 +295,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	
 	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-	printf("Sorted data\n");
+    // printf("Sorted data\n");
 	
 	// TODO: need to return enrypted result
 
@@ -328,7 +328,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  }
 	}
 
-	printf("Encrypted data\n");
+    // printf("Encrypted data\n");
 
 	//printf("Encrypted data's length is %u\n", (input_ptr - input));
 
@@ -474,7 +474,7 @@ size_t enc_table_id_size(const uint8_t *enc_table_id) {
 }
 
 size_t join_row_size(const uint8_t *join_row) {
-  printf("Enc join row size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
+  // printf("Enc join row size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
   return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
 }
 

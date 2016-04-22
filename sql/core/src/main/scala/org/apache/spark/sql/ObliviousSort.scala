@@ -30,7 +30,7 @@ object ObliviousSort extends java.io.Serializable {
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
-    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    // println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
     result
   }
 
@@ -94,8 +94,8 @@ object ObliviousSort extends java.io.Serializable {
       ret_result = Array.fill[Value](r * rounds)(new Value(0, 0))
     }
 
-    println("Ret_result's array size is " + (r * rounds))
-    println("Total number of rounds: " + rounds)
+    // println("Ret_result's array size is " + (r * rounds))
+    // println("Total number of rounds: " + rounds)
 
     var counter = 0
     for (v <- it) {
@@ -165,7 +165,7 @@ object ObliviousSort extends java.io.Serializable {
       counter += 1
     }
 
-    println(s"Filled counter $counter vs. len $len")
+    // println(s"Filled counter $counter vs. len $len")
 
     time("Column sort, step 3") {
       OSortSingleMachine_WithIndex(ret_result, 0, r, opcode)
@@ -219,7 +219,7 @@ object ObliviousSort extends java.io.Serializable {
     var num_columns = 0
     var min_col = 0
 
-    println("ColumnSortFinal: column is " + key._1 + ", length is " + key._2.toArray.length)
+    // println("ColumnSortFinal: column is " + key._1 + ", length is " + key._2.toArray.length)
 
     if (key._1 == 1 || key._1 == NumMachines) {
       result = Array.fill[Value](r * Multiplier * NumCores + r)(new Value(0, 0))
@@ -270,15 +270,15 @@ object ObliviousSort extends java.io.Serializable {
           if (i == NumCores && key._1 < NumMachines) {
             // also sort the last piece
             OSortSingleMachine_WithIndex(result, NumCores * (Multiplier * r), r, opcode)
-            println("[" + key._1 + " - 1] Sorting from " + NumCores * (Multiplier * r) + " for len " + r)
+            // println("[" + key._1 + " - 1] Sorting from " + NumCores * (Multiplier * r) + " for len " + r)
           } else if (i == 1 && key._1 > 1) {
             // also want to sort the first piece
             OSortSingleMachine_WithIndex(result, 0, r, opcode)
-            println("[" + key._1 + " - 2] Sorting from 0 for len" + r)
+            // println("[" + key._1 + " - 2] Sorting from 0 for len" + r)
           }
 
           OSortSingleMachine_WithIndex(result, (i - 1) * (Multiplier * r) + offset, Multiplier * r, opcode)
-          println("[" + key._1 + " - 3] Sorting " + (i - 1) * (Multiplier * r) + offset + " for len " +  Multiplier * r)
+          // println("[" + key._1 + " - 3] Sorting " + (i - 1) * (Multiplier * r) + offset + " for len " +  Multiplier * r)
         }
       }
 
@@ -300,7 +300,7 @@ object ObliviousSort extends java.io.Serializable {
           }
           if (!(key._1 == 1 && i == 1) && !(key._1 == NumMachines && i == NumCores + 1)) {
             val low_index = (i - 1) * (Multiplier * r) + offset
-            println("Sorting array from " + low_index + " for length " + 2 * r + ", for column " + key._1 + ", total length: " + result.length)
+            // println("Sorting array from " + low_index + " for length " + 2 * r + ", for column " + key._1 + ", total length: " + result.length)
             OSortSingleMachine_WithIndex(result, low_index, 2 * r, opcode)
           }
         }
@@ -339,7 +339,7 @@ object ObliviousSort extends java.io.Serializable {
       //println("[" + new_col + ", " + new_row + "]: " + result(idx).value + ", old column is " + key._1)
     }
 
-    println("Final result's length is " + final_result.length)
+    // println("Final result's length is " + final_result.length)
 
     final_result.iterator
 
@@ -364,7 +364,7 @@ object ObliviousSort extends java.io.Serializable {
       r = (math.ceil(len * 1.0 / s)).toInt
     } 
 
-    println("s is " + s + ", r is " + r)
+    // println("s is " + s + ", r is " + r)
 
 
     // TODO: for now do an assert; in the future, need to pad with dummy values

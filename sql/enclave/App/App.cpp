@@ -562,7 +562,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   uint32_t single_row_size = 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND;
   single_row_size += ENC_HEADER_SIZE + ROW_UPPER_BOUND;
   uint32_t out_agg_rows_length = single_row_size * num_rows;
-  printf("single row size is %u\n", single_row_size);
+  // printf("single row size is %u\n", single_row_size);
   
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
   uint32_t actual_out_agg_rows_size = 0;

@@ -4,9 +4,10 @@
 uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
 							   uint8_t *output_row_ptr) {
   // write out num_cols
-  printf("Encrypting and formatting row\n");
+  // printf("Encrypting and formatting row\n");
   uint32_t num_cols = *( (uint32_t *) input_row_ptr);
-  printf("num cols is %u\n", num_cols);
+
+  // printf("num cols is %u\n", num_cols);
   uint32_t value_len = 0;
   *((uint32_t *) output_row_ptr) = num_cols;
   
@@ -314,7 +315,7 @@ void sort_merge_join(int op_code,
 					   primary_row + TABLE_ID_SIZE, 0,
 					   &primary_join_attr);
   } else {
-	printf("Join row is a dummy!\n");
+    // printf("Join row is a dummy!\n");
   }
   
   // construct dummy rows
@@ -359,17 +360,17 @@ void sort_merge_join(int op_code,
 	current_row_ptr += TABLE_ID_SIZE;
 	
 	num_cols = *( (uint32_t *) current_row_ptr);
-	printf("Record %u, num cols is %u\n", r, num_cols);
+    // printf("Record %u, num cols is %u\n", r, num_cols);
 	current_row_ptr += 4;
 
-	print_bytes(current_table, TABLE_ID_SIZE);
+    // print_bytes(current_table, TABLE_ID_SIZE);
 
 	int if_primary = cmp(table_p, current_table, TABLE_ID_SIZE);
 	get_join_attribute(op_code, num_cols,
 					   current_row_ptr, if_primary,
 					   &current_join_attr);
-	printf("if_primary: %u\n", if_primary);
-	print_attribute("Current join attr", current_join_attr.buffer);
+    // printf("if_primary: %u\n", if_primary);
+    // print_attribute("Current join attr", current_join_attr.buffer);
 
 	if (if_primary == 0) {
 	  if (primary_join_attr.compare(&current_join_attr) != 0) {
@@ -453,7 +454,7 @@ void scan_collect_last_primary(int op_code,
   }
 
   // return the last primary row, if there is any!
-  print_join_row("Join row", primary_row);
+  // print_join_row("Join row", primary_row);
   encrypt(primary_row, JOIN_ROW_UPPER_BOUND, output);
 }
 

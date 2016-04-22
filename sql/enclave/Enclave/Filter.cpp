@@ -9,7 +9,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
   uint32_t num_cols = get_num_col(row);
   if (num_cols == 0) {
-    printf("Number of columns: 0\n");    
+    // printf("Number of columns: 0\n");
     return 0;
   }
 

@@ -102,7 +102,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val eid = enclave.StartEnclave()
 
-  ignore("encFilter") {
+  test("encFilter") {
     val (enclave, eid) = QED.initEnclave()
     val data = for (i <- 0 until 256) yield ("foo", i)
     val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
@@ -112,7 +112,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
-  ignore("encPermute") {
+  test("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
       sqlContext.createDataFrame(
@@ -127,7 +127,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val (enclave, eid) = QED.initEnclave()
     val data = for (i <- 0 until 256) yield (i, (i%3)match{case 0=>"A";case 1=>"B";case 2=>"C"}, 1)
     val words = sparkContext.makeRDD(encrypt3(data), 2).toDF("id", "word", "count")
-    println(decrypt3(words.encSort($"word").collect).toSeq)
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
     assert(decrypt2[String, Int](summed.collect) ===
@@ -140,7 +139,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
-  ignore("JNIEncrypt", SGXTest) {
+  test("JNIEncrypt", SGXTest) {
 
     def byteArrayToString(x: Array[Byte]) = {
       val loc = x.indexOf(0)
@@ -162,7 +161,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val decrypted = enclave.Decrypt(eid, ciphertext)
 
-    println("decrypted's length is " + decrypted.length)
+    // println("decrypted's length is " + decrypted.length)
 
     assert(plaintext_bytes.length == decrypted.length)
 
@@ -173,7 +172,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIObliviousSort1", SGXTest) {
+  test("JNIObliviousSort1", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
@@ -199,7 +198,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
       val enc_bytes = enclave.Encrypt(eid, temp_array)
       if (enc_bytes.length != single_enc_size) {
-        println("enc_bytes' length is " + enc_bytes.length)
+        // println("enc_bytes' length is " + enc_bytes.length)
         assert(enc_bytes.length == single_enc_size)
       }
 
@@ -233,7 +232,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     }
 
     for (i <- 1 to len) {
-      println(sorted_numbers(i - 1))
+      // println(sorted_numbers(i - 1))
       assert(number_list(i-1) == sorted_numbers(i-1))
     }
 
@@ -242,7 +241,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
 
-  ignore("JNIObliviousSortRow", SGXTest) {
+  test("JNIObliviousSortRow", SGXTest) {
 
     val eid = enclave.StartEnclave()
 
@@ -261,7 +260,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       total_size += v._1.length
       total_size += v._2.length
 
-      println("v1's length is " + v._1.length + ", v2's length is " + v._2.length)
+      // println("v1's length is " + v._1.length + ", v2's length is " + v._2.length)
     }
 
     val buffer = ByteBuffer.allocate(total_size)
@@ -280,7 +279,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val encrypted_data = new Array[Byte](buffer.limit())
     buffer.get(encrypted_data)
 
-    println("Encrypted_data's size is " + encrypted_data.length)
+    // println("Encrypted_data's size is " + encrypted_data.length)
 
     val sorted_encrypted_data = enclave.ObliviousSort(eid, 2, encrypted_data, 0, data.length)
 
@@ -289,7 +288,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       val num_cols = byte_to_int(sorted_encrypted_data, low_index)
       low_index += 4
 
-      println("num_cols is " + num_cols)
+      // println("num_cols is " + num_cols)
+      assert(num_cols == 2)
 
       for (c <- 1 to num_cols) {
         val enc_value_len = byte_to_int(sorted_encrypted_data, low_index)
@@ -305,24 +305,28 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         // println("")
 
 
-        if (dec_value(0) == 1.toByte) {
-          println("Row " + i + ", column " + c + ": " + byte_to_int(dec_value, 5))
-        } else if (dec_value(0) == 2.toByte) {
-          println("Row " + i + ", column " + c + ": " + byte_to_string(dec_value, 5, byte_to_int(dec_value, 1)))
-        } else {
-          println("Unidentifiable type!\n");
-        }
+        // if (dec_value(0) == 1.toByte) {
+        //   println("Row " + i + ", column " + c + ": " + byte_to_int(dec_value, 5))
+        // } else if (dec_value(0) == 2.toByte) {
+        //   println("Row " + i + ", column " + c + ": " + byte_to_string(dec_value, 5, byte_to_int(dec_value, 1)))
+        // } else {
+        //   println("Unidentifiable type!\n");
+        // }
 
         low_index += enc_value_len
       }
     }
+    assert(
+      decrypt2[String, Int](
+        QED.parseRows(sorted_encrypted_data).map(fields => Row(fields: _*)).toSeq)
+        === data.sortBy(_._2))
 
     enclave.StopEnclave(eid)
 
   }
 
 
-  ignore("JNIFilterSingleRow", SGXTest) {
+  test("JNIFilterSingleRow", SGXTest) {
     val eid = enclave.StartEnclave()
 
     val filter_number : Int = 1233
@@ -338,8 +342,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val byte_array = new Array[Byte](buffer.limit())
     buffer.get(byte_array)
 
-    println("Bytes array's length " + byte_array.length)
-
+    // println("Bytes array's length " + byte_array.length)
 
     // then encrypt this buffer
     val enc_bytes = enclave.Encrypt(eid, byte_array)
@@ -455,7 +458,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIJoin", SGXTest) {
+  test("JNIJoin", SGXTest) {
     val eid = enclave.StartEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
@@ -529,7 +532,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     // merge the two buffers together
     val processed_rows = processed_table_p ++ processed_table_f
 
-    println("processed_rows' length is " + processed_rows.length)
+    // println("processed_rows' length is " + processed_rows.length)
 
     val sorted_rows = enclave.ObliviousSort(eid, 3, processed_rows, 0, table_p_data.length + table_f_data.length)
 

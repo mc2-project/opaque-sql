@@ -467,7 +467,7 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
 	find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
 
 	attributes[0]->consume(sort_pointer, NO_COPY);
-	attributes[0]->print();
+    // attributes[0]->print();
   }
 }
 
@@ -689,7 +689,7 @@ void AggSortAttributes::init() {
 
   // Set "attributes" in the correct place to point to row
 
-  printf("init called, op_code is %u\n", op_code);
+  // printf("init called, op_code is %u\n", op_code);
   if (op_code == 1) {
 	expression = IDENTITY;
 
@@ -878,17 +878,17 @@ void AggRecord::copy(AggRecord *rec, int mode) {
   if (mode == COPY) {
 	this->num_cols = rec->num_cols;
 	
-    printf("aggrecord copy, row=%p, rec=%p, rec->row=%p\n", this->row, rec, rec->row);
+    // printf("aggrecord copy, row=%p, rec=%p, rec->row=%p\n", this->row, rec, rec->row);
     cpy(this->row, rec->row, AGG_UPPER_BOUND);
-    printf("After cpy\n");
-    print_row("", this->row + 4 + 4);
-    printf("After print_row\n");
+    // printf("After cpy\n");
+    // print_row("", this->row + 4 + 4);
+    // printf("After print_row\n");
 	reset_row_ptr();
-    printf("aggrecord set attr1 %p, %p\n",
-           this->agg_sort_attributes,
-           rec->agg_sort_attributes);
+    // printf("aggrecord set attr1 %p, %p\n",
+    //        this->agg_sort_attributes,
+    //        rec->agg_sort_attributes);
 	this->set_agg_sort_attributes(rec->agg_sort_attributes->op_code);
-    printf("aggrecord set attr2\n");
+    // printf("aggrecord set attr2\n");
   }
 }
 
@@ -923,12 +923,12 @@ void AggRecord::consume_enc_agg_record(uint8_t *input, uint32_t enc_len) {
 }
 
 void AggRecord::set_agg_sort_attributes(int op_code) {
-  printf("agg_sort_attributes is %p, num_cols is %u\n", agg_sort_attributes, num_cols);
+  // printf("agg_sort_attributes is %p, num_cols is %u\n", agg_sort_attributes, num_cols);
   if (agg_sort_attributes == NULL) {
 	agg_sort_attributes = new AggSortAttributes(op_code, row + 4 + 4 + 4, num_cols);
-    printf("init1\n");
+    // printf("init1\n");
 	agg_sort_attributes->init();
-    printf("init2\n");
+    // printf("init2\n");
 	agg_sort_attributes->evaluate();
   } else {
 	agg_sort_attributes->re_init(this->row + 4 + 4 + 4);
