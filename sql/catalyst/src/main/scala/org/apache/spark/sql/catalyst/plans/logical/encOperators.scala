@@ -18,6 +18,7 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
@@ -46,9 +47,11 @@ case class EncSort(sortExpr: Expression, child: LogicalPlan) extends UnaryNode {
 case class EncAggregateWithSum(
     groupingExpression: NamedExpression,
     sumExpression: NamedExpression,
+    aggOutputs: Seq[Attribute],
     child: LogicalPlan)
   extends UnaryNode {
 
-  override def output: Seq[Attribute] = child.output :+ sumExpression.toAttribute
+  override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
+  override def output: Seq[Attribute] = child.output ++ aggOutputs
   override def maxRows: Option[Long] = child.maxRows
 }

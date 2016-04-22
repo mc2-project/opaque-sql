@@ -107,10 +107,11 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
 case class EncAggregateWithSum(
     groupingExpression: NamedExpression,
     sumExpression: NamedExpression,
+    aggOutputs: Seq[Attribute],
     child: SparkPlan)
   extends UnaryNode {
 
-  override def output: Seq[Attribute] = child.output :+ sumExpression.toAttribute
+  override def output: Seq[Attribute] = child.output ++ aggOutputs
 
   override def doExecute() = {
     // Process boundaries

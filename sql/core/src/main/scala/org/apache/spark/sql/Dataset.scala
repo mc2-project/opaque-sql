@@ -990,7 +990,10 @@ class Dataset[T] private[sql](
 
   def encGroupByWithSum(groupByCol: Column, sumCol: Column): DataFrame = withPlan {
     EncAggregateWithSum(
-      UnresolvedAlias(groupByCol.expr), sumCol.named, EncSort(groupByCol.expr, logicalPlan))
+      UnresolvedAlias(groupByCol.expr),
+      sumCol.named,
+      Seq(AttributeReference("agg_sum", BinaryType, true)()),
+      EncSort(groupByCol.expr, logicalPlan))
   }
 
   def encSort(col: Column): DataFrame = withPlan {
