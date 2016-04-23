@@ -219,11 +219,11 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
 
-  } else if (op_code == 2 || op_code == 50 || op_code == 51) {
+  } else if (op_code == 2 || op_code == 50 || op_code == 51 || op_code == 52) {
     // Sorting rows
 	// this needs to sort a row of data
 
-    // printf("op_code 2 called\n");
+	//printf("op_code called is %u\n", op_code);
 
 	uint32_t sort_attr_num = 2;
 
@@ -290,12 +290,12 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  rec->sort_attributes->init();
 	  rec->sort_attributes->evaluate();
 
-      // rec->sort_attributes->print();
+	  //rec->sort_attributes->print();
 	}
 	
 	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-    // printf("Sorted data\n");
+	//printf("Sorted data\n");
 	
 	// TODO: need to return enrypted result
 
@@ -304,6 +304,8 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	value_len = 0;
 
 	for (uint32_t i = 0; i < list_length; i++) {
+	  
+	  //data[i]->sort_attributes->print();
 
 	  value_ptr = data[i]->row;
 	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
@@ -319,7 +321,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		*( (uint32_t *)  input_ptr) = enc_size(value_len);
 		input_ptr += 4;
 
-        // print_attribute("", value_ptr);
+		//print_attribute("", value_ptr);
 
 		encrypt(value_ptr, value_len, input_ptr);
 		input_ptr += enc_size(value_len);

@@ -616,7 +616,6 @@ void scan_aggregation_count_distinct(int op_code,
 	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
-    // printf("Record %u, num cols is %u, dummy=%d\n", r, num_cols, dummy);
 	enc_row_ptr += 4;
 
     if (r == 0 && dummy == 0) {
@@ -689,6 +688,11 @@ void scan_aggregation_count_distinct(int op_code,
 	current_agg.rec->reset_row_ptr();
 	current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
     current_agg.rec->set_agg_sort_attributes(op_code);
+
+	if (flag == 1) {
+	  //printf("Record %u, num cols is %u, dummy=%d\n", r, num_cols, dummy);
+	  //current_agg.print();
+	}
 
 	find_attribute(enc_row_ptr, enc_row_len, num_cols,
 				   agg_attribute_num,
@@ -867,6 +871,12 @@ void process_boundary_records(int op_code,
 		decrypted_row.consume_all_encrypted_attributes(enc_row_ptr - 4);
 		decrypted_row.set_agg_sort_attributes(op_code);
 
+		if (round == 0) {
+		  // printf("first decrypted row is\n");
+		  // decrypted_row.print();
+		  // current_agg.print();
+		}
+
 		//decrypt(enc_agg_ptr, enc_agg_len, prev_agg.rec->row);
 		prev_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
 		prev_agg.rec->set_agg_sort_attributes(op_code);
@@ -905,10 +915,11 @@ void process_boundary_records(int op_code,
 	  // compare the first row with prev_agg
 	  int not_distinct_ = prev_agg.rec->compare(&decrypted_row);
 
-	  // if (round == 1) {
-	  // 	printf("not_distinct_ is %u\n", not_distinct_);
-	  // 	decrypted_row.print();
-	  // }
+	  if (round == 0) {
+	  	// printf("not_distinct_ is %u\n", not_distinct_);
+	  	// decrypted_row.print();
+		// current_agg.print();
+	  }
 
 	  if (not_distinct_ == 0) {
 		if (round == 0) {
@@ -957,7 +968,7 @@ void process_boundary_records(int op_code,
 	}
 
 	if (round == 0) {
-      // printf("Distinct items is %u\n", distinct_items);
+      printf("Distinct items is %u\n", distinct_items);
 	}
 
   }

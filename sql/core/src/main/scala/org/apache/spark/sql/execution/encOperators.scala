@@ -82,7 +82,7 @@ case class Permute(child: SparkPlan) extends UnaryNode {
         InternalRow.fromSeq(row.toSeq(schema) :+ QED.randomId(enclave, eid)).encSerialize)
     }
     // TODO: pass opcode to signal sorting on random id
-    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 50).mapPartitions { serRowIter =>
+    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = 52).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       serRowIter.map(serRow => converter(
         InternalRow.fromSeq(QED.parseRow(serRow).init)))
