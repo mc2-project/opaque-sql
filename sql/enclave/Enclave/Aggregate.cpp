@@ -281,10 +281,11 @@ public:
 	
 	agg = rec->row + 4 + 4 + ROW_UPPER_BOUND;
 
-	if (op_code == 1) {
+    if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
 	  agg_data = new aggregate_data_sum;
 	} else {
-	  agg_data = NULL;
+      agg_data = NULL;
+      printf("agg_stats_data::ctor: unknown opcode %d\n", op_code);
 	  assert(false);
 	}
   }
@@ -529,13 +530,15 @@ void scan_aggregation_count_distinct(int op_code,
   // this op_code decides the aggregation function
   // as well as the aggregation column
   switch(op_code) {
-  case 1:
+  case OP_GROUPBY_COL2_SUM_COL3_STEP1:
+  case OP_GROUPBY_COL2_SUM_COL3_STEP2:
 	sort_attribute_num = 2;
 	agg_attribute_num = 3;
 	break;
 
   default:
-	break;
+    printf("scan_aggregation_count_distinct: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
   prev_agg.agg_data->reset();
@@ -788,10 +791,12 @@ void process_boundary_records(int op_code,
   *actual_out_agg_row_size = 0;
 
   switch(op_code) {
-  case 1:
+  case OP_GROUPBY_COL2_SUM_COL3_STEP1:
 	sort_attribute_num = 2;
 	break;
   default:
+    printf("process_boundary_records: Unknown opcode %d\n", op_code);
+    assert(false);
 	break;
   }
 

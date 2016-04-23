@@ -45,37 +45,6 @@ object QED {
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()
 
-  def enclaveRegisterPredicate(
-      enclave: SGXEnclave, eid: Long, pred: Expression, inputSchema: Seq[Attribute]): Int = {
-    // TODO: register arbitrary predicates with the enclave
-    0
-  }
-
-  def enclaveEvalPredicate(
-      enclave: SGXEnclave, eid: Long,
-      predOpcode: Int, row: InternalRow, schema: Seq[DataType]): Boolean = {
-    // Serialize row with # columns (4 bytes), column 1 length (4 bytes), column 1 contents, etc.
-    val buf = ByteBuffer.allocate(100)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    buf.putInt(schema.length)
-    for ((t, i) <- schema.zip(0 until schema.length)) t match {
-      case BinaryType =>
-        // This is really the only valid type since it represents an encrypted field. All other
-        // cleartext types are only for debugging.
-        val bytes = row.getBinary(i)
-        buf.putInt(bytes.length)
-        buf.put(bytes)
-      case _ =>
-        throw new Exception("Type %s is not encrypted".format(t))
-    }
-    buf.flip()
-    val rowBytes = new Array[Byte](buf.limit())
-    buf.get(rowBytes)
-
-    val ret = enclave.Filter(eid, predOpcode, rowBytes)
-    ret
-  }
-
   def encrypt[T](enclave: SGXEnclave, eid: Long, field: T): Array[Byte] = {
     val buf = ByteBuffer.allocate(100)
     buf.order(ByteOrder.LITTLE_ENDIAN)

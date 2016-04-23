@@ -22,6 +22,9 @@
 *   suppliers or licensors in any way.
 */
 
+#ifndef USER_TYPES_H
+#define USER_TYPES_H
+
 /* User defined types */
 
 #ifdef _MSC_VER
@@ -30,6 +33,34 @@
 
 #define LOOPS_PER_THREAD 500
 
+enum TYPE {
+  DUMMY = 0,
+  INT = 1,
+  STRING = 2,
+  FLOAT = 3,
+  DATE = 4,
+
+  PARTIAL_AGG_INT = 5,
+  FINAL_AGG_INT = 6,
+  PARTIAL_AGG_FLOAT = 7,
+  FINAL_AGG_FLOAT = 8
+};
+
+enum OPCODE {
+  OP_BD2 = 10,
+  OP_SORT_INTEGERS_TEST = 90,
+  OP_SORT_COL1 = 2,
+  OP_SORT_COL2 = 50,
+  OP_SORT_COL4_IS_DUMMY_COL2 = 51,
+  OP_GROUPBY_COL2_SUM_COL3_STEP1 = 1,
+  OP_GROUPBY_COL2_SUM_COL3_STEP2 = 101,
+  OP_JOIN_COL2 = 3,
+  OP_FILTER_COL2_GT3 = 30,
+  OP_FILTER_TEST = 91,
+  OP_FILTER_COL4_NOT_DUMMY = 32,
+};
+
 typedef void *buffer_t;
 typedef int array_t[10];
 
+#endif

@@ -28,7 +28,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   uint32_t attr_len = 0;
   uint8_t *attr_ptr = NULL;
 
-  if (op_code == 0) {
+  if (op_code == OP_FILTER_COL2_GT3) {
     // find the second attribute
 		
     // row_ptr = get_enc_attr(&enc_attr_ptr, &enc_attr_len, row_ptr, row, length);
@@ -43,14 +43,13 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 	get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
 	
 
-	// since op_code is 0, number should be "integer"
     int *value_ptr = (int *) attr_ptr;
 
     if (*value_ptr <= 3) {
       ret = 0;
     }
 
-  } else if (op_code == 2) {
+  } else if (op_code == OP_FILTER_COL4_NOT_DUMMY) {
     // Filter out rows with a dummy attribute in the 4th column. Such rows represent partial aggregates
     find_attribute(row_ptr, length, num_cols, 4, &enc_value_ptr, &enc_value_len);
     decrypt(enc_value_ptr, enc_value_len, decrypted_data);
@@ -60,7 +59,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
       ret = 0;
     }
 
-  } else if (op_code == -1) {
+  } else if (op_code == OP_FILTER_TEST) {
     // this is for test only
 
 	find_attribute(row_ptr, length, num_cols,

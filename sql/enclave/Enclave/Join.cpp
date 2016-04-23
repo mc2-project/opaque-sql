@@ -50,7 +50,7 @@ void join_sort_preprocess(int op_code,
 	
   int if_primary = 0;
   
-  if (op_code == 3) {
+  if (op_code == OP_JOIN_COL2) {
 	char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
 	if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
   }
@@ -155,7 +155,7 @@ void get_join_attribute(int op_code,
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
   
-  if (op_code == 3) {
+  if (op_code == OP_JOIN_COL2) {
 	if (if_primary == 0) {
 	  // attribute number is 2nd column
 	  for (uint32_t i = 0; i < num_cols; i++) {
@@ -204,7 +204,7 @@ void join_merge_row(int op_code,
   uint32_t secondary_row_cols = 0;
   uint32_t secondary_join_attr = 0;
   
-  if (op_code == 3) {
+  if (op_code == OP_JOIN_COL2) {
 	primary_row_cols = *( (uint32_t *) primary_row);
 	secondary_row_cols =  *( (uint32_t *) secondary_row);
 	secondary_join_attr = 2;
@@ -322,7 +322,7 @@ void sort_merge_join(int op_code,
   // constructs a final row with final num cols = 
   // (num cols of table P + num cols of table f)
   // each attribute will be empty, but type is specified
-  if (op_code == 3) {
+  if (op_code == OP_JOIN_COL2) {
 	*( (uint32_t *) dummy_row_ptr) = 5;
 	dummy_row_ptr += 4;
 	int types[5] = {INT, STRING, INT, INT, INT};

@@ -341,53 +341,6 @@ GroupedAttributes::GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num
   this->op_code = op_code;
 }
 
-void GroupedAttributes::init() {
-
-  uint8_t *sort_pointer = NULL;
-  uint32_t len = 0;
-
-  // Set "attributes" in the correct place to point to row
-  if (op_code == 1 || op_code == 2 || op_code == 3) {
-	expression = IDENTITY;
-
-	num_attr = 1;
-	num_eval_attr = 1;
-
-	attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
-	eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
-
-	if (op_code == 2) {
-
-	  find_plaintext_attribute(row, num_cols,
-							   2, &sort_pointer, &len);
-	  attributes[0] = new Integer;
-	  attributes[0]->consume(sort_pointer, NO_COPY);
-
-	  eval_attributes[0] = new Integer;
-	  
-	} else if (op_code == 3) {
-
-	  find_plaintext_attribute(row, num_cols,
-							   2, &sort_pointer, &len);
-
-	  attributes[0] = new String;
-	  attributes[0]->consume(sort_pointer, NO_COPY);
-
-	  eval_attributes[0] = new String;
-	}
-	
-	num_eval_attr = num_attr;
-
-  } else if (op_code == 10) {
-	// for Big Data Benchmark query #2
-	expression = BD2;
-
-	num_attr = 1;
-	num_eval_attr = 1;
-
-  }
-}
-
 int GroupedAttributes::compare(GroupedAttributes *attr) {
   // compare the eval attributes
   
@@ -445,7 +398,7 @@ void ProjectAttributes::init() {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == 10) {
+  if (op_code == OP_BD2) {
 	// for Big Data Benchmark query #2
 	expression = BD2;
 
@@ -461,7 +414,7 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
-  if (this->op_code == 10) {
+  if (this->op_code == OP_BD2) {
 	attributes[0]->reset();
 
 	find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
@@ -523,7 +476,7 @@ void JoinAttributes::init() {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == 3) {
+  if (op_code == OP_JOIN_COL2) {
 	expression = IDENTITY;
 
 	num_attr = 1;
@@ -535,14 +488,13 @@ void JoinAttributes::init() {
 	find_plaintext_attribute(row, num_cols,
 							 2, &sort_pointer, &len);
 
-	attributes[0] = new String;
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
 	attributes[0]->consume(sort_pointer, NO_COPY);
 
-	eval_attributes[0] = new String;
-	
 	num_eval_attr = num_attr;
 
-  } else if (op_code == 10) {
+  } else if (op_code == OP_BD2) {
 	// for Big Data Benchmark query #2
 	expression = BD2;
 
@@ -572,7 +524,7 @@ void SortAttributes::init() {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
   
-  if (op_code == 2) {
+  if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2) {
 	expression = IDENTITY;
 
 	num_attr = 1;
@@ -581,41 +533,28 @@ void SortAttributes::init() {
 	attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
 	eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
+    uint32_t sort_col = 0;
+    switch (op_code) {
+    case OP_SORT_COL1: sort_col = 1; break;
+    case OP_SORT_COL2: sort_col = 2; break;
+    default: assert(false);
+    }
 	find_plaintext_attribute(row, num_cols,
-							 2, &sort_pointer, &len);
-	attributes[0] = new Integer;
+                             sort_col, &sort_pointer, &len);
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
 	attributes[0]->consume(sort_pointer, NO_COPY);
 	
-	eval_attributes[0] = new Integer;
-	
-	num_eval_attr = num_attr;
+    num_eval_attr = num_attr;
 
-  } else if (op_code == 10) {
+  } else if (op_code == OP_BD2) {
 	// for Big Data Benchmark query #2
 	expression = BD2;
 
 	num_attr = 1;
 	num_eval_attr = 1;
 
-  } else if (op_code == 50) {
-    expression = IDENTITY;
-
-    num_attr = 1;
-    num_eval_attr = 1;
-
-    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
-    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
-
-    find_plaintext_attribute(row, num_cols,
-                             2, &sort_pointer, &len);
-    attributes[0] = new String;
-    attributes[0]->consume(sort_pointer, NO_COPY);
-
-    eval_attributes[0] = new String;
-
-    num_eval_attr = num_attr;
-
-  } else if (op_code == 51) {
+  } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
 	// this sort is the last step of aggregation
 
 	num_attr = 2;
@@ -639,26 +578,11 @@ void SortAttributes::init() {
     attributes[1] = create_attr(sort_pointer);
 	eval_attributes[1] = create_attr(sort_pointer);
     attributes[1]->consume(sort_pointer, NO_COPY);
-	
-  } else if (op_code == 52) {
-    expression = IDENTITY;
-	
-    num_attr = 1;
-    num_eval_attr = 1;
-	
-    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
-    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
-	
-    find_plaintext_attribute(row, num_cols,
-                             2, &sort_pointer, &len);
-    attributes[0] = new Integer;
-    attributes[0]->consume(sort_pointer, NO_COPY);
-	
-    eval_attributes[0] = new Integer;
-	
-    num_eval_attr = num_attr;
+  } else {
+    printf("SortAttributes::init: unknown opcode %d\n", op_code);
+    assert(false);
   }
-	
+
 }
 
 void SortAttributes::evaluate() {
@@ -668,7 +592,7 @@ void SortAttributes::evaluate() {
 }
 
 int SortAttributes::compare(SortAttributes *attr) {
-  if (op_code == 51) {
+  if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
 
 	int ret = 0;
 	for (uint32_t i = 0; i < num_eval_attr; i++) {
@@ -709,7 +633,7 @@ void AggSortAttributes::init() {
   // Set "attributes" in the correct place to point to row
 
   // printf("init called, op_code is %u\n", op_code);
-  if (op_code == 1) {
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
 	expression = IDENTITY;
 
 	num_attr = 1;
@@ -721,11 +645,10 @@ void AggSortAttributes::init() {
 	find_plaintext_attribute(row, num_cols,
 							 2, &sort_pointer, &len);
 
-	attributes[0] = new String;
-	attributes[0]->consume(sort_pointer, NO_COPY);
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
 
-	eval_attributes[0] = new String;
-	
 	num_eval_attr = num_attr;
 
   }
@@ -736,7 +659,8 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
-  if (this->op_code == 1) {
+  if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1
+      || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
 	attributes[0]->reset();
 
 	find_plaintext_attribute(new_row_ptr, num_cols,

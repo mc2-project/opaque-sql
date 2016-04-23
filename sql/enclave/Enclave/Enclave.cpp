@@ -172,8 +172,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 						  int low_idx, uint32_t list_length) {
   // iterate through all data, and then decrypt
 
-  // op_code = 1 means it's a list of integers
-  if (op_code == 1) {
+  if (op_code == OP_SORT_INTEGERS_TEST) {
     // Sorting integers (test only)
 	Integer **data = (Integer **) malloc(sizeof(Integer *) * list_length);
 	if (data == NULL) {
@@ -219,15 +218,13 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
 
-  } else if (op_code == 2 || op_code == 50 || op_code == 51 || op_code == 52) {
+  } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
     // Sorting rows
 	// this needs to sort a row of data
 
 	//printf("op_code called is %u\n", op_code);
 
-	uint32_t sort_attr_num = 2;
-
-	SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
+    SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
 	if (data == NULL) {
 	  printf("Could not allocate enough data\n");
 	}
@@ -344,7 +341,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	free(data);
 
 	//printf("Freed data\n");
-  } else if (op_code == 3) {
+  } else if (op_code == OP_JOIN_COL2) {
     // Sorting for Join
 	// get the primary/foreign table indicators
 	uint8_t primary_table[TABLE_ID_SIZE];
@@ -355,10 +352,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	// that means there are two different join attributes:
 	// one for the primary key table, the other the foreign key table
 	
-	uint32_t sort_attr_num_p = 2;
-	uint32_t sort_attr_num_f = 2;
-	
-	JoinRecord **data = (JoinRecord **) malloc(sizeof(JoinRecord *) * list_length);
+    JoinRecord **data = (JoinRecord **) malloc(sizeof(JoinRecord *) * list_length);
 	if (data == NULL) {
 	  printf("Could not allocate enough data\n");
 	  assert(false);
@@ -410,7 +404,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
   } else {
-    printf("Error in ecall_oblivious_sort: unexpected op code %d\n", op_code);
+    printf("ecall_oblivious_sort: unknown opcode %d\n", op_code);
     assert(false);
   }
 }

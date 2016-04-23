@@ -495,16 +495,22 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   uint8_t *agg_row_ptr = (uint8_t *) env->GetByteArrayElements(agg_row, &if_copy);
   
   uint32_t actual_size = 0;
-  int flag = op_code < 100 ? 1 : 2;
-  int real_op_code = op_code % 100;
-
+  int flag;
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1) {
+    flag = 1;
+  } else if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+    flag = 2;
+  } else {
+    printf("Aggregate: unknown opcode %d\n", op_code);
+    assert(false);
+  }
 
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
   
   uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
   uint8_t *output_rows = NULL;
 
-  if (op_code < 100) {
+  if (flag == 1) {
 	output_rows = (uint8_t *) malloc(output_rows_length);
   } else {
 	// TODO: change this hard-coded buffer
@@ -514,7 +520,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   }
 
   
-  ecall_scan_aggregation_count_distinct(eid, real_op_code,
+  ecall_scan_aggregation_count_distinct(eid, op_code,
 										input_rows_ptr, input_rows_length,
 										num_rows,
 										agg_row_ptr, agg_row_length,

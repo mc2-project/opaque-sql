@@ -10,6 +10,7 @@ class GenericType;
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
+#include "user_types.h"
 #include "sgx_trts.h"
 #include "math.h"
 #include "define.h"
@@ -17,20 +18,6 @@ class GenericType;
 #include "Expression.h"
 
 #include "util.h"
-
-
-enum TYPE {
-  DUMMY = 0,
-  INT = 1,
-  STRING = 2,
-  FLOAT = 3,
-  DATE = 4,
-
-  PARTIAL_AGG_INT = 5,
-  FINAL_AGG_INT = 6,
-  PARTIAL_AGG_FLOAT = 7,
-  FINAL_AGG_FLOAT = 8
-};
 
 enum CONSUME_MODE {
   ALLOC,
@@ -215,7 +202,7 @@ class GroupedAttributes {
   }
 
   // using the op_code, initialize the GroupedAttributes information
-  virtual void init();
+  virtual void init() = 0;
 
   // given the expression, evaluate that on the sort attributes
   void evaluate();
