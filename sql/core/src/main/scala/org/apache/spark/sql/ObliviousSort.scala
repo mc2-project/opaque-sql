@@ -353,6 +353,10 @@ object ObliviousSort extends java.io.Serializable {
     // divide N into r * s, where s is the number of machines, and r is the size of the 
     // constraints: s | r; r >= 2 * (s-1)^2
 
+    val mustCacheData = data.getStorageLevel == StorageLevel.NONE
+    if (mustCacheData) {
+      data.cache()
+    }
     val len = data.count
 
     var s = s_input
@@ -381,6 +385,10 @@ object ObliviousSort extends java.io.Serializable {
     /* End Alternative */
 
     val count = par_data_final.count
+
+    if (mustCacheData) {
+      data.unpersist(true)
+    }
 
     par_data_final.map(_._2._2)
   }
