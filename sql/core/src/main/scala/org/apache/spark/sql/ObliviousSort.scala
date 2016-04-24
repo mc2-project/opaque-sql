@@ -25,7 +25,7 @@ object ObliviousSort extends java.io.Serializable {
   // TODO(ankurdave): Use SparkContext to determine these
   val NumMachines = 2
   val NumCores = 1
-  val Multiplier = 1
+  val Multiplier = 2 // TODO: fix bug when this is 1
 
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
