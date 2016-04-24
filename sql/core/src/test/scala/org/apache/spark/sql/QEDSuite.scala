@@ -103,7 +103,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
-  ignore("encPermute") {
+  test("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
       sqlContext.createDataFrame(

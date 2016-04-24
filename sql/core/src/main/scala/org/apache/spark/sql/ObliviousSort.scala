@@ -49,11 +49,10 @@ object ObliviousSort extends java.io.Serializable {
   def OSortSingleMachine_WithIndex(
       values: Array[Value], low_idx: Int, len: Int, opcode: Int) = {
 
-    val log_len = log2(len) + 1
-    val offset = low_idx
+    val valuesSlice = values.slice(low_idx, low_idx + len)
 
     // Concatenate encrypted rows into a buffer
-    val nonEmptyRows = values.map(_.value).filter(_.length != 0)
+    val nonEmptyRows = valuesSlice.map(_.value).filter(_.length != 0)
     val concatRows = QED.concatByteArrays(nonEmptyRows)
 
     // Sort rows in enclave
@@ -63,7 +62,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // Copy rows back into values
     val sortedRowIter = QED.readRows(allRowsSorted)
-    for (row <- values) {
+    for (row <- valuesSlice) {
       if (sortedRowIter.hasNext) {
         row.value = sortedRowIter.next()
       } else {
@@ -131,7 +130,7 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortStep3[A: Ordering](
+  def ColumnSortStep3(
       key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: Int): Iterator[Value] = {
 
     var len = 0
