@@ -122,10 +122,8 @@ case class EncAggregateWithSum(
   extends UnaryNode {
 
   override def doExecute() = {
-    val childRDD = child.execute().cache()
-
     // Process boundaries
-    val boundaries = childRDD.mapPartitions { rowIter =>
+    val boundaries = child.execute().mapPartitions { rowIter =>
       val rows = rowIter.map(_.copy).toArray
       val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
       val (enclave, eid) = QED.initEnclave()
@@ -146,7 +144,7 @@ case class EncAggregateWithSum(
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries)
-    val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
+    val partialAggregates = child.execute().zipPartitions(processedBoundariesRDD) {
       (rowIter, boundaryIter) =>
         val rows = rowIter.map(_.copy).toArray
         val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
@@ -161,7 +159,7 @@ case class EncAggregateWithSum(
         assert(partialAgg.nonEmpty)
         enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
-    }
+    }.cache()
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = ObliviousSort.ColumnSort(
