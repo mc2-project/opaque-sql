@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -eu
+
 SCALA_CP=$(pwd)/build:/usr/share/java/scala-library.jar
 ENCLAVE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BASE_DIR="$( cd "$ENCLAVE_DIR" && cd ../.. && pwd )"

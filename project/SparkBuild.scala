@@ -395,6 +395,13 @@ object OldDeps {
 }
 
 object Catalyst {
+  val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave code")
+  val enclaveBuildSettings = Seq(
+    enclaveBuildTask := {
+      import sys.process._
+      Seq("sql/enclave/build.sh") !
+    },
+    baseDirectory in enclaveBuildTask := file("/home/ankurd/sparksgx/"))
   lazy val settings = Seq(
     // ANTLR code-generation step.
     //
@@ -445,8 +452,11 @@ object Catalyst {
     // Include ANTLR tokens files.
     resourceGenerators in Compile += Def.task {
       ((sourceManaged in Compile).value ** "*.tokens").get.toSeq
-    }.taskValue
-  )
+    }.taskValue) ++
+  // Build enclave code
+  enclaveBuildSettings ++
+  Seq(
+    compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask))
 }
 
 object SQL {
