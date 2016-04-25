@@ -373,7 +373,7 @@ object ObliviousSort extends java.io.Serializable {
 
     val numPartitions = NumCores * NumMachines
     val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
-      .repartition(numPartitions)
+      .groupBy(_._2 / r + 1).flatMap(_._2)
     par_data.count
 
     val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
@@ -381,8 +381,9 @@ object ObliviousSort extends java.io.Serializable {
     /* Alternative */
     val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
       .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
-    val par_data_final = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
+    val par_data_i2 = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
       .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
+    val par_data_final = par_data_i2
       .map(v => ((v._1, v._2._1), v._2._2))
       .sortByKey()
     /* End Alternative */

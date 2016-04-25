@@ -115,7 +115,12 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("encGroupByWithSum") {
-    val data = for (i <- 0 until 256) yield (i, (i%3)match{case 0=>"A";case 1=>"B";case 2=>"C"}, 1)
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = sparkContext.makeRDD(encrypt3(data), 2).toDF("id", "word", "count")
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
