@@ -101,8 +101,6 @@ void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
   osort_with_index_int(input, 0, input_len);
 }
 
-
-
 // input_length is the length of input in bytes
 // len is the number of records
 template<typename T>
@@ -167,9 +165,41 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
 
 }
 
+// merges together two sorted arrays non-obliviously, in place
+template<typename T>
+void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offset, uint32_t len) {
+  // initialize the two merge pointers
+  uint32_t left_ptr = 0;
+  uint32_t right_ptr = offset;
+  
+  while (true) {
+	if (left_ptr == right_ptr || right_ptr == len) {
+	  break;
+	}
+	
+	T *left_item = input[left_ptr];
+	T *right_item = input[right_ptr];
+
+	int ret = left_item->compare(right_item);
+	if (ret == -1 || ret == 0) {
+	  // just increment the left ptr
+	  ++left_ptr;
+	} else {
+	  // swap the right item all the way up to left_ptr, then increment both
+	  for (uint32_t j = right_ptr; j > left_ptr; j--) {
+		input[j]->swap(input[j - 1]);
+	  }
+
+	  ++left_ptr;
+	  ++right_ptr;
+	}
+  }
+  
+}
+
 // TODO: format of this input array?
-void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
-						  int low_idx, uint32_t list_length) {
+void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
+					int low_idx, uint32_t list_length) {
   // iterate through all data, and then decrypt
 
   if (op_code == OP_SORT_INTEGERS_TEST) {
@@ -223,7 +253,7 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	// this needs to sort a row of data
 
 	//printf("op_code called is %u\n", op_code);
-
+	
     SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
 	if (data == NULL) {
 	  printf("Could not allocate enough data\n");
@@ -248,10 +278,12 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  
 	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	  
-      //printf("Got next row\n");
+	  //printf("Got next row\n");
 
 	  data[i] = new SortRecord;
 	  SortRecord *rec = data[i];
+
+	  //printf("Within enclave? %u\n", sgx_is_within_enclave(rec, ROW_UPPER_BOUND));
 
 	  uint32_t columns = *( (uint32_t *) enc_row_ptr);
 
@@ -405,13 +437,142 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
   }
 }
 
+// this uses the oblivious sort on equi-sized buffers
+// this should be in row format (either sort_row, or join row)
+// also: assume that all rows are equi-sized!
+void ecall_external_oblivious_sort(int op_code,
+								   uint32_t num_buffers,
+								   uint8_t **buffer_list, 
+								   uint32_t *buffer_lengths,
+								   uint32_t *num_rows) {
+
+  uint8_t *internal_buffer = (uint8_t *) malloc(MAX_SORT_BUFFER);
+
+  // First, iterate through and decrypt the data
+  // Then store the decrypted data in a list of objects (based on the given op_code)
+
+  int len = num_buffers;
+  int log_len = log_2(len) + 1;
+  int offset = 0;
+
+  int swaps = 0;
+  int min_val = 0;
+  int max_val = 0;
+
+  //printf("External sort called\n");
+
+  if (num_buffers == 1) {
+	//printf("%p, %u, %u\n", buffer_list[0], buffer_lengths[0], num_rows[0]);
+	assert(buffer_lengths[0] < MAX_SORT_BUFFER);
+	cpy(internal_buffer, buffer_list[0], buffer_lengths[0]);
+	oblivious_sort(op_code, internal_buffer, buffer_lengths[0], 0, num_rows[0]);
+	cpy(buffer_list[0], internal_buffer, buffer_lengths[0]);
+	free(internal_buffer);
+	return;
+  }
+
+  // TODO: another alternative is to first sort each buffer, and then just merge them together
+
+  //printf("Trying to sort on multiple partitions!\n");
+  //assert(false);
+  
+  for (int stage = 1; stage <= log_len; stage++) {
+
+    for (int stage_i = stage; stage_i >= 1; stage_i--) {
+
+      int part_size = pow_2(stage_i);
+      int part_size_half = part_size / 2;
+
+      if (stage_i == stage) {
+		for (int i = offset; i <= (offset + len - 1); i += part_size) {
+		  for (int j = 1; j <= part_size_half; j++) {
+			int idx = i + j - 1;
+			int pair_idx = i + part_size - j;
+
+			if (pair_idx < offset + len) {
+
+			  // find two pointers to these buffers
+			  uint8_t *buffer1_ptr = buffer_list[idx];
+			  uint8_t *buffer2_ptr = buffer_list[pair_idx];
+
+			  uint32_t buffer1_size = buffer_lengths[idx];
+			  uint32_t buffer2_size = buffer_lengths[pair_idx];
+
+			  assert((buffer1_size + buffer2_size) < MAX_SORT_BUFFER);
+			  
+			  cpy(internal_buffer, buffer1_ptr, buffer1_size);
+			  cpy(internal_buffer + buffer1_size, buffer2_ptr, buffer2_size);
+
+			  // sort these two buffers
+			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
+
+			  // copy the internal buffer to outside
+			  cpy(buffer1_ptr, internal_buffer, buffer1_size);
+			  cpy(buffer2_ptr, internal_buffer + buffer1_size, buffer2_size);
+			}
+		  }
+		}
+
+      } else {	
+
+		for (int i = offset; i <= (offset + len - 1); i += part_size) {
+		  for (int j = 1; j <= part_size_half; j++) {
+			int idx = i + j - 1;
+			int pair_idx = idx + part_size_half;
+
+			if (pair_idx < offset + len) {
+			  
+			  // find two pointers to these buffers
+			  uint8_t *buffer1_ptr = buffer_list[idx];
+			  uint8_t *buffer2_ptr = buffer_list[pair_idx];
+
+			  uint32_t buffer1_size = buffer_lengths[idx];
+			  uint32_t buffer2_size = buffer_lengths[pair_idx];
+
+			  assert(buffer1_size < MAX_SORT_BUFFER && buffer2_size < MAX_SORT_BUFFER);
+			  
+			  cpy(internal_buffer, buffer1_ptr, buffer1_size);
+			  cpy(internal_buffer + buffer1_size, buffer2_ptr, buffer2_size);
+
+			  // sort these two buffers
+			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
+
+			  // copy the internal buffer to outside
+			  cpy(buffer1_ptr, internal_buffer, buffer1_size);
+			  cpy(buffer2_ptr, internal_buffer + buffer1_size, buffer2_size);
+			}
+
+		  }
+		}
+
+      }
+
+    }
+  }
+
+  free(internal_buffer);
+
+}
+
 // TODO: return encrypted random identifier
 void ecall_random_id(uint8_t *ptr, uint32_t length) {
   sgx_status_t rand_status = sgx_read_rand(ptr, length);
 }
 
 void ecall_test() {
-  agg_test();
+  uint8_t x[1024 * 1024];
+  assert(sgx_is_within_enclave(x, 1024 * 1024) == 1);
+
+  uint32_t malloc_length = 1024 * 1024;
+  uint32_t malloc_size = 1024;
+
+  for (uint32_t i = 0; i < malloc_length; i++) {
+	malloc(malloc_size);
+  }
+  
+  uint8_t *ptr = (uint8_t *) malloc(malloc_size);
+  printf("Malloc within enclave? %u\n", sgx_is_within_enclave(ptr, malloc_size));
+  free(ptr);
 }
 
 /**** BEGIN Aggregation ****/

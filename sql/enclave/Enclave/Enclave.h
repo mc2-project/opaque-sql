@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <sgx_trts.h>
 
 #include "util.h"
 #include "Aggregate.h"
@@ -52,8 +53,10 @@ extern "C" {
 		     uint32_t plaintext_length);
 
   void ecall_random_id(uint8_t *ptr, uint32_t length);
-  void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
-							int low_idx, uint32_t list_length);
+
+  
+  void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
+					  int low_idx, uint32_t list_length);
 
 #if defined(__cplusplus)
 }

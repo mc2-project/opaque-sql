@@ -116,7 +116,7 @@ endif
 .PHONY: all run
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: $(App_Name) $(Enclave_Name)
+all: $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Enclave_Name) first with your signing key before you run the $(App_Name) to launch and access the enclave."
 	@echo "To sign the enclave use the command:"

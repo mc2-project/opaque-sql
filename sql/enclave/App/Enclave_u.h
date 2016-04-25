@@ -51,7 +51,7 @@ sgx_status_t ecall_encrypt(sgx_enclave_id_t eid, uint8_t* plaintext, uint32_t le
 sgx_status_t ecall_decrypt(sgx_enclave_id_t eid, uint8_t* ciphertext, uint32_t ciphertext_length, uint8_t* plaintext, uint32_t plaintext_length);
 sgx_status_t ecall_test_int(sgx_enclave_id_t eid, int* ptr);
 sgx_status_t ecall_oblivious_sort_int(sgx_enclave_id_t eid, int* input, uint32_t input_len);
-sgx_status_t ecall_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint8_t* input, uint32_t buffer_length, int low_idx, uint32_t list_length);
+sgx_status_t ecall_external_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint32_t num_buffers, uint8_t** buffer_list, uint32_t* buffer_lengths, uint32_t* num_rows);
 sgx_status_t ecall_random_id(sgx_enclave_id_t eid, uint8_t* ptr, uint32_t length);
 sgx_status_t ecall_scan_aggregation_count_distinct(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* agg_row, uint32_t agg_row_buffer_length, uint8_t* output_rows, uint32_t output_rows_length, uint32_t* actual_size, int flag, uint32_t* cardinality);
 sgx_status_t ecall_test(sgx_enclave_id_t eid);

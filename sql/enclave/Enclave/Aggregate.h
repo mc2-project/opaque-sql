@@ -13,13 +13,6 @@
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
 
-// defines an upper bound on the size of the aggregation value
-// only the plaintext size
-#define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
-#define ROW_UPPER_BOUND (2048)
-// distinct items, offset, sort attribute, aggregation attribute
-#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
-
 class agg_stats_data;
 
 void scan_aggregation_count_distinct(int op_code,

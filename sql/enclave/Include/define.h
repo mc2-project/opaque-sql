@@ -19,7 +19,7 @@
 #define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
 
 #define INT_UPPER_BOUND (4)
-#define STRING_UPPER_BOUND (1024)
+#define STRING_UPPER_BOUND (512)
 
 
 #define TABLE_ID_SIZE (8)
@@ -52,5 +52,7 @@ enum OPCODE {
   OP_FILTER_TEST = 91,
   OP_FILTER_COL4_NOT_DUMMY = 32,
 };
+
+#define MAX_SORT_BUFFER (16 * 1024 * 1024)
 
 #endif // DEFINE_H

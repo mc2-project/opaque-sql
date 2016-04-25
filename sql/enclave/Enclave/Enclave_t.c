@@ -47,13 +47,13 @@ typedef struct ms_ecall_oblivious_sort_int_t {
 	uint32_t ms_input_len;
 } ms_ecall_oblivious_sort_int_t;
 
-typedef struct ms_ecall_oblivious_sort_t {
+typedef struct ms_ecall_external_oblivious_sort_t {
 	int ms_op_code;
-	uint8_t* ms_input;
-	uint32_t ms_buffer_length;
-	int ms_low_idx;
-	uint32_t ms_list_length;
-} ms_ecall_oblivious_sort_t;
+	uint32_t ms_num_buffers;
+	uint8_t** ms_buffer_list;
+	uint32_t* ms_buffer_lengths;
+	uint32_t* ms_num_rows;
+} ms_ecall_external_oblivious_sort_t;
 
 typedef struct ms_ecall_random_id_t {
 	uint8_t* ms_ptr;
@@ -492,33 +492,73 @@ err:
 	return status;
 }
 
-static sgx_status_t SGX_CDECL sgx_ecall_oblivious_sort(void* pms)
+static sgx_status_t SGX_CDECL sgx_ecall_external_oblivious_sort(void* pms)
 {
-	ms_ecall_oblivious_sort_t* ms = SGX_CAST(ms_ecall_oblivious_sort_t*, pms);
+	ms_ecall_external_oblivious_sort_t* ms = SGX_CAST(ms_ecall_external_oblivious_sort_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
-	uint8_t* _tmp_input = ms->ms_input;
-	uint32_t _tmp_buffer_length = ms->ms_buffer_length;
-	size_t _len_input = _tmp_buffer_length;
-	uint8_t* _in_input = NULL;
+	uint8_t** _tmp_buffer_list = ms->ms_buffer_list;
+	uint32_t _tmp_num_buffers = ms->ms_num_buffers;
+	size_t _len_buffer_list = _tmp_num_buffers * sizeof(*_tmp_buffer_list);
+	uint8_t** _in_buffer_list = NULL;
+	uint32_t* _tmp_buffer_lengths = ms->ms_buffer_lengths;
+	size_t _len_buffer_lengths = _tmp_num_buffers * sizeof(*_tmp_buffer_lengths);
+	uint32_t* _in_buffer_lengths = NULL;
+	uint32_t* _tmp_num_rows = ms->ms_num_rows;
+	size_t _len_num_rows = _tmp_num_buffers * sizeof(*_tmp_num_rows);
+	uint32_t* _in_num_rows = NULL;
 
-	CHECK_REF_POINTER(pms, sizeof(ms_ecall_oblivious_sort_t));
-	CHECK_UNIQUE_POINTER(_tmp_input, _len_input);
+	if ((size_t)_tmp_num_buffers > (SIZE_MAX / sizeof(*_tmp_buffer_list))) {
+		status = SGX_ERROR_INVALID_PARAMETER;
+		goto err;
+	}
 
-	if (_tmp_input != NULL) {
-		_in_input = (uint8_t*)malloc(_len_input);
-		if (_in_input == NULL) {
+	if ((size_t)_tmp_num_buffers > (SIZE_MAX / sizeof(*_tmp_buffer_lengths))) {
+		status = SGX_ERROR_INVALID_PARAMETER;
+		goto err;
+	}
+
+	if ((size_t)_tmp_num_buffers > (SIZE_MAX / sizeof(*_tmp_num_rows))) {
+		status = SGX_ERROR_INVALID_PARAMETER;
+		goto err;
+	}
+
+	CHECK_REF_POINTER(pms, sizeof(ms_ecall_external_oblivious_sort_t));
+	CHECK_UNIQUE_POINTER(_tmp_buffer_list, _len_buffer_list);
+	CHECK_UNIQUE_POINTER(_tmp_buffer_lengths, _len_buffer_lengths);
+	CHECK_UNIQUE_POINTER(_tmp_num_rows, _len_num_rows);
+
+	if (_tmp_buffer_list != NULL) {
+		_in_buffer_list = (uint8_t**)malloc(_len_buffer_list);
+		if (_in_buffer_list == NULL) {
 			status = SGX_ERROR_OUT_OF_MEMORY;
 			goto err;
 		}
 
-		memcpy(_in_input, _tmp_input, _len_input);
+		memcpy(_in_buffer_list, _tmp_buffer_list, _len_buffer_list);
 	}
-	ecall_oblivious_sort(ms->ms_op_code, _in_input, _tmp_buffer_length, ms->ms_low_idx, ms->ms_list_length);
+	if (_tmp_buffer_lengths != NULL) {
+		_in_buffer_lengths = (uint32_t*)malloc(_len_buffer_lengths);
+		if (_in_buffer_lengths == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_buffer_lengths, _tmp_buffer_lengths, _len_buffer_lengths);
+	}
+	if (_tmp_num_rows != NULL) {
+		_in_num_rows = (uint32_t*)malloc(_len_num_rows);
+		if (_in_num_rows == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memcpy(_in_num_rows, _tmp_num_rows, _len_num_rows);
+	}
+	ecall_external_oblivious_sort(ms->ms_op_code, _tmp_num_buffers, _in_buffer_list, _in_buffer_lengths, _in_num_rows);
 err:
-	if (_in_input) {
-		memcpy(_tmp_input, _in_input, _len_input);
-		free(_in_input);
-	}
+	if (_in_buffer_list) free(_in_buffer_list);
+	if (_in_buffer_lengths) free(_in_buffer_lengths);
+	if (_in_num_rows) free(_in_num_rows);
 
 	return status;
 }
@@ -1619,7 +1659,7 @@ SGX_EXTERNC const struct {
 		{(void*)(uintptr_t)sgx_ecall_decrypt, 0},
 		{(void*)(uintptr_t)sgx_ecall_test_int, 0},
 		{(void*)(uintptr_t)sgx_ecall_oblivious_sort_int, 0},
-		{(void*)(uintptr_t)sgx_ecall_oblivious_sort, 0},
+		{(void*)(uintptr_t)sgx_ecall_external_oblivious_sort, 0},
 		{(void*)(uintptr_t)sgx_ecall_random_id, 0},
 		{(void*)(uintptr_t)sgx_ecall_scan_aggregation_count_distinct, 0},
 		{(void*)(uintptr_t)sgx_ecall_test, 0},

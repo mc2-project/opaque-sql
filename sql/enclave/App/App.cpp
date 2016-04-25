@@ -133,6 +133,12 @@ static sgx_errlist_t sgx_errlist[] = {
         "Can't open enclave file.",
         NULL
     },
+
+	{
+	  SGX_SUCCESS,
+	  "SGX call success",
+	  NULL
+    },
 };
 
 /* Check error conditions for loading enclave */
@@ -428,14 +434,15 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 
 
 // the op_code allows the internal sort code to decide which comparator to use
+// assume that the elements are of equal size!
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
-																			   jobject obj, 
-																			   jlong eid,
-																			   jint op_code,
-																			   jbyteArray input,
-																			   jint offset,
-																			   jint num_items) {
-
+																				jobject obj, 
+																				jlong eid,
+																				jint op_code,
+																				jbyteArray input,
+																				jint offset,
+																				jint num_items) {
+  
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
@@ -447,7 +454,53 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     //printf("input_copy is %u\n", input_copy[i]);
   }
 
-  ecall_oblivious_sort(eid, op_code, input_copy, input_len, offset, (uint32_t) num_items);
+  if (input_len < MAX_SORT_BUFFER) {
+
+	uint8_t *buffer_list[1] = {input_copy};
+	uint32_t buffer_sizes[1] = {input_len};
+	uint32_t num_rows[1];
+	num_rows[0] = (uint32_t) num_items;
+	
+	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows);
+	
+	//printf("Only sorting on one partition\n");
+	//print_error_message(status);
+  } else {
+
+	// try to split the input into partitions if it's too big
+	uint32_t element_size = input_len / num_items;
+	uint32_t elements_per_part = MAX_SORT_BUFFER / element_size;
+	uint32_t num_part = input_len / elements_per_part;
+	if (input_len % elements_per_part != 0) {
+	  num_part += 1;
+	}
+	
+	uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
+	uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
+	uint32_t *num_rows = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
+	
+	uint8_t *input_ptr = input_copy;
+	
+	for (uint32_t i = 0 ; i < num_part; i++) {
+	  buffer_list[i] = input_ptr;
+	  if (i == num_part - 1) {
+		num_rows[i] = num_items - elements_per_part * i;
+		buffer_sizes[i] = elements_per_part * element_size;
+	  } else {
+		num_rows[i] = elements_per_part;
+		buffer_sizes[i] = elements_per_part * element_size;
+	  }
+	}
+
+	//ecall_external_oblivious_sort(eid, op_code, input_copy, input_len, offset, (uint32_t) num_items);
+	
+	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
+														num_part,
+														buffer_list, buffer_sizes, num_rows);
+	free(buffer_list);
+	free(buffer_sizes);
+	free(num_rows);
+  }
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
@@ -457,6 +510,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   free(input_copy);
   
   return ret;
+  //return input;
 }
 
 
@@ -784,27 +838,79 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   return (row_ptr - row);
 }
 
+void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
+  uint8_t temp[1024];
+  uint8_t *ptr = row;
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+	printf("Row -- num_cols is %u\n", *( (uint32_t *) ptr));
+	ptr += 4;
+
+	for (uint32_t j = 0; j < cols; j++) {
+	  uint32_t enc_len = *( (uint32_t *) ptr);
+	  ptr += 4;
+	  ecall_decrypt(global_eid, ptr, enc_len, temp, enc_len - ENC_HEADER_SIZE);
+
+	  if (j == 1) {
+		uint8_t *value_ptr = temp;
+		uint8_t attr_type = *value_ptr;
+		uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
+		printf("[attr: type is %u, attr_len is %u; ", attr_type, attr_len);
+		if (attr_type == 1) {
+		  printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+		} else if (attr_type == 2) {
+		  printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
+		}
+	  }
+	  
+	  ptr += enc_len;
+	}
+  }
+}
+
 void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t num_rows = 1024 * 1024;
+  uint32_t total_num_rows = 1024 * 32;
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + 1);
   printf("single_row_size is %u\n", single_row_size);
-  uint8_t *input_rows = (uint8_t *) malloc(single_row_size * (num_rows + 2));
+  uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
 
   uint8_t *input_rows_ptr = input_rows;
   uint32_t offset = 0;
-  for (uint32_t i = 0; i < num_rows; i++) {
+  for (uint32_t i = 0; i < total_num_rows; i++) {
 	offset = format_encrypt_row(input_rows_ptr, i, num_cols);
 	input_rows_ptr += offset;
   }
 
-  //printf("Overall size is %u, %u\n", single_row_size * num_rows, (input_rows_ptr - input_rows));
-  ecall_oblivious_sort(global_eid, op_code, input_rows, single_row_size * num_rows, 0, num_rows);
+  printf("Encryption done\n");
 
+  // split the input rows into 64 partitions of (1024 * 4) rows
+  const uint32_t num_part = 1;
+
+  uint8_t *buffer_list[num_part];
+  uint32_t buffer_sizes[num_part];
+  uint32_t num_rows[num_part];
+
+  input_rows_ptr = input_rows;
+
+  for (uint32_t i = 0; i < num_part; i++) {
+	buffer_list[i] = input_rows_ptr;
+	num_rows[i] = total_num_rows / num_part;
+	buffer_sizes[i] = (single_row_size * total_num_rows) / num_part;
+	input_rows_ptr += buffer_sizes[i];
+  };
+
+  sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
+													  num_part,
+													  buffer_list, buffer_sizes, num_rows);
+
+  //decrypt_and_print(input_rows, total_num_rows, num_cols);
+
+  print_error_message(status);
 }
 
 /* Application entry */
@@ -820,7 +926,7 @@ int SGX_CDECL main(int argc, char *argv[])
         printf("Enter a character before exit ...\n");
         getchar();
         return -1; 
-    }
+    }[
 #endif 
     
     /* Initialize the enclave */
@@ -830,6 +936,9 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
+	// sgx_status_t status = ecall_test(global_eid);
+	// print_error_message(status);
+	
 	test_enclave_sort();
 
     /* Destroy the enclave */

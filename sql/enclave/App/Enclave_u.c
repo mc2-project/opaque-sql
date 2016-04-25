@@ -31,13 +31,13 @@ typedef struct ms_ecall_oblivious_sort_int_t {
 	uint32_t ms_input_len;
 } ms_ecall_oblivious_sort_int_t;
 
-typedef struct ms_ecall_oblivious_sort_t {
+typedef struct ms_ecall_external_oblivious_sort_t {
 	int ms_op_code;
-	uint8_t* ms_input;
-	uint32_t ms_buffer_length;
-	int ms_low_idx;
-	uint32_t ms_list_length;
-} ms_ecall_oblivious_sort_t;
+	uint32_t ms_num_buffers;
+	uint8_t** ms_buffer_list;
+	uint32_t* ms_buffer_lengths;
+	uint32_t* ms_num_rows;
+} ms_ecall_external_oblivious_sort_t;
 
 typedef struct ms_ecall_random_id_t {
 	uint8_t* ms_ptr;
@@ -465,15 +465,15 @@ sgx_status_t ecall_oblivious_sort_int(sgx_enclave_id_t eid, int* input, uint32_t
 	return status;
 }
 
-sgx_status_t ecall_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint8_t* input, uint32_t buffer_length, int low_idx, uint32_t list_length)
+sgx_status_t ecall_external_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint32_t num_buffers, uint8_t** buffer_list, uint32_t* buffer_lengths, uint32_t* num_rows)
 {
 	sgx_status_t status;
-	ms_ecall_oblivious_sort_t ms;
+	ms_ecall_external_oblivious_sort_t ms;
 	ms.ms_op_code = op_code;
-	ms.ms_input = input;
-	ms.ms_buffer_length = buffer_length;
-	ms.ms_low_idx = low_idx;
-	ms.ms_list_length = list_length;
+	ms.ms_num_buffers = num_buffers;
+	ms.ms_buffer_list = buffer_list;
+	ms.ms_buffer_lengths = buffer_lengths;
+	ms.ms_num_rows = num_rows;
 	status = sgx_ecall(eid, 5, &ocall_table_Enclave, &ms);
 	return status;
 }
