@@ -10,7 +10,6 @@ class GenericType;
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
-#include "user_types.h"
 #include "sgx_trts.h"
 #include "math.h"
 #include "define.h"
