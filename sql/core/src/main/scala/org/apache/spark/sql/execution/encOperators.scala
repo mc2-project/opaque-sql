@@ -122,10 +122,13 @@ case class EncAggregateWithSum(
   extends UnaryNode {
 
   override def doExecute() = {
+    val childRDD = child.execute().mapPartitions { rowIter =>
+      rowIter.map(_.encSerialize)
+    }.cache()
     // Process boundaries
-    val boundaries = child.execute().mapPartitions { rowIter =>
-      val rows = rowIter.map(_.copy).toArray
-      val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
+    val boundaries = childRDD.mapPartitions { rowIter =>
+      val rows = rowIter.toArray
+      val concatRows = QED.concatByteArrays(rows)
       val (enclave, eid) = QED.initEnclave()
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
       val boundary = enclave.Aggregate(
@@ -144,10 +147,10 @@ case class EncAggregateWithSum(
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries)
-    val partialAggregates = child.execute().zipPartitions(processedBoundariesRDD) {
+    val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
       (rowIter, boundaryIter) =>
-        val rows = rowIter.map(_.copy).toArray
-        val concatRows = QED.concatByteArrays(rows.map(_.encSerialize))
+        val rows = rowIter.toArray
+        val concatRows = QED.concatByteArrays(rows)
         val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
         val boundaryArray = boundaryIter.toArray
         assert(boundaryArray.length == 1)
