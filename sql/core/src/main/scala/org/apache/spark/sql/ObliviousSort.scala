@@ -19,6 +19,7 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.storage.StorageLevel
 
 object ObliviousSort extends java.io.Serializable {
 
