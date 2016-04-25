@@ -125,8 +125,7 @@ class aggregate_data_sum : public aggregate_data {
 	result_ptr += TYPE_SIZE;
 	*( (uint32_t *) result_ptr) = 4;
 	result_ptr += 4;
-	uint32_t cur_value = *( (uint32_t *) result_ptr);
-	*( (uint32_t *) result_ptr) = cur_value + sum - cur_value;
+	*( (uint32_t *) result_ptr) = sum;
 
 	return HEADER_SIZE + 4;
   }
@@ -412,19 +411,13 @@ public:
 
   uint32_t output_enc_row(uint8_t *output, int if_final) {
 	// simply output all records from rec, and also flush agg_data's value as an extra row
-	//uint8_t temp[PARTIAL_AGG_UPPER_BOUND];
+	uint8_t temp[PARTIAL_AGG_UPPER_BOUND];
 	uint32_t ret = rec->flush_encrypt_all_attributes(output);
     *((uint32_t*) output) = rec->num_cols + 1;
 	
-    //uint32_t len = agg_data->flush(temp, if_final);
-	uint32_t len = agg_data->ret_length();
+    uint32_t len = agg_data->flush(temp, if_final);
 	*( (uint32_t *) (output + ret) ) = enc_size(len);
-	encrypt(agg, len, output + ret + 4);
-
-	// if (if_final == 0) {
-	//   printf("output_enc_row is called\n");
-	//   print_attribute("agg result", agg);
-	// }
+	encrypt(temp, len, output + ret + 4);
 
 	return ret + 4 + enc_size(len);
   }
