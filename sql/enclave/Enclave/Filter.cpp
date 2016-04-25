@@ -70,8 +70,8 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     
     int *value_ptr = (int *) attr_ptr;
 
-    printf("Input value is %u\n", *value_ptr);
-    printf("Attr len is  is %u\n", attr_len);
+    // printf("Input value is %u\n", *value_ptr);
+    // printf("Attr len is  is %u\n", attr_len);
 	
     ret = 0;
   } else {

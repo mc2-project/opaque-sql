@@ -959,8 +959,8 @@ void process_boundary_records(int op_code,
 		encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
 		out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
 		  
-		printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
-		prev_agg.print();
+        // printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
+        // prev_agg.print();
 	  }
 
 	  // compare sort attributes current and previous agg
@@ -980,7 +980,7 @@ void process_boundary_records(int op_code,
 	}
 
 	if (round == 0) {
-      printf("Distinct items is %u\n", distinct_items);
+      // printf("Distinct items is %u\n", distinct_items);
 	}
 
   }
