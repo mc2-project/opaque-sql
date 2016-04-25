@@ -735,6 +735,76 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 	
 }
 
+uint32_t enc_size(uint32_t len) {
+  return len + ENC_HEADER_SIZE;
+}
+
+uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
+  static char chars[3] = {'A', 'B', 'C'};
+  uint8_t temp[1024];
+
+  uint8_t *row_ptr = row;
+  uint32_t len = 0;
+
+  *( (uint32_t *) row_ptr) = num_cols;
+  row_ptr += 4;
+  
+  // [int][string][int]
+  *temp = INT;
+  *( (uint32_t *) (temp + 1)) = 4;
+  *( (uint32_t *) (temp + 5)) = index;
+  
+  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 4);
+  row_ptr += 4;
+  ecall_encrypt(global_eid, temp, (1 + 4 + 4), row_ptr, enc_size(1 + 4 + 4));
+  row_ptr += enc_size(1 + 4 + 4);
+  
+  
+  *temp = STRING;
+  *( (uint32_t *) (temp + 1)) = 1;
+  *((char *) (temp + 5)) = chars[index % 3];
+
+  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 1);
+  row_ptr += 4;
+  ecall_encrypt(global_eid, temp, (1 + 4 + 1), row_ptr, enc_size(1 + 4 + 1));
+  row_ptr += enc_size(1 + 4 + 1);
+  
+  
+  *temp = INT;
+  *( (uint32_t *) (temp + 1)) = 4;
+  *( (uint32_t *) (temp + 5)) = 1;
+  
+  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 4);
+  row_ptr += 4;
+  ecall_encrypt(global_eid, temp, (1 + 4 + 4), row_ptr, enc_size(1 + 4 + 4));
+  row_ptr += enc_size(1 + 4 + 4);
+
+  return (row_ptr - row);
+}
+
+void test_enclave_sort() {
+  // use op_code = OP_SORT_COL2
+
+  int op_code = OP_SORT_COL2;
+  uint32_t num_rows = 1024 * 1024;
+  uint32_t num_cols = 3;
+  // [int][string][int]
+  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + 1);
+  printf("single_row_size is %u\n", single_row_size);
+  uint8_t *input_rows = (uint8_t *) malloc(single_row_size * (num_rows + 2));
+
+  uint8_t *input_rows_ptr = input_rows;
+  uint32_t offset = 0;
+  for (uint32_t i = 0; i < num_rows; i++) {
+	offset = format_encrypt_row(input_rows_ptr, i, num_cols);
+	input_rows_ptr += offset;
+  }
+
+  //printf("Overall size is %u, %u\n", single_row_size * num_rows, (input_rows_ptr - input_rows));
+  ecall_oblivious_sort(global_eid, op_code, input_rows, single_row_size * num_rows, 0, num_rows);
+
+}
+
 /* Application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
@@ -751,10 +821,6 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 #endif 
     
-    char buf[32 * 1024];
-    char *buf_ptr = buf;
-    int integer = 1234;
-
     /* Initialize the enclave */
     if(initialize_enclave() < 0){
         printf("Enter a character before exit ...\n");
@@ -762,9 +828,7 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
-
-
-	ecall_test(global_eid);
+	test_enclave_sort();
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

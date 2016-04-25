@@ -244,11 +244,11 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	uint8_t *data_ptr_ = NULL;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-      // printf("list length is %u\n", list_length);
+	  //printf("list length is %u\n", list_length);
 	  
 	  get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	  
-      // printf("Got next row\n");
+      //printf("Got next row\n");
 
 	  data[i] = new SortRecord;
 	  SortRecord *rec = data[i];
@@ -258,9 +258,9 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  enc_row_ptr += 4;
 	  
 	  enc_value_ptr = enc_row_ptr;
-
-      // printf("Data item %u; has %u columns\n", i, columns);
-
+	  
+	  //printf("Data item %u; has %u columns\n", i, columns);
+	  
 	  // iterate through encrypted attributes, 
 	  for (uint32_t j = 0; j < columns; j++) {
 
@@ -286,13 +286,13 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	  rec->sort_attributes->init();
 	  rec->sort_attributes->evaluate();
-
+	  
 	  //rec->sort_attributes->print();
 	}
 	
 	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-	//printf("Sorted data\n");
+	printf("Sorted data\n");
 	
 	// TODO: need to return enrypted result
 
@@ -301,18 +301,14 @@ void ecall_oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	value_len = 0;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  
 	  //data[i]->sort_attributes->print();
-
+	  
 	  value_ptr = data[i]->row;
 	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
 	  input_ptr += 4;
 
-	  //printf("Num cols is %u\n", data[i]->num_cols);
-
 	  // need to encrypt each attribute separately
 	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
-
 		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
 
 		*( (uint32_t *)  input_ptr) = enc_size(value_len);
