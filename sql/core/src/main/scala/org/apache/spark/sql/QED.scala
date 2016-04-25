@@ -36,11 +36,19 @@ import org.apache.spark.sql.types.StringType
 
 object QED {
   def initEnclave(): (SGXEnclave, Long) = {
-    System.load(System.getenv("LIBSGXENCLAVE_PATH"))
-    val enclave = new SGXEnclave()
-    val eid = enclave.StartEnclave()
-    (enclave, eid)
+    if (eid == 0L) {
+      System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+      val enclave = new SGXEnclave()
+      eid = enclave.StartEnclave()
+      println("Starting an enclave")
+      (enclave, eid)
+    } else {
+      val enclave = new SGXEnclave()
+      (enclave, eid)
+    }
   }
+
+  var eid = 0L
 
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()

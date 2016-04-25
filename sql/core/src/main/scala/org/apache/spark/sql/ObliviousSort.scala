@@ -59,7 +59,7 @@ object ObliviousSort extends java.io.Serializable {
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
     val allRowsSorted = enclave.ObliviousSort(eid, opcode, concatRows, 0, nonEmptyRows.length)
-    enclave.StopEnclave(eid)
+    // enclave.StopEnclave(eid)
 
     // Copy rows back into values
     val sortedRowIter = QED.readRows(allRowsSorted)

@@ -133,7 +133,7 @@ case class EncAggregateWithSum(
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
       val boundary = enclave.Aggregate(
         eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value, concatRows, rows.length, new Array[Byte](aggSize))
-      enclave.StopEnclave(eid)
+      // enclave.StopEnclave(eid)
       Iterator(boundary)
     }
 
@@ -142,7 +142,7 @@ case class EncAggregateWithSum(
     val processedBoundariesConcat = enclave.ProcessBoundary(
       eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value,
       QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
-    enclave.StopEnclave(eid)
+    // enclave.StopEnclave(eid)
 
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
@@ -160,7 +160,7 @@ case class EncAggregateWithSum(
         val partialAgg = enclave.Aggregate(
           eid, OP_GROUPBY_COL2_SUM_COL3_STEP2.value, concatRows, rows.length, boundaryRecord)
         assert(partialAgg.nonEmpty)
-        enclave.StopEnclave(eid)
+        // enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
     }.cache()
 
