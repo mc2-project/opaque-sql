@@ -369,6 +369,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // TODO: for now do an assert; in the future, need to pad with dummy values
     assert(r >= 2 * math.pow(s, 2).toInt)
+    assert(len == r * s)
 
     val numPartitions = NumCores * NumMachines
     val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
