@@ -94,7 +94,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  ignore("encFilter") {
+  test("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
     val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
     assert(decrypt2(words.collect) === data)
@@ -103,7 +103,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
-  ignore("encPermute") {
+  test("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
       sqlContext.createDataFrame(
@@ -128,13 +128,13 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
-  ignore("encSort") {
+  test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
     assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
-  ignore("JNIEncrypt") {
+  test("JNIEncrypt") {
 
     def byteArrayToString(x: Array[Byte]) = {
       val loc = x.indexOf(0)
@@ -167,7 +167,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIObliviousSort1") {
+  test("JNIObliviousSort1") {
 
     val eid = enclave.StartEnclave()
 
@@ -236,7 +236,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
 
-  ignore("JNIObliviousSortRow") {
+  test("JNIObliviousSortRow") {
 
     val eid = enclave.StartEnclave()
 
@@ -321,7 +321,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
 
-  ignore("JNIFilterSingleRow") {
+  test("JNIFilterSingleRow") {
     val eid = enclave.StartEnclave()
 
     val filter_number : Int = 1233
@@ -359,7 +359,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIAggregation") {
+  test("JNIAggregation") {
 
     val eid = enclave.StartEnclave()
 
@@ -448,7 +448,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIJoin") {
+  test("JNIJoin") {
     val eid = enclave.StartEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
