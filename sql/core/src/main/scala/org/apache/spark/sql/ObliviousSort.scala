@@ -370,20 +370,25 @@ object ObliviousSort extends java.io.Serializable {
     // TODO: for now do an assert; in the future, need to pad with dummy values
     assert(r >= 2 * math.pow(s, 2).toInt)
 
+    val numPartitions = NumCores * NumMachines
     val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
-      .repartition(NumCores * NumMachines)
+      .repartition(numPartitions)
     par_data.count
 
     val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
 
     /* Alternative */
-    val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortStep3(x, r, s, opcode))
-    val par_data_final = par_data_intermediate.map(x => (x.column, (x.row, x.value))).groupByKey(s).flatMap(x => ColumnSortFinal(x, r, s, opcode))
+    val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
+    val par_data_final = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
+      .map(v => ((v._1, v._2._1), v._2._2))
+      .sortByKey()
     /* End Alternative */
 
     val count = par_data_final.count
 
-    par_data_final.map(_._2._2)
+    par_data_final.map(_._2)
   }
 
   def GenRandomData(offset: Int, len: Int): Seq[(Int, Int)] ={
