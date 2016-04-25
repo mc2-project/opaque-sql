@@ -614,14 +614,16 @@ void scan_aggregation_count_distinct(int op_code,
   
   *actual_output_rows_length = 0;
 
+  uint32_t num_output_rows = 0;
+
   for (uint32_t r = 0; r < num_rows; r++) {
 	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
 	enc_row_ptr += 4;
 
-    if (r == 0 && dummy == 0) {
-      // if the dummy is empty, it is the very first row of the current partition
+    if (r == 0) {
+	  // if the dummy is empty, it is the very first row of the current partition
 	  // put down marker for the previous row
 	  prev_row_ptr = enc_row_ptr - 4; 
 	  prev_row_len = enc_row_len;
@@ -629,18 +631,18 @@ void scan_aggregation_count_distinct(int op_code,
 	  current_agg.inc_distinct();
 	  
 	  // also copy the attribute information into current_agg
- 	  // find_attribute(enc_row_ptr, enc_row_len, num_cols,
+	  // find_attribute(enc_row_ptr, enc_row_len, num_cols,
 	  // 				 sort_attribute_num,
 	  // 				 &enc_value_ptr, &enc_value_len);
 	  // decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
 
 	  current_agg.rec->reset_row_ptr();
-      current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
+	  current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
 
 	  find_attribute(enc_row_ptr, enc_row_len, num_cols,
-	  				 agg_attribute_num,
-	  				 &enc_value_ptr, &enc_value_len);
+					 agg_attribute_num,
+					 &enc_value_ptr, &enc_value_len);
 	  decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
 
 	  current_agg.aggregate();
@@ -648,7 +650,7 @@ void scan_aggregation_count_distinct(int op_code,
 
 	  // cleanup
 	  enc_row_ptr += enc_row_len;
-
+	  
 	  continue;
 	}
 
@@ -706,8 +708,9 @@ void scan_aggregation_count_distinct(int op_code,
 	if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
 	  current_agg.aggregate();
 
-	  if (flag == 2 && mode == HIGH_AGG) {
+	  if (flag == 2 && mode == HIGH_AGG && r > 0) {
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
+		num_output_rows++;
 		//printf("-------------------------------------- OUTPUT --------------------------------------\n");
 		//prev_agg.print();
 		//printf("-------------------------------------- END OUTPUT --------------------------------------\n");
@@ -721,6 +724,7 @@ void scan_aggregation_count_distinct(int op_code,
 
 	  if (flag == 2 && mode == HIGH_AGG && r > 0) {
 		output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
+		num_output_rows++;
 		// printf("-------------------------------------- OUTPUT final --------------------------------------\n");
 		// prev_agg.print();
 		// printf("-------------------------------------- END OUTPUT --------------------------------------\n");
@@ -751,8 +755,10 @@ void scan_aggregation_count_distinct(int op_code,
 	  // compare current_agg with decrypted row
 	  if ((current_agg.cmp_sort_attr(&decrypted_row) == 0) && (offset < distinct_items - 1)) {
 		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, -1);
+		num_output_rows++;
 	  } else {
 		output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, 0);
+		num_output_rows++;
 		// printf("-------------------------------------- OUTPUT (final) --------------------------------------\n");
 		// current_agg.flush_all();
 		// current_agg.print();
@@ -768,6 +774,8 @@ void scan_aggregation_count_distinct(int op_code,
   if (flag == 2) {
 	//*cardinality = distinct_items;
   }
+
+  //printf("Num output rows is %u, received rows: %u\n", num_output_rows, num_rows);
   
 }
 
