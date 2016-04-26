@@ -12,18 +12,18 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
   *((uint32_t *) output_row_ptr) = num_cols;
   
   uint32_t input_offset = 4;
-  uint32_t output_offset = 0;
+  uint32_t output_offset = 4;
   
   for (uint32_t i = 0; i < num_cols; i++) {
-	value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE));
-	*((uint32_t *) output_row_ptr) = enc_size(value_len + HEADER_SIZE);
-	output_offset += HEADER_SIZE;
+    value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE)) + HEADER_SIZE;
+    *((uint32_t *) (output_row_ptr + output_offset)) = enc_size(value_len);
+    output_offset += LEN_SIZE;
 
-	//printf("[%u] value_len is %u\n", i, value_len);
+    // printf("[%u] value_len is %u\n", i, value_len);
 	encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
 	
-	input_offset += value_len + HEADER_SIZE;
-	output_offset += enc_size(value_len + HEADER_SIZE);
+    input_offset += value_len;
+    output_offset += enc_size(value_len);
   }
 
   return output_offset;
