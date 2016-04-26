@@ -91,6 +91,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
           QED.decrypt[D](enclave, eid, dEnc))
     }
   }
+  def decrypt5[A, B, C, D, E](rows: Seq[Row]): Seq[(A, B, C, D, E)] = {
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte], eEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc),
+          QED.decrypt[D](enclave, eid, dEnc),
+          QED.decrypt[E](enclave, eid, eEnc))
+    }
+  }
 
   val (enclave, eid) = QED.initEnclave()
 
@@ -121,7 +131,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       case 2 => "C"
     }
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val words = sparkContext.makeRDD(encrypt3(data), 2).toDF("id", "word", "count")
+    val words = sparkContext.makeRDD(encrypt3(data)).toDF("id", "word", "count")
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
     assert(decrypt2[String, Int](summed.collect) ===
@@ -132,6 +142,21 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
     assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
+  }
+
+  test("encJoin") {
+    val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
+    val p = sparkContext.makeRDD(encrypt3(p_data)).toDF("id", "pk", "x")
+    val f = sparkContext.makeRDD(encrypt3(f_data)).toDF("id", "fk", "x")
+    val joined = p.encJoin(f, $"pk", $"fk").collect
+    val expectedJoin =
+      for {
+        (p_id, pk, p_x) <- p_data
+        (f_id, fk, f_x) <- f_data
+        if pk == fk
+      } yield (p_id, pk, p_x, f_id, f_x)
+    assert(decrypt5[Int, String, Int, Int, Int](joined).toSet === expectedJoin.toSet)
   }
 
   test("JNIEncrypt") {

@@ -18,6 +18,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
+import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.storage.StorageLevel
 
@@ -62,7 +63,15 @@ object ObliviousSort extends java.io.Serializable {
     // enclave.StopEnclave(eid)
 
     // Copy rows back into values
-    val sortedRowIter = QED.readRows(allRowsSorted)
+    val sortedRowIter =
+      if (opcode == OP_JOIN_COL2.value) {
+        // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
+        // them evenly
+        QED.splitBytes(allRowsSorted, nonEmptyRows.length).iterator
+      } else {
+        // Rows may be different lengths but row format is standard, so we must parse each row
+        QED.readRows(allRowsSorted)
+      }
     for (row <- valuesSlice) {
       if (sortedRowIter.hasNext) {
         row.value = sortedRowIter.next()

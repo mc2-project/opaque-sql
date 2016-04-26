@@ -1001,6 +1001,13 @@ class Dataset[T] private[sql](
   }
 
   /**
+   * Equi-join this DataFrame on the specified columns assuming a primary-foreign relationship.
+   */
+  def encJoin(right: DataFrame, leftCol: Column, rightCol: Column): DataFrame = withPlan {
+    EncJoin(logicalPlan, right.logicalPlan, leftCol.expr, rightCol.expr)
+  }
+
+  /**
    * Filters rows using the given condition.
    * {{{
    *   // The following are equivalent:

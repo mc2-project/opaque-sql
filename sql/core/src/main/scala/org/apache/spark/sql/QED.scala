@@ -186,6 +186,21 @@ object QED {
     bytes.grouped(splitSize).toArray
   }
 
+  private def tableId(b: Byte): Array[Byte] = {
+    val buf = ByteBuffer.allocate(8)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    for (i <- 1 to 8) {
+      buf.put(b)
+    }
+    buf.flip()
+    val result = new Array[Byte](8)
+    buf.get(result)
+    result
+  }
+
+  def primaryTableId(): Array[Byte] = tableId('a')
+  def foreignTableId(): Array[Byte] = tableId('b')
+
   def genAndWriteData() = {
     // write this hard-coded set of columns to text file, in csv format
   }

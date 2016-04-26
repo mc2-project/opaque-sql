@@ -55,3 +55,14 @@ case class EncAggregateWithSum(
   override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
   override def maxRows: Option[Long] = child.maxRows
 }
+
+case class EncJoin(
+    left: LogicalPlan,
+    right: LogicalPlan,
+    leftCol: Expression,
+    rightCol: Expression)
+  extends BinaryNode {
+
+  override def output: Seq[Attribute] =
+    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+}

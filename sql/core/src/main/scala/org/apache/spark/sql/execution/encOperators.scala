@@ -180,3 +180,56 @@ case class EncAggregateWithSum(
     }
   }
 }
+
+case class EncSortMergeJoin(
+    left: SparkPlan,
+    right: SparkPlan,
+    leftCol: Expression,
+    rightCol: Expression)
+  extends BinaryNode {
+
+  override def output: Seq[Attribute] =
+    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+
+  override def doExecute() = {
+    val processed = left.execute().zipPartitions(right.execute()) { (leftRowIter, rightRowIter) =>
+      val (enclave, eid) = QED.initEnclave()
+
+      val leftRows = leftRowIter.map(_.encSerialize).toArray
+      val leftProcessed = enclave.JoinSortPreprocess(
+        eid, OP_JOIN_COL2.value, QED.primaryTableId,
+        QED.concatByteArrays(leftRows), leftRows.length)
+
+      val rightRows = rightRowIter.map(_.encSerialize).toArray
+      val rightProcessed = enclave.JoinSortPreprocess(
+        eid, OP_JOIN_COL2.value, QED.foreignTableId,
+        QED.concatByteArrays(rightRows), rightRows.length)
+
+      (QED.splitBytes(leftProcessed, leftRows.length).iterator ++
+        QED.splitBytes(rightProcessed, rightRows.length).iterator)
+    }
+
+    val sorted = ObliviousSort.ColumnSort(sparkContext, processed, OP_JOIN_COL2.value)
+
+    val (enclave, eid) = QED.initEnclave()
+    // TODO: parallelize this
+    val sortedCollected = sorted.collect
+    val lastPrimary = enclave.ScanCollectLastPrimary(
+      eid, OP_JOIN_COL2.value, QED.concatByteArrays(sortedCollected), sortedCollected.length)
+
+    // TODO: parallelize this
+    val joined = enclave.SortMergeJoin(
+      eid, OP_JOIN_COL2.value, QED.concatByteArrays(sortedCollected), sortedCollected.length,
+      lastPrimary)
+
+    // TODO: permute first, otherwise this is insecure
+    val nonDummy = QED.readRows(joined).filter(row =>
+      enclave.Filter(eid, OP_FILTER_COL4_NOT_DUMMY.value, row))
+
+    val finalRows = nonDummy.map(QED.parseRow).toArray.toSeq
+    sparkContext.parallelize(finalRows).mapPartitions { rowIter =>
+      val converter = UnsafeProjection.create(schema)
+      rowIter.map(row => converter(InternalRow.fromSeq(row)))
+    }
+  }
+}
