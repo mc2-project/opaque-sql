@@ -123,7 +123,8 @@ extern "C" {
 																				  jlong,
 																				  jint,
 																				  jbyteArray,
-																				  jint);
+                                                                                  jint,
+                                                                                  jbyteArray);
 	
 #ifdef __cplusplus
 }
