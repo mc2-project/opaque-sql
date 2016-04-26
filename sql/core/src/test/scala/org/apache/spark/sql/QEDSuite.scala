@@ -529,11 +529,12 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val sorted_rows = enclave.ObliviousSort(
       eid, OP_JOIN_COL2.value, processed_rows, 0, table_p_data.length + table_f_data.length)
 
-    // val join_row = enclave.ScanCollectLastPrimary(
-    //   eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length);
+    val join_row = enclave.ScanCollectLastPrimary(
+      eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length);
 
-    val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length)
-    
+    println(QED.decryptJoinRow(enclave, eid, join_row).toList)
+
+    val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length, join_row)
 
     enclave.StopEnclave(eid)
   }

@@ -83,7 +83,8 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long,
     op_code: Int,
     input_rows: Array[Byte],
-    num_rows: Int
+    num_rows: Int,
+    join_row: Array[Byte]
   ): Array[Byte]
 
 }

@@ -703,7 +703,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 																				jlong eid,
 																				jint op_code,
 																				jbyteArray input_rows,
-																				jint num_rows) {
+                                                                                jint num_rows,
+                                                                                jbyteArray join_row) {
 
   jboolean if_copy;
 
@@ -713,15 +714,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
   uint32_t output_length = (ENC_HEADER_SIZE + 2 * JOIN_ROW_UPPER_BOUND) * num_rows;
   uint8_t *output = (uint8_t *) malloc(output_length);
 
-  uint8_t join_row[ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND];
-  uint32_t join_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
-  memset(join_row, 0, join_row_length);
+  uint32_t join_row_length = (uint32_t) env->GetArrayLength(join_row);
+  uint8_t *join_row_ptr = (uint8_t *) env->GetByteArrayElements(join_row, &if_copy);
 
   ecall_sort_merge_join(eid,
 						op_code,
 						input_rows_ptr, input_rows_length,
 						num_rows,
-						join_row, join_row_length,
+                        join_row_ptr, join_row_length,
 						output, output_length);
 
   jbyteArray ret = env->NewByteArray(output_length);
