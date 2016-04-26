@@ -181,7 +181,7 @@ void get_join_attribute(int op_code,
 	  }	  
 	}
   } else {
-	// not yet implemented!
+    printf("get_join_attribute: Unknown opcode %d\n", op_code);
 	assert(false);
   }
 
@@ -316,7 +316,8 @@ void sort_merge_join(int op_code,
                        primary_row + TABLE_ID_SIZE + 4, 0,
 					   &primary_join_attr);
   } else {
-    // printf("Join row is a dummy!\n");
+    printf("Join row is a dummy!\n");
+    assert(false);
   }
   
   // construct dummy rows
@@ -347,7 +348,10 @@ void sort_merge_join(int op_code,
 	  dummy_row_ptr += 4;
 	  dummy_row_ptr += upper_bound;
 	}
+  } else {
+    assert(false);
   }
+
 
   dummy_row_ptr = dummy_row;
 
