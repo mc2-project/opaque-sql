@@ -312,7 +312,7 @@ void sort_merge_join(int op_code,
 	assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
 	num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
 	get_join_attribute(op_code, num_cols,
-					   primary_row + TABLE_ID_SIZE, 0,
+                       primary_row + TABLE_ID_SIZE + 4, 0,
 					   &primary_join_attr);
   } else {
     // printf("Join row is a dummy!\n");
