@@ -401,7 +401,11 @@ object Catalyst {
       import sys.process._
       Seq("sql/enclave/build.sh") !
     },
-    baseDirectory in enclaveBuildTask := file("/home/ankurd/sparksgx/"))
+    baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value,
+    compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask),
+    watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
+      ((base / "sql/enclave") ** (("*.cpp" || "*.h") -- "Enclave_u.h" -- "Enclave_t.h")).get
+    })
   lazy val settings = Seq(
     // ANTLR code-generation step.
     //
@@ -452,11 +456,8 @@ object Catalyst {
     // Include ANTLR tokens files.
     resourceGenerators in Compile += Def.task {
       ((sourceManaged in Compile).value ** "*.tokens").get.toSeq
-    }.taskValue) ++
-  // Build enclave code
-  enclaveBuildSettings ++
-  Seq(
-    compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask))
+    }.taskValue
+  ) ++ enclaveBuildSettings
 }
 
 object SQL {
