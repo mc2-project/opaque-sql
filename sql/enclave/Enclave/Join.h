@@ -31,6 +31,7 @@ void sort_merge_join(int op_code,
 					 uint8_t *input_rows, uint32_t input_rows_length,
 					 uint32_t num_rows,
 					 uint8_t *join_row, uint32_t join_row_length,
-					 uint8_t *output, uint32_t output_length);
+                     uint8_t *output, uint32_t output_length,
+                     uint32_t *actual_output_length);
 
 #endif

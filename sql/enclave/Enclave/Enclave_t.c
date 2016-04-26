@@ -122,6 +122,7 @@ typedef struct ms_ecall_sort_merge_join_t {
 	uint32_t ms_join_row_length;
 	uint8_t* ms_output_rows;
 	uint32_t ms_output_rows_length;
+	uint32_t* ms_actual_output_length;
 } ms_ecall_sort_merge_join_t;
 
 typedef struct ms_ecall_join_sort_preprocess_t {
@@ -873,10 +874,14 @@ static sgx_status_t SGX_CDECL sgx_ecall_sort_merge_join(void* pms)
 	uint32_t _tmp_output_rows_length = ms->ms_output_rows_length;
 	size_t _len_output_rows = _tmp_output_rows_length;
 	uint8_t* _in_output_rows = NULL;
+	uint32_t* _tmp_actual_output_length = ms->ms_actual_output_length;
+	size_t _len_actual_output_length = 4;
+	uint32_t* _in_actual_output_length = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_sort_merge_join_t));
 	CHECK_UNIQUE_POINTER(_tmp_join_row, _len_join_row);
 	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
+	CHECK_UNIQUE_POINTER(_tmp_actual_output_length, _len_actual_output_length);
 
 	if (_tmp_join_row != NULL) {
 		_in_join_row = (uint8_t*)malloc(_len_join_row);
@@ -901,12 +906,24 @@ static sgx_status_t SGX_CDECL sgx_ecall_sort_merge_join(void* pms)
 
 		memset((void*)_in_output_rows, 0, _len_output_rows);
 	}
-	ecall_sort_merge_join(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_join_row, ms->ms_join_row_length, _in_output_rows, _tmp_output_rows_length);
+	if (_tmp_actual_output_length != NULL) {
+		if ((_in_actual_output_length = (uint32_t*)malloc(_len_actual_output_length)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_actual_output_length, 0, _len_actual_output_length);
+	}
+	ecall_sort_merge_join(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_join_row, ms->ms_join_row_length, _in_output_rows, _tmp_output_rows_length, _in_actual_output_length);
 err:
 	if (_in_join_row) free(_in_join_row);
 	if (_in_output_rows) {
 		memcpy(_tmp_output_rows, _in_output_rows, _len_output_rows);
 		free(_in_output_rows);
+	}
+	if (_in_actual_output_length) {
+		memcpy(_tmp_actual_output_length, _in_actual_output_length, _len_actual_output_length);
+		free(_in_actual_output_length);
 	}
 
 	return status;
