@@ -266,7 +266,8 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t temp[STRING_UPPER_BOUND];
 
   switch (attr_type) {
-	
+
+  case FLOAT:
   case INT:
 	{
 	  // value is always 4 bytes
@@ -308,6 +309,18 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	  output_ptr += 4 + enc_size(HEADER_SIZE + upper_bound);
 	}
 
+	break;
+
+  case DATE:
+	{
+	  // value is always 8 bytes
+	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + 8);
+	  output_ptr += 8;
+	  encrypt(input_ptr, HEADER_SIZE + 8, output_ptr);
+
+	  input_ptr += HEADER_SIZE + 8;
+	  output_ptr += 8 + enc_size(HEADER_SIZE + 8);
+	}
 	break;
   }
 

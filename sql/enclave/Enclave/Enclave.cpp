@@ -299,8 +299,8 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		assert(enc_value_ptr <= input_ptr);
 		// [enc len]encrypted{[value type][value len][value]}
 
-		enc_value_len = *( (uint32_t *) enc_value_ptr);
-		enc_value_ptr += 4;
+		// enc_value_len = *( (uint32_t *) enc_value_ptr);
+		// enc_value_ptr += 4;
 		
 		// value_len includes the type's length as well
 		//value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);

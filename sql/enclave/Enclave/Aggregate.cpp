@@ -412,14 +412,18 @@ public:
   uint32_t output_enc_row(uint8_t *output, int if_final) {
 	// simply output all records from rec, and also flush agg_data's value as an extra row
 	uint8_t temp[PARTIAL_AGG_UPPER_BOUND];
+	uint8_t *temp_ptr = temp;
 	uint32_t ret = rec->flush_encrypt_all_attributes(output);
     *((uint32_t*) output) = rec->num_cols + 1;
+
+	uint8_t *output_ptr = output + ret;
 	
     uint32_t len = agg_data->flush(temp, if_final);
-	*( (uint32_t *) (output + ret) ) = enc_size(len);
-	encrypt(temp, len, output + ret + 4);
+	// *( (uint32_t *) (output + ret) ) = enc_size(len);
+	// encrypt(temp, len, output + ret + 4);
+	encrypt_attribute(&temp_ptr, &output_ptr);
 
-	return ret + 4 + enc_size(len);
+	return (output_ptr - output);
   }
 
   uint32_t *distinct_entries;
