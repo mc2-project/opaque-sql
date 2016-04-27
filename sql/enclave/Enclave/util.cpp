@@ -263,7 +263,7 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t attr_type = *input_ptr;
   uint32_t attr_len = 0;
   
-  uint8_t temp[STRING_UPPER_BOUND];
+  uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
   switch (attr_type) {
 
@@ -306,6 +306,8 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	  cpy(temp, input_ptr, HEADER_SIZE + attr_len);
 	  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
 
+	  //printf("enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
+	  
 	  input_ptr += HEADER_SIZE + attr_len;
 	  output_ptr += enc_size(HEADER_SIZE + upper_bound);
 	}
@@ -335,9 +337,11 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t *output_ptr = *output;
 
   uint32_t enc_len = *( (uint32_t *) (input_ptr));
+  //printf("enc_len is %u\n", enc_len);
+  
   input_ptr += 4;
   
-  uint8_t temp[STRING_UPPER_BOUND];
+  uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
   decrypt(input_ptr, enc_len, temp);
 
@@ -347,27 +351,6 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   cpy(output_ptr, temp, HEADER_SIZE + attr_len);
   input_ptr += enc_len;
   output_ptr += HEADER_SIZE + attr_len;
-	  
-  // switch (attr_type) {
-	
-  // case INT:
-  // 	{
-  // 	  cpy(output_ptr, temp, HEADER_SIZE + 4);
-  // 	  input_ptr += 4 + enc_size(HEADER_SIZE + 4);
-  // 	  output_ptr += HEADER_SIZE + 4;
-  // 	}
-
-  // 	break;
-	
-  // case STRING:
-  // 	{
-  // 	  cpy(output_ptr, temp, HEADER_SIZE + attr_len);
-  // 	  input_ptr += 4 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
-  // 	  output_ptr += HEADER_SIZE + attr_len;
-  // 	}
-
-  // 	break;
-  // }
 
   *input = input_ptr;
   *output = output_ptr;

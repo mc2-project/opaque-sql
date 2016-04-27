@@ -70,7 +70,8 @@ object QED {
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
     buf.get(bytes)
-    enclave.EncryptAttribute(eid, bytes)
+    val encrypted_value = enclave.EncryptAttribute(eid, bytes)
+    encrypted_value
   }
 
   def decrypt[T](enclave: SGXEnclave, eid: Long, bytes: Array[Byte]): T = {
@@ -85,7 +86,6 @@ object QED {
       case 2 =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
-        assert(!buf.hasRemaining)
         new String(sBytes, "UTF-8")
     }
     result.asInstanceOf[T]

@@ -386,7 +386,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(JNIEnv
   jbyteArray ciphertext = env->NewByteArray(clength);
   uint8_t *ciphertext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
 
-  uint8_t ciphertext_copy[100];
+  uint8_t ciphertext_copy[2048];
   
   //printf("Encrypt(): plength is %u\n", plength);
 
@@ -413,10 +413,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
   const jsize plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
   jbyteArray plaintext = env->NewByteArray(plength);
 
-  uint8_t plaintext_copy[100];
+  uint8_t plaintext_copy[2048];
   
-  //printf("Decrypt(): plength is %u\n", plength);
-
   ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength);
 
   env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
@@ -437,17 +435,20 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
   
   uint8_t *plaintext_ptr = (uint8_t *) ptr;
 
-  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-  jbyteArray ciphertext = env->NewByteArray(clength);
-  uint8_t *ciphertext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
+  uint32_t ciphertext_length = 4 + ENC_HEADER_SIZE + HEADER_SIZE + ATTRIBUTE_UPPER_BOUND;
+  uint8_t *ciphertext_copy = (uint8_t *) malloc(ciphertext_length);
 
-  uint8_t *ciphertext_copy = (uint8_t *) malloc(ATTRIBUTE_UPPER_BOUND + ENC_HEADER_SIZE + 4);
   uint32_t actual_size = 0;
   
   ecall_encrypt_attribute(eid, plaintext_ptr, plength,
-						  ciphertext_copy, (uint32_t) clength, &actual_size);
+						  ciphertext_copy, (uint32_t) ciphertext_length,
+						  &actual_size);
 
-  env->SetByteArrayRegion(ciphertext, 0, actual_size, (jbyte *) ciphertext_copy);
+  //printf("actual size is %u, ciphertext_length is %u, enc_len is %u\n", actual_size, ciphertext_length,
+  //*((uint32_t *) ciphertext_copy));
+
+  jbyteArray ciphertext = env->NewByteArray(actual_size - 4);
+  env->SetByteArrayRegion(ciphertext, 0, actual_size - 4, (jbyte *) (ciphertext_copy + 4));
 
   env->ReleaseByteArrayElements(plaintext, ptr, 0);
 
@@ -495,8 +496,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 	
 	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows);
 	
-	//printf("Only sorting on one partition\n");
-	//print_error_message(status);
+	printf("Only sorting on one partition, input_len is %u\n", input_len);
+	print_error_message(status);
   } else {
 
 	// try to split the input into partitions if it's too big
@@ -524,7 +525,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 	  buffer_list[i] = input_ptr;
 	  if (i == num_part - 1) {
 		num_rows[i] = num_items - elements_per_part * i;
-		buffer_sizes[i] = elements_per_part * element_size;
+		buffer_sizes[i] = input_len - (input_ptr - input_copy);
 	  } else {
 		num_rows[i] = elements_per_part;
 		buffer_sizes[i] = elements_per_part * element_size;

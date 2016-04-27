@@ -252,7 +252,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
     // Sorting rows
 	// this needs to sort a row of data
 
-	//printf("op_code called is %u\n", op_code);
+	printf("op_code called is %u\n", op_code);
 	
     SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
 	if (data == NULL) {
@@ -299,15 +299,15 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		assert(enc_value_ptr <= input_ptr);
 		// [enc len]encrypted{[value type][value len][value]}
 
-		// enc_value_len = *( (uint32_t *) enc_value_ptr);
+		//enc_value_len = *( (uint32_t *) enc_value_ptr);
 		// enc_value_ptr += 4;
+		//printf("enc_value_len is %u\n", enc_value_len);
 		
 		// value_len includes the type's length as well
 		//value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
 		//decrypt(enc_value_ptr, enc_value_len, data_ptr_);
 		
-		//rec->consume_encrypted_attribute(enc_value_ptr, enc_value_len);
 		rec->consume_encrypted_attribute(&enc_value_ptr);
 		
 		//enc_value_ptr += enc_value_len;
@@ -324,7 +324,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	
 	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-	//printf("Sorted data\n");
+	printf("Sorted data\n");
 	
 	// TODO: need to return enrypted result
 
@@ -361,8 +361,8 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		//input_ptr += enc_size(value_len);
 	  }
 	}
-    // printf("Encrypted data\n");
-	// printf("Encrypted data's length is %u\n", (input_ptr - input));
+    printf("Encrypted data\n");
+ 	//printf("Encrypted data's length is %u\n", (input_ptr - input));
 
 	// TODO: free data, including record pointers
 
@@ -477,8 +477,6 @@ void ecall_external_oblivious_sort(int op_code,
 
   // TODO: another alternative is to first sort each buffer, and then just merge them together
   
-  //printf("Trying to sort on multiple partitions!\n");
-  //assert(false);
   
   for (int stage = 1; stage <= log_len; stage++) {
 
@@ -502,11 +500,15 @@ void ecall_external_oblivious_sort(int op_code,
 			  uint32_t buffer1_size = buffer_lengths[idx];
 			  uint32_t buffer2_size = buffer_lengths[pair_idx];
 
-			  assert((buffer1_size + buffer2_size) < MAX_SORT_BUFFER);
+			  if ((buffer1_size + buffer2_size) > MAX_SORT_BUFFER) {
+				printf("assert failed\n");
+				assert((buffer1_size + buffer2_size) <= MAX_SORT_BUFFER);
+			  }
 			  
 			  cpy(internal_buffer, buffer1_ptr, buffer1_size);
 			  cpy(internal_buffer + buffer1_size, buffer2_ptr, buffer2_size);
 
+			  //printf("Sorting on %u and %u\n", idx, pair_idx);
 			  // sort these two buffers
 			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
 
@@ -533,11 +535,15 @@ void ecall_external_oblivious_sort(int op_code,
 			  uint32_t buffer1_size = buffer_lengths[idx];
 			  uint32_t buffer2_size = buffer_lengths[pair_idx];
 
-			  assert(buffer1_size < MAX_SORT_BUFFER && buffer2_size < MAX_SORT_BUFFER);
+			  if ((buffer1_size + buffer2_size) > MAX_SORT_BUFFER) {
+				printf("assert failed\n");
+				assert((buffer1_size + buffer2_size) <= MAX_SORT_BUFFER);
+			  }
 			  
 			  cpy(internal_buffer, buffer1_ptr, buffer1_size);
 			  cpy(internal_buffer + buffer1_size, buffer2_ptr, buffer2_size);
 
+			  //printf("Sorting on %u and %u\n", idx, pair_idx);
 			  // sort these two buffers
 			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
 
@@ -699,13 +705,12 @@ void ecall_sort_merge_join(int op_code,
 
 /**** END Join ****/
 
-
-
 void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
-						uint8_t *output, uint32_t output_size,
-						uint32_t *actual_size) {
+							 uint8_t *output, uint32_t output_size,
+							 uint32_t *actual_size) {
   uint8_t *input_ptr = input;
   uint8_t *output_ptr = output;
+
   encrypt_attribute(&input_ptr, &output_ptr);
   *actual_size = (output_ptr - output);
 }
