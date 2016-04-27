@@ -54,7 +54,7 @@ object QED {
   val decoder = new BASE64Decoder()
 
   def encrypt[T](enclave: SGXEnclave, eid: Long, field: T): Array[Byte] = {
-    val buf = ByteBuffer.allocate(100)
+    val buf = ByteBuffer.allocate(2048) // TODO: adaptive size
     buf.order(ByteOrder.LITTLE_ENDIAN)
     field match {
       case x: Int =>
@@ -70,7 +70,7 @@ object QED {
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
     buf.get(bytes)
-    enclave.Encrypt(eid, bytes)
+    enclave.EncryptAttribute(eid, bytes)
   }
 
   def decrypt[T](enclave: SGXEnclave, eid: Long, bytes: Array[Byte]): T = {
