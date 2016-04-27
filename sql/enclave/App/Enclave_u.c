@@ -88,13 +88,13 @@ typedef struct ms_ecall_scan_collect_last_primary_t {
 } ms_ecall_scan_collect_last_primary_t;
 
 typedef struct ms_ecall_process_join_boundary_t {
+	int ms_op_code;
 	uint8_t* ms_input_rows;
 	uint32_t ms_input_rows_length;
 	uint32_t ms_num_rows;
 	uint8_t* ms_output_rows;
 	uint32_t ms_output_rows_size;
-	uint8_t* ms_enc_table_p;
-	uint8_t* ms_enc_table_f;
+	uint32_t* ms_actual_output_length;
 } ms_ecall_process_join_boundary_t;
 
 typedef struct ms_ecall_sort_merge_join_t {
@@ -557,17 +557,17 @@ sgx_status_t ecall_scan_collect_last_primary(sgx_enclave_id_t eid, int op_code, 
 	return status;
 }
 
-sgx_status_t ecall_process_join_boundary(sgx_enclave_id_t eid, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output_rows, uint32_t output_rows_size, uint8_t* enc_table_p, uint8_t* enc_table_f)
+sgx_status_t ecall_process_join_boundary(sgx_enclave_id_t eid, int op_code, uint8_t* input_rows, uint32_t input_rows_length, uint32_t num_rows, uint8_t* output_rows, uint32_t output_rows_size, uint32_t* actual_output_length)
 {
 	sgx_status_t status;
 	ms_ecall_process_join_boundary_t ms;
+	ms.ms_op_code = op_code;
 	ms.ms_input_rows = input_rows;
 	ms.ms_input_rows_length = input_rows_length;
 	ms.ms_num_rows = num_rows;
 	ms.ms_output_rows = output_rows;
 	ms.ms_output_rows_size = output_rows_size;
-	ms.ms_enc_table_p = enc_table_p;
-	ms.ms_enc_table_f = enc_table_f;
+	ms.ms_actual_output_length = actual_output_length;
 	status = sgx_ecall(eid, 12, &ocall_table_Enclave, &ms);
 	return status;
 }

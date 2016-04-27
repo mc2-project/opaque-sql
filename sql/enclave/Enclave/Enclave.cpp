@@ -505,15 +505,15 @@ void ecall_scan_collect_last_primary(int op_code,
 							output, output_length);
 }
 
-void ecall_process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
+void ecall_process_join_boundary(int op_code,
+                                 uint8_t *input_rows, uint32_t input_rows_length,
 								 uint32_t num_rows,
-								 uint8_t *output_rows, uint32_t output_rows_size,
-								 uint8_t *enc_table_p, uint8_t *enc_table_f) {
+                                 uint8_t *output_rows, uint32_t output_rows_size,
+                                 uint32_t *actual_output_length) {
   
-  process_join_boundary(input_rows, input_rows_length,
+  process_join_boundary(op_code, input_rows, input_rows_length,
 						num_rows,
-						output_rows, output_rows_size,
-						enc_table_p, enc_table_f);
+                        output_rows, output_rows_size, actual_output_length);
 	
 }
 

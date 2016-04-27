@@ -79,6 +79,13 @@ class SGXEnclave extends java.io.Serializable {
     num_rows: Int
   ): Array[Byte]
 
+  @native def ProcessJoinBoundary(
+    eid: Long,
+    op_code: Int,
+    input_rows: Array[Byte],
+    num_rows: Int
+  ): Array[Byte]
+
   @native def SortMergeJoin(
     eid: Long,
     op_code: Int,

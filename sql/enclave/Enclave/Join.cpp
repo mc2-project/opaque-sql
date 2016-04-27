@@ -465,11 +465,12 @@ void scan_collect_last_primary(int op_code,
 
 
 // collect and process boundary records
-void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
+void process_join_boundary(int op_code,
+                           uint8_t *input_rows, uint32_t input_rows_length,
 						   uint32_t num_rows,
-						   uint8_t *output_rows, uint32_t output_rows_size,
-						   uint8_t *enc_table_p, uint8_t *enc_table_f) {
-  
+                           uint8_t *output_rows, uint32_t output_rows_size,
+                           uint32_t *actual_output_length) {
+
   uint8_t *input_rows_ptr = input_rows;
   uint8_t *output_rows_ptr = output_rows;
   
@@ -509,6 +510,6 @@ void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
 	input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	output_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
   }
-  
-}
 
+  *actual_output_length = output_rows_ptr - output_rows;
+}

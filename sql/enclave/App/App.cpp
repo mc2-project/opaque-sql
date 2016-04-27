@@ -667,6 +667,34 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   return ret;  
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBoundary(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows) {
+
+  jboolean if_copy;
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+  uint32_t row_length = 0;
+
+  uint32_t single_row_length = ENC_JOIN_ROW_UPPER_BOUND;
+  uint32_t output_rows_length = single_row_length * num_rows;
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+  uint8_t *output_rows_ptr = output_rows;
+  uint32_t actual_output_length = 0;
+
+  ecall_process_join_boundary(eid, op_code, input_rows_ptr, input_rows_length, num_rows,
+                              output_rows_ptr, output_rows_length, &actual_output_length);
+
+  jbyteArray ret = env->NewByteArray(actual_output_length);
+  env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *env, 
 																						 jobject obj, 
 																						 jlong eid,

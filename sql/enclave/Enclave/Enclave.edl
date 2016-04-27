@@ -61,11 +61,11 @@ enclave {
 									             uint32_t num_rows,
 									             [out, size=output_length] uint8_t *output, uint32_t output_length);
 
-	 public void ecall_process_join_boundary([user_check] uint8_t *input_rows, uint32_t input_rows_length,
+     public void ecall_process_join_boundary(int op_code,
+                                             [user_check] uint8_t *input_rows, uint32_t input_rows_length,
 						                     uint32_t num_rows,
-						                     [out, size=output_rows_size] uint8_t *output_rows, uint32_t output_rows_size,
-						                     [in, sizefunc=enc_table_id_size] uint8_t *enc_table_p,
-											 [in, sizefunc=enc_table_id_size] uint8_t *enc_table_f);
+                                             [out, size=output_rows_size] uint8_t *output_rows, uint32_t output_rows_size,
+                                             [out, size=4] uint32_t *actual_output_length);
 
 	 public void ecall_sort_merge_join(int op_code,
 						               [user_check] uint8_t *input_rows, uint32_t input_rows_length,
