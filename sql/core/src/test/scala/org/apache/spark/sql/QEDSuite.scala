@@ -521,14 +521,14 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val buffer = ByteBuffer.allocate(128)
     buffer.order(ByteOrder.LITTLE_ENDIAN)
-    val enc_table_p_id = new Array[Byte](8)
-    val enc_table_f_id = new Array[Byte](8)
+    val table_p_id = new Array[Byte](8)
+    val table_f_id = new Array[Byte](8)
 
     for (i <- 1 to 8) {
       buffer.put("a".getBytes)
     }
     buffer.flip()
-    buffer.get(enc_table_p_id)
+    buffer.get(table_p_id)
 
     buffer.clear()
 
@@ -536,15 +536,15 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       buffer.put("b".getBytes)
     }
     buffer.flip()
-    buffer.get(enc_table_f_id)
+    buffer.get(table_f_id)
 
     val enc_table_p = encrypt_and_serialize(table_p_data)
     val enc_table_f = encrypt_and_serialize(table_f_data)
 
     val processed_table_p = enclave.JoinSortPreprocess(
-      eid, OP_JOIN_COL2.value, enc_table_p_id, enc_table_p, table_p_data.length)
+      eid, OP_JOIN_COL2.value, table_p_id, enc_table_p, table_p_data.length)
     val processed_table_f = enclave.JoinSortPreprocess(
-      eid, OP_JOIN_COL2.value, enc_table_f_id, enc_table_f, table_f_data.length)
+      eid, OP_JOIN_COL2.value, table_f_id, enc_table_f, table_f_data.length)
 
     // merge the two buffers together
     val processed_rows = processed_table_p ++ processed_table_f
@@ -557,7 +557,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val join_row = enclave.ScanCollectLastPrimary(
       eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length);
 
-    val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows, table_p_data.length + table_f_data.length, join_row)
+    val processed_join_row = enclave.ProcessJoinBoundary(
+      eid, OP_JOIN_COL2.value, join_row, 1)
+
+    val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows,
+      table_p_data.length + table_f_data.length, processed_join_row)
 
     enclave.StopEnclave(eid)
   }
