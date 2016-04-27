@@ -332,6 +332,48 @@ void Date::print() {
 
 /*** Date ***/
 
+
+/*** URL ***/
+
+URL::URL() {
+  type_ = URL_TYPE;
+}
+
+void URL::print() {
+  printf("URL attr: %.*s\n", this->length, this->data);
+}
+
+/*** URL ***/
+
+
+/*** CountryCode ***/
+
+CountryCode::CountryCode() {
+  type_ = C_CODE;
+}
+
+void CountryCode::print() {
+  printf("CountryCode attr: %.*s\n", this->length, this->data);
+}
+
+/*** CountryCode ***/
+
+
+
+/*** LanguageCode ***/
+
+LanguageCode::LanguageCode() {
+  type_ = L_CODE;
+}
+
+void LanguageCode::print() {
+  printf("LangaugeCode attr: %.*s\n", this->length, this->data);
+}
+
+/*** LanguageCode ***/
+
+
+
 /*** GROUPED ATTRIBUTES ***/
 GroupedAttributes::GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) {
   this->row = row_ptr;

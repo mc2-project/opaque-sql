@@ -281,16 +281,31 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	break;
 	
   case STRING:
+  case URL:
+  case C_CODE:
+  case L_CODE:
 	{
 	  // fixed upper bound length is STRING_UPPER_BOUND
-	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
+	  uint32_t upper_bound = 0;
+	  if (attr_type == STRING) {
+		upper_bound = STRING_UPPER_BOUND;
+	  } else if (attr_type == URL) {
+		upper_bound = URL_UPPER_BOUND;
+	  } else if (attr_type == C_CODE) {
+		upper_bound = C_CODE_UPPER_BOUND;
+	  } else if (attr_type == L_CODE) {
+		upper_bound = L_CODE_UPPER_BOUND;
+	  }
+
+	  
+	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + upper_bound);
 	  output_ptr += 4;
 	  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
 	  cpy(temp, input_ptr, HEADER_SIZE + attr_len);
-	  encrypt(temp, HEADER_SIZE + STRING_UPPER_BOUND, output_ptr);
+	  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
 
 	  input_ptr += HEADER_SIZE + attr_len;
-	  output_ptr += 4 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
+	  output_ptr += 4 + enc_size(HEADER_SIZE + upper_bound);
 	}
 
 	break;
@@ -306,6 +321,7 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t *output_ptr = *output;
 
   uint32_t enc_len = *( (uint32_t *) (input_ptr));
+  input_ptr += 4;
   
   uint8_t temp[STRING_UPPER_BOUND];
 
@@ -313,27 +329,31 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
 
   uint8_t attr_type = *temp;
   uint32_t attr_len = *( (uint32_t *) (temp + TYPE_SIZE));
+
+  cpy(output_ptr, temp, HEADER_SIZE + attr_len);
+  input_ptr += enc_len;
+  output_ptr += HEADER_SIZE + attr_len;
 	  
-  switch (attr_type) {
+  // switch (attr_type) {
 	
-  case INT:
-	{
-	  cpy(output_ptr, temp, HEADER_SIZE + 4);
-	  input_ptr += 4 + enc_size(HEADER_SIZE + 4);
-	  output_ptr += HEADER_SIZE + 4;
-	}
+  // case INT:
+  // 	{
+  // 	  cpy(output_ptr, temp, HEADER_SIZE + 4);
+  // 	  input_ptr += 4 + enc_size(HEADER_SIZE + 4);
+  // 	  output_ptr += HEADER_SIZE + 4;
+  // 	}
 
-	break;
+  // 	break;
 	
-  case STRING:
-	{
-	  cpy(output_ptr, temp, HEADER_SIZE + attr_len);
-	  input_ptr += 4 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
-	  output_ptr += HEADER_SIZE + attr_len;
-	}
+  // case STRING:
+  // 	{
+  // 	  cpy(output_ptr, temp, HEADER_SIZE + attr_len);
+  // 	  input_ptr += 4 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
+  // 	  output_ptr += HEADER_SIZE + attr_len;
+  // 	}
 
-	break;
-  }
+  // 	break;
+  // }
 
   *input = input_ptr;
   *output = output_ptr;

@@ -177,6 +177,35 @@ class Date : public GenericType {
 
 };
 
+class URL : public String {
+
+ public:
+  URL();
+
+  ~URL() {}
+
+  void print();
+};
+
+class CountryCode : public String {
+
+ public:
+  CountryCode();
+
+  ~CountryCode() {}
+
+  void print();
+};
+
+class LanguageCode : public String {
+
+ public:
+  LanguageCode();
+
+  ~LanguageCode() {}
+
+  void print();
+};
 
 // given an attribute in serialized form (i.e. buffer form)
 // return the appropriate GenericType
