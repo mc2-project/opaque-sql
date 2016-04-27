@@ -698,16 +698,23 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   uint32_t enc_len = 0;
   uint32_t total_len = 4;
   for (uint32_t i = 0; i < this->num_cols; i++) {
-	enc_len = *( (uint32_t *) (input_row_ptr));
-	input_row_ptr += 4;
-	decrypt(input_row_ptr, enc_len, row_ptr);
+	// enc_len = *( (uint32_t *) (input_row_ptr));
+	// input_row_ptr += 4;
+	// decrypt(input_row_ptr, enc_len, row_ptr);
 	
-	input_row_ptr += enc_len;
-	row_ptr += dec_size(enc_len);
-	total_len += enc_len;
+	// input_row_ptr += enc_len;
+	// row_ptr += dec_size(enc_len);
+	// total_len += enc_len;
+
+	decrypt_attribute(&input_row_ptr, &row_ptr);
   }
 
   return total_len;
+}
+
+void Record::consume_encrypted_attribute(uint8_t **enc_value_ptr) {
+  decrypt_attribute(enc_value_ptr, &row_ptr);
+  num_cols += 1;
 }
 
 /*** RECORD ***/
@@ -743,17 +750,19 @@ uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
   output_ptr += 4;
 
   uint8_t temp[ROW_UPPER_BOUND];
+  uint8_t *temp_ptr = temp;
 
   for (uint32_t i = 0; i < attrs->num_eval_attr; i++) {
 	
 	attrs->eval_attributes[i]->flush(temp);
+	encrypt_attribute(&temp_ptr, &output_ptr);
 	
-	value_len = *( (uint32_t *) (temp + TYPE_SIZE));
-	*( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
+	// value_len = *( (uint32_t *) (temp + TYPE_SIZE));
+	// *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
 	
-	encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
+	// encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
 	
-	output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
+	// output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
   return (output_ptr - output);
@@ -898,13 +907,14 @@ uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
   output_ptr += 4;
 
   for (uint32_t i = 0; i < this->num_cols; i++) {
-	value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
-	*( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
+	encrypt_attribute(&input_ptr, &output_ptr);
+	// value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
+ 	// *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
 	
-	encrypt(input_ptr, value_len + HEADER_SIZE, output_ptr + 4);
+	// encrypt(input_ptr, value_len + HEADER_SIZE, output_ptr + 4);
 	
-	input_ptr += value_len + HEADER_SIZE;
-	output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
+	// input_ptr += value_len + HEADER_SIZE;
+	// output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
   return (output_ptr - output);

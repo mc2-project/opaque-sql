@@ -454,6 +454,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     //printf("input_copy is %u\n", input_copy[i]);
   }
 
+  printf("input len is %u, MAX_SORT_BUFFER is %u\n", input_len, MAX_SORT_BUFFER);
+
   if (input_len < MAX_SORT_BUFFER) {
 
 	uint8_t *buffer_list[1] = {input_copy};
@@ -469,11 +471,18 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
 	// try to split the input into partitions if it's too big
 	uint32_t element_size = input_len / num_items;
-	uint32_t elements_per_part = MAX_SORT_BUFFER / element_size;
-	uint32_t num_part = input_len / elements_per_part;
+	uint32_t elements_per_part1 = HALF_MAX_SORT_BUFFER / element_size;
+
+	uint32_t elements_per_part = MAX_ELEMENTS < elements_per_part1 ? MAX_ELEMENTS : elements_per_part1;
+	printf("elements per part1: %u, max elements: %u, elements_per_part: %u\n", elements_per_part1, MAX_ELEMENTS, elements_per_part);
+
+	uint32_t num_part = num_items / elements_per_part;
 	if (input_len % elements_per_part != 0) {
 	  num_part += 1;
 	}
+
+	printf("input_len: %u\n", input_len);
+	printf("element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", element_size, num_part, num_items, elements_per_part);
 	
 	uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
 	uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
@@ -490,10 +499,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 		num_rows[i] = elements_per_part;
 		buffer_sizes[i] = elements_per_part * element_size;
 	  }
+
+	  input_ptr += buffer_sizes[i];
+
+	  printf("[%u] num_rows: %u, buffer_sizes: %u\n", i, num_rows[i], buffer_sizes[i]);
 	}
 
-	//ecall_external_oblivious_sort(eid, op_code, input_copy, input_len, offset, (uint32_t) num_items);
-	
 	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
 														num_part,
 														buffer_list, buffer_sizes, num_rows);

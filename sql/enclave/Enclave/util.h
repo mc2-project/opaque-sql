@@ -9,6 +9,7 @@
 #include "Enclave_t.h"  /* print_string */
 #include "define.h"
 #include "InternalTypes.h"
+#include "Crypto.h"
 
 /* 
  * printf: 
@@ -58,5 +59,10 @@ template <typename T> void swap_helper(T *v1, T *v2) {
   *v1 = *v2;
   *v2 = temp;
 }
+
+
+// returns the offset for output to advance
+void encrypt_attribute(uint8_t **input, uint8_t **output);
+void decrypt_attribute(uint8_t **input, uint8_t **output);
 
 #endif // UTIL_H

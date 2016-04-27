@@ -13,20 +13,25 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
   
   uint32_t input_offset = 4;
   uint32_t output_offset = 4;
+
+  uint8_t *input_row_ptr_ = input_row_ptr + 4;
+  uint8_t *output_row_ptr_ = output_row_ptr + 4;
   
   for (uint32_t i = 0; i < num_cols; i++) {
-    value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE)) + HEADER_SIZE;
-    *((uint32_t *) (output_row_ptr + output_offset)) = enc_size(value_len);
-    output_offset += LEN_SIZE;
+    // value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE)) + HEADER_SIZE;
+    // *((uint32_t *) (output_row_ptr + output_offset)) = enc_size(value_len);
+    // output_offset += LEN_SIZE;
 
-    // printf("[%u] value_len is %u\n", i, value_len);
-	encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
+    // // printf("[%u] value_len is %u\n", i, value_len);
+	// encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
 	
-    input_offset += value_len;
-    output_offset += enc_size(value_len);
+    // input_offset += value_len;
+    // output_offset += enc_size(value_len);
+
+	encrypt_attribute(&input_row_ptr_, &output_row_ptr_);
   }
 
-  return output_offset;
+  return (output_row_ptr_ - output_row_ptr);;
 }
 
 // This pre-processing pads all rows to ROW_UPPER_BOUND, and then encrypt the entire thing
@@ -71,16 +76,18 @@ void join_sort_preprocess(int op_code,
 
   uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
   enc_row_ptr += 4;
+  enc_value_ptr = enc_row_ptr;
 
   *( (uint32_t *) temp_ptr) = num_cols;
   temp_ptr += 4;
   
   for (uint32_t i = 0; i < num_cols; i++) {
-	find_attribute(enc_row_ptr, enc_row_len, num_cols,
-				   i + 1, &enc_value_ptr, &enc_value_len);
+	// find_attribute(enc_row_ptr, enc_row_len, num_cols,
+	// 			   i + 1, &enc_value_ptr, &enc_value_len);
 
-	decrypt(enc_value_ptr, enc_value_len, temp_ptr);
-	temp_ptr += dec_size(enc_value_len);
+	// decrypt(enc_value_ptr, enc_value_len, temp_ptr);
+	// temp_ptr += dec_size(enc_value_len);
+	decrypt_attribute(&enc_value_ptr, &temp_ptr);
   }
 
   uint32_t total_len = (uint32_t) (temp_ptr - temp);

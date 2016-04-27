@@ -307,11 +307,11 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
 		//decrypt(enc_value_ptr, enc_value_len, data_ptr_);
 		
-		rec->consume_encrypted_attribute(enc_value_ptr, enc_value_len);
-
-		enc_value_ptr += enc_value_len;
-		data_ptr_ += value_len;
-
+		//rec->consume_encrypted_attribute(enc_value_ptr, enc_value_len);
+		rec->consume_encrypted_attribute(&enc_value_ptr);
+		
+		//enc_value_ptr += enc_value_len;
+		//data_ptr_ += value_len;
 	  }
 	  
 	  rec->set_sort_attributes(op_code);
@@ -341,24 +341,24 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	  // need to encrypt each attribute separately
 	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
-		value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
 
-		*( (uint32_t *)  input_ptr) = enc_size(value_len);
-		input_ptr += 4;
+		encrypt_attribute(&value_ptr, &input_ptr);
+		
+		// value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
 
-		//print_attribute("", value_ptr);
+		// *( (uint32_t *)  input_ptr) = enc_size(value_len);
+		// input_ptr += 4;
 
-		encrypt(value_ptr, value_len, input_ptr);
-		input_ptr += enc_size(value_len);
+		// //print_attribute("", value_ptr);
 
-		value_ptr += value_len;
+		// encrypt(value_ptr, value_len, input_ptr);
+		// input_ptr += enc_size(value_len);
+
+		// value_ptr += valuen_len;
 	  }
 	}
-
     // printf("Encrypted data\n");
-
-	//printf("Encrypted data's length is %u\n", (input_ptr - input));
-
+	// printf("Encrypted data's length is %u\n", (input_ptr - input));
 
 	// TODO: free data, including record pointers
 
@@ -472,7 +472,7 @@ void ecall_external_oblivious_sort(int op_code,
   }
 
   // TODO: another alternative is to first sort each buffer, and then just merge them together
-
+  
   //printf("Trying to sort on multiple partitions!\n");
   //assert(false);
   

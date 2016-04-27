@@ -324,6 +324,8 @@ class Record {
 	num_cols += 1;
   }
 
+  void consume_encrypted_attribute(uint8_t **enc_value_ptr);
+
   // given a row with a set of encrypted attributes
   // assume that the row_ptr is set correctly
   uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
