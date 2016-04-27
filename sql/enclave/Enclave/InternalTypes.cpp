@@ -22,6 +22,24 @@ GenericType *create_attr(uint8_t *attr) {
 	}
 	break;
 
+  case URL_TYPE:
+	{
+	  return new URL;
+	}
+	break;
+
+  case C_CODE:
+	{
+	  return new CountryCode;
+	}
+	break;
+
+  case L_CODE:
+	{
+	  return new LanguageCode;
+	}
+	break;
+
   }
 }
 

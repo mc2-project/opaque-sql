@@ -496,6 +496,4 @@ class AggRecord : public Record {
   AggSortAttributes *agg_sort_attributes;
 };
 
-
-
 #endif

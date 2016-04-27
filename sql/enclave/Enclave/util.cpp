@@ -281,22 +281,22 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	break;
 	
   case STRING:
-  case URL:
+  case URL_TYPE:
   case C_CODE:
   case L_CODE:
 	{
 	  // fixed upper bound length is STRING_UPPER_BOUND
 	  uint32_t upper_bound = 0;
+	  
 	  if (attr_type == STRING) {
 		upper_bound = STRING_UPPER_BOUND;
-	  } else if (attr_type == URL) {
+	  } else if (attr_type == URL_TYPE) {
 		upper_bound = URL_UPPER_BOUND;
 	  } else if (attr_type == C_CODE) {
 		upper_bound = C_CODE_UPPER_BOUND;
 	  } else if (attr_type == L_CODE) {
 		upper_bound = L_CODE_UPPER_BOUND;
 	  }
-
 	  
 	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + upper_bound);
 	  output_ptr += 4;
