@@ -339,9 +339,14 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
 	  input_ptr += 4;
 
+	  //printf("data[%u]'s num cols is %u\n", data[i]->row);
+
+	  //value_ptr += 4;
+
 	  // need to encrypt each attribute separately
 	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
 
+		//print_attribute("", value_ptr);
 		encrypt_attribute(&value_ptr, &input_ptr);
 		
 		// value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
@@ -349,12 +354,11 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 		// *( (uint32_t *)  input_ptr) = enc_size(value_len);
 		// input_ptr += 4;
 
-		// //print_attribute("", value_ptr);
-
 		// encrypt(value_ptr, value_len, input_ptr);
-		// input_ptr += enc_size(value_len);
 
 		// value_ptr += valuen_len;
+
+		//input_ptr += enc_size(value_len);
 	  }
 	}
     // printf("Encrypted data\n");
@@ -695,3 +699,13 @@ void ecall_sort_merge_join(int op_code,
 
 /**** END Join ****/
 
+
+
+void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
+						uint8_t *output, uint32_t output_size,
+						uint32_t *actual_size) {
+  uint8_t *input_ptr = input;
+  uint8_t *output_ptr = output;
+  encrypt_attribute(&input_ptr, &output_ptr);
+  *actual_size = (output_ptr - output);
+}

@@ -426,6 +426,36 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
   return plaintext;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribute(JNIEnv *env, 
+																				   jobject obj, 
+																				   jlong eid, 
+																				   jbyteArray plaintext) {
+
+  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
+  
+  uint8_t *plaintext_ptr = (uint8_t *) ptr;
+
+  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  jbyteArray ciphertext = env->NewByteArray(clength);
+  uint8_t *ciphertext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
+
+  uint8_t *ciphertext_copy = (uint8_t *) malloc(ATTRIBUTE_UPPER_BOUND + ENC_HEADER_SIZE + 4);
+  uint32_t actual_size = 0;
+  
+  ecall_encrypt_attribute(eid, plaintext_ptr, plength,
+						  ciphertext_copy, (uint32_t) clength, &actual_size);
+
+  env->SetByteArrayRegion(ciphertext, 0, actual_size, (jbyte *) ciphertext_copy);
+
+  env->ReleaseByteArrayElements(plaintext, ptr, 0);
+
+  free(ciphertext_copy);
+
+  return ciphertext;
+}
+
 JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEnv *env, jobject obj, jlong eid) {
   int input = 0;
   //ecall_test_int(eid, &input);

@@ -87,4 +87,9 @@ class SGXEnclave extends java.io.Serializable {
     join_row: Array[Byte]
   ): Array[Byte]
 
+  @native def EncryptAttribute(
+    eid: Long,
+    plaintext: Array[Byte]
+  ): Array[Byte];
+
 }

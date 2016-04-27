@@ -271,12 +271,13 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
   case INT:
 	{
 	  // value is always 4 bytes
+	  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
 	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + 4);
 	  output_ptr += 4;
 	  encrypt(input_ptr, HEADER_SIZE + 4, output_ptr);
 
 	  input_ptr += HEADER_SIZE + 4;
-	  output_ptr += 4 + enc_size(HEADER_SIZE + 4);
+	  output_ptr += enc_size(HEADER_SIZE + 4);
 	}
 
 	break;
@@ -306,7 +307,7 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
 
 	  input_ptr += HEADER_SIZE + attr_len;
-	  output_ptr += 4 + enc_size(HEADER_SIZE + upper_bound);
+	  output_ptr += enc_size(HEADER_SIZE + upper_bound);
 	}
 
 	break;
@@ -315,11 +316,11 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	{
 	  // value is always 8 bytes
 	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + 8);
-	  output_ptr += 8;
+	  output_ptr += 4;
 	  encrypt(input_ptr, HEADER_SIZE + 8, output_ptr);
 
 	  input_ptr += HEADER_SIZE + 8;
-	  output_ptr += 8 + enc_size(HEADER_SIZE + 8);
+	  output_ptr += enc_size(HEADER_SIZE + 8);
 	}
 	break;
   }

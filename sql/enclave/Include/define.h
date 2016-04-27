@@ -11,7 +11,7 @@
 #define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
 #define ROW_UPPER_BOUND (2048)
 // distinct items, offset, sort attribute, aggregation attribute
-#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
+//#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
 
 #define TYPE_SIZE (1)
@@ -19,8 +19,11 @@
 #define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
 
 #define TABLE_ID_SIZE (8)
-#define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
+//#define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
 #define ENC_JOIN_ROW_UPPER_BOUND (ENC_HEADER_SIZE + ROW_UPPER_BOUND + TABLE_ID_SIZE)
+
+#define AGG_UPPER_BOUND (2028 + 512)
+#define JOIN_ROW_UPPER_BOUND AGG_UPPER_BOUND
 
 enum TYPE {
   DUMMY = 0,
@@ -43,6 +46,8 @@ enum TYPE {
 #define URL_UPPER_BOUND (100)
 #define C_CODE_UPPER_BOUND (3)
 #define L_CODE_UPPER_BOUND (6)
+
+#define ATTRIBUTE_UPPER_BOUND (512)
 
 enum OPCODE {
   OP_BD2 = 10,

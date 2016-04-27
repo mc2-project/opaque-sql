@@ -125,6 +125,11 @@ extern "C" {
 																				  jbyteArray,
                                                                                   jint,
                                                                                   jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribute(JNIEnv *, 
+																					 jobject, 
+																					 jlong, 
+																					 jbyteArray);
 	
 #ifdef __cplusplus
 }
