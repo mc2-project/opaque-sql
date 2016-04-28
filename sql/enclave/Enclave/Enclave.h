@@ -56,7 +56,7 @@ extern "C" {
 
   
   void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
-					  int low_idx, uint32_t list_length);
+					  int low_idx, uint32_t list_length, bool if_sort);
 
 #if defined(__cplusplus)
 }

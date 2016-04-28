@@ -168,38 +168,81 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
 // merges together two sorted arrays non-obliviously, in place
 template<typename T>
 void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offset, uint32_t len) {
+  // // initialize the two merge pointers
+  // uint32_t left_ptr = 0;
+  // uint32_t right_ptr = offset;
+  
+  // while (true) {
+  // 	if (left_ptr == right_ptr || right_ptr == len) {
+  // 	  break;
+  // 	}
+	
+  // 	T *left_item = input[left_ptr];
+  // 	T *right_item = input[right_ptr];
+
+  // 	int ret = left_item->compare(right_item);
+  // 	if (ret == -1 || ret == 0) {
+  // 	  // just increment the left ptr
+  // 	  ++left_ptr;
+  // 	} else {
+  // 	  // swap the right item all the way up to left_ptr, then increment both
+  // 	  for (uint32_t j = right_ptr; j > left_ptr; j--) {
+  // 		input[j]->swap(input[j - 1]);
+  // 	  }
+
+  // 	  ++left_ptr;
+  // 	  ++right_ptr;
+  // 	}
+  // }
+
+  //printf("Merge called\n");
+  T **temp = (T **) malloc(sizeof(T*) * len);
   // initialize the two merge pointers
   uint32_t left_ptr = 0;
   uint32_t right_ptr = offset;
-  
-  while (true) {
-	if (left_ptr == right_ptr || right_ptr == len) {
-	  break;
-	}
-	
-	T *left_item = input[left_ptr];
-	T *right_item = input[right_ptr];
 
-	int ret = left_item->compare(right_item);
-	if (ret == -1 || ret == 0) {
-	  // just increment the left ptr
-	  ++left_ptr;
+  for (uint32_t i = 0; i < len; i++) {
+
+	//printf("len: %u, left_ptr: %u, right_ptr: %u\n", len, left_ptr, right_ptr);
+	if (left_ptr == offset) {
+	  temp[i] = input[right_ptr++];
+	} else if (right_ptr == len) {
+	  temp[i] = input[left_ptr++];
 	} else {
-	  // swap the right item all the way up to left_ptr, then increment both
-	  for (uint32_t j = right_ptr; j > left_ptr; j--) {
-		input[j]->swap(input[j - 1]);
+	
+	  T *left_item = input[left_ptr];
+	  T *right_item = input[right_ptr];
+	  
+	  int ret = left_item->compare(right_item);
+	  
+	  //printf("ret: %d, left_ptr: %u, right_ptr: %u, offset: %u, len is %u\n", ret, left_ptr, right_ptr, offset, len);
+	  if (ret == -1 || ret == 0) {
+		temp[i] = left_item;
+		left_ptr += 1;
+	  } else if (ret == 1) {
+		temp[i] = right_item;
+		right_ptr += 1;
 	  }
-
-	  ++left_ptr;
-	  ++right_ptr;
 	}
+
   }
-  
+
+  //printf("Merge done\n");
+
+  // change ordering of input
+
+  for (uint32_t i = 0; i < len; i++) {
+  	input[i] = temp[i];
+	//printf("input[%u] is %p\n", i, input[i]);
+  }
+
+  free(temp);
 }
 
 // TODO: format of this input array?
 void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
-					int low_idx, uint32_t list_length) {
+					int low_idx, uint32_t list_length,
+					bool if_sort) {
   // iterate through all data, and then decrypt
 
   if (op_code == OP_SORT_INTEGERS_TEST) {
@@ -252,7 +295,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
     // Sorting rows
 	// this needs to sort a row of data
 
-	printf("op_code called is %u\n", op_code);
+	//printf("op_code called is %u\n", op_code);
 	
     SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
 	if (data == NULL) {
@@ -264,7 +307,6 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	uint8_t *enc_row_ptr = NULL;
 	uint32_t enc_row_len = 0;
-
 
 	uint8_t *enc_value_ptr = NULL;
 	uint32_t enc_value_len = 0;
@@ -283,8 +325,6 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  data[i] = new SortRecord;
 	  SortRecord *rec = data[i];
 
-	  //printf("Within enclave? %u\n", sgx_is_within_enclave(rec, ROW_UPPER_BOUND));
-
 	  uint32_t columns = *( (uint32_t *) enc_row_ptr);
 
 	  enc_row_ptr += 4;
@@ -292,79 +332,45 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  enc_value_ptr = enc_row_ptr;
 	  
 	  //printf("Data item %u; has %u columns\n", i, columns);
-	  
 	  // iterate through encrypted attributes, 
 	  for (uint32_t j = 0; j < columns; j++) {
-
 		assert(enc_value_ptr <= input_ptr);
 		// [enc len]encrypted{[value type][value len][value]}
-
-		//enc_value_len = *( (uint32_t *) enc_value_ptr);
-		// enc_value_ptr += 4;
-		//printf("enc_value_len is %u\n", enc_value_len);
-		
-		// value_len includes the type's length as well
-		//value_len = enc_value_len - (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
-		//printf("Attribute %u: encrypted value's length is %u; data[i].num_cols is %u\n", j, enc_value_len, data[i].num_cols);
-		//decrypt(enc_value_ptr, enc_value_len, data_ptr_);
-		
 		rec->consume_encrypted_attribute(&enc_value_ptr);
-		
-		//enc_value_ptr += enc_value_len;
-		//data_ptr_ += value_len;
 	  }
-	  
-	  rec->set_sort_attributes(op_code);
 
+	  rec->set_sort_attributes(op_code);
+	  
 	  rec->sort_attributes->init();
 	  rec->sort_attributes->evaluate();
-
-	  //rec->sort_attributes->print();
+	  
+	  // rec->sort_attributes->print();
 	}
-	
-	osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 
-	printf("Sorted data\n");
-	
-	// TODO: need to return enrypted result
+	if (if_sort) {
+	  osort_with_index<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, 0, list_length);
+	} else {
+	  non_oblivious_merge<SortRecord>(op_code, data, sizeof(SortRecord *) * list_length, low_idx, list_length);
+	}
 
+	//printf("Sorted data\n");
+	
 	input_ptr = input;
 	value_ptr = NULL;
 	value_len = 0;
 
 	for (uint32_t i = 0; i < list_length; i++) {
-	  //data[i]->sort_attributes->print();
-	  
 	  value_ptr = data[i]->row;
 	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
 	  input_ptr += 4;
 
-	  //printf("data[%u]'s num cols is %u\n", data[i]->row);
-
-	  //value_ptr += 4;
-
 	  // need to encrypt each attribute separately
 	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
-
-		//print_attribute("", value_ptr);
 		encrypt_attribute(&value_ptr, &input_ptr);
-		
-		// value_len = *( (uint32_t *) (value_ptr + TYPE_SIZE) ) + HEADER_SIZE;
-
-		// *( (uint32_t *)  input_ptr) = enc_size(value_len);
-		// input_ptr += 4;
-
-		// encrypt(value_ptr, value_len, input_ptr);
-
-		// value_ptr += valuen_len;
-
-		//input_ptr += enc_size(value_len);
 	  }
 	}
-    printf("Encrypted data\n");
+    //printf("Encrypted data\n");
  	//printf("Encrypted data's length is %u\n", (input_ptr - input));
-
-	// TODO: free data, including record pointers
 
 	for (uint32_t i = 0; i < list_length; i++) {
 	  delete data[i];
@@ -417,8 +423,14 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	  //record->join_attributes->print();
 	}
+	
+	if (if_sort) {
+	  osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, 0, list_length);
+	} else {
+	  non_oblivious_merge<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
+	}
 
-	osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
+	//osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
 
 	// Produce encrypted output rows
 	input_ptr = input;
@@ -469,14 +481,24 @@ void ecall_external_oblivious_sort(int op_code,
 	//printf("%p, %u, %u\n", buffer_list[0], buffer_lengths[0], num_rows[0]);
 	assert(buffer_lengths[0] < MAX_SORT_BUFFER);
 	cpy(internal_buffer, buffer_list[0], buffer_lengths[0]);
-	oblivious_sort(op_code, internal_buffer, buffer_lengths[0], 0, num_rows[0]);
+	oblivious_sort(op_code, internal_buffer, buffer_lengths[0], 0, num_rows[0], true);
 	cpy(buffer_list[0], internal_buffer, buffer_lengths[0]);
 	free(internal_buffer);
 	return;
   }
 
   // TODO: another alternative is to first sort each buffer, and then just merge them together
-  
+  for (uint32_t i = 0; i < num_buffers; i++) {
+	cpy(internal_buffer, buffer_list[i], buffer_lengths[i]);
+	oblivious_sort(op_code, internal_buffer, buffer_lengths[i], 0, num_rows[i], true);
+	cpy(buffer_list[i], internal_buffer, buffer_lengths[i]);
+  }
+
+  // free(internal_buffer);
+  // return;
+
+  //printf("oblivious sorted single partitions\n");
+  uint32_t merges = 0;
   
   for (int stage = 1; stage <= log_len; stage++) {
 
@@ -510,7 +532,10 @@ void ecall_external_oblivious_sort(int op_code,
 
 			  //printf("Sorting on %u and %u\n", idx, pair_idx);
 			  // sort these two buffers
-			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
+			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size,
+			  				 num_rows[idx], num_rows[idx] + num_rows[pair_idx],
+			  				 false);
+			  ++merges;
 
 			  // copy the internal buffer to outside
 			  cpy(buffer1_ptr, internal_buffer, buffer1_size);
@@ -545,7 +570,10 @@ void ecall_external_oblivious_sort(int op_code,
 
 			  //printf("Sorting on %u and %u\n", idx, pair_idx);
 			  // sort these two buffers
-			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size, 0, num_rows[idx] + num_rows[pair_idx]);
+			  oblivious_sort(op_code, internal_buffer, buffer1_size + buffer2_size,
+			  				 num_rows[idx], num_rows[idx] + num_rows[pair_idx],
+			  				 false);
+			  ++merges;
 
 			  // copy the internal buffer to outside
 			  cpy(buffer1_ptr, internal_buffer, buffer1_size);
@@ -560,8 +588,9 @@ void ecall_external_oblivious_sort(int op_code,
     }
   }
 
-  free(internal_buffer);
+  printf("number of merges: %u\n", merges);
 
+  free(internal_buffer);
 }
 
 // TODO: return encrypted random identifier

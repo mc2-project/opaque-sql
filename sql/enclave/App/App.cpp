@@ -485,7 +485,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     //printf("input_copy is %u\n", input_copy[i]);
   }
 
-  printf("input len is %u, MAX_SORT_BUFFER is %u\n", input_len, MAX_SORT_BUFFER);
+  //printf("input len is %u, MAX_SORT_BUFFER is %u\n", input_len, MAX_SORT_BUFFER);
 
   if (input_len < MAX_SORT_BUFFER) {
 
@@ -496,8 +496,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 	
 	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows);
 	
-	printf("Only sorting on one partition, input_len is %u\n", input_len);
-	print_error_message(status);
+	//printf("Only sorting on one partition, input_len is %u\n", input_len);
+	//print_error_message(status);
   } else {
 
 	// try to split the input into partitions if it's too big
@@ -505,14 +505,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 	uint32_t elements_per_part1 = HALF_MAX_SORT_BUFFER / element_size;
 
 	uint32_t elements_per_part = MAX_ELEMENTS < elements_per_part1 ? MAX_ELEMENTS : elements_per_part1;
-	printf("elements per part1: %u, max elements: %u, elements_per_part: %u\n", elements_per_part1, MAX_ELEMENTS, elements_per_part);
+	//printf("elements per part1: %u, max elements: %u, elements_per_part: %u\n", elements_per_part1, MAX_ELEMENTS, elements_per_part);
 
 	uint32_t num_part = num_items / elements_per_part;
 	if (input_len % elements_per_part != 0) {
 	  num_part += 1;
 	}
 
-	printf("input_len: %u\n", input_len);
+	//printf("input_len: %u\n", input_len);
 	printf("element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", element_size, num_part, num_items, elements_per_part);
 	
 	uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
@@ -533,7 +533,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
 	  input_ptr += buffer_sizes[i];
 
-	  printf("[%u] num_rows: %u, buffer_sizes: %u\n", i, num_rows[i], buffer_sizes[i]);
+	  //printf("[%u] num_rows: %u, buffer_sizes: %u\n", i, num_rows[i], buffer_sizes[i]);
 	}
 
 	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
@@ -931,7 +931,7 @@ void test_enclave_sort() {
   printf("Encryption done\n");
 
   // split the input rows into 64 partitions of (1024 * 4) rows
-  const uint32_t num_part = 1;
+  const uint32_t num_part = 2;
 
   uint8_t *buffer_list[num_part];
   uint32_t buffer_sizes[num_part];
