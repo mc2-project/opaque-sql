@@ -119,7 +119,7 @@ class aggregate_data_sum : public aggregate_data {
 	if (if_final == 0) {
 	  *result_ptr = INT;
 	} else {
-	  *result_ptr = DUMMY;
+	  *result_ptr = DUMMY_INT;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -185,7 +185,7 @@ class aggregate_data_count : public aggregate_data {
 	if (if_final == 0) {
 	  *result_ptr = INT;
 	} else {
-	  *result_ptr = DUMMY;
+	  *result_ptr = DUMMY_INT;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -248,7 +248,7 @@ class aggregate_data_avg : public aggregate_data {
 	if (if_final == 0) {
 	  *result_ptr = FLOAT;
 	} else {
-	  *result_ptr = DUMMY;
+	  *result_ptr = DUMMY_FLOAT;
 	}
 	
 	result_ptr += TYPE_SIZE;
@@ -423,7 +423,9 @@ public:
 	// encrypt(temp, len, output + ret + 4);
 	encrypt_attribute(&temp_ptr, &output_ptr);
 
-	return (output_ptr - output);
+	uint32_t output_size = (output_ptr - output);
+	//printf("output_enc_row: output_size is %u\n", output_size);
+	return output_size;
   }
 
   uint32_t *distinct_entries;
@@ -558,6 +560,8 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t *agg_row_ptr = agg_row;
   uint32_t agg_row_length = 0;
 
+  printf("scan_aggregation_count_distinct called, flag is %u\n", flag);
+
   if (flag == 2) {
 	agg_row_length = *( (uint32_t *) agg_row);
 	agg_row_ptr += 4;
@@ -607,7 +611,7 @@ void scan_aggregation_count_distinct(int op_code,
   uint32_t enc_row_len = 0;
 
   uint8_t *prev_row_ptr = NULL;
-  uint8_t prev_row_len = 0;
+  uint32_t prev_row_len = 0;
   
   uint8_t *enc_value_ptr = NULL;
   uint32_t enc_value_len = 0;
@@ -624,6 +628,8 @@ void scan_aggregation_count_distinct(int op_code,
 	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 	uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
+	//printf("Record %u, num_cols: %u, enc_row_len: %u\n", r, num_cols, enc_row_len);
+
 	enc_row_ptr += 4;
 
     if (r == 0) {
@@ -631,6 +637,8 @@ void scan_aggregation_count_distinct(int op_code,
 	  // put down marker for the previous row
 	  prev_row_ptr = enc_row_ptr - 4; 
 	  prev_row_len = enc_row_len;
+
+	  //printf("prev_row_len is %u, enc_row_len is %u\n", prev_row_len, enc_row_len);
 
 	  current_agg.inc_distinct();
 	  
@@ -663,6 +671,8 @@ void scan_aggregation_count_distinct(int op_code,
     prev_agg.copy_agg(&current_agg);
     //prev_agg.print();
 
+	//printf("prev_row_len is %u\n", prev_row_len);
+
 	// should output the previous row with the partial aggregate information
 	if ((flag == 1 && r == 1)) {
 	  //*( (uint32_t *) output_rows_ptr) = prev_row_len;
@@ -670,8 +680,8 @@ void scan_aggregation_count_distinct(int op_code,
 	  cpy(output_rows_ptr, prev_row_ptr, prev_row_len);
 	  output_rows_ptr += prev_row_len;
 	  *actual_output_rows_length += prev_row_len;
-
-      // printf("Write out to output: total bytes is %u\n", prev_row_len);
+	  
+      //printf("Write out to output: total bytes is %u\n", prev_row_len);
 	}
 
 
@@ -841,7 +851,7 @@ void process_boundary_records(int op_code,
   uint32_t agg_enc_size = AGG_UPPER_BOUND;
   int ret = 0;
 
-  // printf("Process_boundary_records called; buffer size is %u, %p\n", rows_size, out_agg_rows);
+  printf("Process_boundary_records called; buffer size is %u, %p\n", rows_size, out_agg_rows);
 
   for (int round = 0; round < 2; round++) {
 	// round 1: collect information about num distinct items
@@ -853,12 +863,12 @@ void process_boundary_records(int op_code,
 	
 	for (uint32_t i = 0; i < num_rows; i++) {
 
-      // printf("round=%u, i=%u, get_next_row(...)\n", round, i);
+      printf("round=%u, i=%u, get_next_row(...)\n", round, i);
       get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
-      // printf("Got next row\n");
+      printf("Got next row\n");
 	  uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
-      // printf("Record %u, num cols is %u, enc_row_len is %u\n", i, num_cols, enc_row_len);
+	  printf("Record %u, num cols is %u\n", i, num_cols);
 	  enc_row_ptr += 4;
 
 	  enc_agg_ptr = input_ptr;
@@ -886,6 +896,7 @@ void process_boundary_records(int op_code,
 		decrypted_row.reset_row_ptr();
 		decrypted_row.consume_all_encrypted_attributes(enc_row_ptr - 4);
 		decrypted_row.set_agg_sort_attributes(op_code);
+		//decrypted_row.print();
 
 		if (round == 0) {
 		  // printf("first decrypted row is\n");
@@ -921,6 +932,7 @@ void process_boundary_records(int op_code,
 	  current_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
 	  current_agg.rec->set_agg_sort_attributes(op_code);
 	  current_agg.reset_aggregate();
+	  //current_agg.print();
 	  
 	  if (round == 0) {
 		distinct_items += current_agg.distinct();

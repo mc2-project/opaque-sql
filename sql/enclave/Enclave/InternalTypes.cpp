@@ -1,12 +1,20 @@
 #include "InternalTypes.h"
 
+bool is_dummy_type(uint8_t attr_type) {
+  return (attr_type == DUMMY_INT || attr_type == DUMMY_FLOAT);
+}
+
 GenericType *create_attr(uint8_t *attr) {
   uint8_t type = *attr;
   switch (type) {
 
-  case DUMMY:
+  case DUMMY_INT:
 	{
-	  return new Dummy;
+	  return new Dummy(DUMMY_INT);
+	}
+  case DUMMY_FLOAT:
+	{
+	  return new Dummy(DUMMY_FLOAT);
 	}
 	break;
 
@@ -757,6 +765,7 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   uint8_t *input_row_ptr = input_row + 4;
   uint32_t enc_len = 0;
   uint32_t total_len = 4;
+
   for (uint32_t i = 0; i < this->num_cols; i++) {
 	// enc_len = *( (uint32_t *) (input_row_ptr));
 	// input_row_ptr += 4;
@@ -769,7 +778,7 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
 	decrypt_attribute(&input_row_ptr, &row_ptr);
   }
 
-  return total_len;
+  return (input_row_ptr - input_row);
 }
 
 void Record::consume_encrypted_attribute(uint8_t **enc_value_ptr) {
@@ -966,8 +975,10 @@ uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
   *( (uint32_t *) (output_ptr)) = this->num_cols;
   output_ptr += 4;
 
+  //printf("flush_encrypt_all_attributes\n");
   for (uint32_t i = 0; i < this->num_cols; i++) {
 	encrypt_attribute(&input_ptr, &output_ptr);
+	
 	// value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
  	// *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
 	

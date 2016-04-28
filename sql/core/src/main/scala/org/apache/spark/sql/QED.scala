@@ -104,7 +104,7 @@ object QED {
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
     buf.get(bytes)
-    enclave.Encrypt(eid, bytes)
+    enclave.EncryptAttribute(eid, bytes)
   }
 
   def encodeData(value: Array[Byte]): String = {

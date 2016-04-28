@@ -294,7 +294,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
   } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
     // Sorting rows
 	// this needs to sort a row of data
-
+	
 	//printf("op_code called is %u\n", op_code);
 	
     SortRecord **data = (SortRecord **) malloc(sizeof(SortRecord *) * list_length);
@@ -336,6 +336,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  for (uint32_t j = 0; j < columns; j++) {
 		assert(enc_value_ptr <= input_ptr);
 		// [enc len]encrypted{[value type][value len][value]}
+		// printf("enc_value_ptr len is %u\n", *( (uint32_t *) enc_value_ptr));
 		rec->consume_encrypted_attribute(&enc_value_ptr);
 	  }
 
@@ -344,7 +345,7 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	  rec->sort_attributes->init();
 	  rec->sort_attributes->evaluate();
 	  
-	  // rec->sort_attributes->print();
+	  //rec->sort_attributes->print();
 	}
 
 	if (if_sort) {
@@ -358,19 +359,30 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	input_ptr = input;
 	value_ptr = NULL;
 	value_len = 0;
+	uint8_t *test_ptr = NULL;
 
 	for (uint32_t i = 0; i < list_length; i++) {
+	  //data[i]->sort_attributes->print();
+	  
 	  value_ptr = data[i]->row;
+	  test_ptr = input_ptr;
 	  *( (uint32_t *) input_ptr) = data[i]->num_cols;
 	  input_ptr += 4;
 
 	  // need to encrypt each attribute separately
 	  for (uint32_t c = 0; c < data[i]->num_cols; c++) {
+		//printf("encrypted_attr type is %u\n", *value_ptr);
+		// uint8_t type = *value_ptr;
+		// if (c == 3 && type == INT) {
+		//   printf("encrypted_attr len is %u\n", *( (uint32_t *) (value_ptr + HEADER_SIZE)));
+		// }
 		encrypt_attribute(&value_ptr, &input_ptr);
 	  }
+
+	  //printf("encrypted row's length is %u\n", (input_ptr - test_ptr));
 	}
-    //printf("Encrypted data\n");
- 	//printf("Encrypted data's length is %u\n", (input_ptr - input));
+	
+ 	//printf("Encrypted all data, length is %u\n", (input_ptr - input));
 
 	for (uint32_t i = 0; i < list_length; i++) {
 	  delete data[i];
@@ -381,6 +393,9 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 	//printf("Freed data\n");
   } else if (op_code == OP_JOIN_COL2) {
     // Sorting for Join
+
+	//printf("join sort, op_code is %u\n", op_code);
+	
 	// get the primary/foreign table indicators
 	uint8_t primary_table[TABLE_ID_SIZE];
 	uint8_t foreign_table[TABLE_ID_SIZE];
@@ -683,7 +698,7 @@ void ecall_join_sort_preprocess(int op_code,
   uint32_t enc_row_len = 0;
 
   uint8_t *output_row_ptr = output_row;
-  
+
   for (uint32_t i = 0; i < num_rows; i++) {
 	get_next_row(&input_row_ptr, &enc_row_ptr, &enc_row_len);
 	

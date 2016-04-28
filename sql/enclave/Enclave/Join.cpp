@@ -52,6 +52,8 @@ void join_sort_preprocess(int op_code,
   uint8_t foreign_table[TABLE_ID_SIZE];
 
   get_table_indicator(primary_table, foreign_table);
+
+  //printf("join sort preprocess called, input size %u, output_row_len %u, join_row_upperbound: %u\n", input_row_len, output_row_len, JOIN_ROW_UPPER_BOUND);
 	
   int if_primary = 0;
   
@@ -81,18 +83,27 @@ void join_sort_preprocess(int op_code,
   *( (uint32_t *) temp_ptr) = num_cols;
   temp_ptr += 4;
   
+  //printf("if_primary: %d, num_cols: %u\n", if_primary, num_cols);
+  
   for (uint32_t i = 0; i < num_cols; i++) {
 	// find_attribute(enc_row_ptr, enc_row_len, num_cols,
 	// 			   i + 1, &enc_value_ptr, &enc_value_len);
 
 	// decrypt(enc_value_ptr, enc_value_len, temp_ptr);
 	// temp_ptr += dec_size(enc_value_len);
+
 	decrypt_attribute(&enc_value_ptr, &temp_ptr);
   }
 
+  //printf("decrypted all\n");
+
   uint32_t total_len = (uint32_t) (temp_ptr - temp);
 
+  //print_join_row("Join preprocess", temp);
+
   encrypt(temp, JOIN_ROW_UPPER_BOUND, output_row);
+
+  //printf("encrypted all\n");
 }
 
 class join_attribute {
@@ -313,6 +324,7 @@ void sort_merge_join(int op_code,
 
   uint32_t num_cols = 0;
 
+  printf("Sort merge join called\n");
 
   // check to see if this is a dummy row
   if (test_dummy(join_row, enc_size(JOIN_ROW_UPPER_BOUND)) != 0) {
@@ -334,18 +346,18 @@ void sort_merge_join(int op_code,
   if (op_code == OP_JOIN_COL2) {
 	*( (uint32_t *) dummy_row_ptr) = 5;
 	dummy_row_ptr += 4;
-	int types[5] = {INT, STRING, INT, INT, INT};
+	uint8_t types[5] = {DUMMY_INT, DUMMY_STRING, DUMMY_INT, DUMMY_INT, DUMMY_INT};
 	uint32_t upper_bound = 0;
 	
 	for (uint32_t i = 0; i < 5; i++) {
-	  uint32_t t = types[i];
+	  uint8_t t = types[i];
 	  // instead of writing back the correct type, we need to write a dummy type
-	  *dummy_row_ptr = DUMMY;
+	  *dummy_row_ptr = types[i];
 	  dummy_row_ptr += TYPE_SIZE;
 	  
-	  if (t == INT) {
+	  if (t == DUMMY_INT) {
 		upper_bound = INT_UPPER_BOUND;
-	  } else if (t == STRING) {
+	  } else if (t == DUMMY_STRING) {
 		upper_bound = STRING_UPPER_BOUND;
 	  } else {
 		upper_bound = 0;
@@ -358,7 +370,6 @@ void sort_merge_join(int op_code,
   } else {
     assert(false);
   }
-
 
   dummy_row_ptr = dummy_row;
 
@@ -436,6 +447,8 @@ void scan_collect_last_primary(int op_code,
   uint8_t *current_table = NULL;
 
 
+  printf("scan_collect_last_primary called\n");
+  
   uint8_t *input_rows_ptr = input_rows;
   
   join_attribute current_join_attr;
@@ -468,8 +481,9 @@ void scan_collect_last_primary(int op_code,
   }
 
   // return the last primary row, if there is any!
-  // print_join_row("Join row", primary_row);
+  //print_join_row("Join row", primary_row);
   encrypt(primary_row, JOIN_ROW_UPPER_BOUND, output);
+  printf("enc_size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
 }
 
 
@@ -492,6 +506,8 @@ void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
   // decrypt the table IDs
   decrypt(enc_table_p, enc_size(TABLE_ID_SIZE), table_p);
   decrypt(enc_table_f, enc_size(TABLE_ID_SIZE), table_f);
+
+  printf("process_join_boundary called\n");
   
   for (uint32_t i = 0; i < num_rows; i++) {
 	cpy(prev_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);

@@ -256,7 +256,7 @@ void get_attr(uint8_t *dec_attr_ptr,
 }
 
 
-void encrypt_attribute(uint8_t **input, uint8_t **output) {
+void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type) {
   uint8_t *input_ptr = *input;
   uint8_t *output_ptr = *output;
   
@@ -265,10 +265,16 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
   
   uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
+  if (real_type != DUMMY) {
+	attr_type = real_type;
+  }
+
   switch (attr_type) {
 
   case FLOAT:
   case INT:
+  case DUMMY_INT:
+  case DUMMY_FLOAT:
 	{
 	  // value is always 4 bytes
 	  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
@@ -276,6 +282,8 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	  output_ptr += 4;
 	  encrypt(input_ptr, HEADER_SIZE + 4, output_ptr);
 
+	  //printf("enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
+	  
 	  input_ptr += HEADER_SIZE + 4;
 	  output_ptr += enc_size(HEADER_SIZE + 4);
 	}
@@ -286,11 +294,12 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
   case URL_TYPE:
   case C_CODE:
   case L_CODE:
+  case DUMMY_STRING:
 	{
 	  // fixed upper bound length is STRING_UPPER_BOUND
 	  uint32_t upper_bound = 0;
 	  
-	  if (attr_type == STRING) {
+	  if (attr_type == STRING || attr_type == DUMMY_STRING) {
 		upper_bound = STRING_UPPER_BOUND;
 	  } else if (attr_type == URL_TYPE) {
 		upper_bound = URL_UPPER_BOUND;
@@ -306,7 +315,7 @@ void encrypt_attribute(uint8_t **input, uint8_t **output) {
 	  cpy(temp, input_ptr, HEADER_SIZE + attr_len);
 	  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
 
-	  //printf("enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
+	  //printf("[String type] enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
 	  
 	  input_ptr += HEADER_SIZE + attr_len;
 	  output_ptr += enc_size(HEADER_SIZE + upper_bound);
@@ -337,13 +346,14 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t *output_ptr = *output;
 
   uint32_t enc_len = *( (uint32_t *) (input_ptr));
-  //printf("enc_len is %u\n", enc_len);
+  //printf("[decrypt_attribute] enc_len is %u\n", enc_len);
   
   input_ptr += 4;
   
   uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
   decrypt(input_ptr, enc_len, temp);
+  //printf("[decrypt_attribute] enc_len is %u, type is %u\n", enc_len, *temp);
 
   uint8_t attr_type = *temp;
   uint32_t attr_len = *( (uint32_t *) (temp + TYPE_SIZE));

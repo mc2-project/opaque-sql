@@ -9,7 +9,7 @@
 // defines an upper bound on the size of the aggregation value
 // only the plaintext size
 #define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
-#define ROW_UPPER_BOUND (1024)
+#define ROW_UPPER_BOUND (2048)
 // distinct items, offset, sort attribute, aggregation attribute
 //#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
@@ -34,6 +34,10 @@ enum TYPE {
   URL_TYPE = 5,
   C_CODE = 6,
   L_CODE = 7,
+
+  DUMMY_INT = 100,
+  DUMMY_FLOAT = 101,
+  DUMMY_STRING = 102,
 
   /* PARTIAL_AGG_INT = 5, */
   /* FINAL_AGG_INT = 6, */

@@ -444,8 +444,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
 						  ciphertext_copy, (uint32_t) ciphertext_length,
 						  &actual_size);
 
-  //printf("actual size is %u, ciphertext_length is %u, enc_len is %u\n", actual_size, ciphertext_length,
-  //*((uint32_t *) ciphertext_copy));
+  //printf("actual size is %u, type is %u\n", actual_size, *plaintext_ptr);
 
   jbyteArray ciphertext = env->NewByteArray(actual_size - 4);
   env->SetByteArrayRegion(ciphertext, 0, actual_size - 4, (jbyte *) (ciphertext_copy + 4));
@@ -479,6 +478,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
+  //printf("input_len is %u\n", input_len);
 
   for (int i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -625,6 +625,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
 										flag,
 										(uint32_t *) output_rows);
 
+  printf("alloc size is %u, actual_size is %u, num_rows is %u\n", output_rows_length, actual_size, num_rows);
+
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) (output_rows + 4));
 
@@ -736,7 +738,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
   uint32_t row_length = 0;
   
-  uint32_t single_row_length = ENC_JOIN_ROW_UPPER_BOUND;
+  uint32_t single_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
@@ -744,6 +746,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   uint8_t *enc_table_id_ptr = (uint8_t *) env->GetByteArrayElements(enc_table_id, &if_copy);
 
   // try to call on each row individually
+
+  //printf("Preprocess 1, num_rows is %u\n", num_rows);
 
   ecall_join_sort_preprocess(eid,
 							 op_code,
@@ -759,6 +763,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
   free(output_rows);
+
+  //printf("Preprocess 2\n");
 
   return ret;  
 }
@@ -776,6 +782,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
 
   uint32_t output_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
   uint8_t *output = (uint8_t *) malloc(output_length);
+
+  //printf("scan_collect start\n");
   
   ecall_scan_collect_last_primary(eid,
 								  op_code,
@@ -789,6 +797,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
   free(output);
+
+  //printf("scan_collect done\n");
 
   return ret;
 }

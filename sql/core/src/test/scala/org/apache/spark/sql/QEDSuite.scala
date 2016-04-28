@@ -36,6 +36,13 @@ import org.apache.spark.sql.types.StructType
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
+  def time[A](desc: String)(f: => A): A = {
+    val start = System.nanoTime
+    val result = f
+    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    result
+  }
+
   def byte_to_int(array: Array[Byte], index: Int) = {
     val int_bytes = array.slice(index, index + 4)
     val buf = ByteBuffer.wrap(int_bytes)
@@ -140,7 +147,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-    val sorted = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
+    val sorted = time("Enc sorting: ") {
+      sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
+    }
     assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
@@ -159,7 +168,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt5[Int, String, Int, Int, Int](joined).toSet === expectedJoin.toSet)
   }
 
-  test("JNIEncrypt") {
+  ignore("JNIEncrypt") {
 
     def byteArrayToString(x: Array[Byte]) = {
       val loc = x.indexOf(0)
@@ -192,76 +201,76 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIObliviousSort1") {
+  ignore("JNIObliviousSort1") {
 
-    val eid = enclave.StartEnclave()
+    // val eid = enclave.StartEnclave()
 
-    val len = 20
-    var number_list = (1 to len).toList
-    val random_number_list = Random.shuffle(number_list).toArray
+    // val len = 20
+    // var number_list = (1 to len).toList
+    // val random_number_list = Random.shuffle(number_list).toArray
 
-    // encrypt these numbers
-    val enc_size = (12 + 16 + 4 + 4) * len
-    val single_enc_size = 12 + 16 + 4
-    val buffer = ByteBuffer.allocate(enc_size)
-    buffer.order(ByteOrder.LITTLE_ENDIAN)
+    // // encrypt these numbers
+    // val enc_size = (12 + 16 + 4 + 4) * len
+    // val single_enc_size = 12 + 16 + 4
+    // val buffer = ByteBuffer.allocate(enc_size)
+    // buffer.order(ByteOrder.LITTLE_ENDIAN)
 
-    val temp_buffer = ByteBuffer.allocate(4)
-    temp_buffer.order(ByteOrder.LITTLE_ENDIAN)
-    val temp_array = Array.fill[Byte](4)(0)
+    // val temp_buffer = ByteBuffer.allocate(4)
+    // temp_buffer.order(ByteOrder.LITTLE_ENDIAN)
+    // val temp_array = Array.fill[Byte](4)(0)
 
-    for (v <- random_number_list) {
-      temp_buffer.clear()
-      temp_buffer.putInt(v)
-      temp_buffer.flip()
-      temp_buffer.get(temp_array)
+    // for (v <- random_number_list) {
+    //   temp_buffer.clear()
+    //   temp_buffer.putInt(v)
+    //   temp_buffer.flip()
+    //   temp_buffer.get(temp_array)
 
-      val enc_bytes = enclave.Encrypt(eid, temp_array)
-      if (enc_bytes.length != single_enc_size) {
-        // println("enc_bytes' length is " + enc_bytes.length)
-        assert(enc_bytes.length == single_enc_size)
-      }
+    //   val enc_bytes = enclave.Encrypt(eid, temp_array)
+    //   if (enc_bytes.length != single_enc_size) {
+    //     // println("enc_bytes' length is " + enc_bytes.length)
+    //     assert(enc_bytes.length == single_enc_size)
+    //   }
 
-      buffer.putInt(single_enc_size)
-      buffer.put(enc_bytes)
-    }
+    //   buffer.putInt(single_enc_size)
+    //   buffer.put(enc_bytes)
+    // }
 
-    buffer.flip()
-    val enc_data = new Array[Byte](buffer.limit())
-    buffer.get(enc_data)
+    // buffer.flip()
+    // val enc_data = new Array[Byte](buffer.limit())
+    // buffer.get(enc_data)
 
-    val enc_sorted = enclave.ObliviousSort(eid, OP_SORT_INTEGERS_TEST.value, enc_data, 0, len)
+    // val enc_sorted = enclave.ObliviousSort(eid, OP_SORT_INTEGERS_TEST.value, enc_data, 0, len)
 
-    // decrypt enc_sorted
-    var low_index = 4
-    var sorted_numbers = Array.fill[Int](len)(0)
+    // // decrypt enc_sorted
+    // var low_index = 4
+    // var sorted_numbers = Array.fill[Int](len)(0)
 
-    for (i <- 1 to len) {
-      val enc_number_bytes = enc_sorted.slice(low_index, single_enc_size + low_index)
-      //println("slice is from " + low_index + " to " + low_index + single_enc_size)
-      assert(enc_number_bytes.length == single_enc_size)
+    // for (i <- 1 to len) {
+    //   val enc_number_bytes = enc_sorted.slice(low_index, single_enc_size + low_index)
+    //   //println("slice is from " + low_index + " to " + low_index + single_enc_size)
+    //   assert(enc_number_bytes.length == single_enc_size)
 
-      val dec_number_bytes = enclave.Decrypt(eid, enc_number_bytes)
-      temp_buffer.clear()
-      val buf = ByteBuffer.wrap(dec_number_bytes)
-      buf.order(ByteOrder.LITTLE_ENDIAN)
-      val dec_number = buf.getInt
-      sorted_numbers(i - 1) = dec_number
+    //   val dec_number_bytes = enclave.Decrypt(eid, enc_number_bytes)
+    //   temp_buffer.clear()
+    //   val buf = ByteBuffer.wrap(dec_number_bytes)
+    //   buf.order(ByteOrder.LITTLE_ENDIAN)
+    //   val dec_number = buf.getInt
+    //   sorted_numbers(i - 1) = dec_number
 
-      low_index += single_enc_size + 4
-    }
+    //   low_index += single_enc_size + 4
+    // }
 
-    for (i <- 1 to len) {
-      // println(sorted_numbers(i - 1))
-      assert(number_list(i-1) == sorted_numbers(i-1))
-    }
+    // for (i <- 1 to len) {
+    //   // println(sorted_numbers(i - 1))
+    //   assert(number_list(i-1) == sorted_numbers(i-1))
+    // }
 
-    enclave.StopEnclave(eid)
+    // enclave.StopEnclave(eid)
 
   }
 
 
-  test("JNIObliviousSortRow") {
+  ignore("JNIObliviousSortRow") {
 
     val eid = enclave.StartEnclave()
 
@@ -346,7 +355,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
 
-  test("JNIFilterSingleRow") {
+  ignore("JNIFilterSingleRow") {
     val eid = enclave.StartEnclave()
 
     val filter_number : Int = 1233
@@ -384,7 +393,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIAggregation") {
+  ignore("JNIAggregation") {
 
     val eid = enclave.StartEnclave()
 
@@ -473,7 +482,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  test("JNIJoin") {
+  ignore("JNIJoin") {
     val eid = enclave.StartEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {

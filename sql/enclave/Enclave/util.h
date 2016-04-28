@@ -62,7 +62,7 @@ template <typename T> void swap_helper(T *v1, T *v2) {
 
 
 // returns the offset for output to advance
-void encrypt_attribute(uint8_t **input, uint8_t **output);
+void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type = DUMMY);
 void decrypt_attribute(uint8_t **input, uint8_t **output);
 
 #endif // UTIL_H
