@@ -348,6 +348,7 @@ class Record {
 };
 
 class ProjectRecord : public Record {
+public:
   ProjectRecord () {
 	project_attributes = NULL;
 	num_cols = 0;

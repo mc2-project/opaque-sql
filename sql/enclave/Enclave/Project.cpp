@@ -37,6 +37,6 @@ void project(int op_code,
 	
   }
 
-  actual_output_rows_length = (output_rows_ptr - output_rows);
+  *actual_output_rows_length = (output_rows_ptr - output_rows);
   
 }

@@ -414,6 +414,17 @@ void ecall_test() {
   agg_test();
 }
 
+void ecall_project(int op_code,
+                   uint8_t *input_rows, uint32_t input_rows_length,
+                   uint32_t num_rows,
+                   uint8_t *output_rows, uint32_t output_rows_length,
+                   uint32_t *actual_output_rows_length) {
+
+  project(
+    op_code, input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+    actual_output_rows_length);
+}
+
 /**** BEGIN Aggregation ****/
 void ecall_scan_aggregation_count_distinct(int op_code,
 										   uint8_t *input_rows, uint32_t input_rows_length,

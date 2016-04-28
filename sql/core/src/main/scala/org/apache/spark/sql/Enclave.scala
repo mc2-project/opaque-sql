@@ -22,6 +22,13 @@ class SGXEnclave extends java.io.Serializable {
   @native def StartEnclave(): Long
   @native def StopEnclave(enclave_id: Long)
 
+  @native def Project(
+    eid: Long,
+    op_code: Int,
+    input_rows: Array[Byte],
+    num_rows: Int
+  ): Array[Byte]
+
   @native def Filter(
     enclave_id: Long, op: Int, value1: Array[Byte]): Boolean
 

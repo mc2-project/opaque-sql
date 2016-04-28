@@ -23,6 +23,9 @@ extern "C" {
   JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave
   (JNIEnv *, jobject, jlong);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+
   /*
    * Class:     org_apache_spark_sql_SGXEnclave
    * Method:    Filter

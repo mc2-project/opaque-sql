@@ -35,6 +35,7 @@
 #include "Crypto.h"
 #include "Join.h"
 #include "Filter.h"
+#include "Project.h"
 #include "InternalTypes.h"
 
 #if defined(__cplusplus)

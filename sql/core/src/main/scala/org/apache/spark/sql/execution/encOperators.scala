@@ -36,6 +36,23 @@ import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
+case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+
+  override def doExecute() = child.execute().mapPartitions { iter =>
+    val (enclave, eid) = QED.initEnclave()
+    val converter = UnsafeProjection.create(projectList, child.output)
+    iter.map { row =>
+      val serResult = enclave.Project(eid, OP_BD2.value, row.encSerialize, 1)
+      converter(InternalRow.fromSeq(QED.parseRow(serResult)))
+    }
+  }
+
+  override def outputOrdering: Seq[SortOrder] = child.outputOrdering
+}
+
 case class EncFilter(condition: Expression, child: SparkPlan)
   extends UnaryNode with PredicateHelper {
 

@@ -28,6 +28,7 @@ import oblivious_sort.ObliviousSort
 
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.StructField
@@ -103,6 +104,13 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   val (enclave, eid) = QED.initEnclave()
+
+  test("encProject") {
+    val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i)
+    val rdd = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x")
+    val proj = rdd.encProject(/*substring($"str", 0, 3)*/$"str", $"x")
+    assert(decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
+  }
 
   test("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
