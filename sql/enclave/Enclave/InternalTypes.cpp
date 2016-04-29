@@ -572,6 +572,32 @@ void JoinAttributes::init() {
   }
 }
 
+void JoinAttributes::re_init(uint8_t *new_row_ptr) {
+  uint8_t *sort_pointer = NULL;
+  uint32_t len = 0;
+
+  // Set "attributes" in the correct place to point to row
+  // For JoinAttributes, can look at the different columns for primary & foreign key tables
+  if (op_code == OP_JOIN_COL2) {
+	expression = IDENTITY;
+
+	find_plaintext_attribute(row, num_cols,
+							 2, &sort_pointer, &len);
+
+    attributes[0]->reset();
+    eval_attributes[0]->reset();
+	attributes[0]->consume(sort_pointer, NO_COPY);
+
+  } else if (op_code == OP_BD2) {
+	// for Big Data Benchmark query #2
+	expression = BD2;
+
+	num_attr = 1;
+	num_eval_attr = 1;
+
+  }
+}
+
 void JoinAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
 				eval_attributes, num_eval_attr,
@@ -651,6 +677,56 @@ void SortAttributes::init() {
     assert(false);
   }
 
+}
+
+void SortAttributes::re_init(uint8_t *new_row_ptr) {
+  uint8_t *sort_pointer = NULL;
+  uint32_t len = 0;
+
+  if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2) {
+	
+    uint32_t sort_col = 0;
+    switch (op_code) {
+    case OP_SORT_COL1: sort_col = 1; break;
+    case OP_SORT_COL2: sort_col = 2; break;
+    default: assert(false);
+    }
+	find_plaintext_attribute(row, num_cols,
+                             sort_col, &sort_pointer, &len);
+    attributes[0]->reset();
+    eval_attributes[0]->reset();
+	attributes[0]->consume(sort_pointer, NO_COPY);
+	
+  } else if (op_code == OP_BD2) {
+	// for Big Data Benchmark query #2
+
+  } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+	// this sort is the last step of aggregation
+
+	// first, sort based on the aggregation attribute's type
+	// if not dummy, sort based on the agg sort attribute
+
+	attributes[0]->reset();
+
+	find_plaintext_attribute(row, num_cols,
+							 4, &sort_pointer, &len);
+
+	delete attributes[0];
+	delete eval_attributes[0];
+
+	attributes[0] = create_attr(sort_pointer);
+	eval_attributes[0] = create_attr(sort_pointer);
+	
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+    attributes[1]->reset();
+	eval_attributes[1]->reset();
+    attributes[1]->consume(sort_pointer, NO_COPY);
+  } else {
+    printf("SortAttributes::init: unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  
 }
 
 void SortAttributes::evaluate() {
@@ -866,9 +942,23 @@ void JoinRecord::consume_encrypted_row(uint8_t *enc_row) {
 }
 
 void JoinRecord::set_join_attributes(int op_code) {
-  join_attributes = new JoinAttributes(op_code, row + TABLE_ID_SIZE + 4, num_cols);
-  join_attributes->set_table_id(row);
-  join_attributes->if_primary = is_table_primary(row);
+  if (join_attributes == NULL) {
+	join_attributes = new JoinAttributes(op_code, row + TABLE_ID_SIZE + 4, num_cols);
+	join_attributes->set_table_id(row);
+	join_attributes->if_primary = is_table_primary(row);
+	join_attributes->init();
+	join_attributes->evaluate();
+  } else {
+	join_attributes->re_init(this->row + TABLE_ID_SIZE + 4);
+	join_attributes->set_table_id(row);
+	join_attributes->if_primary = is_table_primary(row);
+	join_attributes->evaluate();
+  }
+}
+
+void JoinRecord::reset() {
+  this->num_cols = 0;
+  this->row_ptr = this->row;
 }
 
 /*** JOIN RECORD  ***/
@@ -891,6 +981,23 @@ void SortRecord::compare_and_swap(SortRecord *rec) {
 	this->swap(rec);
   }
 }
+
+void SortRecord::reset() {
+  this->num_cols = 0;
+  this->row_ptr = this->row;
+}
+
+void SortRecord::set_sort_attributes(int op_code) {
+  if (sort_attributes == NULL) {
+	sort_attributes = new SortAttributes(op_code, row, num_cols);
+	sort_attributes->init();
+	sort_attributes->evaluate();
+  } else {
+	sort_attributes->re_init(this->row);
+	sort_attributes->evaluate();
+  }
+}
+
 
 /*** SORT RECORD  ***/
 

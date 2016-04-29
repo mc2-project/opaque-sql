@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cstdlib>
+#include <sys/time.h>
 
 #ifdef _MSC_VER
 # include <Shlobj.h>
@@ -46,6 +47,28 @@
 #include "org_apache_spark_sql_SGXEnclave.h"
 #include "sgx_tcrypto.h"
 #include "define.h"
+
+
+class scoped_timer {
+
+public:
+  scoped_timer(uint64_t *total_time) {
+    this->total_time = total_time;
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    time_start = start.tv_sec * 1000000 + start.tv_usec;
+  }
+  
+  ~scoped_timer() {
+    struct timeval end;
+    gettimeofday(&end, NULL);
+    time_end = end.tv_sec * 1000000 + end.tv_usec;
+    *total_time += time_end - time_start;
+  }
+
+  uint64_t * total_time;
+  uint64_t time_start, time_end;
+};
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -872,10 +895,10 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   *( (uint32_t *) (temp + 1)) = 1;
   *((char *) (temp + 5)) = chars[index % 3];
 
-  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 1);
+  *( (uint32_t *) row_ptr) = enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   row_ptr += 4;
-  ecall_encrypt(global_eid, temp, (1 + 4 + 1), row_ptr, enc_size(1 + 4 + 1));
-  row_ptr += enc_size(1 + 4 + 1);
+  ecall_encrypt(global_eid, temp, (HEADER_SIZE + STRING_UPPER_BOUND), row_ptr, enc_size(HEADER_SIZE + STRING_UPPER_BOUND));
+  row_ptr += enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   
   
   *temp = INT;
@@ -895,7 +918,7 @@ void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
   uint8_t *ptr = row;
 
   for (uint32_t i = 0; i < num_rows; i++) {
-	printf("Row -- num_cols is %u\n", *( (uint32_t *) ptr));
+	//printf("Row -- num_cols is %u\n", *( (uint32_t *) ptr));
 	ptr += 4;
 
 	for (uint32_t j = 0; j < cols; j++) {
@@ -903,17 +926,17 @@ void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
 	  ptr += 4;
 	  ecall_decrypt(global_eid, ptr, enc_len, temp, enc_len - ENC_HEADER_SIZE);
 
-	  if (j == 1) {
-		uint8_t *value_ptr = temp;
-		uint8_t attr_type = *value_ptr;
-		uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
-		printf("[attr: type is %u, attr_len is %u; ", attr_type, attr_len);
-		if (attr_type == 1) {
-		  printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
-		} else if (attr_type == 2) {
-		  printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
-		}
-	  }
+	  // if (j == 1) {
+	  // 	uint8_t *value_ptr = temp;
+	  // 	uint8_t attr_type = *value_ptr;
+	  // 	uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
+	  // 	printf("[attr: type is %u, attr_len is %u; ", attr_type, attr_len);
+	  // 	if (attr_type == 1) {
+	  // 	  printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+	  // 	} else if (attr_type == 2) {
+	  // 	  printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
+	  // 	}
+	  // }
 	  
 	  ptr += enc_len;
 	}
@@ -924,10 +947,10 @@ void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 1024 * 32;
+  uint32_t total_num_rows = 256 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
-  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + 1);
+  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   printf("single_row_size is %u\n", single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
 
@@ -941,7 +964,7 @@ void test_enclave_sort() {
   printf("Encryption done\n");
 
   // split the input rows into 64 partitions of (1024 * 4) rows
-  const uint32_t num_part = 2;
+  const uint32_t num_part = 16;
 
   uint8_t *buffer_list[num_part];
   uint32_t buffer_sizes[num_part];
@@ -956,13 +979,22 @@ void test_enclave_sort() {
 	input_rows_ptr += buffer_sizes[i];
   };
 
-  sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
-													  num_part,
-													  buffer_list, buffer_sizes, num_rows);
+  printf("buffer_sizes[0] is %u, total size is %u\n", buffer_sizes[0], single_row_size * total_num_rows);
 
-  //decrypt_and_print(input_rows, total_num_rows, num_cols);
+  uint64_t t = 0;
+  {
+	scoped_timer timer(&t);
+	sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
+														num_part,
+														buffer_list, buffer_sizes, num_rows);
+  }
 
-  print_error_message(status);
+  double t_ms = ((double) t) / 1000;
+  printf("Sort took %f ms\n", t_ms);
+
+  decrypt_and_print(input_rows, total_num_rows, num_cols);
+
+  //print_error_message(status);
 }
 
 /* Application entry */

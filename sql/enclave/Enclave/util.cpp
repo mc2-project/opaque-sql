@@ -366,3 +366,75 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   *output = output_ptr;
 }
 
+
+// Row reader is able to piece together multiple buffer locations
+// and return rows; it assumes that no row is split across boundaries!
+BufferReader::BufferReader() {
+  offset = 0;
+  for (uint32_t i = 0; i < 10; i++) {
+	buffer_list[i] = NULL;
+	buffer_sizes[i] = 0;
+  }
+
+  current_pointer = NULL;
+  current_buf = 0;
+}
+  
+void BufferReader::add_buffer(uint8_t *ptr, uint32_t size) {
+  buffer_list[offset] = ptr;
+  buffer_sizes[offset] = size;
+
+  ++offset;
+}
+
+void BufferReader::reset() {
+  // reset pointer
+  current_pointer = buffer_list[0];
+  current_buf = 0;
+}
+
+void BufferReader::clear() {
+  offset = 0;
+  for (uint32_t i = 0; i < 10; i++) {
+	buffer_list[i] = NULL;
+	buffer_sizes[i] = 0;
+  }
+  current_pointer = NULL;
+  current_buf = 0;
+}
+
+
+uint8_t *BufferReader::get_ptr() {
+  return current_pointer;
+}
+
+void BufferReader::inc_ptr(uint8_t *ptr) {
+  uint32_t inc_size = ptr - current_pointer;
+  if ((current_pointer + inc_size) >= buffer_list[current_buf] + buffer_sizes[current_buf]) {
+	++current_buf;
+	current_pointer = buffer_list[current_buf];
+	//printf("[BufferReader] jump pointer, %p\n", current_pointer);
+	// if (current_pointer != NULL) {
+	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer)));
+	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer + 4)));
+	// }
+  } else {
+	current_pointer += inc_size;
+  }
+}
+
+// // this is just a dumb memory allocator
+
+// Allocator::Allocator() {
+//   buf = (uint8_t *) malloc();
+//   ptr = buf;
+// }
+
+// Allocator::~Allocator() {
+//   free(buf);
+// }
+
+// uint8_t * Allocator::alloc_memory(uint32_t size) {
+  
+// }
+

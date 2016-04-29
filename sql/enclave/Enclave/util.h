@@ -65,4 +65,33 @@ template <typename T> void swap_helper(T *v1, T *v2) {
 void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type = DUMMY);
 void decrypt_attribute(uint8_t **input, uint8_t **output);
 
+class BufferReader {
+ public:
+  BufferReader();
+
+  void add_buffer(uint8_t *ptr, uint32_t size);
+  void reset();
+  void clear();
+  uint8_t *get_ptr();
+  void inc_ptr(uint8_t *ptr);
+
+  uint8_t *buffer_list[10];
+  uint32_t buffer_sizes[10];
+  
+  int offset;
+
+  uint32_t current_buf;
+  uint8_t *current_pointer;
+};
+
+
+/* class Allocator { */
+/*   Allocator(); */
+/*   ~Allocator(); */
+
+/*   uint8_t *alloc_memory(); */
+  
+/*   utin8_t *buf; */
+/* }; */
+
 #endif // UTIL_H

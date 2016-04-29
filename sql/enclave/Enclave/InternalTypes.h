@@ -271,6 +271,7 @@ class SortAttributes : public GroupedAttributes {
   int compare(SortAttributes *attr);
 
   void init();
+  void re_init(uint8_t *new_row_ptr);
   
   void evaluate();
 };
@@ -301,12 +302,15 @@ class JoinAttributes : public GroupedAttributes {
   void swap(JoinAttributes *attr);
 
   void init();
+  void re_init(uint8_t *new_row_ptr);
   
   void evaluate();
 
   void set_table_id(uint8_t *ptr) {
 	table_id = ptr;
   }
+
+  void reset();
 
   void print();
   
@@ -427,6 +431,8 @@ class JoinRecord : public Record {
   
   void swap(JoinRecord *rec);
 
+  void reset();
+
   void compare_and_swap(JoinRecord *rec);
   
   JoinAttributes *join_attributes;
@@ -444,13 +450,13 @@ class SortRecord : public Record {
 	}
   }
 
-  void set_sort_attributes(int op_code) {
-	sort_attributes = new SortAttributes(op_code, row, num_cols);
-  }
+  void set_sort_attributes(int op_code);
 
   int compare(SortRecord *rec);
 
   void swap(SortRecord *rec);
+
+  void reset();
 
   void compare_and_swap(SortRecord *rec);
 
