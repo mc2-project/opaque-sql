@@ -171,7 +171,7 @@ void String::alloc(uint8_t *buffer) {
 	free(data);
   }
 	
-  if (buffer == NULL) {
+  if (buffer != NULL) {
 	this->data = buffer;
 	if_alloc = -1;
   } else {
@@ -470,9 +470,25 @@ void ProjectAttributes::init() {
 	// for Big Data Benchmark query #2
 	expression = BD2;
 
-	num_attr = 1;
-	num_eval_attr = 1;
+    num_attr = 2;
+    num_eval_attr = 2;
 
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+    attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1] = create_attr(sort_pointer);
+    attributes[1]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
   }
 
 }
@@ -483,12 +499,15 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
   uint32_t len = 0;
 
   if (this->op_code == OP_BD2) {
-	attributes[0]->reset();
-
-	find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
-
+    attributes[0]->reset();
+    find_plaintext_attribute(new_row_ptr, num_cols, 1, &sort_pointer, &len);
 	attributes[0]->consume(sort_pointer, NO_COPY);
-    // attributes[0]->print();
+    attributes[0]->print();
+
+    attributes[1]->reset();
+    find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
+    attributes[1]->consume(sort_pointer, NO_COPY);
+    attributes[1]->print();
   }
 }
 

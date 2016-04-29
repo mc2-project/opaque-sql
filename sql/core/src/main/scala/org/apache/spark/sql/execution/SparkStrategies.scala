@@ -396,6 +396,8 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.Project(projectList, planLater(child)) :: Nil
       case logical.Filter(condition, child) =>
         execution.Filter(condition, planLater(child)) :: Nil
+      case logical.EncProject(projectList, child) =>
+        execution.EncProject(projectList, planLater(child)) :: Nil
       case logical.EncFilter(condition, child) =>
         execution.EncFilter(condition, planLater(child)) :: Nil
       case logical.Permute(child) =>

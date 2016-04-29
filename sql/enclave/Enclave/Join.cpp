@@ -326,17 +326,16 @@ void sort_merge_join(int op_code,
 
   printf("Sort merge join called\n");
 
+  decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
   // check to see if this is a dummy row
-  if (test_dummy(join_row, enc_size(JOIN_ROW_UPPER_BOUND)) != 0) {
-	decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
-	assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
-	num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
-	get_join_attribute(op_code, num_cols,
+  if (test_dummy(primary_row, JOIN_ROW_UPPER_BOUND) != 0) {
+    assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
+    num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
+    get_join_attribute(op_code, num_cols,
                        primary_row + TABLE_ID_SIZE + 4, 0,
 					   &primary_join_attr);
   } else {
-    printf("Join row is a dummy!\n");
-    assert(false);
+    // printf("Join row is a dummy!\n");
   }
   
   // construct dummy rows
@@ -488,27 +487,23 @@ void scan_collect_last_primary(int op_code,
 
 
 // collect and process boundary records
-void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
+void process_join_boundary(int op_code,
+                           uint8_t *input_rows, uint32_t input_rows_length,
 						   uint32_t num_rows,
-						   uint8_t *output_rows, uint32_t output_rows_size,
-						   uint8_t *enc_table_p, uint8_t *enc_table_f) {
-  
+                           uint8_t *output_rows, uint32_t output_rows_size,
+                           uint32_t *actual_output_length) {
+
   uint8_t *input_rows_ptr = input_rows;
   uint8_t *output_rows_ptr = output_rows;
   
   uint8_t prev_join_row[JOIN_ROW_UPPER_BOUND];
   uint8_t current_join_row[JOIN_ROW_UPPER_BOUND];
+  write_dummy(current_join_row, JOIN_ROW_UPPER_BOUND);
 
-  uint8_t table_p[TABLE_ID_SIZE];
-  uint8_t table_f[TABLE_ID_SIZE];
   uint8_t *current_table = current_join_row;
 
-  // decrypt the table IDs
-  decrypt(enc_table_p, enc_size(TABLE_ID_SIZE), table_p);
-  decrypt(enc_table_f, enc_size(TABLE_ID_SIZE), table_f);
-
   printf("process_join_boundary called\n");
-  
+
   for (uint32_t i = 0; i < num_rows; i++) {
 	cpy(prev_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);
 	decrypt(input_rows_ptr, enc_size(JOIN_ROW_UPPER_BOUND), current_join_row);
@@ -521,23 +516,24 @@ void process_join_boundary(uint8_t *input_rows, uint32_t input_rows_length,
 	  continue;
 	}
 
-	// check the table ID
-	int ret = cmp(current_table, table_p, TABLE_ID_SIZE);
+    // check the table ID
+    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
+    int if_primary = cmp(current_table, (uint8_t *)cmp_table, TABLE_ID_SIZE);
 
-	if (ret == 0) {
+    if (if_primary == 0) {
 	  // write out the previous join attribute
-	  encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
-	  // need a dummy write to current_row
-	  cpy(current_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);
-	} else {
+      encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
+      // need a dummy write to current_row
+      cpy(current_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);
+    } else {
 	  // current join row is a dummy, need to copy previous row into current row
 	  cpy(current_join_row, prev_join_row, JOIN_ROW_UPPER_BOUND);
 	  encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
-	}
+    }
 	
 	input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	output_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
   }
-  
-}
 
+  *actual_output_length = output_rows_ptr - output_rows;
+}

@@ -23,6 +23,9 @@ extern "C" {
   JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave
   (JNIEnv *, jobject, jlong);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+
   /*
    * Class:     org_apache_spark_sql_SGXEnclave
    * Method:    Filter
@@ -118,7 +121,10 @@ extern "C" {
 																						   jbyteArray,
 																						   jint);
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *, 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBoundary(
+  JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *,
 																				  jobject, 
 																				  jlong,
 																				  jint,

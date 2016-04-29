@@ -21,6 +21,7 @@ import scala.math.Ordering
 import scala.reflect.classTag
 
 import oblivious_sort.ObliviousSort
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.Row
@@ -34,6 +35,23 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
+
+case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+
+  override def doExecute() = child.execute().mapPartitions { iter =>
+    val (enclave, eid) = QED.initEnclave()
+    val converter = UnsafeProjection.create(projectList, child.output)
+    iter.map { row =>
+      val serResult = enclave.Project(eid, OP_BD2.value, row.encSerialize, 1)
+      converter(InternalRow.fromSeq(QED.parseRow(serResult)))
+    }
+  }
+
+  override def outputOrdering: Seq[SortOrder] = child.outputOrdering
+}
 
 case class EncFilter(condition: Expression, child: SparkPlan)
   extends UnaryNode with PredicateHelper {
@@ -211,25 +229,42 @@ case class EncSortMergeJoin(
 
     val sorted = ObliviousSort.ColumnSort(sparkContext, processed, OP_JOIN_COL2.value)
 
-    val (enclave, eid) = QED.initEnclave()
-    // TODO: parallelize this
-    val sortedCollected = sorted.collect
-    val lastPrimary = enclave.ScanCollectLastPrimary(
-      eid, OP_JOIN_COL2.value, QED.concatByteArrays(sortedCollected), sortedCollected.length)
+    val lastPrimaryRows = sorted.mapPartitions { rowIter =>
+      val rows = rowIter.toArray
+      val (enclave, eid) = QED.initEnclave()
+      val lastPrimary = enclave.ScanCollectLastPrimary(
+        eid, OP_JOIN_COL2.value, QED.concatByteArrays(rows), rows.length)
+      Iterator(lastPrimary)
+    }
 
-    // TODO: parallelize this
-    val joined = enclave.SortMergeJoin(
-      eid, OP_JOIN_COL2.value, QED.concatByteArrays(sortedCollected), sortedCollected.length,
-      lastPrimary)
+    val lastPrimaryRowsCollected = lastPrimaryRows.collect
+    val (enclave, eid) = QED.initEnclave()
+    val processedJoinRows = enclave.ProcessJoinBoundary(
+      eid, OP_JOIN_COL2.value, QED.concatByteArrays(lastPrimaryRowsCollected),
+      lastPrimaryRowsCollected.length)
+
+    val processedJoinRowsRDD =
+      sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length))
+
+    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (rowIter, joinRowIter) =>
+      val rows = rowIter.toArray
+      val joinRow = joinRowIter.next()
+      assert(!joinRowIter.hasNext)
+      val (enclave, eid) = QED.initEnclave()
+      val joined = enclave.SortMergeJoin(
+        eid, OP_JOIN_COL2.value, QED.concatByteArrays(rows), rows.length, joinRow)
+      QED.readRows(joined)
+    }
 
     // TODO: permute first, otherwise this is insecure
-    val nonDummy = QED.readRows(joined).filter(row =>
-      enclave.Filter(eid, OP_FILTER_COL4_NOT_DUMMY.value, row))
+    val nonDummy = joined.mapPartitions { rowIter =>
+      val (enclave, eid) = QED.initEnclave()
+      rowIter.filter(row => enclave.Filter(eid, OP_FILTER_COL4_NOT_DUMMY.value, row))
+    }
 
-    val finalRows = nonDummy.map(QED.parseRow).toArray.toSeq
-    sparkContext.parallelize(finalRows).mapPartitions { rowIter =>
+    nonDummy.mapPartitions { rowIter =>
       val converter = UnsafeProjection.create(schema)
-      rowIter.map(row => converter(InternalRow.fromSeq(row)))
+      rowIter.map { row => converter(InternalRow.fromSeq(QED.parseRow(row))) }
     }
   }
 }
