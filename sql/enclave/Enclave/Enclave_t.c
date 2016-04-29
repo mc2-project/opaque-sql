@@ -53,6 +53,7 @@ typedef struct ms_ecall_external_oblivious_sort_t {
 	uint8_t** ms_buffer_list;
 	uint32_t* ms_buffer_lengths;
 	uint32_t* ms_num_rows;
+	uint8_t* ms_external_scratch;
 } ms_ecall_external_oblivious_sort_t;
 
 typedef struct ms_ecall_random_id_t {
@@ -505,20 +506,14 @@ static sgx_status_t SGX_CDECL sgx_ecall_external_oblivious_sort(void* pms)
 	ms_ecall_external_oblivious_sort_t* ms = SGX_CAST(ms_ecall_external_oblivious_sort_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	uint8_t** _tmp_buffer_list = ms->ms_buffer_list;
-	uint32_t _tmp_num_buffers = ms->ms_num_buffers;
-	size_t _len_buffer_list = _tmp_num_buffers * sizeof(*_tmp_buffer_list);
-	uint8_t** _in_buffer_list = NULL;
 	uint32_t* _tmp_buffer_lengths = ms->ms_buffer_lengths;
+	uint32_t _tmp_num_buffers = ms->ms_num_buffers;
 	size_t _len_buffer_lengths = _tmp_num_buffers * sizeof(*_tmp_buffer_lengths);
 	uint32_t* _in_buffer_lengths = NULL;
 	uint32_t* _tmp_num_rows = ms->ms_num_rows;
 	size_t _len_num_rows = _tmp_num_buffers * sizeof(*_tmp_num_rows);
 	uint32_t* _in_num_rows = NULL;
-
-	if ((size_t)_tmp_num_buffers > (SIZE_MAX / sizeof(*_tmp_buffer_list))) {
-		status = SGX_ERROR_INVALID_PARAMETER;
-		goto err;
-	}
+	uint8_t* _tmp_external_scratch = ms->ms_external_scratch;
 
 	if ((size_t)_tmp_num_buffers > (SIZE_MAX / sizeof(*_tmp_buffer_lengths))) {
 		status = SGX_ERROR_INVALID_PARAMETER;
@@ -531,19 +526,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_external_oblivious_sort(void* pms)
 	}
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_external_oblivious_sort_t));
-	CHECK_UNIQUE_POINTER(_tmp_buffer_list, _len_buffer_list);
 	CHECK_UNIQUE_POINTER(_tmp_buffer_lengths, _len_buffer_lengths);
 	CHECK_UNIQUE_POINTER(_tmp_num_rows, _len_num_rows);
 
-	if (_tmp_buffer_list != NULL) {
-		_in_buffer_list = (uint8_t**)malloc(_len_buffer_list);
-		if (_in_buffer_list == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_buffer_list, _tmp_buffer_list, _len_buffer_list);
-	}
 	if (_tmp_buffer_lengths != NULL) {
 		_in_buffer_lengths = (uint32_t*)malloc(_len_buffer_lengths);
 		if (_in_buffer_lengths == NULL) {
@@ -562,9 +547,8 @@ static sgx_status_t SGX_CDECL sgx_ecall_external_oblivious_sort(void* pms)
 
 		memcpy(_in_num_rows, _tmp_num_rows, _len_num_rows);
 	}
-	ecall_external_oblivious_sort(ms->ms_op_code, _tmp_num_buffers, _in_buffer_list, _in_buffer_lengths, _in_num_rows);
+	ecall_external_oblivious_sort(ms->ms_op_code, _tmp_num_buffers, _tmp_buffer_list, _in_buffer_lengths, _in_num_rows, _tmp_external_scratch);
 err:
-	if (_in_buffer_list) free(_in_buffer_list);
 	if (_in_buffer_lengths) free(_in_buffer_lengths);
 	if (_in_num_rows) free(_in_num_rows);
 

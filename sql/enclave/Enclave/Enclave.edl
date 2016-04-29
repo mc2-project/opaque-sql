@@ -38,9 +38,10 @@ enclave {
 	 //		int low_idx, uint32_t list_length);
 	 public void ecall_external_oblivious_sort(int op_code,
 	                                           uint32_t num_buffers,
-								               [in, count=num_buffers] uint8_t **buffer_list, 
+								               [user_check] uint8_t **buffer_list, 
 								               [in, count=num_buffers] uint32_t *buffer_lengths,
-								               [in, count=num_buffers] uint32_t* num_rows);
+								               [in, count=num_buffers] uint32_t* num_rows,
+											   [user_check] uint8_t *external_scratch);
 
 	 public void ecall_random_id([in, out, size=length]uint8_t *ptr, uint32_t length);
 	 public void ecall_scan_aggregation_count_distinct(

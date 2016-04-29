@@ -22,6 +22,7 @@ void print_bytes(uint8_t *ptr, uint32_t len);
 
 void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len);
+void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len);
 
 // cmp should return 0 if equal, and -1 if not equal
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len);
@@ -41,6 +42,7 @@ int is_table_primary(uint8_t *table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
 void print_row(const char *row_name, uint8_t *row_ptr);
+void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols);
 void print_join_row(const char *row_name, uint8_t *row_ptr);
 
 uint32_t get_num_col(uint8_t *row);
@@ -84,14 +86,6 @@ class BufferReader {
   uint8_t *current_pointer;
 };
 
-
-/* class Allocator { */
-/*   Allocator(); */
-/*   ~Allocator(); */
-
-/*   uint8_t *alloc_memory(); */
-  
-/*   utin8_t *buf; */
-/* }; */
+uint32_t attr_upper_bound(uint8_t *attr);
 
 #endif // UTIL_H

@@ -55,6 +55,30 @@ void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
   *enc_row_len = len;
 }
 
+// advance pointer to the next row
+// return pointer to current row, as well as the overall length
+void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len) {
+  // a row should be in the format of [num_col][attr1 type][attr1 len][attr1]...
+  uint32_t num_cols = * ( (uint32_t *) *ptr);
+  uint8_t *attr_ptr = *ptr;
+  uint32_t attr_len = 0;
+  uint32_t len = 0;
+
+  // move past the column number
+  attr_ptr += 4;
+  len = 4;
+
+  for (uint32_t i = 0; i < num_cols; i++) {
+	attr_len = * ((uint32_t *) (attr_ptr + TYPE_SIZE));
+	attr_ptr += HEADER_SIZE + attr_len;
+	len += HEADER_SIZE + attr_len;
+  }
+
+  *row_ptr = *ptr;
+  *ptr = attr_ptr;
+  *row_len = len;
+}
+
 
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
 
@@ -200,6 +224,19 @@ void print_row(const char *row_name, uint8_t *row_ptr) {
   }
   printf("===============\n");
 }
+
+// this function prints out a plaintext row
+void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols) {
+  uint8_t *value_ptr = row_ptr;
+  printf("===============\n");
+  printf("Row %s\n", row_name);
+  for (uint32_t i = 0; i < num_cols; i++) {
+	print_attribute("", value_ptr);
+	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+  }
+  printf("===============\n");
+}
+
 
 // this function prints out a plaintext join row
 void print_join_row(const char *row_name, uint8_t *row_ptr) {
@@ -423,18 +460,14 @@ void BufferReader::inc_ptr(uint8_t *ptr) {
   }
 }
 
-// // this is just a dumb memory allocator
-
-// Allocator::Allocator() {
-//   buf = (uint8_t *) malloc();
-//   ptr = buf;
-// }
-
-// Allocator::~Allocator() {
-//   free(buf);
-// }
-
-// uint8_t * Allocator::alloc_memory(uint32_t size) {
+uint32_t attr_upper_bound(uint8_t *attr) {
+  uint8_t attr_type = *attr;
   
-// }
+  switch(attr_type) {
+  case INT:
+	return INT_UPPER_BOUND;
+  case STRING:
+	return STRING_UPPER_BOUND;
 
+  }
+}

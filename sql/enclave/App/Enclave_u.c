@@ -37,6 +37,7 @@ typedef struct ms_ecall_external_oblivious_sort_t {
 	uint8_t** ms_buffer_list;
 	uint32_t* ms_buffer_lengths;
 	uint32_t* ms_num_rows;
+	uint8_t* ms_external_scratch;
 } ms_ecall_external_oblivious_sort_t;
 
 typedef struct ms_ecall_random_id_t {
@@ -473,7 +474,7 @@ sgx_status_t ecall_oblivious_sort_int(sgx_enclave_id_t eid, int* input, uint32_t
 	return status;
 }
 
-sgx_status_t ecall_external_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint32_t num_buffers, uint8_t** buffer_list, uint32_t* buffer_lengths, uint32_t* num_rows)
+sgx_status_t ecall_external_oblivious_sort(sgx_enclave_id_t eid, int op_code, uint32_t num_buffers, uint8_t** buffer_list, uint32_t* buffer_lengths, uint32_t* num_rows, uint8_t* external_scratch)
 {
 	sgx_status_t status;
 	ms_ecall_external_oblivious_sort_t ms;
@@ -482,6 +483,7 @@ sgx_status_t ecall_external_oblivious_sort(sgx_enclave_id_t eid, int op_code, ui
 	ms.ms_buffer_list = buffer_list;
 	ms.ms_buffer_lengths = buffer_lengths;
 	ms.ms_num_rows = num_rows;
+	ms.ms_external_scratch = external_scratch;
 	status = sgx_ecall(eid, 5, &ocall_table_Enclave, &ms);
 	return status;
 }
