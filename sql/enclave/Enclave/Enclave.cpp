@@ -102,6 +102,28 @@ void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
   osort_with_index_int(input, 0, input_len);
 }
 
+
+int qsort_cmp_sort(const void *a, const void *b) {
+  return ( *((SortRecord **) a) )->compare(*((SortRecord **) b));
+}
+
+int qsort_cmp_join(const void *a, const void *b) {
+  return ( *((JoinRecord **) a) )->compare( *((JoinRecord **) b) );
+}
+
+template<typename T>
+void qsort_with_index(int op_code, T **input, uint32_t input_length, int low_idx, uint32_t len) { }
+
+template<>
+void qsort_with_index<SortRecord>(int op_code, SortRecord **input, uint32_t input_length, int low_idx, uint32_t len) {
+  qsort(input, len, sizeof(SortRecord *), qsort_cmp_sort);
+}
+
+template<>
+void qsort_with_index<JoinRecord>(int op_code, JoinRecord **input, uint32_t input_length, int low_idx, uint32_t len) {
+  qsort(input, len, sizeof(JoinRecord *), qsort_cmp_join);
+}
+
 // input_length is the length of input in bytes
 // len is the number of records
 template<typename T>
@@ -346,7 +368,7 @@ void oblivious_sort(int op_code, BufferReader *reader,
 	}
 
 	if (if_sort) {
-	  osort_with_index<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, 0, list_length);
+	  qsort_with_index<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, 0, list_length);
 	} else {
 	  non_oblivious_merge<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, low_idx, list_length);
 	}
@@ -545,7 +567,7 @@ void ecall_external_oblivious_sort(int op_code,
 	return;
   }
 
-  uint8_t * scratch = (uint8_t *) malloc(16 * 1024 * 1024);
+  uint8_t * scratch = (uint8_t *) malloc(MAX_SORT_BUFFER);
   uint8_t * scratch_ptr = scratch;
   uint8_t * external_scratch_ptr = external_scratch;
   
@@ -783,37 +805,37 @@ void ecall_external_oblivious_sort(int op_code,
   	reader.reset();
   	reader.add_buffer(buffer_list[i], buffer_lengths[i]);
 	
-	// note that these are padded!
-	decrypt(external_scratch_list[i], external_scratch_size[i], scratch);
-	scratch_ptr = scratch;
-	for (uint32_t r = 0; r < num_rows[i]; r++) {
-	  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-	  // set num cols first
-	  sort_data[r]->num_cols = *( (uint32_t *) (row_ptr));
-	  memcpy(sort_data[r]->row, row_ptr + 4, row_len - 4);
-	  sort_data[r]->row_ptr = sort_data[r]->row + row_len - 4;
-	}
+  	// note that these are padded!
+  	decrypt(external_scratch_list[i], external_scratch_size[i], scratch);
+  	scratch_ptr = scratch;
+  	for (uint32_t r = 0; r < num_rows[i]; r++) {
+  	  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+  	  // set num cols first
+  	  sort_data[r]->num_cols = *( (uint32_t *) (row_ptr));
+  	  memcpy(sort_data[r]->row, row_ptr + 4, row_len - 4);
+  	  sort_data[r]->row_ptr = sort_data[r]->row + row_len - 4;
+  	}
 
-	reader.reset();
-	input_ptr = reader.get_ptr();
-	value_ptr = NULL;
-	value_len = 0;
-	uint8_t *test_ptr = NULL;
+  	reader.reset();
+  	input_ptr = reader.get_ptr();
+  	value_ptr = NULL;
+  	value_len = 0;
+  	uint8_t *test_ptr = NULL;
 
-	for (uint32_t r = 0; r < num_rows[i]; r++) {
-	  value_ptr = sort_data[r]->row;
-	  input_ptr = reader.get_ptr();
+  	for (uint32_t r = 0; r < num_rows[i]; r++) {
+  	  value_ptr = sort_data[r]->row;
+  	  input_ptr = reader.get_ptr();
 	  
-	  //test_ptr = input_ptr;
-	  *( (uint32_t *) input_ptr) = sort_data[r]->num_cols;
-	  input_ptr += 4;
+  	  //test_ptr = input_ptr;
+  	  *( (uint32_t *) input_ptr) = sort_data[r]->num_cols;
+  	  input_ptr += 4;
 
-	  // need to encrypt each attribute separately
-	  for (uint32_t c = 0; c < sort_data[i]->num_cols; c++) {
-		encrypt_attribute(&value_ptr, &input_ptr);
-	  }
-	  reader.inc_ptr(input_ptr);
-	}
+  	  // need to encrypt each attribute separately
+  	  for (uint32_t c = 0; c < sort_data[i]->num_cols; c++) {
+  		encrypt_attribute(&value_ptr, &input_ptr);
+  	  }
+  	  reader.inc_ptr(input_ptr);
+  	}
   }
 
   printf("number of merges: %u\n", merges);
