@@ -399,7 +399,8 @@ object Catalyst {
   val enclaveBuildSettings = Seq(
     enclaveBuildTask := {
       import sys.process._
-      Seq("sql/enclave/build.sh") !
+      val ret = Seq("sql/enclave/build.sh").!
+      if (ret != 0) error("C++ build failed.")
     },
     baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value,
     compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask),
