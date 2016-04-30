@@ -197,9 +197,9 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
 
 // merges together two sorted arrays non-obliviously, in place
 template<typename T>
-void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offset, uint32_t len) {
+void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offset, uint32_t len, uint8_t **temp_ptr) {
 
-  T **temp = (T **) malloc(sizeof(T *) * len);
+  T **temp = (T **) (temp_ptr);
 
   // initialize the two merge pointers
   uint32_t left_ptr = 0;
@@ -240,14 +240,15 @@ void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offs
   	//printf("input[%u] is %p\n", i, input[i]);
   }
 
-  free(temp);
+  //free(temp);
 }
 
 void oblivious_sort(int op_code, BufferReader *reader,
 					int low_idx, uint32_t list_length,
 					bool if_sort,
 					SortRecord **sort_data,
-					JoinRecord **join_data) {
+					JoinRecord **join_data,
+					uint8_t **temp) {
   
   // iterate through all data, and then decrypt
 
@@ -370,7 +371,7 @@ void oblivious_sort(int op_code, BufferReader *reader,
 	if (if_sort) {
 	  qsort_with_index<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, 0, list_length);
 	} else {
-	  non_oblivious_merge<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, low_idx, list_length);
+	  non_oblivious_merge<SortRecord>(op_code, sort_data, sizeof(SortRecord *) * list_length, low_idx, list_length, temp);
 	}
 
 	//printf("Sorted data\n");
@@ -462,7 +463,7 @@ void oblivious_sort(int op_code, BufferReader *reader,
 	if (if_sort) {
 	  osort_with_index<JoinRecord>(op_code, join_data, sizeof(JoinRecord *) * list_length, 0, list_length);
 	} else {
-	  non_oblivious_merge<JoinRecord>(op_code, join_data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
+	  non_oblivious_merge<JoinRecord>(op_code, join_data, sizeof(JoinRecord *) * list_length, low_idx, list_length, temp);
 	}
 
 	//osort_with_index<JoinRecord>(op_code, data, sizeof(JoinRecord *) * list_length, low_idx, list_length);
@@ -524,6 +525,8 @@ void ecall_external_oblivious_sort(int op_code,
   SortRecord **sort_data = NULL;
   JoinRecord **join_data = NULL;
   
+  uint8_t **temp = NULL;
+  
   uint32_t max_list_length = num_rows[0];
   if (num_buffers > 1) {
 	max_list_length += num_rows[1];
@@ -541,17 +544,39 @@ void ecall_external_oblivious_sort(int op_code,
 	}
   }
 
+  temp = (uint8_t **) malloc(sizeof(void *) * max_list_length);
+
   printf("max_list_length is %u\n", max_list_length);
 
   if (num_buffers == 1) {
 	//assert(buffer_lengths[0] < MAX_SORT_BUFFER);
 	printf("num buffers is 1\n");
 	reader.add_buffer(buffer_list[0], buffer_lengths[0]);
-	oblivious_sort(op_code, &reader, 0, num_rows[0], true, sort_data, join_data);
+	oblivious_sort(op_code, &reader, 0, num_rows[0], true, sort_data, join_data, NULL);
+
+	reader.reset();
+	uint8_t * input_ptr = reader.get_ptr();
+	uint8_t * value_ptr = NULL;
+	uint32_t value_len = 0;
+	uint8_t *test_ptr = NULL;
+
+	for (uint32_t i = 0; i < num_rows[0]; i++) {
+	  value_ptr = sort_data[i]->row;
+	  input_ptr = reader.get_ptr();
+	  
+	  *( (uint32_t *) input_ptr) = sort_data[i]->num_cols;
+	  input_ptr += 4;
+	  
+	  // need to encrypt each attribute separately
+	  for (uint32_t c = 0; c < sort_data[i]->num_cols; c++) {
+		encrypt_attribute(&value_ptr, &input_ptr);
+	  }
+	  reader.inc_ptr(input_ptr);
+	}
 
 	if (sort_data != NULL) {
 	  for (uint32_t i = 0; i < max_list_length; i++) {
-		free(sort_data[i]);
+		delete sort_data[i];
 	  }
 	
 	  free(sort_data);
@@ -559,11 +584,13 @@ void ecall_external_oblivious_sort(int op_code,
 
 	if (join_data != NULL) {
 	  for (uint32_t i = 0; i < max_list_length; i++) {
-		free(join_data[i]);
+		delete join_data[i];
 	  }
 	
 	  free(join_data);
 	}
+	
+	free(temp);
 	return;
   }
 
@@ -583,7 +610,7 @@ void ecall_external_oblivious_sort(int op_code,
   	reader.clear();
   	reader.reset();
   	reader.add_buffer(buffer_list[i], buffer_lengths[i]);
-  	oblivious_sort(op_code, &reader, 0, num_rows[i], true, sort_data, join_data);
+  	oblivious_sort(op_code, &reader, 0, num_rows[i], true, sort_data, join_data, temp);
 	
 	scratch_ptr = scratch;
 	// flush sort records/join records to ptr, then encrypt that all at once
@@ -608,7 +635,7 @@ void ecall_external_oblivious_sort(int op_code,
 	}
 	
 	//padded_row_size = 4 + (HEADER_SIZE + INT_UPPER_BOUND) * 2 + (HEADER_SIZE + STRING_UPPER_BOUND);
-	printf("padded_row_size is %u\n", padded_row_size);
+	//printf("padded_row_size is %u\n", padded_row_size);
 
 	// there needs to be padding
 	encrypt(scratch, padded_row_size * num_rows[i], external_scratch_ptr);
@@ -683,7 +710,8 @@ void ecall_external_oblivious_sort(int op_code,
 			  oblivious_sort(op_code, &reader,
 			  				 num_rows[idx], num_rows[idx] + num_rows[pair_idx],
 			  				 false,
-			  				 sort_data, join_data);
+			  				 sort_data, join_data,
+							 temp);
 
 			  // flush data out to scratch, encrypt
 			  scratch_ptr = scratch;
@@ -723,7 +751,7 @@ void ecall_external_oblivious_sort(int op_code,
 			int pair_idx = idx + part_size_half;
 
 			if (pair_idx < offset + len) {
-			  
+
 			  // find two pointers to these buffers
 			  uint8_t *buffer1_ptr = external_scratch_list[idx];
 			  uint8_t *buffer2_ptr = external_scratch_list[pair_idx];
@@ -759,7 +787,8 @@ void ecall_external_oblivious_sort(int op_code,
 			  oblivious_sort(op_code, &reader,
 			  				 num_rows[idx], num_rows[idx] + num_rows[pair_idx],
 			  				 false,
-			  				 sort_data, join_data);
+			  				 sort_data, join_data,
+							 temp);
 
 			  // flush data out to scratch, encrypt
 			  scratch_ptr = scratch;
@@ -846,7 +875,7 @@ void ecall_external_oblivious_sort(int op_code,
   
   if (sort_data != NULL) {
 	for (uint32_t i = 0; i < max_list_length; i++) {
-	  free(sort_data[i]);
+	  delete sort_data[i];
 	}
 	
 	free(sort_data);
@@ -854,11 +883,13 @@ void ecall_external_oblivious_sort(int op_code,
 
   if (join_data != NULL) {
 	for (uint32_t i = 0; i < max_list_length; i++) {
-	  free(join_data[i]);
+	  delete join_data[i];
 	}
 	
 	free(join_data);
   }
+
+  free(temp);
 
 }
 
