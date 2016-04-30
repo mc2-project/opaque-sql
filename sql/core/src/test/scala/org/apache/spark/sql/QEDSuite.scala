@@ -112,14 +112,14 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  test("encProject") {
+  ignore("encProject") {
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i)
     val rdd = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x")
     val proj = rdd.encProject(/*substring($"str", 0, 3)*/$"str", $"x")
     assert(decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
   }
 
-  test("encFilter") {
+  ignore("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
     val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
     assert(decrypt2(words.collect) === data)
@@ -128,7 +128,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
-  test("encPermute") {
+  ignore("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
       sqlContext.createDataFrame(
@@ -139,7 +139,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt1[Int](permuted).sorted === array)
   }
 
-  test("encGroupByWithSum") {
+  ignore("encGroupByWithSum") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
       case 1 => "B"
@@ -153,7 +153,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
-  test("encSort") {
+  ignore("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = time("Enc sorting: ") {
       sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
@@ -161,7 +161,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
-  test("encJoin") {
+  ignore("encJoin") {
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
     val p = sparkContext.makeRDD(encrypt3(p_data)).toDF("id", "pk", "x")
@@ -490,7 +490,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
-  ignore("JNIJoin") {
+  test("JNIJoin") {
     val eid = enclave.StartEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
