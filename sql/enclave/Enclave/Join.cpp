@@ -498,6 +498,7 @@ void process_join_boundary(int op_code,
   
   uint8_t prev_join_row[JOIN_ROW_UPPER_BOUND];
   uint8_t current_join_row[JOIN_ROW_UPPER_BOUND];
+  write_dummy(prev_join_row, JOIN_ROW_UPPER_BOUND);
   write_dummy(current_join_row, JOIN_ROW_UPPER_BOUND);
 
   uint8_t *current_table = current_join_row;
@@ -509,7 +510,7 @@ void process_join_boundary(int op_code,
 	decrypt(input_rows_ptr, enc_size(JOIN_ROW_UPPER_BOUND), current_join_row);
 
 	if (i == 0) {
-	  // encrypt a dummy record 
+	  // encrypt a dummy record
 	  encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
 	  input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
 	  output_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);

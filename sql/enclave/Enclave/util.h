@@ -5,6 +5,7 @@
 #include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>
 
 #include "Enclave_t.h"  /* print_string */
 #include "define.h"

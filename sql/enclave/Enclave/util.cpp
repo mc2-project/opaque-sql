@@ -67,9 +67,11 @@ int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
 }
 
 void cpy(uint8_t *dest, uint8_t *src, uint32_t len) {
-  for (uint32_t i = 0; i < len; i++) {
-	*(dest + i) = *(src + i);
-  }
+  // for (uint32_t i = 0; i < len; i++) {
+  // 	*(dest + i) = *(src + i);
+  // }
+
+  memcpy(dest, src, len);
 }
 
 // basically a memset 0
