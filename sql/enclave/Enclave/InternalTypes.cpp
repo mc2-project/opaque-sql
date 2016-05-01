@@ -691,11 +691,12 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
     case OP_SORT_COL2: sort_col = 2; break;
     default: assert(false);
     }
-	find_plaintext_attribute(row, num_cols,
+    	find_plaintext_attribute(row, num_cols,
                              sort_col, &sort_pointer, &len);
     attributes[0]->reset();
     eval_attributes[0]->reset();
-	attributes[0]->consume(sort_pointer, NO_COPY);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
 	
   } else if (op_code == OP_BD2) {
 	// for Big Data Benchmark query #2

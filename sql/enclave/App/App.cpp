@@ -973,7 +973,7 @@ void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 128 * 1024;
+  uint32_t total_num_rows = 256 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);

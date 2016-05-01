@@ -84,7 +84,7 @@ else
 	Crypto_Library_Name := sgx_tcrypto
 endif
 
-Enclave_Cpp_Files := Enclave/util.cpp Enclave/InternalTypes.cpp Enclave/Expression.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
+Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/util.cpp Enclave/InternalTypes.cpp Enclave/Expression.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
 Enclave_Include_Paths := -IInclude -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
@@ -170,8 +170,8 @@ Enclave/%.o: Enclave/%.cpp
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+$(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects)
+	@$(CXX) $^ -o $@  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
