@@ -146,6 +146,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
+  test("spark sql sort") {
+    val data = Random.shuffle((0 until 256000).map(x => (x.toString, x)).toSeq)
+    val sorted = time("spark sql sorting") {
+      val df = sparkContext.makeRDD(data).toDF("str", "x").sort($"x")
+      df.count()
+      df
+    }
+    assert(sorted.collect === data.sortBy(_._2).map { case (str, x) => Row(str, x) })
+  }
+
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = time("Enc sorting: ") {
