@@ -28,6 +28,14 @@ enclave {
      *  [string]: specifies 'str' is a NULL terminated buffer.
      */
      trusted {
+         public void ecall_project(
+             int op_code,
+             [in, size=input_rows_length] uint8_t *input_rows,
+             uint32_t input_rows_length,
+             uint32_t num_rows,
+             [out, size=output_rows_length] uint8_t *output_rows,
+             uint32_t output_rows_length,
+             [out] uint32_t *actual_output_rows_length);
          public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
 	 public void ecall_encrypt([in, size=length] uint8_t *plaintext, uint32_t length, [out, size=cipher_length] uint8_t *ciphertext, uint32_t cipher_length);
 	 public void ecall_decrypt([in, size=ciphertext_length] uint8_t *ciphertext, uint32_t ciphertext_length, [out, size=plaintext_length] uint8_t *plaintext, uint32_t plaintext_length);
@@ -67,11 +75,11 @@ enclave {
 									             uint32_t num_rows,
 									             [out, size=output_length] uint8_t *output, uint32_t output_length);
 
-	 public void ecall_process_join_boundary([user_check] uint8_t *input_rows, uint32_t input_rows_length,
+     public void ecall_process_join_boundary(int op_code,
+                                             [user_check] uint8_t *input_rows, uint32_t input_rows_length,
 						                     uint32_t num_rows,
-						                     [out, size=output_rows_size] uint8_t *output_rows, uint32_t output_rows_size,
-						                     [in, sizefunc=enc_table_id_size] uint8_t *enc_table_p,
-											 [in, sizefunc=enc_table_id_size] uint8_t *enc_table_f);
+                                             [out, size=output_rows_size] uint8_t *output_rows, uint32_t output_rows_size,
+                                             [out, size=4] uint32_t *actual_output_length);
 
 	 public void ecall_sort_merge_join(int op_code,
 						               [user_check] uint8_t *input_rows, uint32_t input_rows_length,

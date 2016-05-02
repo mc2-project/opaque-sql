@@ -181,6 +181,9 @@ class Analyzer(
       case Aggregate(groups, aggs, child) if child.resolved && hasUnresolvedAlias(aggs) =>
         Aggregate(groups, assignAliases(aggs), child)
 
+      case EncProject(projectList, child) if child.resolved && hasUnresolvedAlias(projectList) =>
+        EncProject(assignAliases(projectList), child)
+
       case EncAggregateWithSum(groupingExpression, sumExpression, aggOutputs, child)
           if child.resolved && hasUnresolvedAlias(Seq(groupingExpression)) =>
         EncAggregateWithSum(assignAliases(Seq(groupingExpression)).head, sumExpression, aggOutputs, child)

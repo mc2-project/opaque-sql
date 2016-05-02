@@ -32,12 +32,19 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 												   NULL, 0,
 												   mac_ptr);
   switch(status) {
+  case SGX_SUCCESS:
+    break;
   case SGX_ERROR_INVALID_PARAMETER:
+    printf("Encrypt: invalid parameter\n");
     break;
   case SGX_ERROR_OUT_OF_MEMORY:
+    printf("Encrypt: out of memory\n");
     break;
   case SGX_ERROR_UNEXPECTED:
+    printf("Encrypt: unexpected error\n");
     break;
+  default:
+    printf("Encrypt: other error %#08x\n", status);
   }
 
 }

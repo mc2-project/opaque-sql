@@ -23,6 +23,14 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 
+case class EncProject(projectList: Seq[NamedExpression], child: LogicalPlan)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+
+  override def maxRows: Option[Long] = child.maxRows
+}
+
 case class EncFilter(condition: Expression, child: LogicalPlan)
   extends UnaryNode with PredicateHelper {
 

@@ -5,6 +5,7 @@
 #include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>
 
 #include "Enclave_t.h"  /* print_string */
 #include "define.h"
@@ -64,5 +65,7 @@ template <typename T> void swap_helper(T *v1, T *v2) {
 // returns the offset for output to advance
 void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type = DUMMY);
 void decrypt_attribute(uint8_t **input, uint8_t **output);
+
+void check(const char* message, bool test);
 
 #endif // UTIL_H

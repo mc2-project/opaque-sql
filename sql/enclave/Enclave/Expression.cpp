@@ -8,6 +8,7 @@
 // This expression returns a new string with that is a prefix of str
 // returned = str[1:offset]
 void prefix(String *input, uint32_t offset, String *result) {
+  result->alloc(NULL);
   cpy(result->data, input->data, offset);
   result->length = offset;
 }
@@ -100,10 +101,11 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
 					  uint32_t expression) {
   switch(expression) {
   case BD2:
-	{
-	  prefix(dynamic_cast<String *>(input_attr[0]),
+    {
+      prefix(dynamic_cast<String *>(input_attr[0]),
 			 3,
-			 dynamic_cast<String *>(output_attr[0]));
+             dynamic_cast<String *>(output_attr[0]));
+      dynamic_cast<Integer *>(output_attr[1])->copy_attr(dynamic_cast<Integer *>(input_attr[1]));
 	}
 	break;
   }
