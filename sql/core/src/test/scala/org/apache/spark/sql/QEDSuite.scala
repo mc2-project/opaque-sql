@@ -36,6 +36,16 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 
+object QEDSuite {
+  def bd1Encrypt3(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(u: String, r: Int, d: Int) =>
+        (QED.encrypt(enclave, eid, u), QED.encrypt(enclave, eid, r), QED.encrypt(enclave, eid, d))
+    }
+  }
+}
+
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
@@ -114,24 +124,38 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  test("big data 1") {
-    val rankings = sqlContext.read.schema(
+  test("big data 1 - spark sql") {
+    val rankingsDF = sqlContext.read.schema(
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType),
         StructField("avgDuration", IntegerType))))
       .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
-      .collect.map { case Row(u: String, r: Int, d: Int) => (u, r, d)}
-    val rankingsDF = sparkContext.makeRDD(encrypt3(rankings)).toDF("pageURL", "pageRank", "avgDuration")
-    assert(decrypt3(rankingsDF.collect) === rankings)
-
-    val filtered = time("big data 1") {
-      val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
-      df.count
+      .coalesce(2)
+    val filtered = time("big data 1 - spark sql") {
+      val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
+      val count = df.count
+      println("big data 1 spark sql - num rows: " + count)
       df
     }
+  }
 
-    assert(decrypt2[String, Int](filtered.collect).sorted === rankings.collect { case (u, r, d) if r > 1000 => (u, r) }.sorted)
+  test("big data 1") {
+    val rankingsDF = sqlContext.read.schema(
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType),
+        StructField("avgDuration", IntegerType))))
+      .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
+      .mapPartitions(QEDSuite.bd1Encrypt3)
+      .toDF("pageURL", "pageRank", "avgDuration")
+      .coalesce(2)
+    val filtered = time("big data 1") {
+      val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
+      val count = df.count
+      println("big data 1 - num rows: " + count)
+      df
+    }
   }
 
   test("encFilter") {
