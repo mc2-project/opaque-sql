@@ -329,7 +329,7 @@ void sort_merge_join(int op_code,
   decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
   // check to see if this is a dummy row
   if (test_dummy(primary_row, JOIN_ROW_UPPER_BOUND) != 0) {
-    assert(cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
+    check("primary_row != table_p", cmp(primary_row, table_p, TABLE_ID_SIZE) == 0);
     num_cols = *( (uint32_t *) (primary_row + TABLE_ID_SIZE));
     get_join_attribute(op_code, num_cols,
                        primary_row + TABLE_ID_SIZE + 4, 0,
@@ -367,7 +367,7 @@ void sort_merge_join(int op_code,
 	  dummy_row_ptr += upper_bound;
 	}
   } else {
-    assert(false);
+    check("unknown op code", false);
   }
 
   dummy_row_ptr = dummy_row;
@@ -403,7 +403,7 @@ void sort_merge_join(int op_code,
 		cpy(primary_row, current_row + TABLE_ID_SIZE, ROW_UPPER_BOUND);
 	  } else {
 		// this shouldn't happen, based on the assumptions!
-		assert(false);
+        check("violated assumptions?", false);
 	  }
 	  // write out dummy join
 	  output_rows_ptr += encrypt_and_write_row(dummy_row, output_rows_ptr);
@@ -426,6 +426,7 @@ void sort_merge_join(int op_code,
   *actual_output_length = output_rows_ptr - output_rows;
   
   free(dummy_row);
+  free(merge_row);
 }
 
 

@@ -368,3 +368,9 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   *output = output_ptr;
 }
 
+void check(const char* message, bool test) {
+  if (!test) {
+    printf("%s\n", message);
+    assert(test);
+  }
+}

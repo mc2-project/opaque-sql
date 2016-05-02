@@ -821,7 +821,7 @@ void ProjectRecord::set_project_attributes(int op_code) {
 	project_attributes->init();
 	project_attributes->evaluate();
   } else {
-	project_attributes->re_init(this->row + 4);
+    project_attributes->re_init(this->row);
 	project_attributes->evaluate();
   }
 
@@ -841,8 +841,9 @@ uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
   uint8_t *temp_ptr = temp;
 
   for (uint32_t i = 0; i < attrs->num_eval_attr; i++) {
-	
-	attrs->eval_attributes[i]->flush(temp);
+
+    temp_ptr = temp;
+    attrs->eval_attributes[i]->flush(temp);
 	encrypt_attribute(&temp_ptr, &output_ptr);
 	
 	// value_len = *( (uint32_t *) (temp + TYPE_SIZE));
