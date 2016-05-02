@@ -942,6 +942,11 @@ void JoinRecord::consume_encrypted_row(uint8_t *enc_row) {
   this->num_cols = *( (uint32_t *) (row + TABLE_ID_SIZE));
 }
 
+void JoinRecord::consume_plaintext_row(uint8_t *plain_row) {
+  memcpy(row, plain_row, JOIN_ROW_UPPER_BOUND);
+  this->num_cols = *( (uint32_t *) (row + TABLE_ID_SIZE));
+}
+
 void JoinRecord::set_join_attributes(int op_code) {
   if (join_attributes == NULL) {
 	join_attributes = new JoinAttributes(op_code, row + TABLE_ID_SIZE + 4, num_cols);

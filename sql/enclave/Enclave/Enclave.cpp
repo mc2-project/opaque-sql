@@ -438,28 +438,34 @@ void oblivious_sort(int op_code, BufferReader *reader,
     uint8_t *table_id = NULL;
     uint8_t *value_ptr = NULL;
     uint32_t value_len = 0;
-	
+
     for (uint32_t i = 0; i < list_length; i++) {
-      // allocate JOIN_ROW_UPPER_BOUND
-      //JoinRecord *record = &(data[i].record);
-      //record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
-
-      input_ptr = reader->get_ptr();
-
-      //data[i] = new JoinRecord;
       JoinRecord *record = join_data[i];
-      record->reset();
-	  
-      record->consume_encrypted_row(input_ptr);
-      input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+      if (if_sort) {
+	// allocate JOIN_ROW_UPPER_BOUND
+	//JoinRecord *record = &(data[i].record);
+	//record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
+	
+	input_ptr = reader->get_ptr();
+	
+	//data[i] = new JoinRecord;
+	record->reset();
+	
+	record->consume_encrypted_row(input_ptr);
+	input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+
+	//print_join_row("", record->row);
+	//printf("Parsing join record %u, num_cols is %u\n", i, if_sort, record->num_cols);
+	//printf("Parsing join record %u, num_cols is %u\n", i, if_sort, record->num_cols);
+       
+	//record->join_attributes->init();
+	//record->join_attributes->evaluate();
+	//record->join_attributes->print();
+
+	reader->inc_ptr(input_ptr);
+      }
 
       record->set_join_attributes(op_code);
-
-      //record->join_attributes->init();
-      //record->join_attributes->evaluate();
-      //record->join_attributes->print();
-
-      reader->inc_ptr(input_ptr);
     }
 	
     if (if_sort) {
@@ -615,7 +621,12 @@ void ecall_external_oblivious_sort(int op_code,
     return;
   }
 
-  uint8_t * scratch = (uint8_t *) malloc(MAX_SORT_BUFFER);
+  uint8_t *scratch = NULL;
+  if (operation == SORT_SORT) {
+    scratch = (uint8_t *) malloc(max_list_length * ROW_UPPER_BOUND);
+  } else {
+    scratch = (uint8_t *) malloc(max_list_length * JOIN_ROW_UPPER_BOUND);
+  }
   uint8_t * scratch_ptr = scratch;
   uint8_t * external_scratch_ptr = external_scratch;
   
@@ -634,28 +645,44 @@ void ecall_external_oblivious_sort(int op_code,
   }
  
   printf("--- Begin memory alloc size --- \n");
-  printf("Sort data's malloc size is %u\n", max_list_length * ROW_UPPER_BOUND);
+  if (operation == SORT_JOIN) {
+    printf("Join data's malloc size is %u\n", max_list_length * JOIN_ROW_UPPER_BOUND);
+  } else {
+    printf("Sort data's malloc size is %u\n", max_list_length * ROW_UPPER_BOUND);
+  }
   printf("temp's malloc size is %u\n", sizeof(void *) * max_list_length);
   printf("Scratch size is %u\n", MAX_SORT_BUFFER);
-  printf("Total memory size %u\n", MAX_SORT_BUFFER + sizeof(void *) * max_list_length + max_list_length * ROW_UPPER_BOUND);
+  if (operation == SORT_JOIN) {
+    printf("Total memory size %u\n", MAX_SORT_BUFFER + sizeof(void *) * max_list_length + max_list_length * JOIN_ROW_UPPER_BOUND);
+  } else {
+    printf("Total memory size %u\n", MAX_SORT_BUFFER + sizeof(void *) * max_list_length + max_list_length * ROW_UPPER_BOUND);
+  }
   printf("--- End memory alloc size --- \n");
 
   printf("Start single partition oblivious sort, num buffers: %u\n", num_buffers);
   for (uint32_t i = 0; i < num_buffers; i++) {
+    printf("Parsing buffer %u\n", i);
     reader.clear();
     reader.reset();
     reader.add_buffer(buffer_list[i], buffer_lengths[i]);
     oblivious_sort(op_code, &reader, 0, num_rows[i], true, sort_data, join_data, temp);
 	
     scratch_ptr = scratch;
-    // flush sort records/join records to ptr, then encrypt that all at once
-    for (uint32_t r = 0; r < num_rows[i]; r++) {	  
-      *( (uint32_t *) scratch_ptr) = data[r]->num_cols;
-      scratch_ptr += 4;
-	  
-      row_size = data[r]->row_ptr - data[r]->row;
-      memcpy(scratch_ptr, data[r]->row, row_size);
-      scratch_ptr += row_size;
+    if (operation == SORT_SORT) {
+      // flush sort records/join records to ptr, then encrypt that all at once
+      for (uint32_t r = 0; r < num_rows[i]; r++) {	  
+	*( (uint32_t *) scratch_ptr) = data[r]->num_cols;
+	scratch_ptr += 4;
+	
+	row_size = data[r]->row_ptr - data[r]->row;
+	memcpy(scratch_ptr, data[r]->row, row_size);
+	scratch_ptr += row_size;
+      }
+    } else {
+      for (uint32_t r = 0; r < num_rows[i]; r++) {
+	memcpy(scratch_ptr, data[r]->row, JOIN_ROW_UPPER_BOUND);
+	scratch_ptr += JOIN_ROW_UPPER_BOUND;
+      }
     }
 
     // TODO: since rows should have the same content, take a look at row 0 and find the padded_row_size
@@ -713,7 +740,7 @@ void ecall_external_oblivious_sort(int op_code,
 	      uint32_t buffer1_size = external_scratch_size[idx];
 	      uint32_t buffer2_size = external_scratch_size[pair_idx];
 
-	      //printf("external scratch sizes are %u and %u\n", external_scratch_size[idx], external_scratch_size[pair_idx]);
+	      printf("external scratch sizes are %u and %u\n", external_scratch_size[idx], external_scratch_size[pair_idx]);
 
 	      // if ((buffer1_size + buffer2_size) > MAX_SORT_BUFFER) {
 	      // 	printf("assert failed\n");
@@ -725,25 +752,45 @@ void ecall_external_oblivious_sort(int op_code,
 	      reader.add_buffer(buffer1_ptr, buffer1_size);
 	      reader.add_buffer(buffer2_ptr, buffer2_size);
 
-	      // note that these are padded!
-	      decrypt(buffer1_ptr, buffer1_size, scratch);
-	      scratch_ptr = scratch;
-	      for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-		// set num cols first
-		data[r]->num_cols = *( (uint32_t *) (row_ptr));
-		memcpy(data[r]->row, row_ptr + 4, row_len - 4);
-		data[r]->row_ptr = data[r]->row + row_len - 4;
-	      }
+	      if (operation == SORT_SORT) {
+		// note that these are padded!
+		decrypt(buffer1_ptr, buffer1_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+		  // set num cols first
+		  data[r]->num_cols = *( (uint32_t *) (row_ptr));
+		  memcpy(data[r]->row, row_ptr + 4, row_len - 4);
+		  data[r]->row_ptr = data[r]->row + row_len - 4;
+		}
 
-	      decrypt(buffer2_ptr, buffer2_size, scratch);
-	      scratch_ptr = scratch;
-	      for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-		// set num cols first
-		data[r]->num_cols = *( (uint32_t *) (row_ptr));
-		memcpy(data[r]->row, row_ptr + 4, row_len - 4);
-		data[r]->row_ptr = data[r]->row + row_len - 4;
+		decrypt(buffer2_ptr, buffer2_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
+		  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+		  // set num cols first
+		  data[r]->num_cols = *( (uint32_t *) (row_ptr));
+		  memcpy(data[r]->row, row_ptr + 4, row_len - 4);
+		  data[r]->row_ptr = data[r]->row + row_len - 4;
+		}
+
+	      } else {
+		// note that these are padded!
+		decrypt(buffer1_ptr, buffer1_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  // set num cols first
+		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+
+		decrypt(buffer2_ptr, buffer2_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
+		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+
 	      }
 
 	      oblivious_sort(op_code, &reader,
@@ -754,30 +801,49 @@ void ecall_external_oblivious_sort(int op_code,
 	      
 	      Record **sort_temp = (Record **) temp;
 
-	      // flush data out to scratch, encrypt
-	      scratch_ptr = scratch;
-	      for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		*( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
-		scratch_ptr += 4;
+	      if (operation == SORT_SORT) {
+		// flush data out to scratch, encrypt
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  *( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
+		  scratch_ptr += 4;
 
-		//print_row("after merging", sort_data[r]->row, sort_data[r]->num_cols);
+		  //print_row("after merging", sort_data[r]->row, sort_data[r]->num_cols);
 				
-		row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
-		memcpy(scratch_ptr, sort_temp[r]->row, row_size);
-		scratch_ptr += row_size;
-	      }
-	      encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		  row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
+		  memcpy(scratch_ptr, sort_temp[r]->row, row_size);
+		  scratch_ptr += row_size;
+		}
+		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 			  
-	      scratch_ptr = scratch;
-	      for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		*( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
-		scratch_ptr += 4;
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
+		  *( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
+		  scratch_ptr += 4;
 				
-		row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
-		memcpy(scratch_ptr, sort_temp[r]->row, row_size);
-		scratch_ptr += row_size;
+		  row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
+		  memcpy(scratch_ptr, sort_temp[r]->row, row_size);
+		  scratch_ptr += row_size;
+		}
+		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
+
+	      } else {
+		JoinRecord **join_temp = (JoinRecord **) temp;
+
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
+		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
 	      }
-	      encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
 			  
 	      ++merges;
 	    }
@@ -804,57 +870,97 @@ void ecall_external_oblivious_sort(int op_code,
 	      reader.add_buffer(buffer1_ptr, buffer1_size);
 	      reader.add_buffer(buffer2_ptr, buffer2_size);
 
-	      // note that these are padded!
-	      decrypt(buffer1_ptr, buffer1_size, scratch);
-	      scratch_ptr = scratch;
-	      for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-		// set num cols first
-		data[r]->num_cols = *( (uint32_t *) (row_ptr));
-		memcpy(data[r]->row, row_ptr + 4, row_len - 4);
-		data[r]->row_ptr = data[r]->row + row_len - 4;
-	      }
+	      if (operation == SORT_SORT) {
 
-	      decrypt(buffer2_ptr, buffer2_size, scratch);
-	      scratch_ptr = scratch;
-	      for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-		// set num cols first
-		data[r]->num_cols = *( (uint32_t *) (row_ptr));
-		memcpy(data[r]->row, row_ptr + 4, row_len - 4);
-		data[r]->row_ptr = data[r]->row + row_len - 4;
-	      }
+		// note that these are padded!
+		decrypt(buffer1_ptr, buffer1_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+		  // set num cols first
+		  data[r]->num_cols = *( (uint32_t *) (row_ptr));
+		  memcpy(data[r]->row, row_ptr + 4, row_len - 4);
+		  data[r]->row_ptr = data[r]->row + row_len - 4;
+		}
 
+		decrypt(buffer2_ptr, buffer2_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
+		  get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+		  // set num cols first
+		  data[r]->num_cols = *( (uint32_t *) (row_ptr));
+		  memcpy(data[r]->row, row_ptr + 4, row_len - 4);
+		  data[r]->row_ptr = data[r]->row + row_len - 4;
+		}
+	      } else {
+		// note that these are padded!
+		decrypt(buffer1_ptr, buffer1_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  // set num cols first
+		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+
+		decrypt(buffer2_ptr, buffer2_size, scratch);
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
+		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+
+	      }
+ 
 	      oblivious_sort(op_code, &reader,
 			     num_rows[idx], num_rows[idx] + num_rows[pair_idx],
 			     false,
 			     sort_data, join_data,
 			     temp);
+
 	      SortRecord **sort_temp = (SortRecord **) temp;
 
-	      // flush data out to scratch, encrypt
-	      scratch_ptr = scratch;
-	      for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		*( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
-		scratch_ptr += 4;
+	      if (operation == SORT_SORT) {
+		// flush data out to scratch, encrypt
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  *( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
+		  scratch_ptr += 4;
 				
-		row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
-		memcpy(scratch_ptr, sort_temp[r]->row, row_size);
-		scratch_ptr += row_size;
-	      }
-	      encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		  row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
+		  memcpy(scratch_ptr, sort_temp[r]->row, row_size);
+		  scratch_ptr += row_size;
+		}
+		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 
 			  
-	      scratch_ptr = scratch;
-	      for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		*( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
-		scratch_ptr += 4;
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
+		  *( (uint32_t *) scratch_ptr) = sort_temp[r]->num_cols;
+		  scratch_ptr += 4;
 				
-		row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
-		memcpy(scratch_ptr, sort_temp[r]->row, row_size);
-		scratch_ptr += row_size;
+		  row_size = sort_temp[r]->row_ptr - sort_temp[r]->row;
+		  memcpy(scratch_ptr, sort_temp[r]->row, row_size);
+		  scratch_ptr += row_size;
+		}
+		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
+	      } else {
+
+		JoinRecord **join_temp = (JoinRecord **) temp;
+
+		scratch_ptr = scratch;
+		for (uint32_t r = 0; r < num_rows[idx]; r++) {
+		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+
+		scratch_ptr = scratch;
+		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
+		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
+		}
+		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
 	      }
-	      encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
 			  
 	      ++merges;
 	    }
@@ -878,15 +984,24 @@ void ecall_external_oblivious_sort(int op_code,
 	
     // note that these are padded!
     decrypt(external_scratch_list[i], external_scratch_size[i], scratch);
-    scratch_ptr = scratch;
-    for (uint32_t r = 0; r < num_rows[i]; r++) {
-      get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
-      // set num cols first
-      data[r]->num_cols = *( (uint32_t *) (row_ptr));
-      memcpy(data[r]->row, row_ptr + 4, row_len - 4);
-      data[r]->row_ptr = data[r]->row + row_len - 4;
-    }
 
+    if (operation == SORT_SORT) {
+      scratch_ptr = scratch;
+      for (uint32_t r = 0; r < num_rows[i]; r++) {
+	get_next_plaintext_row(&scratch_ptr, &row_ptr, &row_len);
+	// set num cols first
+	data[r]->num_cols = *( (uint32_t *) (row_ptr));
+	memcpy(data[r]->row, row_ptr + 4, row_len - 4);
+	data[r]->row_ptr = data[r]->row + row_len - 4;
+      }
+    } else {
+      scratch_ptr = scratch;
+      for (uint32_t r = 0; r < num_rows[i]; r++) {
+	memcpy(join_data[r]->row, scratch_ptr, JOIN_ROW_UPPER_BOUND);
+	scratch_ptr += JOIN_ROW_UPPER_BOUND;
+      }
+    }
+      
     reader.reset();
     input_ptr = reader.get_ptr();
     value_ptr = NULL;
@@ -909,21 +1024,17 @@ void ecall_external_oblivious_sort(int op_code,
 	reader.inc_ptr(input_ptr);
       }
     } else {
-      for (uint32_t i = 0; i < num_rows[i]; i++) {
+      for (uint32_t r = 0; r < num_rows[i]; r++) {
 	// simply encrypt the entire row all at once
 	input_ptr = reader.get_ptr();
-	
-	encrypt(join_data[i]->row, JOIN_ROW_UPPER_BOUND, input_ptr);
+	encrypt(join_data[r]->row, JOIN_ROW_UPPER_BOUND, input_ptr);
 	input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
-      
 	reader.inc_ptr(input_ptr);
       }
     }
   }
 
   printf("number of merges: %u\n", merges);
-
-  free(scratch);
 
   // free data
   
@@ -943,6 +1054,7 @@ void ecall_external_oblivious_sort(int op_code,
     free(join_data);
   }
 
+  free(scratch);
   free(temp);
 
 }

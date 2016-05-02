@@ -424,6 +424,7 @@ class JoinRecord : public Record {
 
   // sets data directly
   void consume_encrypted_row(uint8_t *enc_row);
+  void consume_plaintext_row(uint8_t *plain_row);
 
   void set_join_attributes(int op_code);
 
