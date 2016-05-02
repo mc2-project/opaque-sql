@@ -984,8 +984,8 @@ class Dataset[T] private[sql](
     EncProject(cols.map(_.named), logicalPlan)
   }
 
-  def encFilter(condition: Column): Dataset[T] = withTypedPlan {
-    EncFilter(condition.expr, Permute(logicalPlan))
+  def encFilter(condition: QEDOpcode): Dataset[T] = withTypedPlan {
+    EncFilter(condition, Permute(logicalPlan))
   }
 
   def encPermute(): Dataset[T] = withTypedPlan {

@@ -117,7 +117,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
     assert(decrypt2(words.collect) === data)
 
-    val filtered = words.encFilter($"count") // TODO: make enc versions of each operator
+    val filtered = words.encFilter(OP_FILTER_COL2_GT3)
     assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 

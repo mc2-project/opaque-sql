@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
+import org.apache.spark.sql.QEDOpcode
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -31,15 +32,10 @@ case class EncProject(projectList: Seq[NamedExpression], child: LogicalPlan)
   override def maxRows: Option[Long] = child.maxRows
 }
 
-case class EncFilter(condition: Expression, child: LogicalPlan)
-  extends UnaryNode with PredicateHelper {
+case class EncFilter(condition: QEDOpcode, child: LogicalPlan)
+  extends UnaryNode {
 
   override def output: Seq[Attribute] = child.output
-
-  override def maxRows: Option[Long] = child.maxRows
-
-  override protected def validConstraints: Set[Expression] =
-    child.constraints.union(splitConjunctivePredicates(condition).toSet)
 }
 
 case class Permute(child: LogicalPlan) extends UnaryNode {

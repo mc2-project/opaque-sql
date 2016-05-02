@@ -23,6 +23,7 @@ import scala.reflect.classTag
 import oblivious_sort.ObliviousSort
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
+import org.apache.spark.sql.QEDOpcode
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
@@ -53,37 +54,15 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
 }
 
-case class EncFilter(condition: Expression, child: SparkPlan)
-  extends UnaryNode with PredicateHelper {
+case class EncFilter(condition: QEDOpcode, child: SparkPlan)
+  extends UnaryNode {
 
-  // Split out all the IsNotNulls from condition.
-  private val (notNullPreds, _) = splitConjunctivePredicates(condition).partition {
-    case IsNotNull(a) if child.output.contains(a) => true
-    case _ => false
-  }
-
-  // The columns that will filtered out by `IsNotNull` could be considered as not nullable.
-  private val notNullAttributes = notNullPreds.flatMap(_.references)
-
-  override def output: Seq[Attribute] = {
-    child.output.map { a =>
-      if (a.nullable && notNullAttributes.contains(a)) {
-        a.withNullability(false)
-      } else {
-        a
-      }
-    }
-  }
+  override def output: Seq[Attribute] = child.output
 
   override def doExecute() = child.execute().mapPartitions { iter =>
     val (enclave, eid) = QED.initEnclave()
-    iter.filter(rowSer => enclave.Filter(eid, OP_FILTER_COL2_GT3.value, rowSer.encSerialize))
+    iter.filter(rowSer => enclave.Filter(eid, condition.value, rowSer.encSerialize))
   }
-
-  private[sql] override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of output rows"))
-
-  override def outputOrdering: Seq[SortOrder] = child.outputOrdering
 }
 
 case class Permute(child: SparkPlan) extends UnaryNode {
