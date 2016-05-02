@@ -47,6 +47,16 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
       ret = 0;
     }
 
+  } else if (op_code == OP_BD1) {
+    find_attribute(row_ptr, length, num_cols,
+                   2,
+                   &enc_value_ptr, &enc_value_len);
+    enc_value_ptr -= 4;
+    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
+    int *value_ptr = (int *) (decrypted_data + HEADER_SIZE);
+    if (*value_ptr <= 1000) {
+      ret = 0;
+    }
   } else if (op_code == OP_FILTER_COL4_NOT_DUMMY) {
     // Filter out rows with a dummy attribute in the 4th column. Such rows represent partial aggregates
 	decrypted_data_ptr = decrypted_data;

@@ -54,6 +54,7 @@ enum TYPE {
 #define ATTRIBUTE_UPPER_BOUND (512)
 
 enum OPCODE {
+  OP_BD1 = 11,
   OP_BD2 = 10,
   OP_SORT_INTEGERS_TEST = 90,
   OP_SORT_COL1 = 2,

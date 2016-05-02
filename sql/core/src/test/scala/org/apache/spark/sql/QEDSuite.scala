@@ -31,6 +31,8 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 
@@ -111,6 +113,26 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   val (enclave, eid) = QED.initEnclave()
+
+  test("big data 1") {
+    val rankings = sqlContext.read.schema(
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType),
+        StructField("avgDuration", IntegerType))))
+      .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
+      .collect.map { case Row(u: String, r: Int, d: Int) => (u, r, d)}
+    val rankingsDF = sparkContext.makeRDD(encrypt3(rankings)).toDF("pageURL", "pageRank", "avgDuration")
+    assert(decrypt3(rankingsDF.collect) === rankings)
+
+    val filtered = time("big data 1") {
+      val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
+      df.count
+      df
+    }
+
+    assert(decrypt2[String, Int](filtered.collect).sorted === rankings.collect { case (u, r, d) if r > 1000 => (u, r) }.sorted)
+  }
 
   test("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)

@@ -18,6 +18,7 @@
 package org.apache.spark.sql;
 
 public enum QEDOpcode {
+    OP_BD1(11),
     OP_BD2(10),
     OP_SORT_INTEGERS_TEST(90),
     OP_SORT_COL1(2),
