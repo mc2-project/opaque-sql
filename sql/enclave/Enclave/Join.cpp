@@ -2,7 +2,7 @@
 
 
 uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
-							   uint8_t *output_row_ptr) {
+			       uint8_t *output_row_ptr) {
   // write out num_cols
   // printf("Encrypting and formatting row\n");
   uint32_t num_cols = *( (uint32_t *) input_row_ptr);
@@ -39,9 +39,9 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
 // the sort operation
 // Also adds a tabld ID for indicating whether this row belongs to the primary key table
 void join_sort_preprocess(int op_code,
-						  uint8_t *table_id, 
-						  uint8_t *input_row, uint32_t input_row_len,
-						  uint8_t *output_row, uint32_t output_row_len) {
+			  uint8_t *table_id, 
+			  uint8_t *input_row, uint32_t input_row_len,
+			  uint8_t *output_row, uint32_t output_row_len) {
 
   uint8_t temp[JOIN_ROW_UPPER_BOUND];
   uint8_t *temp_ptr = temp;
@@ -166,9 +166,9 @@ public:
 
 // given a decrypted row and an opcode, extract the join attribute
 void get_join_attribute(int op_code,
-						uint32_t num_cols, uint8_t *row,
-						int if_primary,
-						join_attribute *join_attr) {
+			uint32_t num_cols, uint8_t *row,
+			int if_primary,
+			join_attribute *join_attr) {
   join_attr->reset();
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
@@ -277,9 +277,9 @@ void join_merge_row(int op_code,
 // TODO: each data type should have an upper bound on the data size, otherwise
 // it's easy to tell what rows have have bene put where
 void sort_merge_join(int op_code,
-					 uint8_t *input_rows, uint32_t input_rows_length,
-					 uint32_t num_rows,
-					 uint8_t *join_row, uint32_t join_row_length,
+		     uint8_t *input_rows, uint32_t input_rows_length,
+		     uint32_t num_rows,
+		     uint8_t *join_row, uint32_t join_row_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_output_length) {
 
@@ -434,9 +434,9 @@ void sort_merge_join(int op_code,
 // do a scan of all of the encrypted rows
 // return the last primary table row in this 
 void scan_collect_last_primary(int op_code,
-							   uint8_t *input_rows, uint32_t input_rows_length,
-							   uint32_t num_rows,
-							   uint8_t *output, uint32_t output_length) {
+			       uint8_t *input_rows, uint32_t input_rows_length,
+			       uint32_t num_rows,
+			       uint8_t *output, uint32_t output_length) {
 
   // primary_table is the table that is joining on primary key
   // foreign_table joins on foreign key

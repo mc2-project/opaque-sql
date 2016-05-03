@@ -55,6 +55,30 @@ void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
   *enc_row_len = len;
 }
 
+// advance pointer to the next row
+// return pointer to current row, as well as the overall length
+void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len) {
+  // a row should be in the format of [num_col][attr1 type][attr1 len][attr1]...
+  uint32_t num_cols = * ( (uint32_t *) *ptr);
+  uint8_t *attr_ptr = *ptr;
+  uint32_t attr_len = 0;
+  uint32_t len = 0;
+
+  // move past the column number
+  attr_ptr += 4;
+  len = 4;
+
+  for (uint32_t i = 0; i < num_cols; i++) {
+	attr_len = * ((uint32_t *) (attr_ptr + TYPE_SIZE));
+	attr_ptr += HEADER_SIZE + attr_len;
+	len += HEADER_SIZE + attr_len;
+  }
+
+  *row_ptr = *ptr;
+  *ptr = attr_ptr;
+  *row_len = len;
+}
+
 
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
 
@@ -202,6 +226,19 @@ void print_row(const char *row_name, uint8_t *row_ptr) {
   }
   printf("===============\n");
 }
+
+// this function prints out a plaintext row
+void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols) {
+  uint8_t *value_ptr = row_ptr;
+  printf("===============\n");
+  printf("Row %s\n", row_name);
+  for (uint32_t i = 0; i < num_cols; i++) {
+	print_attribute("", value_ptr);
+	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+  }
+  printf("===============\n");
+}
+
 
 // this function prints out a plaintext join row
 void print_join_row(const char *row_name, uint8_t *row_ptr) {
@@ -372,5 +409,73 @@ void check(const char* message, bool test) {
   if (!test) {
     printf("%s\n", message);
     assert(test);
+  }
+}
+
+// Row reader is able to piece together multiple buffer locations
+// and return rows; it assumes that no row is split across boundaries!
+BufferReader::BufferReader() {
+  offset = 0;
+  for (uint32_t i = 0; i < 10; i++) {
+	buffer_list[i] = NULL;
+	buffer_sizes[i] = 0;
+  }
+
+  current_pointer = NULL;
+  current_buf = 0;
+}
+  
+void BufferReader::add_buffer(uint8_t *ptr, uint32_t size) {
+  buffer_list[offset] = ptr;
+  buffer_sizes[offset] = size;
+
+  ++offset;
+}
+
+void BufferReader::reset() {
+  // reset pointer
+  current_pointer = buffer_list[0];
+  current_buf = 0;
+}
+
+void BufferReader::clear() {
+  offset = 0;
+  for (uint32_t i = 0; i < 10; i++) {
+	buffer_list[i] = NULL;
+	buffer_sizes[i] = 0;
+  }
+  current_pointer = NULL;
+  current_buf = 0;
+}
+
+
+uint8_t *BufferReader::get_ptr() {
+  return current_pointer;
+}
+
+void BufferReader::inc_ptr(uint8_t *ptr) {
+  uint32_t inc_size = ptr - current_pointer;
+  if ((current_pointer + inc_size) >= buffer_list[current_buf] + buffer_sizes[current_buf]) {
+	++current_buf;
+	current_pointer = buffer_list[current_buf];
+	//printf("[BufferReader] jump pointer, %p\n", current_pointer);
+	// if (current_pointer != NULL) {
+	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer)));
+	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer + 4)));
+	// }
+  } else {
+	current_pointer += inc_size;
+  }
+}
+
+uint32_t attr_upper_bound(uint8_t *attr) {
+  uint8_t attr_type = *attr;
+  
+  switch(attr_type) {
+  case INT:
+	return INT_UPPER_BOUND;
+  case STRING:
+	return STRING_UPPER_BOUND;
+
   }
 }

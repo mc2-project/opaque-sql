@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cstdlib>
+#include <sys/time.h>
 
 #ifdef _MSC_VER
 # include <Shlobj.h>
@@ -46,6 +47,28 @@
 #include "org_apache_spark_sql_SGXEnclave.h"
 #include "sgx_tcrypto.h"
 #include "define.h"
+
+
+class scoped_timer {
+
+public:
+  scoped_timer(uint64_t *total_time) {
+    this->total_time = total_time;
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    time_start = start.tv_sec * 1000000 + start.tv_usec;
+  }
+  
+  ~scoped_timer() {
+    struct timeval end;
+    gettimeofday(&end, NULL);
+    time_end = end.tv_sec * 1000000 + end.tv_usec;
+    *total_time += time_end - time_start;
+  }
+
+  uint64_t * total_time;
+  uint64_t time_start, time_end;
+};
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -452,10 +475,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribute(JNIEnv *env, 
-																				   jobject obj, 
-																				   jlong eid, 
-																				   jbyteArray plaintext) {
-
+										   jobject obj, 
+										   jlong eid, 
+										   jbyteArray plaintext) {
+  
   uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
@@ -493,19 +516,20 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 // the op_code allows the internal sort code to decide which comparator to use
 // assume that the elements are of equal size!
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env, 
-																				jobject obj, 
-																				jlong eid,
-																				jint op_code,
-																				jbyteArray input,
-																				jint offset,
-																				jint num_items) {
+										jobject obj, 
+										jlong eid,
+										jint op_code,
+										jbyteArray input,
+										jint offset,
+										jint num_items) {
   
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  //printf("input_len is %u\n", input_len);
+  uint8_t *scratch = (uint8_t *) malloc(input_len);
+
 
   for (int i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -516,59 +540,53 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
   if (input_len < MAX_SORT_BUFFER) {
 
-	uint8_t *buffer_list[1] = {input_copy};
-	uint32_t buffer_sizes[1] = {input_len};
-	uint32_t num_rows[1];
-	num_rows[0] = (uint32_t) num_items;
+    uint8_t *buffer_list[1] = {input_copy};
+    uint32_t buffer_sizes[1] = {input_len};
+    uint32_t num_rows[1];
+    num_rows[0] = (uint32_t) num_items;
 	
-	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows);
+    sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch);
 	
-	//printf("Only sorting on one partition, input_len is %u\n", input_len);
-	//print_error_message(status);
+    //printf("Only sorting on one partition, input_len is %u\n", input_len);
+    //print_error_message(status);
   } else {
 
-	// try to split the input into partitions if it's too big
-	uint32_t element_size = input_len / num_items;
-	uint32_t elements_per_part1 = HALF_MAX_SORT_BUFFER / element_size;
+    // try to split the input into partitions if it's too big
+    uint32_t element_size = input_len / num_items;
+    uint32_t elements_per_part = PAR_MAX_ELEMENTS;
+    
+    uint32_t num_part = num_items / elements_per_part;
+    if (input_len % elements_per_part != 0) {
+      num_part += 1;
+    }
+    
+    //printf("input_len is %u, element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", input_len, element_size, num_part, num_items, elements_per_part);
 
-	uint32_t elements_per_part = MAX_ELEMENTS < elements_per_part1 ? MAX_ELEMENTS : elements_per_part1;
-	//printf("elements per part1: %u, max elements: %u, elements_per_part: %u\n", elements_per_part1, MAX_ELEMENTS, elements_per_part);
-
-	uint32_t num_part = num_items / elements_per_part;
-	if (input_len % elements_per_part != 0) {
-	  num_part += 1;
-	}
-
-	//printf("input_len: %u\n", input_len);
-    // printf("element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", element_size, num_part, num_items, elements_per_part);
-	
-	uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
-	uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
-	uint32_t *num_rows = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
-	
-	uint8_t *input_ptr = input_copy;
-	
-	for (uint32_t i = 0 ; i < num_part; i++) {
-	  buffer_list[i] = input_ptr;
-	  if (i == num_part - 1) {
-		num_rows[i] = num_items - elements_per_part * i;
-		buffer_sizes[i] = input_len - (input_ptr - input_copy);
-	  } else {
-		num_rows[i] = elements_per_part;
-		buffer_sizes[i] = elements_per_part * element_size;
-	  }
-
-	  input_ptr += buffer_sizes[i];
-
-	  //printf("[%u] num_rows: %u, buffer_sizes: %u\n", i, num_rows[i], buffer_sizes[i]);
-	}
-
-	sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
-														num_part,
-														buffer_list, buffer_sizes, num_rows);
-	free(buffer_list);
-	free(buffer_sizes);
-	free(num_rows);
+    uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
+    uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
+    uint32_t *num_rows = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
+    
+    uint8_t *input_ptr = input_copy;
+    
+    for (uint32_t i = 0 ; i < num_part; i++) {
+      buffer_list[i] = input_ptr;
+      if (i == num_part - 1) {
+	num_rows[i] = num_items - elements_per_part * i;
+	buffer_sizes[i] = input_len - (input_ptr - input_copy);
+      } else {
+	num_rows[i] = elements_per_part;
+	buffer_sizes[i] = elements_per_part * element_size;
+      }
+      
+      input_ptr += buffer_sizes[i];
+    }
+    
+    sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
+							num_part,
+							buffer_list, buffer_sizes, num_rows, scratch);
+    free(buffer_list);
+    free(buffer_sizes);
+    free(num_rows);
   }
 
   jbyteArray ret = env->NewByteArray(input_len);
@@ -577,16 +595,16 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   env->ReleaseByteArrayElements(input, ptr, 0);
 
   free(input_copy);
+  free(scratch);
   
   return ret;
-  //return input;
 }
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(JNIEnv *env,
-																		   jobject obj,
-																		   jlong eid) {
-
+									   jobject obj,
+									   jlong eid) {
+  
   // size should be SGX
   const uint32_t length = SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 8;
   jbyteArray ret = env->NewByteArray(length);
@@ -678,11 +696,11 @@ void print_bytes_(uint8_t *ptr, uint32_t len) {
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(JNIEnv *env, 
-																				  jobject obj, 
-																				  jlong eid,
-																				  jint op_code,
-																				  jbyteArray rows,
-																				  jint num_rows) {
+										  jobject obj, 
+										  jlong eid,
+										  jint op_code,
+										  jbyteArray rows,
+										  jint num_rows) {
   
   jboolean if_copy;
   
@@ -862,10 +880,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *env, 
-																				jobject obj, 
-																				jlong eid,
-																				jint op_code,
-																				jbyteArray input_rows,
+										jobject obj, 
+										jlong eid,
+										jint op_code,
+										jbyteArray input_rows,
                                                                                 jint num_rows,
                                                                                 jbyteArray join_row) {
 
@@ -905,7 +923,7 @@ uint32_t enc_size(uint32_t len) {
 }
 
 uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
-  static char chars[3] = {'A', 'B', 'C'};
+  static char chars[5] = {'A', 'B', 'C', 'D', 'E'};
   uint8_t temp[1024];
 
   uint8_t *row_ptr = row;
@@ -927,12 +945,12 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   
   *temp = STRING;
   *( (uint32_t *) (temp + 1)) = 1;
-  *((char *) (temp + 5)) = chars[index % 3];
+  *((char *) (temp + 5)) = chars[index % 5];
 
-  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 1);
+  *( (uint32_t *) row_ptr) = enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   row_ptr += 4;
-  ecall_encrypt(global_eid, temp, (1 + 4 + 1), row_ptr, enc_size(1 + 4 + 1));
-  row_ptr += enc_size(1 + 4 + 1);
+  ecall_encrypt(global_eid, temp, (HEADER_SIZE + STRING_UPPER_BOUND), row_ptr, enc_size(HEADER_SIZE + STRING_UPPER_BOUND));
+  row_ptr += enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   
   
   *temp = INT;
@@ -947,33 +965,64 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   return (row_ptr - row);
 }
 
+uint32_t format_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
+  static char chars[3] = {'A', 'B', 'C'};
+  uint8_t temp[1024];
+
+  uint8_t *row_ptr = row;
+  uint32_t len = 0;
+
+  *( (uint32_t *) row_ptr) = num_cols;
+  row_ptr += 4;
+  
+  // [int][string][int]
+  *row_ptr = INT;
+  *( (uint32_t *) (row_ptr + 1)) = 4;
+  *( (uint32_t *) (row_ptr + 5)) = index;
+  row_ptr += 1 + 4 + 4;
+  
+  
+  *row_ptr = STRING;
+  *( (uint32_t *) (row_ptr + 1)) = 1;
+  *((char *) (row_ptr + 5)) = chars[index % 3];
+  row_ptr += HEADER_SIZE + STRING_UPPER_BOUND;
+  
+  
+  *row_ptr = INT;
+  *( (uint32_t *) (row_ptr + 1)) = 4;
+  *( (uint32_t *) (row_ptr + 5)) = 1;
+  row_ptr += 1 + 4 + 4;
+
+  return (row_ptr - row);
+}
+
 void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
   uint8_t temp[1024];
   uint8_t *ptr = row;
 
   for (uint32_t i = 0; i < num_rows; i++) {
-	printf("Row -- num_cols is %u\n", *( (uint32_t *) ptr));
-	ptr += 4;
+    //printf("Row -- num_cols is %u\n", *( (uint32_t *) ptr));
+    ptr += 4;
 
-	for (uint32_t j = 0; j < cols; j++) {
-	  uint32_t enc_len = *( (uint32_t *) ptr);
-	  ptr += 4;
-	  ecall_decrypt(global_eid, ptr, enc_len, temp, enc_len - ENC_HEADER_SIZE);
+    for (uint32_t j = 0; j < cols; j++) {
+      uint32_t enc_len = *( (uint32_t *) ptr);
+      ptr += 4;
+      ecall_decrypt(global_eid, ptr, enc_len, temp, enc_len - ENC_HEADER_SIZE);
 
-	  if (j == 1) {
-		uint8_t *value_ptr = temp;
-		uint8_t attr_type = *value_ptr;
-		uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
-		printf("[attr: type is %u, attr_len is %u; ", attr_type, attr_len);
-		if (attr_type == 1) {
-		  printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
-		} else if (attr_type == 2) {
-		  printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
-		}
-	  }
-	  
-	  ptr += enc_len;
+      if (false) {
+	uint8_t *value_ptr = temp;
+	uint8_t attr_type = *value_ptr;
+	uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
+	printf("[attr: type is %u, attr_len is %u; ", attr_type, attr_len);
+	if (attr_type == 1) {
+	  printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+	} else if (attr_type == 2) {
+	  printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
 	}
+      }
+	  
+      ptr += enc_len;
+    }
   }
 }
 
@@ -981,24 +1030,53 @@ void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 1024 * 32;
+  uint32_t total_num_rows = 150 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
-  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + 1);
+  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
+  uint32_t single_row_plaintext_size = 4 + num_cols * 4 + (HEADER_SIZE + 4) * 2 + (HEADER_SIZE + STRING_UPPER_BOUND);
   printf("single_row_size is %u\n", single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
+  
+  uint8_t *dec_data = (uint8_t *) malloc(single_row_size * total_num_rows);
+  uint8_t *enc_data = (uint8_t *) malloc(single_row_size * total_num_rows);
+  uint32_t actual_size = 0;
+
+  uint64_t t = 0;
 
   uint8_t *input_rows_ptr = input_rows;
   uint32_t offset = 0;
-  for (uint32_t i = 0; i < total_num_rows; i++) {
-	offset = format_encrypt_row(input_rows_ptr, i, num_cols);
-	input_rows_ptr += offset;
+
+  {
+    scoped_timer timer(&t);
+    for (uint32_t i = 0; i < total_num_rows; i++) {
+      offset = format_encrypt_row(input_rows_ptr, i, num_cols);
+      input_rows_ptr += offset;
+    }
   }
 
-  printf("Encryption done\n");
+  double t_ms = ((double) t) / 1000;
+  printf("Encryption took %f ms\n", t_ms);
 
+
+  uint8_t *dec_data_ptr = dec_data;
+
+  // t = 0;
+  // for (uint32_t i = 0; i < total_num_rows; i++) {
+  // 	offset = format_row(dec_data_ptr, i, num_cols);
+  // 	dec_data_ptr += offset;
+  // }
+  // {
+  // 	scoped_timer timer(&t);
+  // 	ecall_encrypt(global_eid, dec_data, dec_data_ptr - dec_data, enc_data, enc_size(dec_data_ptr - dec_data));
+  // }
+
+  // t_ms = ((double) t) / 1000;
+  // printf("Encrypting block took %f ms\n", t_ms);
+  
+  printf("Encryption done\n");
   // split the input rows into 64 partitions of (1024 * 4) rows
-  const uint32_t num_part = 2;
+  const uint32_t num_part = total_num_rows / PAR_MAX_ELEMENTS + 1;
 
   uint8_t *buffer_list[num_part];
   uint32_t buffer_sizes[num_part];
@@ -1006,20 +1084,64 @@ void test_enclave_sort() {
 
   input_rows_ptr = input_rows;
 
-  for (uint32_t i = 0; i < num_part; i++) {
-	buffer_list[i] = input_rows_ptr;
-	num_rows[i] = total_num_rows / num_part;
-	buffer_sizes[i] = (single_row_size * total_num_rows) / num_part;
-	input_rows_ptr += buffer_sizes[i];
-  };
+  // // for testing
+  // single_row_size = 4 + (1 + 4 + 4 + 1 + 4 + STRING_UPPER_BOUND + 1 + 4 + 4);
+  // input_rows_ptr = dec_data;
+  // // end testing
+  
+  // for (uint32_t i = 0; i < num_part; i++) {
+  // 	buffer_list[i] = input_rows_ptr;
+  // 	num_rows[i] = total_num_rows / num_part;
+  // 	buffer_sizes[i] = (single_row_size * total_num_rows) / num_part;
+  // 	input_rows_ptr += buffer_sizes[i];
+  // }
 
-  sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
-													  num_part,
-													  buffer_list, buffer_sizes, num_rows);
+  for (uint32_t i = 0 ; i < num_part; i++) {
+    buffer_list[i] = input_rows_ptr;
+    if (i == num_part - 1) {
+      num_rows[i] = total_num_rows - PAR_MAX_ELEMENTS * i;
+      buffer_sizes[i] = single_row_size * total_num_rows - (input_rows_ptr - input_rows);
+    } else {
+      num_rows[i] = PAR_MAX_ELEMENTS;
+      buffer_sizes[i] = PAR_MAX_ELEMENTS * single_row_size;
+    }
+    
+    input_rows_ptr += buffer_sizes[i];
+  }
 
-  //decrypt_and_print(input_rows, total_num_rows, num_cols);
+  // input_rows_ptr = dec_data;
+  // uint8_t *enc_data_ptr = enc_data;
+  // uint32_t buf_size = 0;
+  // for (uint32_t i = 0; i < num_part; i++) {
+  // 	buf_size = num_rows[i] * single_row_plaintext_size;
+  // 	ecall_encrypt(global_eid, input_rows_ptr, buf_size, enc_data_ptr, enc_size(buf_size));
+  // 	buffer_sizes[i] = enc_size(buf_size);
 
-  print_error_message(status);
+  // 	buffer_list[i] = enc_data_ptr;
+  // 	input_rows_ptr += buf_size;
+	
+  // 	enc_data_ptr += enc_size(buf_size);
+  // }
+
+  // printf("buffer_sizes[0] is %u, total size is %u\n", buffer_sizes[0], single_row_size * total_num_rows);
+
+  t = 0;
+  {
+    scoped_timer timer(&t);
+    sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
+							num_part,
+							buffer_list, buffer_sizes, num_rows,
+							enc_data);
+    print_error_message(status);
+  }
+  
+  t_ms = ((double) t) / 1000;
+  printf("Sort took %f ms\n", t_ms);
+
+  decrypt_and_print(input_rows, total_num_rows, num_cols);
+
+  free(enc_data);
+  free(dec_data);
 }
 
 /* Application entry */

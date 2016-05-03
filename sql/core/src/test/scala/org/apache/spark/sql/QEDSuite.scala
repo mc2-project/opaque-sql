@@ -268,7 +268,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("spark sql sort") {
-    val data = Random.shuffle((0 until 256000).map(x => (x.toString, x)).toSeq)
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = time("spark sql sorting") {
       val df = sparkContext.makeRDD(data).toDF("str", "x").sort($"x")
       df.count()

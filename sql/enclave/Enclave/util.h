@@ -23,6 +23,7 @@ void print_bytes(uint8_t *ptr, uint32_t len);
 
 void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len);
+void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len);
 
 // cmp should return 0 if equal, and -1 if not equal
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len);
@@ -42,6 +43,7 @@ int is_table_primary(uint8_t *table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
 void print_row(const char *row_name, uint8_t *row_ptr);
+void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols);
 void print_join_row(const char *row_name, uint8_t *row_ptr);
 
 uint32_t get_num_col(uint8_t *row);
@@ -67,5 +69,26 @@ void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type = DU
 void decrypt_attribute(uint8_t **input, uint8_t **output);
 
 void check(const char* message, bool test);
+
+class BufferReader {
+ public:
+  BufferReader();
+
+  void add_buffer(uint8_t *ptr, uint32_t size);
+  void reset();
+  void clear();
+  uint8_t *get_ptr();
+  void inc_ptr(uint8_t *ptr);
+
+  uint8_t *buffer_list[10];
+  uint32_t buffer_sizes[10];
+  
+  int offset;
+
+  uint32_t current_buf;
+  uint8_t *current_pointer;
+};
+
+uint32_t attr_upper_bound(uint8_t *attr);
 
 #endif // UTIL_H

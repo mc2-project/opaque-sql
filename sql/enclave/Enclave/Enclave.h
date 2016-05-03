@@ -56,8 +56,8 @@ extern "C" {
   void ecall_random_id(uint8_t *ptr, uint32_t length);
 
   
-  void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
-					  int low_idx, uint32_t list_length, bool if_sort);
+  /* void oblivious_sort(int op_code, int low_idx, uint32_t list_length, */
+  /* 					  BufferReader *reader, bool if_sort); */
 
 #if defined(__cplusplus)
 }

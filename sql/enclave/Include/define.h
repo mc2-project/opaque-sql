@@ -9,7 +9,7 @@
 // defines an upper bound on the size of the aggregation value
 // only the plaintext size
 #define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
-#define ROW_UPPER_BOUND (2048)
+#define ROW_UPPER_BOUND (1400)
 // distinct items, offset, sort attribute, aggregation attribute
 //#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
@@ -72,8 +72,15 @@ enum OPCODE {
   OP_FILTER_COL4_NOT_DUMMY = 32,
 };
 
-#define HALF_MAX_SORT_BUFFER (4 * 1024 * 1024)
+//#define HALF_MAX_SORT_BUFFER (8 * 1024 * 1024)
+//#define MAX_ELEMENTS ((100 * 1024 * 1024) / JOIN_ROW_UPPER_BOUND)
+
+enum SORT_OP {
+  SORT_SORT = 1,
+  SORT_JOIN = 2
+};
+
 #define MAX_SORT_BUFFER (8 * 1024 * 1024)
-#define MAX_ELEMENTS ((32 * 1024 * 1024) / JOIN_ROW_UPPER_BOUND)
+#define PAR_MAX_ELEMENTS (MAX_SORT_BUFFER / JOIN_ROW_UPPER_BOUND)
 
 #endif // DEFINE_H
