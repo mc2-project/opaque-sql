@@ -28,7 +28,13 @@ GenericType *create_attr(uint8_t *attr) {
 	{
 	  return new String;
 	}
-	break;
+    break;
+
+  case FLOAT:
+  {
+    return new Float;
+  }
+  break;
 
   case URL_TYPE:
 	{
@@ -292,7 +298,7 @@ void Float::flush(uint8_t *output) {
   *( (float *) (output + HEADER_SIZE)) = value;
 }
 
-void Float::copy_attr(Float *attr, int mode) {
+void Float::copy_attr(Float *attr) {
   this->value = attr->value;
 }
 
@@ -665,6 +671,30 @@ void SortAttributes::init() {
     attributes[1] = create_attr(sort_pointer);
 	eval_attributes[1] = create_attr(sort_pointer);
     attributes[1]->consume(sort_pointer, NO_COPY);
+  } else if (op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
+    // this sort is the last step of aggregation
+
+    num_attr = 2;
+    num_eval_attr = 2;
+
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             3, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1] = create_attr(sort_pointer);
+    attributes[1]->consume(sort_pointer, NO_COPY);
   } else {
     printf("SortAttributes::init: unknown opcode %d\n", op_code);
     assert(false);
@@ -679,7 +709,7 @@ void SortAttributes::evaluate() {
 }
 
 int SortAttributes::compare(SortAttributes *attr) {
-  if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+  if (op_code == OP_SORT_COL4_IS_DUMMY_COL2 || op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
 
 	int ret = 0;
 	for (uint32_t i = 0; i < num_eval_attr; i++) {
@@ -702,11 +732,13 @@ int SortAttributes::compare(SortAttributes *attr) {
 	  }
 	}
 
+  } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 || op_code == OP_SORT_INTEGERS_TEST) {
+    int ret = GroupedAttributes::compare(attr);
+    return ret;
+  } else {
+    printf("SortAttributes::compare: Unknown opcode %d\n", op_code);
+    assert(false);
   }
-
-  
-  int ret = GroupedAttributes::compare(attr);
-  return ret;
 }
 
 /*** SORT ATTRIBUTES ***/
@@ -738,6 +770,26 @@ void AggSortAttributes::init() {
 
 	num_eval_attr = num_attr;
 
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    expression = IDENTITY;
+
+    num_attr = 1;
+    num_eval_attr = 1;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
+  } else {
+    printf("AggSortAttributes::init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
@@ -756,8 +808,18 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
 	attributes[0]->consume(sort_pointer, NO_COPY);
     // printf("Re-initialize, new attributes is ");
     // attributes[0]->print();
-  }
+  } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1
+      || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    attributes[0]->reset();
 
+    find_plaintext_attribute(new_row_ptr, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0]->consume(sort_pointer, NO_COPY);
+  } else {
+    printf("AggSortAttributes::re_init: Unknown opcode %d\n", this->op_code);
+    assert(false);
+  }
 }
 
 void AggSortAttributes::evaluate() {

@@ -18,23 +18,25 @@
 package org.apache.spark.sql;
 
 public enum QEDColumnType {
-    DUMMY(0),
-    INT(1),
-    STRING(2),
-    FLOAT(3),
-    DATE(4),
-    PARTIAL_AGG_INT(5),
-    FINAL_AGG_INT(6),
-    PARTIAL_AGG_FLOAT(7),
-    FINAL_AGG_FLOAT(8);
+    DUMMY((byte)0),
+    INT((byte)1),
+    STRING((byte)2),
+    FLOAT((byte)3),
+    DATE((byte)4),
+    URL_TYPE((byte)5),
+    C_CODE((byte)6),
+    L_CODE((byte)7),
+    DUMMY_INT((byte)100),
+    DUMMY_FLOAT((byte)101),
+    DUMMY_STRING((byte)102);
 
-    private int value;
+    private byte _value;
 
-    private QEDColumnType(int value) {
-        this.value = value;
+    private QEDColumnType(byte value) {
+        this._value = value;
     }
 
-    public int getValue() {
-        return value;
+    public byte value() {
+        return _value;
     }
 }

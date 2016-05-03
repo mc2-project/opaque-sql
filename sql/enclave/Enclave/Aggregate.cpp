@@ -71,30 +71,43 @@ class aggregate_data_sum : public aggregate_data {
 
  public:
   aggregate_data_sum() {
-	sum = 0;
+    sum = 0;
+    float_sum = 0.0;
   }
 
   void reset() {
 	sum = 0;
+    float_sum = 0.0;
   }
 
   void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {
-	switch(data_type) {
+    switch(data_type) {
 
- 	case 1: // int
-	  {
-		uint32_t *int_data_ptr = NULL;
-		assert(data_len == 4);
-		int_data_ptr = (uint32_t *) data;
-		sum += *int_data_ptr;
-        // printf("Rolling sum is %u, took in data %u\n", sum, *int_data_ptr);
-	  }
-	  break;
+    case INT:
+    {
+      uint32_t *int_data_ptr = NULL;
+      assert(data_len == 4);
+      int_data_ptr = (uint32_t *) data;
+      sum += *int_data_ptr;
+      // printf("Rolling sum is %u, took in data %u\n", sum, *int_data_ptr);
+      type = INT;
+    }
+    break;
+    case FLOAT:
+    {
+      float *float_data_ptr = NULL;
+      assert(data_len == 4);
+      float_data_ptr = (float *) data;
+      float_sum += *float_data_ptr;
+      type = FLOAT;
+    }
+    break;
 	default: // cannot handle sum of other types!
-	  {
-		assert(false);
-	  }
-	  break;
+    {
+      printf("aggregate_data_sum::agg: unknown data type %d\n", data_type);
+      assert(false);
+    }
+    break;
 	}
   }
 
@@ -105,27 +118,54 @@ class aggregate_data_sum : public aggregate_data {
 
   // serialize the result directly into the result buffer
   void ret_result(uint8_t *result) {
-	uint8_t *result_ptr = result;
-	*result_ptr = 1;
-	result_ptr += 1;
-	*( (uint32_t *) result_ptr) = 4;
-	result_ptr += 4;
-	uint32_t cur_value = *( (uint32_t *) result_ptr);
-	*( (uint32_t *) result_ptr) = cur_value + sum - cur_value;
+    flush(result, 0);
   }
 
   uint32_t flush(uint8_t *output, int if_final) {
 	uint8_t *result_ptr = output;
 	if (if_final == 0) {
-	  *result_ptr = INT;
-	} else {
-	  *result_ptr = DUMMY_INT;
-	}
+      switch (type) {
+      case INT:
+        *result_ptr = INT;
+        break;
+      case FLOAT:
+        *result_ptr = FLOAT;
+        break;
+      default:
+        printf("aggregate_data_sum::flush: unknown type %d\n", type);
+        assert(false);
+        break;
+      }
+    } else {
+      switch (type) {
+      case INT:
+        *result_ptr = DUMMY_INT;
+        break;
+      case FLOAT:
+        *result_ptr = DUMMY_FLOAT;
+        break;
+      default:
+        printf("aggregate_data_sum::flush: unknown type %d\n", type);
+        assert(false);
+        break;
+      }
+    }
 	
 	result_ptr += TYPE_SIZE;
 	*( (uint32_t *) result_ptr) = 4;
 	result_ptr += 4;
-	*( (uint32_t *) result_ptr) = sum;
+    switch (type) {
+    case INT:
+      *( (uint32_t *) result_ptr) = sum;
+      break;
+    case FLOAT:
+      *( (float *) result_ptr) = float_sum;
+      break;
+    default:
+      printf("aggregate_data_sum::flush: unknown type %d\n", type);
+      assert(false);
+      break;
+    }
 
 	return HEADER_SIZE + 4;
   }
@@ -138,11 +178,22 @@ class aggregate_data_sum : public aggregate_data {
 	*( (uint32_t *) result_ptr) = 4;
 	result_ptr += 4;
 	uint32_t cur_value = *( (uint32_t *) result_ptr);
-	*( (uint32_t *) result_ptr) = cur_value + (sum - sum);
+    *( (uint32_t *) result_ptr) = cur_value;
   }
 
   void ret_result_print() {
-	printf("Current result is %u\n", sum);
+    switch (type) {
+    case INT:
+      printf("Current result is %u\n", sum);
+      break;
+    case FLOAT:
+      printf("Current result is %f\n", float_sum);
+      break;
+    default:
+      printf("aggregate_data_sum::ret_result_print: unknown type %d\n", type);
+      assert(false);
+      break;
+    }
   }
 
   void copy_data(aggregate_data *data) {
@@ -150,11 +201,15 @@ class aggregate_data_sum : public aggregate_data {
 	// only copy if the data is of the same type
 	if (dynamic_cast<aggregate_data_sum *>(data) != NULL) {
 	  this->sum = dynamic_cast<aggregate_data_sum *> (data)->sum;
+      this->float_sum = dynamic_cast<aggregate_data_sum *> (data)->float_sum;
+      this->type = dynamic_cast<aggregate_data_sum *> (data)->type;
 	}
 
   }
 
   uint32_t sum;
+  float float_sum;
+  uint8_t type;
 };
 
 class aggregate_data_count : public aggregate_data {
@@ -280,7 +335,8 @@ public:
 	
 	agg = rec->row + 4 + 4 + ROW_UPPER_BOUND;
 
-    if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+    if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2 ||
+        op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
 	  agg_data = new aggregate_data_sum;
 	} else {
       agg_data = NULL;
@@ -540,6 +596,12 @@ void scan_aggregation_count_distinct(int op_code,
 	sort_attribute_num = 2;
 	agg_attribute_num = 3;
 	break;
+
+  case OP_GROUPBY_COL1_SUM_COL2_STEP1:
+  case OP_GROUPBY_COL1_SUM_COL2_STEP2:
+    sort_attribute_num = 1;
+    agg_attribute_num = 2;
+    break;
 
   default:
     printf("scan_aggregation_count_distinct: Unknown opcode %d\n", op_code);
@@ -815,6 +877,9 @@ void process_boundary_records(int op_code,
   case OP_GROUPBY_COL2_SUM_COL3_STEP1:
 	sort_attribute_num = 2;
 	break;
+  case OP_GROUPBY_COL1_SUM_COL2_STEP1:
+    sort_attribute_num = 1;
+    break;
   default:
     printf("process_boundary_records: Unknown opcode %d\n", op_code);
     assert(false);

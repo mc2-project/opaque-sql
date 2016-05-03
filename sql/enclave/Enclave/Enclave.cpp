@@ -291,7 +291,8 @@ void oblivious_sort(int op_code, uint8_t *input, uint32_t buffer_length,
 
 	free(data);
 
-  } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+  } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 ||
+             op_code == OP_SORT_COL3_IS_DUMMY_COL1 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
     // Sorting rows
 	// this needs to sort a row of data
 	

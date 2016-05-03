@@ -31,6 +31,8 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
+import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.types.FloatType
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
@@ -42,6 +44,29 @@ object QEDSuite {
     iter.map {
       case Row(u: String, r: Int, d: Int) =>
         (QED.encrypt(enclave, eid, u), QED.encrypt(enclave, eid, r), QED.encrypt(enclave, eid, d))
+    }
+  }
+
+  def bd1Encrypt9(iter: Iterator[Row])
+      : Iterator[(
+        Array[Byte], Array[Byte], Array[Byte],
+        Array[Byte], Array[Byte], Array[Byte],
+        Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(
+        si: String,
+        du: String,
+        vd: java.sql.Date,
+        ar: Float,
+        ua: String,
+        cc: String,
+        lc: String,
+        sw: String,
+        d: Int) =>
+        (QED.encrypt(enclave, eid, si), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
+          QED.encrypt(enclave, eid, ar), QED.encrypt(enclave, eid, ua), QED.encrypt(enclave, eid, cc),
+          QED.encrypt(enclave, eid, lc), QED.encrypt(enclave, eid, sw), QED.encrypt(enclave, eid, d))
     }
   }
 }
@@ -132,7 +157,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         StructField("avgDuration", IntegerType))))
       .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
       .coalesce(2)
-    val filtered = time("big data 1 - spark sql") {
+    val result = time("big data 1 - spark sql") {
       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
       val count = df.count
       println("big data 1 spark sql - num rows: " + count)
@@ -150,10 +175,60 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       .mapPartitions(QEDSuite.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
       .coalesce(2)
-    val filtered = time("big data 1") {
+    val result = time("big data 1") {
       val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
       val count = df.count
       println("big data 1 - num rows: " + count)
+      df
+    }
+  }
+
+  test("big data 2 - spark sql") {
+    val uservisitsDF = sqlContext.read.schema(
+      StructType(Seq(
+        StructField("sourceIP", StringType),
+        StructField("destURL", StringType),
+        StructField("visitDate", DateType),
+        StructField("adRevenue", FloatType),
+        StructField("userAgent", StringType),
+        StructField("countryCode", StringType),
+        StructField("languageCode", StringType),
+        StructField("searchWord", StringType),
+        StructField("duration", IntegerType))))
+      .csv("/home/ankurd/big-data-benchmark-files/uservisits/tiny")
+      .coalesce(2)
+    val result = time("big data 2 - spark sql") {
+      val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
+        .groupBy($"sourceIPSubstr").sum("adRevenue")
+      val count = df.count
+      println("big data 2 spark sql - num rows: " + count)
+      df
+    }
+  }
+
+  test("big data 2") {
+    val uservisitsDF = sqlContext.read.schema(
+      StructType(Seq(
+        StructField("sourceIP", StringType),
+        StructField("destURL", StringType),
+        StructField("visitDate", DateType),
+        StructField("adRevenue", FloatType),
+        StructField("userAgent", StringType),
+        StructField("countryCode", StringType),
+        StructField("languageCode", StringType),
+        StructField("searchWord", StringType),
+        StructField("duration", IntegerType))))
+      .csv("/home/ankurd/big-data-benchmark-files/uservisits/tiny")
+      .mapPartitions(QEDSuite.bd1Encrypt9)
+      .toDF("sourceIP", "destURL", "visitDate",
+        "adRevenue", "userAgent", "countryCode",
+        "languageCode", "searchWord", "duration")
+      .coalesce(2)
+    val result = time("big data 2") {
+      val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
+        .encGroupByWithSum($"sourceIP", $"adRevenue".as("totalAdRevenue"))
+      val count = df.count
+      println("big data 2 - num rows: " + count)
       df
     }
   }

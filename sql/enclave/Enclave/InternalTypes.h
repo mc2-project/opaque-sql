@@ -139,7 +139,7 @@ class Float : public GenericType {
 
   void flush(uint8_t *output);
 
-  void copy_attr(Float *attr, int mode);
+  void copy_attr(Float *attr);
 
   void reset() {
 	this->value = 0;

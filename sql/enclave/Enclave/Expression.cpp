@@ -105,7 +105,7 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
       prefix(dynamic_cast<String *>(input_attr[0]),
 			 3,
              dynamic_cast<String *>(output_attr[0]));
-      dynamic_cast<Integer *>(output_attr[1])->copy_attr(dynamic_cast<Integer *>(input_attr[1]));
+      dynamic_cast<Float *>(output_attr[1])->copy_attr(dynamic_cast<Float *>(input_attr[1]));
 	}
 	break;
   }

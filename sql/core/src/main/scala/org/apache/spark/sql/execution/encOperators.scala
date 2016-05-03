@@ -85,20 +85,9 @@ case class Permute(child: SparkPlan) extends UnaryNode {
 case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
-  private def attributeIndexOf(a: Attribute, list: Seq[Attribute]): Int = {
-    var i = 0
-    while (i < list.size) {
-      if (list(i) semanticEquals a) {
-        return i
-      }
-      i += 1
-    }
-    return -1
-  }
-
   override def doExecute() = {
     val childRDD = child.execute().map(_.encSerialize)
-    val sortAttrPos = attributeIndexOf(sortExpr.references.toSeq(0), child.output)
+    val sortAttrPos = QED.attributeIndexOf(sortExpr.references.toSeq(0), child.output)
     val opcode = sortAttrPos match {
       case 0 => OP_SORT_COL1.value
       case 1 => OP_SORT_COL2.value
@@ -119,6 +108,22 @@ case class EncAggregateWithSum(
   extends UnaryNode {
 
   override def doExecute() = {
+    val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
+    val sumExprPos = QED.attributeIndexOf(sumExpression.references.toSeq(0), child.output)
+    val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
+      (child.output.size, groupingExprPos, sumExprPos) match {
+        case (2, 0, 1) =>
+          (OP_GROUPBY_COL1_SUM_COL2_STEP1.value,
+            OP_GROUPBY_COL1_SUM_COL2_STEP2.value,
+            OP_SORT_COL3_IS_DUMMY_COL1.value,
+            OP_FILTER_COL3_NOT_DUMMY.value)
+        case (3, 1, 2) =>
+          (OP_GROUPBY_COL2_SUM_COL3_STEP1.value,
+            OP_GROUPBY_COL2_SUM_COL3_STEP2.value,
+            OP_SORT_COL4_IS_DUMMY_COL2.value,
+            OP_FILTER_COL4_NOT_DUMMY.value)
+      }
+
     val childRDD = child.execute().mapPartitions { rowIter =>
       rowIter.map(_.encSerialize)
     }.cache()
@@ -129,7 +134,7 @@ case class EncAggregateWithSum(
       val (enclave, eid) = QED.initEnclave()
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
       val boundary = enclave.Aggregate(
-        eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value, concatRows, rows.length, new Array[Byte](aggSize))
+        eid, aggStep1Opcode, concatRows, rows.length, new Array[Byte](aggSize))
       // enclave.StopEnclave(eid)
       Iterator(boundary)
     }
@@ -137,7 +142,7 @@ case class EncAggregateWithSum(
     val boundariesCollected = boundaries.collect
     val (enclave, eid) = QED.initEnclave()
     val processedBoundariesConcat = enclave.ProcessBoundary(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value,
+      eid, aggStep1Opcode,
       QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
     // enclave.StopEnclave(eid)
 
@@ -155,7 +160,7 @@ case class EncAggregateWithSum(
         assert(boundaryRecord.length >= aggSize)
         val (enclave, eid) = QED.initEnclave()
         val partialAgg = enclave.Aggregate(
-          eid, OP_GROUPBY_COL2_SUM_COL3_STEP2.value, concatRows, rows.length, boundaryRecord)
+          eid, aggStep2Opcode, concatRows, rows.length, boundaryRecord)
         assert(partialAgg.nonEmpty)
         // enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
@@ -163,12 +168,12 @@ case class EncAggregateWithSum(
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = ObliviousSort.ColumnSort(
-      partialAggregates.context, partialAggregates, OP_SORT_COL4_IS_DUMMY_COL2.value)
+      partialAggregates.context, partialAggregates, aggDummySortOpcode)
 
     // Filter out the non-final aggregates
     val finalAggregates = sortedAggregates.mapPartitions { serRows =>
       val (enclave, eid) = QED.initEnclave()
-      serRows.filter(serRow => enclave.Filter(eid, OP_FILTER_COL4_NOT_DUMMY.value, serRow))
+      serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode, serRow))
     }
 
     finalAggregates.flatMap { serRows =>

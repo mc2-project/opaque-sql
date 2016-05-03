@@ -56,16 +56,25 @@ object QED {
   def encrypt[T](enclave: SGXEnclave, eid: Long, field: T): Array[Byte] = {
     val buf = ByteBuffer.allocate(2048) // TODO: adaptive size
     buf.order(ByteOrder.LITTLE_ENDIAN)
+    import org.apache.spark.sql.QEDColumnType._
     field match {
       case x: Int =>
-        buf.put(1: Byte)
+        buf.put(INT.value)
         buf.putInt(4)
         buf.putInt(x)
       case s: String =>
-        buf.put(2: Byte)
+        buf.put(STRING.value)
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
+      case f: Float =>
+        buf.put(FLOAT.value)
+        buf.putInt(4)
+        buf.putFloat(f)
+      case d: java.sql.Date =>
+        buf.put(DATE.value)
+        buf.putInt(8)
+        buf.putLong(d.getTime / 1000)
     }
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
@@ -79,11 +88,12 @@ object QED {
     buf.order(ByteOrder.LITTLE_ENDIAN)
     val tpe = buf.get()
     val size = buf.getInt()
+    import org.apache.spark.sql.QEDColumnType._
     val result = tpe match {
-      case 1 =>
+      case t if t == INT.value =>
         assert(size == 4)
         buf.getInt()
-      case 2 =>
+      case t if t == STRING.value =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
         new String(sBytes, "UTF-8")
@@ -203,5 +213,16 @@ object QED {
 
   def genAndWriteData() = {
     // write this hard-coded set of columns to text file, in csv format
+  }
+
+  def attributeIndexOf(a: Attribute, list: Seq[Attribute]): Int = {
+    var i = 0
+    while (i < list.size) {
+      if (list(i) semanticEquals a) {
+        return i
+      }
+      i += 1
+    }
+    return -1
   }
 }
