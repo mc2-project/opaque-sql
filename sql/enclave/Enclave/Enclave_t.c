@@ -591,17 +591,11 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 	ms_ecall_scan_aggregation_count_distinct_t* ms = SGX_CAST(ms_ecall_scan_aggregation_count_distinct_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	uint8_t* _tmp_input_rows = ms->ms_input_rows;
-	uint32_t _tmp_input_rows_length = ms->ms_input_rows_length;
-	size_t _len_input_rows = _tmp_input_rows_length;
-	uint8_t* _in_input_rows = NULL;
 	uint8_t* _tmp_agg_row = ms->ms_agg_row;
 	uint32_t _tmp_agg_row_buffer_length = ms->ms_agg_row_buffer_length;
 	size_t _len_agg_row = _tmp_agg_row_buffer_length;
 	uint8_t* _in_agg_row = NULL;
 	uint8_t* _tmp_output_rows = ms->ms_output_rows;
-	uint32_t _tmp_output_rows_length = ms->ms_output_rows_length;
-	size_t _len_output_rows = _tmp_output_rows_length;
-	uint8_t* _in_output_rows = NULL;
 	uint32_t* _tmp_actual_size = ms->ms_actual_size;
 	size_t _len_actual_size = sizeof(*_tmp_actual_size);
 	uint32_t* _in_actual_size = NULL;
@@ -610,21 +604,10 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 	uint32_t* _in_cardinality = NULL;
 
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_scan_aggregation_count_distinct_t));
-	CHECK_UNIQUE_POINTER(_tmp_input_rows, _len_input_rows);
 	CHECK_UNIQUE_POINTER(_tmp_agg_row, _len_agg_row);
-	CHECK_UNIQUE_POINTER(_tmp_output_rows, _len_output_rows);
 	CHECK_UNIQUE_POINTER(_tmp_actual_size, _len_actual_size);
 	CHECK_UNIQUE_POINTER(_tmp_cardinality, _len_cardinality);
 
-	if (_tmp_input_rows != NULL) {
-		_in_input_rows = (uint8_t*)malloc(_len_input_rows);
-		if (_in_input_rows == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memcpy(_in_input_rows, _tmp_input_rows, _len_input_rows);
-	}
 	if (_tmp_agg_row != NULL) {
 		_in_agg_row = (uint8_t*)malloc(_len_agg_row);
 		if (_in_agg_row == NULL) {
@@ -633,14 +616,6 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 		}
 
 		memcpy(_in_agg_row, _tmp_agg_row, _len_agg_row);
-	}
-	if (_tmp_output_rows != NULL) {
-		if ((_in_output_rows = (uint8_t*)malloc(_len_output_rows)) == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memset((void*)_in_output_rows, 0, _len_output_rows);
 	}
 	if (_tmp_actual_size != NULL) {
 		if ((_in_actual_size = (uint32_t*)malloc(_len_actual_size)) == NULL) {
@@ -658,14 +633,9 @@ static sgx_status_t SGX_CDECL sgx_ecall_scan_aggregation_count_distinct(void* pm
 
 		memset((void*)_in_cardinality, 0, _len_cardinality);
 	}
-	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _in_input_rows, _tmp_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _in_output_rows, _tmp_output_rows_length, _in_actual_size, ms->ms_flag, _in_cardinality);
+	ecall_scan_aggregation_count_distinct(ms->ms_op_code, _tmp_input_rows, ms->ms_input_rows_length, ms->ms_num_rows, _in_agg_row, _tmp_agg_row_buffer_length, _tmp_output_rows, ms->ms_output_rows_length, _in_actual_size, ms->ms_flag, _in_cardinality);
 err:
-	if (_in_input_rows) free(_in_input_rows);
 	if (_in_agg_row) free(_in_agg_row);
-	if (_in_output_rows) {
-		memcpy(_tmp_output_rows, _in_output_rows, _len_output_rows);
-		free(_in_output_rows);
-	}
 	if (_in_actual_size) {
 		memcpy(_tmp_actual_size, _in_actual_size, _len_actual_size);
 		free(_in_actual_size);

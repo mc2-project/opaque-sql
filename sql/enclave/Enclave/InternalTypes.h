@@ -40,6 +40,9 @@ class GenericType {
 
   virtual void reset() = 0;
 
+  virtual void sum(GenericType *v) {}
+  virtual void avg(uint64_t count) {}
+
   uint8_t type_;
 };
 
@@ -90,7 +93,18 @@ class Integer : public GenericType {
   void print();
 
   void reset() {
-	value = 0;
+    value = 0;
+  }
+
+  void sum(GenericType *v) {
+    if (v->type_ == INT) {
+      this->value += dynamic_cast<Integer *>(v)->value;
+    }
+  }
+
+  void avg(uint64_t count) {
+    int temp = (int) count;
+    value = value / temp;
   }
 
   int value;
@@ -142,8 +156,20 @@ class Float : public GenericType {
   void copy_attr(Float *attr, int mode);
 
   void reset() {
-	this->value = 0;
+    this->value = 0;
   }
+
+  void sum(GenericType *v) {
+    if (v->type_ == INT) {
+      this->value += dynamic_cast<Float *>(v)->value;
+    }
+  }
+
+  void avg(uint64_t count) {
+    float temp = (float) count;
+    value = value / temp;
+  }
+
 
   void print();
 
@@ -213,6 +239,7 @@ class LanguageCode : public String {
 // return the appropriate GenericType
 GenericType *create_attr(uint8_t *attr);
 bool is_dummy_type(uint8_t attr_type);
+uint8_t get_dummy_type(uint8_t attr_type);
 
 // This class is able to group together attributes, and execute evaluation on these attributes
 // assume that the buffer_ptr is [attr type][attr len][attr] [attr type][attr len][attr]...
@@ -292,6 +319,24 @@ class AggSortAttributes : public GroupedAttributes {
   void evaluate();
 
 };
+
+class AggAggAttributes : public GroupedAttributes {
+ public:
+ AggAggAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+  GroupedAttributes(op_code, row_ptr, num_cols) { }
+
+  int compare(AggAggAttributes *attr);
+
+  void init();
+  
+  // re-initialize: op_code should be the same, num cols the same
+  // but row_pointer is different
+  void re_init(uint8_t *new_row_ptr);
+  
+  void evaluate();
+
+};
+
 
 class JoinAttributes : public GroupedAttributes {
  public:
@@ -468,14 +513,18 @@ class SortRecord : public Record {
 class AggRecord : public Record {
  public:
  AggRecord() : Record(AGG_UPPER_BOUND) {
-	agg_sort_attributes = NULL;
-	row_ptr = row + 4 + 4;
+    agg_sort_attributes = NULL;
+    agg_agg_attributes = NULL;
+    row_ptr = row + 4 + 4;
   }
 
   ~AggRecord() {
-	if (agg_sort_attributes != NULL) {
-	  delete agg_sort_attributes;
-	}
+    if (agg_sort_attributes != NULL) {
+      delete agg_sort_attributes;
+    }
+    if (agg_agg_attributes != NULL) {
+      delete agg_agg_attributes;
+    }
   }
 
   uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
@@ -504,6 +553,7 @@ class AggRecord : public Record {
   // Format of row is
   // [distinct entries (4 bytes)] [offset (4 bytes)] [number of columns] [attr1 type][attr1 len][attr1]...
   AggSortAttributes *agg_sort_attributes;
+  AggAggAttributes *agg_agg_attributes;
 };
 
 #endif

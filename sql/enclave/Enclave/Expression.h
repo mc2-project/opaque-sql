@@ -25,7 +25,8 @@ enum EVAL_MODE {
   PROJECT,
   SORT,
   AGG,
-  JOIN
+  JOIN,
+  AGG_AGG
 };
 
 void evaluate_expr(GenericType **input_attr, uint32_t num_input_attr,

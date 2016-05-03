@@ -34,6 +34,7 @@ enum TYPE {
   URL_TYPE = 5,
   C_CODE = 6,
   L_CODE = 7,
+  LONG = 8,
 
   DUMMY_INT = 100,
   DUMMY_FLOAT = 101,
