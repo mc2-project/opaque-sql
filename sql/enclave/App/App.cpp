@@ -533,7 +533,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
       num_part += 1;
     }
     
-    printf("input_len is %u, element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", input_len, element_size, num_part, num_items, elements_per_part);
+    //printf("input_len is %u, element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", input_len, element_size, num_part, num_items, elements_per_part);
 	
     uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
     uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
@@ -575,9 +575,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(JNIEnv *env,
-																		   jobject obj,
-																		   jlong eid) {
-
+									   jobject obj,
+									   jlong eid) {
+  
   // size should be SGX
   const uint32_t length = SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 8;
   jbyteArray ret = env->NewByteArray(length);
@@ -667,11 +667,11 @@ void print_bytes_(uint8_t *ptr, uint32_t len) {
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(JNIEnv *env, 
-																				  jobject obj, 
-																				  jlong eid,
-																				  jint op_code,
-																				  jbyteArray rows,
-																				  jint num_rows) {
+										  jobject obj, 
+										  jlong eid,
+										  jint op_code,
+										  jbyteArray rows,
+										  jint num_rows) {
   
   jboolean if_copy;
   
@@ -973,7 +973,7 @@ void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 256 * 1024;
+  uint32_t total_num_rows = 150 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
@@ -991,11 +991,11 @@ void test_enclave_sort() {
   uint32_t offset = 0;
 
   {
-	scoped_timer timer(&t);
-	for (uint32_t i = 0; i < total_num_rows; i++) {
-	  offset = format_encrypt_row(input_rows_ptr, i, num_cols);
-	  input_rows_ptr += offset;
-	}
+    scoped_timer timer(&t);
+    for (uint32_t i = 0; i < total_num_rows; i++) {
+      offset = format_encrypt_row(input_rows_ptr, i, num_cols);
+      input_rows_ptr += offset;
+    }
   }
 
   double t_ms = ((double) t) / 1000;

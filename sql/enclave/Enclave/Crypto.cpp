@@ -24,17 +24,16 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
+  AesGcm cipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
+  memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
 
-  // AesGcm cipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
-  // cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
-  // memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-
-  sgx_status_t status = sgx_rijndael128GCM_encrypt(key,
-  						   plaintext, plaintext_length,
-  						   ciphertext_ptr,
-  						   iv_ptr, SGX_AESGCM_IV_SIZE,
-  						   NULL, 0,
-  						   mac_ptr);
+  // sgx_status_t status = sgx_rijndael128GCM_encrypt(key,
+  // 						   plaintext, plaintext_length,
+  // 						   ciphertext_ptr,
+  // 						   iv_ptr, SGX_AESGCM_IV_SIZE,
+  // 						   NULL, 0,
+  // 						   mac_ptr);
  
   // switch(status) {
   // case SGX_ERROR_INVALID_PARAMETER:
@@ -66,42 +65,42 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
-  // AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
-  // decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-  // if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-  //   printf("Decrypt: invalid mac\n");
-  // }
+  AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+  if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+    printf("Decrypt: invalid mac\n");
+  }
 
   //printf("Decrypt: ciphertext_length is %u\n", ciphertext_length);
-  sgx_status_t status = sgx_rijndael128GCM_decrypt(key,
-  						   ciphertext_ptr, plaintext_length,
-  						   plaintext,
-  						   iv_ptr, SGX_AESGCM_IV_SIZE,
-  						   NULL, 0,
-  						   mac_ptr);
+  // sgx_status_t status = sgx_rijndael128GCM_decrypt(key,
+  // 						   ciphertext_ptr, plaintext_length,
+  // 						   plaintext,
+  // 						   iv_ptr, SGX_AESGCM_IV_SIZE,
+  // 						   NULL, 0,
+  // 						   mac_ptr);
   
-  if (status != SGX_SUCCESS) {
-    switch(status) {
-    case SGX_ERROR_INVALID_PARAMETER:
-      printf("Decrypt: invalid parameter\n");
-      break;
+  // if (status != SGX_SUCCESS) {
+  //   switch(status) {
+  //   case SGX_ERROR_INVALID_PARAMETER:
+  //     printf("Decrypt: invalid parameter\n");
+  //     break;
 
-    case SGX_ERROR_OUT_OF_MEMORY:
-      printf("Decrypt: out of enclave memory\n");
-      break;
+  //   case SGX_ERROR_OUT_OF_MEMORY:
+  //     printf("Decrypt: out of enclave memory\n");
+  //     break;
 
-    case SGX_ERROR_UNEXPECTED:
-      printf("Decrypt: unexpected error\n");
-      break;
+  //   case SGX_ERROR_UNEXPECTED:
+  //     printf("Decrypt: unexpected error\n");
+  //     break;
 
-    case SGX_ERROR_MAC_MISMATCH:
-      printf("Decrypt: MAC mismatch\n");
-      break;
+  //   case SGX_ERROR_MAC_MISMATCH:
+  //     printf("Decrypt: MAC mismatch\n");
+  //     break;
 
-    default:
-      printf("Decrypt: other error %#08x\n", status);
-    }
-  }
+  //   default:
+  //     printf("Decrypt: other error %#08x\n", status);
+  //   }
+  // }
 }
 
 

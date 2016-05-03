@@ -559,11 +559,11 @@ void ecall_external_oblivious_sort(int op_code,
 
   temp = (uint8_t **) malloc(sizeof(void *) * max_list_length);
 
-  printf("max_list_length is %u\n", max_list_length);
+  //printf("max_list_length is %u\n", max_list_length);
 
   if (num_buffers == 1) {
     //assert(buffer_lengths[0] < MAX_SORT_BUFFER);
-    printf("num buffers is 1\n");
+    //printf("num buffers is 1\n");
     reader.add_buffer(buffer_list[0], buffer_lengths[0]);
     oblivious_sort(op_code, &reader, 0, num_rows[0], true, sort_data, join_data, NULL);
 
@@ -644,6 +644,7 @@ void ecall_external_oblivious_sort(int op_code,
     data = (Record **) join_data;
   }
  
+  /*
   printf("--- Begin memory alloc size --- \n");
   if (operation == SORT_JOIN) {
     printf("Join data's malloc size is %u\n", max_list_length * JOIN_ROW_UPPER_BOUND);
@@ -658,10 +659,11 @@ void ecall_external_oblivious_sort(int op_code,
     printf("Total memory size %u\n", MAX_SORT_BUFFER + sizeof(void *) * max_list_length + max_list_length * ROW_UPPER_BOUND);
   }
   printf("--- End memory alloc size --- \n");
+  */
 
-  printf("Start single partition oblivious sort, num buffers: %u\n", num_buffers);
+  //printf("Start single partition oblivious sort, num buffers: %u\n", num_buffers);
   for (uint32_t i = 0; i < num_buffers; i++) {
-    printf("Parsing buffer %u\n", i);
+    //printf("Parsing buffer %u\n", i);
     reader.clear();
     reader.reset();
     reader.add_buffer(buffer_list[i], buffer_lengths[i]);
@@ -712,7 +714,7 @@ void ecall_external_oblivious_sort(int op_code,
 
     external_scratch_ptr += enc_size(padded_row_size * num_rows[i]);
   }
-  printf("End single partition oblivious sort\n");
+  //printf("End single partition oblivious sort\n");
 
   uint32_t merges = 0;
   uint8_t *row_ptr = NULL;
@@ -740,7 +742,7 @@ void ecall_external_oblivious_sort(int op_code,
 	      uint32_t buffer1_size = external_scratch_size[idx];
 	      uint32_t buffer2_size = external_scratch_size[pair_idx];
 
-	      printf("external scratch sizes are %u and %u\n", external_scratch_size[idx], external_scratch_size[pair_idx]);
+	      //printf("external scratch sizes are %u and %u\n", external_scratch_size[idx], external_scratch_size[pair_idx]);
 
 	      // if ((buffer1_size + buffer2_size) > MAX_SORT_BUFFER) {
 	      // 	printf("assert failed\n");
@@ -1034,7 +1036,7 @@ void ecall_external_oblivious_sort(int op_code,
     }
   }
 
-  printf("number of merges: %u\n", merges);
+  //printf("number of merges: %u\n", merges);
 
   // free data
   
