@@ -324,7 +324,7 @@ void sort_merge_join(int op_code,
 
   uint32_t num_cols = 0;
 
-  printf("Sort merge join called\n");
+  // printf("Sort merge join called\n");
 
   decrypt(join_row, enc_size(JOIN_ROW_UPPER_BOUND), primary_row);
   // check to see if this is a dummy row
@@ -447,7 +447,7 @@ void scan_collect_last_primary(int op_code,
   uint8_t *current_table = NULL;
 
 
-  printf("scan_collect_last_primary called\n");
+  // printf("scan_collect_last_primary called\n");
   
   uint8_t *input_rows_ptr = input_rows;
   
@@ -483,7 +483,7 @@ void scan_collect_last_primary(int op_code,
   // return the last primary row, if there is any!
   //print_join_row("Join row", primary_row);
   encrypt(primary_row, JOIN_ROW_UPPER_BOUND, output);
-  printf("enc_size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
+  // printf("enc_size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
 }
 
 
@@ -504,7 +504,7 @@ void process_join_boundary(int op_code,
 
   uint8_t *current_table = current_join_row;
 
-  printf("process_join_boundary called\n");
+  // printf("process_join_boundary called\n");
 
   for (uint32_t i = 0; i < num_rows; i++) {
 	cpy(prev_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);

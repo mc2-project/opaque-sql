@@ -622,7 +622,7 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t *agg_row_ptr = agg_row;
   uint32_t agg_row_length = 0;
 
-  printf("scan_aggregation_count_distinct called, flag is %u\n", flag);
+  // printf("scan_aggregation_count_distinct called, flag is %u\n", flag);
 
   if (flag == 2) {
 	agg_row_length = *( (uint32_t *) agg_row);
@@ -916,7 +916,7 @@ void process_boundary_records(int op_code,
   uint32_t agg_enc_size = AGG_UPPER_BOUND;
   int ret = 0;
 
-  printf("Process_boundary_records called; buffer size is %u, %p\n", rows_size, out_agg_rows);
+  // printf("Process_boundary_records called; buffer size is %u, %p\n", rows_size, out_agg_rows);
 
   for (int round = 0; round < 2; round++) {
 	// round 1: collect information about num distinct items
@@ -928,12 +928,12 @@ void process_boundary_records(int op_code,
 	
 	for (uint32_t i = 0; i < num_rows; i++) {
 
-      printf("round=%u, i=%u, get_next_row(...)\n", round, i);
+      // printf("round=%u, i=%u, get_next_row(...)\n", round, i);
       get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
-      printf("Got next row\n");
+      // printf("Got next row\n");
 	  uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
-	  printf("Record %u, num cols is %u\n", i, num_cols);
+      // printf("Record %u, num cols is %u\n", i, num_cols);
 	  enc_row_ptr += 4;
 
 	  enc_agg_ptr = input_ptr;

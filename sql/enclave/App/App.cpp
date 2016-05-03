@@ -540,7 +540,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 	}
 
 	//printf("input_len: %u\n", input_len);
-	printf("element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", element_size, num_part, num_items, elements_per_part);
+    // printf("element_size is %u, num part is %u, num_items: %u, elements_per_part: %u\n", element_size, num_part, num_items, elements_per_part);
 	
 	uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
 	uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
@@ -654,7 +654,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
 										flag,
 										(uint32_t *) output_rows);
 
-  printf("alloc size is %u, actual_size is %u, num_rows is %u\n", output_rows_length, actual_size, num_rows);
+  // printf("alloc size is %u, actual_size is %u, num_rows is %u\n", output_rows_length, actual_size, num_rows);
 
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) (output_rows + 4));

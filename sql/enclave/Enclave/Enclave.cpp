@@ -604,7 +604,7 @@ void ecall_external_oblivious_sort(int op_code,
     }
   }
 
-  printf("number of merges: %u\n", merges);
+  // printf("number of merges: %u\n", merges);
 
   free(internal_buffer);
 }
