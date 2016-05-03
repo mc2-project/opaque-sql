@@ -115,8 +115,8 @@ void Integer::flush(uint8_t *output) {
   *( (uint32_t *) (output + HEADER_SIZE)) = value;
 }
 
-void Integer::copy_attr(Integer *attr) {
-  this->value = attr->value;
+void Integer::copy_attr(Integer *v) {
+  this->value = v->value;
 }
 
 void Integer::print() {
@@ -239,7 +239,6 @@ void String::copy_attr(String *attr, int mode) {
   } else {
 	cpy(this->data, attr->data, this->length);
   }
-
   
 }
 
@@ -864,10 +863,11 @@ void AggAggAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-			     2, &sort_pointer, &len);
+			     3, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
+
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
@@ -880,13 +880,10 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
-  if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1
-      || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+  if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
     attributes[0]->reset();
-
     find_plaintext_attribute(new_row_ptr, num_cols,
-			     2, &sort_pointer, &len);
-
+			     3, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
   }
 

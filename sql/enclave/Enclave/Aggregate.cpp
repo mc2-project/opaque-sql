@@ -340,6 +340,31 @@ public:
     return HEADER_SIZE + *((uint32_t *) (result_ptr + TYPE_SIZE));
   }
 
+  uint32_t flush_agg(uint8_t *output) {
+    uint8_t *output_ptr = output;
+    // evaluate agg_field
+    agg_field->flush(output_ptr);
+    uint32_t flush_len = *( (uint32_t *) (output_ptr + TYPE_SIZE)) + HEADER_SIZE;
+
+    return flush_len;
+  }
+
+
+  void copy_data(aggregate_data *data) {
+
+    // only copy if the data is of the same type
+    if (dynamic_cast<generic_agg_sum *>(data) != NULL) {
+      GenericType *v1 = this->agg_field;
+      GenericType *v2 = dynamic_cast<generic_agg_sum *> (data)->agg_field;
+
+      if (v1->type_ == INT) {
+	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
+      } else if (v1->type_ == FLOAT) {
+	dynamic_cast<Float *>(v1)->value = dynamic_cast<Float *>(v2)->value;
+      }
+    }
+  }
+
   GenericType *agg_field;
 };
 
@@ -445,6 +470,21 @@ public:
     return (output_ptr - output);
   }
 
+  void copy_data(aggregate_data *data) {
+    // only copy if the data is of the same type
+    if (dynamic_cast<generic_agg_avg *>(data) != NULL) {
+      this->count = dynamic_cast<generic_agg_avg *> (data)->count;
+      GenericType *v1 = this->agg_field;
+      GenericType *v2 = dynamic_cast<generic_agg_avg *> (data)->agg_field;
+
+      if (v1->type_ == INT) {
+	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
+      } else if (v1->type_ == FLOAT) {
+	dynamic_cast<Float *>(v1)->value = dynamic_cast<Float *>(v2)->value;
+      }
+    }
+  }
+
   GenericType *agg_field;
   uint64_t count;
 };
@@ -463,30 +503,30 @@ public:
 	
     agg = rec->row + 4 + 4 + ROW_UPPER_BOUND;
 
-    if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
-      agg_data = new aggregate_data_sum;
-    } else {
-      agg_data = NULL;
-      printf("agg_stats_data::ctor: unknown opcode %d\n", op_code);
-      assert(false);
-    }
+    // if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+    //   agg_data = new aggregate_data_sum;
+    // } else {
+    //   agg_data = NULL;
+    //   printf("agg_stats_data::ctor: unknown opcode %d\n", op_code);
+    //   assert(false);
+    // }
 
     agg_data_list[0] = NULL;
     agg_data_list[1] = NULL;
 
-    // TODO: create the different agg_data here
+    // reate the different agg_data here
     if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
       num_agg_fields = 1;
       agg_data_list[0] = new generic_agg_sum(INT);
     } else {
-      agg_data = NULL;
+      //agg_data = NULL;
       printf("agg_stats_data::ctor: unknown opcode %d\n", op_code);
       assert(false);
     }
   }
 
   ~agg_stats_data() {
-    delete agg_data;
+    //delete agg_data;
     delete rec;
 
     for (uint32_t i = 0; i < num_agg_fields; i++) {
@@ -573,7 +613,13 @@ public:
       agg_data_list[i]->reset();
     }
     
-    this->aggregate();
+    this->aggregate_buf();
+  }
+
+  void reset() {
+    for (uint32_t i = 0; i < num_agg_fields; i++) {
+      agg_data_list[i]->reset();
+    }
   }
 
   // this flushes agg_data's information into agg
@@ -607,7 +653,12 @@ public:
     //cpy(this->agg, data->agg, PARTIAL_AGG_UPPER_BOUND);
     //this->flush_all();
 
-    agg_data->copy_data(data->agg_data);
+    //agg_data->copy_data(data->agg_data);
+    
+    for (uint32_t i = 0; i < num_agg_fields; i++) {
+      agg_data_list[i]->copy_data(data->agg_data_list[i]);
+    }
+
     this->rec->copy(data->rec, COPY);
     this->flush_all();
   }
@@ -658,7 +709,7 @@ public:
       printf("Distinct entries: %u\n", *distinct_entries);
       printf("Offset: %u\n", *offset_ptr);
       rec->print();
-      print_attribute("agg result", agg);
+      print_attributes("agg result", agg, num_agg_fields);
       printf("==============\n");
     }
   }
@@ -694,7 +745,7 @@ public:
   uint8_t *agg;
 
   AggRecord *rec;
-  aggregate_data *agg_data;
+  //aggregate_data *agg_data;
 
   uint32_t num_agg_fields;
   aggregate_data *agg_data_list[2];
@@ -806,8 +857,8 @@ void scan_aggregation_count_distinct(int op_code,
     assert(false);
   }
 
-  prev_agg.agg_data->reset();
-  current_agg.agg_data->reset();
+  // prev_agg.agg_data->reset();
+  // current_agg.agg_data->reset();
 
   uint32_t offset = 0;
   uint32_t distinct_items = 0;
@@ -836,7 +887,8 @@ void scan_aggregation_count_distinct(int op_code,
       //decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
       current_agg.rec->consume_enc_agg_record(agg_row_ptr, agg_row_length);
       //current_agg.aggregate();
-      current_agg.aggregate_buf();
+      //current_agg.aggregate_buf();
+      current_agg.reset_aggregate();
       offset = current_agg.offset();
       distinct_items = current_agg.distinct();
 	  
@@ -888,6 +940,12 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t internal_row_1[ROW_UPPER_BOUND];
   uint8_t internal_row_2[ROW_UPPER_BOUND];
 
+  if (dummy == 0) {
+    prev_agg.clear();
+  } else {
+    prev_agg.copy_agg(&current_agg);
+  }
+
   for (uint32_t r = 0; r < num_rows; r++) {
     get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 
@@ -909,25 +967,42 @@ void scan_aggregation_count_distinct(int op_code,
     enc_row_ptr += 4;
 
     if (r == 0) {
-      current_agg.inc_distinct();
-	  
+      current_agg.clear();
       // also copy the attribute information into current_agg
       // find_attribute(enc_row_ptr, enc_row_len, num_cols,
       // 				 sort_attribute_num,
       // 				 &enc_value_ptr, &enc_value_len);
       // decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
 
+      current_agg.inc_distinct();
       current_agg.rec->reset_row_ptr();
       current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
       current_agg.rec->set_agg_sort_attributes(op_code);
+      current_agg.aggregate();
+      //current_agg.print();
 
       // find_attribute(enc_row_ptr, enc_row_len, num_cols,
       // 		     agg_attribute_num,
       // 		     &enc_value_ptr, &enc_value_len);
       // decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
 
-      current_agg.aggregate();
-      current_agg.flush_agg_buffer();
+      if (dummy != 0) {
+	if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
+	  current_agg.aggregate_buf(&prev_agg);
+	  // printf("- - - - - - - - - - - -  Aggregating with previous agg   - - - - - - - - - - - - \n");
+	  // prev_agg.print();
+	  // current_agg.flush_all();
+	  // current_agg.print();
+	  // printf("- - - - - - - - - - - -  END Aggregating with previous agg   - - - - - - - - - - - - \n");
+	  current_agg.flush_agg_buffer();
+	}
+      }
+
+      // if (flag == 2) {
+      // 	printf("current_agg\n");
+      // 	current_agg.print();
+      // 	printf("end current_agg\n");
+      // }
 
       // cleanup
       enc_row_ptr += enc_row_len;
@@ -938,7 +1013,9 @@ void scan_aggregation_count_distinct(int op_code,
     // copy current_agg to prev_agg
     //printf("Before copy_agg\n");
     prev_agg.copy_agg(&current_agg);
-    //prev_agg.print();
+    // if (flag == 2) {
+    //   prev_agg.print();
+    // }
 
     //printf("prev_row_len is %u\n", prev_row_len);
 
@@ -999,7 +1076,8 @@ void scan_aggregation_count_distinct(int op_code,
 
     } else {
       current_agg.inc_distinct();
-      current_agg.agg_data->reset();
+      //current_agg.agg_data->reset();
+      current_agg.reset();
       current_agg.aggregate();
       ++offset;
 
@@ -1027,7 +1105,9 @@ void scan_aggregation_count_distinct(int op_code,
   if (flag == 1) {
     current_agg.flush_all();
     uint32_t ca_size = enc_size(AGG_UPPER_BOUND);
+    // printf("------------------------------ FLAG = 1 ------------------------------\n");
     // current_agg.print();
+    // printf("------------------------------ FLAG = 1 ------------------------------\n");
     *( (uint32_t *) output_rows_ptr) = ca_size;
     encrypt(current_agg.rec->row, AGG_UPPER_BOUND, output_rows_ptr + 4);
     *actual_output_rows_length += 4 + ca_size;
@@ -1039,7 +1119,7 @@ void scan_aggregation_count_distinct(int op_code,
 	num_output_rows++;
       } else {
 	output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, 0);
-	num_output_rows++;
+ 	num_output_rows++;
 	// printf("-------------------------------------- OUTPUT (final) --------------------------------------\n");
 	// current_agg.flush_all();
 	// current_agg.print();
@@ -1054,6 +1134,7 @@ void scan_aggregation_count_distinct(int op_code,
   // TODO: could even to tiered padding here!
   if (flag == 2) {
     //*cardinality = distinct_items;
+    //printf("Num distinct items: %u\n", distinct_items);
   }
 
   //printf("Num output rows is %u, received rows: %u\n", num_output_rows, num_rows);
@@ -1154,7 +1235,7 @@ void process_boundary_records(int op_code,
 	  prev_agg.flush_all();
 	  prev_agg.set_distinct(distinct_items);
 	  prev_agg.set_offset(0);
-	  //printf("Writing out %u, distinct items is %u, agg_enc_size: %u\n", i, distinct_items, agg_enc_size);
+	  // printf("Writing out %u, distinct items is %u, agg_enc_size: %u\n", i, distinct_items, agg_enc_size);
           // prev_agg.print();
 	  encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
 	  out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
@@ -1262,9 +1343,9 @@ void process_boundary_records(int op_code,
       input_ptr = enc_agg_ptr + enc_agg_len;
     }
 
-    if (round == 0) {
-      // printf("Distinct items is %u\n", distinct_items);
-    }
+    // if (round == 0) {
+    //   printf("Distinct items is %u\n", distinct_items);
+    // }
 
   }
 
