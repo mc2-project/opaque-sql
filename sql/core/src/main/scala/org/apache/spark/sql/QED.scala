@@ -97,6 +97,9 @@ object QED {
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
         new String(sBytes, "UTF-8")
+      case t if t == FLOAT.value =>
+        assert(size == 4)
+        buf.getFloat()
     }
     result.asInstanceOf[T]
   }

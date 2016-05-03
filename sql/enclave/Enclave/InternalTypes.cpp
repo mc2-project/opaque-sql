@@ -495,6 +495,9 @@ void ProjectAttributes::init() {
     attributes[1]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
+  } else {
+    printf("ProjectAttributes::init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
 }
@@ -594,6 +597,9 @@ void JoinAttributes::init() {
 	num_attr = 1;
 	num_eval_attr = 1;
 
+  } else {
+    printf("JoinAttributes::init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
