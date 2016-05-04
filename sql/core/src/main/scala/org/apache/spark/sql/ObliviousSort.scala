@@ -59,7 +59,11 @@ object ObliviousSort extends java.io.Serializable {
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
-    val allRowsSorted = enclave.ObliviousSort(eid, opcode, concatRows, 0, nonEmptyRows.length)
+    val allRowsSorted =
+      if (nonEmptyRows.nonEmpty) {
+        enclave.ObliviousSort(eid, opcode, concatRows, 0, nonEmptyRows.length)
+      }
+      else Array.empty[Byte]
     // enclave.StopEnclave(eid)
 
     // Copy rows back into values
@@ -375,10 +379,22 @@ object ObliviousSort extends java.io.Serializable {
 
     // println("s is " + s + ", r is " + r)
 
-
-    // TODO: for now do an assert; in the future, need to pad with dummy values
-    assert(r >= 2 * math.pow(s, 2).toInt)
-    assert(len == r * s)
+    if (!(r >= 2 * math.pow(s, 2).toInt)) {
+      r = 2 * math.pow(s, 2).toInt
+    }
+    val padded =
+      if (len != r * s) {
+        assert(r * s > len)
+        val firstPartitionSize =
+          data.mapPartitionsWithIndex((index, iter) =>
+            if (index == 0) Iterator(iter.size) else Iterator(0)).collect.sum
+        val paddingSize = r * s - len.toInt
+        data.mapPartitionsWithIndex((index, iter) =>
+          if (index == 0) iter.padTo(firstPartitionSize + paddingSize, new Array[Byte](0))
+          else iter)
+      } else {
+        data
+      }
 
     val numPartitions = NumCores * NumMachines
     val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
