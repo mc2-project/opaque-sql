@@ -367,6 +367,8 @@ object ObliviousSort extends java.io.Serializable {
     // divide N into r * s, where s is the number of machines, and r is the size of the 
     // constraints: s | r; r >= 2 * (s-1)^2
 
+    data.cache()
+
     val len = data.count
 
     var s = s_input
@@ -397,23 +399,33 @@ object ObliviousSort extends java.io.Serializable {
       }
 
     val numPartitions = NumCores * NumMachines
-    val par_data = data.zipWithIndex.map(t => (t._1, t._2.toInt))
-      .groupBy(_._2 / r + 1).flatMap(_._2)
-    par_data.count
+    val par_data =
+      time("prepartitioning") {
+        val result = data.zipWithIndex.map(t => (t._1, t._2.toInt))
+          .groupBy(_._2 / r + 1).flatMap(_._2)
+          .cache()
+        result.count
+        result
+      }
 
-    val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) => ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
+    val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) =>
+      ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
 
     /* Alternative */
     val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
       .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
     val par_data_i2 = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
       .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
-    val par_data_final = par_data_i2
-      .map(v => ((v._1, v._2._1), v._2._2))
-      .sortByKey()
+    val par_data_final =
+      time("final partition sorting") {
+        val result = par_data_i2
+          .map(v => ((v._1, v._2._1), v._2._2))
+          .sortByKey()
+          .cache()
+        result.count
+        result
+      }
     /* End Alternative */
-
-    val count = par_data_final.count
 
     par_data_final.map(_._2)
   }
