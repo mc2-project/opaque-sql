@@ -17,8 +17,6 @@
 
 package org.apache.spark.sql
 
-import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -27,59 +25,16 @@ import scala.util.Random
 import oblivious_sort.ObliviousSort
 
 import org.apache.spark.sql.QEDOpcode._
-import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
-import org.apache.spark.sql.types.DateType
-import org.apache.spark.sql.types.FloatType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
-
-object QEDSuite {
-  def bd1Encrypt3(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
-    val (enclave, eid) = QED.initEnclave()
-    iter.map {
-      case Row(u: String, r: Int, d: Int) =>
-        (QED.encrypt(enclave, eid, u), QED.encrypt(enclave, eid, r), QED.encrypt(enclave, eid, d))
-    }
-  }
-
-  def bd1Encrypt9(iter: Iterator[Row])
-      : Iterator[(
-        Array[Byte], Array[Byte], Array[Byte],
-        Array[Byte], Array[Byte], Array[Byte],
-        Array[Byte], Array[Byte], Array[Byte])] = {
-    val (enclave, eid) = QED.initEnclave()
-    iter.map {
-      case Row(
-        si: String,
-        du: String,
-        vd: java.sql.Date,
-        ar: Float,
-        ua: String,
-        cc: String,
-        lc: String,
-        sw: String,
-        d: Int) =>
-        (QED.encrypt(enclave, eid, si), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
-          QED.encrypt(enclave, eid, ar), QED.encrypt(enclave, eid, ua), QED.encrypt(enclave, eid, cc),
-          QED.encrypt(enclave, eid, lc), QED.encrypt(enclave, eid, sw), QED.encrypt(enclave, eid, d))
-    }
-  }
-}
 
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
-  def time[A](desc: String)(f: => A): A = {
-    val start = System.nanoTime
-    val result = f
-    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
-    result
-  }
+  import QED.time
 
   def byte_to_int(array: Array[Byte], index: Int) = {
     val int_bytes = array.slice(index, index + 4)
@@ -93,164 +48,42 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new String(string_bytes)
   }
 
-  def encrypt1[A](rows: Seq[A]): Seq[Array[Byte]] = rows.map {
-    a => QED.encrypt(enclave, eid, a)
-  }
-  def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = rows.map {
-    case (a, b) => (QED.encrypt(enclave, eid, a), QED.encrypt(enclave, eid, b))
-  }
-  def encrypt3[A, B, C](rows: Seq[(A, B, C)]): Seq[(Array[Byte], Array[Byte], Array[Byte])] =
-    rows.map {
-      case (a, b, c) =>
-        (QED.encrypt(enclave, eid, a),
-          QED.encrypt(enclave, eid, b),
-          QED.encrypt(enclave, eid, c))
-    }
-
-  def decrypt1[A](rows: Seq[Row]): Seq[A] = {
-    rows.map {
-      case Row(aEnc: Array[Byte]) =>
-        QED.decrypt[A](enclave, eid, aEnc)
-    }
-  }
-  def decrypt2[A, B](rows: Seq[Row]): Seq[(A, B)] = {
-    rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte]) =>
-        (QED.decrypt[A](enclave, eid, aEnc), QED.decrypt[B](enclave, eid, bEnc))
-    }
-  }
-  def decrypt3[A, B, C](rows: Seq[Row]): Seq[(A, B, C)] = {
-    rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte]) =>
-        (QED.decrypt[A](enclave, eid, aEnc),
-          QED.decrypt[B](enclave, eid, bEnc),
-          QED.decrypt[C](enclave, eid, cEnc))
-    }
-  }
-  def decrypt4[A, B, C, D](rows: Seq[Row]): Seq[(A, B, C, D)] = {
-    rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte]) =>
-        (QED.decrypt[A](enclave, eid, aEnc),
-          QED.decrypt[B](enclave, eid, bEnc),
-          QED.decrypt[C](enclave, eid, cEnc),
-          QED.decrypt[D](enclave, eid, dEnc))
-    }
-  }
-  def decrypt5[A, B, C, D, E](rows: Seq[Row]): Seq[(A, B, C, D, E)] = {
-    rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte], eEnc: Array[Byte]) =>
-        (QED.decrypt[A](enclave, eid, aEnc),
-          QED.decrypt[B](enclave, eid, bEnc),
-          QED.decrypt[C](enclave, eid, cEnc),
-          QED.decrypt[D](enclave, eid, dEnc),
-          QED.decrypt[E](enclave, eid, eEnc))
-    }
-  }
-
   val (enclave, eid) = QED.initEnclave()
 
   test("big data 1 - spark sql") {
-    val rankingsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType),
-        StructField("avgDuration", IntegerType))))
-      .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
-      .coalesce(2)
-    val result = time("big data 1 - spark sql") {
-      val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
-      val count = df.count
-      println("big data 1 spark sql - num rows: " + count)
-      df
-    }
+    QEDBenchmark.bd1SparkSQL(sqlContext, "tiny")
   }
 
   test("big data 1") {
-    val rankingsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType),
-        StructField("avgDuration", IntegerType))))
-      .csv("/home/ankurd/big-data-benchmark-files/rankings/tiny")
-      .mapPartitions(QEDSuite.bd1Encrypt3)
-      .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(2)
-    val result = time("big data 1") {
-      val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
-      val count = df.count
-      println("big data 1 - num rows: " + count)
-      df
-    }
+    QEDBenchmark.bd1Opaque(sqlContext, "tiny")
   }
 
   test("big data 2 - spark sql") {
-    val uservisitsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("sourceIP", StringType),
-        StructField("destURL", StringType),
-        StructField("visitDate", DateType),
-        StructField("adRevenue", FloatType),
-        StructField("userAgent", StringType),
-        StructField("countryCode", StringType),
-        StructField("languageCode", StringType),
-        StructField("searchWord", StringType),
-        StructField("duration", IntegerType))))
-      .csv("/home/ankurd/big-data-benchmark-files/uservisits/tiny")
-      .coalesce(2)
-    val result = time("big data 2 - spark sql") {
-      val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
-        .groupBy($"sourceIPSubstr").sum("adRevenue")
-      val count = df.count
-      println("big data 2 spark sql - num rows: " + count)
-      df
-    }
+    QEDBenchmark.bd2SparkSQL(sqlContext, "tiny")
   }
 
   test("big data 2") {
-    val uservisitsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("sourceIP", StringType),
-        StructField("destURL", StringType),
-        StructField("visitDate", DateType),
-        StructField("adRevenue", FloatType),
-        StructField("userAgent", StringType),
-        StructField("countryCode", StringType),
-        StructField("languageCode", StringType),
-        StructField("searchWord", StringType),
-        StructField("duration", IntegerType))))
-      .csv("/home/ankurd/big-data-benchmark-files/uservisits/tiny")
-      .mapPartitions(QEDSuite.bd1Encrypt9)
-      .toDF("sourceIP", "destURL", "visitDate",
-        "adRevenue", "userAgent", "countryCode",
-        "languageCode", "searchWord", "duration")
-      .coalesce(2)
-    val result = time("big data 2") {
-      val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
-        .encGroupByWithSum($"sourceIP", $"adRevenue".as("totalAdRevenue"))
-      val count = df.count
-      println("big data 2 - num rows: " + count)
-      df
-    }
+    QEDBenchmark.bd2Opaque(sqlContext, "tiny")
   }
 
   test("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
-    val words = sparkContext.makeRDD(encrypt2(data)).toDF("word", "count")
-    assert(decrypt2(words.collect) === data)
+    val words = sparkContext.makeRDD(QED.encrypt2(data)).toDF("word", "count")
+    assert(QED.decrypt2(words.collect) === data)
 
     val filtered = words.encFilter(OP_FILTER_COL2_GT3)
-    assert(decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
+    assert(QED.decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
   test("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
       sqlContext.createDataFrame(
-        sparkContext.makeRDD(encrypt1(array).map(Row(_))),
+        sparkContext.makeRDD(QED.encrypt1(array).map(Row(_))),
         StructType(List(StructField("x", BinaryType, true))))
         .encPermute().collect
-    assert(decrypt1[Int](permuted) !== array)
-    assert(decrypt1[Int](permuted).sorted === array)
+    assert(QED.decrypt1[Int](permuted) !== array)
+    assert(QED.decrypt1[Int](permuted).sorted === array)
   }
 
   test("encGroupByWithSum") {
@@ -260,36 +93,26 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       case 2 => "C"
     }
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val words = sparkContext.makeRDD(encrypt3(data)).toDF("id", "word", "count")
+    val words = sparkContext.makeRDD(QED.encrypt3(data)).toDF("id", "word", "count")
 
     val summed = words.encGroupByWithSum($"word", $"count".as("totalCount"))
-    assert(decrypt2[String, Int](summed.collect) ===
+    assert(QED.decrypt2[String, Int](summed.collect) ===
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
-  }
-
-  test("spark sql sort") {
-    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-    val sorted = time("spark sql sorting") {
-      val df = sparkContext.makeRDD(data).toDF("str", "x").sort($"x")
-      df.count()
-      df
-    }
-    assert(sorted.collect === data.sortBy(_._2).map { case (str, x) => Row(str, x) })
   }
 
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = time("Enc sorting: ") {
-      sparkContext.makeRDD(encrypt2(data)).toDF("str", "x").encSort($"x").collect
+      sparkContext.makeRDD(QED.encrypt2(data)).toDF("str", "x").encSort($"x").collect
     }
-    assert(decrypt2[String, Int](sorted) === data.sortBy(_._2))
+    assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
   test("encJoin") {
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
-    val p = sparkContext.makeRDD(encrypt3(p_data)).toDF("id", "pk", "x")
-    val f = sparkContext.makeRDD(encrypt3(f_data)).toDF("id", "fk", "x")
+    val p = sparkContext.makeRDD(QED.encrypt3(p_data)).toDF("id", "pk", "x")
+    val f = sparkContext.makeRDD(QED.encrypt3(f_data)).toDF("id", "fk", "x")
     val joined = p.encJoin(f, $"pk", $"fk").collect
     val expectedJoin =
       for {
@@ -297,14 +120,14 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         (f_id, fk, f_x) <- f_data
         if pk == fk
       } yield (p_id, pk, p_x, f_id, f_x)
-    assert(decrypt5[Int, String, Int, Int, Int](joined).toSet === expectedJoin.toSet)
+    assert(QED.decrypt5[Int, String, Int, Int, Int](joined).toSet === expectedJoin.toSet)
   }
 
   test("encProject") {
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
-    val rdd = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x")
+    val rdd = sparkContext.makeRDD(QED.encrypt2(data)).toDF("str", "x")
     val proj = rdd.encProject(/*substring($"str", 0, 3)*/$"str", $"x")
-    assert(decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
+    assert(QED.decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
   }
 
   test("JNIEncrypt") {
@@ -485,7 +308,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       }
     }
     assert(
-      decrypt2[String, Int](
+      QED.decrypt2[String, Int](
         QED.parseRows(sorted_encrypted_data).map(fields => Row(fields: _*)).toSeq)
         === data.sortBy(_._2))
 

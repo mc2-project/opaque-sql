@@ -35,6 +35,13 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 
 object QED {
+  def time[A](desc: String)(f: => A): A = {
+    val start = System.nanoTime
+    val result = f
+    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    result
+  }
+
   def initEnclave(): (SGXEnclave, Long) = {
     if (eid == 0L) {
       System.load(System.getenv("LIBSGXENCLAVE_PATH"))
@@ -102,6 +109,73 @@ object QED {
         buf.getFloat()
     }
     result.asInstanceOf[T]
+  }
+
+  def encrypt1[A](rows: Seq[A]): Seq[Array[Byte]] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      a => QED.encrypt(enclave, eid, a)
+    }
+  }
+  def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case (a, b) => (QED.encrypt(enclave, eid, a), QED.encrypt(enclave, eid, b))
+    }
+  }
+  def encrypt3[A, B, C](rows: Seq[(A, B, C)]): Seq[(Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case (a, b, c) =>
+        (QED.encrypt(enclave, eid, a),
+          QED.encrypt(enclave, eid, b),
+          QED.encrypt(enclave, eid, c))
+    }
+  }
+
+  def decrypt1[A](rows: Seq[Row]): Seq[A] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case Row(aEnc: Array[Byte]) =>
+        QED.decrypt[A](enclave, eid, aEnc)
+    }
+  }
+  def decrypt2[A, B](rows: Seq[Row]): Seq[(A, B)] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc), QED.decrypt[B](enclave, eid, bEnc))
+    }
+  }
+  def decrypt3[A, B, C](rows: Seq[Row]): Seq[(A, B, C)] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc))
+    }
+  }
+  def decrypt4[A, B, C, D](rows: Seq[Row]): Seq[(A, B, C, D)] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc),
+          QED.decrypt[D](enclave, eid, dEnc))
+    }
+  }
+  def decrypt5[A, B, C, D, E](rows: Seq[Row]): Seq[(A, B, C, D, E)] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte], eEnc: Array[Byte]) =>
+        (QED.decrypt[A](enclave, eid, aEnc),
+          QED.decrypt[B](enclave, eid, bEnc),
+          QED.decrypt[C](enclave, eid, cEnc),
+          QED.decrypt[D](enclave, eid, dEnc),
+          QED.decrypt[E](enclave, eid, eEnc))
+    }
   }
 
   def randomId(enclave: SGXEnclave, eid: Long): Array[Byte] = {
@@ -227,5 +301,36 @@ object QED {
       i += 1
     }
     return -1
+  }
+
+  def bd1Encrypt3(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(u: String, r: Int, d: Int) =>
+        (QED.encrypt(enclave, eid, u), QED.encrypt(enclave, eid, r), QED.encrypt(enclave, eid, d))
+    }
+  }
+
+  def bd2Encrypt9(iter: Iterator[Row])
+      : Iterator[(
+        Array[Byte], Array[Byte], Array[Byte],
+        Array[Byte], Array[Byte], Array[Byte],
+        Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(
+        si: String,
+        du: String,
+        vd: java.sql.Date,
+        ar: Float,
+        ua: String,
+        cc: String,
+        lc: String,
+        sw: String,
+        d: Int) =>
+        (QED.encrypt(enclave, eid, si), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
+          QED.encrypt(enclave, eid, ar), QED.encrypt(enclave, eid, ua), QED.encrypt(enclave, eid, cc),
+          QED.encrypt(enclave, eid, lc), QED.encrypt(enclave, eid, sw), QED.encrypt(enclave, eid, d))
+    }
   }
 }
