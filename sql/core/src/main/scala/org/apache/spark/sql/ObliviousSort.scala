@@ -402,7 +402,7 @@ object ObliviousSort extends java.io.Serializable {
     val par_data =
       time("prepartitioning") {
         val result = data.zipWithIndex.map(t => (t._1, t._2.toInt))
-          .groupBy(_._2 / r + 1).flatMap(_._2)
+          .groupBy((x: (Array[Byte], Int)) => x._2 / r + 1, numPartitions).flatMap(_._2)
           .cache()
         result.count
         result
