@@ -17,6 +17,11 @@
 
 package org.apache.spark.sql
 
+import scala.util.Random
+
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.types.BinaryType
@@ -26,10 +31,37 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
-import scala.util.Random
 
 object QEDBenchmark {
   import QED.time
+
+  def main(args: Array[String]) {
+    val sparkConf = new SparkConf().setAppName("QEDBenchmark")
+    val sc = new SparkContext(sparkConf)
+    val sqlContext = new SQLContext(sc)
+
+    // time("spark sql sort") {
+    //   QEDBenchmark.sortSparkSQL(sqlContext, 256 * 1024)
+    // }
+
+    // time("opaque sort") {
+    //   QEDBenchmark.sortOpaque(sqlContext, 256 * 1024)
+    // }
+
+    QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
+
+    QEDBenchmark.bd1Opaque(sqlContext, "1million")
+
+    // test("big data 2 - spark sql") {
+    //   QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
+    // }
+
+    // test("big data 2") {
+    //   QEDBenchmark.bd2Opaque(sqlContext, "1node")
+    // }
+
+    sc.stop()
+  }
 
   def bd1SparkSQL(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
