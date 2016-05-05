@@ -185,19 +185,7 @@ object QED {
   }
 
   def randomId(enclave: SGXEnclave, eid: Long): Array[Byte] = {
-    // TODO: this whole function should be in the enclave, otherwise it's insecure. An attacker can
-    // read and modify the random bytes before they get encrypted
-    val buf = ByteBuffer.allocate(100)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    val randomBytes = enclave.RandomID(eid)
-    // Label the random bytes as a string so the enclave will recognize their type
-    buf.put(2: Byte)
-    buf.putInt(randomBytes.length)
-    buf.put(randomBytes)
-    buf.flip()
-    val bytes = new Array[Byte](buf.limit)
-    buf.get(bytes)
-    enclave.EncryptAttribute(eid, bytes)
+    enclave.RandomID(eid)
   }
 
   def encodeData(value: Array[Byte]): String = {
