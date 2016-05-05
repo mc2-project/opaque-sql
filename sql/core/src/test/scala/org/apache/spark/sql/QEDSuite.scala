@@ -25,6 +25,7 @@ import scala.util.Random
 import oblivious_sort.ObliviousSort
 
 import org.apache.spark.sql.QEDOpcode._
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
@@ -64,6 +65,17 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("big data 2") {
     QEDBenchmark.bd2Opaque(sqlContext, "tiny")
+  }
+
+  test("columnsort padding") {
+    val data = Random.shuffle((0 until 3).map(x => (x.toString, x)).toSeq)
+    val encData = QED.encrypt2(data).map {
+      case (str, x) => InternalRow(str, x).encSerialize
+    }
+    val sorted = ObliviousSort.ColumnSort(
+      sparkContext, sparkContext.makeRDD(encData), OP_SORT_COL2.value)
+      .map(row => Row(QED.parseRow(row): _*)).collect
+    assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
   test("encFilter") {

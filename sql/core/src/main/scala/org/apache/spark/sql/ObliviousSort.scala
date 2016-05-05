@@ -68,13 +68,17 @@ object ObliviousSort extends java.io.Serializable {
 
     // Copy rows back into values
     val sortedRowIter =
-      if (opcode == OP_JOIN_COL2.value) {
-        // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
-        // them evenly
-        QED.splitBytes(allRowsSorted, nonEmptyRows.length).iterator
+      if (nonEmptyRows.nonEmpty) {
+        if (opcode == OP_JOIN_COL2.value) {
+          // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
+          // them evenly
+          QED.splitBytes(allRowsSorted, nonEmptyRows.length).iterator
+        } else {
+          // Rows may be different lengths but row format is standard, so we must parse each row
+          QED.readRows(allRowsSorted)
+        }
       } else {
-        // Rows may be different lengths but row format is standard, so we must parse each row
-        QED.readRows(allRowsSorted)
+        Iterator.empty
       }
     for (row <- valuesSlice) {
       if (sortedRowIter.hasNext) {
@@ -381,11 +385,14 @@ object ObliviousSort extends java.io.Serializable {
 
     // println("s is " + s + ", r is " + r)
 
-    if (!(r >= 2 * math.pow(s, 2).toInt)) {
+    if (r < 2 * math.pow(s, 2).toInt) {
+      println(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len")
       r = 2 * math.pow(s, 2).toInt
     }
+
     val padded =
       if (len != r * s) {
+        println(s"Padding len from $len to ${r*s}. r=$r, s=$s")
         assert(r * s > len)
         val firstPartitionSize =
           data.mapPartitionsWithIndex((index, iter) =>
@@ -401,7 +408,7 @@ object ObliviousSort extends java.io.Serializable {
     val numPartitions = NumCores * NumMachines
     val par_data =
       time("prepartitioning") {
-        val result = data.zipWithIndex.map(t => (t._1, t._2.toInt))
+        val result = padded.zipWithIndex.map(t => (t._1, t._2.toInt))
           .groupBy((x: (Array[Byte], Int)) => x._2 / r + 1, numPartitions).flatMap(_._2)
           .cache()
         result.count
@@ -427,7 +434,7 @@ object ObliviousSort extends java.io.Serializable {
       }
     /* End Alternative */
 
-    par_data_final.map(_._2)
+    par_data_final.map(_._2).filter(_.nonEmpty)
   }
 
   def GenRandomData(offset: Int, len: Int): Seq[(Int, Int)] ={
