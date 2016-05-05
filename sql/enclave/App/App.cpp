@@ -464,8 +464,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
   uint32_t actual_size = 0;
   
   ecall_encrypt_attribute(eid, plaintext_ptr, plength,
-						  ciphertext_copy, (uint32_t) ciphertext_length,
-						  &actual_size);
+			  ciphertext_copy, (uint32_t) ciphertext_length,
+			  &actual_size);
 
   //printf("actual size is %u, type is %u\n", actual_size, *plaintext_ptr);
 
@@ -501,7 +501,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + ROW_UPPER_BOUND));
 
 
   for (int i = 0; i < input_len; i++) {
@@ -973,7 +973,7 @@ void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 150 * 1024;
+  uint32_t total_num_rows = 1024 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
@@ -981,8 +981,7 @@ void test_enclave_sort() {
   printf("single_row_size is %u\n", single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
   
-  uint8_t *dec_data = (uint8_t *) malloc(single_row_size * total_num_rows);
-  uint8_t *enc_data = (uint8_t *) malloc(single_row_size * total_num_rows);
+  uint8_t *enc_data = (uint8_t *) malloc(ROW_UPPER_BOUND * total_num_rows + ENC_HEADER_SIZE * total_num_rows);
   uint32_t actual_size = 0;
 
   uint64_t t = 0;
@@ -1000,22 +999,6 @@ void test_enclave_sort() {
 
   double t_ms = ((double) t) / 1000;
   printf("Encryption took %f ms\n", t_ms);
-
-
-  uint8_t *dec_data_ptr = dec_data;
-
-  // t = 0;
-  // for (uint32_t i = 0; i < total_num_rows; i++) {
-  // 	offset = format_row(dec_data_ptr, i, num_cols);
-  // 	dec_data_ptr += offset;
-  // }
-  // {
-  // 	scoped_timer timer(&t);
-  // 	ecall_encrypt(global_eid, dec_data, dec_data_ptr - dec_data, enc_data, enc_size(dec_data_ptr - dec_data));
-  // }
-
-  // t_ms = ((double) t) / 1000;
-  // printf("Encrypting block took %f ms\n", t_ms);
   
   printf("Encryption done\n");
   // split the input rows into 64 partitions of (1024 * 4) rows
@@ -1026,18 +1009,6 @@ void test_enclave_sort() {
   uint32_t num_rows[num_part];
 
   input_rows_ptr = input_rows;
-
-  // // for testing
-  // single_row_size = 4 + (1 + 4 + 4 + 1 + 4 + STRING_UPPER_BOUND + 1 + 4 + 4);
-  // input_rows_ptr = dec_data;
-  // // end testing
-  
-  // for (uint32_t i = 0; i < num_part; i++) {
-  // 	buffer_list[i] = input_rows_ptr;
-  // 	num_rows[i] = total_num_rows / num_part;
-  // 	buffer_sizes[i] = (single_row_size * total_num_rows) / num_part;
-  // 	input_rows_ptr += buffer_sizes[i];
-  // }
 
   for (uint32_t i = 0 ; i < num_part; i++) {
     buffer_list[i] = input_rows_ptr;
@@ -1051,22 +1022,6 @@ void test_enclave_sort() {
     
     input_rows_ptr += buffer_sizes[i];
   }
-
-  // input_rows_ptr = dec_data;
-  // uint8_t *enc_data_ptr = enc_data;
-  // uint32_t buf_size = 0;
-  // for (uint32_t i = 0; i < num_part; i++) {
-  // 	buf_size = num_rows[i] * single_row_plaintext_size;
-  // 	ecall_encrypt(global_eid, input_rows_ptr, buf_size, enc_data_ptr, enc_size(buf_size));
-  // 	buffer_sizes[i] = enc_size(buf_size);
-
-  // 	buffer_list[i] = enc_data_ptr;
-  // 	input_rows_ptr += buf_size;
-	
-  // 	enc_data_ptr += enc_size(buf_size);
-  // }
-
-  // printf("buffer_sizes[0] is %u, total size is %u\n", buffer_sizes[0], single_row_size * total_num_rows);
 
   t = 0;
   {
@@ -1084,7 +1039,6 @@ void test_enclave_sort() {
   decrypt_and_print(input_rows, total_num_rows, num_cols);
 
   free(enc_data);
-  free(dec_data);
 }
 
 /* Application entry */

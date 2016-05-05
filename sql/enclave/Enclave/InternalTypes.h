@@ -385,24 +385,24 @@ class ProjectAttributes : public GroupedAttributes {
 class Record {
  public:
   Record() {
-	row = (uint8_t *) malloc(ROW_UPPER_BOUND);
-	row_ptr = row;
-	num_cols = 0;
+    row = (uint8_t *) malloc(ROW_UPPER_BOUND);
+    row_ptr = row;
+    num_cols = 0;
   }
 
   Record(uint32_t malloc_length) {
-	row = (uint8_t *) malloc(malloc_length);
-	num_cols = 0;
+    row = (uint8_t *) malloc(malloc_length);
+    num_cols = 0;
   }
   
   ~Record() {
-	free(row);
+    free(row);
   }
 
   void consume_encrypted_attribute(uint8_t *enc_value_ptr, uint32_t enc_value_len) {
-	decrypt(enc_value_ptr, enc_value_len, row_ptr);
-	row_ptr += dec_size(enc_value_len);
-	num_cols += 1;
+    decrypt(enc_value_ptr, enc_value_len, row_ptr);
+    row_ptr += dec_size(enc_value_len);
+    num_cols += 1;
   }
 
   void consume_encrypted_attribute(uint8_t **enc_value_ptr);
@@ -412,17 +412,17 @@ class Record {
   uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
 
   void swap(Record *rec) {
-	uint32_t num_cols_ = num_cols;
-	uint8_t *row_ = row;
-	uint8_t *row_ptr_ = row_ptr;
+    uint32_t num_cols_ = num_cols;
+    uint8_t *row_ = row;
+    uint8_t *row_ptr_ = row_ptr;
 
-	this->num_cols = rec->num_cols;
-	this->row = rec->row;
-	this->row_ptr = rec->row_ptr;
+    this->num_cols = rec->num_cols;
+    this->row = rec->row;
+    this->row_ptr = rec->row_ptr;
 
-	rec->num_cols = num_cols_;
-	rec->row = row_;
-	rec->row_ptr = row_ptr_;
+    rec->num_cols = num_cols_;
+    rec->row = row_;
+    rec->row_ptr = row_ptr_;
   }
 
   uint32_t num_cols;
@@ -486,14 +486,16 @@ class JoinRecord : public Record {
 
 class SortRecord : public Record {
  public:
+  // format: [num cols][attribute format]
   SortRecord() {
-	sort_attributes = NULL;
+    sort_attributes = NULL;
+    this->row_ptr = this->row + 4;
   }
 
   ~SortRecord() {
-	if (sort_attributes != NULL) {
-	  delete sort_attributes;
-	}
+    if (sort_attributes != NULL) {
+      delete sort_attributes;
+    }
   }
 
   void set_sort_attributes(int op_code);
@@ -505,6 +507,8 @@ class SortRecord : public Record {
   void reset();
 
   void compare_and_swap(SortRecord *rec);
+
+  void consume_encrypted_attribute(uint8_t **enc_value_ptr);
 
   SortAttributes *sort_attributes;
 

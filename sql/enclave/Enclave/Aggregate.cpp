@@ -511,8 +511,9 @@ public:
     //   assert(false);
     // }
 
-    agg_data_list[0] = NULL;
-    agg_data_list[1] = NULL;
+    for (uint32_t i = 0; i < max_agg_fields; i++) {
+      agg_data_list[i] = NULL;
+    }
 
     // reate the different agg_data here
     if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
@@ -739,6 +740,8 @@ public:
     return output_size;
   }
 
+  const static uint32_t max_agg_fields = 10;
+
   uint32_t *distinct_entries;
   uint32_t *offset_ptr;
   // the sort attribute could consist of multiple attributes
@@ -748,7 +751,7 @@ public:
   //aggregate_data *agg_data;
 
   uint32_t num_agg_fields;
-  aggregate_data *agg_data_list[2];
+  aggregate_data *agg_data_list[max_agg_fields];
 };
 
 

@@ -1061,20 +1061,25 @@ void SortRecord::compare_and_swap(SortRecord *rec) {
 
 void SortRecord::reset() {
   this->num_cols = 0;
-  this->row_ptr = this->row;
+  this->row_ptr = this->row + 4;
 }
 
 void SortRecord::set_sort_attributes(int op_code) {
   if (sort_attributes == NULL) {
-	sort_attributes = new SortAttributes(op_code, row, num_cols);
-	sort_attributes->init();
-	sort_attributes->evaluate();
+    sort_attributes = new SortAttributes(op_code, row + 4, num_cols);
+    sort_attributes->init();
+    sort_attributes->evaluate();
   } else {
-	sort_attributes->re_init(this->row);
-	sort_attributes->evaluate();
+    sort_attributes->re_init(this->row + 4);
+    sort_attributes->evaluate();
   }
 }
 
+void SortRecord::consume_encrypted_attribute(uint8_t **enc_value_ptr) {
+  decrypt_attribute(enc_value_ptr, &row_ptr);
+  num_cols += 1;
+  *( (uint32_t *) this->row) = num_cols;
+}
 
 /*** SORT RECORD  ***/
 
