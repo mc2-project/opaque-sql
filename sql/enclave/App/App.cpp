@@ -538,7 +538,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
   //printf("input len is %u, MAX_SORT_BUFFER is %u\n", input_len, MAX_SORT_BUFFER);
 
-  if (input_len < MAX_SORT_BUFFER) {
+  if (input_len < MAX_SINGLE_SORT_BUFFER) {
 
     uint8_t *buffer_list[1] = {input_copy};
     uint32_t buffer_sizes[1] = {input_len};
@@ -606,27 +606,27 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(JNIEn
 									   jlong eid) {
   
   // size should be SGX
-  const uint32_t length = SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE + 8;
-  jbyteArray ret = env->NewByteArray(length);
+  const uint32_t random_id_length = ENC_HEADER_SIZE + HEADER_SIZE + 4;
+  jbyteArray ret = env->NewByteArray(ENC_HEADER_SIZE + HEADER_SIZE + 4);
   jboolean if_copy;
   jbyte *ptr = env->GetByteArrayElements(ret, &if_copy);
 
-  uint8_t buf[length];
-  ecall_random_id(eid, buf, length);
+  uint8_t buf[random_id_length];
+  ecall_random_id(eid, buf, random_id_length);
 
-  env->SetByteArrayRegion(ret, 0, length, (jbyte *) buf);
+  env->SetByteArrayRegion(ret, 0, random_id_length, (jbyte *) buf);
 
   return ret;
 
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIEnv *env, 
-																			jobject obj, 
-																			jlong eid,
-																			jint op_code,
-																			jbyteArray input_rows,
-																			jint num_rows,
-																			jbyteArray agg_row) {
+									    jobject obj, 
+									    jlong eid,
+									    jint op_code,
+									    jbyteArray input_rows,
+									    jint num_rows,
+									    jbyteArray agg_row) {
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   jboolean if_copy;

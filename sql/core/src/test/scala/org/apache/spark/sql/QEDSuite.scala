@@ -537,4 +537,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     enclave.StopEnclave(eid)
   }
 
+
+  test("JNIRandomID") {
+    val eid = enclave.StartEnclave()
+
+    for (v <- 1 to 10) {
+      val buf = enclave.RandomID(eid)
+      val integer = QED.decrypt[Int](enclave, eid, buf)
+      println("Integer is " + integer)
+    }
+
+    enclave.StopEnclave(eid)
+  }
 }

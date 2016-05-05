@@ -1067,9 +1067,16 @@ void ecall_external_oblivious_sort(int op_code,
 
 }
 
-// TODO: return encrypted random identifier
+// returns an encrypted random integer
 void ecall_random_id(uint8_t *ptr, uint32_t length) {
-  sgx_status_t rand_status = sgx_read_rand(ptr, length);
+  uint8_t internal_buf[HEADER_SIZE + 4];
+  uint8_t *internal_buf_ptr = internal_buf + HEADER_SIZE;
+  sgx_status_t rand_status = sgx_read_rand(internal_buf_ptr, 4);
+
+  *internal_buf = INT;
+  *((uint32_t *) (internal_buf + TYPE_SIZE)) = 4;
+
+  encrypt(internal_buf, HEADER_SIZE + 4, ptr);
 }
 
 void ecall_test() {
