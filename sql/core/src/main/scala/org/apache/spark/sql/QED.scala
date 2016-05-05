@@ -43,15 +43,17 @@ object QED {
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
-    if (eid == 0L) {
-      System.load(System.getenv("LIBSGXENCLAVE_PATH"))
-      val enclave = new SGXEnclave()
-      eid = enclave.StartEnclave()
-      println("Starting an enclave")
-      (enclave, eid)
-    } else {
-      val enclave = new SGXEnclave()
-      (enclave, eid)
+    this.synchronized {
+      if (eid == 0L) {
+        System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+        val enclave = new SGXEnclave()
+        eid = enclave.StartEnclave()
+        println("Starting an enclave")
+        (enclave, eid)
+      } else {
+        val enclave = new SGXEnclave()
+        (enclave, eid)
+      }
     }
   }
 

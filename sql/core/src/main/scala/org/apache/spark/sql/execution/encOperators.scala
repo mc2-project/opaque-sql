@@ -148,7 +148,7 @@ case class EncAggregateWithSum(
 
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
-    val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries)
+    val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries, childRDD.partitions.length)
     val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
       (rowIter, boundaryIter) =>
         val rows = rowIter.toArray
@@ -159,9 +159,11 @@ case class EncAggregateWithSum(
         val boundaryRecord = boundaryArray.head
         assert(boundaryRecord.length >= aggSize)
         val (enclave, eid) = QED.initEnclave()
+        assert(rows.length > 0)
         val partialAgg = enclave.Aggregate(
           eid, aggStep2Opcode, concatRows, rows.length, boundaryRecord)
-        assert(partialAgg.nonEmpty)
+        assert(partialAgg.nonEmpty,
+          s"enclave.Aggregate($eid, $aggStep2Opcode, ${concatRows.length}, ${rows.length}, ${boundaryRecord.length}) returned empty result given input ${concatRows.toList}")
         // enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
     }.cache()
@@ -228,7 +230,8 @@ case class EncSortMergeJoin(
       lastPrimaryRowsCollected.length)
 
     val processedJoinRowsRDD =
-      sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length))
+      sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length),
+        sorted.partitions.length)
 
     val joined = sorted.zipPartitions(processedJoinRowsRDD) { (rowIter, joinRowIter) =>
       val rows = rowIter.toArray
