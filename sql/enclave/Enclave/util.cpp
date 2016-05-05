@@ -208,11 +208,31 @@ void print_attribute(const char *attr_name, uint8_t *value_ptr) {
   uint32_t attr_len = *( (uint32_t *) (value_ptr + 1));
   printf("[%s: type is %u, attr_len is %u; ", attr_name, attr_type, attr_len);
   if (attr_type == 1) {
-	printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+    printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
   } else if (attr_type == 2) {
-	printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
+    printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
   }
 }
+
+
+void print_attributes(const char *attr_name, uint8_t *ptr, uint32_t num_attributes) {
+  uint8_t *value_ptr = ptr;
+  for (uint32_t i = 0; i < num_attributes; i++) {
+
+    uint8_t attr_type = *value_ptr;
+    uint32_t attr_len = *( (uint32_t *) (value_ptr + TYPE_SIZE));
+    printf("[%s: type is %u, attr_len is %u; ", attr_name, attr_type, attr_len);
+    if (attr_type == 1) {
+      printf("Attr: %u]\n", *( (uint32_t *) (value_ptr + 1 + 4)));
+    } else if (attr_type == 2) {
+      printf("Attr: %.*s]\n", attr_len, (char *) (value_ptr + 1 + 4));
+    }
+
+    value_ptr += HEADER_SIZE + attr_len;
+
+  }
+}
+
 
 // this function prints out a plaintext row
 void print_row(const char *row_name, uint8_t *row_ptr) {

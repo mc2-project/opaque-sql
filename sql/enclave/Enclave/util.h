@@ -42,6 +42,7 @@ void get_table_indicator(uint8_t *primary_table,
 int is_table_primary(uint8_t *table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
+void print_attributes(const char *attr_name, uint8_t *ptr, uint32_t num_attributes);
 void print_row(const char *row_name, uint8_t *row_ptr);
 void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols);
 void print_join_row(const char *row_name, uint8_t *row_ptr);

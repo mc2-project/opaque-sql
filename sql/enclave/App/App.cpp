@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <cstdlib>
 #include <sys/time.h>
+#include <time.h>
 
 #ifdef _MSC_VER
 # include <Shlobj.h>
@@ -491,8 +492,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
   uint32_t actual_size = 0;
   
   ecall_encrypt_attribute(eid, plaintext_ptr, plength,
-						  ciphertext_copy, (uint32_t) ciphertext_length,
-						  &actual_size);
+			  ciphertext_copy, (uint32_t) ciphertext_length,
+			  &actual_size);
 
   //printf("actual size is %u, type is %u\n", actual_size, *plaintext_ptr);
 
@@ -528,7 +529,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + ROW_UPPER_BOUND));
 
 
   for (int i = 0; i < input_len; i++) {
@@ -544,11 +545,17 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     uint32_t buffer_sizes[1] = {input_len};
     uint32_t num_rows[1];
     num_rows[0] = (uint32_t) num_items;
+
+    uint64_t t = 0;
+    {
+      scoped_timer timer(&t);
+      sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch);
+    }
+
+    double t_ms = ((double) t) / 1000;
+    printf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
+    //printf("Sort took %f ms\n", t_ms);
 	
-    sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch);
-	
-    //printf("Only sorting on one partition, input_len is %u\n", input_len);
-    //print_error_message(status);
   } else {
 
     // try to split the input into partitions if it's too big
@@ -580,10 +587,18 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
       
       input_ptr += buffer_sizes[i];
     }
-    
-    sgx_status_t status = ecall_external_oblivious_sort(eid, op_code,
-							num_part,
-							buffer_list, buffer_sizes, num_rows, scratch);
+
+    uint64_t t = 0;
+    {    
+      scoped_timer timer(&t);
+      sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, num_part,
+							  buffer_list, buffer_sizes, num_rows, scratch);
+    }
+
+    double t_ms = ((double) t) / 1000;
+    printf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
+    //printf("Sort took %f ms\n", t_ms);
+
     free(buffer_list);
     free(buffer_sizes);
     free(num_rows);
@@ -942,7 +957,16 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   ecall_encrypt(global_eid, temp, (1 + 4 + 4), row_ptr, enc_size(1 + 4 + 4));
   row_ptr += enc_size(1 + 4 + 4);
   
-  
+  *temp = INT;
+  *( (uint32_t *) (temp + 1)) = 4;
+  *( (uint32_t *) (temp + 5)) = (uint32_t) (rand());
+  //printf("rand is %u\n", *( (uint32_t *) (temp + 5)));
+
+  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 4);
+  row_ptr += 4;
+  ecall_encrypt(global_eid, temp, (1 + 4 + 4), row_ptr, enc_size(1 + 4 + 4));
+  row_ptr += enc_size(1 + 4 + 4);
+
   *temp = STRING;
   *( (uint32_t *) (temp + 1)) = 1;
   *((char *) (temp + 5)) = chars[index % 5];
@@ -951,16 +975,7 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   row_ptr += 4;
   ecall_encrypt(global_eid, temp, (HEADER_SIZE + STRING_UPPER_BOUND), row_ptr, enc_size(HEADER_SIZE + STRING_UPPER_BOUND));
   row_ptr += enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
-  
-  
-  *temp = INT;
-  *( (uint32_t *) (temp + 1)) = 4;
-  *( (uint32_t *) (temp + 5)) = 1;
-  
-  *( (uint32_t *) row_ptr) = enc_size(1 + 4 + 4);
-  row_ptr += 4;
-  ecall_encrypt(global_eid, temp, (1 + 4 + 4), row_ptr, enc_size(1 + 4 + 4));
-  row_ptr += enc_size(1 + 4 + 4);
+
 
   return (row_ptr - row);
 }
@@ -979,19 +994,18 @@ uint32_t format_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   *row_ptr = INT;
   *( (uint32_t *) (row_ptr + 1)) = 4;
   *( (uint32_t *) (row_ptr + 5)) = index;
+  row_ptr += 1 + 4 + 4;  
+  
+  *row_ptr = INT;
+  *( (uint32_t *) (row_ptr + 1)) = 4;
+  *( (uint32_t *) (row_ptr + 5)) = (uint32_t ) (rand());
   row_ptr += 1 + 4 + 4;
-  
-  
+
   *row_ptr = STRING;
   *( (uint32_t *) (row_ptr + 1)) = 1;
   *((char *) (row_ptr + 5)) = chars[index % 3];
   row_ptr += HEADER_SIZE + STRING_UPPER_BOUND;
-  
-  
-  *row_ptr = INT;
-  *( (uint32_t *) (row_ptr + 1)) = 4;
-  *( (uint32_t *) (row_ptr + 5)) = 1;
-  row_ptr += 1 + 4 + 4;
+
 
   return (row_ptr - row);
 }
@@ -1029,17 +1043,18 @@ void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
 void test_enclave_sort() {
   // use op_code = OP_SORT_COL2
 
+  srand(time(NULL));
+
   int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 150 * 1024;
+  uint32_t total_num_rows = 250 * 1024;
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
   uint32_t single_row_plaintext_size = 4 + num_cols * 4 + (HEADER_SIZE + 4) * 2 + (HEADER_SIZE + STRING_UPPER_BOUND);
-  printf("single_row_size is %u\n", single_row_size);
+  printf("num items: %u, single_row_size is %u, total data sorted: %u\n", total_num_rows, single_row_size, total_num_rows * single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
   
-  uint8_t *dec_data = (uint8_t *) malloc(single_row_size * total_num_rows);
-  uint8_t *enc_data = (uint8_t *) malloc(single_row_size * total_num_rows);
+  uint8_t *enc_data = (uint8_t *) malloc(ROW_UPPER_BOUND * total_num_rows + ENC_HEADER_SIZE * total_num_rows);
   uint32_t actual_size = 0;
 
   uint64_t t = 0;
@@ -1057,91 +1072,76 @@ void test_enclave_sort() {
 
   double t_ms = ((double) t) / 1000;
   printf("Encryption took %f ms\n", t_ms);
-
-
-  uint8_t *dec_data_ptr = dec_data;
-
-  // t = 0;
-  // for (uint32_t i = 0; i < total_num_rows; i++) {
-  // 	offset = format_row(dec_data_ptr, i, num_cols);
-  // 	dec_data_ptr += offset;
-  // }
-  // {
-  // 	scoped_timer timer(&t);
-  // 	ecall_encrypt(global_eid, dec_data, dec_data_ptr - dec_data, enc_data, enc_size(dec_data_ptr - dec_data));
-  // }
-
-  // t_ms = ((double) t) / 1000;
-  // printf("Encrypting block took %f ms\n", t_ms);
   
   printf("Encryption done\n");
   // split the input rows into 64 partitions of (1024 * 4) rows
-  const uint32_t num_part = total_num_rows / PAR_MAX_ELEMENTS + 1;
+  if (total_num_rows * ROW_UPPER_BOUND < MAX_SINGLE_SORT_BUFFER) {
+    printf("Single round sort called\n");
 
-  uint8_t *buffer_list[num_part];
-  uint32_t buffer_sizes[num_part];
-  uint32_t num_rows[num_part];
+    const uint32_t num_part = 1;
+    uint8_t *buffer_list[1];
+    uint32_t buffer_sizes[1];
+    uint32_t num_rows[1];
 
-  input_rows_ptr = input_rows;
+    buffer_list[0] = input_rows;
+    buffer_sizes[0] = single_row_size * total_num_rows;
+    num_rows[0] = total_num_rows;
 
-  // // for testing
-  // single_row_size = 4 + (1 + 4 + 4 + 1 + 4 + STRING_UPPER_BOUND + 1 + 4 + 4);
-  // input_rows_ptr = dec_data;
-  // // end testing
-  
-  // for (uint32_t i = 0; i < num_part; i++) {
-  // 	buffer_list[i] = input_rows_ptr;
-  // 	num_rows[i] = total_num_rows / num_part;
-  // 	buffer_sizes[i] = (single_row_size * total_num_rows) / num_part;
-  // 	input_rows_ptr += buffer_sizes[i];
-  // }
-
-  for (uint32_t i = 0 ; i < num_part; i++) {
-    buffer_list[i] = input_rows_ptr;
-    if (i == num_part - 1) {
-      num_rows[i] = total_num_rows - PAR_MAX_ELEMENTS * i;
-      buffer_sizes[i] = single_row_size * total_num_rows - (input_rows_ptr - input_rows);
-    } else {
-      num_rows[i] = PAR_MAX_ELEMENTS;
-      buffer_sizes[i] = PAR_MAX_ELEMENTS * single_row_size;
+    t = 0;
+    {
+      scoped_timer timer(&t);
+      sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
+							  num_part,
+							  buffer_list, buffer_sizes, num_rows,
+							  enc_data);
+      print_error_message(status);
     }
-    
-    input_rows_ptr += buffer_sizes[i];
-  }
-
-  // input_rows_ptr = dec_data;
-  // uint8_t *enc_data_ptr = enc_data;
-  // uint32_t buf_size = 0;
-  // for (uint32_t i = 0; i < num_part; i++) {
-  // 	buf_size = num_rows[i] * single_row_plaintext_size;
-  // 	ecall_encrypt(global_eid, input_rows_ptr, buf_size, enc_data_ptr, enc_size(buf_size));
-  // 	buffer_sizes[i] = enc_size(buf_size);
-
-  // 	buffer_list[i] = enc_data_ptr;
-  // 	input_rows_ptr += buf_size;
-	
-  // 	enc_data_ptr += enc_size(buf_size);
-  // }
-
-  // printf("buffer_sizes[0] is %u, total size is %u\n", buffer_sizes[0], single_row_size * total_num_rows);
-
-  t = 0;
-  {
-    scoped_timer timer(&t);
-    sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
-							num_part,
-							buffer_list, buffer_sizes, num_rows,
-							enc_data);
-    print_error_message(status);
-  }
   
-  t_ms = ((double) t) / 1000;
-  printf("Sort took %f ms\n", t_ms);
+    t_ms = ((double) t) / 1000;
+    printf("Sort took %f ms\n", t_ms);
+
+  
+  } else {
+    printf("Multi-round sort called\n");
+
+    const uint32_t num_part = total_num_rows / PAR_MAX_ELEMENTS + 1;
+
+    uint8_t *buffer_list[num_part];
+    uint32_t buffer_sizes[num_part];
+    uint32_t num_rows[num_part];
+
+    input_rows_ptr = input_rows;
+
+    for (uint32_t i = 0 ; i < num_part; i++) {
+      buffer_list[i] = input_rows_ptr;
+      if (i == num_part - 1) {
+	num_rows[i] = total_num_rows - PAR_MAX_ELEMENTS * i;
+	buffer_sizes[i] = single_row_size * total_num_rows - (input_rows_ptr - input_rows);
+      } else {
+	num_rows[i] = PAR_MAX_ELEMENTS;
+	buffer_sizes[i] = PAR_MAX_ELEMENTS * single_row_size;
+      }
+    
+      input_rows_ptr += buffer_sizes[i];
+    }
+
+    t = 0;
+    {
+      scoped_timer timer(&t);
+      sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
+							  num_part,
+							  buffer_list, buffer_sizes, num_rows,
+							  enc_data);
+      print_error_message(status);
+    }
+  
+    t_ms = ((double) t) / 1000;
+    printf("Sort took %f ms\n", t_ms);
+  }
 
   decrypt_and_print(input_rows, total_num_rows, num_cols);
 
   free(enc_data);
-  free(dec_data);
 }
 
 /* Application entry */

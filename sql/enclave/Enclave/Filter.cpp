@@ -21,7 +21,6 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   uint8_t decrypted_data[2048];
   uint8_t *decrypted_data_ptr = decrypted_data;
 
-
   uint8_t *enc_value_ptr = NULL;
   uint32_t enc_value_len = 0;
 
@@ -32,16 +31,16 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   if (op_code == OP_FILTER_COL2_GT3) {
     // find the second attribute
 		
-	find_attribute(row_ptr, length, num_cols,
-				   2,
-				   &enc_value_ptr, &enc_value_len);
+    find_attribute(row_ptr, length, num_cols,
+		   2,
+		   &enc_value_ptr, &enc_value_len);
 
-	//decrypt(enc_value_ptr, enc_value_len, decrypted_data);
-	enc_value_ptr -= 4;
-	decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
+    //decrypt(enc_value_ptr, enc_value_len, decrypted_data);
+    enc_value_ptr -= 4;
+    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
 
     int *value_ptr = (int *) (decrypted_data + HEADER_SIZE);
-	//printf("value is %u\n", *value_ptr);
+    //printf("value is %u\n", *value_ptr);
 
     if (*value_ptr <= 3) {
       ret = 0;
@@ -59,16 +58,16 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     }
   } else if (op_code == OP_FILTER_COL4_NOT_DUMMY) {
     // Filter out rows with a dummy attribute in the 4th column. Such rows represent partial aggregates
-	decrypted_data_ptr = decrypted_data;
+    decrypted_data_ptr = decrypted_data;
 
     find_attribute(row_ptr, length, num_cols, 4, &enc_value_ptr, &enc_value_len);
-	//printf("attr 4, enc_value_len is %u\n", enc_value_len);
-	enc_value_ptr -= 4;
-	decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
+    //printf("attr 4, enc_value_len is %u\n", enc_value_len);
+    enc_value_ptr -= 4;
+    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
 
-	attr_type = *decrypted_data;
+    attr_type = *decrypted_data;
 
-	//printf("attr_type is %u\n", attr_type);
+    //printf("attr_type is %u\n", attr_type);
 
     if (is_dummy_type(attr_type)) {
       ret = 0;
@@ -91,11 +90,11 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
   } else if (op_code == OP_FILTER_TEST) {
     // this is for test only
 
-	find_attribute(row_ptr, length, num_cols,
-				   1,
-				   &enc_value_ptr, &enc_value_len);
-	decrypt(enc_value_ptr, enc_value_len, decrypted_data);
-	get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
+    find_attribute(row_ptr, length, num_cols,
+		   1,
+		   &enc_value_ptr, &enc_value_len);
+    decrypt(enc_value_ptr, enc_value_len, decrypted_data);
+    get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
     
     int *value_ptr = (int *) attr_ptr;
 
