@@ -60,28 +60,34 @@ object QED {
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()
 
-  def encrypt[T](enclave: SGXEnclave, eid: Long, field: T): Array[Byte] = {
+  def encrypt[T](enclave: SGXEnclave, eid: Long, field: T, tpe: Option[QEDColumnType] = None)
+    : Array[Byte] = {
     val buf = ByteBuffer.allocate(2048) // TODO: adaptive size
     buf.order(ByteOrder.LITTLE_ENDIAN)
     import org.apache.spark.sql.QEDColumnType._
-    field match {
-      case x: Int =>
+    ((field, tpe): @unchecked) match {
+      case (x: Int, None) =>
         buf.put(INT.value)
         buf.putInt(4)
         buf.putInt(x)
-      case s: String =>
+      case (s: String, None) =>
         buf.put(STRING.value)
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
-      case f: Float =>
+      case (f: Float, None) =>
         buf.put(FLOAT.value)
         buf.putInt(4)
         buf.putFloat(f)
-      case d: java.sql.Date =>
+      case (d: java.sql.Date, None) =>
         buf.put(DATE.value)
         buf.putInt(8)
         buf.putLong(d.getTime / 1000)
+      case (s: String, Some(URL_TYPE)) =>
+        buf.put(URL_TYPE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
     }
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
@@ -307,7 +313,9 @@ object QED {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
       case Row(u: String, r: Int, d: Int) =>
-        (QED.encrypt(enclave, eid, u), QED.encrypt(enclave, eid, r), QED.encrypt(enclave, eid, d))
+        (QED.encrypt(enclave, eid, u, Some(QEDColumnType.URL_TYPE)),
+          QED.encrypt(enclave, eid, r),
+          QED.encrypt(enclave, eid, d))
     }
   }
 
