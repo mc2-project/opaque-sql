@@ -813,22 +813,37 @@ void ecall_external_oblivious_sort(int op_code,
 		}
 
 	      } else {
-		// note that these are padded!
-		decrypt(buffer1_ptr, buffer1_size, scratch);
-		scratch_ptr = scratch;
+
+		uint8_t *iv_ptr = buffer1_ptr;
+		AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+		uint8_t *ptr;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  // set num cols first
-		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
+		  join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row));
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
+		if (memcmp(decipher.tag().t, buffer1_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
+		  printf("Decipher MAC error 3\n");
+		  assert(false);
+		}
 
-		decrypt(buffer2_ptr, buffer2_size, scratch);
-		scratch_ptr = scratch;
+		//decrypt(buffer2_ptr, buffer2_size, scratch);
+		iv_ptr = buffer2_ptr;
+		AesGcm decipher2(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  decipher2.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
+		  join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row + TABLE_ID_SIZE));
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
 
+		if (memcmp(decipher2.tag().t, buffer2_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
+		  printf("Decipher MAC error 4\n");
+		  assert(false);
+		}
 	      }
 
 	      oblivious_sort(op_code, &reader,
@@ -870,21 +885,34 @@ void ecall_external_oblivious_sort(int op_code,
 		memcpy(buffer2_ptr + SGX_AESGCM_IV_SIZE, cipher2.tag().t, SGX_AESGCM_MAC_SIZE);
 
 	      } else {
-		JoinRecord **join_temp = (JoinRecord **) temp;
 
-		scratch_ptr = scratch;
+		JoinRecord ** join_temp = (JoinRecord **) temp;
+
+		sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
+		AesGcm cipher(&ks, iv, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  cipher.encrypt(join_temp[r]->row, JOIN_ROW_UPPER_BOUND, scratch_ptr, JOIN_ROW_UPPER_BOUND);
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
-		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		memcpy(buffer1_ptr, iv, SGX_AESGCM_IV_SIZE);
+		memcpy(buffer1_ptr + SGX_AESGCM_IV_SIZE, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
 
-		scratch_ptr = scratch;
+		sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
+		AesGcm cipher2(&ks, iv, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  cipher2.encrypt(join_temp[r]->row, JOIN_ROW_UPPER_BOUND, scratch_ptr, JOIN_ROW_UPPER_BOUND);
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
-		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
+		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		memcpy(buffer2_ptr, iv, SGX_AESGCM_IV_SIZE);
+		memcpy(buffer2_ptr + SGX_AESGCM_IV_SIZE, cipher2.tag().t, SGX_AESGCM_MAC_SIZE);
 	      }
 			  
 	      ++merges;
@@ -958,22 +986,37 @@ void ecall_external_oblivious_sort(int op_code,
 		
 
 	      } else {
-		// note that these are padded!
-		decrypt(buffer1_ptr, buffer1_size, scratch);
-		scratch_ptr = scratch;
+
+		uint8_t *iv_ptr = buffer1_ptr;
+		AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+		uint8_t *ptr;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  // set num cols first
-		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
+		  join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row));
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
+		if (memcmp(decipher.tag().t, buffer1_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
+		  printf("Decipher MAC error 3\n");
+		  assert(false);
+		}
 
-		decrypt(buffer2_ptr, buffer2_size, scratch);
-		scratch_ptr = scratch;
+		//decrypt(buffer2_ptr, buffer2_size, scratch);
+		iv_ptr = buffer2_ptr;
+		AesGcm decipher2(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		  join_data[r]->consume_plaintext_row(scratch_ptr);
+		  decipher2.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
+		  join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row + TABLE_ID_SIZE));
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
 
+		if (memcmp(decipher2.tag().t, buffer2_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
+		  printf("Decipher MAC error 4\n");
+		  assert(false);
+		}
 	      }
  
 	      oblivious_sort(op_code, &reader,
@@ -1015,23 +1058,35 @@ void ecall_external_oblivious_sort(int op_code,
 		
 	      } else {
 
-		JoinRecord **join_temp = (JoinRecord **) temp;
+		JoinRecord ** join_temp = (JoinRecord **) temp;
 
-		scratch_ptr = scratch;
+		sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
+		AesGcm cipher(&ks, iv, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  cipher.encrypt(join_temp[r]->row, JOIN_ROW_UPPER_BOUND, scratch_ptr, JOIN_ROW_UPPER_BOUND);
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
-		encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		memcpy(buffer1_ptr, iv, SGX_AESGCM_IV_SIZE);
+		memcpy(buffer1_ptr + SGX_AESGCM_IV_SIZE, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
 
-		scratch_ptr = scratch;
+		sgx_read_rand(iv, SGX_AESGCM_IV_SIZE);
+		AesGcm cipher2(&ks, iv, SGX_AESGCM_IV_SIZE);
+
+		//scratch_ptr = scratch;
+		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		  memcpy(scratch_ptr, join_temp[r]->row, JOIN_ROW_UPPER_BOUND);
+		  cipher2.encrypt(join_temp[r]->row, JOIN_ROW_UPPER_BOUND, scratch_ptr, JOIN_ROW_UPPER_BOUND);
 		  scratch_ptr += JOIN_ROW_UPPER_BOUND;
 		}
-		encrypt(scratch, dec_size(buffer2_size), buffer2_ptr);
+		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
+		memcpy(buffer2_ptr, iv, SGX_AESGCM_IV_SIZE);
+		memcpy(buffer2_ptr + SGX_AESGCM_IV_SIZE, cipher2.tag().t, SGX_AESGCM_MAC_SIZE);
 	      }
-			  
+	      
 	      ++merges;
 	    }
 
@@ -1081,9 +1136,14 @@ void ecall_external_oblivious_sort(int op_code,
 
 
     } else {
-      scratch_ptr = scratch;
+      iv_ptr = external_scratch_list[i];
+      AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+
+      //scratch_ptr = scratch;
+      scratch_ptr = external_scratch_list[i] + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+      uint8_t *ptr;
       for (uint32_t r = 0; r < num_rows[i]; r++) {
-	memcpy(join_data[r]->row, scratch_ptr, JOIN_ROW_UPPER_BOUND);
+	decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, data[r]->row, JOIN_ROW_UPPER_BOUND);
 	scratch_ptr += JOIN_ROW_UPPER_BOUND;
       }
     }
