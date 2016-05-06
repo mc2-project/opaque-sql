@@ -906,6 +906,24 @@ void AggSortAttributes::init() {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+    expression = IDENTITY;
+
+    num_attr = 1;
+    num_eval_attr = 1;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
   } else {
     printf("AggSortAttributes::init: Unknown opcode %d\n", op_code);
     assert(false);
@@ -929,6 +947,14 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
     // attributes[0]->print();
   } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1
       || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    attributes[0]->reset();
+
+    find_plaintext_attribute(new_row_ptr, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0]->consume(sort_pointer, NO_COPY);
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,

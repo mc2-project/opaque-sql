@@ -653,10 +653,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   uint32_t actual_size = 0;
   int flag;
   if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 ||
-      op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1) {
+      op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 ||
+      op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1) {
     flag = 1;
   } else if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2 ||
-             op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+             op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
     flag = 2;
   } else {
     printf("Aggregate: unknown opcode %d\n", op_code);
