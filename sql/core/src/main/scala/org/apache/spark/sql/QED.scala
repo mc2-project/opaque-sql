@@ -90,6 +90,11 @@ object QED {
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
+      case (s: String, Some(IP_TYPE)) =>
+        buf.put(IP_TYPE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
     }
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
@@ -326,7 +331,7 @@ object QED {
         lc: String,
         sw: String,
         d: Int) =>
-        (QED.encrypt(enclave, eid, si), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
+        (QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
           QED.encrypt(enclave, eid, ar), QED.encrypt(enclave, eid, ua), QED.encrypt(enclave, eid, cc),
           QED.encrypt(enclave, eid, lc), QED.encrypt(enclave, eid, sw), QED.encrypt(enclave, eid, d))
     }

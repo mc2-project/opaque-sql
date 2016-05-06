@@ -77,12 +77,7 @@ object QEDBenchmark {
 
   def bd1Opaque(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
-    val rankingsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType),
-        StructField("avgDuration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
+    val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
       .coalesce(sqlContext.sparkContext.defaultParallelism)
@@ -96,18 +91,7 @@ object QEDBenchmark {
 
   def bd2SparkSQL(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
-    val uservisitsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("sourceIP", StringType),
-        StructField("destURL", StringType),
-        StructField("visitDate", DateType),
-        StructField("adRevenue", FloatType),
-        StructField("userAgent", StringType),
-        StructField("countryCode", StringType),
-        StructField("languageCode", StringType),
-        StructField("searchWord", StringType),
-        StructField("duration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/uservisits/$size")
+    val uservisitsDF = uservisits(sqlContext, size)
     val result = time("big data 2 - spark sql") {
       val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
@@ -119,18 +103,7 @@ object QEDBenchmark {
 
   def bd2Opaque(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
-    val uservisitsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("sourceIP", StringType),
-        StructField("destURL", StringType),
-        StructField("visitDate", DateType),
-        StructField("adRevenue", FloatType),
-        StructField("userAgent", StringType),
-        StructField("countryCode", StringType),
-        StructField("languageCode", StringType),
-        StructField("searchWord", StringType),
-        StructField("duration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/uservisits/$size")
+    val uservisitsDF = uservisits(sqlContext, size)
       .mapPartitions(QED.bd2Encrypt9)
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
@@ -144,6 +117,28 @@ object QEDBenchmark {
       df
     }
   }
+
+  def rankings(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType),
+        StructField("avgDuration", IntegerType))))
+      .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
+
+  def uservisits(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("sourceIP", StringType),
+        StructField("destURL", StringType),
+        StructField("visitDate", DateType),
+        StructField("adRevenue", FloatType),
+        StructField("userAgent", StringType),
+        StructField("countryCode", StringType),
+        StructField("languageCode", StringType),
+        StructField("searchWord", StringType),
+        StructField("duration", IntegerType))))
+      .csv(s"/home/ankurd/big-data-benchmark-files/uservisits/$size")
 
   def sortSparkSQL(sqlContext: SQLContext, n: Int) {
     import sqlContext.implicits._

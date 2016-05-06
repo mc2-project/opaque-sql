@@ -136,8 +136,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("encProject") {
+    def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = {
+      val (enclave, eid) = QED.initEnclave()
+      rows.map {
+        case (a, b) =>
+          (QED.encrypt(enclave, eid, a, Some(QEDColumnType.IP_TYPE)),
+            QED.encrypt(enclave, eid, b))
+      }
+    }
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
-    val rdd = sparkContext.makeRDD(QED.encrypt2(data)).toDF("str", "x")
+    val rdd = sparkContext.makeRDD(encrypt2(data)).toDF("str", "x")
     val proj = rdd.encProject(/*substring($"str", 0, 3)*/$"str", $"x")
     assert(QED.decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
   }
