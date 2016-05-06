@@ -417,6 +417,44 @@ void LanguageCode::print() {
 /*** LanguageCode ***/
 
 
+/*** IP ***/
+
+IP::IP() {
+  type_ = IP_TYPE;
+}
+
+void IP::print() {
+  printf("IP attr: %.*s\n", this->length, this->data);
+}
+
+/*** IP ***/
+
+
+/*** User Agent ***/
+
+UserAgent::UserAgent() {
+  type_ = USER_AGENT_TYPE;
+}
+
+void UserAgent::print() {
+  printf("UserAgent attr: %.*s\n", this->length, this->data);
+}
+
+/*** User Agent ***/
+
+
+/*** Search word ***/
+
+SearchWord::SearchWord() {
+  type_ = SEARCH_WORD_TYPE;
+}
+
+void SearchWord::print() {
+  printf("SearchWord attr: %.*s\n", this->length, this->data);
+}
+
+/*** User Agent ***/
+
 
 /*** GROUPED ATTRIBUTES ***/
 GroupedAttributes::GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) {

@@ -235,6 +235,36 @@ class LanguageCode : public String {
   void print();
 };
 
+class IP : public String {
+ public:
+  IP();
+
+  ~IP() {}
+
+  void print();
+
+};
+
+
+class UserAgent : public String {
+ public:
+  UserAgent();
+
+  ~UserAgent() {}
+
+  void print();
+};
+
+class SearchWord : public String {
+ public:
+  SearchWord();
+
+  ~SearchWord() {}
+
+  void print();
+};
+
+
 // given an attribute in serialized form (i.e. buffer form)
 // return the appropriate GenericType
 GenericType *create_attr(uint8_t *attr);

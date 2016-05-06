@@ -35,6 +35,9 @@ enum TYPE {
   C_CODE = 6,
   L_CODE = 7,
   LONG = 8,
+  IP_TYPE = 9,
+  USER_AGENT_TYPE = 10,
+  SEARCH_WORD_TYPE = 11,
 
   DUMMY_INT = 100,
   DUMMY_FLOAT = 101,
@@ -51,6 +54,9 @@ enum TYPE {
 #define URL_UPPER_BOUND (100)
 #define C_CODE_UPPER_BOUND (3)
 #define L_CODE_UPPER_BOUND (6)
+#define IP_UPPER_BOUND (4)
+#define USER_AGENT_UPPER_BOUND (256)
+#define SEARCH_WORD_UPPER_BOUND (32)
 
 #define ATTRIBUTE_UPPER_BOUND (512)
 
