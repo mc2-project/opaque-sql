@@ -696,13 +696,6 @@ void SortAttributes::init() {
 	
     num_eval_attr = num_attr;
 
-  } else if (op_code == OP_BD2) {
-	// for Big Data Benchmark query #2
-	expression = BD2;
-
-	num_attr = 1;
-	num_eval_attr = 1;
-
   } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
 	// this sort is the last step of aggregation
 
@@ -777,9 +770,6 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
 	
-  } else if (op_code == OP_BD2) {
-	// for Big Data Benchmark query #2
-
   } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
 	// this sort is the last step of aggregation
 
@@ -802,8 +792,30 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[1]->reset();
 	eval_attributes[1]->reset();
     attributes[1]->consume(sort_pointer, NO_COPY);
+  } else if (op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
+    // this sort is the last step of aggregation
+
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
+
+    attributes[0]->reset();
+
+    find_plaintext_attribute(row, num_cols,
+                             3, &sort_pointer, &len);
+
+    delete attributes[0];
+    delete eval_attributes[0];
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+    attributes[1]->reset();
+    eval_attributes[1]->reset();
+    attributes[1]->consume(sort_pointer, NO_COPY);
   } else {
-    printf("SortAttributes::init: unknown opcode %d\n", op_code);
+    printf("SortAttributes::re_init: unknown opcode %d\n", op_code);
     assert(false);
   }
   
@@ -971,6 +983,57 @@ void AggAggAttributes::init() {
 
     num_eval_attr = num_attr;
 
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    expression = IDENTITY;
+
+    num_attr = 1;
+    num_eval_attr = 1;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                 2, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
+
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
+	     op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+
+    expression = IDENTITY;
+
+    num_attr = 2;
+    num_eval_attr = 2;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+			     1, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    find_plaintext_attribute(row, num_cols,
+			     2, &sort_pointer, &len);
+
+    attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1] = create_attr(sort_pointer);
+
+    attributes[1]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
+    
+  } else {
+    printf("AggAggAttributes::init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
@@ -984,6 +1047,28 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
     find_plaintext_attribute(new_row_ptr, num_cols,
 			     3, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
+  } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    attributes[0]->reset();
+    find_plaintext_attribute(new_row_ptr, num_cols,
+                 2, &sort_pointer, &len);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
+	     op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+    find_plaintext_attribute(new_row_ptr, num_cols,
+			     1, &sort_pointer, &len);
+
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    find_plaintext_attribute(new_row_ptr, num_cols,
+			     2, &sort_pointer, &len);
+
+    attributes[1]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
+  } else {
+    printf("AggAggAttributes::re_init: Unknown opcode %d\n", this->op_code);
+    assert(false);
   }
 
 }

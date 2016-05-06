@@ -264,8 +264,6 @@ void join_merge_row(int op_code,
 // join format
 //
 // TODO: should we leak which attributes are being joined, but not the constants?
-// TODO: each data type should have an upper bound on the data size, otherwise
-// it's easy to tell what rows have have bene put where
 void sort_merge_join(int op_code,
 		     uint8_t *input_rows, uint32_t input_rows_length,
 		     uint32_t num_rows,

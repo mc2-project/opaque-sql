@@ -278,15 +278,15 @@ class GroupedAttributes {
   GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols);
   
   ~GroupedAttributes() {
-	for (uint32_t i = 0; i < num_attr; i++) {
-	  delete attributes[i];
-	}
-	free(attributes);
+    for (uint32_t i = 0; i < num_attr; i++) {
+      delete attributes[i];
+    }
+    free(attributes);
 	
-	for (uint32_t i = 0; i < num_eval_attr; i++) {
-	  delete eval_attributes[i];
-	}
-	free(eval_attributes);
+    for (uint32_t i = 0; i < num_eval_attr; i++) {
+      delete eval_attributes[i];
+    }
+    free(eval_attributes);
   }
 
   // using the op_code, initialize the GroupedAttributes information
@@ -488,14 +488,14 @@ public:
 class JoinRecord : public Record {
  public:
  JoinRecord() : Record(JOIN_ROW_UPPER_BOUND) {
-	row_ptr += TABLE_ID_SIZE;
-	join_attributes = NULL;
+    row_ptr += TABLE_ID_SIZE;
+    join_attributes = NULL;
   }
 
   ~JoinRecord() {
-	if (join_attributes != NULL) {
-	  delete join_attributes;
-	}
+    if (join_attributes != NULL) {
+      delete join_attributes;
+    }
   }
 
   // sets data directly

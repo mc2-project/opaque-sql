@@ -423,6 +423,13 @@ public:
         op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
       num_agg_fields = 1;
       agg_data_list[0] = new generic_agg_sum(INT);
+    } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
+	       op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+
+      num_agg_fields = 2;
+      agg_data_list[0] = new generic_agg_avg(INT);
+      agg_data_list[1] = new generic_agg_sum(FLOAT);
+
     } else {
       //agg_data = NULL;
       printf("agg_stats_data::ctor: unknown opcode %d\n", op_code);
