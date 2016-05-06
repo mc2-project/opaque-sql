@@ -52,13 +52,9 @@ object QEDBenchmark {
 
     QEDBenchmark.bd1Opaque(sqlContext, "1million")
 
-    // test("big data 2 - spark sql") {
-    //   QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
-    // }
+    QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
 
-    // test("big data 2") {
-    //   QEDBenchmark.bd2Opaque(sqlContext, "1node")
-    // }
+    QEDBenchmark.bd2Opaque(sqlContext, "1million")
 
     sc.stop()
   }
@@ -71,7 +67,6 @@ object QEDBenchmark {
         StructField("pageRank", IntegerType),
         StructField("avgDuration", IntegerType))))
       .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
-      .coalesce(2)
     val result = time("big data 1 - spark sql") {
       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
       val count = df.count
@@ -90,7 +85,7 @@ object QEDBenchmark {
       .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(2)
+      .coalesce(sqlContext.sparkContext.defaultParallelism)
     val result = time("big data 1") {
       val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
       val count = df.count
@@ -113,7 +108,6 @@ object QEDBenchmark {
         StructField("searchWord", StringType),
         StructField("duration", IntegerType))))
       .csv(s"/home/ankurd/big-data-benchmark-files/uservisits/$size")
-      .coalesce(2)
     val result = time("big data 2 - spark sql") {
       val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
@@ -141,7 +135,7 @@ object QEDBenchmark {
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(2)
+      .coalesce(sqlContext.sparkContext.defaultParallelism)
     val result = time("big data 2") {
       val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
         .encGroupByWithSum($"sourceIP", $"adRevenue".as("totalAdRevenue"))
