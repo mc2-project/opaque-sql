@@ -128,14 +128,17 @@ case class EncAggregateWithSum(
     val childRDD = child.execute().mapPartitions { rowIter =>
       rowIter.map(_.encSerialize)
     }.cache()
+    time("Force child of EncAggregate") { childRDD.count }
     // Process boundaries
     val boundaries = childRDD.mapPartitions { rowIter =>
       val rows = rowIter.toArray
       val concatRows = QED.concatByteArrays(rows)
       val (enclave, eid) = QED.initEnclave()
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
-      val boundary = enclave.Aggregate(
-        eid, aggStep1Opcode, concatRows, rows.length, new Array[Byte](aggSize))
+      val boundary = time("aggregate - step 1 - JNI call") {
+        enclave.Aggregate(
+          eid, aggStep1Opcode, concatRows, rows.length, new Array[Byte](aggSize))
+      }
       // enclave.StopEnclave(eid)
       Iterator(boundary)
     }
