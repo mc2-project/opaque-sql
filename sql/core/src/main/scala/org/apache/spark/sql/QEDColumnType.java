@@ -26,6 +26,10 @@ public enum QEDColumnType {
     URL_TYPE((byte)5),
     C_CODE((byte)6),
     L_CODE((byte)7),
+    LONG((byte)8),
+    IP_TYPE((byte)9),
+    USER_AGENT_TYPE((byte)10),
+    SEARCH_WORD_TYPE((byte)11),
     DUMMY_INT((byte)100),
     DUMMY_FLOAT((byte)101),
     DUMMY_STRING((byte)102);

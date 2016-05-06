@@ -21,51 +21,24 @@ GenericType *create_attr(uint8_t *attr) {
   uint8_t type = *attr;
   switch (type) {
 
-  case DUMMY_INT:
-	{
-	  return new Dummy(DUMMY_INT);
-	}
-  case DUMMY_FLOAT:
-	{
-	  return new Dummy(DUMMY_FLOAT);
-	}
-	break;
+  case INT: return new Integer; break;
+  case STRING: return new String; break;
+  case FLOAT: return new Float; break;
+  case DATE: return new Date; break;
+  case URL_TYPE: return new URL; break;
+  case C_CODE: return new CountryCode; break;
+  case L_CODE: return new LanguageCode; break;
+  case LONG: assert(false); break;
+  case IP_TYPE: return new IP; break;
+  case USER_AGENT_TYPE: return new UserAgent; break;
+  case SEARCH_WORD_TYPE: return new SearchWord; break;
+  case DUMMY_INT: return new Dummy(DUMMY_INT); break;
+  case DUMMY_FLOAT: return new Dummy(DUMMY_FLOAT); break;
+  case DUMMY_STRING: return new Dummy(DUMMY_STRING); break;
 
-  case INT:
-	{
-	  return new Integer;
-	}
-	break;
-
-  case STRING:
-	{
-	  return new String;
-	}
-    break;
-
-  case FLOAT:
-  {
-    return new Float;
-  }
-  break;
-
-  case URL_TYPE:
-	{
-	  return new URL;
-	}
-	break;
-
-  case C_CODE:
-	{
-	  return new CountryCode;
-	}
-	break;
-
-  case L_CODE:
-	{
-	  return new LanguageCode;
-	}
-	break;
+  default:
+    printf("create_attr: Unknown type %d\n", type);
+    assert(false);
 
   }
 }
