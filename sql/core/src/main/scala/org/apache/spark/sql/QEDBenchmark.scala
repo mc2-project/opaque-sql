@@ -75,6 +75,7 @@ object QEDBenchmark {
       println("big data 1 spark sql - num rows: " + count)
       df
     }
+    rankingsDF.unpersist()
   }
 
   def bd1Opaque(sqlContext: SQLContext, size: String) {
@@ -91,6 +92,7 @@ object QEDBenchmark {
       println("big data 1 - num rows: " + count)
       df
     }
+    rankingsDF.unpersist()
   }
 
   def bd2SparkSQL(sqlContext: SQLContext, size: String) {
@@ -104,6 +106,7 @@ object QEDBenchmark {
       println("big data 2 spark sql - num rows: " + count)
       df
     }
+    uservisitsDF.unpersist()
   }
 
   def bd2Opaque(sqlContext: SQLContext, size: String) {
@@ -123,6 +126,7 @@ object QEDBenchmark {
       println("big data 2 - num rows: " + count)
       df
     }
+    uservisitsDF.unpersist()
   }
 
   def bd3SparkSQL(sqlContext: SQLContext, size: String) {
@@ -146,6 +150,8 @@ object QEDBenchmark {
       println("big data 3 spark sql - num rows: " + count)
       df
     }
+    uservisitsDF.unpersist()
+    rankingsDF.unpersist()
   }
 
   def rankings(sqlContext: SQLContext, size: String): DataFrame =
