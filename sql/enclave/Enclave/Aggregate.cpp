@@ -115,71 +115,6 @@ class aggregate_data_count : public aggregate_data {
 };
 
 
-class aggregate_data_avg : public aggregate_data {
-
-  aggregate_data_avg() {
-    count = 0;
-  }
-  
-  void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {
-
-    switch(data_type) {
-    case 1: // int
-      {
-	uint32_t *int_data_ptr = NULL;
-	assert(data_len == 4);
-	int_data_ptr = (uint32_t *) data;
-	sum += *int_data_ptr;
-      }
-      break;
-    default: // cannot handle sum of other types!
-      {
-	assert(false);
-      }
-      break;
-    }
-
-    count += 1;
-  }
-  
-  uint32_t ret_length() {
-    return (1 + 4 + 8);
-  }
-  
-  void ret_result(uint8_t *result) {
-    uint8_t *result_ptr = result;
-    *result_ptr = 1;
-    result_ptr += 1;
-    *( (uint32_t *) result_ptr) = 4;
-    result_ptr += 4;
-
-    float avg = ((float) sum) / ((float) count);
-    *( (float *) result_ptr) = avg;
-  }
-  
-  uint32_t flush(uint8_t *output, int if_final) {
-    uint8_t *result_ptr = output;
-    if (if_final == 0) {
-      *result_ptr = FLOAT;
-    } else {
-      *result_ptr = DUMMY_FLOAT;
-    }
-	
-    result_ptr += TYPE_SIZE;
-    *( (uint32_t *) result_ptr) = 4;
-    result_ptr += 4;
-	
-    float avg = ((float) sum) / ((float) count);
-    *( (float *) result_ptr) = avg;
-
-    return HEADER_SIZE + 4;
-  }
-
-
-  uint64_t sum;
-  uint64_t count;
-};
-
 class generic_agg_sum : public aggregate_data {
 public:
   generic_agg_sum(uint8_t type) {
@@ -754,29 +689,6 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t *prev_row = NULL;
   uint8_t *current_row = NULL;
   
-  uint32_t agg_attribute_num = 1;
-  uint32_t sort_attribute_num = 1;
-
-  // this op_code decides the aggregation function
-  // as well as the aggregation column
-  switch(op_code) {
-  case OP_GROUPBY_COL2_SUM_COL3_STEP1:
-  case OP_GROUPBY_COL2_SUM_COL3_STEP2:
-    sort_attribute_num = 2;
-    agg_attribute_num = 3;
-    break;
-
-  case OP_GROUPBY_COL1_SUM_COL2_STEP1:
-  case OP_GROUPBY_COL1_SUM_COL2_STEP2:
-    sort_attribute_num = 1;
-    agg_attribute_num = 2;
-    break;
-
-  default:
-    printf("scan_aggregation_count_distinct: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
   // prev_agg.agg_data->reset();
   // current_agg.agg_data->reset();
 
