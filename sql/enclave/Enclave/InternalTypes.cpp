@@ -84,6 +84,9 @@ void Integer::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == INT) {
     this->value = *( (uint32_t *) (input + HEADER_SIZE));
+  } else {
+    printf("Integer::consume: Unexpected type %d\n", type);
+    assert(false);
   }
 }
   
@@ -100,6 +103,15 @@ void Integer::copy_attr(Integer *v) {
 
 void Integer::print() {
   printf("Integer attr: %u\n", this->value);
+}
+
+void Integer::sum(GenericType *v) {
+  if (v->type_ == INT) {
+    this->value += dynamic_cast<Integer *>(v)->value;
+  } else {
+    printf("Integer::sum: Unexpected type %d\n", v->type_);
+    assert(false);
+  }
 }
 
 /*** INTEGER ***/
@@ -273,6 +285,9 @@ void Float::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == FLOAT) {
 	this->value = *( (float *) (input + HEADER_SIZE));
+  } else {
+    printf("Float::consume: Unexpected type %d\n", type);
+    assert(false);
   }
   
 }
@@ -285,6 +300,15 @@ void Float::flush(uint8_t *output) {
 
 void Float::copy_attr(Float *attr) {
   this->value = attr->value;
+}
+
+void Float::sum(GenericType *v) {
+  if (v->type_ == FLOAT) {
+    this->value += dynamic_cast<Float *>(v)->value;
+  } else {
+    printf("Float::sum: Unexpected type %d\n", v->type_);
+    assert(false);
+  }
 }
 
 void Float::print() {

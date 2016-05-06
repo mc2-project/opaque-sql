@@ -36,14 +36,17 @@ void evaluate_join(GenericType **input_attr, uint32_t num_input_attr,
 	  dynamic_cast<Integer *>(output_attr[i])->copy_attr(dynamic_cast<Integer *>(input_attr[i]));
 	} else if (dynamic_cast<String *>(input_attr[i]) != NULL) {
 	  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
+        } else {
+          printf("evaluate_join: Attribute %d has unknown type\n", i);
+          input_attr[i]->print();
+          assert(false);
 	}
       }
     }
     break;
-  case BD2:
-    {
-	  
-    }
+  default:
+    printf("evaluate_join: Unknown expression type\n", expression);
+    assert(false);
     break;
   }
    
@@ -62,14 +65,19 @@ void evaluate_agg(GenericType **input_attr, uint32_t num_input_attr,
 	  dynamic_cast<Integer *>(output_attr[i])->copy_attr(dynamic_cast<Integer *>(input_attr[i]));
 	} else if (dynamic_cast<String *>(input_attr[i]) != NULL) {
 	  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
+        } else if (dynamic_cast<Float *>(input_attr[i]) != NULL) {
+          dynamic_cast<Float *>(output_attr[i])->copy_attr(dynamic_cast<Float *>(input_attr[i]));
+        } else {
+          printf("evaluate_agg: Attribute %d has unknown type\n", i);
+          input_attr[i]->print();
+          assert(false);
 	}
       }
     }
     break;
-  case BD2:
-    {
-	  
-    }
+  default:
+    printf("evaluate_agg: Unknown expression type\n", expression);
+    assert(false);
     break;
   }
   
@@ -89,14 +97,19 @@ void evaluate_agg_agg(GenericType **input_attr, uint32_t num_input_attr,
 	  dynamic_cast<Integer *>(output_attr[i])->copy_attr(dynamic_cast<Integer *>(input_attr[i]));
 	} else if (dynamic_cast<String *>(input_attr[i]) != NULL) {
 	  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
+        } else if (dynamic_cast<Float *>(input_attr[i]) != NULL) {
+          dynamic_cast<Float *>(output_attr[i])->copy_attr(dynamic_cast<Float *>(input_attr[i]));
+        } else {
+          printf("evaluate_agg_agg: Attribute %d has unknown type\n", i);
+          input_attr[i]->print();
+          assert(false);
 	}
       }
     }
     break;
-  case BD2:
-    {
-	  
-    }
+  default:
+    printf("evaluate_agg_agg: Unknown expression type\n", expression);
+    assert(false);
     break;
   }
   
@@ -116,10 +129,20 @@ void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
 	  dynamic_cast<Integer *>(output_attr[i])->copy_attr(dynamic_cast<Integer *>(input_attr[i]));
 	} else if (dynamic_cast<String *>(input_attr[i]) != NULL) {
 	  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
+        } else if (dynamic_cast<Float *>(input_attr[i]) != NULL) {
+          dynamic_cast<Float *>(output_attr[i])->copy_attr(dynamic_cast<Float *>(input_attr[i]));
+        } else {
+          printf("evaluate_sort: Attribute %d has unknown type\n", i);
+          input_attr[i]->print();
+          assert(false);
 	}
 
       }
     }
+    break;
+  default:
+    printf("evaluate_sort: Unknown expression type\n", expression);
+    assert(false);
     break;
   }
 }
@@ -136,6 +159,10 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
       dynamic_cast<Float *>(output_attr[1])->copy_attr(dynamic_cast<Float *>(input_attr[1]));
 	}
 	break;
+  default:
+    printf("evaluate_project: Unknown expression type\n", expression);
+    assert(false);
+    break;
   }
 }
 
@@ -163,5 +190,8 @@ void evaluate_expr(GenericType **input_attr, uint32_t num_input_attr,
   } else if (mode == AGG_AGG) {
     evaluate_agg_agg(input_attr, num_input_attr, output_attr, num_output_attr,
 		     expression);
+  } else {
+    printf("evaluate_expr: Unknown mode %d\n", mode);
+    assert(false);
   }
 }

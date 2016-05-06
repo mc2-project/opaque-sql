@@ -96,11 +96,7 @@ class Integer : public GenericType {
     value = 0;
   }
 
-  void sum(GenericType *v) {
-    if (v->type_ == INT) {
-      this->value += dynamic_cast<Integer *>(v)->value;
-    }
-  }
+  void sum(GenericType *v);
 
   void avg(uint64_t count) {
     int temp = (int) count;
@@ -159,11 +155,7 @@ class Float : public GenericType {
     this->value = 0;
   }
 
-  void sum(GenericType *v) {
-    if (v->type_ == INT) {
-      this->value += dynamic_cast<Float *>(v)->value;
-    }
-  }
+  void sum(GenericType *v);
 
   void avg(uint64_t count) {
     float temp = (float) count;
