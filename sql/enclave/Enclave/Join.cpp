@@ -18,17 +18,7 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
   uint8_t *output_row_ptr_ = output_row_ptr + 4;
   
   for (uint32_t i = 0; i < num_cols; i++) {
-    // value_len = *((uint32_t *) (input_row_ptr + input_offset + TYPE_SIZE)) + HEADER_SIZE;
-    // *((uint32_t *) (output_row_ptr + output_offset)) = enc_size(value_len);
-    // output_offset += LEN_SIZE;
-
-    // // printf("[%u] value_len is %u\n", i, value_len);
-	// encrypt(input_row_ptr + input_offset, value_len, output_row_ptr + output_offset);
-	
-    // input_offset += value_len;
-    // output_offset += enc_size(value_len);
-
-	encrypt_attribute(&input_row_ptr_, &output_row_ptr_);
+    encrypt_attribute(&input_row_ptr_, &output_row_ptr_);
   }
 
   return (output_row_ptr_ - output_row_ptr);;
@@ -58,14 +48,14 @@ void join_sort_preprocess(int op_code,
   int if_primary = 0;
   
   if (op_code == OP_JOIN_COL2) {
-	char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
-	if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
+    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
+    if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
   }
 
   if (if_primary == 0) {
-	cpy(temp_ptr, primary_table, TABLE_ID_SIZE);
+    cpy(temp_ptr, primary_table, TABLE_ID_SIZE);
   } else {
-	cpy(temp_ptr, foreign_table, TABLE_ID_SIZE);
+    cpy(temp_ptr, foreign_table, TABLE_ID_SIZE);
   }
 
   temp_ptr += TABLE_ID_SIZE;
@@ -86,13 +76,13 @@ void join_sort_preprocess(int op_code,
   //printf("if_primary: %d, num_cols: %u\n", if_primary, num_cols);
   
   for (uint32_t i = 0; i < num_cols; i++) {
-	// find_attribute(enc_row_ptr, enc_row_len, num_cols,
-	// 			   i + 1, &enc_value_ptr, &enc_value_len);
+    // find_attribute(enc_row_ptr, enc_row_len, num_cols,
+    // 			   i + 1, &enc_value_ptr, &enc_value_len);
 
-	// decrypt(enc_value_ptr, enc_value_len, temp_ptr);
-	// temp_ptr += dec_size(enc_value_len);
+    // decrypt(enc_value_ptr, enc_value_len, temp_ptr);
+    // temp_ptr += dec_size(enc_value_len);
 
-	decrypt_attribute(&enc_value_ptr, &temp_ptr);
+    decrypt_attribute(&enc_value_ptr, &temp_ptr);
   }
 
   //printf("decrypted all\n");

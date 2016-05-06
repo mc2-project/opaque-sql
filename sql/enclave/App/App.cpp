@@ -788,12 +788,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(JNIEnv *env, 
-																					 jobject obj, 
-																					 jlong eid,
-																					 jint op_code,
-																					 jbyteArray enc_table_id,
-																					 jbyteArray input_rows,
-																					 jint num_rows) {
+										     jobject obj, 
+										     jlong eid,
+										     jint op_code,
+										     jbyteArray enc_table_id,
+										     jbyteArray input_rows,
+										     jint num_rows) {
   jboolean if_copy;
   
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
@@ -812,11 +812,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   //printf("Preprocess 1, num_rows is %u\n", num_rows);
 
   ecall_join_sort_preprocess(eid,
-							 op_code,
-							 enc_table_id_ptr, 
-							 input_rows_ptr, input_rows_length,
-							 num_rows, 
-							 output_rows_ptr, output_rows_length);
+			     op_code,
+			     enc_table_id_ptr, 
+			     input_rows_ptr, input_rows_length,
+			     num_rows, 
+			     output_rows_ptr, output_rows_length);
 
    
   jbyteArray ret = env->NewByteArray(output_rows_length);

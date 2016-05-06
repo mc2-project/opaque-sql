@@ -78,26 +78,26 @@ enclave {
 
      public void ecall_process_join_boundary(int op_code,
                                              [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-						                     uint32_t num_rows,
-                                             [out, size=output_rows_size] uint8_t *output_rows, uint32_t output_rows_size,
+					     uint32_t num_rows,
+                                             [user_check] uint8_t *output_rows, uint32_t output_rows_size,
                                              [out, size=4] uint32_t *actual_output_length);
 
 	 public void ecall_sort_merge_join(int op_code,
-						               [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-									   uint32_t num_rows,
-									   [in, sizefunc=join_row_size] uint8_t *join_row, uint32_t join_row_length,
-                                       [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length,
-                                       [out, size=4] uint32_t *actual_output_length);
+				           [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+					   uint32_t num_rows,
+					   [in, sizefunc=join_row_size] uint8_t *join_row, uint32_t join_row_length,
+                                       	   [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length,
+                                       	   [out, size=4] uint32_t *actual_output_length);
 									   
 	 public void ecall_join_sort_preprocess(int op_code,
-	                                        [in, sizefunc=enc_table_id_size] uint8_t *table_id,
+	                                        [user_check] uint8_t *table_id,
 	                                        [user_check] uint8_t *input_row, uint32_t input_row_len,
-											uint32_t num_rows,
-											[out, size=output_row_len] uint8_t *output_row, uint32_t output_row_len);
+						uint32_t num_rows,
+						[user_check] uint8_t *output_row, uint32_t output_row_len);
 
 	 public void ecall_encrypt_attribute([in, size=input_size] uint8_t *input, uint32_t input_size,
-						            [out, size=output_size] uint8_t *output, uint32_t output_size,
-									[out] uint32_t *actual_size);
+				             [out, size=output_size] uint8_t *output, uint32_t output_size,
+					     [out] uint32_t *actual_size);
 
 	};
 
