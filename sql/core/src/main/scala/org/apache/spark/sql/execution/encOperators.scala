@@ -107,6 +107,8 @@ case class EncAggregateWithSum(
     child: SparkPlan)
   extends UnaryNode {
 
+  import QED.time
+
   override def doExecute() = {
     val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
     val sumExprPos = QED.attributeIndexOf(sumExpression.references.toSeq(0), child.output)
@@ -139,11 +141,13 @@ case class EncAggregateWithSum(
       Iterator(boundary)
     }
 
-    val boundariesCollected = boundaries.collect
+    val boundariesCollected = time("aggregate - step 1") { boundaries.collect }
     val (enclave, eid) = QED.initEnclave()
-    val processedBoundariesConcat = enclave.ProcessBoundary(
-      eid, aggStep1Opcode,
-      QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
+    val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
+      enclave.ProcessBoundary(
+        eid, aggStep1Opcode,
+        QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
+    }
     // enclave.StopEnclave(eid)
 
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
@@ -168,9 +172,13 @@ case class EncAggregateWithSum(
         QED.readRows(partialAgg)
     }.cache()
 
+    time("aggregate - step 2") { partialAggregates.count }
+
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
-    val sortedAggregates = ObliviousSort.ColumnSort(
-      partialAggregates.context, partialAggregates, aggDummySortOpcode)
+    val sortedAggregates = time("aggregate - sort dummies") {
+      ObliviousSort.ColumnSort(
+        partialAggregates.context, partialAggregates, aggDummySortOpcode)
+    }
 
     // Filter out the non-final aggregates
     val finalAggregates = sortedAggregates.mapPartitions { serRows =>
