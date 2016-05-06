@@ -126,7 +126,8 @@ object QEDBenchmark {
     val result = time("big data 3 - spark sql") {
       val df = uservisitsDF.filter($"visitDate" > lit("1980-01-01"))
         .filter($"visitDate" < lit("1980-04-01"))
-        .join(rankingsDF, rankingsDF("pageURL") === uservisitsDF("destURL"))
+        .select($"destURL", $"sourceIP", $"adRevenue")
+        .join(rankingsDF.select($"pageURL", $"pageRank"), rankingsDF("pageURL") === uservisitsDF("destURL"))
         .select($"sourceIP", $"pageRank", $"adRevenue")
         .groupBy($"sourceIP")
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
