@@ -74,15 +74,11 @@ class Integer : public GenericType {
  public:
   Integer();
 
-  Integer(int v);
-
   ~Integer() { }
 
   int compare(GenericType *v);
 
   void swap(GenericType *v);
-
-  void compare_and_swap(Integer *v);
 
   void consume(uint8_t *input, int mode);
   
@@ -136,7 +132,6 @@ class String : public GenericType {
 class Float : public GenericType {
  public:
   Float();
-  Float(float v);
 
   ~Float() {}
 

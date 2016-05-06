@@ -50,10 +50,6 @@ Integer::Integer() {
   type_ = INT;
 }
 
-Integer::Integer(int v) {
-  this->value = v;
-}
-
 int Integer::compare(GenericType *v) {
   Integer *int_v = dynamic_cast<Integer *>(v);
   
@@ -74,12 +70,6 @@ void Integer::swap(GenericType *v) {
   int_v->value = value_;
 }
 	
-void Integer::compare_and_swap(Integer *v) {
-  if (this->compare(v) == 1) {
-	this->swap(v);
-  }
-}
-
 void Integer::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == INT) {
@@ -254,10 +244,6 @@ void String::print() {
 Float::Float() {
   value = 0;
   type_ = FLOAT;
-}
-
-Float::Float(float v) {
-  this->value = v;
 }
 
 int Float::compare(GenericType *v) {
