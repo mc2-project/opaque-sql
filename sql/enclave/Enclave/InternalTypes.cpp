@@ -534,12 +534,13 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols, 1, &sort_pointer, &len);
 	attributes[0]->consume(sort_pointer, NO_COPY);
-    attributes[0]->print();
 
     attributes[1]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
     attributes[1]->consume(sort_pointer, NO_COPY);
-    attributes[1]->print();
+  } else {
+    printf("ProjectAttributes::re_init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
@@ -1039,6 +1040,7 @@ void Record::consume_encrypted_attribute(uint8_t **enc_value_ptr) {
 
 void ProjectRecord::clear() {
   this->num_cols = 0;
+  this->row_ptr = this->row;
 }
 
 void ProjectRecord::set_project_attributes(int op_code) {

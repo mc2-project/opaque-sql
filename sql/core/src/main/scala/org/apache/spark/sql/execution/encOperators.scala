@@ -44,11 +44,10 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
 
   override def doExecute() = child.execute().mapPartitions { iter =>
     val (enclave, eid) = QED.initEnclave()
+    val rows = iter.map(_.encSerialize).toArray
+    val serResult = enclave.Project(eid, OP_BD2.value, QED.concatByteArrays(rows), rows.length)
     val converter = UnsafeProjection.create(projectList, child.output)
-    iter.map { row =>
-      val serResult = enclave.Project(eid, OP_BD2.value, row.encSerialize, 1)
-      converter(InternalRow.fromSeq(QED.parseRow(serResult)))
-    }
+    QED.parseRows(serResult).map(fields => converter(InternalRow.fromSeq(fields)))
   }
 
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
