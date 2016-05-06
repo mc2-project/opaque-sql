@@ -861,26 +861,26 @@ void SortAttributes::evaluate() {
 int SortAttributes::compare(SortAttributes *attr) {
   if (op_code == OP_SORT_COL4_IS_DUMMY_COL2 || op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
 
-	int ret = 0;
-	for (uint32_t i = 0; i < num_eval_attr; i++) {
-	  if (i == 0) {
-		uint8_t type1 = this->eval_attributes[0]->type_;
-		uint8_t type2 = attr->eval_attributes[0]->type_;
+    int ret = 0;
+    for (uint32_t i = 0; i < num_eval_attr; i++) {
+      if (i == 0) {
+	uint8_t type1 = this->eval_attributes[0]->type_;
+	uint8_t type2 = attr->eval_attributes[0]->type_;
 
-		if (type1 == DUMMY) {
-		  return -1;
-		} else if (type2 == DUMMY) {
-		  return 1;
-		}
-
-	  } else {
-		ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
-		
-		if (ret != 0) {	  
-		  return ret;
-		}
-	  }
+	if (type1 == DUMMY) {
+	  return -1;
+	} else if (type2 == DUMMY) {
+	  return 1;
 	}
+
+      } else {
+	ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
+		
+	if (ret != 0) {	  
+	  return ret;
+	}
+      }
+    }
 
   } else if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 || op_code == OP_SORT_INTEGERS_TEST) {
     int ret = GroupedAttributes::compare(attr);

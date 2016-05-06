@@ -247,7 +247,7 @@ public:
       agg_field = new Float;
       break;
     default:
-      printf("Type not handled in generic_agg_sum!\n");
+      printf("Type not handled in generic_agg_avg!\n");
       assert(false);
       break;
     }
@@ -390,7 +390,6 @@ public:
       agg_data_list[0] = new generic_agg_sum();
     } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
 	       op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
-
       num_agg_fields = 2;
       agg_data_list[0] = new generic_agg_avg(INT);
       agg_data_list[1] = new generic_agg_sum();

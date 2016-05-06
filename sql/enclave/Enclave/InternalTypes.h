@@ -50,8 +50,8 @@ class Dummy : public GenericType {
  public:
   
   Dummy(uint8_t real_type) {
-	type_ = DUMMY;
-	real_type_ = real_type;
+    type_ = DUMMY;
+    real_type_ = real_type;
   }
 
   ~Dummy() {}
@@ -508,6 +508,11 @@ class SortRecord : public Record {
  public:
   // format: [num cols][attribute format]
   SortRecord() {
+    sort_attributes = NULL;
+    this->row_ptr = this->row + 4;
+  }
+
+ SortRecord(uint32_t malloc_size) : Record(malloc_size) {
     sort_attributes = NULL;
     this->row_ptr = this->row + 4;
   }

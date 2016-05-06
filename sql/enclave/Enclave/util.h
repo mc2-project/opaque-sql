@@ -91,5 +91,6 @@ class BufferReader {
 };
 
 uint32_t attr_upper_bound(uint8_t *attr);
+uint32_t get_plaintext_padded_row_size(uint8_t *row);
 
 #endif // UTIL_H

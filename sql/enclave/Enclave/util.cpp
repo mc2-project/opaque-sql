@@ -514,3 +514,21 @@ uint32_t attr_upper_bound(uint8_t *attr) {
     assert(false);
   }
 }
+
+
+uint32_t get_plaintext_padded_row_size(uint8_t *row) {
+  uint8_t *row_ptr = row;
+  uint32_t len = 0;
+  uint32_t num_cols = *( (uint32_t *) row_ptr);
+  row_ptr += 4;
+
+  uint32_t enc_attr_len = 0;
+  
+  for (uint32_t i = 0; i < num_cols; i++) {
+    enc_attr_len = *( (uint32_t *) row_ptr);
+    len += enc_attr_len - ENC_HEADER_SIZE;
+    row_ptr += 4 + enc_attr_len;
+  }
+  
+  return len;
+}

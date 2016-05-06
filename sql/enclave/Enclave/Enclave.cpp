@@ -514,10 +514,10 @@ void ecall_external_oblivious_sort(int op_code,
 				   uint32_t *num_rows,
 				   uint8_t *external_scratch) {
 
-  //uint8_t *internal_buffer = (uint8_t *) malloc(MAX_SORT_BUFFER);
-
   // First, iterate through and decrypt the data
   // Then store the decrypted data in a list of objects (based on the given op_code)
+
+  printf("oblivious sort called\n");
 
   int len = num_buffers;
   int log_len = log_2(len) + 1;
@@ -527,7 +527,12 @@ void ecall_external_oblivious_sort(int op_code,
   int min_val = 0;
   int max_val = 0;
 
-  //printf("External sort called\n");
+  // read first 4 bytes of input
+  uint32_t single_row_size = 0;
+  uint32_t padded_single_row_size = 0;
+
+  printf("single row size is %u\n", single_row_size);
+  printf("padded_single_row_size is %u\n", padded_single_row_size);
 
   BufferReader reader;
   reader.clear();
@@ -548,9 +553,13 @@ void ecall_external_oblivious_sort(int op_code,
 
   if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 ||
       op_code == OP_SORT_COL3_IS_DUMMY_COL1 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+
+    single_row_size = get_plaintext_padded_row_size(buffer_list[0]);
+    padded_single_row_size = (4 + single_row_size / 16) * 16;
+
     sort_data = (SortRecord **) malloc(sizeof(SortRecord *) * max_list_length);
     for (uint32_t i = 0; i < max_list_length; i++) {
-      sort_data[i] = new SortRecord;
+      sort_data[i] = new SortRecord(padded_single_row_size);
     }
     operation = SORT_SORT;
   } else if (op_code == OP_JOIN_COL2) {
@@ -570,8 +579,7 @@ void ecall_external_oblivious_sort(int op_code,
   //printf("max_list_length is %u\n", max_list_length);
 
   if (num_buffers == 1) {
-    //assert(buffer_lengths[0] < MAX_SORT_BUFFER);
-    //printf("num buffers is 1\n");
+    printf("num buffers is 1\n");
     reader.add_buffer(buffer_list[0], buffer_lengths[0]);
     oblivious_sort(op_code, &reader, 0, num_rows[0], true, sort_data, join_data, NULL);
 
@@ -599,7 +607,6 @@ void ecall_external_oblivious_sort(int op_code,
 
       for (uint32_t i = 0; i < num_rows[0]; i++) {
 	// simply encrypt the entire row all at once
-	//print_join_row("Join row ", data[i]->row);
 	input_ptr = reader.get_ptr();
 	
 	encrypt(join_data[i]->row, JOIN_ROW_UPPER_BOUND, input_ptr);
@@ -690,8 +697,8 @@ void ecall_external_oblivious_sort(int op_code,
     if (operation == SORT_SORT) {
       // flush sort records/join records to ptr, then encrypt that all at once
       for (uint32_t r = 0; r < num_rows[i]; r++) {	  
-	cipher.encrypt(data[r]->row, ROW_UPPER_BOUND, external_scratch_ptr, ROW_UPPER_BOUND);
-	external_scratch_ptr += ROW_UPPER_BOUND;
+	cipher.encrypt(data[r]->row, padded_single_row_size, external_scratch_ptr, padded_single_row_size);
+	external_scratch_ptr += padded_single_row_size;
       }
     } else {
       for (uint32_t r = 0; r < num_rows[i]; r++) {
@@ -713,7 +720,7 @@ void ecall_external_oblivious_sort(int op_code,
 	sort_data_ptr += HEADER_SIZE + attr_len;
       }
 
-      padded_row_size = ROW_UPPER_BOUND;
+      padded_row_size = padded_single_row_size;
     } else {
       padded_row_size = JOIN_ROW_UPPER_BOUND;
     }
@@ -783,13 +790,13 @@ void ecall_external_oblivious_sort(int op_code,
 		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		uint8_t *ptr;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  decipher.decrypt(scratch_ptr, ROW_UPPER_BOUND, data[r]->row, ROW_UPPER_BOUND);
+		  decipher.decrypt(scratch_ptr, padded_single_row_size, data[r]->row, padded_single_row_size);
 		  data[r]->num_cols = *( (uint32_t *) (data[r]->row));
 		  ptr = data[r]->row;
 		  get_next_plaintext_row(&ptr, &row_ptr, &row_len);
 		  data[r]->row_ptr = data[r]->row + row_len;;
 
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  scratch_ptr += padded_single_row_size;
 		}
 
 		if (memcmp(decipher.tag().t, buffer1_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
@@ -802,13 +809,13 @@ void ecall_external_oblivious_sort(int op_code,
 		AesGcm decipher2(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
 		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		  decipher2.decrypt(scratch_ptr, ROW_UPPER_BOUND, data[r]->row, ROW_UPPER_BOUND);
+		  decipher2.decrypt(scratch_ptr, padded_single_row_size, data[r]->row, padded_single_row_size);
 		  data[r]->num_cols = *( (uint32_t *) (data[r]->row));
 		  ptr = data[r]->row;
 		  get_next_plaintext_row(&ptr, &row_ptr, &row_len);
 		  data[r]->row_ptr = data[r]->row + row_len;;
 
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  scratch_ptr += padded_single_row_size;
 		}
 		
 		if (memcmp(decipher2.tag().t, buffer2_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
@@ -869,8 +876,8 @@ void ecall_external_oblivious_sort(int op_code,
 		//scratch_ptr = scratch;
 		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  cipher.encrypt(sort_temp[r]->row, ROW_UPPER_BOUND, scratch_ptr, ROW_UPPER_BOUND);
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  cipher.encrypt(sort_temp[r]->row, padded_single_row_size, scratch_ptr, padded_single_row_size);
+		  scratch_ptr += padded_single_row_size;
 		}
 		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 		memcpy(buffer1_ptr, iv, SGX_AESGCM_IV_SIZE);
@@ -883,8 +890,8 @@ void ecall_external_oblivious_sort(int op_code,
 		//scratch_ptr = scratch;
 		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		  cipher2.encrypt(sort_temp[r]->row, ROW_UPPER_BOUND, scratch_ptr, ROW_UPPER_BOUND);
-		  scratch_ptr+= ROW_UPPER_BOUND;
+		  cipher2.encrypt(sort_temp[r]->row, padded_single_row_size, scratch_ptr, padded_single_row_size);
+		  scratch_ptr+= padded_single_row_size;
 		}
 		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 		memcpy(buffer2_ptr, iv, SGX_AESGCM_IV_SIZE);
@@ -958,13 +965,13 @@ void ecall_external_oblivious_sort(int op_code,
 		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		uint8_t *ptr;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  decipher.decrypt(scratch_ptr, ROW_UPPER_BOUND, data[r]->row, ROW_UPPER_BOUND);
+		  decipher.decrypt(scratch_ptr, padded_single_row_size, data[r]->row, padded_single_row_size);
 		  data[r]->num_cols = *( (uint32_t *) (data[r]->row));
 		  ptr = data[r]->row;
 		  get_next_plaintext_row(&ptr, &row_ptr, &row_len);
 		  data[r]->row_ptr = data[r]->row + row_len;;
 
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  scratch_ptr += padded_single_row_size;
 		}
 		if (memcmp(decipher.tag().t, buffer1_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
 		  printf("Decipher MAC error 3\n");
@@ -976,13 +983,13 @@ void ecall_external_oblivious_sort(int op_code,
 		AesGcm decipher2(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
 		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {	
-		  decipher2.decrypt(scratch_ptr, ROW_UPPER_BOUND, data[r]->row, ROW_UPPER_BOUND);
+		  decipher2.decrypt(scratch_ptr, padded_single_row_size, data[r]->row, padded_single_row_size);
 		  data[r]->num_cols = *( (uint32_t *) (data[r]->row));
 		  ptr = data[r]->row;
 		  get_next_plaintext_row(&ptr, &row_ptr, &row_len);
 		  data[r]->row_ptr = data[r]->row + row_len;;
 
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  scratch_ptr += padded_single_row_size;
 		}
 
 		if (memcmp(decipher2.tag().t, buffer2_ptr + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
@@ -1042,8 +1049,8 @@ void ecall_external_oblivious_sort(int op_code,
 		//scratch_ptr = scratch;
 		scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = 0; r < num_rows[idx]; r++) {
-		  cipher.encrypt(sort_temp[r]->row, ROW_UPPER_BOUND, scratch_ptr, ROW_UPPER_BOUND);
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  cipher.encrypt(sort_temp[r]->row, padded_single_row_size, scratch_ptr, padded_single_row_size);
+		  scratch_ptr += padded_single_row_size;
 		}
 		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 		memcpy(buffer1_ptr, iv, SGX_AESGCM_IV_SIZE);
@@ -1055,8 +1062,8 @@ void ecall_external_oblivious_sort(int op_code,
 		//scratch_ptr = scratch;
 		scratch_ptr = buffer2_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 		for (uint32_t r = num_rows[idx]; r < num_rows[idx] + num_rows[pair_idx]; r++) {
-		  cipher2.encrypt(sort_temp[r]->row, ROW_UPPER_BOUND, scratch_ptr, ROW_UPPER_BOUND);
-		  scratch_ptr += ROW_UPPER_BOUND;
+		  cipher2.encrypt(sort_temp[r]->row, padded_single_row_size, scratch_ptr, padded_single_row_size);
+		  scratch_ptr += padded_single_row_size;
 		}
 		//encrypt(scratch, dec_size(buffer1_size), buffer1_ptr);
 		memcpy(buffer2_ptr, iv, SGX_AESGCM_IV_SIZE);
@@ -1126,13 +1133,13 @@ void ecall_external_oblivious_sort(int op_code,
       scratch_ptr = external_scratch_list[i] + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
       uint8_t *ptr;
       for (uint32_t r = 0; r < num_rows[i]; r++) {
-	decipher.decrypt(scratch_ptr, ROW_UPPER_BOUND, data[r]->row, ROW_UPPER_BOUND);
+	decipher.decrypt(scratch_ptr, padded_single_row_size, data[r]->row, padded_single_row_size);
 	data[r]->num_cols = *( (uint32_t *) (data[r]->row));
 	ptr = data[r]->row;
 	get_next_plaintext_row(&ptr, &row_ptr, &row_len);
 	data[r]->row_ptr = data[r]->row + row_len;;
 
-	scratch_ptr += ROW_UPPER_BOUND;
+	scratch_ptr += padded_single_row_size;
       }
 
       if (memcmp(decipher.tag().t, external_scratch_list[i] + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE) != 0) {
