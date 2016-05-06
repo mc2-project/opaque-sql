@@ -67,6 +67,8 @@ object QEDBenchmark {
         StructField("pageRank", IntegerType),
         StructField("avgDuration", IntegerType))))
       .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
+      .cache()
+    rankingsDF.count
     val result = time("big data 1 - spark sql") {
       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
       val count = df.count
@@ -81,6 +83,8 @@ object QEDBenchmark {
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
       .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .cache()
+    rankingsDF.count
     val result = time("big data 1") {
       val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
       val count = df.count
@@ -91,7 +95,8 @@ object QEDBenchmark {
 
   def bd2SparkSQL(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
-    val uservisitsDF = uservisits(sqlContext, size)
+    val uservisitsDF = uservisits(sqlContext, size).cache()
+    uservisitsDF.count
     val result = time("big data 2 - spark sql") {
       val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
@@ -109,6 +114,8 @@ object QEDBenchmark {
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
       .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .cache()
+    uservisitsDF.count
     val result = time("big data 2") {
       val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
         .encGroupByWithSum($"sourceIP", $"adRevenue".as("totalAdRevenue"))
@@ -121,8 +128,10 @@ object QEDBenchmark {
   def bd3SparkSQL(sqlContext: SQLContext, size: String) {
     import sqlContext.implicits._
     import org.apache.spark.sql.functions.{lit, sum, avg}
-    val uservisitsDF = uservisits(sqlContext, size)
-    val rankingsDF = rankings(sqlContext, size)
+    val uservisitsDF = uservisits(sqlContext, size).cache()
+    uservisitsDF.count
+    val rankingsDF = rankings(sqlContext, size).cache()
+    rankingsDF.count
     val result = time("big data 3 - spark sql") {
       val df = uservisitsDF.filter($"visitDate" > lit("1980-01-01"))
         .filter($"visitDate" < lit("1980-04-01"))
