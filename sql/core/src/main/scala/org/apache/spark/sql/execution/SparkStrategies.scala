@@ -406,8 +406,8 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.EncSort(sortExpr, planLater(child)) :: Nil
       case logical.EncJoin(left, right, leftCol, rightCol) =>
         execution.EncSortMergeJoin(planLater(left), planLater(right), leftCol, rightCol) :: Nil
-      case a @ logical.EncAggregateWithSum(groupingExpressions, sumExpression, aggOutputs, child) =>
-        execution.EncAggregateWithSum(groupingExpressions, sumExpression, aggOutputs, a.output, planLater(child)) :: Nil
+      case a @ logical.EncAggregate(groupingExpressions, aggExpressions, aggOutputs, child) =>
+        execution.EncAggregate(groupingExpressions, aggExpressions, aggOutputs, a.output, planLater(child)) :: Nil
       case e @ logical.Expand(_, _, child) =>
         execution.Expand(e.projections, e.output, planLater(child)) :: Nil
       case logical.Window(windowExprs, partitionSpec, orderSpec, child) =>

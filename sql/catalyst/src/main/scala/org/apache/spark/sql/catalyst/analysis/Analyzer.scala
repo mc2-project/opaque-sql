@@ -184,9 +184,9 @@ class Analyzer(
       case EncProject(projectList, child) if child.resolved && hasUnresolvedAlias(projectList) =>
         EncProject(assignAliases(projectList), child)
 
-      case EncAggregateWithSum(groupingExpression, sumExpression, aggOutputs, child)
+      case EncAggregate(groupingExpression, aggExpressions, aggOutputs, child)
           if child.resolved && hasUnresolvedAlias(Seq(groupingExpression)) =>
-        EncAggregateWithSum(assignAliases(Seq(groupingExpression)).head, sumExpression, aggOutputs, child)
+        EncAggregate(assignAliases(Seq(groupingExpression)).head, aggExpressions, aggOutputs, child)
 
       case g: GroupingSets if g.child.resolved && hasUnresolvedAlias(g.aggregations) =>
         g.copy(aggregations = assignAliases(g.aggregations))

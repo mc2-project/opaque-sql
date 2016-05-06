@@ -992,11 +992,11 @@ class Dataset[T] private[sql](
     Permute(logicalPlan)
   }
 
-  def encGroupByWithSum(groupByCol: Column, sumCol: Column): DataFrame = withPlan {
-    EncAggregateWithSum(
+  def encAggregate(groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
+    EncAggregate(
       UnresolvedAlias(groupByCol.expr),
-      sumCol.named,
-      Seq(AttributeReference("agg_sum", BinaryType, true)()),
+      aggCols.map(_.named),
+      aggCols.map(col => AttributeReference(col.toString + "_agg", BinaryType, true)()),
       EncSort(groupByCol.expr, logicalPlan))
   }
 

@@ -48,9 +48,9 @@ case class EncSort(sortExpr: Expression, child: LogicalPlan) extends UnaryNode {
   override def maxRows: Option[Long] = child.maxRows
 }
 
-case class EncAggregateWithSum(
+case class EncAggregate(
     groupingExpression: NamedExpression,
-    sumExpression: NamedExpression,
+    aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],
     child: LogicalPlan)
   extends UnaryNode {

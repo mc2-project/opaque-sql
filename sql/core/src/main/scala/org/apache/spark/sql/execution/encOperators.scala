@@ -98,9 +98,9 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
   }
 }
 
-case class EncAggregateWithSum(
+case class EncAggregate(
     groupingExpression: NamedExpression,
-    sumExpression: NamedExpression,
+    aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],
     output: Seq[Attribute],
     child: SparkPlan)
@@ -110,15 +110,15 @@ case class EncAggregateWithSum(
 
   override def doExecute() = {
     val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
-    val sumExprPos = QED.attributeIndexOf(sumExpression.references.toSeq(0), child.output)
+    val aggExprsPos = aggExpressions.map(expr => QED.attributeIndexOf(expr.references.toSeq(0), child.output)).toList
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
-      (child.output.size, groupingExprPos, sumExprPos) match {
-        case (2, 0, 1) =>
+      (child.output.size, groupingExprPos, aggExprsPos) match {
+        case (2, 0, List(1)) =>
           (OP_GROUPBY_COL1_SUM_COL2_STEP1.value,
             OP_GROUPBY_COL1_SUM_COL2_STEP2.value,
             OP_SORT_COL3_IS_DUMMY_COL1.value,
             OP_FILTER_COL3_NOT_DUMMY.value)
-        case (3, 1, 2) =>
+        case (3, 1, List(2)) =>
           (OP_GROUPBY_COL2_SUM_COL3_STEP1.value,
             OP_GROUPBY_COL2_SUM_COL3_STEP2.value,
             OP_SORT_COL4_IS_DUMMY_COL2.value,

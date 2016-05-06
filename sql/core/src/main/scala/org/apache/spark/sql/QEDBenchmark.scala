@@ -121,7 +121,7 @@ object QEDBenchmark {
     uservisitsDF.count
     val result = time("big data 2") {
       val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
-        .encGroupByWithSum($"sourceIP", $"adRevenue".as("totalAdRevenue"))
+        .encAggregate($"sourceIP", $"adRevenue".as("totalAdRevenue"))
       val count = df.count
       println("big data 2 - num rows: " + count)
       df
