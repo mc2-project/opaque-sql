@@ -1060,14 +1060,14 @@ uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
 
     temp_ptr = temp;
     attrs->eval_attributes[i]->flush(temp);
-	encrypt_attribute(&temp_ptr, &output_ptr);
+    encrypt_attribute(&temp_ptr, &output_ptr);
 	
-	// value_len = *( (uint32_t *) (temp + TYPE_SIZE));
-	// *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
-	
-	// encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
-	
-	// output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
+    // value_len = *( (uint32_t *) (temp + TYPE_SIZE));
+    // *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
+    
+    // encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
+    
+    // output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
   return (output_ptr - output);

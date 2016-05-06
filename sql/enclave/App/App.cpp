@@ -669,24 +669,30 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   uint8_t *output_rows = NULL;
 
   if (flag == 1) {
-	output_rows = (uint8_t *) malloc(output_rows_length);
+    output_rows = (uint8_t *) malloc(output_rows_length);
   } else {
-	// TODO: change this hard-coded buffer
-	uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
+    // TODO: change this hard-coded buffer
+    uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
     output_rows_length = num_rows  * real_size;
-	output_rows = (uint8_t *) malloc(4 + output_rows_length);
+    output_rows = (uint8_t *) malloc(4 + output_rows_length);
   }
 
-  
-  ecall_scan_aggregation_count_distinct(eid, op_code,
-										input_rows_ptr, input_rows_length,
-										num_rows,
-										agg_row_ptr, agg_row_length,
-										output_rows + 4, output_rows_length,
-										&actual_size,
-										flag,
-										(uint32_t *) output_rows);
+  uint64_t t = 0;
+  {
+    scoped_timer timer(&t);
+    ecall_scan_aggregation_count_distinct(eid, op_code,
+					  input_rows_ptr, input_rows_length,
+					  num_rows,
+					  agg_row_ptr, agg_row_length,
+					  output_rows + 4, output_rows_length,
+					  &actual_size,
+					  flag,
+					  (uint32_t *) output_rows);
+  }
 
+  double t_ms = ((double) t) / 1000;
+  printf("Enclave aggregation took %f ms\n", t_ms);
+  
   // printf("alloc size is %u, actual_size is %u, num_rows is %u\n", output_rows_length, actual_size, num_rows);
 
   jbyteArray ret = env->NewByteArray(actual_size);
