@@ -118,6 +118,26 @@ object QEDBenchmark {
     }
   }
 
+  def bd3SparkSQL(sqlContext: SQLContext, size: String) {
+    import sqlContext.implicits._
+    import org.apache.spark.sql.functions.{lit, sum, avg}
+    val uservisitsDF = uservisits(sqlContext, size)
+    val rankingsDF = rankings(sqlContext, size)
+    val result = time("big data 3 - spark sql") {
+      val df = uservisitsDF.filter($"visitDate" > lit("1980-01-01"))
+        .filter($"visitDate" < lit("1980-04-01"))
+        .join(rankingsDF, rankingsDF("pageURL") === uservisitsDF("destURL"))
+        .select($"sourceIP", $"pageRank", $"adRevenue")
+        .groupBy($"sourceIP")
+        .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
+        .orderBy($"totalRevenue".desc)
+      df.show
+      val count = df.count
+      println("big data 3 spark sql - num rows: " + count)
+      df
+    }
+  }
+
   def rankings(sqlContext: SQLContext, size: String): DataFrame =
     sqlContext.read.schema(
       StructType(Seq(
