@@ -41,7 +41,7 @@ class GenericType {
   virtual void reset() = 0;
 
   virtual void sum(GenericType *v) {}
-  virtual void avg(uint64_t count) {}
+  virtual void avg(uint32_t count) {}
 
   uint8_t type_;
 };
@@ -94,8 +94,8 @@ class Integer : public GenericType {
 
   void sum(GenericType *v);
 
-  void avg(uint64_t count) {
-    int temp = (int) count;
+  void avg(uint32_t count) {
+    uint32_t temp = (uint32_t) count;
     value = value / temp;
   }
 
@@ -152,7 +152,7 @@ class Float : public GenericType {
 
   void sum(GenericType *v);
 
-  void avg(uint64_t count) {
+  void avg(uint32_t count) {
     float temp = (float) count;
     value = value / temp;
   }

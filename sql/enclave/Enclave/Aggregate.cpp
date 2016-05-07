@@ -258,7 +258,7 @@ public:
       {
 	uint32_t num = *( (uint32_t *) (agg_ptr + HEADER_SIZE));
 	dynamic_cast<Integer *>(agg_field)->value += num;
-	uint64_t count_temp = *( (uint64_t *) (data_ptr + HEADER_SIZE * 2 + HEADER_SIZE));
+        uint32_t count_temp = *( (uint32_t *) (data_ptr + HEADER_SIZE * 2 + HEADER_SIZE));
 	this->count += count_temp;
 	ret_len = (HEADER_SIZE + 4) * 2;
       }
@@ -268,7 +268,7 @@ public:
       {
 	float num = *( (float *) (agg_ptr + HEADER_SIZE));
 	dynamic_cast<Float *>(agg_field)->value += num;
-	uint64_t count_temp = *( (uint64_t *) (data_ptr + HEADER_SIZE * 2 + HEADER_SIZE));
+        uint32_t count_temp = *( (uint32_t *) (data_ptr + HEADER_SIZE * 2 + HEADER_SIZE));
 	this->count += count_temp;
 	ret_len = (HEADER_SIZE + 4) * 2;
       }
@@ -308,10 +308,10 @@ public:
     agg_field->flush(output_ptr);
     uint32_t flush_len = *( (uint32_t *) (output_ptr + TYPE_SIZE)) + HEADER_SIZE;
     output_ptr += flush_len;
-    *output_ptr = LONG;
-    *((uint32_t *) (output_ptr + TYPE_SIZE)) = 8;
+    *output_ptr = INT;
+    *((uint32_t *) (output_ptr + TYPE_SIZE)) = 4;
     *((uint32_t *) (output_ptr + HEADER_SIZE)) = this->count;
-    output_ptr += HEADER_SIZE + 8;
+    output_ptr += HEADER_SIZE + 4;
 
     return (output_ptr - output);
   }
@@ -332,7 +332,7 @@ public:
   }
 
   GenericType *agg_field;
-  uint64_t count;
+  uint32_t count;
 };
 
 class agg_stats_data {
