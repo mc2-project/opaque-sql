@@ -117,7 +117,12 @@ class aggregate_data_count : public aggregate_data {
 
 class generic_agg_sum : public aggregate_data {
 public:
-  generic_agg_sum(uint8_t type) {
+  generic_agg_sum() {
+    agg_field = NULL;
+  }
+
+  void init(uint8_t type) {
+    if (agg_field == NULL) {
     switch(type) {
     case INT:
       agg_field = new Integer;
@@ -134,17 +139,22 @@ public:
       break;
     }
   }
+  }
 
   ~generic_agg_sum() {
+    if (agg_field != NULL) {
     delete agg_field;
+  }
   }
 
   void agg(GenericType *v) {
+    init(v->type_);
     agg_field->sum(v);
   }
 
   uint32_t agg_buffer(uint8_t *data_ptr) {
     uint8_t attr_type = *data_ptr;
+    init(attr_type);
     uint32_t len = 0;
 
     switch(attr_type) {
@@ -169,7 +179,9 @@ public:
   }
 
   void reset() {
+    if (agg_field != NULL) {
     agg_field->reset();
+  }
   }
 
   uint32_t flush(uint8_t *output, int if_final) {
@@ -202,6 +214,7 @@ public:
     if (dynamic_cast<generic_agg_sum *>(data) != NULL) {
       GenericType *v1 = this->agg_field;
       GenericType *v2 = dynamic_cast<generic_agg_sum *> (data)->agg_field;
+      init(v2->type_);
 
       if (v1->type_ == INT) {
 	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
@@ -357,13 +370,13 @@ public:
     if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2||
         op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
       num_agg_fields = 1;
-      agg_data_list[0] = new generic_agg_sum(INT);
+      agg_data_list[0] = new generic_agg_sum();
     } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
 	       op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
 
       num_agg_fields = 2;
       agg_data_list[0] = new generic_agg_avg(INT);
-      agg_data_list[1] = new generic_agg_sum(FLOAT);
+      agg_data_list[1] = new generic_agg_sum();
 
     } else {
       //agg_data = NULL;
