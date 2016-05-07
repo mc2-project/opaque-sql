@@ -214,10 +214,10 @@ case class EncSortMergeJoin(
     val leftColPos = QED.attributeIndexOf(leftCol.references.toSeq(0), left.output)
     val rightColPos = QED.attributeIndexOf(rightCol.references.toSeq(0), right.output)
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
-      (leftColPos, rightColPos) match {
-        case (0, 0) =>
+      (left.output.size, right.output.size, leftColPos, rightColPos) match {
+        case (2, 3, 0, 0) =>
           (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
-        case (1, 1) =>
+        case (3, 3, 1, 1) =>
           (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_COL4_NOT_DUMMY)
       }
 
