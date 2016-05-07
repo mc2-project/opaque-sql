@@ -81,7 +81,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       case (str, x) => InternalRow(str, x).encSerialize
     }
     val sorted = ObliviousSort.ColumnSort(
-      sparkContext, sparkContext.makeRDD(encData), OP_SORT_COL2.value)
+      sparkContext, sparkContext.makeRDD(encData), OP_SORT_COL2)
       .map(row => Row(QED.parseRow(row): _*)).collect
     assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }

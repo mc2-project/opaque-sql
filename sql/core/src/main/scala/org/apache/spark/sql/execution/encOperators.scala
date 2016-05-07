@@ -73,7 +73,7 @@ case class Permute(child: SparkPlan) extends UnaryNode {
       rowIter.map(row =>
         InternalRow.fromSeq(QED.randomId(enclave, eid) +: row.toSeq(schema)).encSerialize)
     }
-    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode = OP_SORT_COL1.value).mapPartitions { serRowIter =>
+    ObliviousSort.ColumnSort(childRDD.context, childRDD, OP_SORT_COL1).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       serRowIter.map(serRow => converter(
         InternalRow.fromSeq(QED.parseRow(serRow).tail)))
@@ -88,8 +88,8 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
     val childRDD = child.execute().map(_.encSerialize)
     val sortAttrPos = QED.attributeIndexOf(sortExpr.references.toSeq(0), child.output)
     val opcode = sortAttrPos match {
-      case 0 => OP_SORT_COL1.value
-      case 1 => OP_SORT_COL2.value
+      case 0 => OP_SORT_COL1
+      case 1 => OP_SORT_COL2
     }
     ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode).mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
@@ -114,20 +114,20 @@ case class EncAggregate(
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
       (child.output.size, groupingExprPos, aggExprsPos) match {
         case (2, 0, List(1)) =>
-          (OP_GROUPBY_COL1_SUM_COL2_STEP1.value,
-            OP_GROUPBY_COL1_SUM_COL2_STEP2.value,
-            OP_SORT_COL3_IS_DUMMY_COL1.value,
-            OP_FILTER_COL3_NOT_DUMMY.value)
+          (OP_GROUPBY_COL1_SUM_COL2_STEP1,
+            OP_GROUPBY_COL1_SUM_COL2_STEP2,
+            OP_SORT_COL3_IS_DUMMY_COL1,
+            OP_FILTER_COL3_NOT_DUMMY)
         case (3, 1, List(2)) =>
-          (OP_GROUPBY_COL2_SUM_COL3_STEP1.value,
-            OP_GROUPBY_COL2_SUM_COL3_STEP2.value,
-            OP_SORT_COL4_IS_DUMMY_COL2.value,
-            OP_FILTER_COL4_NOT_DUMMY.value)
+          (OP_GROUPBY_COL2_SUM_COL3_STEP1,
+            OP_GROUPBY_COL2_SUM_COL3_STEP2,
+            OP_SORT_COL4_IS_DUMMY_COL2,
+            OP_FILTER_COL4_NOT_DUMMY)
         case (3, 0, List(1, 2)) =>
-          (OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1.value,
-            OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2.value,
-            OP_SORT_COL3_IS_DUMMY_COL1.value,
-            OP_FILTER_COL4_NOT_DUMMY.value)
+          (OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1,
+            OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2,
+            OP_SORT_COL3_IS_DUMMY_COL1,
+            OP_FILTER_COL4_NOT_DUMMY)
       }
 
     val childRDD = child.execute().mapPartitions { rowIter =>
@@ -142,7 +142,7 @@ case class EncAggregate(
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
       val boundary = time("aggregate - step 1 - JNI call") {
         enclave.Aggregate(
-          eid, aggStep1Opcode, concatRows, rows.length, new Array[Byte](aggSize))
+          eid, aggStep1Opcode.value, concatRows, rows.length, new Array[Byte](aggSize))
       }
       // enclave.StopEnclave(eid)
       Iterator(boundary)
@@ -152,7 +152,7 @@ case class EncAggregate(
     val (enclave, eid) = QED.initEnclave()
     val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
       enclave.ProcessBoundary(
-        eid, aggStep1Opcode,
+        eid, aggStep1Opcode.value,
         QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
     }
     // enclave.StopEnclave(eid)
@@ -172,7 +172,7 @@ case class EncAggregate(
         val (enclave, eid) = QED.initEnclave()
         assert(rows.length > 0)
         val partialAgg = enclave.Aggregate(
-          eid, aggStep2Opcode, concatRows, rows.length, boundaryRecord)
+          eid, aggStep2Opcode.value, concatRows, rows.length, boundaryRecord)
         assert(partialAgg.nonEmpty,
           s"enclave.Aggregate($eid, $aggStep2Opcode, ${concatRows.length}, ${rows.length}, ${boundaryRecord.length}) returned empty result given input starting with ${concatRows.slice(0, 16).toList}")
         // enclave.StopEnclave(eid)
@@ -190,7 +190,7 @@ case class EncAggregate(
     // Filter out the non-final aggregates
     val finalAggregates = sortedAggregates.mapPartitions { serRows =>
       val (enclave, eid) = QED.initEnclave()
-      serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode, serRow))
+      serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode.value, serRow))
     }
 
     finalAggregates.flatMap { serRows =>
@@ -238,7 +238,7 @@ case class EncSortMergeJoin(
         QED.splitBytes(rightProcessed, rightRows.length).iterator)
     }
 
-    val sorted = ObliviousSort.ColumnSort(sparkContext, processed, joinOpcode.value)
+    val sorted = ObliviousSort.ColumnSort(sparkContext, processed, joinOpcode)
 
     val lastPrimaryRows = sorted.mapPartitions { rowIter =>
       val rows = rowIter.toArray

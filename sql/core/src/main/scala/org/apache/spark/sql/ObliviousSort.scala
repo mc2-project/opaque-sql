@@ -18,7 +18,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
-import org.apache.spark.sql.QEDOpcode._
+import org.apache.spark.sql.QEDOpcode
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.storage.StorageLevel
 
@@ -49,7 +49,7 @@ object ObliviousSort extends java.io.Serializable {
 
   // this function performs an oblivious sort on an array of (column, (row, value))
   def OSortSingleMachine_WithIndex(
-      values: Array[Value], low_idx: Int, len: Int, opcode: Int) = {
+      values: Array[Value], low_idx: Int, len: Int, opcode: QEDOpcode) = {
 
     val valuesSlice = values.slice(low_idx, low_idx + len)
 
@@ -61,7 +61,7 @@ object ObliviousSort extends java.io.Serializable {
     val (enclave, eid) = QED.initEnclave()
     val allRowsSorted =
       if (nonEmptyRows.nonEmpty) {
-        enclave.ObliviousSort(eid, opcode, concatRows, 0, nonEmptyRows.length)
+        enclave.ObliviousSort(eid, opcode.value, concatRows, 0, nonEmptyRows.length)
       }
       else Array.empty[Byte]
     // enclave.StopEnclave(eid)
@@ -69,7 +69,7 @@ object ObliviousSort extends java.io.Serializable {
     // Copy rows back into values
     val sortedRowIter =
       if (nonEmptyRows.nonEmpty) {
-        if (opcode == OP_JOIN_COL2.value) {
+        if (opcode.isJoin) {
           // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
           // them evenly
           QED.splitBytes(allRowsSorted, nonEmptyRows.length).iterator
@@ -103,7 +103,7 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def ColumnSortParFunction1(index: Int, it: Iterator[(Array[Byte], Int)],
-      numPartitions: Int, r: Int, s: Int, opcode: Int): Iterator[Value] = {
+      numPartitions: Int, r: Int, s: Int, opcode: QEDOpcode): Iterator[Value] = {
 
     val rounds = s / numPartitions
     var ret_result = Array.empty[Value]
@@ -149,7 +149,8 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def ColumnSortStep3(
-      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: Int): Iterator[Value] = {
+      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode)
+    : Iterator[Value] = {
 
     var len = 0
     var i = 0
@@ -229,7 +230,7 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortFinal(key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: Int)
+  def ColumnSortFinal(key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode)
     : Iterator[(Int, (Int, Array[Byte]))] = {
 
     var result = Array.empty[Value]
@@ -364,7 +365,7 @@ object ObliviousSort extends java.io.Serializable {
 
   // this sorting algorithm is taken from "Tight Bounds on the Complexity of Parallel Sorting"
   def ColumnSort(
-      sc: SparkContext, data: RDD[Array[Byte]], opcode: Int, r_input: Int = 0, s_input: Int = 0)
+      sc: SparkContext, data: RDD[Array[Byte]], opcode: QEDOpcode, r_input: Int = 0, s_input: Int = 0)
     : RDD[Array[Byte]] = {
 
     // let len be N
@@ -378,9 +379,9 @@ object ObliviousSort extends java.io.Serializable {
         val (enclave, eid) = QED.initEnclave()
         val rows = rowIter.toArray
         val concatRows = QED.concatByteArrays(rows)
-        val sortedRows = enclave.ObliviousSort(eid, opcode, concatRows, 0, rows.length)
+        val sortedRows = enclave.ObliviousSort(eid, opcode.value, concatRows, 0, rows.length)
         val sortedRowIter =
-          if (opcode == OP_JOIN_COL2.value) {
+          if (opcode.isJoin) {
             // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
             // them evenly
             QED.splitBytes(sortedRows, rows.length).iterator

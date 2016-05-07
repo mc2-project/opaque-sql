@@ -48,4 +48,8 @@ public enum QEDOpcode {
     public int value() {
         return _value;
     }
+
+    public boolean isJoin() {
+        return this == OP_JOIN_COL1 || this == OP_JOIN_COL2;
+    }
 }
