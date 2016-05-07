@@ -120,6 +120,9 @@ object QED {
       case t if t == FLOAT.value =>
         assert(size == 4)
         buf.getFloat()
+      case t if t == DATE.value =>
+        assert(size == 8)
+        new java.sql.Date(buf.getLong() * 1000)
     }
     result.asInstanceOf[T]
   }

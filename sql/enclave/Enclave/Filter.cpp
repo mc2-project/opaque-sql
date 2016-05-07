@@ -115,7 +115,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
     uint64_t date = *( (uint64_t *) (decrypted_data + HEADER_SIZE));
 
-    if (date >= 60276470400 && date <= 60284242800) {
+    if (date >= 315561600 && date <= 323424000) {
       return 1;
     } else {
       return 0;

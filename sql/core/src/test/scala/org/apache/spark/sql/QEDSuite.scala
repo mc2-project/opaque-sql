@@ -23,12 +23,16 @@ import java.nio.ByteOrder
 import scala.util.Random
 
 import oblivious_sort.ObliviousSort
+import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.BinaryType
+import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 
@@ -93,6 +97,29 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val filtered = words.encFilter(OP_FILTER_COL2_GT3)
     assert(QED.decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
+  }
+
+  test("encFilter on date") {
+    import java.sql.Date
+    val dates = List("1975-01-01", "1980-01-01", "1980-03-02", "1980-04-01", "1990-01-01")
+    val filteredDates = List("1980-01-01", "1980-03-02", "1980-04-01")
+    val data = sqlContext.createDataFrame(
+      sparkContext.makeRDD(dates.map(d =>
+        Row(DateTimeUtils.toJavaDate(DateTimeUtils.stringToDate(UTF8String.fromString(d)).get)))),
+      StructType(Seq(StructField("date", DateType))))
+    val filtered = data.filter($"date" >= lit("1980-01-01"))
+      .filter($"date" <= lit("1980-04-01"))
+    assert(filtered.collect.map(_.get(0).toString).sorted === filteredDates.sorted)
+
+    val encDates = data.mapPartitions { iter =>
+      val (enclave, eid) = QED.initEnclave()
+      iter.map {
+        case Row(d: java.sql.Date) => QED.encrypt(enclave, eid, d)
+      }
+    }.toDF("date")
+    val encFiltered = encDates.encFilter(OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
+    assert(QED.decrypt1[java.sql.Date](encFiltered.collect).map(_.toString).sorted ===
+      filteredDates.sorted)
   }
 
   test("encPermute") {
