@@ -98,7 +98,6 @@ enclave {
 	 public void ecall_encrypt_attribute([in, size=input_size] uint8_t *input, uint32_t input_size,
 				             [out, size=output_size] uint8_t *output, uint32_t output_size,
 					     [out] uint32_t *actual_size);
-
 	};
 
     untrusted {

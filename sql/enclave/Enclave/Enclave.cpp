@@ -551,8 +551,7 @@ void ecall_external_oblivious_sort(int op_code,
 
   int operation = 0;
 
-  if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 ||
-      op_code == OP_SORT_COL3_IS_DUMMY_COL1 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+  if (get_sort_operation(op_code) == SORT_SORT) {
 
     single_row_size = get_plaintext_padded_row_size(buffer_list[0]);
     padded_single_row_size = (4 + single_row_size / 16) * 16;
@@ -562,7 +561,7 @@ void ecall_external_oblivious_sort(int op_code,
       sort_data[i] = new SortRecord(padded_single_row_size);
     }
     operation = SORT_SORT;
-  } else if (op_code == OP_JOIN_COL2) {
+  } else if (get_sort_operation(op_code) == SORT_JOIN) {
     join_data = (JoinRecord **) malloc(sizeof(JoinRecord *) * max_list_length);
     for (uint32_t i = 0; i < max_list_length; i++) {
       join_data[i] = new JoinRecord;	  
@@ -1386,3 +1385,5 @@ void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
   encrypt_attribute(&input_ptr, &output_ptr);
   *actual_size = (output_ptr - output);
 }
+
+

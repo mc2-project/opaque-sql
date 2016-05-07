@@ -48,6 +48,7 @@
 #include "org_apache_spark_sql_SGXEnclave.h"
 #include "sgx_tcrypto.h"
 #include "define.h"
+#include "common.h"
 
 
 class scoped_timer {
@@ -565,8 +566,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     uint32_t element_size = input_len / num_items;
     uint32_t elements_per_part = 0;
     
-    if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 ||
-	op_code == OP_SORT_COL3_IS_DUMMY_COL1 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+    if (get_sort_operation((int) op_code) == SORT_SORT) {
 
       uint8_t *row_ptr = input_copy;
       uint32_t len = 0;

@@ -337,29 +337,29 @@ void sort_merge_join(int op_code,
   // (num cols of table P + num cols of table f)
   // each attribute will be empty, but type is specified
   if (op_code == OP_JOIN_COL2) {
-	*( (uint32_t *) dummy_row_ptr) = 5;
-	dummy_row_ptr += 4;
-	uint8_t types[5] = {DUMMY_INT, DUMMY_STRING, DUMMY_INT, DUMMY_INT, DUMMY_INT};
-	uint32_t upper_bound = 0;
+    *( (uint32_t *) dummy_row_ptr) = 5;
+    dummy_row_ptr += 4;
+    uint8_t types[5] = {DUMMY_INT, DUMMY_STRING, DUMMY_INT, DUMMY_INT, DUMMY_INT};
+    uint32_t upper_bound = 0;
 	
-	for (uint32_t i = 0; i < 5; i++) {
-	  uint8_t t = types[i];
-	  // instead of writing back the correct type, we need to write a dummy type
-	  *dummy_row_ptr = types[i];
-	  dummy_row_ptr += TYPE_SIZE;
+    for (uint32_t i = 0; i < 5; i++) {
+      uint8_t t = types[i];
+      // instead of writing back the correct type, we need to write a dummy type
+      *dummy_row_ptr = types[i];
+      dummy_row_ptr += TYPE_SIZE;
 	  
-	  if (t == DUMMY_INT) {
-		upper_bound = INT_UPPER_BOUND;
-	  } else if (t == DUMMY_STRING) {
-		upper_bound = STRING_UPPER_BOUND;
-	  } else {
-		upper_bound = 0;
-	  }
+      if (t == DUMMY_INT) {
+	upper_bound = INT_UPPER_BOUND;
+      } else if (t == DUMMY_STRING) {
+	upper_bound = STRING_UPPER_BOUND;
+      } else {
+	upper_bound = 0;
+      }
 
-	  *( (uint32_t *) dummy_row_ptr) = upper_bound;
-	  dummy_row_ptr += 4;
-	  dummy_row_ptr += upper_bound;
-	}
+      *( (uint32_t *) dummy_row_ptr) = upper_bound;
+      dummy_row_ptr += 4;
+      dummy_row_ptr += upper_bound;
+    }
   } else {
     printf("sort_merge_join: Unknown opcode %d\n", op_code);
     assert(false);

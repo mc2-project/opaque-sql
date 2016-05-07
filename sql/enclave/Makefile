@@ -34,16 +34,30 @@ else
         SGX_COMMON_CFLAGS += -O2
 endif
 
+######## Common Settings ########
+
+Common_Cpp_Files := Common/common.cpp
+Common_Include_Paths := -IInclude -ICommon
+
+Common_C_Flags := -fPIC -Wno-attributes $(Common_Include_Paths)
+Common_Cpp_Flags := $(Common_C_Flags) -std=c++11
+
+Common_Cpp_Objects := $(Common_Cpp_Files:.cpp=.o)
+
+Common/%.o: Common/%.cpp
+	@$(CXX) $(Common_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
+
 ######## App Settings ########
 
 ifneq ($(SGX_MODE), HW)
-	Urts_Library_Name := sgx_urts_sim
+Urts_Library_Name := sgx_urts_sim
 else
-	Urts_Library_Name := sgx_urts
-endif
+Urts_Library_Name := sgx_urts
+endif	
 
 App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
-App_Include_Paths := -IInclude -IApp -I$(SGX_SDK)/include
+App_Include_Paths := -IInclude -IApp -ICommon -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -85,7 +99,7 @@ else
 endif
 
 Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/util.cpp Enclave/InternalTypes.cpp Enclave/Expression.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp Enclave/Project.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
-Enclave_Include_Paths := -IInclude -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
+Enclave_Include_Paths := -IInclude -IEnclave -ICommon -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++03 -nostdinc++
@@ -148,11 +162,11 @@ App/%.o: App/%.cpp
 	@$(CXX) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
+$(App_Name): App/Enclave_u.o $(App_Cpp_Objects) $(Common_Cpp_Objects)
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-$(App_SO_Name): App/Enclave_u.o $(App_Cpp_Objects)
+$(App_SO_Name): App/Enclave_u.o $(App_Cpp_Objects) $(Common_Cpp_Objects)
 	@$(CXX) $^ $(App_Link_Flags) -shared -o $@
 	@echo "LINK =>  $@"
 
@@ -170,7 +184,7 @@ Enclave/%.o: Enclave/%.cpp
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects)
+$(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects) $(Common_Cpp_Objects)
 	@$(CXX) $^ -o $@  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -181,4 +195,4 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
-	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
+	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* $(Common_Cpp_Objects)

@@ -11,6 +11,7 @@
 #include "define.h"
 #include "InternalTypes.h"
 #include "Crypto.h"
+#include "common.h"
 
 /* 
  * printf: 
