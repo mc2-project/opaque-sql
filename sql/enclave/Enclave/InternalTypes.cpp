@@ -14,6 +14,9 @@ uint8_t get_dummy_type(uint8_t attr_type) {
 
   case STRING:
     return DUMMY_STRING;
+
+  default:
+    printf("get_dummy_type: Unknown type %d\n", attr_type);
   }
 }
 
@@ -204,7 +207,11 @@ void String::consume(uint8_t *input, int mode) {
 	  data = input + HEADER_SIZE;
 	  if_alloc = -1;
 	}
-	break;
+    break;
+
+  default:
+    printf("String::consume: Unknown mode %d\n", mode);
+    assert(false);
   }
 
 }
@@ -343,6 +350,9 @@ void Date::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == DATE) {
 	this->date = *( (float *) (input + HEADER_SIZE));
+  } else {
+    printf("Date::consume: Unexpected type %d\n", type);
+    assert(false);
   }
   
 }
@@ -664,6 +674,9 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
 	num_attr = 1;
 	num_eval_attr = 1;
 
+  } else {
+    printf("JoinAttributes::re_init: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
@@ -700,7 +713,9 @@ void SortAttributes::init() {
     switch (op_code) {
     case OP_SORT_COL1: sort_col = 1; break;
     case OP_SORT_COL2: sort_col = 2; break;
-    default: assert(false);
+    default:
+      printf("SortAttributes::init: Unknown opcode %d\n", op_code);
+      assert(false);
     }
 	find_plaintext_attribute(row, num_cols,
                              sort_col, &sort_pointer, &len);
@@ -775,7 +790,9 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
     switch (op_code) {
     case OP_SORT_COL1: sort_col = 1; break;
     case OP_SORT_COL2: sort_col = 2; break;
-    default: assert(false);
+    default:
+      printf("SortAttributes::init: Unknown opcode %d\n", op_code);
+      assert(false);
     }
     	find_plaintext_attribute(row, num_cols,
                              sort_col, &sort_pointer, &len);

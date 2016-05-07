@@ -414,6 +414,7 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *e
   sgx_status_t status = ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length);
   if (status != SGX_SUCCESS) {
     printf("filter_single_row() not successful!\n");
+    print_error_message(status);
   }
 
   env->ReleaseByteArrayElements(row, row_ptr, 0);

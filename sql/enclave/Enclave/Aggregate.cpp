@@ -172,7 +172,11 @@ public:
 	dynamic_cast<Float *>(agg_field)->value += num;
 	len = HEADER_SIZE + 4;
       }
-      break;      
+      break;
+
+    default:
+      printf("generic_agg_sum::agg_buffer: Unknown type %d\n", attr_type);
+      assert(false);
     }
 
     return len;
@@ -220,6 +224,9 @@ public:
 	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
       } else if (v1->type_ == FLOAT) {
 	dynamic_cast<Float *>(v1)->value = dynamic_cast<Float *>(v2)->value;
+      } else {
+        printf("generic_agg_sum::copy_data: Unknown type %d\n", v1->type_);
+        assert(false);
       }
     }
   }
@@ -255,6 +262,9 @@ public:
   void agg(GenericType *v) {
     if (agg_field->type_ == INT || agg_field->type_ == FLOAT) {
       agg_field->sum(v);
+    } else {
+      printf("generic_agg_avg::agg: Unknown type %d\n", agg_field->type_);
+      assert(false);
     }
     count += 1;
   }
@@ -286,6 +296,10 @@ public:
 	ret_len = (HEADER_SIZE + 4) * 2;
       }
       break;      
+
+    default:
+      printf("generic_agg_avg::agg_buffer: Unknown type %d\n", attr_type);
+      assert(false);
     }
     
     return ret_len;
@@ -340,6 +354,9 @@ public:
 	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
       } else if (v1->type_ == FLOAT) {
 	dynamic_cast<Float *>(v1)->value = dynamic_cast<Float *>(v2)->value;
+      } else {
+        printf("generic_agg_avg::copy_data: Unknown type %d\n", v1->type_);
+        assert(false);
       }
     }
   }

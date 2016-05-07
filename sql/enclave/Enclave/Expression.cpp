@@ -45,7 +45,7 @@ void evaluate_join(GenericType **input_attr, uint32_t num_input_attr,
     }
     break;
   default:
-    printf("evaluate_join: Unknown expression type\n", expression);
+    printf("evaluate_join: Unknown expression %d\n", expression);
     assert(false);
     break;
   }
@@ -76,7 +76,7 @@ void evaluate_agg(GenericType **input_attr, uint32_t num_input_attr,
     }
     break;
   default:
-    printf("evaluate_agg: Unknown expression type\n", expression);
+    printf("evaluate_agg: Unknown expression %d\n", expression);
     assert(false);
     break;
   }
@@ -108,7 +108,7 @@ void evaluate_agg_agg(GenericType **input_attr, uint32_t num_input_attr,
     }
     break;
   default:
-    printf("evaluate_agg_agg: Unknown expression type\n", expression);
+    printf("evaluate_agg_agg: Unknown expression %d\n", expression);
     assert(false);
     break;
   }
@@ -145,7 +145,7 @@ void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
     }
     break;
   default:
-    printf("evaluate_sort: Unknown expression type\n", expression);
+    printf("evaluate_sort: Unknown expression %d\n", expression);
     assert(false);
     break;
   }
@@ -164,7 +164,7 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
 	}
 	break;
   default:
-    printf("evaluate_project: Unknown expression type\n", expression);
+    printf("evaluate_project: Unknown expression %d\n", expression);
     assert(false);
     break;
   }

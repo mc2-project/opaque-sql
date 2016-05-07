@@ -50,6 +50,9 @@ void join_sort_preprocess(int op_code,
   if (op_code == OP_JOIN_COL2) {
     char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
     if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
+  } else {
+    printf("join_sort_preprocess: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
   if (if_primary == 0) {
@@ -243,6 +246,9 @@ void join_merge_row(int op_code,
 	  }
 	  input_ptr += value_len;
 	}
+  } else {
+    printf("join_merge_row: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 }
 
@@ -355,7 +361,8 @@ void sort_merge_join(int op_code,
 	  dummy_row_ptr += upper_bound;
 	}
   } else {
-    check("unknown op code", false);
+    printf("sort_merge_join: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
   dummy_row_ptr = dummy_row;

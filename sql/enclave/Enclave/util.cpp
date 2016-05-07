@@ -402,6 +402,10 @@ void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type) {
 	  output_ptr += enc_size(HEADER_SIZE + 8);
 	}
 	break;
+
+  default:
+    printf("encrypt_attribute: Unknown type %d\n", attr_type);
+    assert(false);
   }
 
   *input = input_ptr;
@@ -505,6 +509,8 @@ uint32_t attr_upper_bound(uint8_t *attr) {
 	return INT_UPPER_BOUND;
   case STRING:
 	return STRING_UPPER_BOUND;
-
+  default:
+    printf("attr_upper_bound: Unknown type %d\n", attr_type);
+    assert(false);
   }
 }
