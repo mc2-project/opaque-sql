@@ -193,8 +193,8 @@ void get_join_attribute(int op_code,
 // based on the op_code, de-duplicate the join columns
 // assume that output row has enough buffer size
 void join_merge_row(int op_code,
-					uint8_t *primary_row, uint8_t *secondary_row,
-					uint8_t *output_row) {
+                    uint8_t *primary_row, uint8_t *secondary_row,
+                    uint8_t *output_row) {
 
   uint8_t *input_ptr = primary_row;
   uint8_t *output_row_ptr = output_row;

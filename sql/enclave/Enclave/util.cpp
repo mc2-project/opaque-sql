@@ -1,5 +1,89 @@
 #include "util.h"
 
+bool is_dummy_type(uint8_t attr_type) {
+  switch(attr_type) {
+  case DUMMY:
+  case INT:
+  case STRING:
+  case FLOAT:
+  case DATE:
+  case URL_TYPE:
+  case C_CODE:
+  case L_CODE:
+  case LONG:
+  case IP_TYPE:
+  case USER_AGENT_TYPE:
+  case SEARCH_WORD_TYPE:
+    return false;
+
+  case DUMMY_INT:
+  case DUMMY_FLOAT:
+  case DUMMY_STRING:
+    return true;
+
+  default:
+    printf("is_dummy_type: Unknown type %d\n", attr_type);
+    assert(false);
+  }
+}
+
+uint8_t get_dummy_type(uint8_t attr_type) {
+  switch(attr_type) {
+  case INT:
+    return DUMMY_INT;
+
+  case FLOAT:
+    return DUMMY_FLOAT;
+
+  case STRING:
+    return DUMMY_STRING;
+
+  default:
+    printf("get_dummy_type: Unknown type %d\n", attr_type);
+    assert(false);
+  }
+}
+
+uint32_t attr_upper_bound(uint8_t attr_type) {
+  switch(attr_type) {
+  case INT:
+  case DUMMY_INT:
+  case FLOAT:
+  case DUMMY_FLOAT:
+    return INT_UPPER_BOUND;
+
+  case STRING:
+  case DUMMY_STRING:
+    return STRING_UPPER_BOUND;
+
+  case DATE:
+  case LONG:
+    return LONG_UPPER_BOUND;
+
+  case URL_TYPE:
+    return URL_UPPER_BOUND;
+
+  case C_CODE:
+    return C_CODE_UPPER_BOUND;
+
+  case L_CODE:
+    return L_CODE_UPPER_BOUND;
+
+  case IP_TYPE:
+    return IP_UPPER_BOUND;
+
+  case USER_AGENT_TYPE:
+    return USER_AGENT_UPPER_BOUND;
+
+  case SEARCH_WORD_TYPE:
+    return SEARCH_WORD_UPPER_BOUND;
+
+  default:
+    printf("attr_upper_bound: Unknown type %d\n", attr_type);
+    assert(false);
+  }
+}
+
 void printf(const char *fmt, ...)
 {
     char buf[BUFSIZ] = {'\0'};
@@ -174,19 +258,6 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
   }
 }
 
-
-// return the upper bound size for a certain type
-uint32_t get_value_bound(int type) {
-  if (type == INT) {
-	return INT_UPPER_BOUND;
-  } else if (type == STRING) {
-	return STRING_UPPER_BOUND;
-  } else {
-	return 0;
-  }
-}
-
-
 void get_table_indicator(uint8_t *primary_table,
 						 uint8_t *foreign_table) {
   char primary_table_[TABLE_ID_SIZE+1] = "11111111";
@@ -328,85 +399,16 @@ void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type) {
 	attr_type = real_type;
   }
 
-  switch (attr_type) {
+  uint32_t upper_bound = attr_upper_bound(attr_type);
 
-  case FLOAT:
-  case INT:
-  case DUMMY_INT:
-  case DUMMY_FLOAT:
-	{
-	  // value is always 4 bytes
-	  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
-	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + 4);
-	  output_ptr += 4;
-	  encrypt(input_ptr, HEADER_SIZE + 4, output_ptr);
+  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + upper_bound);
+  output_ptr += 4;
+  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
+  cpy(temp, input_ptr, HEADER_SIZE + attr_len);
+  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
 
-	  //printf("enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
-	  
-	  input_ptr += HEADER_SIZE + 4;
-	  output_ptr += enc_size(HEADER_SIZE + 4);
-	}
-
-	break;
-	
-  case STRING:
-  case URL_TYPE:
-  case C_CODE:
-  case L_CODE:
-  case DUMMY_STRING:
-  case IP_TYPE:
-  case USER_AGENT_TYPE:
-	{
-	  // fixed upper bound length is STRING_UPPER_BOUND
-	  uint32_t upper_bound = 0;
-	  
-	  if (attr_type == STRING || attr_type == DUMMY_STRING) {
-	    upper_bound = STRING_UPPER_BOUND;
-	  } else if (attr_type == URL_TYPE) {
-	    upper_bound = URL_UPPER_BOUND;
-	  } else if (attr_type == C_CODE) {
-	    upper_bound = C_CODE_UPPER_BOUND;
-	  } else if (attr_type == L_CODE) {
-	    upper_bound = L_CODE_UPPER_BOUND;
-	  } else if (attr_type == IP_TYPE) {
-	    upper_bound = IP_UPPER_BOUND;
-	  } else if (attr_type == USER_AGENT_TYPE) {
-	    upper_bound = USER_AGENT_UPPER_BOUND;
-	  } else {
-	    printf("string type unknown\n");
-	    assert(false);
-	  }
-	  
-	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + upper_bound);
-	  output_ptr += 4;
-	  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
-	  cpy(temp, input_ptr, HEADER_SIZE + attr_len);
-	  encrypt(temp, HEADER_SIZE + upper_bound, output_ptr);
-
-	  //printf("[String type] enc_size is %u\n", *((uint32_t *) (output_ptr - 4)));
-	  
-	  input_ptr += HEADER_SIZE + attr_len;
-	  output_ptr += enc_size(HEADER_SIZE + upper_bound);
-	}
-
-	break;
-
-  case DATE:
-	{
-	  // value is always 8 bytes
-	  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + 8);
-	  output_ptr += 4;
-	  encrypt(input_ptr, HEADER_SIZE + 8, output_ptr);
-
-	  input_ptr += HEADER_SIZE + 8;
-	  output_ptr += enc_size(HEADER_SIZE + 8);
-	}
-	break;
-
-  default:
-    printf("encrypt_attribute: Unknown type %d\n", attr_type);
-    assert(false);
-  }
+  input_ptr += HEADER_SIZE + attr_len;
+  output_ptr += enc_size(HEADER_SIZE + upper_bound);
 
   *input = input_ptr;
   *output = output_ptr;
@@ -500,21 +502,6 @@ void BufferReader::inc_ptr(uint8_t *ptr) {
 	current_pointer += inc_size;
   }
 }
-
-uint32_t attr_upper_bound(uint8_t *attr) {
-  uint8_t attr_type = *attr;
-  
-  switch(attr_type) {
-  case INT:
-	return INT_UPPER_BOUND;
-  case STRING:
-	return STRING_UPPER_BOUND;
-  default:
-    printf("attr_upper_bound: Unknown type %d\n", attr_type);
-    assert(false);
-  }
-}
-
 
 uint32_t get_plaintext_padded_row_size(uint8_t *row) {
   uint8_t *row_ptr = row;

@@ -715,7 +715,7 @@ void ecall_external_oblivious_sort(int op_code,
       sort_data_ptr = data[0]->row;
       for (uint32_t col = 0; col < data[0]->num_cols; col++) {
 	attr_len = *( (uint32_t *) (sort_data_ptr + TYPE_SIZE));
-	padded_row_size += HEADER_SIZE + attr_upper_bound(sort_data_ptr);
+        padded_row_size += HEADER_SIZE + attr_upper_bound(*sort_data_ptr);
 	sort_data_ptr += HEADER_SIZE + attr_len;
       }
 

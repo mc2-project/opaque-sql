@@ -1,25 +1,5 @@
 #include "InternalTypes.h"
 
-bool is_dummy_type(uint8_t attr_type) {
-  return (attr_type == DUMMY_INT || attr_type == DUMMY_FLOAT);
-}
-
-uint8_t get_dummy_type(uint8_t attr_type) {
-  switch(attr_type) {
-  case INT:
-    return DUMMY_INT;
-    
-  case FLOAT:
-    return DUMMY_FLOAT;
-
-  case STRING:
-    return DUMMY_STRING;
-
-  default:
-    printf("get_dummy_type: Unknown type %d\n", attr_type);
-  }
-}
-
 GenericType *create_attr(uint8_t *attr) {
   uint8_t type = *attr;
   switch (type) {
@@ -644,29 +624,29 @@ void JoinAttributes::init() {
     num_eval_attr = num_attr;
 
   } else if (op_code == OP_JOIN_COL2) {
-	expression = IDENTITY;
+    expression = IDENTITY;
 
-	num_attr = 1;
-	num_eval_attr = 1;
+    num_attr = 1;
+    num_eval_attr = 1;
 
-	attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
-	eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
-	find_plaintext_attribute(row, num_cols,
-							 2, &sort_pointer, &len);
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
-	attributes[0]->consume(sort_pointer, NO_COPY);
+    attributes[0]->consume(sort_pointer, NO_COPY);
 
-	num_eval_attr = num_attr;
+    num_eval_attr = num_attr;
 
   } else if (op_code == OP_BD2) {
-	// for Big Data Benchmark query #2
-	expression = BD2;
+    // for Big Data Benchmark query #2
+    expression = BD2;
 
-	num_attr = 1;
-	num_eval_attr = 1;
+    num_attr = 1;
+    num_eval_attr = 1;
 
   } else {
     printf("JoinAttributes::init: Unknown opcode %d\n", op_code);
@@ -691,14 +671,14 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
   } else if (op_code == OP_JOIN_COL2) {
-	expression = IDENTITY;
+    expression = IDENTITY;
 
-	find_plaintext_attribute(row, num_cols,
-							 2, &sort_pointer, &len);
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
 
     attributes[0]->reset();
     eval_attributes[0]->reset();
-	attributes[0]->consume(sort_pointer, NO_COPY);
+    attributes[0]->consume(sort_pointer, NO_COPY);
 
   } else if (op_code == OP_BD2) {
 	// for Big Data Benchmark query #2

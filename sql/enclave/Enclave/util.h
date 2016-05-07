@@ -13,6 +13,10 @@
 #include "Crypto.h"
 #include "common.h"
 
+bool is_dummy_type(uint8_t attr_type);
+uint8_t get_dummy_type(uint8_t attr_type);
+uint32_t attr_upper_bound(uint8_t attr);
+
 /* 
  * printf: 
  *   Invokes OCALL to display the enclave buffer to the terminal.
@@ -91,7 +95,6 @@ class BufferReader {
   uint8_t *current_pointer;
 };
 
-uint32_t attr_upper_bound(uint8_t *attr);
 uint32_t get_plaintext_padded_row_size(uint8_t *row);
 
 #endif // UTIL_H

@@ -15,6 +15,7 @@ class GenericType;
 #include "define.h"
 #include "Crypto.h"
 #include "Expression.h"
+#include "common.h"
 
 #include "util.h"
 
@@ -257,8 +258,6 @@ class SearchWord : public String {
 // given an attribute in serialized form (i.e. buffer form)
 // return the appropriate GenericType
 GenericType *create_attr(uint8_t *attr);
-bool is_dummy_type(uint8_t attr_type);
-uint8_t get_dummy_type(uint8_t attr_type);
 
 // This class is able to group together attributes, and execute evaluation on these attributes
 // assume that the buffer_ptr is [attr type][attr len][attr] [attr type][attr len][attr]...
