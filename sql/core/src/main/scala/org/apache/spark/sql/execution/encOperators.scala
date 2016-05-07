@@ -123,6 +123,11 @@ case class EncAggregate(
             OP_GROUPBY_COL2_SUM_COL3_STEP2.value,
             OP_SORT_COL4_IS_DUMMY_COL2.value,
             OP_FILTER_COL4_NOT_DUMMY.value)
+        case (3, 0, List(1, 2)) =>
+          (OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1.value,
+            OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2.value,
+            OP_SORT_COL3_IS_DUMMY_COL1.value,
+            OP_FILTER_COL4_NOT_DUMMY.value)
       }
 
     val childRDD = child.execute().mapPartitions { rowIter =>
