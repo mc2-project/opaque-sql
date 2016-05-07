@@ -71,6 +71,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     QEDBenchmark.bd3SparkSQL(sqlContext, "tiny")
   }
 
+  ignore("big data 3") {
+    QEDBenchmark.bd3Opaque(sqlContext, "tiny")
+  }
+
   test("columnsort padding") {
     val data = Random.shuffle((0 until 3).map(x => (x.toString, x)).toSeq)
     val encData = QED.encrypt2(data).map {

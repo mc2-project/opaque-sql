@@ -996,7 +996,7 @@ class Dataset[T] private[sql](
     EncAggregate(
       UnresolvedAlias(groupByCol.expr),
       aggCols.map(_.named),
-      aggCols.map(col => AttributeReference(col.toString + "_agg", BinaryType, true)()),
+      aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
       EncSort(groupByCol.expr, logicalPlan))
   }
 
