@@ -165,6 +165,21 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt5[Int, String, Int, Int, Int](joined).toSet === expectedJoin.toSet)
   }
 
+  ignore("encJoin on column 1") {
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, i * 10)
+    val p = sparkContext.makeRDD(QED.encrypt2(p_data)).toDF("pk", "x")
+    val f = sparkContext.makeRDD(QED.encrypt2(f_data)).toDF("fk", "x")
+    val joined = p.encJoin(f, $"pk", $"fk").collect
+    val expectedJoin =
+      for {
+        (pk, p_x) <- p_data
+        (fk, f_x) <- f_data
+        if pk == fk
+      } yield (pk, p_x, f_x)
+    assert(QED.decrypt3[String, Int, Int](joined).toSet === expectedJoin.toSet)
+  }
+
   test("encProject") {
     def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = {
       val (enclave, eid) = QED.initEnclave()
