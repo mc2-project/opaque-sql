@@ -625,7 +625,25 @@ void JoinAttributes::init() {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == OP_JOIN_COL2) {
+  if (op_code == OP_JOIN_COL1) {
+    expression = IDENTITY;
+
+    num_attr = 1;
+    num_eval_attr = 1;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    num_eval_attr = num_attr;
+
+  } else if (op_code == OP_JOIN_COL2) {
 	expression = IDENTITY;
 
 	num_attr = 1;
@@ -662,7 +680,17 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == OP_JOIN_COL2) {
+  if (op_code == OP_JOIN_COL1) {
+    expression = IDENTITY;
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[0]->reset();
+    eval_attributes[0]->reset();
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+  } else if (op_code == OP_JOIN_COL2) {
 	expression = IDENTITY;
 
 	find_plaintext_attribute(row, num_cols,

@@ -47,7 +47,7 @@ void join_sort_preprocess(int op_code,
 	
   int if_primary = 0;
   
-  if (op_code == OP_JOIN_COL2) {
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
     char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
     if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
   } else {
@@ -165,37 +165,27 @@ void get_join_attribute(int op_code,
   join_attr->reset();
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
+  uint32_t join_attr_idx;
   
-  if (op_code == OP_JOIN_COL2) {
-	if (if_primary == 0) {
-	  // attribute number is 2nd column
-	  for (uint32_t i = 0; i < num_cols; i++) {
-		total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-		if (i + 1 == 2) {
-		  join_attr->new_attribute(row_ptr, total_value_len);
-		} else {
-		  // TODO: dummy write
-		}
-		row_ptr += total_value_len;
-	  }
-
-	} else {
-	  // attribute number is 1st column
-	  for (uint32_t i = 0; i < num_cols; i++) {
-		total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-		if (i + 1 == 2) {
-		  join_attr->new_attribute(row_ptr, total_value_len);
-		} else {
-		  // TODO: dummy write
-		}
-		row_ptr += total_value_len;
-	  }	  
-	}
+  if (op_code == OP_JOIN_COL1) {
+    join_attr_idx = 1;
+  } else if (op_code == OP_JOIN_COL2) {
+    join_attr_idx = 2;
   } else {
     printf("get_join_attribute: Unknown opcode %d\n", op_code);
-	assert(false);
+    assert(false);
   }
 
+  // Join both tables on join_attr
+  for (uint32_t i = 0; i < num_cols; i++) {
+    total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
+    if (i + 1 == join_attr_idx) {
+      join_attr->new_attribute(row_ptr, total_value_len);
+    } else {
+      // TODO: dummy write
+    }
+    row_ptr += total_value_len;
+  }
 }
 
 
@@ -215,40 +205,41 @@ void join_merge_row(int op_code,
   uint32_t secondary_row_cols = 0;
   uint32_t secondary_join_attr = 0;
   
-  if (op_code == OP_JOIN_COL2) {
-	primary_row_cols = *( (uint32_t *) primary_row);
-	secondary_row_cols =  *( (uint32_t *) secondary_row);
-	secondary_join_attr = 2;
-	
-	// primary row has 3 columns, other row has 2 columns
-	// p_row's 2nd column = row's 1st column
-	*( (uint32_t *) output_row_ptr) = primary_row_cols + secondary_row_cols - 1;
-	output_row_ptr += 4;
-
-	input_ptr += 4;
-	// first write out primary_row
-	for (uint32_t i = 0; i < primary_row_cols; i++) {
-	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
-	  cpy(output_row_ptr, input_ptr, value_len);
-	  input_ptr += value_len;
-	  output_row_ptr += value_len;
-	}
-
-	// now, write out the other row, skipping the duplicate columns
-	input_ptr = secondary_row;
-	input_ptr += 4;
-
-	for (uint32_t i = 0; i < secondary_row_cols; i++) {
-	  value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
-	  if (i + 1 != secondary_join_attr) {
-		cpy(output_row_ptr, input_ptr, value_len);
-		output_row_ptr += value_len;
-	  }
-	  input_ptr += value_len;
-	}
+  if (op_code == OP_JOIN_COL1) {
+    secondary_join_attr = 1;
+  } else if (op_code == OP_JOIN_COL2) {
+    secondary_join_attr = 2;
   } else {
     printf("join_merge_row: Unknown opcode %d\n", op_code);
     assert(false);
+  }
+
+  primary_row_cols = *( (uint32_t *) primary_row);
+  secondary_row_cols =  *( (uint32_t *) secondary_row);
+
+  *( (uint32_t *) output_row_ptr) = primary_row_cols + secondary_row_cols - 1;
+  output_row_ptr += 4;
+
+  input_ptr += 4;
+  // first write out primary_row
+  for (uint32_t i = 0; i < primary_row_cols; i++) {
+    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    cpy(output_row_ptr, input_ptr, value_len);
+    input_ptr += value_len;
+    output_row_ptr += value_len;
+  }
+
+  // now, write out the other row, skipping the duplicate columns
+  input_ptr = secondary_row;
+  input_ptr += 4;
+
+  for (uint32_t i = 0; i < secondary_row_cols; i++) {
+    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    if (i + 1 != secondary_join_attr) {
+      cpy(output_row_ptr, input_ptr, value_len);
+      output_row_ptr += value_len;
+    }
+    input_ptr += value_len;
   }
 }
 
@@ -347,14 +338,26 @@ void sort_merge_join(int op_code,
       // instead of writing back the correct type, we need to write a dummy type
       *dummy_row_ptr = types[i];
       dummy_row_ptr += TYPE_SIZE;
-	  
-      if (t == DUMMY_INT) {
-	upper_bound = INT_UPPER_BOUND;
-      } else if (t == DUMMY_STRING) {
-	upper_bound = STRING_UPPER_BOUND;
-      } else {
-	upper_bound = 0;
-      }
+
+      upper_bound = attr_upper_bound(t);
+
+      *( (uint32_t *) dummy_row_ptr) = upper_bound;
+      dummy_row_ptr += 4;
+      dummy_row_ptr += upper_bound;
+    }
+  } else if (op_code == OP_JOIN_COL1) {
+    *( (uint32_t *) dummy_row_ptr) = 4;
+    dummy_row_ptr += 4;
+    uint8_t types[4] = {DUMMY_STRING, DUMMY_INT, DUMMY_STRING, DUMMY_FLOAT};
+    uint32_t upper_bound = 0;
+
+    for (uint32_t i = 0; i < 4; i++) {
+      uint8_t t = types[i];
+      // instead of writing back the correct type, we need to write a dummy type
+      *dummy_row_ptr = types[i];
+      dummy_row_ptr += TYPE_SIZE;
+
+      upper_bound = attr_upper_bound(t);
 
       *( (uint32_t *) dummy_row_ptr) = upper_bound;
       dummy_row_ptr += 4;
