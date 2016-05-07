@@ -140,6 +140,12 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
+  test("encSort by float") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
+    val sorted = sparkContext.makeRDD(QED.encrypt2(data)).toDF("str", "x").encSort($"x").collect
+    assert(QED.decrypt2[String, Float](sorted) === data.sortBy(_._2))
+  }
+
   test("encJoin") {
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
