@@ -131,6 +131,10 @@ void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
 	  dynamic_cast<String *>(output_attr[i])->copy_attr(dynamic_cast<String *>(input_attr[i]), NO_COPY);
         } else if (dynamic_cast<Float *>(input_attr[i]) != NULL) {
           dynamic_cast<Float *>(output_attr[i])->copy_attr(dynamic_cast<Float *>(input_attr[i]));
+        } else if (dynamic_cast<Dummy *>(input_attr[i]) != NULL) {
+          // Do nothing - this case only happens for the dummy sorting opcodes,
+          // in which case SortAttributes::compare will take care of sorting
+          // dummies
         } else {
           printf("evaluate_sort: Attribute %d has unknown type\n", i);
           input_attr[i]->print();

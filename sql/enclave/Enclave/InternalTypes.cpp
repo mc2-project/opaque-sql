@@ -43,6 +43,10 @@ GenericType *create_attr(uint8_t *attr) {
   }
 }
 
+/*** DUMMY ***/
+void Dummy::print() {
+  printf("Dummy with type %d\n", real_type_);
+}
 
 /*** INTEGER ***/
 Integer::Integer() {

@@ -36,7 +36,7 @@ class GenericType {
   
   virtual void evaluate() {}
 
-  virtual void print() {}
+  virtual void print() = 0;
 
   virtual void reset() = 0;
 
@@ -63,6 +63,8 @@ class Dummy : public GenericType {
   void swap(GenericType *v) {
 	// do nothing
   }
+
+  void print();
 
   void reset() { }
 

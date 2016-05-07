@@ -212,9 +212,9 @@ public:
 
     // only copy if the data is of the same type
     if (dynamic_cast<generic_agg_sum *>(data) != NULL) {
-      GenericType *v1 = this->agg_field;
       GenericType *v2 = dynamic_cast<generic_agg_sum *> (data)->agg_field;
       init(v2->type_);
+      GenericType *v1 = this->agg_field;
 
       if (v1->type_ == INT) {
 	dynamic_cast<Integer *>(v1)->value = dynamic_cast<Integer *>(v2)->value;
