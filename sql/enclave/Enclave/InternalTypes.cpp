@@ -1050,7 +1050,7 @@ void AggAggAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-			     1, &sort_pointer, &len);
+                 2, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
@@ -1058,7 +1058,7 @@ void AggAggAttributes::init() {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(row, num_cols,
-			     2, &sort_pointer, &len);
+                 3, &sort_pointer, &len);
 
     attributes[1] = create_attr(sort_pointer);
     eval_attributes[1] = create_attr(sort_pointer);
@@ -1092,12 +1092,12 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
   } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
 	     op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
     find_plaintext_attribute(new_row_ptr, num_cols,
-			     1, &sort_pointer, &len);
+                 2, &sort_pointer, &len);
 
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(new_row_ptr, num_cols,
-			     2, &sort_pointer, &len);
+                 3, &sort_pointer, &len);
 
     attributes[1]->consume(sort_pointer, NO_COPY);
 
