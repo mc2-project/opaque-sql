@@ -185,6 +185,14 @@ void print_error_message(sgx_status_t ret)
         printf("Error: Unexpected error occurred.\n");
 }
 
+void sgx_check(const char* message, sgx_status_t ret)
+{
+  if (ret != SGX_SUCCESS) {
+    printf("%s failed\n", message);
+    print_error_message(ret);
+  }
+}
+
 /* Initialize the enclave:
  *   Step 1: retrive the launch token saved by last transaction
  *   Step 2: call sgx_create_enclave to initialize an enclave instance
@@ -353,20 +361,14 @@ JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(JNIEnv
   sgx_launch_token_t token = {0};
   int updated = 0;
 
-  ret = sgx_create_enclave(std::getenv("LIBENCLAVESIGNED_PATH"), SGX_DEBUG_FLAG, &token, &updated, &eid, NULL);
+  sgx_check("StartEnclave", sgx_create_enclave(std::getenv("LIBENCLAVESIGNED_PATH"), SGX_DEBUG_FLAG, &token, &updated, &eid, NULL));
 
-  if (ret != SGX_SUCCESS) {
-    print_error_message(ret);
-  }
-  
   return eid;
 }
 
 
 JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(JNIEnv *env, jobject obj, jlong eid) {
-  if (SGX_SUCCESS != sgx_destroy_enclave(eid)) {
-    printf("Enclave destruction failure\n");
-  }
+  sgx_check("StopEnclave", sgx_destroy_enclave(eid));
 }
 
 // read a chunk of buffer from the scala program
@@ -384,9 +386,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
 
   uint32_t actual_output_rows_length = 0;
 
-  ecall_project(
+  sgx_check("Project", ecall_project(
     eid, op_code, input_rows_ptr, input_rows_length, num_rows, output_rows, output_rows_length,
-    &actual_output_rows_length);
+    &actual_output_rows_length));
 
   jbyteArray ret = env->NewByteArray(actual_output_rows_length);
   env->SetByteArrayRegion(ret, 0, actual_output_rows_length, (jbyte *) output_rows);
@@ -412,11 +414,7 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(JNIEnv *e
   // printf("Row's length is %u\n", length);
 
   int ret = 0;
-  sgx_status_t status = ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length);
-  if (status != SGX_SUCCESS) {
-    printf("filter_single_row() not successful!\n");
-    print_error_message(status);
-  }
+  sgx_check("Filter", ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length));
 
   env->ReleaseByteArrayElements(row, row_ptr, 0);
 
@@ -443,7 +441,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(JNIEnv
   
   //printf("Encrypt(): plength is %u\n", plength);
 
-  ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength);
+  sgx_check("Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
 
   env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
 
@@ -468,7 +466,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(JNIEnv
 
   uint8_t plaintext_copy[2048];
   
-  ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength);
+  sgx_check("Decrypt", ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength));
 
   env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
 
@@ -493,9 +491,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
 
   uint32_t actual_size = 0;
   
-  ecall_encrypt_attribute(eid, plaintext_ptr, plength,
-			  ciphertext_copy, (uint32_t) ciphertext_length,
-			  &actual_size);
+  sgx_check("EncryptAttribute",
+            ecall_encrypt_attribute(eid, plaintext_ptr, plength,
+                                    ciphertext_copy, (uint32_t) ciphertext_length,
+                                    &actual_size));
 
   //printf("actual size is %u, type is %u\n", actual_size, *plaintext_ptr);
 
@@ -551,7 +550,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     uint64_t t = 0;
     {
       scoped_timer timer(&t);
-      sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch);
+      sgx_check("Single Partition Oblivious Sort",
+                ecall_external_oblivious_sort(
+                  eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch));
     }
 
     double t_ms = ((double) t) / 1000;
@@ -617,8 +618,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     uint64_t t = 0;
     {    
       scoped_timer timer(&t);
-      sgx_status_t status = ecall_external_oblivious_sort(eid, op_code, num_part,
-							  buffer_list, buffer_sizes, num_rows, scratch);
+      sgx_check("External Oblivious Sort",
+                ecall_external_oblivious_sort(eid, op_code, num_part,
+                                              buffer_list, buffer_sizes, num_rows, scratch));
     }
 
     double t_ms = ((double) t) / 1000;
@@ -653,7 +655,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(JNIEn
   jbyte *ptr = env->GetByteArrayElements(ret, &if_copy);
 
   uint8_t buf[random_id_length];
-  ecall_random_id(eid, buf, random_id_length);
+  sgx_check("RandomID", ecall_random_id(eid, buf, random_id_length));
 
   env->SetByteArrayRegion(ret, 0, random_id_length, (jbyte *) buf);
 
@@ -708,14 +710,16 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
   uint64_t t = 0;
   {
     scoped_timer timer(&t);
-    ecall_scan_aggregation_count_distinct(eid, op_code,
-					  input_rows_ptr, input_rows_length,
-					  num_rows,
-					  agg_row_ptr, agg_row_length,
-					  output_rows + 4, output_rows_length,
-					  &actual_size,
-					  flag,
-					  (uint32_t *) output_rows);
+    sgx_check("Aggregate",
+              ecall_scan_aggregation_count_distinct(
+                eid, op_code,
+                input_rows_ptr, input_rows_length,
+                num_rows,
+                agg_row_ptr, agg_row_length,
+                output_rows + 4, output_rows_length,
+                &actual_size,
+                flag,
+                (uint32_t *) output_rows));
   }
 
   double t_ms = ((double) t) / 1000;
@@ -767,11 +771,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
   uint32_t actual_out_agg_rows_size = 0;
   
-  ecall_process_boundary_records(eid, op_code,
-  								 rows_ptr, rows_length,
-  								 num_rows,
-  								 out_agg_rows, out_agg_rows_length,
-								 &actual_out_agg_rows_size);
+  sgx_check("ProcessBoundary",
+            ecall_process_boundary_records(
+              eid, op_code,
+              rows_ptr, rows_length,
+              num_rows,
+              out_agg_rows, out_agg_rows_length,
+              &actual_out_agg_rows_size));
 
   jbyteArray ret = env->NewByteArray(actual_out_agg_rows_size);
   env->SetByteArrayRegion(ret, 0, actual_out_agg_rows_size, (jbyte *) out_agg_rows);
@@ -785,49 +791,27 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
 
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregation(JNIEnv *env, 
-																				   jobject obj, 
-																				   jlong eid,
-																				   jint op_code,
-																				   jbyteArray rows,
-																				   jint num_rows) {
-  /*
-  
-  jboolean if_copy;
-  
-  uint32_t rows_length = (uint32_t) env->GetArrayLength(rows);
-  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
-  
-  
-  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t real_size = ENC_HEADER_SIZE + AGG_UPPER_BOUND;
-  uint32_t out_agg_rows_length = real_size * num_rows;
-  
-  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
-  
-  ecall_process_boundary_records(eid, op_code,
-  								 rows_ptr, rows_length,
-  								 num_rows,
-  								 out_agg_rows, out_agg_rows_length);
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregation(
+  JNIEnv *env, 
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray rows,
+  jint num_rows) {
 
-  jbyteArray ret = env->NewByteArray(out_agg_rows_length);
-  env->SetByteArrayRegion(ret, 0, out_agg_rows_length, (jbyte *) out_agg_rows);
-
-  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
-
-  free(out_agg_rows);
-
-  return ret;
-  */
+  printf("FinalAggregation not yet implemented\n");
+  assert(false);
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(JNIEnv *env, 
-										     jobject obj, 
-										     jlong eid,
-										     jint op_code,
-										     jbyteArray enc_table_id,
-										     jbyteArray input_rows,
-										     jint num_rows) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray enc_table_id,
+  jbyteArray input_rows,
+  jint num_rows) {
+
   jboolean if_copy;
   
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
@@ -845,12 +829,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
 
   //printf("Preprocess 1, num_rows is %u\n", num_rows);
 
-  ecall_join_sort_preprocess(eid,
-			     op_code,
-			     enc_table_id_ptr, 
-			     input_rows_ptr, input_rows_length,
-			     num_rows, 
-			     output_rows_ptr, output_rows_length);
+  sgx_check("JoinSortPreprocess",
+            ecall_join_sort_preprocess(
+              eid,
+              op_code,
+              enc_table_id_ptr,
+              input_rows_ptr, input_rows_length,
+              num_rows,
+              output_rows_ptr, output_rows_length));
 
    
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -880,8 +866,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   uint8_t *output_rows_ptr = output_rows;
   uint32_t actual_output_length = 0;
 
-  ecall_process_join_boundary(eid, op_code, input_rows_ptr, input_rows_length, num_rows,
-                              output_rows_ptr, output_rows_length, &actual_output_length);
+  sgx_check("ProcessJoinBoundary",
+            ecall_process_join_boundary(
+              eid, op_code, input_rows_ptr, input_rows_length, num_rows,
+              output_rows_ptr, output_rows_length, &actual_output_length));
 
   jbyteArray ret = env->NewByteArray(actual_output_length);
   env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output_rows);
@@ -893,12 +881,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *env, 
-																						 jobject obj, 
-																						 jlong eid,
-																						 jint op_code,
-																						 jbyteArray input_rows,
-																						 jint num_rows) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray input_rows,
+  jint num_rows) {
+
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
@@ -909,11 +899,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
 
   //printf("scan_collect start\n");
   
-  ecall_scan_collect_last_primary(eid,
-								  op_code,
-								  input_rows_ptr, input_rows_length,
-  								  num_rows,
-  								  output, output_length);
+  sgx_check("ScanCollectLastPrimary",
+            ecall_scan_collect_last_primary(
+              eid,
+              op_code,
+              input_rows_ptr, input_rows_length,
+              num_rows,
+              output, output_length));
 
   jbyteArray ret = env->NewByteArray(output_length);
   env->SetByteArrayRegion(ret, 0, output_length, (jbyte *) output);
@@ -928,13 +920,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *env, 
-										jobject obj, 
-										jlong eid,
-										jint op_code,
-										jbyteArray input_rows,
-                                                                                jint num_rows,
-                                                                                jbyteArray join_row) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray input_rows,
+  jint num_rows,
+  jbyteArray join_row) {
 
   jboolean if_copy;
 
@@ -949,12 +942,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 
   uint32_t actual_output_length = 0;
 
-  ecall_sort_merge_join(eid,
-						op_code,
-						input_rows_ptr, input_rows_length,
-						num_rows,
-                        join_row_ptr, join_row_length,
-                        output, output_length, &actual_output_length);
+  sgx_check("SortMergeJoin",
+            ecall_sort_merge_join(
+              eid,
+              op_code,
+              input_rows_ptr, input_rows_length,
+              num_rows,
+              join_row_ptr, join_row_length,
+              output, output_length, &actual_output_length));
 
   jbyteArray ret = env->NewByteArray(actual_output_length);
   env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
