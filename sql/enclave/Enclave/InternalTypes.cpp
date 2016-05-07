@@ -327,11 +327,16 @@ Date::Date(uint64_t date) {
 
 int Date::compare(GenericType *v) {
   Date *date_v = dynamic_cast<Date *>(v);
-  
-  if (this->date > date_v->date) {
-	return 1;
-  } else if (this->date < date_v->date) {
-	return -1;
+
+  if (date_v == NULL) {
+    printf("Date::compare -- date_v is not type Date, instead %u\n", v->type_);
+    assert(false);
+  } else {
+    if (this->date > date_v->date) {
+      return 1;
+    } else if (this->date < date_v->date) {
+      return -1;
+    }
   }
 
   return 0;
