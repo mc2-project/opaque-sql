@@ -138,7 +138,7 @@ public:
       }
       break;
     }
-  }
+    }
   }
 
   ~generic_agg_sum() {

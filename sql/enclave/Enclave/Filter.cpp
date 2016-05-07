@@ -102,6 +102,25 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     // printf("Attr len is  is %u\n", attr_len);
 	
     ret = 0;
+  } else if (op_code == OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01) {
+    
+    find_attribute(row_ptr, length, num_cols,
+		   1, &enc_value_ptr, &enc_value_len);
+
+    decrypt(enc_value_ptr, enc_value_len, decrypted_data);
+
+    if (*decrypted_data != DATE) {
+      printf("ecall_filter_single_row -- data type is wrong, %u\n", *decrypted_data);
+    }
+
+    uint64_t date = *( (uint64_t *) (decrypted_data + HEADER_SIZE));
+
+    if (date >= 60276470400 && date <= 60284242800) {
+      return 1;
+    } else {
+      return 0;
+    }
+    
   } else {
     printf("ecall_filter_single_row: unknown opcode %d\n", op_code);
     assert(false);
