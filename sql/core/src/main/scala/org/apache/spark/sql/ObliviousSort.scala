@@ -373,7 +373,10 @@ object ObliviousSort extends java.io.Serializable {
     // constraints: s | r; r >= 2 * (s-1)^2
 
     // Skip column sort if there's no parallelism anyway
-    if (data.partitions.length == 1) {
+    if (data.partitions.length == 0) {
+      println("Skipping any sort!")
+      sc.emptyRDD[Array[Byte]]
+    } else if (data.partitions.length == 1) {
       println("Skipping column sort")
       data.mapPartitions { rowIter =>
         val (enclave, eid) = QED.initEnclave()

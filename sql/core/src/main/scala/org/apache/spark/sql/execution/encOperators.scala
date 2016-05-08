@@ -117,7 +117,7 @@ case class EncAggregate(
 
   import QED.time
 
-  override def doExecute() = {
+  override def doExecute(): RDD[InternalRow] = {
     val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
     val aggExprsPos = aggExpressions.map(expr => QED.attributeIndexOf(expr.references.toSeq(0), child.output)).toList
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
@@ -158,6 +158,9 @@ case class EncAggregate(
     }
 
     val boundariesCollected = time("aggregate - step 1") { boundaries.collect }
+    if (boundariesCollected.forall(_.isEmpty)) {
+      return sqlContext.sparkContext.emptyRDD[InternalRow]
+    }
     val (enclave, eid) = QED.initEnclave()
     val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
       enclave.ProcessBoundary(

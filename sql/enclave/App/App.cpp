@@ -530,6 +530,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
+
+  if (num_items == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    env->ReleaseByteArrayElements(input, ptr, 0);
+    return ret;
+  }
+
   uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + ROW_UPPER_BOUND));
 
 
@@ -677,7 +684,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(JNIE
 
   uint32_t agg_row_length = (uint32_t) env->GetArrayLength(agg_row);
   uint8_t *agg_row_ptr = (uint8_t *) env->GetByteArrayElements(agg_row, &if_copy);
-  
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+    return ret;
+  }
+
   uint32_t actual_size = 0;
   int flag;
   if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 ||
