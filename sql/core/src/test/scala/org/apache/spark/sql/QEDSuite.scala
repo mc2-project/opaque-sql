@@ -221,8 +221,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     }
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val rdd = sparkContext.makeRDD(encrypt2(data), 1).toDF("str", "x")
-    val proj = rdd.encProject(/*substring($"str", 0, 3)*/$"str", $"x")
-    assert(QED.decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 3), x) })
+    val proj = rdd.encProject(/*substring($"str", 0, 8)*/$"str", $"x")
+    assert(QED.decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 8), x) })
   }
 
   test("JNIEncrypt") {
