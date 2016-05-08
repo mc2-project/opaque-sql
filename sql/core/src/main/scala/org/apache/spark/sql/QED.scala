@@ -113,7 +113,7 @@ object QED {
       case t if t == INT.value =>
         assert(size == 4)
         buf.getInt()
-      case t if t == STRING.value =>
+      case t if t == STRING.value || t == URL_TYPE.value || t == IP_TYPE.value =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
         new String(sBytes, "UTF-8")
@@ -334,9 +334,15 @@ object QED {
         lc: String,
         sw: String,
         d: Int) =>
-        (QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)), QED.encrypt(enclave, eid, du), QED.encrypt(enclave, eid, vd.toString),
-          QED.encrypt(enclave, eid, ar), QED.encrypt(enclave, eid, ua), QED.encrypt(enclave, eid, cc),
-          QED.encrypt(enclave, eid, lc), QED.encrypt(enclave, eid, sw), QED.encrypt(enclave, eid, d))
+        (QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)),
+          QED.encrypt(enclave, eid, du),
+          QED.encrypt(enclave, eid, vd),
+          QED.encrypt(enclave, eid, ar),
+          QED.encrypt(enclave, eid, ua),
+          QED.encrypt(enclave, eid, cc),
+          QED.encrypt(enclave, eid, lc),
+          QED.encrypt(enclave, eid, sw),
+          QED.encrypt(enclave, eid, d))
     }
   }
 }

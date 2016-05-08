@@ -111,6 +111,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
     if (*decrypted_data != DATE) {
       printf("ecall_filter_single_row -- data type is wrong, %u\n", *decrypted_data);
+      assert(false);
     }
 
     uint64_t date = *( (uint64_t *) (decrypted_data + HEADER_SIZE));
