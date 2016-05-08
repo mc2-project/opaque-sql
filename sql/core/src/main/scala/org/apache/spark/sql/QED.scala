@@ -90,8 +90,28 @@ object QED {
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
+      case (s: String, Some(C_CODE)) =>
+        buf.put(C_CODE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
+      case (s: String, Some(L_CODE)) =>
+        buf.put(L_CODE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
       case (s: String, Some(IP_TYPE)) =>
         buf.put(IP_TYPE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
+      case (s: String, Some(USER_AGENT_TYPE)) =>
+        buf.put(USER_AGENT_TYPE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
+      case (s: String, Some(SEARCH_WORD_TYPE)) =>
+        buf.put(SEARCH_WORD_TYPE.value)
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
@@ -113,7 +133,9 @@ object QED {
       case t if t == INT.value =>
         assert(size == 4)
         buf.getInt()
-      case t if t == STRING.value || t == URL_TYPE.value || t == IP_TYPE.value =>
+      case t if t == STRING.value || t == URL_TYPE.value || t == C_CODE.value ||
+          t == L_CODE.value || t == IP_TYPE.value || t == USER_AGENT_TYPE.value ||
+          t == SEARCH_WORD_TYPE.value =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
         new String(sBytes, "UTF-8")
