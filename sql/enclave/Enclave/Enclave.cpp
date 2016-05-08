@@ -531,9 +531,6 @@ void ecall_external_oblivious_sort(int op_code,
   uint32_t single_row_size = 0;
   uint32_t padded_single_row_size = 0;
 
-  printf("single row size is %u\n", single_row_size);
-  printf("padded_single_row_size is %u\n", padded_single_row_size);
-
   BufferReader reader;
   reader.clear();
 
@@ -555,6 +552,9 @@ void ecall_external_oblivious_sort(int op_code,
 
     single_row_size = get_plaintext_padded_row_size(buffer_list[0]);
     padded_single_row_size = (4 + single_row_size / 16) * 16;
+
+    printf("single row size is %u\n", single_row_size);
+    printf("padded_single_row_size is %u\n", padded_single_row_size);
 
     sort_data = (SortRecord **) malloc(sizeof(SortRecord *) * max_list_length);
     for (uint32_t i = 0; i < max_list_length; i++) {
@@ -648,8 +648,6 @@ void ecall_external_oblivious_sort(int op_code,
   uint32_t external_scratch_size[2048];
   uint32_t row_size = 0;
   uint32_t padded_row_size = 0;
-  uint32_t attr_len = 0;
-  uint8_t *sort_data_ptr = NULL;
   Record **data = NULL;
 
   if (operation == SORT_SORT) {
@@ -710,15 +708,6 @@ void ecall_external_oblivious_sort(int op_code,
     // hard-coded for now
 
     if (operation == SORT_SORT) {
-      padded_row_size = 4;
-      attr_len = 0;
-      sort_data_ptr = data[0]->row;
-      for (uint32_t col = 0; col < data[0]->num_cols; col++) {
-	attr_len = *( (uint32_t *) (sort_data_ptr + TYPE_SIZE));
-        padded_row_size += HEADER_SIZE + attr_upper_bound(*sort_data_ptr);
-	sort_data_ptr += HEADER_SIZE + attr_len;
-      }
-
       padded_row_size = padded_single_row_size;
     } else {
       padded_row_size = JOIN_ROW_UPPER_BOUND;

@@ -386,7 +386,7 @@ void get_attr(uint8_t *dec_attr_ptr,
 }
 
 
-void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type) {
+void encrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t *input_ptr = *input;
   uint8_t *output_ptr = *output;
   
@@ -394,10 +394,6 @@ void encrypt_attribute(uint8_t **input, uint8_t **output, uint8_t real_type) {
   uint32_t attr_len = 0;
   
   uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
-
-  if (real_type != DUMMY) {
-	attr_type = real_type;
-  }
 
   uint32_t upper_bound = attr_upper_bound(attr_type);
 
