@@ -15,10 +15,12 @@
 enum EXPRESSION {
   IDENTITY,                 // place holder for the identity function
   PREFIX,                   // prefix of a single string
-  INTEGER_SUM,                      // sum of multiple columns
+  INTEGER_SUM,              // sum of multiple columns
   COMPARE,
   BD2,
-  TEST
+  TEST,
+  PR_WEIGHT_RANK,
+  PR_APPLY_INCOMING_RANK
 };
 
 enum EVAL_MODE {

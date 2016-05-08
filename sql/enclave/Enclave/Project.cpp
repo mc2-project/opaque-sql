@@ -25,18 +25,16 @@ void project(int op_code,
   ProjectRecord current_row;
 
   for (uint32_t i = 0; i < num_rows; i++) {
-	get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
+    get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
 
-	current_row.clear();
-	current_row.consume_all_encrypted_attributes(enc_row_ptr);
-	current_row.set_project_attributes(op_code);
+    current_row.clear();
+    current_row.consume_all_encrypted_attributes(enc_row_ptr);
+    current_row.set_project_attributes(op_code);
 
-	// after evaluation, write out to output_rows
+    // after evaluation, write out to output_rows
 
-	output_rows_ptr += current_row.flush_encrypt_eval_attributes(output_rows_ptr);
-	
+    output_rows_ptr += current_row.flush_encrypt_eval_attributes(output_rows_ptr);
   }
 
   *actual_output_rows_length = (output_rows_ptr - output_rows);
-  
 }

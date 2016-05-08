@@ -186,7 +186,7 @@ class Date : public GenericType {
   void copy_attr(Date *attr, int mode);
 
   void reset() {
-	this->date = 0;
+    this->date = 0;
   }
 
   void print();

@@ -4,7 +4,6 @@
 // Basically a set of UDFs
 
 
-
 // This expression returns a new string with that is a prefix of str
 // returned = str[1:offset]
 void prefix(String *input, uint32_t offset, String *result) {
@@ -161,8 +160,58 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
              8,
              dynamic_cast<String *>(output_attr[0]));
       dynamic_cast<Float *>(output_attr[1])->copy_attr(dynamic_cast<Float *>(input_attr[1]));
-	}
-	break;
+    }
+    break;
+  case PR_WEIGHT_RANK:
+    {
+      // project identity
+      Integer *int_input = dynamic_cast<Integer *>(input_attr[0]);
+      Integer *int_output = dynamic_cast<Integer *>(output_attr[0]);
+
+      if (int_input == NULL || int_output == NULL) {
+	printf("evaluate_project[PR_WEIGHT_RANK]: dynamic cast into integer returns null\n");
+      }
+      
+      int_output->copy_attr(int_input);
+
+      // page rank should multiple two attributes together
+      Float *v1 = dynamic_cast<Float *>(input_attr[1]);
+      Float *v2 = dynamic_cast<Float *>(input_attr[2]);
+      Float *v3 = dynamic_cast<Float *>(output_attr[1]);
+
+      if (v1 == NULL || v2 == NULL || v3 == NULL) {
+	printf("evaluate_project[PR_WEIGHT_RANK]: dynamic cast into float returns null\n");
+	assert(false);
+      } 
+      // TODO: put the multiplication function inside the class
+      v3->value = v1->value * v2->value;
+    }
+    break;
+
+  case PR_APPLY_INCOMING_RANK:
+    {
+      // project identity
+      Integer *int_input = dynamic_cast<Integer *>(input_attr[0]);
+      Integer *int_output = dynamic_cast<Integer *>(output_attr[0]);
+
+      if (int_input == NULL || int_output == NULL) {
+	printf("evaluate_project[PR_WEIGHT_RANK]: dynamic cast into integer returns null\n");
+      }
+      
+      int_output->copy_attr(int_input);
+
+      Float *v1 = dynamic_cast<Float *>(input_attr[1]);
+      Float *v2 = dynamic_cast<Float *>(output_attr[1]);
+
+      if (v1 == NULL || v2 == NULL) {
+	printf("evaluate_project[PR_WEIGHT_RANK]: dynamic cast into float is null\n");
+	assert(false);
+      } 
+      // TODO: put the multiplication function inside the class
+      v2->value = v1->value * 0.85 + 0.15;
+    }
+    break;
+
   default:
     printf("evaluate_project: Unknown expression %d\n", expression);
     assert(false);

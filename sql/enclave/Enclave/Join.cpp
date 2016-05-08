@@ -363,6 +363,26 @@ void sort_merge_join(int op_code,
       dummy_row_ptr += 4;
       dummy_row_ptr += upper_bound;
     }
+  } else if (op_code == OP_JOIN_PAGERANK) {
+
+    *( (uint32_t *) dummy_row_ptr) = 4;
+    dummy_row_ptr += 4;
+    uint8_t types[4] = {DUMMY_INT, DUMMY_FLOAT, DUMMY_INT, DUMMY_FLOAT};
+    uint32_t upper_bound = 0;
+
+    for (uint32_t i = 0; i < 4; i++) {
+      uint8_t t = types[i];
+      // instead of writing back the correct type, we need to write a dummy type
+      *dummy_row_ptr = types[i];
+      dummy_row_ptr += TYPE_SIZE;
+
+      upper_bound = attr_upper_bound(t);
+
+      *( (uint32_t *) dummy_row_ptr) = upper_bound;
+      dummy_row_ptr += 4;
+      dummy_row_ptr += upper_bound;
+    }
+
   } else {
     printf("sort_merge_join: Unknown opcode %d\n", op_code);
     assert(false);

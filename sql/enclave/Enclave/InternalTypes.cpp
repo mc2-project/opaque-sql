@@ -103,7 +103,7 @@ String::String() {
 
 String::~String() {
   if (if_alloc == 0) {
-	free(data);
+    free(data);
   }
 }
 
@@ -116,11 +116,11 @@ int String::compare(GenericType *v) {
   uint32_t min_size = this->length < str->length ? str->length : str->length;
   int ret = 0;
   for (uint32_t i = 0; i < min_size; i++) {
-	if (*(this->data+i) < *(str->data+i)) {
-	  return -1;
-	} else if (*(this->data+i) > *(str->data+i)) {
-	  return 1;
-	}
+    if (*(this->data+i) < *(str->data+i)) {
+      return -1;
+    } else if (*(this->data+i) > *(str->data+i)) {
+      return 1;
+    }
   }
 
   if (this->length < str->length) {
@@ -505,9 +505,9 @@ void ProjectAttributes::init() {
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
   if (op_code == OP_BD2) {
-	// for Big Data Benchmark query #2
-	expression = BD2;
-
+    // for Big Data Benchmark query #2
+    expression = BD2;
+    
     num_attr = 2;
     num_eval_attr = 2;
 
@@ -527,13 +527,60 @@ void ProjectAttributes::init() {
     attributes[1]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
+
+  } else if (op_code == OP_PROJECT_PAGERANK_WEIGHT_RANK) {
+
+    expression = PR_WEIGHT_RANK;
+
+    num_attr = 3;
+    num_eval_attr = 2;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    for (uint32_t i = 0; i < num_attr; i++) {
+      find_plaintext_attribute(row, num_cols,
+			       3 + i, &sort_pointer, &len);
+      attributes[i] = create_attr(sort_pointer);
+      attributes[i]->consume(sort_pointer, NO_COPY);
+    }
+
+    eval_attributes[0] = new Integer;
+    eval_attributes[1] = new Float;
+
+  } else if (op_code == OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK) {
+
+    expression = PR_APPLY_INCOMING_RANK;
+
+    num_attr = 2;
+    num_eval_attr = 2;
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+			     1, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    eval_attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0]->reset();
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+    attributes[1] = create_attr(sort_pointer);
+    attributes[1]->consume(sort_pointer, NO_COPY);
+
+    eval_attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1]->reset();
+
   } else {
     printf("ProjectAttributes::init: Unknown opcode %d\n", op_code);
     assert(false);
   }
 
 }
-
 
 void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
@@ -547,6 +594,37 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[1]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
     attributes[1]->consume(sort_pointer, NO_COPY);
+
+  } else if (this->op_code == OP_PROJECT_PAGERANK_WEIGHT_RANK) {
+    
+    find_plaintext_attribute(row, num_cols,
+			     3, &sort_pointer, &len);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
+    find_plaintext_attribute(row, num_cols,
+                             4, &sort_pointer, &len);
+    attributes[1]->consume(sort_pointer, NO_COPY);
+
+    find_plaintext_attribute(row, num_cols,
+                             5, &sort_pointer, &len);
+    attributes[2]->consume(sort_pointer, NO_COPY);
+
+
+    eval_attributes[0]->reset();
+    eval_attributes[1]->reset();
+    
+  } else if (this->op_code == OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK) {
+
+    find_plaintext_attribute(row, num_cols,
+			     1, &sort_pointer, &len);
+    attributes[0]->consume(sort_pointer, NO_COPY);
+    eval_attributes[0]->reset();
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+    attributes[1]->consume(sort_pointer, NO_COPY);
+    eval_attributes[1]->reset();
+
   } else {
     printf("ProjectAttributes::re_init: Unknown opcode %d\n", op_code);
     assert(false);
