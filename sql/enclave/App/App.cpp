@@ -537,7 +537,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     return ret;
   }
 
-  uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + ROW_UPPER_BOUND));
+  uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND));
 
 
   for (int i = 0; i < input_len; i++) {
@@ -634,6 +634,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     printf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
     //printf("Sort took %f ms\n", t_ms);
 
+    //printf("%p, %p, %p\n", buffer_list, buffer_sizes, num_rows);
     free(buffer_list);
     free(buffer_sizes);
     free(num_rows);
@@ -644,8 +645,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
   env->ReleaseByteArrayElements(input, ptr, 0);
 
+  //printf("%p, %p\n", input_copy, scratch);
+
   free(input_copy);
   free(scratch);
+
+  //printf("all sorting done\n");
   
   return ret;
 }
