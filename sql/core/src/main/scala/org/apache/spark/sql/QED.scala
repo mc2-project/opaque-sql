@@ -339,6 +339,14 @@ object QED {
     }
   }
 
+  def bd1Decrypt2(iter: Iterator[Row]): Iterator[(String, Int)] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(u: Array[Byte], r: Array[Byte]) =>
+        (QED.decrypt[String](enclave, eid, u), QED.decrypt[Int](enclave, eid, r))
+    }
+  }
+
   def bd2Encrypt9(iter: Iterator[Row])
       : Iterator[(
         Array[Byte], Array[Byte], Array[Byte],
@@ -357,14 +365,32 @@ object QED {
         sw: String,
         d: Int) =>
         (QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)),
-          QED.encrypt(enclave, eid, du),
+          QED.encrypt(enclave, eid, du, Some(QEDColumnType.URL_TYPE)),
           QED.encrypt(enclave, eid, vd),
           QED.encrypt(enclave, eid, ar),
-          QED.encrypt(enclave, eid, ua),
-          QED.encrypt(enclave, eid, cc),
-          QED.encrypt(enclave, eid, lc),
-          QED.encrypt(enclave, eid, sw),
+          QED.encrypt(enclave, eid, ua, Some(QEDColumnType.USER_AGENT_TYPE)),
+          QED.encrypt(enclave, eid, cc, Some(QEDColumnType.C_CODE)),
+          QED.encrypt(enclave, eid, lc, Some(QEDColumnType.L_CODE)),
+          QED.encrypt(enclave, eid, sw, Some(QEDColumnType.SEARCH_WORD_TYPE)),
           QED.encrypt(enclave, eid, d))
     }
   }
+
+  def bd2Decrypt2(iter: Iterator[Row]): Iterator[(String, Float)] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(sis: Array[Byte], ar: Array[Byte]) =>
+        (QED.decrypt[String](enclave, eid, sis), QED.decrypt[Float](enclave, eid, ar))
+    }
+  }
+
+  def bd3Decrypt3(iter: Iterator[Row]): Iterator[(String, Float, Int)] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(si: Array[Byte], tr: Array[Byte], apr: Array[Byte]) =>
+        (QED.decrypt[String](enclave, eid, si), QED.decrypt[Float](enclave, eid, tr),
+          QED.decrypt[Int](enclave, eid, apr))
+    }
+  }
+
 }

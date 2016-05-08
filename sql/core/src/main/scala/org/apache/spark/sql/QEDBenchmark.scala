@@ -59,7 +59,7 @@ object QEDBenchmark {
     sc.stop()
   }
 
-  def bd1SparkSQL(sqlContext: SQLContext, size: String) {
+  def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     val rankingsDF = sqlContext.read.schema(
       StructType(Seq(
@@ -76,14 +76,15 @@ object QEDBenchmark {
       df
     }
     rankingsDF.unpersist()
+    result
   }
 
-  def bd1Opaque(sqlContext: SQLContext, size: String) {
+  def bd1Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
     import sqlContext.implicits._
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .coalesce(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
     val result = time("big data 1") {
@@ -93,9 +94,10 @@ object QEDBenchmark {
       df
     }
     rankingsDF.unpersist()
+    result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
   }
 
-  def bd2SparkSQL(sqlContext: SQLContext, size: String) {
+  def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
@@ -107,16 +109,17 @@ object QEDBenchmark {
       df
     }
     uservisitsDF.unpersist()
+    result
   }
 
-  def bd2Opaque(sqlContext: SQLContext, size: String) {
+  def bd2Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size)
       .mapPartitions(QED.bd2Encrypt9)
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .coalesce(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val result = time("big data 2") {
@@ -127,9 +130,10 @@ object QEDBenchmark {
       df
     }
     uservisitsDF.unpersist()
+    result.mapPartitions(QED.bd2Decrypt2).toDF("sourceIPSubstr", "adRevenue")
   }
 
-  def bd3SparkSQL(sqlContext: SQLContext, size: String) {
+  def bd3SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     import org.apache.spark.sql.functions.{lit, sum, avg}
     val uservisitsDF = uservisits(sqlContext, size).cache()
@@ -137,39 +141,41 @@ object QEDBenchmark {
     val rankingsDF = rankings(sqlContext, size).cache()
     rankingsDF.count
     val result = time("big data 3 - spark sql") {
-      val df = uservisitsDF.filter($"visitDate" > lit("1980-01-01"))
-        .filter($"visitDate" < lit("1980-04-01"))
+      val df = uservisitsDF.filter($"visitDate" >= lit("1980-01-01"))
+        .filter($"visitDate" <= lit("1980-04-01"))
         .select($"destURL", $"sourceIP", $"adRevenue")
         .join(rankingsDF.select($"pageURL", $"pageRank"), rankingsDF("pageURL") === uservisitsDF("destURL"))
         .select($"sourceIP", $"pageRank", $"adRevenue")
         .groupBy($"sourceIP")
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
-        .orderBy($"totalRevenue".desc)
-      df.show
+        .select($"sourceIP", $"totalRevenue", $"avgPageRank")
+        .orderBy($"totalRevenue".asc)
       val count = df.count
       println("big data 3 spark sql - num rows: " + count)
       df
     }
     uservisitsDF.unpersist()
     rankingsDF.unpersist()
+    result
   }
 
-  def bd3Opaque(sqlContext: SQLContext, size: String) {
+  def bd3Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size)
       .mapPartitions(QED.bd2Encrypt9)
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .coalesce(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(sqlContext.sparkContext.defaultParallelism)
+      .coalesce(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
+
     val result = time("big data 3") {
       val df =
         rankingsDF.select($"pageURL", $"pageRank").encJoin(
@@ -180,15 +186,19 @@ object QEDBenchmark {
           rankingsDF("pageURL"), uservisitsDF("destURL"))
         .select($"sourceIP", $"pageRank", $"adRevenue")
         .encAggregate($"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
+        .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .encSort($"totalRevenue")
-      df.show
       val count = df.count
       println("big data 3 - num rows: " + count)
       df
     }
     uservisitsDF.unpersist()
     rankingsDF.unpersist()
+    result.mapPartitions(QED.bd3Decrypt3).toDF("sourceIP", "totalRevenue", "avgPageRank")
   }
+
+  def numPartitions(sqlContext: SQLContext, distributed: Boolean): Int =
+    if (distributed) sqlContext.sparkContext.defaultParallelism else 1
 
   def rankings(sqlContext: SQLContext, size: String): DataFrame =
     sqlContext.read.schema(

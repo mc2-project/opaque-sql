@@ -55,28 +55,30 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  test("big data 1 - spark sql") {
-    QEDBenchmark.bd1SparkSQL(sqlContext, "tiny")
-  }
-
   test("big data 1") {
-    QEDBenchmark.bd1Opaque(sqlContext, "tiny")
-  }
-
-  test("big data 2 - spark sql") {
-    QEDBenchmark.bd2SparkSQL(sqlContext, "tiny")
+    assert(QEDBenchmark.bd1SparkSQL(sqlContext, "tiny").collect ===
+      QEDBenchmark.bd1Opaque(sqlContext, "tiny").collect)
   }
 
   test("big data 2") {
-    QEDBenchmark.bd2Opaque(sqlContext, "tiny")
+    val a = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny").collect.sortBy(_.getString(0)).map {
+      case Row(str: String, f: Double) => Row(str, "%.2f".format(f))
+    }
+
+    val b = QEDBenchmark.bd2Opaque(sqlContext, "tiny").collect.map {
+      case Row(str: String, f: Float) => Row(str, "%.2f".format(f))
+    }
+
+    assert(a.length === b.length)
+
+    for ((x, y) <- a.zip(b)) {
+      assert(x === y)
+    }
   }
 
-  test("big data 3 - spark sql") {
-    QEDBenchmark.bd3SparkSQL(sqlContext, "tiny")
-  }
-
-  ignore("big data 3") {
-    QEDBenchmark.bd3Opaque(sqlContext, "tiny")
+  test("big data 3") {
+    assert(QEDBenchmark.bd3SparkSQL(sqlContext, "tiny").collect ===
+      QEDBenchmark.bd3Opaque(sqlContext, "tiny").collect)
   }
 
   test("columnsort padding") {
