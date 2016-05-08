@@ -56,6 +56,10 @@ object QEDBenchmark {
 
     QEDBenchmark.bd2Opaque(sqlContext, "1million")
 
+    QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
+
+    QEDBenchmark.bd3Opaque(sqlContext, "1million")
+
     sc.stop()
   }
 
