@@ -87,7 +87,7 @@ object QEDBenchmark {
       .cache()
     rankingsDF.count
     val result = time("big data 1") {
-      val df = rankingsDF.encFilter(OP_BD1).select($"pageURL", $"pageRank")
+      val df = rankingsDF.encFilter($"pageRank", OP_BD1).select($"pageURL", $"pageRank")
       val count = df.count
       println("big data 1 - num rows: " + count)
       df
@@ -175,7 +175,7 @@ object QEDBenchmark {
         rankingsDF.select($"pageURL", $"pageRank").encJoin(
           uservisitsDF
             .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-            .encFilter(OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
+            .encFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
             .select($"destURL", $"sourceIP", $"adRevenue"),
           rankingsDF("pageURL"), uservisitsDF("destURL"))
         .select($"sourceIP", $"pageRank", $"adRevenue")

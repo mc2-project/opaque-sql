@@ -95,7 +95,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val words = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("word", "count")
     assert(QED.decrypt2(words.collect) === data)
 
-    val filtered = words.encFilter(OP_FILTER_COL2_GT3)
+    val filtered = words.encFilter($"count", OP_FILTER_COL2_GT3)
     assert(QED.decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
   }
 
@@ -117,7 +117,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         case Row(d: java.sql.Date) => QED.encrypt(enclave, eid, d)
       }
     }.toDF("date")
-    val encFiltered = encDates.encFilter(OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
+    val encFiltered = encDates.encFilter(
+      $"date", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
     assert(QED.decrypt1[java.sql.Date](encFiltered.collect).map(_.toString).sorted ===
       filteredDates.sorted)
   }

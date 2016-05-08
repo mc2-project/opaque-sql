@@ -53,14 +53,14 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
 }
 
-case class EncFilter(condition: QEDOpcode, child: SparkPlan)
+case class EncFilter(condition: Expression, opcode: QEDOpcode, child: SparkPlan)
   extends UnaryNode {
 
   override def output: Seq[Attribute] = child.output
 
   override def doExecute() = child.execute().mapPartitions { iter =>
     val (enclave, eid) = QED.initEnclave()
-    iter.filter(rowSer => enclave.Filter(eid, condition.value, rowSer.encSerialize))
+    iter.filter(rowSer => enclave.Filter(eid, opcode.value, rowSer.encSerialize))
   }
 }
 

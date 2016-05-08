@@ -32,7 +32,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: LogicalPlan)
   override def maxRows: Option[Long] = child.maxRows
 }
 
-case class EncFilter(condition: QEDOpcode, child: LogicalPlan)
+case class EncFilter(condition: Expression, opcode: QEDOpcode, child: LogicalPlan)
   extends UnaryNode {
 
   override def output: Seq[Attribute] = child.output
