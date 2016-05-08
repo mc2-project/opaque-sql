@@ -28,6 +28,7 @@ import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
@@ -58,9 +59,17 @@ case class EncFilter(condition: Expression, opcode: QEDOpcode, child: SparkPlan)
 
   override def output: Seq[Attribute] = child.output
 
-  override def doExecute() = child.execute().mapPartitions { iter =>
-    val (enclave, eid) = QED.initEnclave()
-    iter.filter(rowSer => enclave.Filter(eid, opcode.value, rowSer.encSerialize))
+  override def doExecute() = {
+    opcode match {
+      case OP_BD1 =>
+        // BD1: pageRank > 1000, where pageRank is the second attribute
+        assert(condition.references == AttributeSet(child.output(1)))
+      case _ => {}
+    }
+    child.execute().mapPartitions { iter =>
+      val (enclave, eid) = QED.initEnclave()
+      iter.filter(rowSer => enclave.Filter(eid, opcode.value, rowSer.encSerialize))
+    }
   }
 }
 

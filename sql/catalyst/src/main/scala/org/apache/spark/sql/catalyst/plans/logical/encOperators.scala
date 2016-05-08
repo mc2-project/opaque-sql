@@ -36,6 +36,8 @@ case class EncFilter(condition: Expression, opcode: QEDOpcode, child: LogicalPla
   extends UnaryNode {
 
   override def output: Seq[Attribute] = child.output
+
+  override def references: AttributeSet = AttributeSet(child.output)
 }
 
 case class Permute(child: LogicalPlan) extends UnaryNode {
