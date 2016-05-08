@@ -102,7 +102,7 @@ object QEDBenchmark {
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
     val result = time("big data 2 - spark sql") {
-      val df = uservisitsDF.select(substring($"sourceIP", 0, 3).as("sourceIPSubstr"), $"adRevenue")
+      val df = uservisitsDF.select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
       val count = df.count
       println("big data 2 spark sql - num rows: " + count)
