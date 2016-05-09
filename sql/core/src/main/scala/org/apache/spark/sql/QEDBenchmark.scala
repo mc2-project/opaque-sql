@@ -35,6 +35,8 @@ import org.apache.spark.sql.types.StructType
 object QEDBenchmark {
   import QED.time
 
+  def dataDir: String = System.getenv("SPARKSGX_DATA_DIR")
+
   def main(args: Array[String]) {
     val sparkConf = new SparkConf().setAppName("QEDBenchmark")
     val sc = new SparkContext(sparkConf)
@@ -65,13 +67,7 @@ object QEDBenchmark {
 
   def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
-    val rankingsDF = sqlContext.read.schema(
-      StructType(Seq(
-        StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType),
-        StructField("avgDuration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
-      .cache()
+    val rankingsDF = rankings(sqlContext, size).cache()
     rankingsDF.count
     val result = time("big data 1 - spark sql") {
       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
@@ -210,7 +206,7 @@ object QEDBenchmark {
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType),
         StructField("avgDuration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/rankings/$size")
+      .csv(s"$dataDir/big-data-benchmark-files/rankings/$size")
 
   def uservisits(sqlContext: SQLContext, size: String): DataFrame =
     sqlContext.read.schema(
@@ -224,7 +220,7 @@ object QEDBenchmark {
         StructField("languageCode", StringType),
         StructField("searchWord", StringType),
         StructField("duration", IntegerType))))
-      .csv(s"/home/ankurd/big-data-benchmark-files/uservisits/$size")
+      .csv(s"$dataDir/big-data-benchmark-files/uservisits/$size")
 
   def sortSparkSQL(sqlContext: SQLContext, n: Int) {
     import sqlContext.implicits._
