@@ -24,12 +24,14 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 
-case class EncProject(projectList: Seq[NamedExpression], child: LogicalPlan)
+case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: LogicalPlan)
   extends UnaryNode {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def maxRows: Option[Long] = child.maxRows
+
+  override def references: AttributeSet = AttributeSet(child.output)
 }
 
 case class EncFilter(condition: Expression, opcode: QEDOpcode, child: LogicalPlan)
@@ -66,7 +68,8 @@ case class EncJoin(
     left: LogicalPlan,
     right: LogicalPlan,
     leftCol: Expression,
-    rightCol: Expression)
+    rightCol: Expression,
+    opcode: Option[QEDOpcode])
   extends BinaryNode {
 
   override def output: Seq[Attribute] =

@@ -170,6 +170,16 @@ object QED {
           QED.encrypt(enclave, eid, c))
     }
   }
+  def encrypt4[A, B, C, D](rows: Seq[(A, B, C, D)]): Seq[(Array[Byte], Array[Byte], Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = initEnclave()
+    rows.map {
+      case (a, b, c, d) =>
+        (QED.encrypt(enclave, eid, a),
+          QED.encrypt(enclave, eid, b),
+          QED.encrypt(enclave, eid, c),
+          QED.encrypt(enclave, eid, d))
+    }
+  }
 
   def decrypt1[A](rows: Seq[Row]): Seq[A] = {
     val (enclave, eid) = initEnclave()
@@ -390,6 +400,25 @@ object QED {
       case Row(si: Array[Byte], tr: Array[Byte], apr: Array[Byte]) =>
         (QED.decrypt[String](enclave, eid, si), QED.decrypt[Float](enclave, eid, tr),
           QED.decrypt[Int](enclave, eid, apr))
+    }
+  }
+
+  def pagerankEncryptEdges(iter: Iterator[Row])
+    : Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
+
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(src: Int, dst: Int, weight: Float) =>
+        (QED.encrypt(enclave, eid, src), QED.encrypt(enclave, eid, dst),
+          QED.encrypt(enclave, eid, weight))
+    }
+  }
+
+  def pagerankEncryptVertices(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte])] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(id: Int, rank: Float) =>
+        (QED.encrypt(enclave, eid, id), QED.encrypt(enclave, eid, rank))
     }
   }
 

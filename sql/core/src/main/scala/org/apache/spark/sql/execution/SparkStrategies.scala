@@ -396,16 +396,16 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.Project(projectList, planLater(child)) :: Nil
       case logical.Filter(condition, child) =>
         execution.Filter(condition, planLater(child)) :: Nil
-      case logical.EncProject(projectList, child) =>
-        execution.EncProject(projectList, planLater(child)) :: Nil
+      case logical.EncProject(projectList, opcode, child) =>
+        execution.EncProject(projectList, opcode, planLater(child)) :: Nil
       case logical.EncFilter(condition, opcode, child) =>
         execution.EncFilter(condition, opcode, planLater(child)) :: Nil
       case logical.Permute(child) =>
         execution.Permute(planLater(child)) :: Nil
       case logical.EncSort(sortExpr, child) =>
         execution.EncSort(sortExpr, planLater(child)) :: Nil
-      case logical.EncJoin(left, right, leftCol, rightCol) =>
-        execution.EncSortMergeJoin(planLater(left), planLater(right), leftCol, rightCol) :: Nil
+      case logical.EncJoin(left, right, leftCol, rightCol, opcode) =>
+        execution.EncSortMergeJoin(planLater(left), planLater(right), leftCol, rightCol, opcode) :: Nil
       case a @ logical.EncAggregate(groupingExpressions, aggExpressions, aggOutputs, child) =>
         execution.EncAggregate(groupingExpressions, aggExpressions, aggOutputs, a.output, planLater(child)) :: Nil
       case e @ logical.Expand(_, _, child) =>

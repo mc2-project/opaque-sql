@@ -37,7 +37,10 @@ public enum QEDOpcode {
     OP_FILTER_TEST(91),
     OP_FILTER_COL3_NOT_DUMMY(33),
     OP_FILTER_COL4_NOT_DUMMY(32),
-    OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01(34);
+    OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01(34),
+    OP_PROJECT_PAGERANK_WEIGHT_RANK(35),
+    OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK(36),
+    OP_JOIN_PAGERANK(37);
 
     private int _value;
 
@@ -50,6 +53,6 @@ public enum QEDOpcode {
     }
 
     public boolean isJoin() {
-        return this == OP_JOIN_COL1 || this == OP_JOIN_COL2;
+        return this == OP_JOIN_COL1 || this == OP_JOIN_COL2 || this == OP_JOIN_PAGERANK;
     }
 }

@@ -55,6 +55,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
+  test("pagerank") {
+    QEDBenchmark.pagerank(sqlContext, "32768")
+  }
+
   test("big data 1") {
     assert(QEDBenchmark.bd1SparkSQL(sqlContext, "tiny").collect ===
       QEDBenchmark.bd1Opaque(sqlContext, "tiny").collect)
@@ -221,8 +225,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     }
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val rdd = sparkContext.makeRDD(encrypt2(data), 1).toDF("str", "x")
-    val proj = rdd.encProject(/*substring($"str", 0, 8)*/$"str", $"x")
+    val proj = rdd.encProject(OP_BD2, $"str", $"x") // substring($"str", 0, 8)
     assert(QED.decrypt2(proj.collect) === data.map { case (str, x) => (str.substring(0, 8), x) })
+  }
+
+  test("encProject - pagerank weight * rank") {
+    val data = List((1, 2.0f, 3, 4.0f), (2, 0.5f, 1, 2.0f))
+    val df = sparkContext.makeRDD(QED.encrypt4(data), 1).toDF("id", "rank", "dst", "weight")
+      .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank")
+    val expected = for ((id, rank, dst, weight) <- data) yield (dst, rank * weight)
+    assert(QED.decrypt2(df.collect) === expected)
   }
 
   test("JNIEncrypt") {

@@ -38,7 +38,7 @@ import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
-case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
+case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: SparkPlan)
   extends UnaryNode {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
@@ -46,9 +46,10 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
   override def doExecute() = child.execute().mapPartitions { iter =>
     val (enclave, eid) = QED.initEnclave()
     val rows = iter.map(_.encSerialize).toArray
-    val serResult = enclave.Project(eid, OP_BD2.value, QED.concatByteArrays(rows), rows.length)
-    val converter = UnsafeProjection.create(projectList, child.output)
-    QED.parseRows(serResult).map(fields => converter(InternalRow.fromSeq(fields)))
+    val serResult = enclave.Project(eid, opcode.value, QED.concatByteArrays(rows), rows.length)
+    val converter = UnsafeProjection.create(schema)
+    val r = QED.parseRows(serResult).toArray
+    r.iterator.map(fields => converter(InternalRow.fromSeq(fields)))
   }
 
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
@@ -216,7 +217,8 @@ case class EncSortMergeJoin(
     left: SparkPlan,
     right: SparkPlan,
     leftCol: Expression,
-    rightCol: Expression)
+    rightCol: Expression,
+    opcode: Option[QEDOpcode])
   extends BinaryNode {
 
   override def output: Seq[Attribute] =
@@ -226,10 +228,12 @@ case class EncSortMergeJoin(
     val leftColPos = QED.attributeIndexOf(leftCol.references.toSeq(0), left.output)
     val rightColPos = QED.attributeIndexOf(rightCol.references.toSeq(0), right.output)
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
-      (left.output.size, right.output.size, leftColPos, rightColPos) match {
-        case (2, 3, 0, 0) =>
+      ((left.output.size, right.output.size, leftColPos, rightColPos, opcode): @unchecked) match {
+        case (2, 3, 0, 0, None) =>
           (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
-        case (3, 3, 1, 1) =>
+        case (2, 3, 0, 0, Some(OP_JOIN_PAGERANK)) =>
+          (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
+        case (3, 3, 1, 1, None) =>
           (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_COL4_NOT_DUMMY)
       }
 

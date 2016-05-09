@@ -540,7 +540,7 @@ void ProjectAttributes::init() {
 
     for (uint32_t i = 0; i < num_attr; i++) {
       find_plaintext_attribute(row, num_cols,
-			       3 + i, &sort_pointer, &len);
+                   2 + i, &sort_pointer, &len);
       attributes[i] = create_attr(sort_pointer);
       attributes[i]->consume(sort_pointer, NO_COPY);
     }
@@ -598,15 +598,15 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
   } else if (this->op_code == OP_PROJECT_PAGERANK_WEIGHT_RANK) {
     
     find_plaintext_attribute(row, num_cols,
-			     3, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(row, num_cols,
-                             4, &sort_pointer, &len);
+                             3, &sort_pointer, &len);
     attributes[1]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(row, num_cols,
-                             5, &sort_pointer, &len);
+                             4, &sort_pointer, &len);
     attributes[2]->consume(sort_pointer, NO_COPY);
 
 

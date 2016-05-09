@@ -980,8 +980,8 @@ class Dataset[T] private[sql](
       c5: TypedColumn[T, U5]): Dataset[(U1, U2, U3, U4, U5)] =
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
-  def encProject(cols: Column*): DataFrame = withPlan {
-    EncProject(cols.map(_.named), logicalPlan)
+  def encProject(opcode: QEDOpcode, cols: Column*): DataFrame = withPlan {
+    EncProject(cols.map(_.named), opcode, logicalPlan)
   }
 
   def encFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
@@ -1007,8 +1007,14 @@ class Dataset[T] private[sql](
   /**
    * Inner equi-join this DataFrame on the specified columns assuming a primary-foreign relationship.
    */
-  def encJoin(right: DataFrame, leftCol: Column, rightCol: Column): DataFrame = withPlan {
-    EncJoin(logicalPlan, right.logicalPlan, leftCol.expr, rightCol.expr)
+  def encJoin(
+      right: DataFrame,
+      leftCol: Column,
+      rightCol: Column,
+      opcode: Option[QEDOpcode] = None)
+    : DataFrame = withPlan {
+
+    EncJoin(logicalPlan, right.logicalPlan, leftCol.expr, rightCol.expr, opcode)
   }
 
   /**

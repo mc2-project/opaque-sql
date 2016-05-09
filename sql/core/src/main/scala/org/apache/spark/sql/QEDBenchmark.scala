@@ -23,6 +23,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
 import org.apache.spark.sql.QEDOpcode._
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.DateType
@@ -62,7 +63,53 @@ object QEDBenchmark {
 
     QEDBenchmark.bd3Opaque(sqlContext, "1million")
 
+    QEDBenchmark.pagerank(sqlContext, "4096")
+    QEDBenchmark.pagerank(sqlContext, "8192")
+    QEDBenchmark.pagerank(sqlContext, "16384")
+    QEDBenchmark.pagerank(sqlContext, "32768")
+
     sc.stop()
+  }
+
+  def pagerank(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+    import sqlContext.implicits._
+    val data = sqlContext.read
+      .schema(
+        StructType(Seq(
+          StructField("src", IntegerType, false),
+          StructField("dst", IntegerType, false),
+          StructField("isVertex", IntegerType, false))))
+      .option("delimiter", " ")
+      .csv(s"/home/ankurd/PageRank$size.in")
+    val edges = data.filter($"isVertex" === lit(0))
+      .select($"src", $"dst", lit(1.0f).as("weight"))
+      .repartition(numPartitions(sqlContext, distributed))
+      .mapPartitions(QED.pagerankEncryptEdges)
+      .toDF("src", "dst", "weight")
+      .cache()
+    val vertices = data.filter($"isVertex" === lit(1))
+      .select($"src".as("id"), lit(1.0f).as("rank"))
+      .repartition(numPartitions(sqlContext, distributed))
+      .mapPartitions(QED.pagerankEncryptVertices)
+      .toDF("id", "rank")
+      .cache()
+    val numEdges = edges.count
+    val numVertices = vertices.count
+    println(s"pagerank num edges $numEdges, num vertices $numVertices")
+    val newV =
+      time(s"pagerank $size") {
+        val result =
+          vertices.encJoin(edges, $"id", $"src", Some(OP_JOIN_PAGERANK))
+            .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank")
+            .select($"dst", $"rank".as("weightedRank"))
+            .encAggregate($"dst", $"weightedRank".as("totalIncomingRank"))
+            .select($"dst", $"totalIncomingRank")
+            .encProject(OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK, $"dst", $"totalIncomingRank")
+            .select($"dst".as("id"), $"totalIncomingRank".as("rank"))
+        result.count
+        result
+      }
+    newV
   }
 
   def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
@@ -123,7 +170,9 @@ object QEDBenchmark {
       .cache()
     uservisitsDF.count
     val result = time("big data 2") {
-      val df = uservisitsDF.select($"sourceIP", $"adRevenue").encProject($"sourceIP", $"adRevenue")
+      val df = uservisitsDF
+        .select($"sourceIP", $"adRevenue")
+        .encProject(OP_BD2, $"sourceIP", $"adRevenue")
         .encAggregate($"sourceIP", $"adRevenue".as("totalAdRevenue"))
       val count = df.count
       println("big data 2 - num rows: " + count)

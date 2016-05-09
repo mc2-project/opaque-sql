@@ -165,7 +165,7 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
   case PR_WEIGHT_RANK:
     {
       // project identity
-      Integer *int_input = dynamic_cast<Integer *>(input_attr[0]);
+      Integer *int_input = dynamic_cast<Integer *>(input_attr[1]);
       Integer *int_output = dynamic_cast<Integer *>(output_attr[0]);
 
       if (int_input == NULL || int_output == NULL) {
@@ -175,7 +175,7 @@ void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
       int_output->copy_attr(int_input);
 
       // page rank should multiple two attributes together
-      Float *v1 = dynamic_cast<Float *>(input_attr[1]);
+      Float *v1 = dynamic_cast<Float *>(input_attr[0]);
       Float *v2 = dynamic_cast<Float *>(input_attr[2]);
       Float *v3 = dynamic_cast<Float *>(output_attr[1]);
 
