@@ -86,16 +86,16 @@ uint32_t attr_upper_bound(uint8_t attr_type) {
 
 void printf(const char *fmt, ...)
 {
-    char buf[BUFSIZ] = {'\0'};
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, BUFSIZ, fmt, ap);
-    va_end(ap);
-    ocall_print_string(buf);
+  char buf[BUFSIZ] = {'\0'};
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, BUFSIZ, fmt, ap);
+  va_end(ap);
+  ocall_print_string(buf);
 }
 
 void print_bytes(uint8_t *ptr, uint32_t len) {
-  
+
   for (int i = 0; i < len; i++) {
     printf("%u", *(ptr + i));
     printf(" - ");
@@ -111,7 +111,7 @@ void get_next_value(uint8_t **ptr, uint8_t **enc_value_ptr, uint32_t *enc_value_
   *enc_value_ptr = *ptr + 4;
 
   *ptr = *ptr + 4 + *enc_value_len;
-  
+
 }
 
 
@@ -129,9 +129,9 @@ void get_next_row(uint8_t **ptr, uint8_t **enc_row_ptr, uint32_t *enc_row_len) {
   len = 4;
 
   for (uint32_t i = 0; i < num_cols; i++) {
-	enc_attr_len = * ((uint32_t *) enc_attr_ptr);
-	enc_attr_ptr += 4 + enc_attr_len;
-	len += 4 + enc_attr_len;
+    enc_attr_len = * ((uint32_t *) enc_attr_ptr);
+    enc_attr_ptr += 4 + enc_attr_len;
+    len += 4 + enc_attr_len;
   }
 
   *enc_row_ptr = *ptr;
@@ -153,9 +153,9 @@ void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len)
   len = 4;
 
   for (uint32_t i = 0; i < num_cols; i++) {
-	attr_len = * ((uint32_t *) (attr_ptr + TYPE_SIZE));
-	attr_ptr += HEADER_SIZE + attr_len;
-	len += HEADER_SIZE + attr_len;
+    attr_len = * ((uint32_t *) (attr_ptr + TYPE_SIZE));
+    attr_ptr += HEADER_SIZE + attr_len;
+    len += HEADER_SIZE + attr_len;
   }
 
   *row_ptr = *ptr;
@@ -167,16 +167,16 @@ void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len)
 int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
 
   for (uint32_t i = 0; i < len; i++) {
-	if (*(value1+i) != *(value2+i)) {
-	  return -1;
-	}
+    if (*(value1+i) != *(value2+i)) {
+      return -1;
+    }
   }
   return 0;
 }
 
 void cpy(uint8_t *dest, uint8_t *src, uint32_t len) {
   // for (uint32_t i = 0; i < len; i++) {
-  // 	*(dest + i) = *(src + i);
+  //     *(dest + i) = *(src + i);
   // }
 
   memcpy(dest, src, len);
@@ -185,84 +185,84 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len) {
 // basically a memset 0
 void clear(uint8_t *dest, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
-	*(dest + i) = 0;
+    *(dest + i) = 0;
   }
 }
 
 void write_dummy(uint8_t *dest, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
-	*(dest + i) = 0;
+    *(dest + i) = 0;
   }
 }
 
 
 int test_dummy(uint8_t *src, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
-	if (*(src + i) != 0) {
-	  return -1;
-	}
+    if (*(src + i) != 0) {
+      return -1;
+    }
   }
   return 0;
 }
 
 // assume that the entire row has been decrypted
 void find_plaintext_attribute(uint8_t *row, uint32_t num_cols,
-							  uint32_t attr_num,
-							  uint8_t **value_ptr,
-							  uint32_t *len) {
-  
+                              uint32_t attr_num,
+                              uint8_t **value_ptr,
+                              uint32_t *len) {
+
   uint8_t *value_ptr_ = row;
   uint32_t value_len_ = 0;
 
   for (uint32_t j = 0; j < num_cols; j++) {
-	// [value type][value len][value]
+    // [value type][value len][value]
 
-	value_len_ = *( (uint32_t *) (value_ptr_ + TYPE_SIZE));
-	  
-	// found aggregate attribute
-	if (j + 1 == attr_num) {
-	  *value_ptr = value_ptr_;
-	  *len = value_len_ + HEADER_SIZE;
-	  return;
-	}
-	
-	value_ptr_ += value_len_ + HEADER_SIZE;
+    value_len_ = *( (uint32_t *) (value_ptr_ + TYPE_SIZE));
+
+    // found aggregate attribute
+    if (j + 1 == attr_num) {
+      *value_ptr = value_ptr_;
+      *len = value_len_ + HEADER_SIZE;
+      return;
+    }
+
+    value_ptr_ += value_len_ + HEADER_SIZE;
 
   }
-  
+
 }
 
 
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
-					uint32_t attr_num,
-					uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
+                    uint32_t attr_num,
+                    uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
 
   uint8_t *enc_value_ptr_ = row;
   uint32_t enc_value_len_ = 0;
 
   for (uint32_t j = 0; j < num_cols; j++) {
-	// [enc len]encrypted{[value type][value len][value]}
+    // [enc len]encrypted{[value type][value len][value]}
 
-	enc_value_len_ = *( (uint32_t *) enc_value_ptr_);
-	enc_value_ptr_ += 4;
-	  
-	// found aggregate attribute
-	if (j + 1 == attr_num) {
-	  *enc_value_ptr = enc_value_ptr_;
-	  *enc_value_len = enc_value_len_;
-	  return;
-	}
-	
-	enc_value_ptr_ += enc_value_len_;
+    enc_value_len_ = *( (uint32_t *) enc_value_ptr_);
+    enc_value_ptr_ += 4;
+
+    // found aggregate attribute
+    if (j + 1 == attr_num) {
+      *enc_value_ptr = enc_value_ptr_;
+      *enc_value_len = enc_value_len_;
+      return;
+    }
+
+    enc_value_ptr_ += enc_value_len_;
 
   }
 }
 
 void get_table_indicator(uint8_t *primary_table,
-						 uint8_t *foreign_table) {
+                         uint8_t *foreign_table) {
   char primary_table_[TABLE_ID_SIZE+1] = "11111111";
   char foreign_table_[TABLE_ID_SIZE+1] = "22222222";
-  
+
   cpy(primary_table, (uint8_t *) primary_table_, TABLE_ID_SIZE);
   cpy(foreign_table, (uint8_t *) foreign_table_, TABLE_ID_SIZE);
 }
@@ -312,8 +312,8 @@ void print_row(const char *row_name, uint8_t *row_ptr) {
   printf("===============\n");
   printf("Row %s\n", row_name);
   for (uint32_t i = 0; i < num_cols; i++) {
-	print_attribute("", value_ptr);
-	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    print_attribute("", value_ptr);
+    value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
   }
   printf("===============\n");
 }
@@ -324,8 +324,8 @@ void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols) {
   printf("===============\n");
   printf("Row %s\n", row_name);
   for (uint32_t i = 0; i < num_cols; i++) {
-	print_attribute("", value_ptr);
-	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    print_attribute("", value_ptr);
+    value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
   }
   printf("===============\n");
 }
@@ -337,16 +337,16 @@ void print_join_row(const char *row_name, uint8_t *row_ptr) {
   printf("===============\n");
   printf("Table id: ");
   print_bytes(table_id, TABLE_ID_SIZE);
-  
+
   uint32_t num_cols = *( (uint32_t *) (row_ptr + TABLE_ID_SIZE));
   uint8_t *value_ptr = row_ptr + TABLE_ID_SIZE + 4;
-  
+
   printf("Row %s\n", row_name);
   for (uint32_t i = 0; i < num_cols; i++) {
-	print_attribute("", value_ptr);
-	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    print_attribute("", value_ptr);
+    value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
   }
-  printf("===============\n");  
+  printf("===============\n");
 }
 
 
@@ -356,8 +356,8 @@ uint32_t get_num_col(uint8_t *row) {
   return *num_col_ptr;
 }
 
-uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len, 
-					  uint8_t *row_ptr, uint8_t *row, uint32_t length) {
+uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len,
+                      uint8_t *row_ptr, uint8_t *row, uint32_t length) {
   if (row_ptr >= row + length) {
     return NULL;
   }
@@ -373,7 +373,7 @@ uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len,
 
 
 void get_attr(uint8_t *dec_attr_ptr,
-			  uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr) {
+              uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr) {
 
   // given a pointer to the encrypted attribute, return the type, attr len, attr pointer
   assert(dec_attr_ptr != NULL);
@@ -381,7 +381,7 @@ void get_attr(uint8_t *dec_attr_ptr,
 
   uint32_t *attr_len_ptr = (uint32_t *) (dec_attr_ptr + 1);
   *attr_len = *(dec_attr_ptr + 1);
-  
+
   *attr_ptr  = (dec_attr_ptr + 1 + *attr_len);
 }
 
@@ -389,10 +389,10 @@ void get_attr(uint8_t *dec_attr_ptr,
 void encrypt_attribute(uint8_t **input, uint8_t **output) {
   uint8_t *input_ptr = *input;
   uint8_t *output_ptr = *output;
-  
+
   uint8_t attr_type = *input_ptr;
   uint32_t attr_len = 0;
-  
+
   uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
   uint32_t upper_bound = attr_upper_bound(attr_type);
@@ -417,9 +417,9 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
 
   uint32_t enc_len = *( (uint32_t *) (input_ptr));
   //printf("[decrypt_attribute] enc_len is %u\n", enc_len);
-  
+
   input_ptr += 4;
-  
+
   uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
 
   decrypt(input_ptr, enc_len, temp);
@@ -448,14 +448,14 @@ void check(const char* message, bool test) {
 BufferReader::BufferReader() {
   offset = 0;
   for (uint32_t i = 0; i < 10; i++) {
-	buffer_list[i] = NULL;
-	buffer_sizes[i] = 0;
+    buffer_list[i] = NULL;
+    buffer_sizes[i] = 0;
   }
 
   current_pointer = NULL;
   current_buf = 0;
 }
-  
+
 void BufferReader::add_buffer(uint8_t *ptr, uint32_t size) {
   buffer_list[offset] = ptr;
   buffer_sizes[offset] = size;
@@ -472,8 +472,8 @@ void BufferReader::reset() {
 void BufferReader::clear() {
   offset = 0;
   for (uint32_t i = 0; i < 10; i++) {
-	buffer_list[i] = NULL;
-	buffer_sizes[i] = 0;
+    buffer_list[i] = NULL;
+    buffer_sizes[i] = 0;
   }
   current_pointer = NULL;
   current_buf = 0;
@@ -487,15 +487,15 @@ uint8_t *BufferReader::get_ptr() {
 void BufferReader::inc_ptr(uint8_t *ptr) {
   uint32_t inc_size = ptr - current_pointer;
   if ((current_pointer + inc_size) >= buffer_list[current_buf] + buffer_sizes[current_buf]) {
-	++current_buf;
-	current_pointer = buffer_list[current_buf];
-	//printf("[BufferReader] jump pointer, %p\n", current_pointer);
-	// if (current_pointer != NULL) {
-	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer)));
-	//   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer + 4)));
-	// }
+    ++current_buf;
+    current_pointer = buffer_list[current_buf];
+    //printf("[BufferReader] jump pointer, %p\n", current_pointer);
+    // if (current_pointer != NULL) {
+    //   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer)));
+    //   printf("First 4 bytes: %u\n", *( (uint32_t *) (current_pointer + 4)));
+    // }
   } else {
-	current_pointer += inc_size;
+    current_pointer += inc_size;
   }
 }
 
@@ -506,12 +506,12 @@ uint32_t get_plaintext_padded_row_size(uint8_t *row) {
   row_ptr += 4;
 
   uint32_t enc_attr_len = 0;
-  
+
   for (uint32_t i = 0; i < num_cols; i++) {
     enc_attr_len = *( (uint32_t *) row_ptr);
     len += enc_attr_len - ENC_HEADER_SIZE;
     row_ptr += 4 + enc_attr_len;
   }
-  
+
   return len;
 }

@@ -1,10 +1,10 @@
 #include "Project.h"
 
 void project(int op_code,
-	     uint8_t *input_rows, uint32_t input_rows_length,
-	     uint32_t num_rows,
-	     uint8_t *output_rows, uint32_t output_rows_length,
-	     uint32_t *actual_output_rows_length) {
+             uint8_t *input_rows, uint32_t input_rows_length,
+             uint32_t num_rows,
+             uint8_t *output_rows, uint32_t output_rows_length,
+             uint32_t *actual_output_rows_length) {
 
   uint8_t *input_ptr = input_rows;
   uint8_t *output_rows_ptr = output_rows;
@@ -13,7 +13,7 @@ void project(int op_code,
 
   uint8_t *prev_row_ptr = NULL;
   uint8_t prev_row_len = 0;
-  
+
   uint8_t *enc_value_ptr = NULL;
   uint32_t enc_value_len = 0;
 

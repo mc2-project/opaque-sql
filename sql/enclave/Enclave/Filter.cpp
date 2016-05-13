@@ -30,10 +30,10 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
   if (op_code == OP_FILTER_COL2_GT3) {
     // find the second attribute
-		
+
     find_attribute(row_ptr, length, num_cols,
-		   2,
-		   &enc_value_ptr, &enc_value_len);
+                   2,
+                   &enc_value_ptr, &enc_value_len);
 
     //decrypt(enc_value_ptr, enc_value_len, decrypted_data);
     enc_value_ptr -= 4;
@@ -91,21 +91,21 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     // this is for test only
 
     find_attribute(row_ptr, length, num_cols,
-		   1,
-		   &enc_value_ptr, &enc_value_len);
+                   1,
+                   &enc_value_ptr, &enc_value_len);
     decrypt(enc_value_ptr, enc_value_len, decrypted_data);
     get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
-    
+
     int *value_ptr = (int *) attr_ptr;
 
     // printf("Input value is %u\n", *value_ptr);
     // printf("Attr len is  is %u\n", attr_len);
-	
+
     ret = 0;
   } else if (op_code == OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01) {
-    
+
     find_attribute(row_ptr, length, num_cols,
-		   1, &enc_value_ptr, &enc_value_len);
+                   1, &enc_value_ptr, &enc_value_len);
 
     decrypt(enc_value_ptr, enc_value_len, decrypted_data);
 
@@ -121,7 +121,7 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
     } else {
       return 0;
     }
-    
+
   } else {
     printf("ecall_filter_single_row: unknown opcode %d\n", op_code);
     assert(false);

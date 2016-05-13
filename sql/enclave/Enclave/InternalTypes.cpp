@@ -39,11 +39,11 @@ Integer::Integer() {
 
 int Integer::compare(GenericType *v) {
   Integer *int_v = dynamic_cast<Integer *>(v);
-  
+
   if (this->value > int_v->value) {
-	return 1;
+    return 1;
   } else if (this->value < int_v->value) {
-	return -1;
+    return -1;
   }
 
   return 0;
@@ -51,12 +51,12 @@ int Integer::compare(GenericType *v) {
 
 void Integer::swap(GenericType *v) {
   Integer *int_v = dynamic_cast<Integer *>(v);
-  
+
   int value_ = this->value;
   this->value = int_v->value;
   int_v->value = value_;
 }
-	
+
 void Integer::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == INT) {
@@ -66,7 +66,7 @@ void Integer::consume(uint8_t *input, int mode) {
     assert(false);
   }
 }
-  
+
 void Integer::flush(uint8_t *output) {
   // write back type, size, and actual output
   *output = INT;
@@ -112,7 +112,7 @@ int String::compare(GenericType *v) {
   // String comparison is lexicographic order
 
   String *str = dynamic_cast<String *>(v);
-	
+
   uint32_t min_size = this->length < str->length ? str->length : str->length;
   int ret = 0;
   for (uint32_t i = 0; i < min_size; i++) {
@@ -124,9 +124,9 @@ int String::compare(GenericType *v) {
   }
 
   if (this->length < str->length) {
-	return -1;
+    return -1;
   } else if (this->length > str->length) {
-	return 1;
+    return 1;
   }
 
   // these two strings are exactly equal!
@@ -135,7 +135,7 @@ int String::compare(GenericType *v) {
 
 void String::swap(GenericType *attr2) {
   String *attr = dynamic_cast<String *>(attr2);
-  
+
   uint32_t length_ = this->length;
   uint8_t *data_ = this->data;
   int if_alloc_ = this->if_alloc;
@@ -149,15 +149,15 @@ void String::swap(GenericType *attr2) {
 
 void String::alloc(uint8_t *buffer) {
   if (if_alloc == 0) {
-	free(data);
+    free(data);
   }
-	
+
   if (buffer != NULL) {
-	this->data = buffer;
-	if_alloc = -1;
+    this->data = buffer;
+    if_alloc = -1;
   } else {
-	this->data = (uint8_t *) malloc(STRING_UPPER_BOUND);
-	if_alloc = 0;
+    this->data = (uint8_t *) malloc(STRING_UPPER_BOUND);
+    if_alloc = 0;
   }
 }
 
@@ -165,29 +165,29 @@ void String::consume(uint8_t *input, int mode) {
   switch(mode) {
 
   case ALLOC:
-	{
-	  this->length = *( (uint32_t *) (input + TYPE_SIZE));
-	  data = (uint8_t *) malloc(this->length);
-	  cpy(this->data, input + HEADER_SIZE, this->length);
-	  if_alloc = 0;
-	}
-	break;
+  {
+    this->length = *( (uint32_t *) (input + TYPE_SIZE));
+    data = (uint8_t *) malloc(this->length);
+    cpy(this->data, input + HEADER_SIZE, this->length);
+    if_alloc = 0;
+  }
+  break;
 
   case COPY:
-	{
-	  this->length = *( (uint32_t *) (input + TYPE_SIZE));
-	  cpy(data, input + HEADER_SIZE, this->length);
-	  if_alloc = -1;
-	}
-	break;
-	  
+  {
+    this->length = *( (uint32_t *) (input + TYPE_SIZE));
+    cpy(data, input + HEADER_SIZE, this->length);
+    if_alloc = -1;
+  }
+  break;
+
   case NO_COPY:
-	{
-	  this->length = *( (uint32_t *) (input + TYPE_SIZE));
-	  data = input + HEADER_SIZE;
-	  if_alloc = -1;
-	}
-    break;
+  {
+    this->length = *( (uint32_t *) (input + TYPE_SIZE));
+    data = input + HEADER_SIZE;
+    if_alloc = -1;
+  }
+  break;
 
   default:
     printf("String::consume: Unknown mode %d\n", mode);
@@ -207,18 +207,18 @@ void String::copy_attr(String *attr, int mode) {
   //this->if_alloc = attr->if_alloc;
 
   if (mode == NO_COPY) {
-	this->data = attr->data;
+    this->data = attr->data;
   } else {
-	cpy(this->data, attr->data, this->length);
+    cpy(this->data, attr->data, this->length);
   }
-  
+
 }
 
 void String::reset() {
   if (if_alloc == 0) {
     free(data);
   }
-	
+
   data = NULL;
   if_alloc = -1;
   length = 0;
@@ -239,11 +239,11 @@ Float::Float() {
 
 int Float::compare(GenericType *v) {
   Float *float_v = dynamic_cast<Float *>(v);
-  
+
   if (this->value > float_v->value) {
-	return 1;
+    return 1;
   } else if (this->value < float_v->value) {
-	return -1;
+    return -1;
   }
 
   return 0;
@@ -261,12 +261,12 @@ void Float::swap(GenericType *v) {
 void Float::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == FLOAT) {
-	this->value = *( (float *) (input + HEADER_SIZE));
+    this->value = *( (float *) (input + HEADER_SIZE));
   } else {
     printf("Float::consume: Unexpected type %d\n", type);
     assert(false);
   }
-  
+
 }
 
 void Float::flush(uint8_t *output) {
@@ -289,7 +289,7 @@ void Float::sum(GenericType *v) {
 }
 
 void Float::print() {
-  printf("Float attr: %f\n", this->value);  
+  printf("Float attr: %f\n", this->value);
 }
 
 /*** Float ***/
@@ -334,12 +334,12 @@ void Date::swap(GenericType *v) {
 void Date::consume(uint8_t *input, int mode) {
   uint8_t type = *input;
   if (type == DATE) {
-	this->date = *( (float *) (input + HEADER_SIZE));
+    this->date = *( (float *) (input + HEADER_SIZE));
   } else {
     printf("Date::consume: Unexpected type %d\n", type);
     assert(false);
   }
-  
+
 }
 
 void Date::flush(uint8_t *output) {
@@ -449,14 +449,14 @@ GroupedAttributes::GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num
 
 int GroupedAttributes::compare(GroupedAttributes *attr) {
   // compare the eval attributes
-  
+
   int ret = 0;
   for (uint32_t i = 0; i < num_eval_attr; i++) {
-	ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
-	
-	if (ret != 0) {	  
-	  return ret;
-	}
+    ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
+
+    if (ret != 0) {
+      return ret;
+    }
   }
 
   return ret;
@@ -466,7 +466,7 @@ void GroupedAttributes::swap(GroupedAttributes *attr) {
   // printf("Before\n");
   // this->print();
   // attr->print();
-  
+
   swap_helper<int>(&(this->op_code), &(attr->op_code));
   swap_helper<uint8_t *>(&row, &(attr->row));
   swap_helper<uint32_t>(&num_cols, &(attr->num_cols));
@@ -484,12 +484,12 @@ void GroupedAttributes::swap(GroupedAttributes *attr) {
 void GroupedAttributes::print() {
   printf("Original attributes:  ");
   for (uint32_t i = 0; i < num_attr; i++) {
-	attributes[i]->print();
+    attributes[i]->print();
   }
 
   printf("Evaluated attributes:  ");
   for (uint32_t i = 0; i < num_eval_attr; i++) {
-	eval_attributes[i]->print();
+    eval_attributes[i]->print();
   }
 }
 
@@ -507,7 +507,7 @@ void ProjectAttributes::init() {
   if (op_code == OP_BD2) {
     // for Big Data Benchmark query #2
     expression = BD2;
-    
+
     num_attr = 2;
     num_eval_attr = 2;
 
@@ -540,7 +540,7 @@ void ProjectAttributes::init() {
 
     for (uint32_t i = 0; i < num_attr; i++) {
       find_plaintext_attribute(row, num_cols,
-                   2 + i, &sort_pointer, &len);
+                               2 + i, &sort_pointer, &len);
       attributes[i] = create_attr(sort_pointer);
       attributes[i]->consume(sort_pointer, NO_COPY);
     }
@@ -559,7 +559,7 @@ void ProjectAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-			     1, &sort_pointer, &len);
+                             1, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     attributes[0]->consume(sort_pointer, NO_COPY);
@@ -589,14 +589,14 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
   if (this->op_code == OP_BD2) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols, 1, &sort_pointer, &len);
-	attributes[0]->consume(sort_pointer, NO_COPY);
+    attributes[0]->consume(sort_pointer, NO_COPY);
 
     attributes[1]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols, 2, &sort_pointer, &len);
     attributes[1]->consume(sort_pointer, NO_COPY);
 
   } else if (this->op_code == OP_PROJECT_PAGERANK_WEIGHT_RANK) {
-    
+
     find_plaintext_attribute(row, num_cols,
                              2, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
@@ -612,11 +612,11 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
 
     eval_attributes[0]->reset();
     eval_attributes[1]->reset();
-    
+
   } else if (this->op_code == OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK) {
 
     find_plaintext_attribute(row, num_cols,
-			     1, &sort_pointer, &len);
+                             1, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
     eval_attributes[0]->reset();
 
@@ -634,8 +634,8 @@ void ProjectAttributes::re_init(uint8_t *new_row_ptr) {
 
 void ProjectAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
-				eval_attributes, num_eval_attr,
-				expression, PROJECT);
+                eval_attributes, num_eval_attr,
+                expression, PROJECT);
 }
 
 
@@ -647,26 +647,26 @@ void ProjectAttributes::evaluate() {
 int JoinAttributes::compare(JoinAttributes *attr) {
   int ret = GroupedAttributes::compare(attr);
   if (ret != 0) {
-	return ret;
+    return ret;
   }
-  
+
   if (ret == 0) {
-	// needs to compare table id's
-	int if_primary_1 = this->if_primary;
-	int if_primary_2 = attr->if_primary;
-	if (if_primary_1 == 0) {
-	  return -1;
-	} else if (if_primary_2 == 0) {
-	  return 1;
-	}
+    // needs to compare table id's
+    int if_primary_1 = this->if_primary;
+    int if_primary_2 = attr->if_primary;
+    if (if_primary_1 == 0) {
+      return -1;
+    } else if (if_primary_2 == 0) {
+      return 1;
+    }
   }
-	
+
   return ret;
 }
 
 void JoinAttributes::swap(JoinAttributes *attr) {
   GroupedAttributes::swap(attr);
-  
+
   uint8_t *table_id_ = this->table_id;
   this->table_id = attr->table_id;
   attr->table_id = table_id_;
@@ -759,11 +759,11 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
   } else if (op_code == OP_BD2) {
-	// for Big Data Benchmark query #2
-	expression = BD2;
+    // for Big Data Benchmark query #2
+    expression = BD2;
 
-	num_attr = 1;
-	num_eval_attr = 1;
+    num_attr = 1;
+    num_eval_attr = 1;
 
   } else {
     printf("JoinAttributes::re_init: Unknown opcode %d\n", op_code);
@@ -773,8 +773,8 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
 
 void JoinAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
-				eval_attributes, num_eval_attr,
-				expression, JOIN);
+                eval_attributes, num_eval_attr,
+                expression, JOIN);
 }
 
 void JoinAttributes::print() {
@@ -790,15 +790,15 @@ void SortAttributes::init() {
 
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
-  
+
   if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2) {
-	expression = IDENTITY;
+    expression = IDENTITY;
 
-	num_attr = 1;
-	num_eval_attr = 1;
+    num_attr = 1;
+    num_eval_attr = 1;
 
-	attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
-	eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     uint32_t sort_col = 0;
     switch (op_code) {
@@ -808,37 +808,37 @@ void SortAttributes::init() {
       printf("SortAttributes::init: Unknown opcode %d\n", op_code);
       assert(false);
     }
-	find_plaintext_attribute(row, num_cols,
+    find_plaintext_attribute(row, num_cols,
                              sort_col, &sort_pointer, &len);
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
-	attributes[0]->consume(sort_pointer, NO_COPY);
-	
+    attributes[0]->consume(sort_pointer, NO_COPY);
+
     num_eval_attr = num_attr;
 
   } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
-	// this sort is the last step of aggregation
+    // this sort is the last step of aggregation
 
-	num_attr = 2;
-	num_eval_attr = 2;
+    num_attr = 2;
+    num_eval_attr = 2;
 
-	// first, sort based on the aggregation attribute's type
-	// if not dummy, sort based on the agg sort attribute
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
 
     attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
-	find_plaintext_attribute(row, num_cols,
-							 4, &sort_pointer, &len);
+    find_plaintext_attribute(row, num_cols,
+                             4, &sort_pointer, &len);
 
-	attributes[0] = create_attr(sort_pointer);
-	eval_attributes[0] = create_attr(sort_pointer);
-	
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
     find_plaintext_attribute(row, num_cols,
                              2, &sort_pointer, &len);
-	
+
     attributes[1] = create_attr(sort_pointer);
-	eval_attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1] = create_attr(sort_pointer);
     attributes[1]->consume(sort_pointer, NO_COPY);
   } else if (op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
     // this sort is the last step of aggregation
@@ -876,7 +876,7 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
   uint32_t len = 0;
 
   if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2) {
-	
+
     uint32_t sort_col = 0;
     switch (op_code) {
     case OP_SORT_COL1: sort_col = 1; break;
@@ -885,34 +885,34 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
       printf("SortAttributes::init: Unknown opcode %d\n", op_code);
       assert(false);
     }
-    	find_plaintext_attribute(row, num_cols,
+    find_plaintext_attribute(row, num_cols,
                              sort_col, &sort_pointer, &len);
     attributes[0]->reset();
     eval_attributes[0]->reset();
     attributes[0]->consume(sort_pointer, NO_COPY);
 
-	
+
   } else if (op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
-	// this sort is the last step of aggregation
+    // this sort is the last step of aggregation
 
-	// first, sort based on the aggregation attribute's type
-	// if not dummy, sort based on the agg sort attribute
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
 
-	attributes[0]->reset();
+    attributes[0]->reset();
 
-	find_plaintext_attribute(row, num_cols,
-							 4, &sort_pointer, &len);
+    find_plaintext_attribute(row, num_cols,
+                             4, &sort_pointer, &len);
 
-	delete attributes[0];
-	delete eval_attributes[0];
+    delete attributes[0];
+    delete eval_attributes[0];
 
-	attributes[0] = create_attr(sort_pointer);
-	eval_attributes[0] = create_attr(sort_pointer);
-	
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
     find_plaintext_attribute(row, num_cols,
                              2, &sort_pointer, &len);
     attributes[1]->reset();
-	eval_attributes[1]->reset();
+    eval_attributes[1]->reset();
     attributes[1]->consume(sort_pointer, NO_COPY);
   } else if (op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
     // this sort is the last step of aggregation
@@ -940,13 +940,13 @@ void SortAttributes::re_init(uint8_t *new_row_ptr) {
     printf("SortAttributes::re_init: unknown opcode %d\n", op_code);
     assert(false);
   }
-  
+
 }
 
 void SortAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
-				eval_attributes, num_eval_attr,
-				expression, SORT);
+                eval_attributes, num_eval_attr,
+                expression, SORT);
 }
 
 int SortAttributes::compare(SortAttributes *attr) {
@@ -955,21 +955,21 @@ int SortAttributes::compare(SortAttributes *attr) {
     int ret = 0;
     for (uint32_t i = 0; i < num_eval_attr; i++) {
       if (i == 0) {
-	uint8_t type1 = this->eval_attributes[0]->type_;
-	uint8_t type2 = attr->eval_attributes[0]->type_;
+        uint8_t type1 = this->eval_attributes[0]->type_;
+        uint8_t type2 = attr->eval_attributes[0]->type_;
 
-	if (type1 == DUMMY) {
-	  return -1;
-	} else if (type2 == DUMMY) {
-	  return 1;
-	}
+        if (type1 == DUMMY) {
+          return -1;
+        } else if (type2 == DUMMY) {
+          return 1;
+        }
 
       } else {
-	ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
-		
-	if (ret != 0) {	  
-	  return ret;
-	}
+        ret = eval_attributes[i]->compare((attr->eval_attributes)[i]);
+
+        if (ret != 0) {
+          return ret;
+        }
       }
     }
 
@@ -1003,7 +1003,7 @@ void AggSortAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-			     2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
@@ -1062,13 +1062,13 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,
-			     2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
 
     attributes[0]->consume(sort_pointer, NO_COPY);
     // printf("Re-initialize, new attributes is ");
     // attributes[0]->print();
   } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1
-      || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+             || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,
@@ -1091,8 +1091,8 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
 
 void AggSortAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
-		eval_attributes, num_eval_attr,
-		expression, AGG);
+                eval_attributes, num_eval_attr,
+                expression, AGG);
 }
 
 int AggSortAttributes::compare(AggSortAttributes *attr) {
@@ -1122,7 +1122,7 @@ void AggAggAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-			     3, &sort_pointer, &len);
+                             3, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
@@ -1141,7 +1141,7 @@ void AggAggAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-                 2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
@@ -1150,8 +1150,8 @@ void AggAggAttributes::init() {
 
     num_eval_attr = num_attr;
 
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
-	     op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
 
     expression = IDENTITY;
 
@@ -1162,7 +1162,7 @@ void AggAggAttributes::init() {
     eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
 
     find_plaintext_attribute(row, num_cols,
-                 2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
 
     attributes[0] = create_attr(sort_pointer);
     eval_attributes[0] = create_attr(sort_pointer);
@@ -1170,7 +1170,7 @@ void AggAggAttributes::init() {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(row, num_cols,
-                 3, &sort_pointer, &len);
+                             3, &sort_pointer, &len);
 
     attributes[1] = create_attr(sort_pointer);
     eval_attributes[1] = create_attr(sort_pointer);
@@ -1178,7 +1178,7 @@ void AggAggAttributes::init() {
     attributes[1]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
-    
+
   } else {
     printf("AggAggAttributes::init: Unknown opcode %d\n", op_code);
     assert(false);
@@ -1193,23 +1193,23 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
   if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols,
-			     3, &sort_pointer, &len);
+                             3, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
   } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols,
-                 2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
 
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 || 
-	     op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
     find_plaintext_attribute(new_row_ptr, num_cols,
-                 2, &sort_pointer, &len);
+                             2, &sort_pointer, &len);
 
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     find_plaintext_attribute(new_row_ptr, num_cols,
-                 3, &sort_pointer, &len);
+                             3, &sort_pointer, &len);
 
     attributes[1]->consume(sort_pointer, NO_COPY);
 
@@ -1223,8 +1223,8 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
 
 void AggAggAttributes::evaluate() {
   evaluate_expr(attributes, num_attr,
-		eval_attributes, num_eval_attr,
-		expression, AGG_AGG);
+                eval_attributes, num_eval_attr,
+                expression, AGG_AGG);
 }
 
 int AggAggAttributes::compare(AggAggAttributes *attr) {
@@ -1239,7 +1239,7 @@ int AggAggAttributes::compare(AggAggAttributes *attr) {
 
 // given a row with a set of encrypted attributes
 // assume that the row_ptr is set correctly
-// do not write into 
+// do not write into
 uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   this->num_cols = *( (uint32_t *) (input_row));
   uint8_t *input_row_ptr = input_row + 4;
@@ -1247,15 +1247,15 @@ uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   uint32_t total_len = 4;
 
   for (uint32_t i = 0; i < this->num_cols; i++) {
-	// enc_len = *( (uint32_t *) (input_row_ptr));
-	// input_row_ptr += 4;
-	// decrypt(input_row_ptr, enc_len, row_ptr);
-	
-	// input_row_ptr += enc_len;
-	// row_ptr += dec_size(enc_len);
-	// total_len += enc_len;
+    // enc_len = *( (uint32_t *) (input_row_ptr));
+    // input_row_ptr += 4;
+    // decrypt(input_row_ptr, enc_len, row_ptr);
 
-	decrypt_attribute(&input_row_ptr, &row_ptr);
+    // input_row_ptr += enc_len;
+    // row_ptr += dec_size(enc_len);
+    // total_len += enc_len;
+
+    decrypt_attribute(&input_row_ptr, &row_ptr);
   }
 
   return (input_row_ptr - input_row);
@@ -1277,14 +1277,14 @@ void ProjectRecord::clear() {
 }
 
 void ProjectRecord::set_project_attributes(int op_code) {
-  
+
   if (project_attributes == NULL) {
-	project_attributes = new ProjectAttributes(op_code, row, num_cols);
-	project_attributes->init();
-	project_attributes->evaluate();
+    project_attributes = new ProjectAttributes(op_code, row, num_cols);
+    project_attributes->init();
+    project_attributes->evaluate();
   } else {
     project_attributes->re_init(this->row);
-	project_attributes->evaluate();
+    project_attributes->evaluate();
   }
 
 }
@@ -1293,7 +1293,7 @@ void ProjectRecord::set_project_attributes(int op_code) {
 uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
   uint8_t *output_ptr = output;
   uint32_t value_len = 0;
-  
+
   ProjectAttributes *attrs = this->project_attributes;
 
   *( (uint32_t *) (output_ptr)) = attrs->num_eval_attr;
@@ -1307,12 +1307,12 @@ uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
     temp_ptr = temp;
     attrs->eval_attributes[i]->flush(temp);
     encrypt_attribute(&temp_ptr, &output_ptr);
-	
+
     // value_len = *( (uint32_t *) (temp + TYPE_SIZE));
     // *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
-    
+
     // encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
-    
+
     // output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
@@ -1336,7 +1336,7 @@ void JoinRecord::swap(JoinRecord *rec) {
 
 void JoinRecord::compare_and_swap(JoinRecord *rec) {
   if (this->compare(rec) == 1) {
-	this->swap(rec);
+    this->swap(rec);
   }
 }
 
@@ -1354,16 +1354,16 @@ void JoinRecord::consume_plaintext_row(uint8_t *plain_row) {
 
 void JoinRecord::set_join_attributes(int op_code) {
   if (join_attributes == NULL) {
-	join_attributes = new JoinAttributes(op_code, row + TABLE_ID_SIZE + 4, num_cols);
-	join_attributes->set_table_id(row);
-	join_attributes->if_primary = is_table_primary(row);
-	join_attributes->init();
-	join_attributes->evaluate();
+    join_attributes = new JoinAttributes(op_code, row + TABLE_ID_SIZE + 4, num_cols);
+    join_attributes->set_table_id(row);
+    join_attributes->if_primary = is_table_primary(row);
+    join_attributes->init();
+    join_attributes->evaluate();
   } else {
-	join_attributes->re_init(this->row + TABLE_ID_SIZE + 4);
-	join_attributes->set_table_id(row);
-	join_attributes->if_primary = is_table_primary(row);
-	join_attributes->evaluate();
+    join_attributes->re_init(this->row + TABLE_ID_SIZE + 4);
+    join_attributes->set_table_id(row);
+    join_attributes->if_primary = is_table_primary(row);
+    join_attributes->evaluate();
   }
 }
 
@@ -1389,7 +1389,7 @@ void SortRecord::swap(SortRecord *rec) {
 void SortRecord::compare_and_swap(SortRecord *rec) {
   if (this->compare(rec) == 1) {
     //printf("Swapping\n");
-	this->swap(rec);
+    this->swap(rec);
   }
 }
 
@@ -1421,7 +1421,7 @@ void SortRecord::consume_encrypted_attribute(uint8_t **enc_value_ptr) {
 void AggRecord::copy(AggRecord *rec, int mode) {
   if (mode == COPY) {
     this->num_cols = rec->num_cols;
-	
+
     //printf("aggrecord copy, row=%p, rec=%p, rec->row=%p\n", this->row, rec, rec->row);
     cpy(this->row, rec->row, AGG_UPPER_BOUND);
     //printf("After cpy\n");
@@ -1452,8 +1452,8 @@ void AggRecord::print() {
   // printf("===============\n");
   uint8_t *value_ptr = row + 4 + 4 + 4;
   for (uint32_t i = 0; i < this->num_cols; i++) {
-	print_attribute("", value_ptr);
-	value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    print_attribute("", value_ptr);
+    value_ptr += *( (uint32_t *) (value_ptr + TYPE_SIZE)) + HEADER_SIZE;
   }
 
   printf("Agg attributes:\n");
@@ -1503,19 +1503,19 @@ uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
   uint8_t *input_ptr = this->row + 4 + 4 + 4;
   uint8_t *output_ptr = output;
   uint32_t value_len = 0;
-  
+
   *( (uint32_t *) (output_ptr)) = this->num_cols;
   output_ptr += 4;
 
   //printf("flush_encrypt_all_attributes\n");
   for (uint32_t i = 0; i < this->num_cols; i++) {
     encrypt_attribute(&input_ptr, &output_ptr);
-	
+
     // value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
     // *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
-	
+
     // encrypt(input_ptr, value_len + HEADER_SIZE, output_ptr + 4);
-	
+
     // input_ptr += value_len + HEADER_SIZE;
     // output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
@@ -1526,5 +1526,5 @@ uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
 void AggRecord::flush() {
   *( (uint32_t *) (row + 4 + 4)) = this->num_cols;
 }
- 
+
 /*** AGG SORT RECORD  ***/
