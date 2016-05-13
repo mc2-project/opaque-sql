@@ -22,4 +22,7 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
 uint32_t enc_size(uint32_t plaintext_size);
 uint32_t dec_size(uint32_t ciphertext_size);
 
+void test_big_encrypt();
+void test_small_encrypts();
+
 #endif

@@ -1216,8 +1216,52 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	// sgx_status_t status = ecall_test(global_eid);
 	// print_error_message(status);
-	
-	test_enclave_sort();
+
+    if (argc < 2) {
+      printf("Usage: ./app big_size small_size\n");
+      return -1;
+    }
+    const uint32_t big_size = atoi(argv[1]); // 256 * 1024 * 1024;
+    const uint32_t small_size = atoi(argv[2]); // 1 * 1024;
+    // const uint32_t big_size = 256 * 1024 * 1024;
+    // const uint32_t small_size = 256 * 1024 * 1024;
+    const uint32_t num_blocks = big_size / small_size;
+    uint8_t *ciphertext = (uint8_t *)malloc(big_size + num_blocks * ENC_HEADER_SIZE);
+    uint8_t *plaintext = (uint8_t *)malloc(big_size);
+
+    uint8_t *ciphertext_ptr = ciphertext;
+
+    uint64_t t;
+    double t_ms;
+
+    // Warmup
+   ecall_encrypt(global_eid, plaintext, big_size, ciphertext, big_size + ENC_HEADER_SIZE);
+
+    t = 0;
+    {
+      scoped_timer timer(&t);
+      for (uint32_t i = 0; i < num_blocks; i++) {
+        ecall_encrypt(global_eid, plaintext, small_size, ciphertext_ptr,
+                      small_size + ENC_HEADER_SIZE);
+        ciphertext_ptr += small_size + ENC_HEADER_SIZE;
+      }
+    }
+    double small_time_ms = ((double) t) / 1000;
+
+
+    t = 0;
+    {
+      scoped_timer timer(&t);
+      ecall_encrypt(global_eid, plaintext, big_size, ciphertext, big_size + ENC_HEADER_SIZE);
+    }
+    double big_time_ms = ((double) t) / 1000;
+
+    printf("big %d %d %f\n", big_size, small_size, big_time_ms);
+
+    printf("small %d %d %f\n", big_size, small_size, small_time_ms);
+
+    free(ciphertext);
+    free(plaintext);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

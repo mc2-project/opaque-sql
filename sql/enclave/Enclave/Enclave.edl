@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 /* Enclave.edl - Top EDL file. */
 
 enclave {
@@ -37,12 +38,12 @@ enclave {
              uint32_t output_rows_length,
              [out] uint32_t *actual_output_rows_length);
          public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
-	 public void ecall_encrypt([in, size=length] uint8_t *plaintext, uint32_t length, [out, size=cipher_length] uint8_t *ciphertext, uint32_t cipher_length);
+     public void ecall_encrypt([user_check] uint8_t *plaintext, uint32_t length, [user_check] uint8_t *ciphertext, uint32_t cipher_length);
 	 public void ecall_decrypt([in, size=ciphertext_length] uint8_t *ciphertext, uint32_t ciphertext_length, [out, size=plaintext_length] uint8_t *plaintext, uint32_t plaintext_length);
-	 public void ecall_test_int([in, size=1] int *ptr);
-	 public void ecall_oblivious_sort_int([in,out, count=input_len] int *input, uint32_t input_len);
+     public void ecall_test_int([in, size=1] int *ptr);
+     public void ecall_oblivious_sort_int([in,out, count=input_len] int *input, uint32_t input_len);
 
-	 //public void ecall_oblivious_sort(int op_code, [in,out, size=buffer_length] uint8_t *input, uint32_t buffer_length,
+     //public void ecall_oblivious_sort(int op_code, [in,out, size=buffer_length] uint8_t *input, uint32_t buffer_length,
 	 //		int low_idx, uint32_t list_length);
 	 public void ecall_external_oblivious_sort(int op_code,
 	                                           uint32_t num_buffers,
