@@ -3,106 +3,123 @@
 
 enclave {
     
-    include "user_types.h" /* buffer_t */
-    //include "jni.h"
-    //include "jni_md.h"
-	//include "define.h"
+  include "user_types.h" /* buffer_t */
+  //include "jni.h"
+  //include "jni_md.h"
+  //include "define.h"
 
-    /* Import ECALL/OCALL from sub-directory EDLs.
-     *  [from]: specifies the location of EDL file. 
-     *  [import]: specifies the functions to import, 
-     *  [*]: implies to import all functions.
-     */
-    
-    from "Edger8rSyntax/Types.edl" import *;
-    from "Edger8rSyntax/Pointers.edl" import *;
-    from "Edger8rSyntax/Arrays.edl" import *;
-    from "Edger8rSyntax/Functions.edl" import *;
+  /* Import ECALL/OCALL from sub-directory EDLs.
+   *  [from]: specifies the location of EDL file.
+   *  [import]: specifies the functions to import,
+   *  [*]: implies to import all functions.
+   */
 
-    from "TrustedLibrary/Libc.edl" import *;
-    from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
-    from "TrustedLibrary/Thread.edl" import *;
+  from "Edger8rSyntax/Types.edl" import *;
+  from "Edger8rSyntax/Pointers.edl" import *;
+  from "Edger8rSyntax/Arrays.edl" import *;
+  from "Edger8rSyntax/Functions.edl" import *;
 
-    /* 
-     * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
-     *  [in]: copy the string buffer to App outside.
-     *  [string]: specifies 'str' is a NULL terminated buffer.
-     */
-     trusted {
-         public void ecall_project(
-             int op_code,
-             [user_check] uint8_t *input_rows,
-             uint32_t input_rows_length,
-             uint32_t num_rows,
-             [user_check] uint8_t *output_rows,
-             uint32_t output_rows_length,
-             [out] uint32_t *actual_output_rows_length);
-         public int ecall_filter_single_row(int op_code, [in, size=length] uint8_t *row, uint32_t length);
-     public void ecall_encrypt([user_check] uint8_t *plaintext, uint32_t length, [user_check] uint8_t *ciphertext, uint32_t cipher_length);
-	 public void ecall_decrypt([in, size=ciphertext_length] uint8_t *ciphertext, uint32_t ciphertext_length, [out, size=plaintext_length] uint8_t *plaintext, uint32_t plaintext_length);
-     public void ecall_test_int([in, size=1] int *ptr);
-     public void ecall_oblivious_sort_int([in,out, count=input_len] int *input, uint32_t input_len);
+  from "TrustedLibrary/Libc.edl" import *;
+  from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
+  from "TrustedLibrary/Thread.edl" import *;
 
-     //public void ecall_oblivious_sort(int op_code, [in,out, size=buffer_length] uint8_t *input, uint32_t buffer_length,
-	 //		int low_idx, uint32_t list_length);
-	 public void ecall_external_oblivious_sort(int op_code,
-	                                           uint32_t num_buffers,
-								               [user_check] uint8_t **buffer_list, 
-								               [in, count=num_buffers] uint32_t *buffer_lengths,
-								               [in, count=num_buffers] uint32_t* num_rows,
-											   [user_check] uint8_t *external_scratch);
+  /*
+   * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
+   *  [in]: copy the string buffer to App outside.
+   *  [string]: specifies 'str' is a NULL terminated buffer.
+   */
+  trusted {
+    public void ecall_project(
+      int op_code,
+      [user_check] uint8_t *input_rows,
+      uint32_t input_rows_length,
+      uint32_t num_rows,
+      [user_check] uint8_t *output_rows,
+      uint32_t output_rows_length,
+      [out] uint32_t *actual_output_rows_length);
+    public int ecall_filter_single_row(
+      int op_code, [in, size=length] uint8_t *row, uint32_t length);
+    public void ecall_encrypt(
+      [user_check] uint8_t *plaintext,
+      uint32_t length,
+      [user_check] uint8_t *ciphertext,
+      uint32_t cipher_length);
+    public void ecall_decrypt(
+      [in, size=ciphertext_length] uint8_t *ciphertext,
+      uint32_t ciphertext_length,
+      [out, size=plaintext_length] uint8_t *plaintext,
+      uint32_t plaintext_length);
+    public void ecall_test_int([in, size=1] int *ptr);
+    public void ecall_oblivious_sort_int(
+      [in,out, count=input_len] int *input, uint32_t input_len);
 
-	 public void ecall_random_id([in, out, size=length]uint8_t *ptr, uint32_t length);
-	 public void ecall_scan_aggregation_count_distinct(
-	 		int op_code,
-	 		[user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
-			[in, size=agg_row_buffer_length] uint8_t *agg_row, uint32_t agg_row_buffer_length,
-			[user_check] uint8_t *output_rows, uint32_t output_rows_length,
-			[out] uint32_t *actual_size,
-			int flag,
-			[out] uint32_t *cardinality);
-	 public void ecall_test();
-	 public void ecall_process_boundary_records(int op_code,
-									[in, size=rows_size] uint8_t *rows, uint32_t rows_size,
-									uint32_t num_rows,
-									[out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size,
-									[out, size=4] uint32_t *actual_out_agg_row_size);
-	 public void ecall_final_aggregation(int op_code,
-							 [in, size=agg_rows_length] uint8_t *agg_rows, uint32_t agg_rows_length,
-							 uint32_t num_rows,
-							 [out, size=ret_length] uint8_t *ret, uint32_t ret_length);
-							 
-	 public void ecall_scan_collect_last_primary(int op_code,
-									             [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-									             uint32_t num_rows,
-									             [out, size=output_length] uint8_t *output, uint32_t output_length);
+    public void ecall_external_oblivious_sort(
+      int op_code,
+      uint32_t num_buffers,
+      [user_check] uint8_t **buffer_list,
+      [in, count=num_buffers] uint32_t *buffer_lengths,
+      [in, count=num_buffers] uint32_t* num_rows,
+      [user_check] uint8_t *external_scratch);
 
-     public void ecall_process_join_boundary(int op_code,
-                                             [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-					     uint32_t num_rows,
-                                             [user_check] uint8_t *output_rows, uint32_t output_rows_size,
-                                             [out, size=4] uint32_t *actual_output_length);
+    public void ecall_random_id(
+      [in, out, size=length]uint8_t *ptr, uint32_t length);
+    public void ecall_scan_aggregation_count_distinct(
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+      [in, size=agg_row_buffer_length] uint8_t *agg_row, uint32_t agg_row_buffer_length,
+      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
+      [out] uint32_t *actual_size,
+      int flag,
+      [out] uint32_t *cardinality);
+    public void ecall_test();
+    public void ecall_process_boundary_records(
+      int op_code,
+      [in, size=rows_size] uint8_t *rows, uint32_t rows_size,
+      uint32_t num_rows,
+      [out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size,
+      [out, size=4] uint32_t *actual_out_agg_row_size);
+    public void ecall_final_aggregation(
+      int op_code,
+      [in, size=agg_rows_length] uint8_t *agg_rows, uint32_t agg_rows_length,
+      uint32_t num_rows,
+      [out, size=ret_length] uint8_t *ret, uint32_t ret_length);
 
-	 public void ecall_sort_merge_join(int op_code,
-				           [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-					   uint32_t num_rows,
-					   [in, sizefunc=join_row_size] uint8_t *join_row, uint32_t join_row_length,
-                                       	   [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length,
-                                       	   [out, size=4] uint32_t *actual_output_length);
-									   
-	 public void ecall_join_sort_preprocess(int op_code,
-	                                        [user_check] uint8_t *table_id,
-	                                        [user_check] uint8_t *input_row, uint32_t input_row_len,
-						uint32_t num_rows,
-						[user_check] uint8_t *output_row, uint32_t output_row_len);
+    public void ecall_scan_collect_last_primary(
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+      uint32_t num_rows,
+      [out, size=output_length] uint8_t *output, uint32_t output_length);
 
-	 public void ecall_encrypt_attribute([in, size=input_size] uint8_t *input, uint32_t input_size,
-				             [out, size=output_size] uint8_t *output, uint32_t output_size,
-					     [out] uint32_t *actual_size);
-	};
+    public void ecall_process_join_boundary(
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+      uint32_t num_rows,
+      [user_check] uint8_t *output_rows, uint32_t output_rows_size,
+      [out, size=4] uint32_t *actual_output_length);
 
-    untrusted {
-        void ocall_print_string([in, string] const char *str);
-    };
+    public void ecall_sort_merge_join(
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+      uint32_t num_rows,
+      [in, sizefunc=join_row_size] uint8_t *join_row, uint32_t join_row_length,
+      [out, size=output_rows_length] uint8_t *output_rows, uint32_t output_rows_length,
+      [out, size=4] uint32_t *actual_output_length);
+
+    public void ecall_join_sort_preprocess(
+      int op_code,
+      [user_check] uint8_t *table_id,
+      [user_check] uint8_t *input_row, uint32_t input_row_len,
+      uint32_t num_rows,
+      [user_check] uint8_t *output_row, uint32_t output_row_len);
+
+    public void ecall_encrypt_attribute(
+      [in, size=input_size] uint8_t *input, uint32_t input_size,
+      [out, size=output_size] uint8_t *output, uint32_t output_size,
+      [out] uint32_t *actual_size);
+  };
+
+  untrusted {
+    void ocall_print_string([in, string] const char *str);
+  };
 
 };
