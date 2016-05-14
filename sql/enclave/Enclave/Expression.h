@@ -32,8 +32,8 @@ enum EVAL_MODE {
 };
 
 void evaluate_expr(GenericType **input_attr, uint32_t num_input_attr,
-				   GenericType **output_attr, uint32_t num_output_attr,
-				   uint32_t expression,
-				   int mode);
+                   GenericType **output_attr, uint32_t num_output_attr,
+                   uint32_t expression,
+                   int mode);
 
 #endif

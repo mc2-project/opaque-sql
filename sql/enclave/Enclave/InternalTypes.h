@@ -26,7 +26,7 @@ enum CONSUME_MODE {
 };
 
 class GenericType {
- public:
+public:
   virtual ~GenericType() {}
 
   virtual int compare(GenericType *v) = 0;
@@ -34,7 +34,7 @@ class GenericType {
 
   virtual void consume(uint8_t *input, int mode) { }
   virtual void flush(uint8_t *output) {}
-  
+
   virtual void evaluate() {}
 
   virtual void print() = 0;
@@ -48,8 +48,8 @@ class GenericType {
 };
 
 class Dummy : public GenericType {
- public:
-  
+public:
+
   Dummy(uint8_t real_type) {
     type_ = DUMMY;
     real_type_ = real_type;
@@ -58,11 +58,11 @@ class Dummy : public GenericType {
   ~Dummy() {}
 
   int compare(GenericType *v) {
-	return -1;
+    return -1;
   }
 
   void swap(GenericType *v) {
-	// do nothing
+    // do nothing
   }
 
   void print();
@@ -74,7 +74,7 @@ class Dummy : public GenericType {
 
 class Integer : public GenericType {
 
- public:
+public:
   Integer();
 
   ~Integer() { }
@@ -84,7 +84,7 @@ class Integer : public GenericType {
   void swap(GenericType *v);
 
   void consume(uint8_t *input, int mode);
-  
+
   void flush(uint8_t *output);
 
   void copy_attr(Integer *attr);
@@ -106,7 +106,7 @@ class Integer : public GenericType {
 };
 
 class String : public GenericType {
- public:
+public:
   String();
 
   ~String();
@@ -126,14 +126,14 @@ class String : public GenericType {
   void reset();
 
   void print();
-  
+
   uint32_t length;
   uint8_t *data;
   int if_alloc;
 };
 
 class Float : public GenericType {
- public:
+public:
   Float();
 
   ~Float() {}
@@ -168,7 +168,7 @@ class Float : public GenericType {
 
 class Date : public GenericType {
 
- public:
+public:
   Date();
   Date(uint64_t date);
 
@@ -197,7 +197,7 @@ class Date : public GenericType {
 
 class URL : public String {
 
- public:
+public:
   URL();
 
   ~URL() {}
@@ -207,7 +207,7 @@ class URL : public String {
 
 class CountryCode : public String {
 
- public:
+public:
   CountryCode();
 
   ~CountryCode() {}
@@ -217,7 +217,7 @@ class CountryCode : public String {
 
 class LanguageCode : public String {
 
- public:
+public:
   LanguageCode();
 
   ~LanguageCode() {}
@@ -226,7 +226,7 @@ class LanguageCode : public String {
 };
 
 class IP : public String {
- public:
+public:
   IP();
 
   ~IP() {}
@@ -237,7 +237,7 @@ class IP : public String {
 
 
 class UserAgent : public String {
- public:
+public:
   UserAgent();
 
   ~UserAgent() {}
@@ -246,7 +246,7 @@ class UserAgent : public String {
 };
 
 class SearchWord : public String {
- public:
+public:
   SearchWord();
 
   ~SearchWord() {}
@@ -262,15 +262,15 @@ GenericType *create_attr(uint8_t *attr);
 // This class is able to group together attributes, and execute evaluation on these attributes
 // assume that the buffer_ptr is [attr type][attr len][attr] [attr type][attr len][attr]...
 class GroupedAttributes {
- public:
+public:
   GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols);
-  
+
   ~GroupedAttributes() {
     for (uint32_t i = 0; i < num_attr; i++) {
       delete attributes[i];
     }
     free(attributes);
-	
+
     for (uint32_t i = 0; i < num_eval_attr; i++) {
       delete eval_attributes[i];
     }
@@ -282,17 +282,17 @@ class GroupedAttributes {
 
   // given the expression, evaluate that on the sort attributes
   void evaluate();
-  
+
   int compare(GroupedAttributes *attr);
 
   static int compare(GroupedAttributes *attr1, GroupedAttributes *attr2) {
-	return attr1->compare(attr2);
+    return attr1->compare(attr2);
   }
 
   void swap(GroupedAttributes *attr);
 
   void print();
-  
+
   int op_code;
   uint8_t *row; // this stores the pointer to the original row data
   uint32_t num_cols;
@@ -304,89 +304,89 @@ class GroupedAttributes {
   // List of valuated attributes of type Integer, String, etc
   uint32_t num_eval_attr;
   GenericType **eval_attributes;
-  
+
   uint32_t expression;
 };
 
 class SortAttributes : public GroupedAttributes {
- public:
- SortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-  GroupedAttributes(op_code, row_ptr, num_cols) { }
+public:
+  SortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+    GroupedAttributes(op_code, row_ptr, num_cols) { }
 
   int compare(SortAttributes *attr);
 
   void init();
   void re_init(uint8_t *new_row_ptr);
-  
+
   void evaluate();
 };
 
 class AggSortAttributes : public GroupedAttributes {
- public:
- AggSortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-  GroupedAttributes(op_code, row_ptr, num_cols) { }
+public:
+  AggSortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+    GroupedAttributes(op_code, row_ptr, num_cols) { }
 
   int compare(AggSortAttributes *attr);
 
   void init();
-  
+
   // re-initialize: op_code should be the same, num cols the same
   // but row_pointer is different
   void re_init(uint8_t *new_row_ptr);
-  
+
   void evaluate();
 
 };
 
 class AggAggAttributes : public GroupedAttributes {
- public:
- AggAggAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-  GroupedAttributes(op_code, row_ptr, num_cols) { }
+public:
+  AggAggAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+    GroupedAttributes(op_code, row_ptr, num_cols) { }
 
   int compare(AggAggAttributes *attr);
 
   void init();
-  
+
   // re-initialize: op_code should be the same, num cols the same
   // but row_pointer is different
   void re_init(uint8_t *new_row_ptr);
-  
+
   void evaluate();
 
 };
 
 
 class JoinAttributes : public GroupedAttributes {
- public:
- JoinAttributes(int op_code, uint8_t *ptr, uint32_t num_cols) :
-  GroupedAttributes(op_code, ptr, num_cols) { }
-  
+public:
+  JoinAttributes(int op_code, uint8_t *ptr, uint32_t num_cols) :
+    GroupedAttributes(op_code, ptr, num_cols) { }
+
   int compare(JoinAttributes *attr);
   void swap(JoinAttributes *attr);
 
   void init();
   void re_init(uint8_t *new_row_ptr);
-  
+
   void evaluate();
 
   void set_table_id(uint8_t *ptr) {
-	table_id = ptr;
+    table_id = ptr;
   }
 
   void reset();
 
   void print();
-  
+
   uint8_t *table_id;
   int if_primary;
 };
 
 class ProjectAttributes : public GroupedAttributes {
 
- public:
+public:
 
- ProjectAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-  GroupedAttributes(op_code, row_ptr, num_cols) {
+  ProjectAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
+    GroupedAttributes(op_code, row_ptr, num_cols) {
 
   }
 
@@ -401,7 +401,7 @@ class ProjectAttributes : public GroupedAttributes {
 };
 
 class Record {
- public:
+public:
   Record() {
     row = (uint8_t *) malloc(ROW_UPPER_BOUND);
     row_ptr = row;
@@ -412,7 +412,7 @@ class Record {
     row = (uint8_t *) malloc(malloc_length);
     num_cols = 0;
   }
-  
+
   ~Record() {
     free(row);
   }
@@ -451,13 +451,13 @@ class Record {
 class ProjectRecord : public Record {
 public:
   ProjectRecord () {
-	project_attributes = NULL;
-	num_cols = 0;
-	row_ptr = row;
+    project_attributes = NULL;
+    num_cols = 0;
+    row_ptr = row;
   }
 
   ~ProjectRecord() {
-	delete project_attributes;
+    delete project_attributes;
   }
 
   void clear();
@@ -474,8 +474,8 @@ public:
 };
 
 class JoinRecord : public Record {
- public:
- JoinRecord() : Record(JOIN_ROW_UPPER_BOUND) {
+public:
+  JoinRecord() : Record(JOIN_ROW_UPPER_BOUND) {
     row_ptr += TABLE_ID_SIZE;
     join_attributes = NULL;
   }
@@ -493,25 +493,25 @@ class JoinRecord : public Record {
   void set_join_attributes(int op_code);
 
   int compare(JoinRecord *rec);
-  
+
   void swap(JoinRecord *rec);
 
   void reset();
 
   void compare_and_swap(JoinRecord *rec);
-  
+
   JoinAttributes *join_attributes;
 };
 
 class SortRecord : public Record {
- public:
+public:
   // format: [num cols][attribute format]
   SortRecord() {
     sort_attributes = NULL;
     this->row_ptr = this->row + 4;
   }
 
- SortRecord(uint32_t malloc_size) : Record(malloc_size) {
+  SortRecord(uint32_t malloc_size) : Record(malloc_size) {
     sort_attributes = NULL;
     this->row_ptr = this->row + 4;
   }
@@ -539,8 +539,8 @@ class SortRecord : public Record {
 };
 
 class AggRecord : public Record {
- public:
- AggRecord() : Record(AGG_UPPER_BOUND) {
+public:
+  AggRecord() : Record(AGG_UPPER_BOUND) {
     agg_sort_attributes = NULL;
     agg_agg_attributes = NULL;
     row_ptr = row + 4 + 4;
@@ -558,13 +558,13 @@ class AggRecord : public Record {
   uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
 
   uint32_t flush_encrypt_all_attributes(uint8_t *output);
-  
+
   void set_agg_sort_attributes(int op_code);
 
   void consume_enc_agg_record(uint8_t *input, uint32_t len);
 
   void reset_row_ptr() {
-	row_ptr = row + 4 + 4;
+    row_ptr = row + 4 + 4;
   }
 
   void reset();

@@ -17,8 +17,8 @@ bool is_dummy_type(uint8_t attr_type);
 uint8_t get_dummy_type(uint8_t attr_type);
 uint32_t attr_upper_bound(uint8_t attr);
 
-/* 
- * printf: 
+/*
+ * printf:
  *   Invokes OCALL to display the enclave buffer to the terminal.
  */
 
@@ -39,11 +39,11 @@ void write_dummy(uint8_t *dest, uint32_t len);
 int test_dummy(uint8_t *src, uint32_t len);
 
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
-					uint32_t attr_num,
-					uint8_t **enc_value_ptr, uint32_t *enc_value_len);
+                    uint32_t attr_num,
+                    uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 
 void get_table_indicator(uint8_t *primary_table,
-						 uint8_t *foreign_table);
+                         uint8_t *foreign_table);
 int is_table_primary(uint8_t *table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
@@ -53,15 +53,15 @@ void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols);
 void print_join_row(const char *row_name, uint8_t *row_ptr);
 
 uint32_t get_num_col(uint8_t *row);
-uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len, 
-					  uint8_t *row_ptr, uint8_t *row, uint32_t length);
+uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len,
+                      uint8_t *row_ptr, uint8_t *row, uint32_t length);
 void get_attr(uint8_t *dec_attr_ptr,
-			  uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr);
+              uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr);
 
 void find_plaintext_attribute(uint8_t *row, uint32_t num_cols,
-							  uint32_t attr_num,
-							  uint8_t **value_ptr,
-							  uint32_t *len);
+                              uint32_t attr_num,
+                              uint8_t **value_ptr,
+                              uint32_t *len);
 
 template <typename T> void swap_helper(T *v1, T *v2) {
   T temp = *v1;
@@ -77,7 +77,7 @@ void decrypt_attribute(uint8_t **input, uint8_t **output);
 void check(const char* message, bool test);
 
 class BufferReader {
- public:
+public:
   BufferReader();
 
   void add_buffer(uint8_t *ptr, uint32_t size);
@@ -88,7 +88,7 @@ class BufferReader {
 
   uint8_t *buffer_list[10];
   uint32_t buffer_sizes[10];
-  
+
   int offset;
 
   uint32_t current_buf;

@@ -40,10 +40,10 @@
 //#define HALF_MAX_SORT_BUFFER (8 * 1024 * 1024)
 //#define MAX_ELEMENTS ((100 * 1024 * 1024) / JOIN_ROW_UPPER_BOUND)
 
-enum SORT_OP {
-  SORT_SORT = 1,
-  SORT_JOIN = 2
-};
+    enum SORT_OP {
+      SORT_SORT = 1,
+      SORT_JOIN = 2
+    };
 
 #define MAX_SINGLE_SORT_BUFFER (70 * 1024 * 1024)
 #define MAX_SORT_BUFFER (2 * 1024 * 1024)
