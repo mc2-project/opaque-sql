@@ -353,9 +353,10 @@ int query_sgx_status()
 
 JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(
   JNIEnv *env, jobject obj) {
+  (void)env;
+  (void)obj;
 
   sgx_enclave_id_t eid;
-  sgx_status_t ret = SGX_SUCCESS;
   sgx_launch_token_t token = {0};
   int updated = 0;
 
@@ -369,6 +370,8 @@ JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(
 
 JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(
   JNIEnv *env, jobject obj, jlong eid) {
+  (void)env;
+  (void)obj;
 
   sgx_check("StopEnclave", sgx_destroy_enclave(eid));
 }
@@ -377,6 +380,7 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows) {
+  (void)obj;
 
   jboolean if_copy;
 
@@ -409,6 +413,7 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
   jlong eid,
   jint op_code,
   jbyteArray row) {
+  (void)obj;
 
   const jsize length = env->GetArrayLength(row);
   jboolean if_copy = false;
@@ -429,6 +434,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(
   jobject obj,
   jlong eid,
   jbyteArray plaintext) {
+  (void)obj;
 
   uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
   jboolean if_copy = false;
@@ -438,7 +444,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(
 
   const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
   jbyteArray ciphertext = env->NewByteArray(clength);
-  uint8_t *ciphertext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
 
   uint8_t ciphertext_copy[2048];
 
@@ -457,6 +462,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(
   jobject obj,
   jlong eid,
   jbyteArray ciphertext) {
+  (void)obj;
 
   uint32_t clength = (uint32_t) env->GetArrayLength(ciphertext);
   jboolean if_copy = false;
@@ -484,6 +490,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
   jobject obj,
   jlong eid,
   jbyteArray plaintext) {
+  (void)obj;
 
   uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
   jboolean if_copy = false;
@@ -512,8 +519,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
 }
 
 JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEnv *env, jobject obj, jlong eid) {
-  int input = 0;
-  //ecall_test_int(eid, &input);
+  (void)env;
+  (void)obj;
+  (void)eid;
   printf("Test!\n");
 }
 
@@ -527,6 +535,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
                                                                                 jbyteArray input,
                                                                                 jint offset,
                                                                                 jint num_items) {
+  (void)obj;
+  (void)offset;
 
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
@@ -543,7 +553,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND));
 
 
-  for (int i = 0; i < input_len; i++) {
+  for (uint32_t i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
   }
 
@@ -654,12 +664,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(
   JNIEnv *env,
   jobject obj,
   jlong eid) {
+  (void)obj;
 
   // size should be SGX
   const uint32_t random_id_length = ENC_HEADER_SIZE + HEADER_SIZE + 4;
   jbyteArray ret = env->NewByteArray(ENC_HEADER_SIZE + HEADER_SIZE + 4);
-  jboolean if_copy;
-  jbyte *ptr = env->GetByteArrayElements(ret, &if_copy);
 
   uint8_t buf[random_id_length];
   sgx_check("RandomID", ecall_random_id(eid, buf, random_id_length));
@@ -677,6 +686,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
   jbyteArray input_rows,
   jint num_rows,
   jbyteArray agg_row) {
+  (void)obj;
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   jboolean if_copy;
@@ -692,7 +702,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
   }
 
   uint32_t actual_size = 0;
-  int flag;
+  int flag = -1;
   if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 ||
       op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 ||
       op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1) {
@@ -749,7 +759,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
 }
 
 void print_bytes_(uint8_t *ptr, uint32_t len) {
-  for (int i = 0; i < len; i++) {
+  for (uint32_t i = 0; i < len; i++) {
     printf("%u", *(ptr + i));
     printf(" - ");
   }
@@ -765,6 +775,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   jint op_code,
   jbyteArray rows,
   jint num_rows) {
+  (void)obj;
 
   jboolean if_copy;
 
@@ -807,9 +818,16 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregati
   jint op_code,
   jbyteArray rows,
   jint num_rows) {
+  (void)env;
+  (void)obj;
+  (void)eid;
+  (void)op_code;
+  (void)rows;
+  (void)num_rows;
 
   printf("FinalAggregation not yet implemented\n");
   assert(false);
+  return NULL;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(
@@ -820,12 +838,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   jbyteArray enc_table_id,
   jbyteArray input_rows,
   jint num_rows) {
+  (void)obj;
 
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
-  uint32_t row_length = 0;
 
   uint32_t single_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
@@ -858,12 +876,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBoundary(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows) {
+  (void)obj;
 
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
-  uint32_t row_length = 0;
 
   uint32_t single_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
@@ -893,6 +911,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
   jint op_code,
   jbyteArray input_rows,
   jint num_rows) {
+  (void)obj;
 
   jboolean if_copy;
 
@@ -929,6 +948,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
   jbyteArray input_rows,
   jint num_rows,
   jbyteArray join_row) {
+  (void)obj;
 
   jboolean if_copy;
 
@@ -972,7 +992,6 @@ uint32_t format_encrypt_row(uint8_t *row, uint32_t index, uint32_t num_cols) {
   uint8_t temp[1024];
 
   uint8_t *row_ptr = row;
-  uint32_t len = 0;
 
   *( (uint32_t *) row_ptr) = num_cols;
   row_ptr += 4;
@@ -1049,12 +1068,10 @@ void test_enclave_sort() {
   uint32_t num_cols = 3;
   // [int][string][int]
   uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
-  uint32_t single_row_plaintext_size = 4 + num_cols * 4 + (HEADER_SIZE + 4) * 2 + (HEADER_SIZE + STRING_UPPER_BOUND);
   printf("num items: %u, single_row_size is %u, total data sorted: %u\n", total_num_rows, single_row_size, total_num_rows * single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
 
   uint8_t *enc_data = (uint8_t *) malloc(ROW_UPPER_BOUND * total_num_rows + ENC_HEADER_SIZE * total_num_rows);
-  uint32_t actual_size = 0;
 
   uint64_t t = 0;
 
@@ -1184,7 +1201,6 @@ int SGX_CDECL main(int argc, char *argv[])
   uint8_t *ciphertext_ptr = ciphertext;
 
   uint64_t t;
-  double t_ms;
 
   // Warmup
   ecall_encrypt(global_eid, plaintext, big_size, ciphertext, big_size + ENC_HEADER_SIZE);

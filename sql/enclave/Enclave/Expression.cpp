@@ -26,6 +26,7 @@ void sum_integers(Integer **integers, uint32_t num_values,
 void evaluate_join(GenericType **input_attr, uint32_t num_input_attr,
                    GenericType **output_attr, uint32_t num_output_attr,
                    uint32_t expression) {
+  (void)num_input_attr;
   switch (expression) {
   case IDENTITY:
   {
@@ -54,7 +55,7 @@ void evaluate_join(GenericType **input_attr, uint32_t num_input_attr,
 void evaluate_agg(GenericType **input_attr, uint32_t num_input_attr,
                   GenericType **output_attr, uint32_t num_output_attr,
                   uint32_t expression) {
-
+  (void)num_input_attr;
   switch (expression) {
   case IDENTITY:
   {
@@ -86,7 +87,7 @@ void evaluate_agg(GenericType **input_attr, uint32_t num_input_attr,
 void evaluate_agg_agg(GenericType **input_attr, uint32_t num_input_attr,
                       GenericType **output_attr, uint32_t num_output_attr,
                       uint32_t expression) {
-
+  (void)num_input_attr;
   switch (expression) {
   case IDENTITY:
   {
@@ -118,6 +119,7 @@ void evaluate_agg_agg(GenericType **input_attr, uint32_t num_input_attr,
 void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
                    GenericType **output_attr, uint32_t num_output_attr,
                    uint32_t expression) {
+  (void)num_input_attr;
   switch(expression) {
   case IDENTITY:
   {
@@ -153,6 +155,8 @@ void evaluate_sort(GenericType **input_attr, uint32_t num_input_attr,
 void evaluate_project(GenericType **input_attr, uint32_t num_input_attr,
                       GenericType **output_attr, uint32_t num_output_attr,
                       uint32_t expression) {
+  (void)num_input_attr;
+  (void)num_output_attr;
   switch(expression) {
   case BD2:
   {

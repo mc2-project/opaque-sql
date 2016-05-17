@@ -50,8 +50,6 @@ enclave {
       [out, size=plaintext_length] uint8_t *plaintext,
       uint32_t plaintext_length);
     public void ecall_test_int([in, size=1] int *ptr);
-    public void ecall_oblivious_sort_int(
-      [in,out, count=input_len] int *input, uint32_t input_len);
 
     public void ecall_external_oblivious_sort(
       int op_code,

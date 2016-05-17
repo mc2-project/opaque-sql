@@ -64,23 +64,6 @@ void ecall_test_int(int *ptr) {
   *ptr = *ptr + 1;
 }
 
-
-// given op code, compare two input buffers
-int compare(int op_code,
-            uint8_t *value1, uint32_t value1_len,
-            uint8_t *value2, uint32_t value2_len) {
-
-
-}
-
-// TODO: swap two buffers
-void swap(uint8_t *value1, uint32_t value1_len,
-          uint8_t *value2, uint32_t value2_len) {
-
-
-}
-
-
 int log_2(int value) {
   double dvalue = (double) value;
   int log_value = (int) ceil(log(dvalue) / log(2));
@@ -92,16 +75,6 @@ int pow_2(int value) {
   int pow_value = (int) pow(2, dvalue);
   return pow_value;
 }
-
-// TODO: this sorts integers only... put in custom comparison operators!
-// TODO: how to make the write oblivious?
-void osort_with_index_int(int *input, int low_idx, uint32_t len) { }
-
-// only sorts integers!
-void ecall_oblivious_sort_int(int *input, uint32_t input_len) {
-  osort_with_index_int(input, 0, input_len);
-}
-
 
 int qsort_cmp_sort(const void *a, const void *b) {
   return ( *((SortRecord **) a) )->compare(*((SortRecord **) b));
@@ -116,11 +89,17 @@ void qsort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
 
 template<>
 void qsort_with_index<SortRecord>(int op_code, SortRecord **input, uint32_t input_length, int low_idx, uint32_t len) {
+  (void)op_code;
+  (void)input_length;
+  (void)low_idx;
   qsort(input, len, sizeof(SortRecord *), qsort_cmp_sort);
 }
 
 template<>
 void qsort_with_index<JoinRecord>(int op_code, JoinRecord **input, uint32_t input_length, int low_idx, uint32_t len) {
+  (void)op_code;
+  (void)input_length;
+  (void)low_idx;
   qsort(input, len, sizeof(JoinRecord *), qsort_cmp_join);
 }
 
@@ -128,6 +107,8 @@ void qsort_with_index<JoinRecord>(int op_code, JoinRecord **input, uint32_t inpu
 // len is the number of records
 template<typename T>
 void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx, uint32_t len) {
+  (void)op_code;
+  (void)input_length;
 
   // First, iterate through and decrypt the data
   // Then store the decrypted data in a list of objects (based on the given op_code)
@@ -135,16 +116,9 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
   int log_len = log_2(len) + 1;
   int offset = low_idx;
 
-  int swaps = 0;
-  int min_val = 0;
-  int max_val = 0;
-
   for (int stage = 1; stage <= log_len; stage++) {
-    //printf("stage = %i\n", stage);
     for (int stage_i = stage; stage_i >= 1; stage_i--) {
-      //printf("stage_i = %i\n", stage_i);
       int part_size = pow_2(stage_i);
-      //printf("part_size = %i\n", part_size);
       int part_size_half = part_size / 2;
 
       if (stage_i == stage) {
@@ -158,7 +132,6 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
               T *idx_value = input[idx];
               T *pair_idx_value = input[pair_idx];
 
-              //idx_value->compare_and_swap(pair_idx_value);
               if (idx_value->compare(pair_idx_value) == 1) {
                 input[idx] = input[pair_idx];
                 input[pair_idx] = idx_value;
@@ -178,7 +151,6 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
               T *idx_value = input[idx];
               T *pair_idx_value = input[pair_idx];
 
-              //idx_value->compare_and_swap(pair_idx_value);
               if (idx_value->compare(pair_idx_value) == 1) {
                 input[idx] = input[pair_idx];
                 input[pair_idx] = idx_value;
@@ -198,6 +170,8 @@ void osort_with_index(int op_code, T **input, uint32_t input_length, int low_idx
 // merges together two sorted arrays non-obliviously, in place
 template<typename T>
 void non_oblivious_merge(int op_code, T **input, uint32_t input_length, int offset, uint32_t len, uint8_t **temp_ptr) {
+  (void)op_code;
+  (void)input_length;
 
   T **temp = (T **) (temp_ptr);
 
@@ -321,11 +295,7 @@ void oblivious_sort(int op_code, BufferReader *reader,
     uint32_t enc_row_len = 0;
 
     uint8_t *enc_value_ptr = NULL;
-    uint32_t enc_value_len = 0;
     uint8_t *value_ptr = NULL;
-    uint32_t value_len = 0;
-
-    uint8_t *data_ptr_ = NULL;
 
     for (uint32_t i = 0; i < list_length; i++) {
       //printf("list length is %u\n", list_length);
@@ -383,29 +353,19 @@ void oblivious_sort(int op_code, BufferReader *reader,
       reader->reset();
       input_ptr = reader->get_ptr();
       value_ptr = NULL;
-      value_len = 0;
-      uint8_t *test_ptr = NULL;
 
       for (uint32_t i = 0; i < list_length; i++) {
-        //data[i]->sort_attributes->print();
-
         value_ptr = sort_data[i]->row;
         input_ptr = reader->get_ptr();
 
-        //test_ptr = input_ptr;
         *( (uint32_t *) input_ptr) = sort_data[i]->num_cols;
         input_ptr += 4;
 
         // need to encrypt each attribute separately
         for (uint32_t c = 0; c < sort_data[i]->num_cols; c++) {
           encrypt_attribute(&value_ptr, &input_ptr);
-
-          // // for testing only
-          // cpy(input_ptr, value_ptr, 1 + 4 + 4 + 1 + 4 + STRING_UPPER_BOUND + 1 + 4 + 4);
-          // // end testing
         }
 
-        //printf("encrypted row's length is %u\n", (input_ptr - test_ptr));
         reader->inc_ptr(input_ptr);
       }
     }
@@ -413,13 +373,10 @@ void oblivious_sort(int op_code, BufferReader *reader,
   } else if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2 || op_code == OP_JOIN_PAGERANK) {
     // Sorting for Join
 
-    //printf("join sort, op_code is %u\n", op_code);
-
     // this is a sort used for sort-merge join!
     // that means there are two different join attributes:
     // one for the primary key table, the other the foreign key table
 
-    //JoinRecord **data = (JoinRecord **) malloc(sizeof(JoinRecord *) * list_length);
     if (join_data == NULL) {
       printf("Could not allocate enough data\n");
       assert(false);
@@ -428,35 +385,17 @@ void oblivious_sort(int op_code, BufferReader *reader,
     // allocate memory for record
     reader->reset();
     uint8_t *input_ptr = reader->get_ptr();
-    //uint8_t *data_ptr = (uint8_t *) data;
-
-    uint8_t *data_ptr_ = NULL;
-    uint8_t *table_id = NULL;
-    uint8_t *value_ptr = NULL;
-    uint32_t value_len = 0;
 
     for (uint32_t i = 0; i < list_length; i++) {
       JoinRecord *record = join_data[i];
       if (if_sort) {
-        // allocate JOIN_ROW_UPPER_BOUND
-        //JoinRecord *record = &(data[i].record);
-        //record->data = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
 
         input_ptr = reader->get_ptr();
 
-        //data[i] = new JoinRecord;
         record->reset();
 
         record->consume_encrypted_row(input_ptr);
         input_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
-
-        //print_join_row("", record->row);
-        //printf("Parsing join record %u, num_cols is %u\n", i, if_sort, record->num_cols);
-        //printf("Parsing join record %u, num_cols is %u\n", i, if_sort, record->num_cols);
-
-        //record->join_attributes->init();
-        //record->join_attributes->evaluate();
-        //record->join_attributes->print();
 
         reader->inc_ptr(input_ptr);
       }
@@ -518,10 +457,6 @@ void ecall_external_oblivious_sort(int op_code,
   int log_len = log_2(len) + 1;
   int offset = 0;
 
-  int swaps = 0;
-  int min_val = 0;
-  int max_val = 0;
-
   // read first 4 bytes of input
   uint32_t single_row_size = 0;
   uint32_t padded_single_row_size = 0;
@@ -580,8 +515,6 @@ void ecall_external_oblivious_sort(int op_code,
     reader.reset();
     uint8_t * input_ptr = reader.get_ptr();
     uint8_t * value_ptr = NULL;
-    uint32_t value_len = 0;
-    uint8_t *test_ptr = NULL;
 
     if (operation == SORT_SORT) {
       for (uint32_t i = 0; i < num_rows[0]; i++) {
@@ -641,7 +574,6 @@ void ecall_external_oblivious_sort(int op_code,
 
   uint8_t *external_scratch_list[2048];
   uint32_t external_scratch_size[2048];
-  uint32_t row_size = 0;
   uint32_t padded_row_size = 0;
   Record **data = NULL;
 
@@ -815,7 +747,6 @@ void ecall_external_oblivious_sort(int op_code,
 
                 //scratch_ptr = scratch;
                 scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-                uint8_t *ptr;
                 for (uint32_t r = 0; r < num_rows[idx]; r++) {
                   decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
                   join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row));
@@ -988,7 +919,6 @@ void ecall_external_oblivious_sort(int op_code,
 
                 //scratch_ptr = scratch;
                 scratch_ptr = buffer1_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-                uint8_t *ptr;
                 for (uint32_t r = 0; r < num_rows[idx]; r++) {
                   decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, join_data[r]->row, JOIN_ROW_UPPER_BOUND);
                   join_data[r]->num_cols = *( (uint32_t *) (join_data[r]->row));
@@ -1096,7 +1026,6 @@ void ecall_external_oblivious_sort(int op_code,
 
   uint8_t *input_ptr = NULL;
   uint8_t *value_ptr = NULL;
-  uint32_t value_len = 0;
   // write out each encrypted row
   for (uint32_t i = 0; i < num_buffers; i++) {
     reader.clear();
@@ -1137,7 +1066,6 @@ void ecall_external_oblivious_sort(int op_code,
 
       //scratch_ptr = scratch;
       scratch_ptr = external_scratch_list[i] + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-      uint8_t *ptr;
       for (uint32_t r = 0; r < num_rows[i]; r++) {
         decipher.decrypt(scratch_ptr, JOIN_ROW_UPPER_BOUND, data[r]->row, JOIN_ROW_UPPER_BOUND);
         scratch_ptr += JOIN_ROW_UPPER_BOUND;
@@ -1147,8 +1075,6 @@ void ecall_external_oblivious_sort(int op_code,
     reader.reset();
     input_ptr = reader.get_ptr();
     value_ptr = NULL;
-    value_len = 0;
-    uint8_t *test_ptr = NULL;
 
     if (operation == SORT_SORT) {
       for (uint32_t r = 0; r < num_rows[i]; r++) {
@@ -1203,9 +1129,8 @@ void ecall_external_oblivious_sort(int op_code,
 
 // returns an encrypted random integer
 void ecall_random_id(uint8_t *ptr, uint32_t length) {
+  (void)length;
   uint8_t internal_buf[HEADER_SIZE + 4];
-  uint8_t *internal_buf_ptr = internal_buf + HEADER_SIZE;
-  sgx_status_t rand_status = sgx_read_rand(internal_buf_ptr, 4);
 
   *internal_buf = INT;
   *((uint32_t *) (internal_buf + TYPE_SIZE)) = 4;
@@ -1287,12 +1212,8 @@ void ecall_final_aggregation(int op_code,
 
 /**** BEGIN Join ****/
 
-size_t enc_table_id_size(const uint8_t *enc_table_id) {
-  return (size_t) (enc_size(TABLE_ID_SIZE));
-}
-
 size_t join_row_size(const uint8_t *join_row) {
-  // printf("Enc join row size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
+  (void)join_row;
   return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
 }
 
@@ -1302,6 +1223,9 @@ void ecall_join_sort_preprocess(int op_code,
                                 uint8_t *input_row, uint32_t input_row_len,
                                 uint32_t num_rows,
                                 uint8_t *output_row, uint32_t output_row_len) {
+  (void)op_code;
+  (void)input_row_len;
+  (void)output_row_len;
 
   bool is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
 
@@ -1361,6 +1285,9 @@ void ecall_sort_merge_join(int op_code,
 void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
                              uint8_t *output, uint32_t output_size,
                              uint32_t *actual_size) {
+  (void)input_size;
+  (void)output_size;
+
   uint8_t *input_ptr = input;
   uint8_t *output_ptr = output;
 

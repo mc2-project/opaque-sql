@@ -85,7 +85,6 @@ void NewProjectRecord::set_project_attributes() {
 uint32_t NewProjectRecord::write_encrypted(uint8_t *output) {
   // Flushes only the eval attributes
   uint8_t *output_ptr = output;
-  uint32_t value_len = 0;
 
   ProjectAttributes *attrs = this->project_attributes;
 
@@ -169,8 +168,7 @@ void NewJoinRecord::reset_to_dummy() {
 }
 
 void NewJoinRecord::init_join_attribute(int op_code) {
-  uint32_t num_cols = *( (uint32_t *) (this->row + TABLE_ID_SIZE));
   get_join_attribute(op_code, this->num_cols(),
-                     this->row + TABLE_ID_SIZE + 4, this->is_primary() ? 0 : -1,
+                     this->row + TABLE_ID_SIZE + 4,
                      &this->join_attr);
 }

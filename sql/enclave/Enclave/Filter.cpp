@@ -17,7 +17,6 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
 
   uint8_t *row_ptr = row + 4;
 
-  const size_t decrypted_data_len = 1024;
   uint8_t decrypted_data[2048];
   uint8_t *decrypted_data_ptr = decrypted_data;
 
@@ -95,11 +94,6 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
                    &enc_value_ptr, &enc_value_len);
     decrypt(enc_value_ptr, enc_value_len, decrypted_data);
     get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
-
-    int *value_ptr = (int *) attr_ptr;
-
-    // printf("Input value is %u\n", *value_ptr);
-    // printf("Attr len is  is %u\n", attr_len);
 
     ret = 0;
   } else if (op_code == OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01) {

@@ -35,6 +35,7 @@ AesGcm::AesGcm(const KeySchedule* ks, const unsigned char* iv, size_t iv_len) {
 }
 
 AesGcm::AesGcm(const AesGcm& other) {
+	(void)other;
 	if (state!=New) throw "Can't clone in this state";
 }
 

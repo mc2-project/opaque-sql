@@ -32,8 +32,13 @@ public:
   virtual int compare(GenericType *v) = 0;
   virtual void swap(GenericType *v) = 0;
 
-  virtual void consume(uint8_t *input, int mode) { }
-  virtual void flush(uint8_t *output) {}
+  virtual void consume(uint8_t *input, int mode) {
+    (void)input;
+    (void)mode;
+  }
+  virtual void flush(uint8_t *output) {
+    (void)output;
+  }
 
   virtual void evaluate() {}
 
@@ -41,8 +46,12 @@ public:
 
   virtual void reset() = 0;
 
-  virtual void sum(GenericType *v) {}
-  virtual void avg(uint32_t count) {}
+  virtual void sum(GenericType *v) {
+    (void)v;
+  }
+  virtual void avg(uint32_t count) {
+    (void)count;
+  }
 
   uint8_t type_;
 };
@@ -58,10 +67,12 @@ public:
   ~Dummy() {}
 
   int compare(GenericType *v) {
+    (void)v;
     return -1;
   }
 
   void swap(GenericType *v) {
+    (void)v;
     // do nothing
   }
 
@@ -265,7 +276,7 @@ class GroupedAttributes {
 public:
   GroupedAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols);
 
-  ~GroupedAttributes() {
+  virtual ~GroupedAttributes() {
     for (uint32_t i = 0; i < num_attr; i++) {
       delete attributes[i];
     }
@@ -316,7 +327,7 @@ public:
   int compare(SortAttributes *attr);
 
   void init();
-  void re_init(uint8_t *new_row_ptr);
+  void re_init();
 
   void evaluate();
 };
@@ -365,7 +376,7 @@ public:
   void swap(JoinAttributes *attr);
 
   void init();
-  void re_init(uint8_t *new_row_ptr);
+  void re_init();
 
   void evaluate();
 
@@ -390,7 +401,7 @@ public:
 
   }
 
-  ~ProjectAttributes() {}
+  virtual ~ProjectAttributes() {}
 
   void init();
 

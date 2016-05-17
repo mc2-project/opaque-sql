@@ -13,12 +13,11 @@
 // given a decrypted row and an opcode, extract the join attribute
 void get_join_attribute(int op_code,
                         uint32_t num_cols, uint8_t *row,
-                        int if_primary,
                         join_attribute *join_attr) {
   join_attr->reset();
   uint8_t *row_ptr = row;
   uint32_t total_value_len = 0;
-  uint32_t join_attr_idx;
+  uint32_t join_attr_idx = 0;
 
   if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
     join_attr_idx = 1;
@@ -65,6 +64,9 @@ void sort_merge_join(int op_code,
                      uint8_t *join_row, uint32_t join_row_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_output_length) {
+  (void)input_rows_length;
+  (void)join_row_length;
+  (void)output_rows_length;
 
   RowReader r(input_rows);
   RowWriter w(output_rows);
@@ -147,6 +149,9 @@ void scan_collect_last_primary(int op_code,
                                uint8_t *input_rows, uint32_t input_rows_length,
                                uint32_t num_rows,
                                uint8_t *output, uint32_t output_length) {
+  (void)op_code;
+  (void)input_rows_length;
+  (void)output_length;
 
   RowReader r(input_rows);
   NewJoinRecord cur, last_primary;
@@ -171,6 +176,9 @@ void process_join_boundary(int op_code,
                            uint32_t num_rows,
                            uint8_t *output_rows, uint32_t output_rows_size,
                            uint32_t *actual_output_length) {
+  (void)op_code;
+  (void)input_rows_length;
+  (void)output_rows_size;
 
   RowReader r(input_rows);
   RowWriter w(output_rows);

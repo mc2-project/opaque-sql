@@ -24,6 +24,7 @@ GenericType *create_attr(uint8_t *attr) {
     assert(false);
 
   }
+  return NULL;
 }
 
 /*** DUMMY ***/
@@ -58,6 +59,7 @@ void Integer::swap(GenericType *v) {
 }
 
 void Integer::consume(uint8_t *input, int mode) {
+  (void)mode;
   uint8_t type = *input;
   if (type == INT) {
     this->value = *( (uint32_t *) (input + HEADER_SIZE));
@@ -259,6 +261,7 @@ void Float::swap(GenericType *v) {
 }
 
 void Float::consume(uint8_t *input, int mode) {
+  (void)mode;
   uint8_t type = *input;
   if (type == FLOAT) {
     this->value = *( (float *) (input + HEADER_SIZE));
@@ -332,6 +335,7 @@ void Date::swap(GenericType *v) {
 }
 
 void Date::consume(uint8_t *input, int mode) {
+  (void)mode;
   uint8_t type = *input;
   if (type == DATE) {
     this->date = *( (float *) (input + HEADER_SIZE));
@@ -349,6 +353,7 @@ void Date::flush(uint8_t *output) {
 }
 
 void Date::copy_attr(Date *attr, int mode) {
+  (void)mode;
   this->date = attr->date;
 }
 
@@ -732,7 +737,7 @@ void JoinAttributes::init() {
   }
 }
 
-void JoinAttributes::re_init(uint8_t *new_row_ptr) {
+void JoinAttributes::re_init() {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
@@ -871,7 +876,7 @@ void SortAttributes::init() {
 
 }
 
-void SortAttributes::re_init(uint8_t *new_row_ptr) {
+void SortAttributes::re_init() {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
@@ -980,6 +985,7 @@ int SortAttributes::compare(SortAttributes *attr) {
     printf("SortAttributes::compare: Unknown opcode %d\n", op_code);
     assert(false);
   }
+  return 0;
 }
 
 /*** SORT ATTRIBUTES ***/
@@ -1243,18 +1249,8 @@ int AggAggAttributes::compare(AggAggAttributes *attr) {
 uint32_t Record::consume_all_encrypted_attributes(uint8_t *input_row) {
   this->num_cols = *( (uint32_t *) (input_row));
   uint8_t *input_row_ptr = input_row + 4;
-  uint32_t enc_len = 0;
-  uint32_t total_len = 4;
 
   for (uint32_t i = 0; i < this->num_cols; i++) {
-    // enc_len = *( (uint32_t *) (input_row_ptr));
-    // input_row_ptr += 4;
-    // decrypt(input_row_ptr, enc_len, row_ptr);
-
-    // input_row_ptr += enc_len;
-    // row_ptr += dec_size(enc_len);
-    // total_len += enc_len;
-
     decrypt_attribute(&input_row_ptr, &row_ptr);
   }
 
@@ -1292,7 +1288,6 @@ void ProjectRecord::set_project_attributes(int op_code) {
 // only the attributes!
 uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
   uint8_t *output_ptr = output;
-  uint32_t value_len = 0;
 
   ProjectAttributes *attrs = this->project_attributes;
 
@@ -1303,17 +1298,9 @@ uint32_t ProjectRecord::flush_encrypt_eval_attributes(uint8_t *output) {
   uint8_t *temp_ptr = temp;
 
   for (uint32_t i = 0; i < attrs->num_eval_attr; i++) {
-
     temp_ptr = temp;
     attrs->eval_attributes[i]->flush(temp);
     encrypt_attribute(&temp_ptr, &output_ptr);
-
-    // value_len = *( (uint32_t *) (temp + TYPE_SIZE));
-    // *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
-
-    // encrypt(temp, value_len + HEADER_SIZE, output_ptr + 4);
-
-    // output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
   return (output_ptr - output);
@@ -1360,7 +1347,7 @@ void JoinRecord::set_join_attributes(int op_code) {
     join_attributes->init();
     join_attributes->evaluate();
   } else {
-    join_attributes->re_init(this->row + TABLE_ID_SIZE + 4);
+    join_attributes->re_init();
     join_attributes->set_table_id(row);
     join_attributes->if_primary = is_table_primary(row);
     join_attributes->evaluate();
@@ -1404,7 +1391,7 @@ void SortRecord::set_sort_attributes(int op_code) {
     sort_attributes->init();
     sort_attributes->evaluate();
   } else {
-    sort_attributes->re_init(this->row + 4);
+    sort_attributes->re_init();
     sort_attributes->evaluate();
   }
 }
@@ -1502,22 +1489,12 @@ uint32_t AggRecord::consume_all_encrypted_attributes(uint8_t *input_row) {
 uint32_t AggRecord::flush_encrypt_all_attributes(uint8_t *output) {
   uint8_t *input_ptr = this->row + 4 + 4 + 4;
   uint8_t *output_ptr = output;
-  uint32_t value_len = 0;
 
   *( (uint32_t *) (output_ptr)) = this->num_cols;
   output_ptr += 4;
 
-  //printf("flush_encrypt_all_attributes\n");
   for (uint32_t i = 0; i < this->num_cols; i++) {
     encrypt_attribute(&input_ptr, &output_ptr);
-
-    // value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
-    // *( (uint32_t *) output_ptr ) = enc_size(value_len + HEADER_SIZE);
-
-    // encrypt(input_ptr, value_len + HEADER_SIZE, output_ptr + 4);
-
-    // input_ptr += value_len + HEADER_SIZE;
-    // output_ptr += enc_size(value_len + HEADER_SIZE) + 4;
   }
 
   return (output_ptr - output);

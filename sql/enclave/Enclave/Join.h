@@ -91,7 +91,6 @@ public:
 
 void get_join_attribute(int op_code,
                         uint32_t num_cols, uint8_t *row,
-                        int if_primary,
                         join_attribute *join_attr);
 
 #endif

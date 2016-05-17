@@ -24,6 +24,7 @@ bool is_dummy_type(uint8_t attr_type) {
   default:
     printf("is_dummy_type: Unknown type %d\n", attr_type);
     assert(false);
+    return false;
   }
 }
 
@@ -41,6 +42,7 @@ uint8_t get_dummy_type(uint8_t attr_type) {
   default:
     printf("get_dummy_type: Unknown type %d\n", attr_type);
     assert(false);
+    return 0;
   }
 }
 
@@ -81,6 +83,7 @@ uint32_t attr_upper_bound(uint8_t attr_type) {
   default:
     printf("attr_upper_bound: Unknown type %d\n", attr_type);
     assert(false);
+    return 0;
   }
 }
 
@@ -96,7 +99,7 @@ void printf(const char *fmt, ...)
 
 void print_bytes(uint8_t *ptr, uint32_t len) {
 
-  for (int i = 0; i < len; i++) {
+  for (uint32_t i = 0; i < len; i++) {
     printf("%u", *(ptr + i));
     printf(" - ");
   }
@@ -236,6 +239,7 @@ void find_plaintext_attribute(uint8_t *row, uint32_t num_cols,
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
                     uint32_t attr_num,
                     uint8_t **enc_value_ptr, uint32_t *enc_value_len) {
+  (void)length;
 
   uint8_t *enc_value_ptr_ = row;
   uint32_t enc_value_len_ = 0;
@@ -379,7 +383,6 @@ void get_attr(uint8_t *dec_attr_ptr,
   assert(dec_attr_ptr != NULL);
   *type = *dec_attr_ptr;
 
-  uint32_t *attr_len_ptr = (uint32_t *) (dec_attr_ptr + 1);
   *attr_len = *(dec_attr_ptr + 1);
 
   *attr_ptr  = (dec_attr_ptr + 1 + *attr_len);
@@ -425,7 +428,6 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   decrypt(input_ptr, enc_len, temp);
   //printf("[decrypt_attribute] enc_len is %u, type is %u\n", enc_len, *temp);
 
-  uint8_t attr_type = *temp;
   uint32_t attr_len = *( (uint32_t *) (temp + TYPE_SIZE));
 
   cpy(output_ptr, temp, HEADER_SIZE + attr_len);

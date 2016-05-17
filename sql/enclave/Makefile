@@ -40,7 +40,7 @@ Common_Cpp_Files := Common/common.cpp
 Common_Include_Paths := -IInclude -ICommon
 
 Common_C_Flags := -fPIC -Wno-attributes $(Common_Include_Paths)
-Common_Cpp_Flags := $(Common_C_Flags) -std=c++11
+Common_Cpp_Flags := $(Common_C_Flags) -std=c++11 -Wall -Wextra -Werror
 
 Common_Cpp_Objects := $(Common_Cpp_Files:.cpp=.o)
 
@@ -73,7 +73,7 @@ else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-App_Cpp_Flags := $(App_C_Flags) -std=c++11
+App_Cpp_Flags := $(App_C_Flags) -std=c++11 -Wall -Wextra -Werror
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread 
 
 ifneq ($(SGX_MODE), HW)
@@ -102,7 +102,7 @@ Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/util.cpp Enclave/InternalTypes.c
 Enclave_Include_Paths := -IInclude -IEnclave -ICommon -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
-Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++
+Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \

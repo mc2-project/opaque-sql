@@ -52,23 +52,48 @@ int mode = HIGH_AGG;
 
 class aggregate_data {
 public:
-  aggregate_data() {
-
-  }
+  aggregate_data() {}
+  virtual ~aggregate_data() {}
   virtual void reset() {}
-  virtual void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {}
-  virtual uint32_t ret_length() {}
-  virtual void ret_result(uint8_t *result) {}
-  virtual void ret_dummy_result(uint8_t *result) {}
+  virtual void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {
+    (void)data_type;
+    (void)data;
+    (void)data_len;
+  }
+  virtual uint32_t ret_length() {
+    printf("aggregate_data::ret_length not implemented\n");
+    assert(false);
+    return 0;
+  }
+  virtual void ret_result(uint8_t *result) {
+    (void)result;
+  }
+  virtual void ret_dummy_result(uint8_t *result) {
+    (void)result;
+  }
   virtual void ret_result_print() {}
 
-  virtual void copy_data(aggregate_data *data) {}
+  virtual void copy_data(aggregate_data *data) {
+    (void)data;
+  }
 
   virtual uint32_t flush(uint8_t *output, int if_final) = 0;
 
-  virtual void agg(GenericType *v) {}
-  virtual uint32_t agg_buffer(uint8_t *input) {}
-  virtual uint32_t flush_agg(uint8_t *output) {}
+  virtual void agg(GenericType *v) {
+    (void)v;
+  }
+  virtual uint32_t agg_buffer(uint8_t *input) {
+    (void)input;
+    printf("aggregate_data::agg_buffer not implemented\n");
+    assert(false);
+    return 0;
+  }
+  virtual uint32_t flush_agg(uint8_t *output) {
+    (void)output;
+    printf("aggregate_data::flush_agg not implemented\n");
+    assert(false);
+    return 0;
+  }
 };
 
 class aggregate_data_count : public aggregate_data {
@@ -78,6 +103,9 @@ class aggregate_data_count : public aggregate_data {
   }
 
   void agg(uint8_t data_type, uint8_t *data, uint32_t data_len) {
+    (void)data_type;
+    (void)data;
+    (void)data_len;
     count += 1;
   }
 
@@ -105,7 +133,6 @@ class aggregate_data_count : public aggregate_data {
     result_ptr += TYPE_SIZE;
     *( (uint32_t *) result_ptr) = 4;
     result_ptr += 4;
-    uint32_t cur_value = *( (uint32_t *) result_ptr);
     *( (uint32_t *) result_ptr) = count;
 
     return HEADER_SIZE + 4;
@@ -141,7 +168,7 @@ public:
     }
   }
 
-  ~generic_agg_sum() {
+  virtual ~generic_agg_sum() {
     if (agg_field != NULL) {
       delete agg_field;
     }
@@ -255,7 +282,7 @@ public:
     count = 0;
   }
 
-  ~generic_agg_avg() {
+  virtual ~generic_agg_avg() {
     delete agg_field;
   }
 
@@ -446,7 +473,6 @@ public:
   void aggregate() {
     //agg_data->agg(*agg, agg+HEADER_SIZE, this->agg_attr_len());
 
-    uint8_t *agg_ptr = this->agg;
     for (uint32_t i = 0; i < num_agg_fields; i++) {
       agg_data_list[i]->agg(this->rec->agg_agg_attributes->eval_attributes[i]);
     }
@@ -475,7 +501,6 @@ public:
     // uint32_t len = data->agg_attr_len();
     // agg_data->agg(*(data->agg), (data->agg)+1+len, len);
 
-    uint8_t *agg_ptr = this->agg;
     for (uint32_t i = 0; i < num_agg_fields; i++) {
       agg_data_list[i]->agg(data->rec->agg_agg_attributes->eval_attributes[i]);
     }
@@ -544,10 +569,10 @@ public:
   }
 
   int cmp_sort_attr(uint8_t *data) {
-    // if (this->sort_attr_len() != *( (uint32_t *) (data + 1))) {
-    //   return -1;
-    // }
-    // return cmp(this->sort_attr, data, *( (uint32_t *) (data + 1)) + 1 + 4);
+    (void)data;
+    printf("cmp_sort_attr(uint8_t *) not implemented\n");
+    assert(false);
+    return 0;
   }
 
   int cmp_sort_attr(AggRecord *data) {
@@ -703,6 +728,10 @@ void scan_aggregation_count_distinct(int op_code,
                                      uint32_t *actual_output_rows_length,
                                      int flag,
                                      uint32_t *cardinality) {
+  (void)input_rows_length;
+  (void)agg_row_buffer_length;
+  (void)output_rows_length;
+  (void)cardinality;
 
   // printf("In scan_aggregation_count_distinct(flag=%d)\n", flag);
   // agg_row is initially encrypted
@@ -715,12 +744,6 @@ void scan_aggregation_count_distinct(int op_code,
   agg_stats_data prev_agg(op_code);
   AggRecord decrypted_row;
 
-  uint8_t *prev_row = NULL;
-  uint8_t *current_row = NULL;
-
-  // prev_agg.agg_data->reset();
-  // current_agg.agg_data->reset();
-
   uint32_t offset = 0;
   uint32_t distinct_items = 0;
 
@@ -732,50 +755,36 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t *agg_row_ptr = agg_row;
   uint32_t agg_row_length = 0;
 
-  // printf("scan_aggregation_count_distinct called, flag is %u\n", flag);
-
   if (flag == 2) {
     agg_row_length = *( (uint32_t *) agg_row);
     agg_row_ptr += 4;
-
-    // printf("agg_row_length is %u, agg_row_buffer_length is %u\n", agg_row_length, agg_row_buffer_length);
 
     if (test_dummy(agg_row_ptr, agg_row_length) == 0) {
       // copy the entire agg_row_ptr to curreng_agg
       cpy(current_agg.agg, agg_row_ptr, agg_row_length);
       dummy = 0;
     } else {
-      //decrypt(agg_row_ptr, agg_row_length, current_agg.rec->row);
       current_agg.rec->consume_enc_agg_record(agg_row_ptr, agg_row_length);
-      //current_agg.aggregate();
-      //current_agg.aggregate_buf();
       current_agg.reset_aggregate();
       offset = current_agg.offset();
       distinct_items = current_agg.distinct();
-
-      // printf("offset is %u, distinct_items is %u\n", offset, distinct_items);
 
       if (mode == LOW_AGG || current_agg.is_dummy()) {
         dummy = 0;
         current_agg.clear();
       } else {
-        //printf("Before set_agg_sort_attributes\n");
-        //current_agg.rec->num_cols = *( (uint32_t *) (current_agg.rec->row + 8));
         current_agg.rec->set_agg_sort_attributes(op_code);
-        //printf("After set_agg_sort_attributes\n");
       }
     }
 
     decrypted_row.reset_row_ptr();
     agg_row_ptr += decrypted_row.consume_all_encrypted_attributes(agg_row_ptr + agg_row_length);
     decrypted_row.set_agg_sort_attributes(op_code);
-    //decrypted_row.print();
 
   } else {
     current_agg.clear();
     dummy = 0;
   }
-  //current_agg.print();
 
   // returned row's structure should be appended with
   // [enc agg len]enc{[agg type][agg len][aggregation]}
@@ -787,19 +796,11 @@ void scan_aggregation_count_distinct(int op_code,
   uint8_t *prev_row_ptr = NULL;
   uint32_t prev_row_len = 0;
 
-  uint8_t *enc_value_ptr = NULL;
-  uint32_t enc_value_len = 0;
-
-  uint8_t value_type = 0;
-  uint32_t value_len = 0;
-  uint8_t *value_ptr = NULL;
-
   *actual_output_rows_length = 0;
 
   uint32_t num_output_rows = 0;
 
   uint8_t internal_row_1[ROW_UPPER_BOUND];
-  uint8_t internal_row_2[ROW_UPPER_BOUND];
 
   if (dummy == 0) {
     prev_agg.clear();
@@ -821,49 +822,23 @@ void scan_aggregation_count_distinct(int op_code,
     memcpy(internal_row_1, enc_row_ptr, enc_row_len);
     enc_row_ptr = internal_row_1;
 
-    uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
-
-    //printf("Record %u, num_cols: %u, enc_row_len: %u\n", r, num_cols, enc_row_len);
-
     enc_row_ptr += 4;
 
     if (r == 0) {
       current_agg.clear();
-      // also copy the attribute information into current_agg
-      // find_attribute(enc_row_ptr, enc_row_len, num_cols,
-      //                  sort_attribute_num,
-      //                  &enc_value_ptr, &enc_value_len);
-      // decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
 
       current_agg.inc_distinct();
       current_agg.rec->reset_row_ptr();
       current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
       current_agg.rec->set_agg_sort_attributes(op_code);
       current_agg.aggregate();
-      //current_agg.print();
-
-      // find_attribute(enc_row_ptr, enc_row_len, num_cols,
-      //              agg_attribute_num,
-      //              &enc_value_ptr, &enc_value_len);
-      // decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
 
       if (dummy != 0) {
         if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
           current_agg.aggregate_buf(&prev_agg);
-          // printf("- - - - - - - - - - - -  Aggregating with previous agg   - - - - - - - - - - - - \n");
-          // prev_agg.print();
-          // current_agg.flush_all();
-          // current_agg.print();
-          // printf("- - - - - - - - - - - -  END Aggregating with previous agg   - - - - - - - - - - - - \n");
           current_agg.flush_agg_buffer();
         }
       }
-
-      // if (flag == 2) {
-      //     printf("current_agg\n");
-      //     current_agg.print();
-      //     printf("end current_agg\n");
-      // }
 
       // cleanup
       enc_row_ptr += enc_row_len;
@@ -872,13 +847,7 @@ void scan_aggregation_count_distinct(int op_code,
     }
 
     // copy current_agg to prev_agg
-    //printf("Before copy_agg\n");
     prev_agg.copy_agg(&current_agg);
-    // if (flag == 2) {
-    //   prev_agg.print();
-    // }
-
-    //printf("prev_row_len is %u\n", prev_row_len);
 
     // should output the previous row with the partial aggregate information
     if ((flag == 1 && r == 1)) {
@@ -886,42 +855,17 @@ void scan_aggregation_count_distinct(int op_code,
       cpy(output_rows_ptr, prev_row_ptr, prev_row_len);
       output_rows_ptr += prev_row_len;
       *actual_output_rows_length += prev_row_len;
-
-      //printf("Write out to output: total bytes is %u\n", prev_row_len);
     }
 
-    //uint32_t partial_agg_len = prev_agg.agg_data->ret_length();
-    //prev_agg.flush_agg();
-    //prev_agg.agg_data->ret_result_print();
-
     if (flag == 2) {
-
       if (mode == LOW_AGG) {
-        // update the output buffer with the partial sum
         agg_final_result(&current_agg, offset, output_rows_ptr, distinct_items);
       }
     }
 
-    // integrate with the current row
-    // find_attribute(enc_row_ptr, enc_row_len, num_cols,
-    //                sort_attribute_num,
-    //                &enc_value_ptr, &enc_value_len);
-    // decrypt(enc_value_ptr, enc_value_len, current_agg.sort_attr);
-
     current_agg.rec->reset_row_ptr();
     current_agg.rec->consume_all_encrypted_attributes(enc_row_ptr - 4);
     current_agg.rec->set_agg_sort_attributes(op_code);
-
-    if (flag == 1) {
-      //printf("Record %u, num cols is %u, dummy=%d\n", r, num_cols, dummy);
-      //current_agg.print();
-    }
-
-    // find_attribute(enc_row_ptr, enc_row_len, num_cols,
-    //            agg_attribute_num,
-    //            &enc_value_ptr, &enc_value_len);
-    // decrypt(enc_value_ptr, enc_value_len, current_agg.agg);
-
 
     // update the partial aggregate
     if (current_agg.cmp_sort_attr(&prev_agg) == 0) {
@@ -930,14 +874,10 @@ void scan_aggregation_count_distinct(int op_code,
       if (flag == 2 && mode == HIGH_AGG && r > 0) {
         output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, -1);
         num_output_rows++;
-        //printf("-------------------------------------- OUTPUT --------------------------------------\n");
-        //prev_agg.print();
-        //printf("-------------------------------------- END OUTPUT --------------------------------------\n");
       }
 
     } else {
       current_agg.inc_distinct();
-      //current_agg.agg_data->reset();
       current_agg.reset();
       current_agg.aggregate();
       ++offset;
@@ -945,9 +885,6 @@ void scan_aggregation_count_distinct(int op_code,
       if (flag == 2 && mode == HIGH_AGG && r > 0) {
         output_rows_ptr += prev_agg.output_enc_row(output_rows_ptr, 0);
         num_output_rows++;
-        // printf("-------------------------------------- OUTPUT final --------------------------------------\n");
-        // prev_agg.print();
-        // printf("-------------------------------------- END OUTPUT --------------------------------------\n");
       }
     }
 
@@ -966,9 +903,6 @@ void scan_aggregation_count_distinct(int op_code,
   if (flag == 1) {
     current_agg.flush_all();
     uint32_t ca_size = enc_size(AGG_UPPER_BOUND);
-    // printf("------------------------------ FLAG = 1 ------------------------------\n");
-    // current_agg.print();
-    // printf("------------------------------ FLAG = 1 ------------------------------\n");
     *( (uint32_t *) output_rows_ptr) = ca_size;
     encrypt(current_agg.rec->row, AGG_UPPER_BOUND, output_rows_ptr + 4);
     *actual_output_rows_length += 4 + ca_size;
@@ -981,25 +915,10 @@ void scan_aggregation_count_distinct(int op_code,
       } else {
         output_rows_ptr += current_agg.output_enc_row(output_rows_ptr, 0);
         num_output_rows++;
-        // printf("-------------------------------------- OUTPUT (final) --------------------------------------\n");
-        // current_agg.flush_all();
-        // current_agg.print();
-        // printf("-------------------------------------- END OUTPUT --------------------------------------\n");
       }
       *actual_output_rows_length = output_rows_ptr - output_rows;
     }
   }
-
-
-  // finally, output cardinality in plaintext
-  // TODO: could even to tiered padding here!
-  if (flag == 2) {
-    //*cardinality = distinct_items;
-    //printf("Num distinct items: %u\n", distinct_items);
-  }
-
-  //printf("Num output rows is %u, received rows: %u\n", num_output_rows, num_rows);
-
 }
 
 
@@ -1013,6 +932,8 @@ void process_boundary_records(int op_code,
                               uint32_t num_rows,
                               uint8_t *out_agg_rows, uint32_t out_agg_row_size,
                               uint32_t *actual_out_agg_row_size) {
+  (void)rows_size;
+  (void)out_agg_row_size;
 
   // rows should be structured as
   // [regular row info][enc agg len]enc{agg}[regular row]...
@@ -1022,11 +943,7 @@ void process_boundary_records(int op_code,
   uint8_t *input_ptr = rows;
   uint8_t *enc_row_ptr = NULL;
   uint32_t enc_row_len = 0;
-  uint8_t *enc_value_ptr = NULL;
-  uint32_t enc_value_len = 0;
-  uint32_t num_cols = 0;
 
-  //uint8_t decrypted_row[ROW_UPPER_BOUND];
   AggRecord decrypted_row;
 
   uint8_t *enc_agg_ptr = NULL;
@@ -1049,8 +966,6 @@ void process_boundary_records(int op_code,
   uint32_t agg_enc_size = AGG_UPPER_BOUND;
   int ret = 0;
 
-  // printf("Process_boundary_records called; buffer size is %u, %p\n", rows_size, out_agg_rows);
-
   for (int round = 0; round < 2; round++) {
     // round 1: collect information about num distinct items
     input_ptr = rows;
@@ -1060,13 +975,8 @@ void process_boundary_records(int op_code,
     single_distinct_items = 0;
 
     for (uint32_t i = 0; i < num_rows; i++) {
-
-      // printf("round=%u, i=%u, get_next_row(...)\n", round, i);
       get_next_row(&input_ptr, &enc_row_ptr, &enc_row_len);
-      // printf("Got next row\n");
-      uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
 
-      // printf("Record %u, num cols is %u\n", i, num_cols);
       enc_row_ptr += 4;
 
       enc_agg_ptr = input_ptr;
@@ -1085,8 +995,6 @@ void process_boundary_records(int op_code,
           prev_agg.flush_all();
           prev_agg.set_distinct(distinct_items);
           prev_agg.set_offset(0);
-          // printf("Writing out %u, distinct items is %u, agg_enc_size: %u\n", i, distinct_items, agg_enc_size);
-          // prev_agg.print();
           encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
           out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
         }
@@ -1094,15 +1002,7 @@ void process_boundary_records(int op_code,
         decrypted_row.reset_row_ptr();
         decrypted_row.consume_all_encrypted_attributes(enc_row_ptr - 4);
         decrypted_row.set_agg_sort_attributes(op_code);
-        //decrypted_row.print();
 
-        if (round == 0) {
-          // printf("first decrypted row is\n");
-          // decrypted_row.print();
-          // current_agg.print();
-        }
-
-        //decrypt(enc_agg_ptr, enc_agg_len, prev_agg.rec->row);
         prev_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
         prev_agg.rec->set_agg_sort_attributes(op_code);
         prev_agg.reset_aggregate();
@@ -1130,7 +1030,6 @@ void process_boundary_records(int op_code,
       current_agg.rec->consume_enc_agg_record(enc_agg_ptr, enc_agg_len);
       current_agg.rec->set_agg_sort_attributes(op_code);
       current_agg.reset_aggregate();
-      //current_agg.print();
 
       if (round == 0) {
         distinct_items += current_agg.distinct();
@@ -1140,12 +1039,6 @@ void process_boundary_records(int op_code,
       // To find the number of distinct records:
       // compare the first row with prev_agg
       int not_distinct_ = prev_agg.rec->compare(&decrypted_row);
-
-      if (round == 0) {
-        // printf("not_distinct_ is %u\n", not_distinct_);
-        // decrypted_row.print();
-        // current_agg.print();
-      }
 
       if (not_distinct_ == 0) {
         if (round == 0) {
@@ -1172,9 +1065,6 @@ void process_boundary_records(int op_code,
 
         encrypt(prev_agg.rec->row, AGG_UPPER_BOUND, out_agg_rows_ptr);
         out_agg_rows_ptr += enc_size(AGG_UPPER_BOUND);
-
-        // printf("Writing out %u, distinct items is %u, size is %u\n", i, distinct_items, agg_enc_size);
-        // prev_agg.print();
       }
 
       // compare sort attributes current and previous agg
@@ -1188,33 +1078,14 @@ void process_boundary_records(int op_code,
       }
 
       prev_agg.copy_agg(&current_agg);
-      //prev_agg.aggregate();
 
       input_ptr = enc_agg_ptr + enc_agg_len;
     }
-
-    // if (round == 0) {
-    //   printf("Distinct items is %u\n", distinct_items);
-    // }
-
   }
 
   out_agg_rows_ptr += decrypted_row.flush_encrypt_all_attributes(out_agg_rows_ptr);
 
   *actual_out_agg_row_size = (out_agg_rows_ptr - out_agg_rows);
-}
-
-
-// produces the final result
-// this assumes that the EPC won't be oblivious: the malicious OS could page out
-void allocate_agg_final_result(uint8_t *enc_result_size,
-                               uint32_t enc_result_size_length,
-                               uint32_t *result_size,
-                               uint8_t *result_set) {
-  decrypt(enc_result_size, enc_result_size_length, (uint8_t *) result_size);
-  // allocate result set
-  uint32_t size = *result_size;
-  result_set = (uint8_t *) malloc(size * AGG_UPPER_BOUND);
 }
 
 
@@ -1241,46 +1112,23 @@ void agg_final_result(agg_stats_data *data, uint32_t offset,
       data->set_distinct(distinct);
     } else {
       *( (uint32_t *) result_set_ptr) = size;
-      uint32_t distinct = data->distinct();
       __builtin_prefetch(result_set_ptr + 4, 1, 1);
-
-      // data->set_distinct(0);
-      // encrypt(data->buffer, AGG_UPPER_BOUND, result_set_ptr + 4);
-      // data->set_distinct(distinct);
     }
   }
 }
-
-// This assumes an oblivious EPC
-void agg_final_result_oblivious_epc(agg_stats_data *data, uint32_t offset,
-                                    uint8_t *result_set, uint32_t result_size) {
-  uint8_t *result_set_ptr = result_set + AGG_UPPER_BOUND * offset;
-  uint32_t size = (4 + enc_size(AGG_UPPER_BOUND));
-
-  data->flush_all();
-  // data->print();
-  *( (uint32_t *) result_set_ptr) = size;
-  uint32_t distinct = data->distinct();
-  data->set_distinct(distinct);
-  encrypt(data->rec->row, AGG_UPPER_BOUND, result_set_ptr + 4);
-  data->set_distinct(distinct);
-}
-
 
 // The final aggregation step does not need to be fully oblivious
 void final_aggregation(int op_code,
                        uint8_t *agg_rows, uint32_t agg_rows_length,
                        uint32_t num_rows,
                        uint8_t *ret, uint32_t ret_length) {
+  (void)agg_rows_length;
+  (void)ret_length;
+
   // iterate through all rows
   uint8_t *output_rows_ptr = ret;
   uint8_t *enc_row_ptr = agg_rows;
   uint32_t enc_row_len = 0;
-
-
-  uint8_t value_type = 0;
-  uint32_t value_len = 0;
-  uint8_t *value_ptr = NULL;
 
   agg_stats_data current_agg(op_code);
 

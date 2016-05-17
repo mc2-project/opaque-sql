@@ -24,7 +24,9 @@ struct KeySchedule {
 	uint32_t ks[AES_MAX_EXP_KEY_SIZE];
 
 	KeySchedule(const unsigned char* k, size_t k_len);
-	KeySchedule(const KeySchedule& other) {};
+	KeySchedule(const KeySchedule& other) {
+		(void)other;
+	};
 };
 
 struct GcmContext {
@@ -35,7 +37,9 @@ struct GcmContext {
 	const KeySchedule* ks;
 	
 	GcmContext();
-	GcmContext(const GcmContext& other) {};
+	GcmContext(const GcmContext& other) {
+		(void)other;
+	};
 };
 
 struct Tag {
