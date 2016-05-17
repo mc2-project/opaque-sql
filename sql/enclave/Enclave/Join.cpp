@@ -410,48 +410,30 @@ void process_join_boundary(int op_code,
                            uint8_t *output_rows, uint32_t output_rows_size,
                            uint32_t *actual_output_length) {
 
-  uint8_t *input_rows_ptr = input_rows;
-  uint8_t *output_rows_ptr = output_rows;
-
-  uint8_t prev_join_row[JOIN_ROW_UPPER_BOUND];
-  uint8_t current_join_row[JOIN_ROW_UPPER_BOUND];
-  write_dummy(prev_join_row, JOIN_ROW_UPPER_BOUND);
-  write_dummy(current_join_row, JOIN_ROW_UPPER_BOUND);
-
-  uint8_t *current_table = current_join_row;
-
-  // printf("process_join_boundary called\n");
+  RowReader r(input_rows);
+  RowWriter w(output_rows);
+  NewJoinRecord prev, cur;
+  cur.reset_to_dummy();
 
   for (uint32_t i = 0; i < num_rows; i++) {
-    cpy(prev_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);
-    decrypt(input_rows_ptr, enc_size(JOIN_ROW_UPPER_BOUND), current_join_row);
+    prev.set(&cur);
+    r.read(&cur);
 
     if (i == 0) {
-      // encrypt a dummy record
-      encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
-      input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
-      output_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+      w.write(&prev);
       continue;
     }
 
-    // check the table ID
-    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
-    int if_primary = cmp(current_table, (uint8_t *)cmp_table, TABLE_ID_SIZE);
-
-    if (if_primary == 0) {
-      // write out the previous join attribute
-      encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
-      // need a dummy write to current_row
-      cpy(current_join_row, current_join_row, JOIN_ROW_UPPER_BOUND);
+    if (cur.is_primary()) {
+      w.write(&prev);
+      // TODO: dummy write to cur
     } else {
       // current join row is a dummy, need to copy previous row into current row
-      cpy(current_join_row, prev_join_row, JOIN_ROW_UPPER_BOUND);
-      encrypt(prev_join_row, JOIN_ROW_UPPER_BOUND, output_rows_ptr);
+      cur.set(&prev);
+      w.write(&prev);
     }
-
-    input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
-    output_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
   }
 
-  *actual_output_length = output_rows_ptr - output_rows;
+  w.close();
+  *actual_output_length = w.bytes_written();
 }

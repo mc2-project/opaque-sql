@@ -89,15 +89,11 @@ uint32_t NewJoinRecord::read(uint8_t *input) {
 }
 
 void NewJoinRecord::set(bool is_primary, NewRecord *record) {
-  uint8_t primary_table[TABLE_ID_SIZE];
-  uint8_t foreign_table[TABLE_ID_SIZE];
-  get_table_indicator(primary_table, foreign_table);
-
   uint8_t *row_ptr = this->row;
   if (is_primary) {
-    cpy(row_ptr, primary_table, TABLE_ID_SIZE);
+    cpy(row_ptr, primary_id, TABLE_ID_SIZE);
   } else {
-    cpy(row_ptr, foreign_table, TABLE_ID_SIZE);
+    cpy(row_ptr, foreign_id, TABLE_ID_SIZE);
   }
   row_ptr += TABLE_ID_SIZE;
 
@@ -114,17 +110,9 @@ uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
 }
 
 bool NewJoinRecord::is_primary() {
-  uint8_t primary_table[TABLE_ID_SIZE];
-  uint8_t foreign_table[TABLE_ID_SIZE];
-  get_table_indicator(primary_table, foreign_table);
-  return cmp(this->row, primary_table, TABLE_ID_SIZE) == 0;
+  return cmp(this->row, primary_id, TABLE_ID_SIZE) == 0;
 }
 
 void NewJoinRecord::reset_to_dummy() {
   write_dummy(this->row, JOIN_ROW_UPPER_BOUND);
-
-  uint8_t primary_table[TABLE_ID_SIZE];
-  uint8_t foreign_table[TABLE_ID_SIZE];
-  get_table_indicator(primary_table, foreign_table);
-  cpy(this->row, foreign_table, TABLE_ID_SIZE);
 }

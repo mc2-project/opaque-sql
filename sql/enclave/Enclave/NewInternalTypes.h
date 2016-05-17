@@ -71,6 +71,9 @@ private:
 
 class NewJoinRecord {
 public:
+  static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
+  static constexpr uint8_t *foreign_id = (uint8_t *) "bbbbbbbb";
+
   NewJoinRecord() {
     row = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
   }
@@ -95,9 +98,8 @@ public:
   bool is_primary();
 
   /**
-   * Zero out the contents of this record and mark it as belonging to the foreign table.
-   *
-   * This causes sort-merge join to treat it as a dummy record.
+   * Zero out the contents of this record. This causes sort-merge join to treat it as a dummy
+   * record.
    */
   void reset_to_dummy();
 

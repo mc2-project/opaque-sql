@@ -415,11 +415,6 @@ void oblivious_sort(int op_code, BufferReader *reader,
 
     //printf("join sort, op_code is %u\n", op_code);
 
-    // get the primary/foreign table indicators
-    uint8_t primary_table[TABLE_ID_SIZE];
-    uint8_t foreign_table[TABLE_ID_SIZE];
-    get_table_indicator(primary_table, foreign_table);
-
     // this is a sort used for sort-merge join!
     // that means there are two different join attributes:
     // one for the primary key table, the other the foreign key table
@@ -1315,8 +1310,7 @@ void ecall_join_sort_preprocess(int op_code,
 
   bool is_primary = false;
   if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
-    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
-    is_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE) == 0;
+    is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
   } else {
     printf("join_sort_preprocess: Unknown opcode %d\n", op_code);
     assert(false);

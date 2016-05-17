@@ -260,15 +260,15 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
 
 void get_table_indicator(uint8_t *primary_table,
                          uint8_t *foreign_table) {
-  char primary_table_[TABLE_ID_SIZE+1] = "11111111";
-  char foreign_table_[TABLE_ID_SIZE+1] = "22222222";
+  char primary_table_[TABLE_ID_SIZE+1] = "aaaaaaaa";
+  char foreign_table_[TABLE_ID_SIZE+1] = "bbbbbbbb";
 
   cpy(primary_table, (uint8_t *) primary_table_, TABLE_ID_SIZE);
   cpy(foreign_table, (uint8_t *) foreign_table_, TABLE_ID_SIZE);
 }
 
 int is_table_primary(uint8_t *table_id) {
-  char primary_table_[TABLE_ID_SIZE+1] = "11111111";
+  char primary_table_[TABLE_ID_SIZE+1] = "aaaaaaaa";
 
   return cmp(table_id, (uint8_t *) primary_table_, TABLE_ID_SIZE);
 }
