@@ -1,5 +1,7 @@
 #include "Join.h"
 
+#include "NewInternalTypes.h"
+
 
 uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
                                uint8_t *output_row_ptr) {
@@ -22,81 +24,6 @@ uint32_t encrypt_and_write_row(uint8_t *input_row_ptr,
   }
 
   return (output_row_ptr_ - output_row_ptr);;
-}
-
-// This pre-processing pads all rows to ROW_UPPER_BOUND, and then encrypt the entire thing
-// This is necessary because we do not want to leak the distribution of table 1 and table 2 after
-// the sort operation
-// Also adds a tabld ID for indicating whether this row belongs to the primary key table
-void join_sort_preprocess(int op_code,
-                          uint8_t *table_id,
-                          uint8_t *input_row, uint32_t input_row_len,
-                          uint8_t *output_row, uint32_t output_row_len) {
-
-  uint8_t temp[JOIN_ROW_UPPER_BOUND];
-  uint8_t *temp_ptr = temp;
-  // decrypt each attribute, copy to temp, then encrypt the entire row to output_row
-  // (including the number of columns!)
-
-  uint8_t primary_table[TABLE_ID_SIZE];
-  uint8_t foreign_table[TABLE_ID_SIZE];
-
-  get_table_indicator(primary_table, foreign_table);
-
-  //printf("join sort preprocess called, input size %u, output_row_len %u, join_row_upperbound: %u\n", input_row_len, output_row_len, JOIN_ROW_UPPER_BOUND);
-
-  int if_primary = 0;
-
-  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
-    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
-    if_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE);
-  } else {
-    printf("join_sort_preprocess: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  if (if_primary == 0) {
-    cpy(temp_ptr, primary_table, TABLE_ID_SIZE);
-  } else {
-    cpy(temp_ptr, foreign_table, TABLE_ID_SIZE);
-  }
-
-  temp_ptr += TABLE_ID_SIZE;
-
-  uint8_t *enc_row_ptr = input_row;
-  uint32_t enc_row_len = 0;
-
-  uint8_t *enc_value_ptr = NULL;
-  uint32_t enc_value_len = 0;
-
-  uint32_t num_cols = *( (uint32_t *) enc_row_ptr);
-  enc_row_ptr += 4;
-  enc_value_ptr = enc_row_ptr;
-
-  *( (uint32_t *) temp_ptr) = num_cols;
-  temp_ptr += 4;
-
-  //printf("if_primary: %d, num_cols: %u\n", if_primary, num_cols);
-
-  for (uint32_t i = 0; i < num_cols; i++) {
-    // find_attribute(enc_row_ptr, enc_row_len, num_cols,
-    //                i + 1, &enc_value_ptr, &enc_value_len);
-
-    // decrypt(enc_value_ptr, enc_value_len, temp_ptr);
-    // temp_ptr += dec_size(enc_value_len);
-
-    decrypt_attribute(&enc_value_ptr, &temp_ptr);
-  }
-
-  //printf("decrypted all\n");
-
-  uint32_t total_len = (uint32_t) (temp_ptr - temp);
-
-  //print_join_row("Join preprocess", temp);
-
-  encrypt(temp, JOIN_ROW_UPPER_BOUND, output_row);
-
-  //printf("encrypted all\n");
 }
 
 class join_attribute {
@@ -456,52 +383,23 @@ void scan_collect_last_primary(int op_code,
                                uint32_t num_rows,
                                uint8_t *output, uint32_t output_length) {
 
-  // primary_table is the table that is joining on primary key
-  // foreign_table joins on foreign key
-  uint8_t primary_table[TABLE_ID_SIZE];
-  uint8_t foreign_table[TABLE_ID_SIZE];
-  get_table_indicator(primary_table, foreign_table);
+  RowReader r(input_rows);
+  NewJoinRecord cur, last_primary;
 
-  uint8_t *current_table = NULL;
+  last_primary.reset_to_dummy();
 
-
-  // printf("scan_collect_last_primary called\n");
-
-  uint8_t *input_rows_ptr = input_rows;
-
-  join_attribute current_join_attr;
-  uint8_t current_row[JOIN_ROW_UPPER_BOUND];
-  uint8_t *current_row_ptr = current_row;
-
-  uint8_t primary_row[JOIN_ROW_UPPER_BOUND];
-  // clear the primary row, and write table_f's table ID in there
-  // later, during the boundary record processing, it's easy to tell whether this is a dummy record
-  write_dummy(primary_row, JOIN_ROW_UPPER_BOUND);
-  cpy(primary_row, foreign_table, TABLE_ID_SIZE);
-
-  for (uint32_t r = 0; r < num_rows; r++) {
-    decrypt(input_rows_ptr, enc_size(JOIN_ROW_UPPER_BOUND), current_row);
-    input_rows_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
-
-    current_row_ptr = current_row;
-
-    // table ID
-    current_table = current_row_ptr;
-    current_row_ptr += TABLE_ID_SIZE;
-
-    if (cmp(current_table, primary_table, TABLE_ID_SIZE) == 0) {
-      cpy(primary_row, current_row, JOIN_ROW_UPPER_BOUND);
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    if (cur.is_primary()) {
+      last_primary.set(&cur);
     } else {
-      // do a dummy write
-      cpy(current_row, current_row, JOIN_ROW_UPPER_BOUND);
-      cpy(primary_row, primary_row, JOIN_ROW_UPPER_BOUND);
+      // TODO: do a dummy write
     }
   }
 
-  // return the last primary row, if there is any!
-  //print_join_row("Join row", primary_row);
-  encrypt(primary_row, JOIN_ROW_UPPER_BOUND, output);
-  // printf("enc_size is %u\n", enc_size(JOIN_ROW_UPPER_BOUND));
+  RowWriter w(output);
+  w.write(&last_primary);
+  w.close();
 }
 
 

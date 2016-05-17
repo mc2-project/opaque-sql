@@ -71,7 +71,7 @@ private:
 
 class NewJoinRecord {
 public:
-  NewJoinRecord() : row_length(0) {
+  NewJoinRecord() {
     row = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
   }
 
@@ -79,9 +79,27 @@ public:
     free(row);
   }
 
+  /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
+  uint32_t read(uint8_t *input);
+
+  /** Convert a standard record into a join record. */
   void set(bool is_primary, NewRecord *record);
 
+  /** Copy the contents of other into this. */
+  void set(NewJoinRecord *other);
+
+  /** Encrypt and write out the record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
+
+  /** Return true if the record belongs to the primary table based on its table ID. */
+  bool is_primary();
+
+  /**
+   * Zero out the contents of this record and mark it as belonging to the foreign table.
+   *
+   * This causes sort-merge join to treat it as a dummy record.
+   */
+  void reset_to_dummy();
 
   uint32_t num_cols() {
     return *( (uint32_t *) (row + TABLE_ID_SIZE));
@@ -89,7 +107,6 @@ public:
 
 private:
   uint8_t *row;
-  uint32_t row_length;
 };
 
 /**
@@ -109,6 +126,9 @@ public:
     buf += row->read(buf);
   }
   void read(NewProjectRecord *row) {
+    buf += row->read(buf);
+  }
+  void read(NewJoinRecord *row) {
     buf += row->read(buf);
   }
 
