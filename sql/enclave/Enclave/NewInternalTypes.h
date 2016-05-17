@@ -73,6 +73,17 @@ private:
   ProjectAttributes *project_attributes;
 };
 
+/**
+ * A record tagged with a table ID for use when joining a primary table with a foreign table.
+ *
+ * The table ID is stored in the first 8 bytes of the row, after which is a row in the standard
+ * format (see NewRecord).
+ *
+ * This record type can optionally provide access to a join attribute, which is a specific attribute
+ * from each primary and foreign row on which the join is performed. To access the join attribute,
+ * first call init_join_attribute with an opcode specifying the position of the join attribute, then
+ * use join_attr.
+ */
 class NewJoinRecord {
 public:
   static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
@@ -98,13 +109,20 @@ public:
   /** Encrypt and write out the record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
 
+  /**
+   * Given two join rows, concatenate their fields into merge, dropping the join attribute from the
+   * foreign row. The attribute to drop (secondary_join_attr) is specified as a 1-indexed column
+   * number from the foreign row.
+   */
   void merge(NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge);
 
+  /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);
 
   /** Return true if the record belongs to the primary table based on its table ID. */
   bool is_primary();
 
+  /** Return true if the record contains all zeros, indicating a dummy record. */
   bool is_dummy();
 
   /**
