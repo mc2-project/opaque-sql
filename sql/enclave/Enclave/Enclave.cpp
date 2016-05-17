@@ -1303,18 +1303,12 @@ void ecall_join_sort_preprocess(int op_code,
                                 uint32_t num_rows,
                                 uint8_t *output_row, uint32_t output_row_len) {
 
+  bool is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
+
   RowReader r(input_row);
   RowWriter w(output_row);
   NewRecord a;
   NewJoinRecord b;
-
-  bool is_primary = false;
-  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
-    is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
-  } else {
-    printf("join_sort_preprocess: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
 
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&a);

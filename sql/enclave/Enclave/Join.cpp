@@ -385,15 +385,12 @@ void scan_collect_last_primary(int op_code,
 
   RowReader r(input_rows);
   NewJoinRecord cur, last_primary;
-
   last_primary.reset_to_dummy();
 
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&cur);
     if (cur.is_primary()) {
       last_primary.set(&cur);
-    } else {
-      // TODO: do a dummy write
     }
   }
 
@@ -417,20 +414,11 @@ void process_join_boundary(int op_code,
 
   for (uint32_t i = 0; i < num_rows; i++) {
     prev.set(&cur);
+    w.write(&prev);
+
     r.read(&cur);
-
-    if (i == 0) {
-      w.write(&prev);
-      continue;
-    }
-
-    if (cur.is_primary()) {
-      w.write(&prev);
-      // TODO: dummy write to cur
-    } else {
-      // current join row is a dummy, need to copy previous row into current row
+    if (!cur.is_primary()) {
       cur.set(&prev);
-      w.write(&prev);
     }
   }
 
