@@ -1,6 +1,7 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include "InternalTypes.h"
+#include "Join.h"
 
 #ifndef NEW_INTERNAL_TYPES_H
 #define NEW_INTERNAL_TYPES_H
@@ -36,6 +37,9 @@ public:
 
   /** Write out this record in plaintext. Return the number of bytes written. */
   uint32_t write_decrypted(uint8_t *output);
+
+  /** Mark this record as a dummy by setting all its types to dummy types. */
+  void mark_dummy(uint8_t *types, uint32_t num_cols);
 
   uint32_t num_cols() {
     return *( (uint32_t *) row);
@@ -74,7 +78,7 @@ public:
   static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
   static constexpr uint8_t *foreign_id = (uint8_t *) "bbbbbbbb";
 
-  NewJoinRecord() {
+  NewJoinRecord() : join_attr() {
     row = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
   }
 
@@ -94,8 +98,14 @@ public:
   /** Encrypt and write out the record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
 
+  void merge(NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge);
+
+  void init_join_attribute(int op_code);
+
   /** Return true if the record belongs to the primary table based on its table ID. */
   bool is_primary();
+
+  bool is_dummy();
 
   /**
    * Zero out the contents of this record. This causes sort-merge join to treat it as a dummy
@@ -106,6 +116,8 @@ public:
   uint32_t num_cols() {
     return *( (uint32_t *) (row + TABLE_ID_SIZE));
   }
+
+  join_attribute join_attr;
 
 private:
   uint8_t *row;

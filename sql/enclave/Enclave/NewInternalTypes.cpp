@@ -39,6 +39,27 @@ uint32_t NewRecord::write_decrypted(uint8_t *output) {
   return this->row_length;
 }
 
+void NewRecord::mark_dummy(uint8_t *types, uint32_t num_cols) {
+  uint8_t *row_ptr = this->row;
+  *( (uint32_t *) row_ptr) = num_cols;
+  row_ptr += 4;
+
+  uint32_t upper_bound = 0;
+  for (uint32_t i = 0; i < num_cols; i++) {
+    uint8_t t = types[i];
+    *row_ptr = t;
+    row_ptr += TYPE_SIZE;
+
+    upper_bound = attr_upper_bound(t);
+
+    *( (uint32_t *) row_ptr) = upper_bound;
+    row_ptr += 4;
+    row_ptr += upper_bound;
+  }
+
+  this->row_length = (row_ptr - row);
+}
+
 NewProjectRecord::~NewProjectRecord() {
   delete project_attributes;
 }
@@ -102,6 +123,7 @@ void NewJoinRecord::set(bool is_primary, NewRecord *record) {
 
 void NewJoinRecord::set(NewJoinRecord *other) {
   cpy(this->row, other->row, JOIN_ROW_UPPER_BOUND);
+  this->join_attr.copy_attribute(&other->join_attr);
 }
 
 uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
@@ -109,10 +131,46 @@ uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
   return enc_size(JOIN_ROW_UPPER_BOUND);
 }
 
+void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) {
+  uint8_t *merge_ptr = merge->row;
+  *( (uint32_t *) merge_ptr) = this->num_cols() + other->num_cols() - 1;
+  merge_ptr += 4;
+
+  uint8_t *input_ptr = this->row + TABLE_ID_SIZE + 4;
+  uint32_t value_len;
+  for (uint32_t i = 0; i < this->num_cols(); i++) {
+    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    cpy(merge_ptr, input_ptr, value_len);
+    merge_ptr += value_len;
+    input_ptr += value_len;
+  }
+
+  input_ptr = other->row + TABLE_ID_SIZE + 4;
+  for (uint32_t i = 0; i < other->num_cols(); i++) {
+    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    if (i + 1 != secondary_join_attr) {
+      cpy(merge_ptr, input_ptr, value_len);
+      merge_ptr += value_len;
+    }
+    input_ptr += value_len;
+  }
+}
+
 bool NewJoinRecord::is_primary() {
   return cmp(this->row, primary_id, TABLE_ID_SIZE) == 0;
 }
 
+bool NewJoinRecord::is_dummy() {
+  return test_dummy(this->row, JOIN_ROW_UPPER_BOUND) == 0;
+}
+
 void NewJoinRecord::reset_to_dummy() {
   write_dummy(this->row, JOIN_ROW_UPPER_BOUND);
+}
+
+void NewJoinRecord::init_join_attribute(int op_code) {
+  uint32_t num_cols = *( (uint32_t *) (this->row + TABLE_ID_SIZE));
+  get_join_attribute(op_code, this->num_cols(),
+                     this->row + TABLE_ID_SIZE + 4, this->is_primary() ? 0 : -1,
+                     &this->join_attr);
 }
