@@ -1308,22 +1308,27 @@ void ecall_join_sort_preprocess(int op_code,
                                 uint32_t num_rows,
                                 uint8_t *output_row, uint32_t output_row_len) {
 
-  // pre-process the rows, make a call to join_sort_preprocess for each row
-  uint8_t *input_row_ptr = input_row;
-  uint8_t *enc_row_ptr = NULL;
-  uint32_t enc_row_len = 0;
+  RowReader r(input_row);
+  RowWriter w(output_row);
+  NewRecord a;
+  NewJoinRecord b;
 
-  uint8_t *output_row_ptr = output_row;
+  bool is_primary = false;
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
+    char cmp_table[TABLE_ID_SIZE+1] = "aaaaaaaa";
+    is_primary = cmp(table_id, (uint8_t *) cmp_table, TABLE_ID_SIZE) == 0;
+  } else {
+    printf("join_sort_preprocess: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
 
   for (uint32_t i = 0; i < num_rows; i++) {
-    get_next_row(&input_row_ptr, &enc_row_ptr, &enc_row_len);
-
-    join_sort_preprocess(op_code, table_id,
-                         enc_row_ptr, enc_row_len,
-                         output_row_ptr, enc_size(JOIN_ROW_UPPER_BOUND));
-
-    output_row_ptr += enc_size(JOIN_ROW_UPPER_BOUND);
+    r.read(&a);
+    b.set(is_primary, &a);
+    w.write(&b);
   }
+
+  w.close();
 }
 
 void ecall_scan_collect_last_primary(int op_code,

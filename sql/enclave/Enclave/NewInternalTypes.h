@@ -11,7 +11,7 @@ class NewRecord {
 public:
   NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
 
-  NewRecord(uint32_t upper_bound) : num_cols(0) {
+  NewRecord(uint32_t upper_bound) {
     row = (uint8_t *) malloc(upper_bound);
   }
 
@@ -19,14 +19,17 @@ public:
     free(row);
   }
 
-  virtual uint32_t read(uint8_t *input) = 0;
-  virtual uint32_t write(uint8_t *output) = 0;
+  virtual uint32_t read(uint8_t *input);
+  virtual uint32_t write_encrypted(uint8_t *output);
+  virtual uint32_t write_decrypted(uint8_t *output);
+
+  virtual uint32_t num_cols() {
+    return *( (uint32_t *) row);
+  }
 
 protected:
-  uint32_t decrypt_row(uint8_t *input);
-
-  uint32_t num_cols;
   uint8_t *row;
+  uint32_t row_length;
 };
 
 class NewProjectRecord : public NewRecord {
@@ -35,18 +38,28 @@ public:
 
   ~NewProjectRecord();
 
-  void init();
-  void re_init();
-  void evaluate();
-
   virtual uint32_t read(uint8_t *input);
-  virtual uint32_t write(uint8_t *output);
+  virtual uint32_t write_encrypted(uint8_t *output);
 
 private:
-  void set_project_attributes(int op_code);
+  void set_project_attributes();
 
   int op_code;
   ProjectAttributes *project_attributes;
+};
+
+class NewJoinRecord : public NewRecord {
+public:
+  NewJoinRecord()
+    : NewRecord(JOIN_ROW_UPPER_BOUND) {}
+
+  void set(bool is_primary, NewRecord *record);
+
+  virtual uint32_t write_encrypted(uint8_t *output);
+
+  virtual uint32_t num_cols() {
+    return *( (uint32_t *) (row + TABLE_ID_SIZE));
+  }
 };
 
 class RowReader {
@@ -66,8 +79,10 @@ public:
   RowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
 
   void write(NewRecord *row) {
-    buf += row->write(buf);
+    buf += row->write_encrypted(buf);
   }
+
+  void close() {}
 
   uint32_t bytes_written() {
     return buf - buf_start;

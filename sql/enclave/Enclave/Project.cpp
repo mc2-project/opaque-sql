@@ -15,5 +15,7 @@ void project(int op_code,
     w.write(&current_row);
   }
 
+  w.close();
+
   *actual_output_rows_length = w.bytes_written();
 }
