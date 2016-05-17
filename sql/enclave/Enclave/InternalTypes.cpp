@@ -683,7 +683,7 @@ void JoinAttributes::init() {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == OP_JOIN_COL1) {
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -738,7 +738,7 @@ void JoinAttributes::re_init(uint8_t *new_row_ptr) {
 
   // Set "attributes" in the correct place to point to row
   // For JoinAttributes, can look at the different columns for primary & foreign key tables
-  if (op_code == OP_JOIN_COL1) {
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
     expression = IDENTITY;
 
     find_plaintext_attribute(row, num_cols,

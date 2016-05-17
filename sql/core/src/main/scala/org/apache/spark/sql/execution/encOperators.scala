@@ -232,7 +232,7 @@ case class EncSortMergeJoin(
         case (2, 3, 0, 0, None) =>
           (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
         case (2, 3, 0, 0, Some(OP_JOIN_PAGERANK)) =>
-          (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
+          (OP_JOIN_PAGERANK, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
         case (3, 3, 1, 1, None) =>
           (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_COL4_NOT_DUMMY)
       }

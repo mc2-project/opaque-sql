@@ -94,7 +94,7 @@ void get_join_attribute(int op_code,
   uint32_t total_value_len = 0;
   uint32_t join_attr_idx;
 
-  if (op_code == OP_JOIN_COL1) {
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
     join_attr_idx = 1;
   } else if (op_code == OP_JOIN_COL2) {
     join_attr_idx = 2;
@@ -132,7 +132,7 @@ void join_merge_row(int op_code,
   uint32_t secondary_row_cols = 0;
   uint32_t secondary_join_attr = 0;
 
-  if (op_code == OP_JOIN_COL1) {
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
     secondary_join_attr = 1;
   } else if (op_code == OP_JOIN_COL2) {
     secondary_join_attr = 2;

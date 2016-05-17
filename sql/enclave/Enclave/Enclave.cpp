@@ -410,7 +410,7 @@ void oblivious_sort(int op_code, BufferReader *reader,
       }
     }
 
-  } else if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2) {
+  } else if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_COL2 || op_code == OP_JOIN_PAGERANK) {
     // Sorting for Join
 
     //printf("join sort, op_code is %u\n", op_code);

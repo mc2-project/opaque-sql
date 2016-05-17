@@ -14,6 +14,7 @@ int get_sort_operation(int op_code) {
 
   case OP_JOIN_COL1:
   case OP_JOIN_COL2:
+  case OP_JOIN_PAGERANK:
     return SORT_JOIN;
     break;
   }
