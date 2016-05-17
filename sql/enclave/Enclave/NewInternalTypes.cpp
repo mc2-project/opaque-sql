@@ -44,18 +44,18 @@ NewProjectRecord::~NewProjectRecord() {
 }
 
 uint32_t NewProjectRecord::read(uint8_t *input) {
-  uint32_t result = NewRecord::read(input);
+  uint32_t result = r.read(input);
   this->set_project_attributes();
   return result;
 }
 
 void NewProjectRecord::set_project_attributes() {
   if (project_attributes == NULL) {
-    project_attributes = new ProjectAttributes(op_code, row + 4, num_cols());
+    project_attributes = new ProjectAttributes(op_code, r.row + 4, r.num_cols());
     project_attributes->init();
     project_attributes->evaluate();
   } else {
-    project_attributes->re_init(row + 4);
+    project_attributes->re_init(r.row + 4);
     project_attributes->evaluate();
   }
 

@@ -1,4 +1,4 @@
-// -*- c-basic-offset: 2 -*-
+// -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include "InternalTypes.h"
 
@@ -7,11 +7,20 @@
 
 class ProjectAttributes;
 
+/**
+ * A standard record (row) in plaintext. Supports reading and writing to and from plaintext and
+ * encrypted formats. It can be reused for multiple rows by alternating calls to read and write.
+ * It stores row data as bytes in the following format:
+ *
+ *     [uint32_t num_cols]([uint8_t attr1_type][uint32_t attr1_len][attr1_contents])...
+ *
+ * Note that num_cols is stored as part of the row data, unlike in the existing codebase.
+ */
 class NewRecord {
 public:
   NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
 
-  NewRecord(uint32_t upper_bound) {
+  NewRecord(uint32_t upper_bound) : row_length(0) {
     row = (uint8_t *) malloc(upper_bound);
   }
 
@@ -19,49 +28,79 @@ public:
     free(row);
   }
 
-  virtual uint32_t read(uint8_t *input);
-  virtual uint32_t write_encrypted(uint8_t *output);
-  virtual uint32_t write_decrypted(uint8_t *output);
+  /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
+  uint32_t read(uint8_t *input);
 
-  virtual uint32_t num_cols() {
+  /** Encrypt and write out this record, returning the number of bytes written. */
+  uint32_t write_encrypted(uint8_t *output);
+
+  /** Write out this record in plaintext. Return the number of bytes written. */
+  uint32_t write_decrypted(uint8_t *output);
+
+  uint32_t num_cols() {
     return *( (uint32_t *) row);
   }
 
-protected:
   uint8_t *row;
   uint32_t row_length;
 };
 
-class NewProjectRecord : public NewRecord {
+/**
+ * A record with a projection function applied. Data that is read and subsequently written out will
+ * pass through the projection function, which is specified using op_code.
+ */
+class NewProjectRecord {
 public:
-  NewProjectRecord(int op_code) : NewRecord(), op_code(op_code), project_attributes(NULL) {}
+  NewProjectRecord(int op_code) : r(), op_code(op_code), project_attributes(NULL) {}
 
   ~NewProjectRecord();
 
-  virtual uint32_t read(uint8_t *input);
-  virtual uint32_t write_encrypted(uint8_t *output);
+  /** Read, decrypt, and evaluate an encrypted row. Return the number of bytes read. */
+  uint32_t read(uint8_t *input);
+
+  /** Encrypt and write out the projected record, returning the number of bytes written. */
+  uint32_t write_encrypted(uint8_t *output);
 
 private:
   void set_project_attributes();
 
+  NewRecord r;
   int op_code;
   ProjectAttributes *project_attributes;
 };
 
-class NewJoinRecord : public NewRecord {
+class NewJoinRecord {
 public:
-  NewJoinRecord()
-    : NewRecord(JOIN_ROW_UPPER_BOUND) {}
+  NewJoinRecord() : row_length(0) {
+    row = (uint8_t *) malloc(JOIN_ROW_UPPER_BOUND);
+  }
+
+  ~NewJoinRecord() {
+    free(row);
+  }
 
   void set(bool is_primary, NewRecord *record);
 
-  virtual uint32_t write_encrypted(uint8_t *output);
+  uint32_t write_encrypted(uint8_t *output);
 
-  virtual uint32_t num_cols() {
+  uint32_t num_cols() {
     return *( (uint32_t *) (row + TABLE_ID_SIZE));
   }
+
+private:
+  uint8_t *row;
+  uint32_t row_length;
 };
 
+/**
+ * Manages reading multiple encrypted rows from a buffer.
+ *
+ * To read rows, initialize an empty row object and repeatedly call the appropriate read function
+ * with it, which will populate the row object with the next row.
+ *
+ * This class performs no bounds checking; the caller is responsible for knowing how many rows the
+ * buffer contains.
+ */
 class RowReader {
 public:
   RowReader(uint8_t *buf) : buf(buf) {}
@@ -69,16 +108,31 @@ public:
   void read(NewRecord *row) {
     buf += row->read(buf);
   }
+  void read(NewProjectRecord *row) {
+    buf += row->read(buf);
+  }
 
 private:
   uint8_t *buf;
 };
 
+/**
+ * Manages encrypting and writing out multiple rows to an output buffer.
+ *
+ * After writing all rows, make sure to call close(). This currently does nothing but eventually
+ * will encrypt all written rows at once.
+ */
 class RowWriter {
 public:
   RowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
 
   void write(NewRecord *row) {
+    buf += row->write_encrypted(buf);
+  }
+  void write(NewProjectRecord *row) {
+    buf += row->write_encrypted(buf);
+  }
+  void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);
   }
 
