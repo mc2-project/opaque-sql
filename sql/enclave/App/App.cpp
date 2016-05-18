@@ -1160,36 +1160,13 @@ void test_enclave_sort() {
   free(enc_data);
 }
 
-/* Application entry */
-//SGX_CDECL
-int SGX_CDECL main(int argc, char *argv[])
-{
-  (void)(argc);
-  (void)(argv);
-
-#if defined(_MSC_VER)
-  if (query_sgx_status() < 0) {
-    /* either SGX is disabled, or a reboot is required to enable SGX */
-    printf("Enter a character before exit ...\n");
-    getchar();
-    return -1;
-  }
-#endif
-
-  /* Initialize the enclave */
-  if(initialize_enclave() < 0){
-    printf("Enter a character before exit ...\n");
-    getchar();
-    return -1;
-  }
-
-  // sgx_status_t status = ecall_test(global_eid);
-  // print_error_message(status);
+void test_encryption_perf(int argc, char *argv[]) {
 
   if (argc < 2) {
     printf("Usage: ./app big_size small_size\n");
-    return -1;
+	assert(false);
   }
+
   const uint32_t big_size = atoi(argv[1]); // 256 * 1024 * 1024;
   const uint32_t small_size = atoi(argv[2]); // 1 * 1024;
   // const uint32_t big_size = 256 * 1024 * 1024;
@@ -1230,7 +1207,37 @@ int SGX_CDECL main(int argc, char *argv[])
 
   free(ciphertext);
   free(plaintext);
+}
 
+void test_stream_encryption() {
+  ecall_stream_encryption_test(global_eid);
+}
+
+/* Application entry */
+//SGX_CDECL
+int SGX_CDECL main(int argc, char *argv[])
+{
+  (void)(argc);
+  (void)(argv);
+
+#if defined(_MSC_VER)
+  if (query_sgx_status() < 0) {
+    /* either SGX is disabled, or a reboot is required to enable SGX */
+    printf("Enter a character before exit ...\n");
+    getchar();
+    return -1;
+  }
+#endif
+
+  /* Initialize the enclave */
+  if(initialize_enclave() < 0){
+    printf("Enter a character before exit ...\n");
+    getchar();
+    return -1;
+  }
+
+  test_stream_encryption();
+  
   /* Destroy the enclave */
   sgx_destroy_enclave(global_eid);
 

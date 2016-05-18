@@ -69,7 +69,7 @@ enclave {
       [out] uint32_t *actual_size,
       int flag,
       [out] uint32_t *cardinality);
-    public void ecall_test();
+    public void ecall_stream_encryption_test();
     public void ecall_process_boundary_records(
       int op_code,
       [in, size=rows_size] uint8_t *rows, uint32_t rows_size,

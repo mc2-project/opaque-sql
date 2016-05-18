@@ -1154,3 +1154,34 @@ void agg_test() {
 }
 
 //void fake_write(int a) { asm volatile ("mov %0 %0" : =m(a)::); }
+
+
+// Given a row and an op_code, hash the appropriate
+// Assume that the input is an entire block encrypted 
+void hash(int op_code,
+		  uint8_t *input_row,
+		  uint32_t num_rows,
+		  uint32_t input_row_len,
+		  uint8_t *output_buffers) {
+  
+  // construct a stream decipher on input row
+
+  // get row size
+  uint32_t row_size = dec_size(input_row_len) / num_rows;
+  check("hash: input rows cannot be split equally\n", dec_size(input_row_len) == row_size * num_rows);
+  
+  NewRecord rec(row_size);
+
+  
+  
+  
+}
+
+
+// non-oblivious aggregation
+void non_oblivious_aggregate() {
+  
+
+}
+
+

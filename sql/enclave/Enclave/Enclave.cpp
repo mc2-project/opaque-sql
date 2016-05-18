@@ -1138,22 +1138,6 @@ void ecall_random_id(uint8_t *ptr, uint32_t length) {
   encrypt(internal_buf, HEADER_SIZE + 4, ptr);
 }
 
-void ecall_test() {
-  uint8_t x[1024 * 1024];
-  assert(sgx_is_within_enclave(x, 1024 * 1024) == 1);
-
-  uint32_t malloc_length = 1024 * 1024;
-  uint32_t malloc_size = 1024;
-
-  for (uint32_t i = 0; i < malloc_length; i++) {
-    malloc(malloc_size);
-  }
-
-  uint8_t *ptr = (uint8_t *) malloc(malloc_size);
-  printf("Malloc within enclave? %u\n", sgx_is_within_enclave(ptr, malloc_size));
-  free(ptr);
-}
-
 void ecall_project(int op_code,
                    uint8_t *input_rows, uint32_t input_rows_length,
                    uint32_t num_rows,
@@ -1293,4 +1277,45 @@ void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
 
   encrypt_attribute(&input_ptr, &output_ptr);
   *actual_size = (output_ptr - output);
+}
+
+
+
+void ecall_stream_encryption_test() {
+
+  //const char *plaintext = "helloworld123456helloworld654321helloworld222222";
+  const char *plaintext1 = "1357913579135791357913";
+  const char *plaintext2 = "12345123451231234512345";
+
+  uint8_t ciphertext[100];
+  uint8_t decrypt_text[100];
+
+  uint8_t *plaintext_ptr = NULL;
+  
+  StreamCipher enc(ciphertext);
+  StreamDecipher dec(ciphertext);
+
+  plaintext_ptr =  (uint8_t *) plaintext1;
+  enc.encrypt(plaintext_ptr, 22, false);
+  enc.encrypt(plaintext_ptr, 22, false);
+  
+  plaintext_ptr = (uint8_t *) plaintext2;
+  enc.encrypt(plaintext_ptr, 23, true);
+
+  uint32_t enc_size = *((uint32_t *) ciphertext);
+
+  assert(dec_size(enc_size) == 22 * 2 + 23);
+
+  dec.decrypt(decrypt_text, 22);
+  int ret = memcmp(plaintext1, decrypt_text, 22);
+  check("Decryption wrong\n", ret == 0);
+  
+  dec.decrypt(decrypt_text, 22);
+  ret = memcmp(plaintext1, decrypt_text, 22);
+  check("Decryption wrong\n", ret == 0);
+
+  dec.decrypt(decrypt_text, 23);
+  ret = memcmp(plaintext2, decrypt_text, 23);
+  check("Decryption wrong\n", ret == 0);
+
 }
