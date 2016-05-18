@@ -2,11 +2,22 @@
 
 #include "InternalTypes.h"
 #include "Join.h"
+#include "util.h"
 
 #ifndef NEW_INTERNAL_TYPES_H
 #define NEW_INTERNAL_TYPES_H
 
 class ProjectAttributes;
+void printf(const char *fmt, ...);
+
+bool attrs_equal(const uint8_t *a, const uint8_t *b);
+uint32_t copy_attr(uint8_t *dst, const uint8_t *src);
+template<typename Type>
+uint32_t write_attr(uint8_t *output, Type value);
+template<>
+uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value);
+template<>
+uint32_t write_attr<float>(uint8_t *output, float value);
 
 /**
  * A standard record (row) in plaintext. Supports reading and writing to and from plaintext and
@@ -38,10 +49,28 @@ public:
   /** Write out this record in plaintext. Return the number of bytes written. */
   uint32_t write_decrypted(uint8_t *output);
 
+  /**
+   * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
+   * the attribute type.
+   */
+  const uint8_t *get_attr(uint32_t attr_idx) const;
+
+  /**
+   * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
+   * the attribute value.
+   */
+  const uint8_t *get_attr_value(uint32_t attr_idx) const;
+
+  /** Append an attribute to the record. */
+  template <typename AttrGeneratorType>
+  void add_attr(AttrGeneratorType *attr);
+
   /** Mark this record as a dummy by setting all its types to dummy types. */
   void mark_dummy(uint8_t *types, uint32_t num_cols);
 
-  uint32_t num_cols() {
+  void print();
+
+  uint32_t num_cols() const {
     return *( (uint32_t *) row);
   }
 
@@ -141,6 +170,147 @@ private:
   uint8_t *row;
 };
 
+template<typename GroupByType, typename Agg1Type>
+class Aggregator1 {
+public:
+  Aggregator1() : num_distinct(0), g(), a1() {}
+
+  void aggregate(NewRecord *record) {
+    GroupByType g2(record);
+    if (g.equals(&g2)) {
+      a1.add(record);
+    } else {
+      num_distinct++;
+      g.set(&g2);
+      a1.zero();
+      a1.add(record);
+    }
+  }
+
+  uint32_t write_encrypted(NewRecord *record, uint8_t *output) {
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct - 1; tmp_ptr += 4;
+    record->write_decrypted(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.write_result(tmp_ptr);
+
+    uint8_t *output_ptr = output;
+    *reinterpret_cast<uint32_t *>(output_ptr) = enc_size(AGG_UPPER_BOUND); output_ptr += 4;
+    encrypt(tmp, AGG_UPPER_BOUND, output_ptr); output_ptr += enc_size(AGG_UPPER_BOUND);
+    return output_ptr - output;
+  }
+
+private:
+  uint32_t num_distinct;
+  GroupByType g;
+  Agg1Type a1;
+};
+
+template<typename GroupByType, typename Agg1Type, typename Agg2Type>
+class Aggregator2 {
+public:
+  Aggregator2() : num_distinct(0), g(), a1(), a2() {}
+
+  void aggregate(NewRecord *record) {
+    GroupByType g2(record);
+    if (g.equals(&g2)) {
+      a1.add(record);
+      a2.add(record);
+    } else {
+      num_distinct++;
+      g.set(&g2);
+      a1.zero();
+      a1.add(record);
+      a2.zero();
+      a2.add(record);
+    }
+  }
+
+  uint32_t write_encrypted(NewRecord *record, uint8_t *output) {
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct - 1; tmp_ptr += 4;
+    record->write_decrypted(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.write_result(tmp_ptr);
+    tmp_ptr += a2.write_result(tmp_ptr);
+
+    uint8_t *output_ptr = output;
+    *reinterpret_cast<uint32_t *>(output_ptr) = enc_size(AGG_UPPER_BOUND); output_ptr += 4;
+    encrypt(tmp, AGG_UPPER_BOUND, output_ptr); output_ptr += enc_size(AGG_UPPER_BOUND);
+    return output_ptr - output;
+  }
+
+private:
+  uint32_t num_distinct;
+  GroupByType g;
+  Agg1Type a1;
+  Agg2Type a2;
+};
+
+template<uint32_t Column>
+class GroupBy {
+public:
+  GroupBy() : attr(NULL) {}
+  GroupBy(NewRecord *record) : attr(record->get_attr(Column)) {}
+  bool equals(GroupBy *other) {
+    if (this->attr != NULL && other->attr != NULL) {
+      return attrs_equal(this->attr, other->attr);
+    } else {
+      return false;
+    }
+  }
+  void set(GroupBy *other) {
+    this->attr = other->attr;
+  }
+  uint32_t write_result(uint8_t *output) {
+    return copy_attr(output, attr);
+  }
+private:
+  const uint8_t *attr;
+};
+
+template<uint32_t Column, typename Type>
+class Sum {
+public:
+  Sum() : sum() {}
+  void zero() {
+    sum = Type();
+  }
+  void add(NewRecord *record) {
+    sum += *reinterpret_cast<const Type *>(record->get_attr_value(Column));
+  }
+  uint32_t write_result(uint8_t *output) {
+    return write_attr<Type>(output, sum);
+  }
+private:
+  Type sum;
+};
+
+template<uint32_t Column, typename Type>
+class Avg {
+public:
+  Avg() : sum(), count(0) {}
+  void zero() {
+    sum = Type();
+    count = 0;
+  }
+  void add(NewRecord *record) {
+    sum += *reinterpret_cast<const Type *>(record->get_attr_value(Column));
+    count++;
+  }
+  uint32_t write_result(uint8_t *output) {
+    uint8_t *output_ptr = output;
+    output_ptr += write_attr<Type>(output_ptr, sum);
+    output_ptr += write_attr<uint32_t>(output_ptr, count);
+    return output_ptr - output;
+  }
+private:
+  Type sum;
+  uint32_t count;
+};
+
 /**
  * Manages reading multiple encrypted rows from a buffer.
  *
@@ -187,6 +357,10 @@ public:
   void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);
   }
+  template<typename AggregatorType>
+  void write(AggregatorType *agg, NewRecord *row) {
+    buf += agg->write_encrypted(row, buf);
+  }
 
   void close() {}
 
@@ -198,5 +372,7 @@ private:
   uint8_t * const buf_start;
   uint8_t *buf;
 };
+
+#include "NewInternalTypes.tcc"
 
 #endif

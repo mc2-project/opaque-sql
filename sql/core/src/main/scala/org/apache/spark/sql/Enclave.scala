@@ -50,6 +50,12 @@ class SGXEnclave extends java.io.Serializable {
   // returns an encrypted random ID
   @native def RandomID(eid: Long): Array[Byte]
 
+  @native def AggregateStep1(
+    eid: Long,
+    op_code: Int,
+    input_rows: Array[Byte],
+    num_rows: Int): Array[Byte]
+
   @native def Aggregate(
     eid: Long,
     op_code: Int,

@@ -109,6 +109,7 @@ case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
 }
 
 case class EncAggregate(
+    opcode: QEDOpcode,
     groupingExpression: NamedExpression,
     aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],
@@ -122,20 +123,25 @@ case class EncAggregate(
     val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
     val aggExprsPos = aggExpressions.map(expr => QED.attributeIndexOf(expr.references.toSeq(0), child.output)).toList
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
-      (child.output.size, groupingExprPos, aggExprsPos) match {
-        case (2, 0, List(1)) =>
-          (OP_GROUPBY_COL1_SUM_COL2_STEP1,
-            OP_GROUPBY_COL1_SUM_COL2_STEP2,
+      (opcode, child.output.size, groupingExprPos, aggExprsPos) match {
+        case (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1, 2, 0, List(1)) =>
+          (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
+            OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
             OP_SORT_COL3_IS_DUMMY_COL1,
             OP_FILTER_COL3_NOT_DUMMY)
-        case (3, 1, List(2)) =>
-          (OP_GROUPBY_COL2_SUM_COL3_STEP1,
-            OP_GROUPBY_COL2_SUM_COL3_STEP2,
+        case (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1, 2, 0, List(1)) =>
+          (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
+            OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
+            OP_SORT_COL3_IS_DUMMY_COL1,
+            OP_FILTER_COL3_NOT_DUMMY)
+        case (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1, 3, 1, List(2)) =>
+          (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
+            OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
             OP_SORT_COL4_IS_DUMMY_COL2,
             OP_FILTER_COL4_NOT_DUMMY)
-        case (3, 0, List(1, 2)) =>
-          (OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1,
-            OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2,
+        case (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1, 3, 0, List(1, 2)) =>
+          (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
+            OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL3_IS_DUMMY_COL1,
             OP_FILTER_COL4_NOT_DUMMY)
       }
@@ -151,8 +157,8 @@ case class EncAggregate(
       val (enclave, eid) = QED.initEnclave()
       val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
       val boundary = time("aggregate - step 1 - JNI call") {
-        enclave.Aggregate(
-          eid, aggStep1Opcode.value, concatRows, rows.length, new Array[Byte](aggSize))
+        enclave.AggregateStep1(
+          eid, aggStep1Opcode.value, concatRows, rows.length)
       }
       // enclave.StopEnclave(eid)
       Iterator(boundary)

@@ -61,6 +61,11 @@ enclave {
 
     public void ecall_random_id(
       [in, out, size=length]uint8_t *ptr, uint32_t length);
+    public void ecall_aggregate_step1(
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
+      [out] uint32_t *actual_size);
     public void ecall_scan_aggregation_count_distinct(
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,

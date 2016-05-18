@@ -167,7 +167,7 @@ void get_next_plaintext_row(uint8_t **ptr, uint8_t **row_ptr, uint32_t *row_len)
 }
 
 
-int cmp(uint8_t *value1, uint8_t *value2, uint32_t len) {
+int cmp(const uint8_t *value1, const uint8_t *value2, uint32_t len) {
 
   for (uint32_t i = 0; i < len; i++) {
     if (*(value1+i) != *(value2+i)) {

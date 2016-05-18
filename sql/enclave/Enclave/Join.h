@@ -2,7 +2,7 @@
 
 #include "util.h"
 
-int cmp(uint8_t *value1, uint8_t *value2, uint32_t len);
+int cmp(const uint8_t *value1, const uint8_t *value2, uint32_t len);
 void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 
 #ifndef JOIN_H

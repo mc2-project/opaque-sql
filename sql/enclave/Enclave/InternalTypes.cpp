@@ -999,7 +999,8 @@ void AggSortAttributes::init() {
   // Set "attributes" in the correct place to point to row
 
   // printf("init called, op_code is %u\n", op_code);
-  if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -1017,7 +1018,10 @@ void AggSortAttributes::init() {
 
     num_eval_attr = num_attr;
 
-  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -1034,8 +1038,8 @@ void AggSortAttributes::init() {
     attributes[0]->consume(sort_pointer, NO_COPY);
 
     num_eval_attr = num_attr;
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -1063,8 +1067,8 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
-  if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1
-      || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,
@@ -1073,16 +1077,18 @@ void AggSortAttributes::re_init(uint8_t *new_row_ptr) {
     attributes[0]->consume(sort_pointer, NO_COPY);
     // printf("Re-initialize, new attributes is ");
     // attributes[0]->print();
-  } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1
-             || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,
                              1, &sort_pointer, &len);
 
     attributes[0]->consume(sort_pointer, NO_COPY);
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
     attributes[0]->reset();
 
     find_plaintext_attribute(new_row_ptr, num_cols,
@@ -1118,7 +1124,8 @@ void AggAggAttributes::init() {
   // Set "attributes" in the correct place to point to row
 
   // printf("init called, op_code is %u\n", op_code);
-  if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -1137,7 +1144,10 @@ void AggAggAttributes::init() {
 
     num_eval_attr = num_attr;
 
-  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2) {
     expression = IDENTITY;
 
     num_attr = 1;
@@ -1156,8 +1166,8 @@ void AggAggAttributes::init() {
 
     num_eval_attr = num_attr;
 
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
 
     expression = IDENTITY;
 
@@ -1196,19 +1206,23 @@ void AggAggAttributes::re_init(uint8_t *new_row_ptr) {
   uint8_t *sort_pointer = NULL;
   uint32_t len = 0;
 
-  if (this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || this->op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2) {
+  if (op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols,
                              3, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
-  } else if (this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || this->op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2) {
     attributes[0]->reset();
     find_plaintext_attribute(new_row_ptr, num_cols,
                              2, &sort_pointer, &len);
     attributes[0]->consume(sort_pointer, NO_COPY);
 
-  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
     find_plaintext_attribute(new_row_ptr, num_cols,
                              2, &sort_pointer, &len);
 

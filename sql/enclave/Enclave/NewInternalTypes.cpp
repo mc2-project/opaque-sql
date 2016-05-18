@@ -2,6 +2,47 @@
 
 #include "NewInternalTypes.h"
 
+bool attrs_equal(const uint8_t *a, const uint8_t *b) {
+  const uint8_t *a_ptr = a;
+  const uint8_t *b_ptr = b;
+  if (*a_ptr != *b_ptr) return false;
+  a_ptr++; b_ptr++;
+  uint32_t a_size = *reinterpret_cast<const uint32_t *>(a_ptr); a_ptr += 4;
+  uint32_t b_size = *reinterpret_cast<const uint32_t *>(b_ptr); b_ptr += 4;
+  if (a_size != b_size) return false;
+  return cmp(a_ptr, b_ptr, a_size) == 0;
+}
+
+uint32_t copy_attr(uint8_t *dst, const uint8_t *src) {
+  const uint8_t *src_ptr = src;
+  uint8_t *dst_ptr = dst;
+  *dst_ptr++ = *src_ptr++;
+  uint32_t len = *reinterpret_cast<const uint32_t *>(src_ptr); src_ptr += 4;
+  *(reinterpret_cast<uint32_t *>(dst_ptr)) = len; dst_ptr += 4;
+  memcpy(dst_ptr, src_ptr, len); src_ptr += len; dst_ptr += len;
+  return dst_ptr - dst;
+}
+
+template<>
+uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value) {
+  uint8_t *output_ptr = output;
+  *output_ptr++ = INT;
+  uint32_t len = attr_upper_bound(INT);
+  *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
+  *reinterpret_cast<uint32_t *>(output_ptr) = value; output_ptr += len;
+  return output_ptr - output;
+}
+
+template<>
+uint32_t write_attr<float>(uint8_t *output, float value) {
+  uint8_t *output_ptr = output;
+  *output_ptr++ = FLOAT;
+  uint32_t len = attr_upper_bound(FLOAT);
+  *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
+  *reinterpret_cast<float *>(output_ptr) = value; output_ptr += len;
+  return output_ptr - output;
+}
+
 uint32_t NewRecord::read(uint8_t *input) {
   uint8_t *input_ptr = input;
   uint8_t *row_ptr = this->row;
@@ -34,9 +75,60 @@ uint32_t NewRecord::write_encrypted(uint8_t *output) {
   return (output_ptr - output);
 }
 
+void NewRecord::print() {
+  uint8_t *row_ptr = this->row;
+
+  printf("NewRecord[num_attrs=%d", *( (uint32_t *) (row_ptr)));
+  row_ptr += 4;
+
+  for (uint32_t i = 0; i < this->num_cols(); i++) {
+    uint8_t type = *row_ptr++;
+    uint32_t len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    printf(", attr_%d=[type=%d, len=%d, value=", i, type, len);
+    switch (type) {
+    case INT: printf("%d]", *reinterpret_cast<uint32_t *>(row_ptr)); break;
+    case FLOAT: printf("%f]", *reinterpret_cast<float *>(row_ptr)); break;
+    case STRING:
+    {
+      char *str = (char *) malloc(len + 1);
+      memcpy(str, row_ptr, len);
+      str[len] = NULL;
+      printf("%s]", str);
+      free(str);
+      break;
+    }
+    default: printf("?]");
+    }
+    row_ptr += len;
+  }
+
+  printf("]\n");
+
+  check("row length mismatch", row_length == row_ptr - row);
+}
+
 uint32_t NewRecord::write_decrypted(uint8_t *output) {
   cpy(output, this->row, this->row_length);
   return this->row_length;
+}
+
+const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
+  check("attr_idx out of bounds", attr_idx > 0 && attr_idx <= num_cols());
+  uint8_t *row_ptr = this->row;
+  row_ptr += 4;
+  for (uint32_t i = 0; i < attr_idx - 1; i++) {
+    row_ptr++;
+    uint32_t attr_len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    row_ptr += attr_len;
+  }
+  return row_ptr;
+}
+
+const uint8_t *NewRecord::get_attr_value(uint32_t attr_idx) const {
+  const uint8_t *result = get_attr(attr_idx);
+  result++;
+  result += 4;
+  return result;
 }
 
 void NewRecord::mark_dummy(uint8_t *types, uint32_t num_cols) {

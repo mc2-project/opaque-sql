@@ -53,6 +53,7 @@ case class EncSort(sortExpr: Expression, child: LogicalPlan) extends UnaryNode {
 }
 
 case class EncAggregate(
+    opcode: QEDOpcode,
     groupingExpression: NamedExpression,
     aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],

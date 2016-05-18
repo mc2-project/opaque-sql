@@ -160,7 +160,7 @@ public:
         break;
       default:
       {
-        printf("Type not handled in generic_agg_sum!\n");
+        printf("Type %d not handled in generic_agg_sum!\n", type);
         assert(false);
       }
       break;
@@ -411,12 +411,16 @@ public:
     }
 
     // reate the different agg_data here
-    if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 || op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2||
-        op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 || op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2) {
+    if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+        op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+        op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+        op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2 ||
+        op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+        op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2) {
       num_agg_fields = 1;
       agg_data_list[0] = new generic_agg_sum();
-    } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1 ||
-               op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+    } else if (op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 ||
+               op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
       num_agg_fields = 2;
       agg_data_list[0] = new generic_agg_avg(INT);
       agg_data_list[1] = new generic_agg_sum();

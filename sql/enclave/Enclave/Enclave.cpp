@@ -1150,6 +1150,38 @@ void ecall_project(int op_code,
 }
 
 /**** BEGIN Aggregation ****/
+void ecall_aggregate_step1(int op_code,
+                           uint8_t *input_rows, uint32_t input_rows_length,
+                           uint32_t num_rows,
+                           uint8_t *output_rows, uint32_t output_rows_length,
+                           uint32_t *actual_size) {
+  switch (op_code) {
+  case OP_GROUPBY_COL1_SUM_COL2_INT_STEP1:
+    aggregate_step1<Aggregator1<GroupBy<1>, Sum<2, uint32_t> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
+  case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1:
+    aggregate_step1<Aggregator1<GroupBy<1>, Sum<2, float> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
+  case OP_GROUPBY_COL2_SUM_COL3_INT_STEP1:
+    aggregate_step1<Aggregator1<GroupBy<2>, Sum<3, uint32_t> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
+  case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1:
+    aggregate_step1<Aggregator2<GroupBy<1>, Avg<2, uint32_t>, Sum<3, float> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
+  default:
+    printf("ecall_aggregate_step1: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+}
+
 void ecall_scan_aggregation_count_distinct(int op_code,
                                            uint8_t *input_rows, uint32_t input_rows_length,
                                            uint32_t num_rows,

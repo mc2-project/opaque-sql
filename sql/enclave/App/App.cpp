@@ -678,6 +678,48 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(
   return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray input_rows,
+  jint num_rows) {
+  (void)obj;
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  jboolean if_copy;
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+    return ret;
+  }
+
+  uint32_t actual_size = 0;
+
+  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+
+  sgx_check("Aggregate step 1",
+            ecall_aggregate_step1(
+              eid, op_code,
+              input_rows_ptr, input_rows_length,
+              num_rows,
+              output_rows, output_rows_length,
+              &actual_size));
+
+  jbyteArray ret = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
   JNIEnv *env,
   jobject obj,
@@ -703,13 +745,15 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
 
   uint32_t actual_size = 0;
   int flag = -1;
-  if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP1 ||
-      op_code == OP_GROUPBY_COL1_SUM_COL2_STEP1 ||
-      op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP1) {
+  if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
+      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
+      op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1) {
     flag = 1;
-  } else if (op_code == OP_GROUPBY_COL2_SUM_COL3_STEP2 ||
-             op_code == OP_GROUPBY_COL1_SUM_COL2_STEP2 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_SUM_COL3_STEP2) {
+  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2 ||
+             op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2 ||
+             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
     flag = 2;
   } else {
     printf("Aggregate: unknown opcode %d\n", op_code);

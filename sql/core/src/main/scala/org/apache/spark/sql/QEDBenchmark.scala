@@ -102,7 +102,8 @@ object QEDBenchmark {
           vertices.encJoin(edges, $"id", $"src", Some(OP_JOIN_PAGERANK))
             .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank")
             .select($"dst", $"rank".as("weightedRank"))
-            .encAggregate($"dst", $"weightedRank".as("totalIncomingRank"))
+            .encAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
+              $"dst", $"weightedRank".as("totalIncomingRank"))
             .select($"dst", $"totalIncomingRank")
             .encProject(OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK, $"dst", $"totalIncomingRank")
             .select($"dst".as("id"), $"totalIncomingRank".as("rank"))
@@ -173,7 +174,8 @@ object QEDBenchmark {
       val df = uservisitsDF
         .select($"sourceIP", $"adRevenue")
         .encProject(OP_BD2, $"sourceIP", $"adRevenue")
-        .encAggregate($"sourceIP", $"adRevenue".as("totalAdRevenue"))
+        .encAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
+          $"sourceIP", $"adRevenue".as("totalAdRevenue"))
       val count = df.count
       println("big data 2 - num rows: " + count)
       df
@@ -234,7 +236,8 @@ object QEDBenchmark {
             .select($"destURL", $"sourceIP", $"adRevenue"),
           rankingsDF("pageURL"), uservisitsDF("destURL"))
         .select($"sourceIP", $"pageRank", $"adRevenue")
-        .encAggregate($"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
+        .encAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
+          $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .encSort($"totalRevenue")
       val count = df.count

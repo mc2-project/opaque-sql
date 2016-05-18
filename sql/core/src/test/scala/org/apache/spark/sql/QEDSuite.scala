@@ -149,7 +149,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = sparkContext.makeRDD(QED.encrypt3(data), 1).toDF("id", "word", "count")
 
-    val summed = words.encAggregate($"word", $"count".as("totalCount"))
+    val summed = words.encAggregate(OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
+      $"word", $"count".as("totalCount"))
     assert(QED.decrypt2[String, Int](summed.collect) ===
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
@@ -163,7 +164,8 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
     val words = sparkContext.makeRDD(QED.encrypt3(data), 1).toDF("str", "x", "y")
 
-    val summed = words.encAggregate($"str", $"x".as("avgX"), $"y".as("totalY"))
+    val summed = words.encAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
+      $"str", $"x".as("avgX"), $"y".as("totalY"))
     assert(QED.decrypt3[String, Int, Float](summed.collect) ===
       data.groupBy(_._1).mapValues(group =>
         (group.map(_._2).sum / group.map(_._2).size, group.map(_._3).sum))
@@ -519,9 +521,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val agg_row2 = Array.fill[Byte](agg_size)(0)
 
     val ret_agg_row1 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value, enc_data1, data_1.length, agg_row1)
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data1, data_1.length, agg_row1)
     val ret_agg_row2 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value, enc_data2, data_2.length, agg_row2)
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data2, data_2.length, agg_row2)
 
     // aggregate the agg_row's together
     val agg_row_buffer = ByteBuffer.allocate(ret_agg_row1.length + ret_agg_row2.length)
@@ -535,7 +537,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     agg_row_buffer.get(agg_row_value)
 
     val step_2_values = enclave.ProcessBoundary(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP1.value, agg_row_value, 2)
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, agg_row_value, 2)
 
     // split these values
     val slices = QED.splitBytes(step_2_values, 2)
@@ -544,9 +546,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     //val new_agg_row3 = slices(2)
 
     val partial_result_1 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP2.value, enc_data1, data_1.length, new_agg_row1)
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data1, data_1.length, new_agg_row1)
     val partial_result_2 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_STEP2.value, enc_data2, data_2.length, new_agg_row2)
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data2, data_2.length, new_agg_row2)
 
     enclave.StopEnclave(eid)
   }

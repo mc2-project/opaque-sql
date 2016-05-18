@@ -992,8 +992,9 @@ class Dataset[T] private[sql](
     Permute(logicalPlan)
   }
 
-  def encAggregate(groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
+  def encAggregate(opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
     EncAggregate(
+      opcode,
       UnresolvedAlias(groupByCol.expr),
       aggCols.map(_.named),
       aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
