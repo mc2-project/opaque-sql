@@ -1334,7 +1334,8 @@ void ecall_stream_encryption_test() {
   plaintext_ptr = (uint8_t *) plaintext2;
   enc.encrypt(plaintext_ptr, 23, true);
 
-  uint32_t enc_size = *((uint32_t *) ciphertext);
+  uint32_t enc_size;
+  memcpy(&enc_size, ciphertext, sizeof(uint32_t));
 
   assert(dec_size(enc_size) == 22 * 2 + 23);
 

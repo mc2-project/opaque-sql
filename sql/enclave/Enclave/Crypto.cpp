@@ -193,7 +193,4 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
   cpy(plaintext_ptr + copied_bytes + decrypt_bytes, leftover_plaintext_ptr, final_size);
   leftover_plaintext_ptr += final_size;
   leftover_plaintext_size -= final_size;
-
-  check("StreamDecipher::decrypt: leftover_plaintext_size is negative\n", leftover_plaintext_size >= 0);
 }
-

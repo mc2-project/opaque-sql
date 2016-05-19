@@ -1167,6 +1167,9 @@ void hash(int op_code,
 		  uint32_t num_rows,
 		  uint32_t input_row_len,
 		  uint8_t *output_buffers) {
+  (void)op_code;
+  (void)input_row;
+  (void)output_buffers;
   
   // construct a stream decipher on input row
 
