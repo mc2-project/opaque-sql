@@ -155,6 +155,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
   }
 
+  test("encAggregate - final run split across multiple partitions") {
+    val data = for (i <- 0 until 256) yield (i, "A", 1)
+    val words = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count")
+
+    val summed = words.encAggregate(OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
+      $"word", $"count".as("totalCount"))
+    assert(QED.decrypt2[String, Int](summed.collect) ===
+      data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
+  }
+
   test("encAggregate on multiple columns") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
