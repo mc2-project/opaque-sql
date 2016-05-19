@@ -520,10 +520,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val agg_row1 = Array.fill[Byte](agg_size)(0)
     val agg_row2 = Array.fill[Byte](agg_size)(0)
 
-    val ret_agg_row1 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data1, data_1.length, agg_row1)
-    val ret_agg_row2 = enclave.Aggregate(
-      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data2, data_2.length, agg_row2)
+    val ret_agg_row1 = enclave.AggregateStep1(
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data1, data_1.length)
+    val ret_agg_row2 = enclave.AggregateStep1(
+      eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP1.value, enc_data2, data_2.length)
 
     // aggregate the agg_row's together
     val agg_row_buffer = ByteBuffer.allocate(ret_agg_row1.length + ret_agg_row2.length)
