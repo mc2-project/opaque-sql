@@ -43,7 +43,56 @@ uint32_t write_attr<float>(uint8_t *output, float value) {
   return output_ptr - output;
 }
 
-uint32_t NewRecord::read(uint8_t *input) {
+template<>
+uint32_t read_attr<uint32_t>(uint8_t *input, uint8_t *value) {
+  return read_attr_internal(input, value, INT);
+}
+template<>
+uint32_t read_attr<float>(uint8_t *input, uint8_t *value) {
+  return read_attr_internal(input, value, FLOAT);
+}
+
+uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_type) {
+  uint8_t *input_ptr = input;
+  uint8_t type = *input_ptr++;
+  if (type != expected_type) {
+    printf("read_attr expected type %d but got %d\n", expected_type, type);
+    assert(false);
+  }
+  uint32_t len = *reinterpret_cast<uint32_t *>(input_ptr); input_ptr += 4;
+  if (len != attr_upper_bound(type)) {
+    printf("read_attr on type %d expected len %d but got %d\n", type, attr_upper_bound(type), len);
+    assert(false);
+  }
+  memcpy(value, input_ptr, len); input_ptr += len;
+  return input_ptr - input;
+}
+
+void NewRecord::set(NewRecord *other) {
+  memcpy(this->row, other->row, other->row_length);
+  this->row_length = other->row_length;
+}
+
+uint32_t NewRecord::read_plaintext(uint8_t *input) {
+  uint8_t *input_ptr = input;
+  uint8_t *row_ptr = this->row;
+
+  *( (uint32_t *) row_ptr) = *( (uint32_t *) input_ptr);
+  input_ptr += 4;
+  row_ptr += 4;
+
+  for (uint32_t i = 0; i < num_cols(); i++) {
+    uint32_t len = copy_attr(row_ptr, input_ptr);
+    input_ptr += len;
+    row_ptr += len;
+  }
+
+  this->row_length = (row_ptr - row);
+
+  return (input_ptr - input);
+}
+
+uint32_t NewRecord::read_encrypted(uint8_t *input) {
   uint8_t *input_ptr = input;
   uint8_t *row_ptr = this->row;
 
@@ -156,8 +205,8 @@ NewProjectRecord::~NewProjectRecord() {
   delete project_attributes;
 }
 
-uint32_t NewProjectRecord::read(uint8_t *input) {
-  uint32_t result = r.read(input);
+uint32_t NewProjectRecord::read_encrypted(uint8_t *input) {
+  uint32_t result = r.read_encrypted(input);
   this->set_project_attributes();
   return result;
 }
@@ -195,7 +244,7 @@ uint32_t NewProjectRecord::write_encrypted(uint8_t *output) {
   return (output_ptr - output);
 }
 
-uint32_t NewJoinRecord::read(uint8_t *input) {
+uint32_t NewJoinRecord::read_encrypted(uint8_t *input) {
   decrypt(input, enc_size(JOIN_ROW_UPPER_BOUND), this->row);
   return enc_size(JOIN_ROW_UPPER_BOUND);
 }

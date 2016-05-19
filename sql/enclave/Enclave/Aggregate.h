@@ -21,6 +21,13 @@ void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size);
 
+template <typename AggregatorType>
+void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_length,
+                                  uint32_t num_rows,
+                                  uint8_t *output_rows, uint32_t output_rows_length,
+                                  uint32_t *actual_output_rows_length);
+
+
 void scan_aggregation_count_distinct(int op_code,
                                      uint8_t *input_rows, uint32_t input_rows_length,
                                      uint32_t num_rows,
