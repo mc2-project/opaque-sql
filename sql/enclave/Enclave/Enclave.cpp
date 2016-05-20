@@ -1230,6 +1230,39 @@ void ecall_process_boundary_records(int op_code,
 }
 
 
+void ecall_aggregate_step2(int op_code,
+                           uint8_t *input_rows, uint32_t input_rows_length,
+                           uint32_t num_rows,
+                           uint8_t *boundary_info_row_ptr, uint32_t boundary_info_row_length,
+                           uint8_t *output_rows, uint32_t output_rows_length,
+                           uint32_t *actual_size) {
+  switch (op_code) {
+  case OP_GROUPBY_COL1_SUM_COL2_INT_STEP2:
+    aggregate_step2<Aggregator1<GroupBy<1>, Sum<2, uint32_t> > >(
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2:
+    aggregate_step2<Aggregator1<GroupBy<1>, Sum<2, float> > >(
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  case OP_GROUPBY_COL2_SUM_COL3_INT_STEP2:
+    aggregate_step2<Aggregator1<GroupBy<2>, Sum<3, uint32_t> > >(
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2:
+    aggregate_step2<Aggregator2<GroupBy<1>, Avg<2, uint32_t>, Sum<3, float> > >(
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  default:
+    printf("ecall_aggregate_step2: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+}
+
 void ecall_final_aggregation(int op_code,
                              uint8_t *agg_rows, uint32_t agg_rows_length,
                              uint32_t num_rows,

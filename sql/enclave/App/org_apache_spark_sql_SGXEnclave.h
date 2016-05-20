@@ -77,6 +77,9 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jbyteArray);
+
   /*
    * Class:     org_apache_spark_sql_SGXEnclave
    * Method:    Aggregate

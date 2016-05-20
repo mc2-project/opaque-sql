@@ -68,6 +68,22 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
   return input_ptr - input;
 }
 
+void NewRecord::init(uint8_t *types, uint32_t types_len) {
+  uint8_t *row_ptr = this->row;
+  *( (uint32_t *) row_ptr) = types_len;
+  row_ptr += 4;
+
+  for (uint32_t i = 0; i < types_len; i++) {
+    uint8_t t = types[i];
+    *row_ptr++ = t;
+    uint32_t len = attr_upper_bound(t);
+    *( (uint32_t *) row_ptr) = len; row_ptr += 4;
+    row_ptr += len;
+  }
+
+  this->row_length = (row_ptr - row);
+}
+
 void NewRecord::set(NewRecord *other) {
   memcpy(this->row, other->row, other->row_length);
   this->row_length = other->row_length;
@@ -180,25 +196,27 @@ const uint8_t *NewRecord::get_attr_value(uint32_t attr_idx) const {
   return result;
 }
 
-void NewRecord::mark_dummy(uint8_t *types, uint32_t num_cols) {
+void NewRecord::mark_dummy() {
   uint8_t *row_ptr = this->row;
-  *( (uint32_t *) row_ptr) = num_cols;
   row_ptr += 4;
 
-  uint32_t upper_bound = 0;
-  for (uint32_t i = 0; i < num_cols; i++) {
-    uint8_t t = types[i];
-    *row_ptr = t;
-    row_ptr += TYPE_SIZE;
-
-    upper_bound = attr_upper_bound(t);
-
-    *( (uint32_t *) row_ptr) = upper_bound;
-    row_ptr += 4;
-    row_ptr += upper_bound;
+  for (uint32_t i = 0; i < num_cols(); i++) {
+    *row_ptr = get_dummy_type(*row_ptr); row_ptr++;
+    uint32_t len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    row_ptr += len;
   }
+}
 
-  this->row_length = (row_ptr - row);
+bool NewRecord::is_dummy() {
+  uint8_t *row_ptr = this->row;
+  row_ptr += 4;
+
+  for (uint32_t i = 0; i < num_cols(); i++) {
+    if (is_dummy_type(*row_ptr)) return true; row_ptr++;
+    uint32_t len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    row_ptr += len;
+  }
+  return false;
 }
 
 NewProjectRecord::~NewProjectRecord() {

@@ -190,10 +190,10 @@ case class EncAggregate(
         assert(boundaryRecord.length >= aggSize)
         val (enclave, eid) = QED.initEnclave()
         assert(rows.length > 0)
-        val partialAgg = enclave.Aggregate(
+        val partialAgg = enclave.AggregateStep2(
           eid, aggStep2Opcode.value, concatRows, rows.length, boundaryRecord)
         assert(partialAgg.nonEmpty,
-          s"enclave.Aggregate($eid, $aggStep2Opcode, ${concatRows.length}, ${rows.length}, ${boundaryRecord.length}) returned empty result given input starting with ${concatRows.slice(0, 16).toList}")
+          s"enclave.AggregateStep2($eid, $aggStep2Opcode, ${concatRows.length}, ${rows.length}, ${boundaryRecord.length}) returned empty result given input starting with ${concatRows.slice(0, 16).toList}")
         // enclave.StopEnclave(eid)
         QED.readRows(partialAgg)
     }.cache()

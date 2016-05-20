@@ -112,9 +112,61 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
     if (i > 0) output.set_offset(prev_last_agg_offset);
     output.set_num_distinct(num_distinct);
     w.write(&output);
-    if (i < num_rows - 1) w.write(&next_first_row); else w.write(&cur_first_row);
+    if (i < num_rows - 1) {
+      w.write(&next_first_row);
+    } else {
+      // The final partition has no next partition, so we send it a dummy row instead
+      cur_first_row.mark_dummy();
+      w.write(&cur_first_row);
+    }
   }
 
   w.close();
   *actual_output_rows_length = w.bytes_written();
+}
+
+template <typename AggregatorType>
+void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
+                     uint32_t num_rows,
+                     uint8_t *boundary_info_rows, uint32_t boundary_info_rows_length,
+                     uint8_t *output_rows, uint32_t output_rows_length,
+                     uint32_t *actual_size) {
+  (void)input_rows_length;
+  (void)boundary_info_rows_length;
+  (void)output_rows_length;
+
+  RowReader r(input_rows);
+  RowWriter w(output_rows);
+  NewRecord cur, next;
+  AggregatorType a;
+
+  RowReader boundary_info_reader(boundary_info_rows);
+  AggregatorType boundary_info;
+  NewRecord next_partition_first_row;
+  boundary_info_reader.read(&boundary_info);
+  boundary_info_reader.read(&next_partition_first_row);
+
+  // Use the last row partial aggregate from the previous partition as the initial aggregate for
+  // this partition
+  a.set(&boundary_info);
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    // Populate cur and next to enable lookahead
+    if (i == 0) r.read(&cur); else cur.set(&next);
+    if (i < num_rows - 1) r.read(&next); else next.set(&next_partition_first_row);
+
+    a.aggregate(&cur);
+
+    // The current aggregate is final if it is the last aggregate for its run
+    bool a_is_final = !a.grouping_attrs_equal(&next);
+
+    a.append_result(&cur);
+    if (!a_is_final) {
+      cur.mark_dummy();
+    }
+    w.write(&cur);
+  }
+
+  w.close();
+  *actual_size = w.bytes_written();
 }

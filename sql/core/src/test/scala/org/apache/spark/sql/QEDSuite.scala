@@ -555,9 +555,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val new_agg_row2 = slices(1)
     //val new_agg_row3 = slices(2)
 
-    val partial_result_1 = enclave.Aggregate(
+    val partial_result_1 = enclave.AggregateStep2(
       eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data1, data_1.length, new_agg_row1)
-    val partial_result_2 = enclave.Aggregate(
+    val partial_result_2 = enclave.AggregateStep2(
       eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data2, data_2.length, new_agg_row2)
 
     enclave.StopEnclave(eid)

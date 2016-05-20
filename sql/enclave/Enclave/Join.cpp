@@ -115,7 +115,7 @@ void sort_merge_join(int op_code,
     printf("sort_merge_join: Unknown opcode %d\n", op_code);
     assert(false);
   }
-  dummy.mark_dummy(types, num_output_cols);
+  dummy.init(types, num_output_cols);
 
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&current);

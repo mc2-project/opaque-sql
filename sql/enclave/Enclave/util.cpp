@@ -40,9 +40,7 @@ uint8_t get_dummy_type(uint8_t attr_type) {
     return DUMMY_STRING;
 
   default:
-    printf("get_dummy_type: Unknown type %d\n", attr_type);
-    assert(false);
-    return 0;
+    return attr_type;
   }
 }
 
