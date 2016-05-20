@@ -24,9 +24,9 @@ uint32_t copy_attr(uint8_t *dst, const uint8_t *src) {
 }
 
 template<>
-uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value) {
+uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy) {
   uint8_t *output_ptr = output;
-  *output_ptr++ = INT;
+  *output_ptr++ = dummy ? DUMMY_INT : INT;
   uint32_t len = attr_upper_bound(INT);
   *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
   *reinterpret_cast<uint32_t *>(output_ptr) = value; output_ptr += len;
@@ -34,9 +34,9 @@ uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value) {
 }
 
 template<>
-uint32_t write_attr<float>(uint8_t *output, float value) {
+uint32_t write_attr<float>(uint8_t *output, float value, bool dummy) {
   uint8_t *output_ptr = output;
-  *output_ptr++ = FLOAT;
+  *output_ptr++ = dummy ? DUMMY_FLOAT : FLOAT;
   uint32_t len = attr_upper_bound(FLOAT);
   *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
   *reinterpret_cast<float *>(output_ptr) = value; output_ptr += len;

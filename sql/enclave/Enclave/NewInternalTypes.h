@@ -14,11 +14,11 @@ void check(const char* message, bool test);
 bool attrs_equal(const uint8_t *a, const uint8_t *b);
 uint32_t copy_attr(uint8_t *dst, const uint8_t *src);
 template<typename Type>
-uint32_t write_attr(uint8_t *output, Type value);
+uint32_t write_attr(uint8_t *output, Type value, bool dummy);
 template<>
-uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value);
+uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy);
 template<>
-uint32_t write_attr<float>(uint8_t *output, float value);
+uint32_t write_attr<float>(uint8_t *output, float value, bool dummy);
 
 template<typename Type>
 uint32_t read_attr(uint8_t *input, uint8_t *value);
@@ -84,10 +84,10 @@ public:
    * Append an attribute to the record. The AttrGeneratorType must have a method with the following
    * signature:
    *
-   *     uint32_t write_result(uint8_t *output);
+   *     uint32_t write_result(uint8_t *output, bool dummy);
    */
   template<typename AttrGeneratorType>
-  void add_attr(AttrGeneratorType *attr);
+  void add_attr(AttrGeneratorType *attr, bool dummy);
 
   /** Mark this record as a dummy by setting all its types to dummy types. */
   void mark_dummy();
@@ -250,8 +250,8 @@ public:
    * Write the final aggregation result to the record by appending one attribute per aggregation
    * column.
    */
-  void append_result(NewRecord *record) {
-    record->add_attr(&a1);
+  void append_result(NewRecord *record, bool dummy) {
+    record->add_attr(&a1, dummy);
   }
 
   /** Read and decrypt a saved aggregation state. */
@@ -369,9 +369,9 @@ public:
     a2.add(&other->a2);
   }
 
-  void append_result(NewRecord *record) {
-    record->add_attr(&a1);
-    record->add_attr(&a2);
+  void append_result(NewRecord *record, bool dummy) {
+    record->add_attr(&a1, dummy);
+    record->add_attr(&a2, dummy);
   }
 
   uint32_t read_encrypted(uint8_t *input) {
@@ -549,12 +549,12 @@ public:
 
   /** Write the partial sum as a single plaintext attribute and return num bytes written. */
   uint32_t write_partial_result(uint8_t *output) {
-    return write_result(output);
+    return write_result(output, false);
   }
 
   /** Write the final sum as a single plaintext attribute and return num bytes written. */
-  uint32_t write_result(uint8_t *output) {
-    return write_attr<Type>(output, sum);
+  uint32_t write_result(uint8_t *output, bool dummy) {
+    return write_attr<Type>(output, sum, dummy);
   }
 
   void print() {
@@ -604,16 +604,16 @@ public:
   /** Write the partial average (two plaintext attrs: sum and count); return num bytes written. */
   uint32_t write_partial_result(uint8_t *output) {
     uint8_t *output_ptr = output;
-    output_ptr += write_attr<Type>(output_ptr, sum);
-    output_ptr += write_attr<uint32_t>(output_ptr, count);
+    output_ptr += write_attr<Type>(output_ptr, sum, false);
+    output_ptr += write_attr<uint32_t>(output_ptr, count, false);
     return output_ptr - output;
   }
 
   /** Write the final average as one plaintext attr of type Type; return num bytes written. */
-  uint32_t write_result(uint8_t *output) {
+  uint32_t write_result(uint8_t *output, bool dummy) {
     double avg = static_cast<double>(sum) / static_cast<double>(count);
     uint8_t *output_ptr = output;
-    output_ptr += write_attr<Type>(output_ptr, static_cast<Type>(avg));
+    output_ptr += write_attr<Type>(output_ptr, static_cast<Type>(avg), dummy);
     return output_ptr - output;
   }
 
