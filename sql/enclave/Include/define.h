@@ -46,7 +46,9 @@
     };
 
 #define MAX_SINGLE_SORT_BUFFER (70 * 1024 * 1024)
+// #define MAX_SINGLE_SORT_BUFFER (2 * 1024 * 1024 * 1024u) // for simulation mode
 #define MAX_SORT_BUFFER (2 * 1024 * 1024)
+// #define MAX_SORT_BUFFER (1 * 1024 * 1024 * 1024) // for simulation mode
 #define PAR_MAX_ELEMENTS (MAX_SORT_BUFFER / JOIN_ROW_UPPER_BOUND)
 
 #endif // DEFINE_H
