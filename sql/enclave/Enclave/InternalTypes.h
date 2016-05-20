@@ -332,41 +332,6 @@ public:
   void evaluate();
 };
 
-class AggSortAttributes : public GroupedAttributes {
-public:
-  AggSortAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-    GroupedAttributes(op_code, row_ptr, num_cols) { }
-
-  int compare(AggSortAttributes *attr);
-
-  void init();
-
-  // re-initialize: op_code should be the same, num cols the same
-  // but row_pointer is different
-  void re_init(uint8_t *new_row_ptr);
-
-  void evaluate();
-
-};
-
-class AggAggAttributes : public GroupedAttributes {
-public:
-  AggAggAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-    GroupedAttributes(op_code, row_ptr, num_cols) { }
-
-  int compare(AggAggAttributes *attr);
-
-  void init();
-
-  // re-initialize: op_code should be the same, num cols the same
-  // but row_pointer is different
-  void re_init(uint8_t *new_row_ptr);
-
-  void evaluate();
-
-};
-
-
 class JoinAttributes : public GroupedAttributes {
 public:
   JoinAttributes(int op_code, uint8_t *ptr, uint32_t num_cols) :
@@ -459,31 +424,6 @@ public:
   uint8_t *row_ptr;
 };
 
-class ProjectRecord : public Record {
-public:
-  ProjectRecord () {
-    project_attributes = NULL;
-    num_cols = 0;
-    row_ptr = row;
-  }
-
-  ~ProjectRecord() {
-    delete project_attributes;
-  }
-
-  void clear();
-
-  void init();
-  void re_init();
-  void evaluate();
-
-  void set_project_attributes(int op_code);
-
-  uint32_t flush_encrypt_eval_attributes(uint8_t *output);
-
-  ProjectAttributes *project_attributes;
-};
-
 class JoinRecord : public Record {
 public:
   JoinRecord() : Record(JOIN_ROW_UPPER_BOUND) {
@@ -547,52 +487,6 @@ public:
 
   SortAttributes *sort_attributes;
 
-};
-
-class AggRecord : public Record {
-public:
-  AggRecord() : Record(AGG_UPPER_BOUND) {
-    agg_sort_attributes = NULL;
-    agg_agg_attributes = NULL;
-    row_ptr = row + 4 + 4;
-  }
-
-  ~AggRecord() {
-    if (agg_sort_attributes != NULL) {
-      delete agg_sort_attributes;
-    }
-    if (agg_agg_attributes != NULL) {
-      delete agg_agg_attributes;
-    }
-  }
-
-  uint32_t consume_all_encrypted_attributes(uint8_t *input_row);
-
-  uint32_t flush_encrypt_all_attributes(uint8_t *output);
-
-  void set_agg_sort_attributes(int op_code);
-
-  void consume_enc_agg_record(uint8_t *input, uint32_t len);
-
-  void reset_row_ptr() {
-    row_ptr = row + 4 + 4;
-  }
-
-  void reset();
-
-  int compare(AggRecord *rec);
-
-  void copy(AggRecord *rec, int mode);
-
-  void print();
-
-  void flush();
-
-
-  // Format of row is
-  // [distinct entries (4 bytes)] [offset (4 bytes)] [number of columns] [attr1 type][attr1 len][attr1]...
-  AggSortAttributes *agg_sort_attributes;
-  AggAggAttributes *agg_agg_attributes;
 };
 
 #endif

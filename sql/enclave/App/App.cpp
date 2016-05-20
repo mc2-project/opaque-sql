@@ -720,6 +720,47 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
   return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint op_code,
+  jbyteArray rows,
+  jint num_rows) {
+  (void)obj;
+
+  jboolean if_copy;
+
+  uint32_t rows_length = (uint32_t) env->GetArrayLength(rows);
+  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
+
+
+  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
+  uint32_t single_row_size = 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND;
+  single_row_size += ENC_HEADER_SIZE + ROW_UPPER_BOUND;
+  uint32_t out_agg_rows_length = single_row_size * num_rows;
+
+  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
+  uint32_t actual_out_agg_rows_size = 0;
+
+  sgx_check("ProcessBoundary",
+            ecall_process_boundary_records(
+              eid, op_code,
+              rows_ptr, rows_length,
+              num_rows,
+              out_agg_rows, out_agg_rows_length,
+              &actual_out_agg_rows_size));
+
+  jbyteArray ret = env->NewByteArray(actual_out_agg_rows_size);
+  env->SetByteArrayRegion(ret, 0, actual_out_agg_rows_size, (jbyte *) out_agg_rows);
+
+  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
+
+  free(out_agg_rows);
+
+  return ret;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
   jbyteArray boundary_info_row) {
@@ -764,88 +805,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Aggregate(
-  JNIEnv *env,
-  jobject obj,
-  jlong eid,
-  jint op_code,
-  jbyteArray input_rows,
-  jint num_rows,
-  jbyteArray agg_row) {
-  (void)obj;
-
-  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
-  jboolean if_copy;
-  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
-
-  uint32_t agg_row_length = (uint32_t) env->GetArrayLength(agg_row);
-  uint8_t *agg_row_ptr = (uint8_t *) env->GetByteArrayElements(agg_row, &if_copy);
-
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-    return ret;
-  }
-
-  uint32_t actual_size = 0;
-  int flag = -1;
-  if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP1 ||
-      op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1 ||
-      op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP1 ||
-      op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1) {
-    flag = 1;
-  } else if (op_code == OP_GROUPBY_COL1_SUM_COL2_INT_STEP2 ||
-             op_code == OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2 ||
-             op_code == OP_GROUPBY_COL2_SUM_COL3_INT_STEP2 ||
-             op_code == OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2) {
-    flag = 2;
-  } else {
-    printf("Aggregate: unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-
-  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
-  uint8_t *output_rows = NULL;
-
-  if (flag == 1) {
-    output_rows = (uint8_t *) malloc(output_rows_length);
-  } else {
-    // TODO: change this hard-coded buffer
-    uint32_t real_size = 4 + 12 + 16 + 4 + 4 + 2048 + 128;
-    output_rows_length = num_rows  * real_size;
-    output_rows = (uint8_t *) malloc(4 + output_rows_length);
-  }
-
-  uint64_t t = 0;
-  {
-    scoped_timer timer(&t);
-    sgx_check("Aggregate",
-              ecall_scan_aggregation_count_distinct(
-                eid, op_code,
-                input_rows_ptr, input_rows_length,
-                num_rows,
-                agg_row_ptr, agg_row_length,
-                output_rows + 4, output_rows_length,
-                &actual_size,
-                flag,
-                (uint32_t *) output_rows));
-  }
-
-  double t_ms = ((double) t) / 1000;
-  printf("Enclave aggregation took %f ms\n", t_ms);
-
-  jbyteArray ret = env->NewByteArray(actual_size);
-  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) (output_rows + 4));
-
-  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-
-  free(output_rows);
-
-  return ret;
-}
-
 void print_bytes_(uint8_t *ptr, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     printf("%u", *(ptr + i));
@@ -853,69 +812,6 @@ void print_bytes_(uint8_t *ptr, uint32_t len) {
   }
 
   printf("\n");
-}
-
-
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(
-  JNIEnv *env,
-  jobject obj,
-  jlong eid,
-  jint op_code,
-  jbyteArray rows,
-  jint num_rows) {
-  (void)obj;
-
-  jboolean if_copy;
-
-  uint32_t rows_length = (uint32_t) env->GetArrayLength(rows);
-  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
-
-
-  // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t single_row_size = 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND;
-  single_row_size += ENC_HEADER_SIZE + ROW_UPPER_BOUND;
-  uint32_t out_agg_rows_length = single_row_size * num_rows;
-
-  uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
-  uint32_t actual_out_agg_rows_size = 0;
-
-  sgx_check("ProcessBoundary",
-            ecall_process_boundary_records(
-              eid, op_code,
-              rows_ptr, rows_length,
-              num_rows,
-              out_agg_rows, out_agg_rows_length,
-              &actual_out_agg_rows_size));
-
-  jbyteArray ret = env->NewByteArray(actual_out_agg_rows_size);
-  env->SetByteArrayRegion(ret, 0, actual_out_agg_rows_size, (jbyte *) out_agg_rows);
-
-  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
-
-  free(out_agg_rows);
-
-  return ret;
-}
-
-
-
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FinalAggregation(
-  JNIEnv *env,
-  jobject obj,
-  jlong eid,
-  jint op_code,
-  jbyteArray rows,
-  jint num_rows) {
-  (void)env;
-  (void)obj;
-  (void)eid;
-  (void)op_code;
-  (void)rows;
-  (void)num_rows;
-
-  printf("FinalAggregation not yet implemented\n");
-  assert(false);
-  return NULL;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(

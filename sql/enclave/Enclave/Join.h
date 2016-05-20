@@ -8,9 +8,22 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 #ifndef JOIN_H
 #define JOIN_H
 
-void join_sort_preprocess(int op_code,
-                          uint8_t *table_id,
+// Oblivious join algorithm (primary-foreign join):
+//
+// 1. Tag each record from each table with the table id. (join_sort_preprocess)
+// 2. Sort all records on the join attribute.
+// 3. Send the last primary row from each partition to the driver. If no primary
+//    rows exist, send a dummy row. (scan_collect_last_primary)
+// 4. On the driver, send each partition that didn't have any primary rows the
+//    closest primary row from a previous partition. (process_join_boundary)
+// 5. On each partition, emit the final join result by merging each foreign row
+//    with the closest previous primary row. For obliviousness, also emit a
+//    dummy row for each primary row. (sort_merge_join)
+// 6. Filter out the dummy rows using an oblivious filter.
+
+void join_sort_preprocess(uint8_t *table_id,
                           uint8_t *input_row, uint32_t input_row_len,
+                          uint32_t num_rows,
                           uint8_t *output_row, uint32_t output_row_len);
 
 void scan_collect_last_primary(int op_code,

@@ -42,8 +42,6 @@ void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
                     uint32_t attr_num,
                     uint8_t **enc_value_ptr, uint32_t *enc_value_len);
 
-void get_table_indicator(uint8_t *primary_table,
-                         uint8_t *foreign_table);
 int is_table_primary(uint8_t *table);
 
 void print_attribute(const char *attr_name, uint8_t *value_ptr);
@@ -53,8 +51,6 @@ void print_row(const char *row_name, uint8_t *row_ptr, uint32_t num_cols);
 void print_join_row(const char *row_name, uint8_t *row_ptr);
 
 uint32_t get_num_col(uint8_t *row);
-uint8_t *get_enc_attr(uint8_t **enc_attr_ptr, uint32_t *enc_attr_len,
-                      uint8_t *row_ptr, uint8_t *row, uint32_t length);
 void get_attr(uint8_t *dec_attr_ptr,
               uint8_t *type, uint32_t *attr_len, uint8_t **attr_ptr);
 

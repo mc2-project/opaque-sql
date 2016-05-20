@@ -5,18 +5,6 @@
 
 void printf(const char *fmt, ...);
 
-// input:   [aab][bbc][ccc][cde]
-//          (one character per row)
-// step1:   [a,2,1,b1][b,2,1,c1][c,1,0,c3][c,3,3,e1]
-//          [first row, local num distinct, local offset, last row partial aggregate]
-// proc_b:  [5,_,_,b][5,1,b1,c][5,2,c1,c][5,2,c4,_]
-//          [global num distinct,
-//           global offset for last row partial aggregate from prev partition,
-//           last row partial aggregate from prev partition (augmented with previous runs),
-//           first row of next partition]
-// step2:   [a1,A2,b1][b2,B3,c1][c2,c3,c4][C5,D1,E1]
-//          (one aggregate per row, final aggregates in caps)
-
 template <typename AggregatorType>
 void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,

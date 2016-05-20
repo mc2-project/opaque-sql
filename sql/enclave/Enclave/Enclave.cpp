@@ -1182,21 +1182,6 @@ void ecall_aggregate_step1(int op_code,
   }
 }
 
-void ecall_scan_aggregation_count_distinct(int op_code,
-                                           uint8_t *input_rows, uint32_t input_rows_length,
-                                           uint32_t num_rows,
-                                           uint8_t *agg_row, uint32_t agg_row_buffer_length,
-                                           uint8_t *output_rows, uint32_t output_rows_length,
-                                           uint32_t *actual_size,
-                                           int flag, uint32_t *cardinality) {
-  scan_aggregation_count_distinct(op_code,
-                                  input_rows, input_rows_length, num_rows,
-                                  agg_row, agg_row_buffer_length,
-                                  output_rows, output_rows_length,
-                                  actual_size,
-                                  flag, cardinality);
-}
-
 void ecall_process_boundary_records(int op_code,
                                     uint8_t *rows, uint32_t rows_size,
                                     uint32_t num_rows,
@@ -1228,7 +1213,6 @@ void ecall_process_boundary_records(int op_code,
     assert(false);
   }
 }
-
 
 void ecall_aggregate_step2(int op_code,
                            uint8_t *input_rows, uint32_t input_rows_length,
@@ -1263,20 +1247,7 @@ void ecall_aggregate_step2(int op_code,
   }
 }
 
-void ecall_final_aggregation(int op_code,
-                             uint8_t *agg_rows, uint32_t agg_rows_length,
-                             uint32_t num_rows,
-                             uint8_t *ret, uint32_t ret_length) {
-  final_aggregation(op_code,
-                    agg_rows, agg_rows_length,
-                    num_rows,
-                    ret, ret_length);
-
-}
-
 /**** END Aggregation ****/
-
-
 
 /**** BEGIN Join ****/
 
@@ -1285,30 +1256,13 @@ size_t join_row_size(const uint8_t *join_row) {
   return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
 }
 
-
 void ecall_join_sort_preprocess(int op_code,
                                 uint8_t *table_id,
                                 uint8_t *input_row, uint32_t input_row_len,
                                 uint32_t num_rows,
                                 uint8_t *output_row, uint32_t output_row_len) {
   (void)op_code;
-  (void)input_row_len;
-  (void)output_row_len;
-
-  bool is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
-
-  RowReader r(input_row);
-  RowWriter w(output_row);
-  NewRecord a;
-  NewJoinRecord b;
-
-  for (uint32_t i = 0; i < num_rows; i++) {
-    r.read(&a);
-    b.set(is_primary, &a);
-    w.write(&b);
-  }
-
-  w.close();
+  join_sort_preprocess(table_id, input_row, input_row_len, num_rows, output_row, output_row_len);
 }
 
 void ecall_scan_collect_last_primary(int op_code,

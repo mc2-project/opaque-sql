@@ -10,54 +10,81 @@
 
 #include "Join.h"
 
-// given a decrypted row and an opcode, extract the join attribute
-void get_join_attribute(int op_code,
-                        uint32_t num_cols, uint8_t *row,
-                        join_attribute *join_attr) {
-  join_attr->reset();
-  uint8_t *row_ptr = row;
-  uint32_t total_value_len = 0;
-  uint32_t join_attr_idx = 0;
+void join_sort_preprocess(uint8_t *table_id,
+                          uint8_t *input_row, uint32_t input_row_len,
+                          uint32_t num_rows,
+                          uint8_t *output_row, uint32_t output_row_len) {
+  (void)input_row_len;
+  (void)output_row_len;
 
-  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
-    join_attr_idx = 1;
-  } else if (op_code == OP_JOIN_COL2) {
-    join_attr_idx = 2;
-  } else {
-    printf("get_join_attribute: Unknown opcode %d\n", op_code);
-    assert(false);
+  bool is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
+
+  RowReader r(input_row);
+  RowWriter w(output_row);
+  NewRecord a;
+  NewJoinRecord b;
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&a);
+    b.set(is_primary, &a);
+    w.write(&b);
   }
 
-  // Join both tables on join_attr
-  for (uint32_t i = 0; i < num_cols; i++) {
-    total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-    if (i + 1 == join_attr_idx) {
-      join_attr->new_attribute(row_ptr, total_value_len);
-    } else {
-      // TODO: dummy write
-    }
-    row_ptr += total_value_len;
-  }
+  w.close();
 }
 
-// Join in enclave: assumes that the records have been sorted
-// by the join attribute already
-// This method takes in a temporay row (which could be a dummy row)
-// Then it compares with the following rows (which should contain the row info, as well as the table info
+void scan_collect_last_primary(int op_code,
+                               uint8_t *input_rows, uint32_t input_rows_length,
+                               uint32_t num_rows,
+                               uint8_t *output, uint32_t output_length) {
+  (void)op_code;
+  (void)input_rows_length;
+  (void)output_length;
 
+  RowReader r(input_rows);
+  NewJoinRecord cur, last_primary;
+  last_primary.reset_to_dummy();
 
-// This join can be implemented by merging from one table to another
-// The tables should have encrypted identifiers so that they can be identified
-//
-// Format of the input rows should be:
-// enc{table name}{row}
-//
-// Output row should be a new row, except the join attributes are de-duplicated
-//
-// Assume that the table has been transformed into a primary key-foreign key
-// join format
-//
-// TODO: should we leak which attributes are being joined, but not the constants?
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    if (cur.is_primary()) {
+      last_primary.set(&cur);
+    }
+  }
+
+  RowWriter w(output);
+  w.write(&last_primary);
+  w.close();
+}
+
+void process_join_boundary(int op_code,
+                           uint8_t *input_rows, uint32_t input_rows_length,
+                           uint32_t num_rows,
+                           uint8_t *output_rows, uint32_t output_rows_size,
+                           uint32_t *actual_output_length) {
+  (void)op_code;
+  (void)input_rows_length;
+  (void)output_rows_size;
+
+  RowReader r(input_rows);
+  RowWriter w(output_rows);
+  NewJoinRecord prev, cur;
+  cur.reset_to_dummy();
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    prev.set(&cur);
+    w.write(&prev);
+
+    r.read(&cur);
+    if (!cur.is_primary()) {
+      cur.set(&prev);
+    }
+  }
+
+  w.close();
+  *actual_output_length = w.bytes_written();
+}
+
 void sort_merge_join(int op_code,
                      uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
@@ -141,60 +168,32 @@ void sort_merge_join(int op_code,
   return;
 }
 
+// given a decrypted row and an opcode, extract the join attribute
+void get_join_attribute(int op_code,
+                        uint32_t num_cols, uint8_t *row,
+                        join_attribute *join_attr) {
+  join_attr->reset();
+  uint8_t *row_ptr = row;
+  uint32_t total_value_len = 0;
+  uint32_t join_attr_idx = 0;
 
-
-// do a scan of all of the encrypted rows
-// return the last primary table row in this
-void scan_collect_last_primary(int op_code,
-                               uint8_t *input_rows, uint32_t input_rows_length,
-                               uint32_t num_rows,
-                               uint8_t *output, uint32_t output_length) {
-  (void)op_code;
-  (void)input_rows_length;
-  (void)output_length;
-
-  RowReader r(input_rows);
-  NewJoinRecord cur, last_primary;
-  last_primary.reset_to_dummy();
-
-  for (uint32_t i = 0; i < num_rows; i++) {
-    r.read(&cur);
-    if (cur.is_primary()) {
-      last_primary.set(&cur);
-    }
+  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
+    join_attr_idx = 1;
+  } else if (op_code == OP_JOIN_COL2) {
+    join_attr_idx = 2;
+  } else {
+    printf("get_join_attribute: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
-  RowWriter w(output);
-  w.write(&last_primary);
-  w.close();
-}
-
-
-// collect and process boundary records
-void process_join_boundary(int op_code,
-                           uint8_t *input_rows, uint32_t input_rows_length,
-                           uint32_t num_rows,
-                           uint8_t *output_rows, uint32_t output_rows_size,
-                           uint32_t *actual_output_length) {
-  (void)op_code;
-  (void)input_rows_length;
-  (void)output_rows_size;
-
-  RowReader r(input_rows);
-  RowWriter w(output_rows);
-  NewJoinRecord prev, cur;
-  cur.reset_to_dummy();
-
-  for (uint32_t i = 0; i < num_rows; i++) {
-    prev.set(&cur);
-    w.write(&prev);
-
-    r.read(&cur);
-    if (!cur.is_primary()) {
-      cur.set(&prev);
+  // Join both tables on join_attr
+  for (uint32_t i = 0; i < num_cols; i++) {
+    total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
+    if (i + 1 == join_attr_idx) {
+      join_attr->new_attribute(row_ptr, total_value_len);
+    } else {
+      // TODO: dummy write
     }
+    row_ptr += total_value_len;
   }
-
-  w.close();
-  *actual_output_length = w.bytes_written();
 }
