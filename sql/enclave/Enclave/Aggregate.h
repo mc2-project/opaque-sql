@@ -58,19 +58,19 @@
 // TODO(wzheng): should we set all aggregate statistics to be the AGG_UPPER_BOUND?
 // TODO: change the [in] pointers to [user_check]
 
-template <typename AggregatorType>
+template<typename AggregatorType>
 void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size);
 
-template <typename AggregatorType>
+template<typename AggregatorType>
 void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_length,
                                   uint32_t num_rows,
                                   uint8_t *output_rows, uint32_t output_rows_length,
                                   uint32_t *actual_output_rows_length);
 
-template <typename AggregatorType>
+template<typename AggregatorType>
 void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *boundary_info_rows, uint32_t boundary_info_rows_length,

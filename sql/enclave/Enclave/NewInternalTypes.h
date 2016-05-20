@@ -86,7 +86,7 @@ public:
    *
    *     uint32_t write_result(uint8_t *output);
    */
-  template <typename AttrGeneratorType>
+  template<typename AttrGeneratorType>
   void add_attr(AttrGeneratorType *attr);
 
   /** Mark this record as a dummy by setting all its types to dummy types. */
