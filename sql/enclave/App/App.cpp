@@ -194,15 +194,21 @@ void sgx_check_quiet(const char* message, sgx_status_t ret)
 }
 
 #ifdef DEBUG
-#define sgx_check(message, op) do {             \
-    printf("%s running...\n", message);         \
-    sgx_status_t ret_ = op;                     \
-    if (ret_ != SGX_SUCCESS) {                  \
-      printf("%s failed\n", message);           \
-      print_error_message(ret_);                \
-    } else {                                    \
-      printf("%s done.\n", message);            \
-    }                                           \
+#define sgx_check(message, op) do {                     \
+    printf("%s running...\n", message);                 \
+    uint64_t t_ = 0;                                    \
+    sgx_status_t ret_;                                  \
+    {                                                   \
+      scoped_timer timer_(&t_);                         \
+      ret_ = op;                                        \
+    }                                                   \
+    double t_ms_ = ((double) t_) / 1000;                \
+    if (ret_ != SGX_SUCCESS) {                          \
+      printf("%s failed (%f ms)\n", message, t_ms_);    \
+      print_error_message(ret_);                        \
+    } else {                                            \
+      printf("%s done (%f ms).\n", message, t_ms_);     \
+    }                                                   \
   } while (0)
 #else
 #define sgx_check(message, op) sgx_check_quiet(message, op)

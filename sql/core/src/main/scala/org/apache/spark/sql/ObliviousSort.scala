@@ -395,6 +395,7 @@ object ObliviousSort extends java.io.Serializable {
         sortedRowIter
       }
     } else {
+      println("Running column sort")
       data.cache()
 
       val len = data.count
