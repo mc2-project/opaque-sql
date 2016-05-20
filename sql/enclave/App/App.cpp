@@ -185,13 +185,28 @@ void print_error_message(sgx_status_t ret)
     printf("Error: Unexpected error occurred.\n");
 }
 
-void sgx_check(const char* message, sgx_status_t ret)
+void sgx_check_quiet(const char* message, sgx_status_t ret)
 {
   if (ret != SGX_SUCCESS) {
     printf("%s failed\n", message);
     print_error_message(ret);
   }
 }
+
+#ifdef DEBUG
+#define sgx_check(message, op) do {             \
+    printf("%s running...\n", message);         \
+    sgx_status_t ret_ = op;                     \
+    if (ret_ != SGX_SUCCESS) {                  \
+      printf("%s failed\n", message);           \
+      print_error_message(ret_);                \
+    } else {                                    \
+      printf("%s done.\n", message);            \
+    }                                           \
+  } while (0)
+#else
+#define sgx_check(message, op) sgx_check_quiet(message, op)
+#endif
 
 /* Initialize the enclave:
  *   Step 1: retrive the launch token saved by last transaction
@@ -420,8 +435,8 @@ JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
   jbyte *row_ptr = env->GetByteArrayElements(row, &if_copy);
 
   int ret = 0;
-  sgx_check("Filter",
-            ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length));
+  sgx_check_quiet(
+    "Filter", ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length));
 
   env->ReleaseByteArrayElements(row, row_ptr, 0);
 
@@ -447,8 +462,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(
 
   uint8_t ciphertext_copy[2048];
 
-  sgx_check("Encrypt",
-            ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
+  sgx_check_quiet(
+    "Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
 
   env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
 
@@ -475,8 +490,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(
 
   uint8_t plaintext_copy[2048];
 
-  sgx_check("Decrypt",
-            ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength));
+  sgx_check_quiet(
+    "Decrypt", ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength));
 
   env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
 
@@ -503,10 +518,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
 
   uint32_t actual_size = 0;
 
-  sgx_check("EncryptAttribute",
-            ecall_encrypt_attribute(eid, plaintext_ptr, plength,
-                                    ciphertext_copy, (uint32_t) ciphertext_length,
-                                    &actual_size));
+  sgx_check_quiet(
+    "EncryptAttribute",
+    ecall_encrypt_attribute(eid, plaintext_ptr, plength,
+                            ciphertext_copy, (uint32_t) ciphertext_length,
+                            &actual_size));
 
   jbyteArray ciphertext = env->NewByteArray(actual_size - 4);
   env->SetByteArrayRegion(ciphertext, 0, actual_size - 4, (jbyte *) (ciphertext_copy + 4));
@@ -671,7 +687,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(
   jbyteArray ret = env->NewByteArray(ENC_HEADER_SIZE + HEADER_SIZE + 4);
 
   uint8_t buf[random_id_length];
-  sgx_check("RandomID", ecall_random_id(eid, buf, random_id_length));
+  sgx_check_quiet("RandomID", ecall_random_id(eid, buf, random_id_length));
 
   env->SetByteArrayRegion(ret, 0, random_id_length, (jbyte *) buf);
 
