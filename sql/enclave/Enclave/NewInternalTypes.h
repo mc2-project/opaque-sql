@@ -6,7 +6,13 @@
 
 class ProjectAttributes;
 void printf(const char *fmt, ...);
-void check(const char* message, bool test);
+#define check(test, ...) do {                   \
+    bool result = test;                         \
+    if (!result) {                              \
+      printf(__VA_ARGS__);                      \
+      assert(result);                           \
+    }                                           \
+  } while (0)
 
 #ifndef NEW_INTERNAL_TYPES_H
 #define NEW_INTERNAL_TYPES_H
@@ -241,8 +247,8 @@ public:
    * belong to the same group.
    */
   void aggregate(Aggregator1 *other) {
-    check("Attempted to combine partial aggregates with different grouping attributes",
-          this->grouping_attrs_equal(other));
+    check(this->grouping_attrs_equal(other),
+          "Attempted to combine partial aggregates with different grouping attributes\n");
     a1.add(&other->a1);
   }
 
@@ -258,8 +264,9 @@ public:
   uint32_t read_encrypted(uint8_t *input) {
     uint8_t *input_ptr = input;
     uint32_t agg_size = *reinterpret_cast<uint32_t *>(input_ptr); input_ptr += 4;
-    check("Aggregator length did not equal enc_size(AGG_UPPER_BOUND)",
-          agg_size == enc_size(AGG_UPPER_BOUND));
+    check(agg_size == enc_size(AGG_UPPER_BOUND),
+          "Aggregator length %d did not equal enc_size(AGG_UPPER_BOUND) = %d\n",
+          agg_size, enc_size(AGG_UPPER_BOUND));
     uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
     decrypt(input_ptr, enc_size(AGG_UPPER_BOUND), tmp); input_ptr += enc_size(AGG_UPPER_BOUND);
     uint8_t *tmp_ptr = tmp;
@@ -363,8 +370,8 @@ public:
   }
 
   void aggregate(Aggregator2 *other) {
-    check("Attempted to combine partial aggregates with different grouping attributes",
-          this->grouping_attrs_equal(other));
+    check(this->grouping_attrs_equal(other),
+          "Attempted to combine partial aggregates with different grouping attributes\n");
     a1.add(&other->a1);
     a2.add(&other->a2);
   }
@@ -377,8 +384,9 @@ public:
   uint32_t read_encrypted(uint8_t *input) {
     uint8_t *input_ptr = input;
     uint32_t agg_size = *reinterpret_cast<uint32_t *>(input_ptr); input_ptr += 4;
-    check("Aggregator length did not equal enc_size(AGG_UPPER_BOUND)",
-          agg_size == enc_size(AGG_UPPER_BOUND));
+    check(agg_size == enc_size(AGG_UPPER_BOUND),
+          "Aggregator length %d did not equal enc_size(AGG_UPPER_BOUND) = %d\n",
+          agg_size, enc_size(AGG_UPPER_BOUND));
     uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
     decrypt(input_ptr, enc_size(AGG_UPPER_BOUND), tmp); input_ptr += enc_size(AGG_UPPER_BOUND);
     uint8_t *tmp_ptr = tmp;

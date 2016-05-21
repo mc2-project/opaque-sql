@@ -411,13 +411,6 @@ void decrypt_attribute(uint8_t **input, uint8_t **output) {
   *output = output_ptr;
 }
 
-void check(const char* message, bool test) {
-  if (!test) {
-    printf("%s\n", message);
-    assert(test);
-  }
-}
-
 // Row reader is able to piece together multiple buffer locations
 // and return rows; it assumes that no row is split across boundaries!
 BufferReader::BufferReader() {

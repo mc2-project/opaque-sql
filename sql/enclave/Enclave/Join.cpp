@@ -104,7 +104,7 @@ void sort_merge_join(int op_code,
   RowReader j_reader(join_row);
   j_reader.read(&primary);
   if (!primary.is_dummy()) {
-    check("sort_merge_join: join_row must be marked as primary", primary.is_primary());
+    check(primary.is_primary(), "sort_merge_join: join_row must be marked as primary\n");
     primary.init_join_attribute(op_code);
   }
 
@@ -148,9 +148,9 @@ void sort_merge_join(int op_code,
     r.read(&current);
     current.init_join_attribute(op_code);
     if (current.is_primary()) {
-      check("sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
-            "the primary table had the same join attribute",
-            primary.join_attr.compare(&current.join_attr) != 0);
+      check(primary.join_attr.compare(&current.join_attr) != 0,
+            "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
+            "the primary table had the same join attribute\n");
       primary.set(&current); // advance to a new join attribute
       w.write(&dummy);
     } else {

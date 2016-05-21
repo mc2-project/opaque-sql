@@ -22,7 +22,8 @@ void hash(int op_code,
 
   // get row size
   uint32_t row_size = dec_size(input_row_len) / num_rows;
-  check("hash: input rows cannot be split equally\n", dec_size(input_row_len) == row_size * num_rows);
+  check(dec_size(input_row_len) == row_size * num_rows,
+        "hash: input rows cannot be split equally\n");
   
   NewRecord rec(row_size);
 

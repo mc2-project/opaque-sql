@@ -169,7 +169,7 @@ void NewRecord::print() {
 
   printf("]\n");
 
-  check("row length mismatch", row_length == row_ptr - row);
+  check(row_length == row_ptr - row, "row length mismatch: %d != %d\n", row_length, row_ptr - row);
 }
 
 uint32_t NewRecord::write_decrypted(uint8_t *output) {
@@ -178,7 +178,8 @@ uint32_t NewRecord::write_decrypted(uint8_t *output) {
 }
 
 const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
-  check("attr_idx out of bounds", attr_idx > 0 && attr_idx <= num_cols());
+  check(attr_idx > 0 && attr_idx <= num_cols(),
+        "attr_idx %d out of bounds (%d cols)\n", attr_idx, num_cols());
   uint8_t *row_ptr = this->row;
   row_ptr += 4;
   for (uint32_t i = 0; i < attr_idx - 1; i++) {

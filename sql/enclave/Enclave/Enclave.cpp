@@ -1111,14 +1111,14 @@ void ecall_stream_encryption_test() {
 
   dec.decrypt(decrypt_text, 22);
   int ret = memcmp(plaintext1, decrypt_text, 22);
-  check("Decryption wrong\n", ret == 0);
+  check(ret == 0, "Decryption wrong\n");
   
   dec.decrypt(decrypt_text, 22);
   ret = memcmp(plaintext1, decrypt_text, 22);
-  check("Decryption wrong\n", ret == 0);
+  check(ret == 0, "Decryption wrong\n");
 
   dec.decrypt(decrypt_text, 23);
   ret = memcmp(plaintext2, decrypt_text, 23);
-  check("Decryption wrong\n", ret == 0);
+  check(ret == 0, "Decryption wrong\n");
 
 }

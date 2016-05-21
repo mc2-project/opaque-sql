@@ -21,6 +21,14 @@
 #define debug(...) do {} while (0)
 #endif
 
+#define check(test, ...) do {                   \
+    bool result = test;                         \
+    if (!result) {                              \
+      printf(__VA_ARGS__);                      \
+      assert(result);                           \
+    }                                           \
+  } while (0)
+
 bool is_dummy_type(uint8_t attr_type);
 uint8_t get_dummy_type(uint8_t attr_type);
 uint32_t attr_upper_bound(uint8_t attr);
@@ -77,8 +85,6 @@ template <typename T> void swap_helper(T *v1, T *v2) {
 // returns the offset for output to advance
 void encrypt_attribute(uint8_t **input, uint8_t **output);
 void decrypt_attribute(uint8_t **input, uint8_t **output);
-
-void check(const char* message, bool test);
 
 class BufferReader {
 public:
