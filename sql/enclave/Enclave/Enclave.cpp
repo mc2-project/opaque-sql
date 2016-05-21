@@ -256,11 +256,11 @@ void ecall_external_oblivious_sort(int op_code,
   // First, iterate through and decrypt the data
   // Then store the decrypted data in a list of objects (based on the given op_code)
 
-  printf("oblivious sort called\n");
-
   int len = num_buffers;
   int log_len = log_2(len) + 1;
   int offset = 0;
+
+  debug("ecall_external_oblivious_sort: Sorting %d buffers in %d rounds\n", num_buffers, log_len);
 
   // read first 4 bytes of input
   uint32_t single_row_size = 0;
@@ -288,8 +288,8 @@ void ecall_external_oblivious_sort(int op_code,
     single_row_size = get_plaintext_padded_row_size(buffer_list[0]);
     padded_single_row_size = (4 + single_row_size / 16) * 16;
 
-    printf("single row size is %u\n", single_row_size);
-    printf("padded_single_row_size is %u\n", padded_single_row_size);
+    debug("single row size is %u\n", single_row_size);
+    debug("padded_single_row_size is %u\n", padded_single_row_size);
 
     sort_data = (SortRecord **) malloc(sizeof(SortRecord *) * max_list_length);
     for (uint32_t i = 0; i < max_list_length; i++) {
@@ -311,7 +311,6 @@ void ecall_external_oblivious_sort(int op_code,
   temp = (uint8_t **) malloc(sizeof(void *) * max_list_length);
 
   if (num_buffers == 1) {
-    printf("num buffers is 1\n");
     reader.add_buffer(buffer_list[0], buffer_lengths[0]);
     oblivious_sort(op_code, &reader, 0, num_rows[0], true, sort_data, join_data, NULL);
 
