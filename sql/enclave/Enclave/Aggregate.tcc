@@ -148,6 +148,7 @@ void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
     // The current aggregate is final if it is the last aggregate for its run
     bool a_is_final = !a.grouping_attrs_equal(&next);
 
+    cur.clear();
     a.append_result(&cur, !a_is_final);
     w.write(&cur);
   }

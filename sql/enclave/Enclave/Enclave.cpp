@@ -149,8 +149,11 @@ void oblivious_sort(int op_code, BufferReader *reader,
 
   // iterate through all data, and then decrypt
 
-  if (op_code == OP_SORT_COL1 || op_code == OP_SORT_COL2 ||
-             op_code == OP_SORT_COL3_IS_DUMMY_COL1 || op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
+  if (op_code == OP_SORT_COL1 ||
+      op_code == OP_SORT_COL2 ||
+      op_code == OP_SORT_COL2_IS_DUMMY_COL1 ||
+      op_code == OP_SORT_COL3_IS_DUMMY_COL1 ||
+      op_code == OP_SORT_COL4_IS_DUMMY_COL2) {
     // Sorting rows
     // this needs to sort a row of data
 

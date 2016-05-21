@@ -86,6 +86,20 @@ int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
       ret = 0;
     }
 
+  } else if (op_code == OP_FILTER_COL2_NOT_DUMMY) {
+    // Filter out rows with a dummy attribute in the 2nd column. Such rows represent partial aggregates
+    decrypted_data_ptr = decrypted_data;
+
+    find_attribute(row_ptr, length, num_cols, 2, &enc_value_ptr, &enc_value_len);
+    enc_value_ptr -= 4;
+    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
+
+    attr_type = *decrypted_data;
+
+    if (is_dummy_type(attr_type)) {
+      ret = 0;
+    }
+
   } else if (op_code == OP_FILTER_TEST) {
     // this is for test only
 

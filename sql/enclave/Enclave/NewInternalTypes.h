@@ -56,6 +56,9 @@ public:
     free(row);
   }
 
+  /** Delete all attributes from the record. */
+  void clear();
+
   /** Create attributes of the specified types, sizing each to the type's upper bound. */
   void init(uint8_t *types, uint32_t types_len);
 
@@ -85,6 +88,15 @@ public:
    * the attribute value.
    */
   const uint8_t *get_attr_value(uint32_t attr_idx) const;
+
+  /**
+   * Append an attribute to the record. The AttrGeneratorType must have a method with the following
+   * signature:
+   *
+   *     uint32_t write_result(uint8_t *output);
+   */
+  template<typename AttrGeneratorType>
+  void add_attr(AttrGeneratorType *attr);
 
   /**
    * Append an attribute to the record. The AttrGeneratorType must have a method with the following
@@ -253,10 +265,11 @@ public:
   }
 
   /**
-   * Write the final aggregation result to the record by appending one attribute per aggregation
-   * column.
+   * Write the final aggregation result to the record by appending the grouping attribute and the
+   * aggregation attribute. If dummy is true, mark the aggregation attribute as a dummy.
    */
   void append_result(NewRecord *record, bool dummy) {
+    record->add_attr(&g);
     record->add_attr(&a1, dummy);
   }
 
@@ -376,7 +389,12 @@ public:
     a2.add(&other->a2);
   }
 
+  /**
+   * Write the final aggregation result to the record by appending the grouping attribute and both
+   * aggregation attributes. If dummy is true, mark the aggregation attributes as dummies.
+   */
   void append_result(NewRecord *record, bool dummy) {
+    record->add_attr(&g);
     record->add_attr(&a1, dummy);
     record->add_attr(&a2, dummy);
   }
@@ -512,6 +530,11 @@ public:
 
   /** Write the grouping attribute as plaintext to output and return the number of bytes written. */
   uint32_t write_grouping_attr(uint8_t *output) {
+    return copy_attr(output, attr);
+  }
+
+  /** Write the grouping attribute as plaintext to output and return the number of bytes written. */
+  uint32_t write_result(uint8_t *output) {
     return copy_attr(output, attr);
   }
 

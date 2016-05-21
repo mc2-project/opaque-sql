@@ -869,6 +869,30 @@ void SortAttributes::init() {
     attributes[1] = create_attr(sort_pointer);
     eval_attributes[1] = create_attr(sort_pointer);
     attributes[1]->consume(sort_pointer, NO_COPY);
+  } else if (op_code == OP_SORT_COL2_IS_DUMMY_COL1) {
+    // this sort is the last step of aggregation
+
+    num_attr = 2;
+    num_eval_attr = 2;
+
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
+
+    attributes = (GenericType **) malloc(sizeof(GenericType *) * num_attr);
+    eval_attributes = (GenericType **) malloc(sizeof(GenericType *) * num_eval_attr);
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+
+    attributes[1] = create_attr(sort_pointer);
+    eval_attributes[1] = create_attr(sort_pointer);
+    attributes[1]->consume(sort_pointer, NO_COPY);
   } else {
     printf("SortAttributes::init: unknown opcode %d\n", op_code);
     assert(false);
@@ -941,6 +965,28 @@ void SortAttributes::re_init() {
     attributes[1]->reset();
     eval_attributes[1]->reset();
     attributes[1]->consume(sort_pointer, NO_COPY);
+  } else if (op_code == OP_SORT_COL2_IS_DUMMY_COL1) {
+    // this sort is the last step of aggregation
+
+    // first, sort based on the aggregation attribute's type
+    // if not dummy, sort based on the agg sort attribute
+
+    attributes[0]->reset();
+
+    find_plaintext_attribute(row, num_cols,
+                             2, &sort_pointer, &len);
+
+    delete attributes[0];
+    delete eval_attributes[0];
+
+    attributes[0] = create_attr(sort_pointer);
+    eval_attributes[0] = create_attr(sort_pointer);
+
+    find_plaintext_attribute(row, num_cols,
+                             1, &sort_pointer, &len);
+    attributes[1]->reset();
+    eval_attributes[1]->reset();
+    attributes[1]->consume(sort_pointer, NO_COPY);
   } else {
     printf("SortAttributes::re_init: unknown opcode %d\n", op_code);
     assert(false);
@@ -955,7 +1001,9 @@ void SortAttributes::evaluate() {
 }
 
 int SortAttributes::compare(SortAttributes *attr) {
-  if (op_code == OP_SORT_COL4_IS_DUMMY_COL2 || op_code == OP_SORT_COL3_IS_DUMMY_COL1) {
+  if (op_code == OP_SORT_COL4_IS_DUMMY_COL2 ||
+      op_code == OP_SORT_COL3_IS_DUMMY_COL1 ||
+      op_code == OP_SORT_COL2_IS_DUMMY_COL1) {
 
     int ret = 0;
     for (uint32_t i = 0; i < num_eval_attr; i++) {

@@ -127,23 +127,23 @@ case class EncAggregate(
         case (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1, 2, 0, List(1)) =>
           (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
-            OP_SORT_COL3_IS_DUMMY_COL1,
-            OP_FILTER_COL3_NOT_DUMMY)
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_COL2_NOT_DUMMY)
         case (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1, 2, 0, List(1)) =>
           (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
-            OP_SORT_COL3_IS_DUMMY_COL1,
-            OP_FILTER_COL3_NOT_DUMMY)
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_COL2_NOT_DUMMY)
         case (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1, 3, 1, List(2)) =>
           (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
             OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
-            OP_SORT_COL4_IS_DUMMY_COL2,
-            OP_FILTER_COL4_NOT_DUMMY)
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_COL2_NOT_DUMMY)
         case (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1, 3, 0, List(1, 2)) =>
           (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
             OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
-            OP_SORT_COL3_IS_DUMMY_COL1,
-            OP_FILTER_COL4_NOT_DUMMY)
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_COL2_NOT_DUMMY)
       }
 
     val childRDD = child.execute().mapPartitions { rowIter =>
@@ -219,7 +219,7 @@ case class EncAggregate(
     }
 
     finalAggregates.flatMap { serRows =>
-      val converter = UnsafeProjection.create(output, child.output ++ aggOutputs)
+      val converter = UnsafeProjection.create(schema)
       QED.parseRows(serRows).map(fields => converter(InternalRow.fromSeq(fields)))
     }
   }

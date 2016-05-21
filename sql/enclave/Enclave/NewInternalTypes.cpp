@@ -68,6 +68,11 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
   return input_ptr - input;
 }
 
+void NewRecord::clear() {
+  *reinterpret_cast<uint32_t *>(row) = 0;
+  row_length = 4;
+}
+
 void NewRecord::init(uint8_t *types, uint32_t types_len) {
   uint8_t *row_ptr = this->row;
   *( (uint32_t *) row_ptr) = types_len;
