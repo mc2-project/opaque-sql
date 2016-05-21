@@ -202,14 +202,20 @@ case class EncAggregate(
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = time("aggregate - sort dummies") {
-      ObliviousSort.ColumnSort(
+      val result = ObliviousSort.ColumnSort(
         partialAggregates.context, partialAggregates, aggDummySortOpcode)
+      result.cache.count
+      result
     }
 
     // Filter out the non-final aggregates
-    val finalAggregates = sortedAggregates.mapPartitions { serRows =>
-      val (enclave, eid) = QED.initEnclave()
-      serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode.value, serRow))
+    val finalAggregates = time("aggregate - filter out dummies") {
+      val result = sortedAggregates.mapPartitions { serRows =>
+        val (enclave, eid) = QED.initEnclave()
+        serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode.value, serRow))
+      }
+      result.cache.count
+      result
     }
 
     finalAggregates.flatMap { serRows =>
@@ -227,6 +233,8 @@ case class EncSortMergeJoin(
     opcode: Option[QEDOpcode])
   extends BinaryNode {
 
+  import QED.time
+
   override def output: Seq[Attribute] =
     left.output ++ right.output.filter(a => !rightCol.references.contains(a))
 
@@ -243,24 +251,42 @@ case class EncSortMergeJoin(
           (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_COL4_NOT_DUMMY)
       }
 
-    val processed = left.execute().zipPartitions(right.execute()) { (leftRowIter, rightRowIter) =>
+    val leftRDD = left.execute().mapPartitions { rowIter =>
+      rowIter.map(_.encSerialize)
+    }.cache()
+    val rightRDD = right.execute().mapPartitions { rowIter =>
+      rowIter.map(_.encSerialize)
+    }.cache()
+    time("Force left child of EncSortMergeJoin") { leftRDD.count }
+    time("Force right child of EncSortMergeJoin") { rightRDD.count }
+
+    val processed = leftRDD.zipPartitions(rightRDD) { (leftRowIter, rightRowIter) =>
       val (enclave, eid) = QED.initEnclave()
 
-      val leftRows = leftRowIter.map(_.encSerialize).toArray
+      val leftRows = leftRowIter.toArray
+      val leftRowsConcat = QED.concatByteArrays(leftRows)
+      println("leftRowsConcat size: " + leftRowsConcat.length)
       val leftProcessed = enclave.JoinSortPreprocess(
         eid, joinOpcode.value, QED.primaryTableId,
-        QED.concatByteArrays(leftRows), leftRows.length)
+        leftRowsConcat, leftRows.length)
 
-      val rightRows = rightRowIter.map(_.encSerialize).toArray
+      val rightRows = rightRowIter.toArray
+      val rightRowsConcat = QED.concatByteArrays(rightRows)
+      println("rightRowsConcat size: " + rightRowsConcat.length)
       val rightProcessed = enclave.JoinSortPreprocess(
         eid, joinOpcode.value, QED.foreignTableId,
-        QED.concatByteArrays(rightRows), rightRows.length)
+        rightRowsConcat, rightRows.length)
 
       (QED.splitBytes(leftProcessed, leftRows.length).iterator ++
         QED.splitBytes(rightProcessed, rightRows.length).iterator)
     }
+    time("join - preprocess") { processed.cache.count }
 
-    val sorted = ObliviousSort.ColumnSort(sparkContext, processed, joinOpcode)
+    val sorted = time("join - sort") {
+      val result = ObliviousSort.ColumnSort(sparkContext, processed, joinOpcode)
+      result.cache.count
+      result
+    }
 
     val lastPrimaryRows = sorted.mapPartitions { rowIter =>
       val rows = rowIter.toArray
@@ -270,11 +296,13 @@ case class EncSortMergeJoin(
       Iterator(lastPrimary)
     }
 
-    val lastPrimaryRowsCollected = lastPrimaryRows.collect
+    val lastPrimaryRowsCollected = time("join - collect last primary") { lastPrimaryRows.collect }
     val (enclave, eid) = QED.initEnclave()
-    val processedJoinRows = enclave.ProcessJoinBoundary(
-      eid, joinOpcode.value, QED.concatByteArrays(lastPrimaryRowsCollected),
-      lastPrimaryRowsCollected.length)
+    val processedJoinRows = time("join - process boundary") {
+      enclave.ProcessJoinBoundary(
+        eid, joinOpcode.value, QED.concatByteArrays(lastPrimaryRowsCollected),
+        lastPrimaryRowsCollected.length)
+    }
 
     val processedJoinRowsRDD =
       sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length),
@@ -289,12 +317,14 @@ case class EncSortMergeJoin(
         eid, joinOpcode.value, QED.concatByteArrays(rows), rows.length, joinRow)
       QED.readRows(joined)
     }
+    time("join - sort merge join") { joined.cache.count }
 
     // TODO: permute first, otherwise this is insecure
     val nonDummy = joined.mapPartitions { rowIter =>
       val (enclave, eid) = QED.initEnclave()
       rowIter.filter(row => enclave.Filter(eid, dummyFilterOpcode.value, row))
     }
+    time("join - filter dummies") { nonDummy.cache.count }
 
     nonDummy.mapPartitions { rowIter =>
       val converter = UnsafeProjection.create(schema)
