@@ -48,7 +48,7 @@ class NewRecord {
 public:
   NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
 
-  NewRecord(uint32_t upper_bound) : row_length(0) {
+  NewRecord(uint32_t upper_bound) : row_length(4) {
     row = (uint8_t *) calloc(upper_bound, sizeof(uint8_t));
   }
 
@@ -469,22 +469,35 @@ public:
 
   GroupBy(NewRecord *record) : row() {
     row.set(record);
-    attr = row.get_attr(Column);
+    if (row.num_cols() != 0) {
+      this->attr = row.get_attr(Column);
+    } else {
+      this->attr = NULL;
+    }
   }
 
   /** Update this GroupBy object to track a different group. */
   void set(GroupBy *other) {
     row.set(&other->row);
-    attr = row.get_attr(Column);
+    if (row.num_cols() != 0) {
+      this->attr = row.get_attr(Column);
+    } else {
+      this->attr = NULL;
+    }
   }
 
   /**
    * Read an entire plaintext row and extract the grouping columns. Return the number of bytes in
-   * the row.
+   * the row. If the row is empty (has 0 columns), then this GroupBy object will not track any
+   * group.
    */
   uint32_t read_plaintext(uint8_t *input) {
     uint32_t result = row.read_plaintext(input);
-    this->attr = row.get_attr(Column);
+    if (row.num_cols() != 0) {
+      this->attr = row.get_attr(Column);
+    } else {
+      this->attr = NULL;
+    }
     return result;
   }
 
