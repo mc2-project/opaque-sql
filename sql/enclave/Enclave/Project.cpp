@@ -1,4 +1,5 @@
 #include "Project.h"
+#include "NewInternalTypes.h"
 
 void project(int op_code,
              uint8_t *input_rows, uint32_t input_rows_length,

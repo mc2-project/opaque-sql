@@ -1,139 +1,47 @@
 #include "Filter.h"
 
-int ecall_filter_single_row(int op_code, uint8_t *row, uint32_t length) {
+void filter(int op_code,
+            uint8_t *input_rows, uint32_t input_rows_length,
+            uint32_t num_rows,
+            uint8_t *output_rows, uint32_t output_rows_length,
+            uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+  (void)input_rows_length;
+  (void)output_rows_length;
 
-  // row is in format of [num cols][enc_attr1 size][enc_attr1][enc_attr2 size][enc_attr2] ...
-  // enc_attr's format is [type][len of plaintext attr][plaintext attr]
-  // num cols is 4 bytes; size is also 4 bytes
-  int ret = 1;
+  RowReader r(input_rows);
+  RowWriter w(output_rows);
+  NewRecord cur;
 
-  uint32_t num_cols = get_num_col(row);
-  if (num_cols == 0) {
-    // printf("Number of columns: 0\n");
-    return 0;
+  uint32_t num_output_rows_result = 0;
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    if (filter_single_row(op_code, &cur)) {
+      w.write(&cur);
+      num_output_rows_result++;
+    }
   }
 
-  // printf("Number of columns: %u\n", num_cols);
+  w.close();
+  *actual_output_rows_length = w.bytes_written();
+  *num_output_rows = num_output_rows_result;
+}
 
-  uint8_t *row_ptr = row + 4;
-
-  uint8_t decrypted_data[2048];
-  uint8_t *decrypted_data_ptr = decrypted_data;
-
-  uint8_t *enc_value_ptr = NULL;
-  uint32_t enc_value_len = 0;
-
-  uint8_t attr_type = 0;
-  uint32_t attr_len = 0;
-  uint8_t *attr_ptr = NULL;
-
-  if (op_code == OP_FILTER_COL2_GT3) {
-    // find the second attribute
-
-    find_attribute(row_ptr, length, num_cols,
-                   2,
-                   &enc_value_ptr, &enc_value_len);
-
-    //decrypt(enc_value_ptr, enc_value_len, decrypted_data);
-    enc_value_ptr -= 4;
-    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
-
-    int *value_ptr = (int *) (decrypted_data + HEADER_SIZE);
-    //printf("value is %u\n", *value_ptr);
-
-    if (*value_ptr <= 3) {
-      ret = 0;
-    }
-
-  } else if (op_code == OP_BD1) {
-    find_attribute(row_ptr, length, num_cols,
-                   2,
-                   &enc_value_ptr, &enc_value_len);
-    enc_value_ptr -= 4;
-    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
-    int *value_ptr = (int *) (decrypted_data + HEADER_SIZE);
-    if (*value_ptr <= 1000) {
-      ret = 0;
-    }
-  } else if (op_code == OP_FILTER_COL4_NOT_DUMMY) {
-    // Filter out rows with a dummy attribute in the 4th column. Such rows represent partial aggregates
-    decrypted_data_ptr = decrypted_data;
-
-    find_attribute(row_ptr, length, num_cols, 4, &enc_value_ptr, &enc_value_len);
-    //printf("attr 4, enc_value_len is %u\n", enc_value_len);
-    enc_value_ptr -= 4;
-    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
-
-    attr_type = *decrypted_data;
-
-    //printf("attr_type is %u\n", attr_type);
-
-    if (is_dummy_type(attr_type)) {
-      ret = 0;
-    }
-
-  } else if (op_code == OP_FILTER_COL3_NOT_DUMMY) {
-    // Filter out rows with a dummy attribute in the 3rd column. Such rows represent partial aggregates
-    decrypted_data_ptr = decrypted_data;
-
-    find_attribute(row_ptr, length, num_cols, 3, &enc_value_ptr, &enc_value_len);
-    enc_value_ptr -= 4;
-    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
-
-    attr_type = *decrypted_data;
-
-    if (is_dummy_type(attr_type)) {
-      ret = 0;
-    }
-
-  } else if (op_code == OP_FILTER_COL2_NOT_DUMMY) {
-    // Filter out rows with a dummy attribute in the 2nd column. Such rows represent partial aggregates
-    decrypted_data_ptr = decrypted_data;
-
-    find_attribute(row_ptr, length, num_cols, 2, &enc_value_ptr, &enc_value_len);
-    enc_value_ptr -= 4;
-    decrypt_attribute(&enc_value_ptr, &decrypted_data_ptr);
-
-    attr_type = *decrypted_data;
-
-    if (is_dummy_type(attr_type)) {
-      ret = 0;
-    }
-
-  } else if (op_code == OP_FILTER_TEST) {
-    // this is for test only
-
-    find_attribute(row_ptr, length, num_cols,
-                   1,
-                   &enc_value_ptr, &enc_value_len);
-    decrypt(enc_value_ptr, enc_value_len, decrypted_data);
-    get_attr(decrypted_data, &attr_type, &attr_len, &attr_ptr);
-
-    ret = 0;
-  } else if (op_code == OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01) {
-
-    find_attribute(row_ptr, length, num_cols,
-                   1, &enc_value_ptr, &enc_value_len);
-
-    decrypt(enc_value_ptr, enc_value_len, decrypted_data);
-
-    if (*decrypted_data != DATE) {
-      printf("ecall_filter_single_row -- data type is wrong, %u\n", *decrypted_data);
-      assert(false);
-    }
-
-    uint64_t date = *( (uint64_t *) (decrypted_data + HEADER_SIZE));
-
-    if (date >= 315561600 && date <= 323424000) {
-      return 1;
-    } else {
-      return 0;
-    }
-
-  } else {
-    printf("ecall_filter_single_row: unknown opcode %d\n", op_code);
+bool filter_single_row(int op_code, NewRecord *cur) {
+  switch (op_code) {
+  case OP_FILTER_COL2_GT3:
+    return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 3;
+  case OP_BD1:
+    return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 1000;
+  case OP_FILTER_NOT_DUMMY:
+    return !cur->is_dummy();
+  case OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01:
+  {
+    uint64_t date = *reinterpret_cast<const uint64_t *>(cur->get_attr_value(1));
+    return date >= 315561600 && date <= 323424000;
+  }
+  default:
+    printf("filter_single_row: unknown opcode %d\n", op_code);
     assert(false);
   }
-
-  return ret;
+  return true;
 }

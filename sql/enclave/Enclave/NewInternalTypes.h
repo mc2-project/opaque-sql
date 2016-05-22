@@ -712,7 +712,10 @@ public:
   RowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
 
   void write(NewRecord *row) {
-    buf += row->write_encrypted(buf);
+    uint32_t delta = row->write_encrypted(buf);
+    check(delta <= enc_size(ROW_UPPER_BOUND),
+          "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
+    buf += delta;
   }
   void write(NewProjectRecord *row) {
     buf += row->write_encrypted(buf);

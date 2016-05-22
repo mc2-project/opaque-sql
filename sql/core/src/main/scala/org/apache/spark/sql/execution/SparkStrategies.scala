@@ -355,6 +355,34 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     }
   }
 
+  object EncOperators extends Strategy {
+    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+      case logical.EncProject(projectList, opcode, child) =>
+        execution.EncProject(
+          projectList, opcode, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case logical.EncFilter(condition, opcode, child) =>
+        execution.EncFilter(condition, opcode, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case logical.Permute(child) =>
+        execution.Permute(planLater(child)) :: Nil
+      case logical.EncSort(sortExpr, child) =>
+        execution.EncSort(sortExpr, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case logical.EncJoin(left, right, leftCol, rightCol, opcode) =>
+        execution.EncSortMergeJoin(
+          planLater(left).asInstanceOf[OutputsBlocks], planLater(right).asInstanceOf[OutputsBlocks],
+          leftCol, rightCol, opcode) :: Nil
+      case a @ logical.EncAggregate(
+          opcode, groupingExpressions, aggExpressions, aggOutputs, child) =>
+        execution.EncAggregate(
+          opcode, groupingExpressions, aggExpressions, aggOutputs, a.output,
+          planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case logical.ConvertToBlocks(child) =>
+        execution.ConvertToBlocks(planLater(child)) :: Nil
+      case logical.ConvertFromBlocks(child) =>
+        execution.ConvertFromBlocks(planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case _ => Nil
+    }
+  }
+
   // Can we automate these 'pass through' operations?
   object BasicOperators extends Strategy {
     def numPartitions: Int = self.numPartitions
@@ -396,21 +424,6 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.Project(projectList, planLater(child)) :: Nil
       case logical.Filter(condition, child) =>
         execution.Filter(condition, planLater(child)) :: Nil
-      case logical.EncProject(projectList, opcode, child) =>
-        execution.EncProject(projectList, opcode, planLater(child)) :: Nil
-      case logical.EncFilter(condition, opcode, child) =>
-        execution.EncFilter(condition, opcode, planLater(child)) :: Nil
-      case logical.Permute(child) =>
-        execution.Permute(planLater(child)) :: Nil
-      case logical.EncSort(sortExpr, child) =>
-        execution.EncSort(sortExpr, planLater(child)) :: Nil
-      case logical.EncJoin(left, right, leftCol, rightCol, opcode) =>
-        execution.EncSortMergeJoin(planLater(left), planLater(right), leftCol, rightCol, opcode) :: Nil
-      case a @ logical.EncAggregate(
-          opcode, groupingExpressions, aggExpressions, aggOutputs, child) =>
-        execution.EncAggregate(
-          opcode, groupingExpressions, aggExpressions, aggOutputs, a.output,
-          planLater(child)) :: Nil
       case e @ logical.Expand(_, _, child) =>
         execution.Expand(e.projections, e.output, planLater(child)) :: Nil
       case logical.Window(windowExprs, partitionSpec, orderSpec, child) =>

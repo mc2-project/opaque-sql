@@ -435,45 +435,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   }
 
-
-  test("JNIFilterSingleRow") {
-    val eid = enclave.StartEnclave()
-
-    val filter_number : Int = 1233
-    val buffer = ByteBuffer.allocate(9)
-    buffer.order(ByteOrder.LITTLE_ENDIAN)
-    val t : Byte = 1
-
-    buffer.put(t)
-    buffer.putInt(4) // for length
-    buffer.putInt(filter_number)
-
-    buffer.flip()
-    val byte_array = new Array[Byte](buffer.limit())
-    buffer.get(byte_array)
-
-    // println("Bytes array's length " + byte_array.length)
-
-    // then encrypt this buffer
-    val enc_bytes = enclave.Encrypt(eid, byte_array)
-
-    val new_buffer = ByteBuffer.allocate(1024)
-    new_buffer.order(ByteOrder.LITTLE_ENDIAN)
-
-    val enc_buffer_size = enc_bytes.length
-    new_buffer.putInt(1) // for number of columns
-    new_buffer.putInt(enc_buffer_size)
-    new_buffer.put(enc_bytes)
-
-    new_buffer.flip()
-    val enc_byte_array = new Array[Byte](new_buffer.limit())
-    new_buffer.get(enc_byte_array)
-
-    val ret = enclave.Filter(eid, OP_FILTER_TEST.value, enc_byte_array)
-
-    enclave.StopEnclave(eid)
-  }
-
   test("JNIAggregation") {
 
     val eid = enclave.StartEnclave()

@@ -81,7 +81,7 @@ void NewRecord::init(uint8_t *types, uint32_t types_len) {
   for (uint32_t i = 0; i < types_len; i++) {
     uint8_t t = types[i];
     *row_ptr++ = t;
-    uint32_t len = attr_upper_bound(t);
+    uint32_t len = 0;
     *( (uint32_t *) row_ptr) = len; row_ptr += 4;
     row_ptr += len;
   }

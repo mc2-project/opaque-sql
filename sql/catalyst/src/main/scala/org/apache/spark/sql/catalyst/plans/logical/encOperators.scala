@@ -24,8 +24,30 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 
-case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: LogicalPlan)
-  extends UnaryNode {
+/**
+ * An operator that computes on encrypted data.
+ */
+trait EncOperator extends LogicalPlan {
+  /**
+   * Every encrypted operator relies on its input having a specific set of columns, so we override
+   * references to include all inputs to prevent Catalyst from dropping any input columns.
+   */
+  override def references: AttributeSet = inputSet
+}
+
+trait OutputsBlocks extends EncOperator
+
+case class ConvertToBlocks(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
+  override def output: Seq[Attribute] = child.output
+}
+
+case class ConvertFromBlocks(child: OutputsBlocks) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+  override def references: AttributeSet = AttributeSet(child.output)
+}
+
+case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
@@ -34,20 +56,21 @@ case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, chil
   override def references: AttributeSet = AttributeSet(child.output)
 }
 
-case class EncFilter(condition: Expression, opcode: QEDOpcode, child: LogicalPlan)
-  extends UnaryNode {
+case class EncFilter(condition: Expression, opcode: QEDOpcode, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = child.output
 
   override def references: AttributeSet = AttributeSet(child.output)
 }
 
-case class Permute(child: LogicalPlan) extends UnaryNode {
+case class Permute(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
   override def maxRows: Option[Long] = child.maxRows
 }
 
-case class EncSort(sortExpr: Expression, child: LogicalPlan) extends UnaryNode {
+case class EncSort(sortExpr: Expression, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
   override def maxRows: Option[Long] = child.maxRows
 }
@@ -57,8 +80,8 @@ case class EncAggregate(
     groupingExpression: NamedExpression,
     aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],
-    child: LogicalPlan)
-  extends UnaryNode {
+    child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
 
   override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
   override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
@@ -66,12 +89,12 @@ case class EncAggregate(
 }
 
 case class EncJoin(
-    left: LogicalPlan,
-    right: LogicalPlan,
+    left: OutputsBlocks,
+    right: OutputsBlocks,
     leftCol: Expression,
     rightCol: Expression,
     opcode: Option[QEDOpcode])
-  extends BinaryNode {
+  extends BinaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] =
     left.output ++ right.output.filter(a => !rightCol.references.contains(a))

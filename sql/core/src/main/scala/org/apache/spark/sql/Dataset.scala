@@ -981,11 +981,11 @@ class Dataset[T] private[sql](
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
   def encProject(opcode: QEDOpcode, cols: Column*): DataFrame = withPlan {
-    EncProject(cols.map(_.named), opcode, logicalPlan)
+    ConvertFromBlocks(EncProject(cols.map(_.named), opcode, ConvertToBlocks(logicalPlan)))
   }
 
   def encFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
-    EncFilter(condition.expr, opcode, Permute(logicalPlan))
+    ConvertFromBlocks(EncFilter(condition.expr, opcode, ConvertToBlocks(Permute(logicalPlan))))
   }
 
   def encPermute(): Dataset[T] = withTypedPlan {
@@ -993,16 +993,17 @@ class Dataset[T] private[sql](
   }
 
   def encAggregate(opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
-    EncAggregate(
-      opcode,
-      UnresolvedAlias(groupByCol.expr),
-      aggCols.map(_.named),
-      aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
-      EncSort(groupByCol.expr, logicalPlan))
+    ConvertFromBlocks(
+      EncAggregate(
+        opcode,
+        UnresolvedAlias(groupByCol.expr),
+        aggCols.map(_.named),
+        aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
+        EncSort(groupByCol.expr, ConvertToBlocks(logicalPlan))))
   }
 
   def encSort(col: Column): DataFrame = withPlan {
-    EncSort(col.expr, logicalPlan)
+    ConvertFromBlocks(EncSort(col.expr, ConvertToBlocks(logicalPlan)))
   }
 
   /**
@@ -1014,8 +1015,11 @@ class Dataset[T] private[sql](
       rightCol: Column,
       opcode: Option[QEDOpcode] = None)
     : DataFrame = withPlan {
-
-    EncJoin(logicalPlan, right.logicalPlan, leftCol.expr, rightCol.expr, opcode)
+    ConvertFromBlocks(
+      EncJoin(
+        ConvertToBlocks(logicalPlan),
+        ConvertToBlocks(right.logicalPlan),
+        leftCol.expr, rightCol.expr, opcode))
   }
 
   /**

@@ -20,6 +20,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.QED
 import org.apache.spark.sql.QEDOpcode
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.execution.Block
 import org.apache.spark.storage.StorageLevel
 
 object ObliviousSort extends java.io.Serializable {
@@ -361,6 +362,22 @@ object ObliviousSort extends java.io.Serializable {
 
     final_result.iterator
 
+  }
+
+  def sortBlocks(data: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
+    if (data.partitions.length <= 1) {
+      data.map { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val sortedRows = enclave.ObliviousSort(eid, opcode.value, block.bytes, 0, block.numRows)
+        Block(sortedRows, block.numRows)
+      }
+    } else {
+      val rows = data.flatMap(block => QED.readRows(block.bytes))
+      ColumnSort(data.context, rows, opcode).mapPartitions { rowIter =>
+        val rowArray = rowIter.toArray
+        Iterator(Block(QED.concatByteArrays(rowArray), rowArray.length))
+      }
+    }
   }
 
   // this sorting algorithm is taken from "Tight Bounds on the Complexity of Parallel Sorting"

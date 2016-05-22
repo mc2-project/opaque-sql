@@ -428,25 +428,38 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
   return ret;
 }
 
-JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
-  JNIEnv *env,
-  jobject obj,
-  jlong eid,
-  jint op_code,
-  jbyteArray row) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  jobject num_output_rows_obj) {
   (void)obj;
 
-  const jsize length = env->GetArrayLength(row);
-  jboolean if_copy = false;
-  jbyte *row_ptr = env->GetByteArrayElements(row, &if_copy);
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  jboolean if_copy;
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  int ret = 0;
-  sgx_check_quiet(
-    "Filter", ecall_filter_single_row(eid, &ret, op_code, (uint8_t *) row_ptr, (uint32_t) length));
+  uint32_t output_rows_length = (ENC_HEADER_SIZE + ROW_UPPER_BOUND) * num_rows;
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
 
-  env->ReleaseByteArrayElements(row, row_ptr, 0);
+  uint32_t actual_output_rows_length = 0;
+  uint32_t num_output_rows = 0;
 
-  return (ret == 1);
+  sgx_check("Filter",
+            ecall_filter(
+              eid, op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
+              output_rows_length, &actual_output_rows_length, &num_output_rows));
+
+  jbyteArray ret = env->NewByteArray(actual_output_rows_length);
+  env->SetByteArrayRegion(ret, 0, actual_output_rows_length, (jbyte *) output_rows);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;
 }
 
 

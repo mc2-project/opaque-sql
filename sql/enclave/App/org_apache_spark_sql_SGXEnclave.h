@@ -26,13 +26,8 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 
-  /*
-   * Class:     org_apache_spark_sql_SGXEnclave
-   * Method:    Filter
-   * Signature: (JI[B)Z
-   */
-  JNIEXPORT jboolean JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter
-  (JNIEnv *, jobject, jlong, jint, jbyteArray);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
 
   /*
    * Class:     org_apache_spark_sql_SGXEnclave

@@ -8,7 +8,6 @@
 #include "math.h"
 #include "Crypto.h"
 #include "util.h"
-#include "NewInternalTypes.h"
 
 #ifndef PROJECT_H
 #define PROJECT_H

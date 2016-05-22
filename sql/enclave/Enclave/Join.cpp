@@ -98,8 +98,8 @@ void sort_merge_join(int op_code,
   RowReader r(input_rows);
   RowWriter w(output_rows);
   NewJoinRecord primary, current;
-  NewRecord dummy(JOIN_ROW_UPPER_BOUND * 2);
-  NewRecord merge(JOIN_ROW_UPPER_BOUND * 2);
+  NewRecord dummy;
+  NewRecord merge;
 
   RowReader j_reader(join_row);
   j_reader.read(&primary);

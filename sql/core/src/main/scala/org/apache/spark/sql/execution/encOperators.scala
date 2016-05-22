@@ -22,6 +22,7 @@ import scala.reflect.classTag
 
 import oblivious_sort.ObliviousSort
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.MutableInteger
 import org.apache.spark.sql.QED
 import org.apache.spark.sql.QEDOpcode
 import org.apache.spark.sql.QEDOpcode._
@@ -38,52 +39,84 @@ import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
-case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: SparkPlan)
-  extends UnaryNode {
+case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
 
-  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
-
-  override def doExecute() = child.execute().mapPartitions { iter =>
-    val (enclave, eid) = QED.initEnclave()
-    val rows = iter.map(_.encSerialize).toArray
-    val serResult = enclave.Project(eid, opcode.value, QED.concatByteArrays(rows), rows.length)
-    val converter = UnsafeProjection.create(schema)
-    val r = QED.parseRows(serResult).toArray
-    r.iterator.map(fields => converter(InternalRow.fromSeq(fields)))
-  }
-
-  override def outputOrdering: Seq[SortOrder] = child.outputOrdering
+trait OutputsBlocks extends SparkPlan {
+  override def doExecute() = throw new UnsupportedOperationException("use executeBlocked")
+  def executeBlocked(): RDD[Block]
 }
 
-case class EncFilter(condition: Expression, opcode: QEDOpcode, child: SparkPlan)
+case class ConvertToBlocks(child: SparkPlan)
+  extends UnaryNode with OutputsBlocks {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
+    child.execute().mapPartitions { rowIter =>
+      val serRows = rowIter.map(_.encSerialize).toArray
+      Iterator(Block(QED.concatByteArrays(serRows), serRows.length))
+    }
+  }
+}
+
+case class ConvertFromBlocks(child: OutputsBlocks)
   extends UnaryNode {
 
   override def output: Seq[Attribute] = child.output
 
   override def doExecute() = {
+    child.executeBlocked().flatMap { block =>
+      val converter = UnsafeProjection.create(schema)
+      QED.parseRows(block.bytes).map(serRow => converter(InternalRow.fromSeq(serRow)))
+    }
+  }
+}
+
+case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+
+  override def executeBlocked() = child.executeBlocked().map { block =>
+    val (enclave, eid) = QED.initEnclave()
+    val serResult = enclave.Project(eid, opcode.value, block.bytes, block.numRows)
+    Block(serResult, block.numRows)
+  }
+}
+
+case class EncFilter(condition: Expression, opcode: QEDOpcode, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
     opcode match {
       case OP_BD1 =>
         // BD1: pageRank > 1000, where pageRank is the second attribute
         assert(condition.references == AttributeSet(child.output(1)))
       case _ => {}
     }
-    child.execute().mapPartitions { iter =>
+    child.executeBlocked().map { block =>
       val (enclave, eid) = QED.initEnclave()
-      iter.filter(rowSer => enclave.Filter(eid, opcode.value, rowSer.encSerialize))
+      val numOutputRows = new MutableInteger
+      val filtered = enclave.Filter(eid, opcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(filtered, numOutputRows.value)
     }
   }
 }
 
+// TODO: operate on blocks
 case class Permute(child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
   override def doExecute() = {
-    val childRDD = child.execute().mapPartitions { rowIter =>
+    val rowsWithRandomIds = child.execute().mapPartitions { rowIter =>
       val (enclave, eid) = QED.initEnclave()
       rowIter.map(row =>
         InternalRow.fromSeq(QED.randomId(enclave, eid) +: row.toSeq(schema)).encSerialize)
     }
-    ObliviousSort.ColumnSort(childRDD.context, childRDD, OP_SORT_COL1).mapPartitions { serRowIter =>
+    ObliviousSort.ColumnSort(rowsWithRandomIds.context, rowsWithRandomIds, OP_SORT_COL1)
+      .mapPartitions { serRowIter =>
       val converter = UnsafeProjection.create(schema)
       serRowIter.map(serRow => converter(
         InternalRow.fromSeq(QED.parseRow(serRow).tail)))
@@ -91,20 +124,18 @@ case class Permute(child: SparkPlan) extends UnaryNode {
   }
 }
 
-case class EncSort(sortExpr: Expression, child: SparkPlan) extends UnaryNode {
+case class EncSort(sortExpr: Expression, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
   override def output: Seq[Attribute] = child.output
 
-  override def doExecute() = {
-    val childRDD = child.execute().map(_.encSerialize)
+  override def executeBlocked() = {
     val sortAttrPos = QED.attributeIndexOf(sortExpr.references.toSeq(0), child.output)
     val opcode = sortAttrPos match {
       case 0 => OP_SORT_COL1
       case 1 => OP_SORT_COL2
     }
-    ObliviousSort.ColumnSort(childRDD.context, childRDD, opcode).mapPartitions { serRowIter =>
-      val converter = UnsafeProjection.create(schema)
-      serRowIter.map(serRow => converter(InternalRow.fromSeq(QED.parseRow(serRow))))
-    }
+    ObliviousSort.sortBlocks(child.executeBlocked(), opcode)
   }
 }
 
@@ -114,12 +145,12 @@ case class EncAggregate(
     aggExpressions: Seq[NamedExpression],
     aggOutputs: Seq[Attribute],
     output: Seq[Attribute],
-    child: SparkPlan)
-  extends UnaryNode {
+    child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
 
   import QED.time
 
-  override def doExecute(): RDD[InternalRow] = {
+  override def executeBlocked(): RDD[Block] = {
     val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
     val aggExprsPos = aggExpressions.map(expr => QED.attributeIndexOf(expr.references.toSeq(0), child.output)).toList
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
@@ -128,45 +159,38 @@ case class EncAggregate(
           (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_COL2_NOT_DUMMY)
+            OP_FILTER_NOT_DUMMY)
         case (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1, 2, 0, List(1)) =>
           (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_COL2_NOT_DUMMY)
+            OP_FILTER_NOT_DUMMY)
         case (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1, 3, 1, List(2)) =>
           (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
             OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_COL2_NOT_DUMMY)
+            OP_FILTER_NOT_DUMMY)
         case (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1, 3, 0, List(1, 2)) =>
           (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
             OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_COL2_NOT_DUMMY)
+            OP_FILTER_NOT_DUMMY)
       }
 
-    val childRDD = child.execute().mapPartitions { rowIter =>
-      rowIter.map(_.encSerialize)
-    }.cache()
-    time("Force child of EncAggregate") { childRDD.count }
+    val childRDD = child.executeBlocked().cache()
+    time("aggregate - force child") { childRDD.count }
     // Process boundaries
-    val boundaries = childRDD.mapPartitions { rowIter =>
-      val rows = rowIter.toArray
-      val concatRows = QED.concatByteArrays(rows)
+    val boundaries = childRDD.map { block =>
       val (enclave, eid) = QED.initEnclave()
-      val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
-      val boundary = time("aggregate - step 1 - JNI call") {
-        enclave.AggregateStep1(
-          eid, aggStep1Opcode.value, concatRows, rows.length)
-      }
+      val boundary = enclave.AggregateStep1(
+        eid, aggStep1Opcode.value, block.bytes, block.numRows)
       // enclave.StopEnclave(eid)
-      Iterator(boundary)
+      boundary
     }
 
     val boundariesCollected = time("aggregate - step 1") { boundaries.collect }
     if (boundariesCollected.forall(_.isEmpty)) {
-      return sqlContext.sparkContext.emptyRDD[InternalRow]
+      return sqlContext.sparkContext.emptyRDD[Block]
     }
     val (enclave, eid) = QED.initEnclave()
     val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
@@ -174,126 +198,114 @@ case class EncAggregate(
         eid, aggStep1Opcode.value,
         QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
     }
-    // enclave.StopEnclave(eid)
 
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries, childRDD.partitions.length)
     val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
-      (rowIter, boundaryIter) =>
-        val rows = rowIter.toArray
-        val concatRows = QED.concatByteArrays(rows)
-        val aggSize = 4 + 12 + 16 + 4 + 4 + 2048 + 128
+      (blockIter, boundaryIter) =>
+        val blockArray = blockIter.toArray
+        assert(blockArray.length == 1)
+        val block = blockArray.head
         val boundaryArray = boundaryIter.toArray
         assert(boundaryArray.length == 1)
         val boundaryRecord = boundaryArray.head
-        assert(boundaryRecord.length >= aggSize)
         val (enclave, eid) = QED.initEnclave()
-        assert(rows.length > 0)
+        assert(block.numRows > 0)
         val partialAgg = enclave.AggregateStep2(
-          eid, aggStep2Opcode.value, concatRows, rows.length, boundaryRecord)
+          eid, aggStep2Opcode.value, block.bytes, block.numRows, boundaryRecord)
         assert(partialAgg.nonEmpty,
-          s"enclave.AggregateStep2($eid, $aggStep2Opcode, ${concatRows.length}, ${rows.length}, ${boundaryRecord.length}) returned empty result given input starting with ${concatRows.slice(0, 16).toList}")
-        // enclave.StopEnclave(eid)
-        QED.readRows(partialAgg)
-    }.cache()
+          s"enclave.AggregateStep2($eid, $aggStep2Opcode, ${block.bytes.length}, ${block.numRows}, ${boundaryRecord.length}) returned empty result")
+        Iterator(Block(partialAgg, block.numRows))
+    }
 
-    time("aggregate - step 2") { partialAggregates.count }
+    time("aggregate - step 2") { partialAggregates.cache.count }
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = time("aggregate - sort dummies") {
-      val result = ObliviousSort.ColumnSort(
-        partialAggregates.context, partialAggregates, aggDummySortOpcode)
+      val result = ObliviousSort.sortBlocks(partialAggregates, aggDummySortOpcode)
       result.cache.count
       result
     }
 
     // Filter out the non-final aggregates
     val finalAggregates = time("aggregate - filter out dummies") {
-      val result = sortedAggregates.mapPartitions { serRows =>
+      val result = sortedAggregates.map { block =>
         val (enclave, eid) = QED.initEnclave()
-        serRows.filter(serRow => enclave.Filter(eid, aggDummyFilterOpcode.value, serRow))
+        val numOutputRows = new MutableInteger
+        val filtered = enclave.Filter(
+          eid, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+        Block(filtered, numOutputRows.value)
       }
       result.cache.count
       result
     }
-
-    finalAggregates.flatMap { serRows =>
-      val converter = UnsafeProjection.create(schema)
-      QED.parseRows(serRows).map(fields => converter(InternalRow.fromSeq(fields)))
-    }
+    finalAggregates
   }
 }
 
 case class EncSortMergeJoin(
-    left: SparkPlan,
-    right: SparkPlan,
+    left: OutputsBlocks,
+    right: OutputsBlocks,
     leftCol: Expression,
     rightCol: Expression,
     opcode: Option[QEDOpcode])
-  extends BinaryNode {
+  extends BinaryNode with OutputsBlocks {
 
   import QED.time
 
   override def output: Seq[Attribute] =
     left.output ++ right.output.filter(a => !rightCol.references.contains(a))
 
-  override def doExecute() = {
+  override def executeBlocked() = {
     val leftColPos = QED.attributeIndexOf(leftCol.references.toSeq(0), left.output)
     val rightColPos = QED.attributeIndexOf(rightCol.references.toSeq(0), right.output)
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       ((left.output.size, right.output.size, leftColPos, rightColPos, opcode): @unchecked) match {
         case (2, 3, 0, 0, None) =>
-          (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
+          (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
         case (2, 3, 0, 0, Some(OP_JOIN_PAGERANK)) =>
-          (OP_JOIN_PAGERANK, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_COL3_NOT_DUMMY)
+          (OP_JOIN_PAGERANK, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
         case (3, 3, 1, 1, None) =>
-          (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_COL4_NOT_DUMMY)
+          (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_NOT_DUMMY)
       }
 
-    val leftRDD = left.execute().mapPartitions { rowIter =>
-      rowIter.map(_.encSerialize)
-    }.cache()
-    val rightRDD = right.execute().mapPartitions { rowIter =>
-      rowIter.map(_.encSerialize)
-    }.cache()
-    time("Force left child of EncSortMergeJoin") { leftRDD.count }
-    time("Force right child of EncSortMergeJoin") { rightRDD.count }
+    val leftRDD = left.executeBlocked()
+    val rightRDD = right.executeBlocked()
+    time("Force left child of EncSortMergeJoin") { leftRDD.cache.count }
+    time("Force right child of EncSortMergeJoin") { rightRDD.cache.count }
 
-    val processed = leftRDD.zipPartitions(rightRDD) { (leftRowIter, rightRowIter) =>
+    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = QED.initEnclave()
 
-      val leftRows = leftRowIter.toArray
-      val leftRowsConcat = QED.concatByteArrays(leftRows)
-      println("leftRowsConcat size: " + leftRowsConcat.length)
+      val leftBlockArray = leftBlockIter.toArray
+      assert(leftBlockArray.length == 1)
+      val leftBlock = leftBlockArray.head
       val leftProcessed = enclave.JoinSortPreprocess(
         eid, joinOpcode.value, QED.primaryTableId,
-        leftRowsConcat, leftRows.length)
+        leftBlock.bytes, leftBlock.numRows)
 
-      val rightRows = rightRowIter.toArray
-      val rightRowsConcat = QED.concatByteArrays(rightRows)
-      println("rightRowsConcat size: " + rightRowsConcat.length)
+      val rightBlockArray = rightBlockIter.toArray
+      assert(rightBlockArray.length == 1)
+      val rightBlock = rightBlockArray.head
       val rightProcessed = enclave.JoinSortPreprocess(
         eid, joinOpcode.value, QED.foreignTableId,
-        rightRowsConcat, rightRows.length)
+        rightBlock.bytes, rightBlock.numRows)
 
-      (QED.splitBytes(leftProcessed, leftRows.length).iterator ++
-        QED.splitBytes(rightProcessed, rightRows.length).iterator)
+      Iterator(Block(QED.concatByteArrays(Array(leftProcessed, rightProcessed)),
+        leftBlock.numRows + rightBlock.numRows))
     }
     time("join - preprocess") { processed.cache.count }
 
     val sorted = time("join - sort") {
-      val result = ObliviousSort.ColumnSort(sparkContext, processed, joinOpcode)
-      result.cache.count
+      val result = ObliviousSort.sortBlocks(processed, joinOpcode).cache()
+      result.count
       result
     }
 
-    val lastPrimaryRows = sorted.mapPartitions { rowIter =>
-      val rows = rowIter.toArray
+    val lastPrimaryRows = sorted.map { block =>
       val (enclave, eid) = QED.initEnclave()
-      val lastPrimary = enclave.ScanCollectLastPrimary(
-        eid, joinOpcode.value, QED.concatByteArrays(rows), rows.length)
-      Iterator(lastPrimary)
+      enclave.ScanCollectLastPrimary(eid, joinOpcode.value, block.bytes, block.numRows)
     }
 
     val lastPrimaryRowsCollected = time("join - collect last primary") { lastPrimaryRows.collect }
@@ -308,27 +320,27 @@ case class EncSortMergeJoin(
       sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length),
         sorted.partitions.length)
 
-    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (rowIter, joinRowIter) =>
-      val rows = rowIter.toArray
+    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
+      val block = blockIter.next()
+      assert(!blockIter.hasNext)
       val joinRow = joinRowIter.next()
       assert(!joinRowIter.hasNext)
       val (enclave, eid) = QED.initEnclave()
       val joined = enclave.SortMergeJoin(
-        eid, joinOpcode.value, QED.concatByteArrays(rows), rows.length, joinRow)
-      QED.readRows(joined)
+        eid, joinOpcode.value, block.bytes, block.numRows, joinRow)
+      Iterator(Block(joined, block.numRows))
     }
     time("join - sort merge join") { joined.cache.count }
 
     // TODO: permute first, otherwise this is insecure
-    val nonDummy = joined.mapPartitions { rowIter =>
+    val nonDummy = joined.map { block =>
       val (enclave, eid) = QED.initEnclave()
-      rowIter.filter(row => enclave.Filter(eid, dummyFilterOpcode.value, row))
+      val numOutputRows = new MutableInteger
+      val filtered = enclave.Filter(
+        eid, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(filtered, numOutputRows.value)
     }
     time("join - filter dummies") { nonDummy.cache.count }
-
-    nonDummy.mapPartitions { rowIter =>
-      val converter = UnsafeProjection.create(schema)
-      rowIter.map { row => converter(InternalRow.fromSeq(QED.parseRow(row))) }
-    }
+    nonDummy
   }
 }

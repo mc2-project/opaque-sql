@@ -18,6 +18,8 @@
 
 package org.apache.spark.sql
 
+class MutableInteger(var value: Int = 0)
+
 class SGXEnclave extends java.io.Serializable {
   @native def StartEnclave(): Long
   @native def StopEnclave(enclave_id: Long)
@@ -30,7 +32,8 @@ class SGXEnclave extends java.io.Serializable {
   ): Array[Byte]
 
   @native def Filter(
-    enclave_id: Long, op: Int, value1: Array[Byte]): Boolean
+    enclave_id: Long, op_code: Int, rows: Array[Byte], num_rows: Int,
+    num_output_rows: MutableInteger): Array[Byte]
 
   @native def Encrypt(
     enclave_id: Long, plaintext: Array[Byte]): Array[Byte]

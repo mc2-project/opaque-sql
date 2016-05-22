@@ -78,6 +78,7 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
       CombineFilters,
       CombineLimits,
       CombineUnions,
+      CombineBlockConversion,
       // Constant folding and strength reduction
       NullPropagation,
       OptimizeIn,
@@ -822,6 +823,16 @@ object CombineFilters extends Rule[LogicalPlan] with PredicateHelper {
         case None =>
           nf
       }
+  }
+}
+
+/**
+ * Eliminates adjacent inverse encrypted-block conversion operators.
+ */
+object CombineBlockConversion extends Rule[LogicalPlan] {
+  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
+    case ConvertToBlocks(ConvertFromBlocks(child)) => child
+    case ConvertFromBlocks(ConvertToBlocks(child)) => child
   }
 }
 
