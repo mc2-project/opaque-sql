@@ -43,36 +43,28 @@ case class ConvertToBlocks(child: LogicalPlan) extends UnaryNode with OutputsBlo
 
 case class ConvertFromBlocks(child: OutputsBlocks) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
-  override def references: AttributeSet = AttributeSet(child.output)
+  override def references: AttributeSet = inputSet
 }
 
 case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
-
-  override def maxRows: Option[Long] = child.maxRows
-
-  override def references: AttributeSet = AttributeSet(child.output)
 }
 
 case class EncFilter(condition: Expression, opcode: QEDOpcode, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = child.output
-
-  override def references: AttributeSet = AttributeSet(child.output)
 }
 
 case class Permute(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
-  override def maxRows: Option[Long] = child.maxRows
 }
 
 case class EncSort(sortExpr: Expression, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
-  override def maxRows: Option[Long] = child.maxRows
 }
 
 case class EncAggregate(
@@ -85,7 +77,6 @@ case class EncAggregate(
 
   override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
   override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
-  override def maxRows: Option[Long] = child.maxRows
 }
 
 case class EncJoin(

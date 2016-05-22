@@ -99,13 +99,10 @@ object QEDBenchmark {
       time(s"pagerank $size") {
         val result =
           vertices.encJoin(edges, $"id", $"src", Some(OP_JOIN_PAGERANK))
-            .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank")
-            .select($"dst", $"rank".as("weightedRank"))
+            .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank".as("weightedRank"))
             .encAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
               $"dst", $"weightedRank".as("totalIncomingRank"))
-            .select($"dst", $"totalIncomingRank")
-            .encProject(OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK, $"dst", $"totalIncomingRank")
-            .select($"dst".as("id"), $"totalIncomingRank".as("rank"))
+            .encProject(OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK, $"dst", $"totalIncomingRank".as("rank"))
         result.count
         result
       }
@@ -135,7 +132,7 @@ object QEDBenchmark {
       .cache()
     rankingsDF.count
     val result = time("big data 1") {
-      val df = rankingsDF.encFilter($"pageRank", OP_BD1).select($"pageURL", $"pageRank")
+      val df = rankingsDF.select($"pageURL", $"pageRank").encFilter($"pageRank", OP_BD1)
       val count = df.count
       println("big data 1 - num rows: " + count)
       df
