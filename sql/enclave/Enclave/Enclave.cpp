@@ -263,7 +263,7 @@ void ecall_external_oblivious_sort(int op_code,
   int log_len = log_2(len) + 1;
   int offset = 0;
 
-  debug("ecall_external_oblivious_sort: Sorting %d buffers in %d rounds\n", num_buffers, log_len);
+  perf("ecall_external_oblivious_sort: Sorting %d buffers in %d rounds\n", num_buffers, log_len);
 
   // read first 4 bytes of input
   uint32_t single_row_size = 0;
@@ -869,7 +869,7 @@ void ecall_external_oblivious_sort(int op_code,
     }
   }
 
-  printf("number of merges: %u\n", merges);
+  debug("number of merges: %u\n", merges);
 
   // free data
 

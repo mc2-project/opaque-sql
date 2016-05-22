@@ -13,20 +13,6 @@
 #include "Crypto.h"
 #include "common.h"
 
-#ifdef DEBUG
-#define debug(...) printf(__VA_ARGS__)
-#else
-#define debug(...) do {} while (0)
-#endif
-
-#define check(test, ...) do {                   \
-    bool result = test;                         \
-    if (!result) {                              \
-      printf(__VA_ARGS__);                      \
-      assert(result);                           \
-    }                                           \
-  } while (0)
-
 bool is_dummy_type(uint8_t attr_type);
 uint8_t get_dummy_type(uint8_t attr_type);
 uint32_t attr_upper_bound(uint8_t attr);

@@ -59,4 +59,24 @@ enum OPCODE {
 
 int get_sort_operation(int op_code);
 
+#ifdef DEBUG
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...) do {} while (0)
+#endif
+
+#ifdef PERF
+#define perf(...) printf(__VA_ARGS__)
+#else
+#define perf(...) do {} while (0)
+#endif
+
+#define check(test, ...) do {                   \
+    bool result = test;                         \
+    if (!result) {                              \
+      printf(__VA_ARGS__);                      \
+      assert(result);                           \
+    }                                           \
+  } while (0)
+
 #endif

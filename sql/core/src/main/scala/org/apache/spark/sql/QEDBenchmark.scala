@@ -95,7 +95,6 @@ object QEDBenchmark {
       .cache()
     val numEdges = edges.count
     val numVertices = vertices.count
-    println(s"pagerank num edges $numEdges, num vertices $numVertices")
     val newV =
       time(s"pagerank $size") {
         val result =

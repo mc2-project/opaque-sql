@@ -29,9 +29,13 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-        SGX_COMMON_CFLAGS += -O0 -g
+        SGX_COMMON_CFLAGS += -O0 -g -DDEBUG
 else
         SGX_COMMON_CFLAGS += -O2
+endif
+
+ifeq ($(SGX_PERF), 1)
+		SGX_COMMON_CFLAGS += -DPERF
 endif
 
 ######## Common Settings ########
@@ -66,15 +70,11 @@ App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-        App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+        App_C_Flags += -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
         App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
-endif
-
-ifeq ($(SGX_PERF), 1)
-		App_C_Flags += -DPERF
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11 -Wall -Wextra -Werror

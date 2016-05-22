@@ -599,7 +599,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     uint32_t num_rows[1];
     num_rows[0] = (uint32_t) num_items;
 
-    printf("Single partition sort, num_items: %u\n", num_items);
+    perf("Single partition sort, num_items: %u\n", num_items);
 
     uint64_t t = 0;
     {
@@ -610,12 +610,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     }
 
     double t_ms = ((double) t) / 1000;
-    printf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
+    (void)t_ms;
+    perf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
     //printf("Sort took %f ms\n", t_ms);
 
   } else {
 
-    printf("Multiple partition sorting\n");
+    perf("Multiple partition sorting\n");
 
     // try to split the input into partitions if it's too big
     uint32_t element_size = input_len / num_items;
@@ -676,7 +677,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     }
 
     double t_ms = ((double) t) / 1000;
-    printf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
+    (void)t_ms;
+    perf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
 
     free(buffer_list);
     free(buffer_sizes);
