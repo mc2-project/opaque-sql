@@ -193,7 +193,7 @@ void sgx_check_quiet(const char* message, sgx_status_t ret)
   }
 }
 
-#ifdef DEBUG
+#if defined(PERF) || defined(DEBUG)
 #define sgx_check(message, op) do {                     \
     printf("%s running...\n", message);                 \
     uint64_t t_ = 0;                                    \

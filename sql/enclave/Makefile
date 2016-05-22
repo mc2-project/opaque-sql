@@ -73,6 +73,10 @@ else
         App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
+ifeq ($(SGX_PERF), 1)
+		App_C_Flags += -DPERF
+endif
+
 App_Cpp_Flags := $(App_C_Flags) -std=c++11 -Wall -Wextra -Werror
 App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread 
 
