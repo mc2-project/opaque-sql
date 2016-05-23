@@ -35,6 +35,8 @@ uint32_t read_attr<float>(uint8_t *input, uint8_t *value);
 
 uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_type);
 
+uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols);
+
 /**
  * A standard record (row) in plaintext. Supports reading and writing to and from plaintext and
  * encrypted formats. It can be reused for multiple rows by alternating calls to read and write.
@@ -60,28 +62,37 @@ public:
   void clear();
 
   /** Create attributes of the specified types, sizing each to the type's upper bound. */
-  void init(uint8_t *types, uint32_t types_len);
+  void init(const uint8_t *types, uint32_t types_len);
 
   /** Copy the contents of the given record into this record. */
-  void set(NewRecord *other);
+  void set(const NewRecord *other);
+
+  /** Append this record with all attributes from the specified record. */
+  void append(const NewRecord *other);
 
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
   uint32_t read_encrypted(uint8_t *input);
 
   /** Read a plaintext row into this record. Return the number of bytes read. */
-  uint32_t read_plaintext(uint8_t *input);
+  uint32_t read_plaintext(const uint8_t *input);
 
   /** Encrypt and write out this record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
 
   /** Write out this record in plaintext. Return the number of bytes written. */
-  uint32_t write_decrypted(uint8_t *output);
+  uint32_t write_decrypted(uint8_t *output) const;
 
   /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
    * the attribute type.
    */
   const uint8_t *get_attr(uint32_t attr_idx) const;
+
+  /** Get the length of the attribute at the specified index (1-indexed). */
+  uint32_t get_attr_len(uint32_t attr_idx) const;
+
+  /** Modify the length of the attribute at the specified index (1-indexed). */
+  void set_attr_len(uint32_t attr_idx, uint32_t new_attr_len);
 
   /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
@@ -90,61 +101,61 @@ public:
   const uint8_t *get_attr_value(uint32_t attr_idx) const;
 
   /**
-   * Append an attribute to the record. The AttrGeneratorType must have a method with the following
-   * signature:
-   *
-   *     uint32_t write_result(uint8_t *output);
+   * Set the value of the attribute at the specified index (1-indexed) to a new value of the same
+   * length by copying the same number of bytes from new_attr_value as the existing attribute
+   * occupies.
    */
-  template<typename AttrGeneratorType>
-  void add_attr(AttrGeneratorType *attr);
+  void set_attr_value(uint32_t attr_idx, const uint8_t *new_attr_value);
+
+  /**
+   * Append an attribute to the record by copying the attribute at the specified index (1-indexed)
+   * from the other record.
+   */
+  void add_attr(const NewRecord *other, uint32_t attr_idx);
+
+  /**
+   * Append an attribute to the record.
+   */
+  void add_attr(uint8_t type, uint32_t len, const uint8_t *value);
 
   /**
    * Append an attribute to the record. The AttrGeneratorType must have a method with the following
    * signature:
    *
-   *     uint32_t write_result(uint8_t *output, bool dummy);
+   *     uint32_t write_result(uint8_t *output) const;
    */
   template<typename AttrGeneratorType>
-  void add_attr(AttrGeneratorType *attr, bool dummy);
+  void add_attr(const AttrGeneratorType *attr);
+
+  /**
+   * Append an attribute to the record. The AttrGeneratorType must have a method with the following
+   * signature:
+   *
+   *     uint32_t write_result(uint8_t *output, bool dummy) const;
+   */
+  template<typename AttrGeneratorType>
+  void add_attr(const AttrGeneratorType *attr, bool dummy);
 
   /** Mark this record as a dummy by setting all its types to dummy types. */
   void mark_dummy();
 
   /** A row is a dummy if any of its types are dummy types. */
-  bool is_dummy();
+  bool is_dummy() const;
 
-  void print();
+  void print() const;
 
   uint32_t num_cols() const {
     return *( (uint32_t *) row);
   }
 
+// private:
+  void set_num_cols(uint32_t num_cols) {
+    *reinterpret_cast<uint32_t *>(row) = num_cols;
+  }
+
+
   uint8_t *row;
   uint32_t row_length;
-};
-
-/**
- * A record with a projection function applied. Data that is read and subsequently written out will
- * pass through the projection function, which is specified using op_code.
- */
-class NewProjectRecord {
-public:
-  NewProjectRecord(int op_code) : r(), op_code(op_code), project_attributes(NULL) {}
-
-  ~NewProjectRecord();
-
-  /** Read, decrypt, and evaluate an encrypted row. Return the number of bytes read. */
-  uint32_t read_encrypted(uint8_t *input);
-
-  /** Encrypt and write out the projected record, returning the number of bytes written. */
-  uint32_t write_encrypted(uint8_t *output);
-
-private:
-  void set_project_attributes();
-
-  NewRecord r;
-  int op_code;
-  ProjectAttributes *project_attributes;
 };
 
 /**
@@ -534,7 +545,7 @@ public:
   }
 
   /** Write the grouping attribute as plaintext to output and return the number of bytes written. */
-  uint32_t write_result(uint8_t *output) {
+  uint32_t write_result(uint8_t *output) const {
     return copy_attr(output, attr);
   }
 
@@ -597,7 +608,7 @@ public:
   }
 
   /** Write the final sum as a single plaintext attribute and return num bytes written. */
-  uint32_t write_result(uint8_t *output, bool dummy) {
+  uint32_t write_result(uint8_t *output, bool dummy) const {
     return write_attr<Type>(output, sum, dummy);
   }
 
@@ -654,7 +665,7 @@ public:
   }
 
   /** Write the final average as one plaintext attr of type Type; return num bytes written. */
-  uint32_t write_result(uint8_t *output, bool dummy) {
+  uint32_t write_result(uint8_t *output, bool dummy) const {
     double avg = static_cast<double>(sum) / static_cast<double>(count);
     uint8_t *output_ptr = output;
     output_ptr += write_attr<Type>(output_ptr, static_cast<Type>(avg), dummy);
@@ -686,9 +697,6 @@ public:
   void read(NewRecord *row) {
     buf += row->read_encrypted(buf);
   }
-  void read(NewProjectRecord *row) {
-    buf += row->read_encrypted(buf);
-  }
   void read(NewJoinRecord *row) {
     buf += row->read_encrypted(buf);
   }
@@ -716,9 +724,6 @@ public:
     check(delta <= enc_size(ROW_UPPER_BOUND),
           "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
     buf += delta;
-  }
-  void write(NewProjectRecord *row) {
-    buf += row->write_encrypted(buf);
   }
   void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);

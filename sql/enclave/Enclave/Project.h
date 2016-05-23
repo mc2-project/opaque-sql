@@ -8,6 +8,7 @@
 #include "math.h"
 #include "Crypto.h"
 #include "util.h"
+#include "NewInternalTypes.h"
 
 #ifndef PROJECT_H
 #define PROJECT_H
@@ -17,5 +18,7 @@ void project(int op_code,
              uint32_t num_rows,
              uint8_t *output_rows, uint32_t output_rows_length,
              uint32_t *actual_output_rows_length);
+
+void project_single_row(int op_code, NewRecord *in, NewRecord *out);
 
 #endif // PROJECT_H

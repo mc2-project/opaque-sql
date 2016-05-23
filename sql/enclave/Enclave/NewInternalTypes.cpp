@@ -73,14 +73,14 @@ void NewRecord::clear() {
   row_length = 4;
 }
 
-void NewRecord::init(uint8_t *types, uint32_t types_len) {
+void NewRecord::init(const uint8_t *types, uint32_t types_len) {
   uint8_t *row_ptr = this->row;
   *( (uint32_t *) row_ptr) = types_len;
   row_ptr += 4;
 
   for (uint32_t i = 0; i < types_len; i++) {
     uint8_t t = types[i];
-    *row_ptr++ = t;
+    *row_ptr = t; row_ptr++;
     uint32_t len = 0;
     *( (uint32_t *) row_ptr) = len; row_ptr += 4;
     row_ptr += len;
@@ -89,13 +89,19 @@ void NewRecord::init(uint8_t *types, uint32_t types_len) {
   this->row_length = (row_ptr - row);
 }
 
-void NewRecord::set(NewRecord *other) {
+void NewRecord::set(const NewRecord *other) {
   memcpy(this->row, other->row, other->row_length);
   this->row_length = other->row_length;
 }
 
-uint32_t NewRecord::read_plaintext(uint8_t *input) {
-  uint8_t *input_ptr = input;
+void NewRecord::append(const NewRecord *other) {
+  memcpy(row + row_length, other->row + 4, other->row_length - 4);
+  this->row_length += other->row_length - 4;
+  set_num_cols(num_cols() + other->num_cols());
+}
+
+uint32_t NewRecord::read_plaintext(const uint8_t *input) {
+  const uint8_t *input_ptr = input;
   uint8_t *row_ptr = this->row;
 
   *( (uint32_t *) row_ptr) = *( (uint32_t *) input_ptr);
@@ -145,19 +151,19 @@ uint32_t NewRecord::write_encrypted(uint8_t *output) {
   return (output_ptr - output);
 }
 
-void NewRecord::print() {
-  uint8_t *row_ptr = this->row;
+void NewRecord::print() const {
+  const uint8_t *row_ptr = this->row;
 
-  printf("NewRecord[num_attrs=%d", *( (uint32_t *) (row_ptr)));
+  printf("NewRecord[num_attrs=%d", *( (const uint32_t *) (row_ptr)));
   row_ptr += 4;
 
   for (uint32_t i = 0; i < this->num_cols(); i++) {
     uint8_t type = *row_ptr++;
-    uint32_t len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    uint32_t len = *reinterpret_cast<const uint32_t *>(row_ptr); row_ptr += 4;
     printf(", attr_%d=[type=%d, len=%d, value=", i, type, len);
     switch (type) {
-    case INT: printf("%d]", *reinterpret_cast<uint32_t *>(row_ptr)); break;
-    case FLOAT: printf("%f]", *reinterpret_cast<float *>(row_ptr)); break;
+    case INT: printf("%d]", *reinterpret_cast<const uint32_t *>(row_ptr)); break;
+    case FLOAT: printf("%f]", *reinterpret_cast<const float *>(row_ptr)); break;
     case STRING:
     {
       char *str = (char *) malloc(len + 1);
@@ -177,15 +183,15 @@ void NewRecord::print() {
   check(row_length == row_ptr - row, "row length mismatch: %d != %d\n", row_length, row_ptr - row);
 }
 
-uint32_t NewRecord::write_decrypted(uint8_t *output) {
-  cpy(output, this->row, this->row_length);
+uint32_t NewRecord::write_decrypted(uint8_t *output) const {
+  memcpy(output, this->row, this->row_length);
   return this->row_length;
 }
 
-const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
-  check(attr_idx > 0 && attr_idx <= num_cols(),
-        "attr_idx %d out of bounds (%d cols)\n", attr_idx, num_cols());
-  uint8_t *row_ptr = this->row;
+uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols) {
+  check(attr_idx > 0 && attr_idx <= num_cols,
+        "attr_idx %d out of bounds (%d cols)\n", attr_idx, num_cols);
+  uint8_t *row_ptr = row;
   row_ptr += 4;
   for (uint32_t i = 0; i < attr_idx - 1; i++) {
     row_ptr++;
@@ -195,11 +201,58 @@ const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
   return row_ptr;
 }
 
+const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
+  return get_attr_internal(row, attr_idx, num_cols());
+}
+
+uint32_t NewRecord::get_attr_len(uint32_t attr_idx) const {
+  const uint8_t *attr_ptr = get_attr(attr_idx);
+  attr_ptr++;
+  return *reinterpret_cast<const uint32_t *>(attr_ptr);
+}
+
+void NewRecord::set_attr_len(uint32_t attr_idx, uint32_t new_attr_len) {
+  uint8_t *attr_start = get_attr_internal(row, attr_idx, num_cols());
+  uint8_t *attr_ptr = attr_start;
+  attr_ptr++;
+  uint32_t old_attr_len = *reinterpret_cast<uint32_t *>(attr_ptr);
+  *reinterpret_cast<uint32_t *>(attr_ptr) = new_attr_len; attr_ptr += 4;
+  uint8_t *old_attr_end = attr_ptr + old_attr_len;
+  uint8_t *new_attr_end = attr_ptr + new_attr_len;
+  uint32_t new_row_len = row_length - old_attr_len + new_attr_len;
+  uint32_t row_remaining_len = row + row_length - old_attr_end;
+  // Move the rest of the row into place
+  memmove(new_attr_end, old_attr_end, row_remaining_len);
+  row_length = new_row_len;
+}
+
 const uint8_t *NewRecord::get_attr_value(uint32_t attr_idx) const {
   const uint8_t *result = get_attr(attr_idx);
   result++;
   result += 4;
   return result;
+}
+
+void NewRecord::set_attr_value(uint32_t attr_idx, const uint8_t *new_attr_value) {
+  uint32_t attr_len = get_attr_len(attr_idx);
+  uint8_t *attr_ptr = get_attr_internal(row, attr_idx, num_cols());
+  attr_ptr++;
+  attr_ptr += 4;
+  memcpy(attr_ptr, new_attr_value, attr_len);
+}
+
+void NewRecord::add_attr(const NewRecord *other, uint32_t attr_idx) {
+  row_length += copy_attr(row + row_length, other->get_attr(attr_idx));
+  set_num_cols(num_cols() + 1);
+}
+
+void NewRecord::add_attr(uint8_t type, uint32_t len, const uint8_t *value) {
+  uint8_t *row_ptr = row + row_length;
+  *row_ptr = type; row_ptr++;
+  *reinterpret_cast<uint32_t *>(row_ptr) = len; row_ptr += 4;
+  memcpy(row_ptr, value, len); row_ptr += len;
+  row_length += row_ptr - (row + row_length);
+  set_num_cols(num_cols() + 1);
 }
 
 void NewRecord::mark_dummy() {
@@ -213,59 +266,16 @@ void NewRecord::mark_dummy() {
   }
 }
 
-bool NewRecord::is_dummy() {
-  uint8_t *row_ptr = this->row;
+bool NewRecord::is_dummy() const {
+  const uint8_t *row_ptr = this->row;
   row_ptr += 4;
 
   for (uint32_t i = 0; i < num_cols(); i++) {
     if (is_dummy_type(*row_ptr)) return true; row_ptr++;
-    uint32_t len = *reinterpret_cast<uint32_t *>(row_ptr); row_ptr += 4;
+    uint32_t len = *reinterpret_cast<const uint32_t *>(row_ptr); row_ptr += 4;
     row_ptr += len;
   }
   return false;
-}
-
-NewProjectRecord::~NewProjectRecord() {
-  delete project_attributes;
-}
-
-uint32_t NewProjectRecord::read_encrypted(uint8_t *input) {
-  uint32_t result = r.read_encrypted(input);
-  this->set_project_attributes();
-  return result;
-}
-
-void NewProjectRecord::set_project_attributes() {
-  if (project_attributes == NULL) {
-    project_attributes = new ProjectAttributes(op_code, r.row + 4, r.num_cols());
-    project_attributes->init();
-    project_attributes->evaluate();
-  } else {
-    project_attributes->re_init(r.row + 4);
-    project_attributes->evaluate();
-  }
-
-}
-
-uint32_t NewProjectRecord::write_encrypted(uint8_t *output) {
-  // Flushes only the eval attributes
-  uint8_t *output_ptr = output;
-
-  ProjectAttributes *attrs = this->project_attributes;
-
-  *( (uint32_t *) (output_ptr)) = attrs->num_eval_attr;
-  output_ptr += 4;
-
-  uint8_t temp[ROW_UPPER_BOUND];
-  uint8_t *temp_ptr = temp;
-
-  for (uint32_t i = 0; i < attrs->num_eval_attr; i++) {
-    temp_ptr = temp;
-    attrs->eval_attributes[i]->flush(temp);
-    encrypt_attribute(&temp_ptr, &output_ptr);
-  }
-
-  return (output_ptr - output);
 }
 
 uint32_t NewJoinRecord::read_encrypted(uint8_t *input) {
@@ -276,9 +286,9 @@ uint32_t NewJoinRecord::read_encrypted(uint8_t *input) {
 void NewJoinRecord::set(bool is_primary, NewRecord *record) {
   uint8_t *row_ptr = this->row;
   if (is_primary) {
-    cpy(row_ptr, primary_id, TABLE_ID_SIZE);
+    memcpy(row_ptr, primary_id, TABLE_ID_SIZE);
   } else {
-    cpy(row_ptr, foreign_id, TABLE_ID_SIZE);
+    memcpy(row_ptr, foreign_id, TABLE_ID_SIZE);
   }
   row_ptr += TABLE_ID_SIZE;
 
@@ -286,7 +296,7 @@ void NewJoinRecord::set(bool is_primary, NewRecord *record) {
 }
 
 void NewJoinRecord::set(NewJoinRecord *other) {
-  cpy(this->row, other->row, JOIN_ROW_UPPER_BOUND);
+  memcpy(this->row, other->row, JOIN_ROW_UPPER_BOUND);
   this->join_attr.copy_attribute(&other->join_attr);
 }
 
@@ -304,7 +314,7 @@ void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, Ne
   uint32_t value_len;
   for (uint32_t i = 0; i < this->num_cols(); i++) {
     value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
-    cpy(merge_ptr, input_ptr, value_len);
+    memcpy(merge_ptr, input_ptr, value_len);
     merge_ptr += value_len;
     input_ptr += value_len;
   }
@@ -313,7 +323,7 @@ void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, Ne
   for (uint32_t i = 0; i < other->num_cols(); i++) {
     value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
     if (i + 1 != secondary_join_attr) {
-      cpy(merge_ptr, input_ptr, value_len);
+      memcpy(merge_ptr, input_ptr, value_len);
       merge_ptr += value_len;
     }
     input_ptr += value_len;
