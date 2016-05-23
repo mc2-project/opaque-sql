@@ -60,10 +60,24 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->append(in);
     break;
   }
-  case OP_PROJECT_REMOVE_COL1:
+  case OP_PROJECT_DROP_COL1:
     out->clear();
     for (uint32_t i = 2; i <= in->num_cols(); i++) {
       out->add_attr(in, i);
+    }
+    break;
+  case OP_PROJECT_SWAP_COL1_COL2:
+    out->clear();
+    for (uint32_t i = 1; i <= in->num_cols(); i++) {
+      uint32_t src_i = (i == 1) ? 2 : (i == 2) ? 1 : i;
+      out->add_attr(in, src_i);
+    }
+    break;
+  case OP_PROJECT_SWAP_COL2_COL3:
+    out->clear();
+    for (uint32_t i = 1; i <= in->num_cols(); i++) {
+      uint32_t src_i = (i == 2) ? 3 : (i == 3) ? 2 : i;
+      out->add_attr(in, src_i);
     }
     break;
   default:

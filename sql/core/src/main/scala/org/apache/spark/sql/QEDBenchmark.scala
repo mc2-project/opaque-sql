@@ -225,17 +225,20 @@ object QEDBenchmark {
 
     val result = time("big data 3") {
       val df =
-        rankingsDF.select($"pageURL", $"pageRank").encJoin(
-          uservisitsDF
-            .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-            .encFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
-            .select($"destURL", $"sourceIP", $"adRevenue"),
-          rankingsDF("pageURL"), uservisitsDF("destURL"))
-        .select($"sourceIP", $"pageRank", $"adRevenue")
-        .encAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
-          $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
-        .select($"sourceIP", $"totalRevenue", $"avgPageRank")
-        .encSort($"totalRevenue")
+        rankingsDF
+          .select($"pageURL", $"pageRank")
+          .encJoin(
+            uservisitsDF
+              .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
+              .encFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
+              .encProject(OP_PROJECT_DROP_COL1, $"destURL", $"sourceIP", $"adRevenue"),
+            rankingsDF("pageURL"), uservisitsDF("destURL"))
+          .encProject(OP_PROJECT_DROP_COL1, $"pageRank", $"sourceIP", $"adRevenue")
+          .encProject(OP_PROJECT_SWAP_COL1_COL2, $"sourceIP", $"pageRank", $"adRevenue")
+          .encAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
+            $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
+          .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
+          .encSort($"totalRevenue")
       val count = df.count
       println("big data 3 - num rows: " + count)
       df

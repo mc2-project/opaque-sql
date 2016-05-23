@@ -117,7 +117,7 @@ case class Permute(child: OutputsBlocks) extends UnaryNode with OutputsBlocks {
     }
     ObliviousSort.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = QED.initEnclave()
-      val serResult = enclave.Project(eid, OP_PROJECT_REMOVE_COL1.value, block.bytes, block.numRows)
+      val serResult = enclave.Project(eid, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
   }
