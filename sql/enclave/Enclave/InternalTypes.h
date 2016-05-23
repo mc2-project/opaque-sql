@@ -357,25 +357,6 @@ public:
   int if_primary;
 };
 
-class ProjectAttributes : public GroupedAttributes {
-
-public:
-
-  ProjectAttributes(int op_code, uint8_t *row_ptr, uint32_t num_cols) :
-    GroupedAttributes(op_code, row_ptr, num_cols) {
-
-  }
-
-  virtual ~ProjectAttributes() {}
-
-  void init();
-
-  void re_init(uint8_t *new_row_ptr);
-
-  void evaluate();
-
-};
-
 class Record {
 public:
   Record() {

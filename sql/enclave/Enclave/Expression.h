@@ -14,17 +14,13 @@
 // A list of all of the UDFs
 enum EXPRESSION {
   IDENTITY,                 // place holder for the identity function
-  PREFIX,                   // prefix of a single string
   INTEGER_SUM,              // sum of multiple columns
   COMPARE,
   BD2,
-  TEST,
-  PR_WEIGHT_RANK,
-  PR_APPLY_INCOMING_RANK
+  TEST
 };
 
 enum EVAL_MODE {
-  PROJECT,
   SORT,
   AGG,
   JOIN,
