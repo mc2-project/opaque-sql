@@ -105,21 +105,20 @@ case class EncFilter(condition: Expression, opcode: QEDOpcode, child: OutputsBlo
   }
 }
 
-// TODO: operate on blocks
-case class Permute(child: SparkPlan) extends UnaryNode {
+case class Permute(child: OutputsBlocks) extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
 
-  override def doExecute() = {
-    val rowsWithRandomIds = child.execute().mapPartitions { rowIter =>
+  override def executeBlocked() = {
+    val rowsWithRandomIds = child.executeBlocked().map { block =>
       val (enclave, eid) = QED.initEnclave()
-      rowIter.map(row =>
-        InternalRow.fromSeq(QED.randomId(enclave, eid) +: row.toSeq(schema)).encSerialize)
+      val serResult = enclave.Project(
+        eid, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
-    ObliviousSort.ColumnSort(rowsWithRandomIds.context, rowsWithRandomIds, OP_SORT_COL1)
-      .mapPartitions { serRowIter =>
-      val converter = UnsafeProjection.create(schema)
-      serRowIter.map(serRow => converter(
-        InternalRow.fromSeq(QED.parseRow(serRow).tail)))
+    ObliviousSort.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(eid, OP_PROJECT_REMOVE_COL1.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
   }
 }

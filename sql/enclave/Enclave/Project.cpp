@@ -51,6 +51,21 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&result));
     break;
   }
+  case OP_PROJECT_ADD_RANDOM_ID:
+  {
+    out->clear();
+    uint32_t random = 0;
+    sgx_read_rand(reinterpret_cast<uint8_t *>(&random), 4);
+    out->add_attr(INT, 4, reinterpret_cast<uint8_t *>(&random));
+    out->append(in);
+    break;
+  }
+  case OP_PROJECT_REMOVE_COL1:
+    out->clear();
+    for (uint32_t i = 2; i <= in->num_cols(); i++) {
+      out->add_attr(in, i);
+    }
+    break;
   default:
     printf("project_single_row: unknown opcode %d\n", op_code);
     assert(false);

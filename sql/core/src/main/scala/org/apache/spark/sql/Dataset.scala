@@ -985,11 +985,11 @@ class Dataset[T] private[sql](
   }
 
   def encFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(EncFilter(condition.expr, opcode, ConvertToBlocks(Permute(logicalPlan))))
+    ConvertFromBlocks(EncFilter(condition.expr, opcode, Permute(ConvertToBlocks(logicalPlan))))
   }
 
   def encPermute(): Dataset[T] = withTypedPlan {
-    Permute(logicalPlan)
+    ConvertFromBlocks(Permute(ConvertToBlocks(logicalPlan)))
   }
 
   def encAggregate(opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
