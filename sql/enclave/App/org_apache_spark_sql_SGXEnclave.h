@@ -61,14 +61,6 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort
   (JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jint);
 
-  /*
-   * Class:     org_apache_spark_sql_SGXEnclave
-   * Method:    RandomID
-   * Signature: (JI[BII)[B
-   */
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID
-  (JNIEnv *, jobject, jlong);
-
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 

@@ -894,17 +894,6 @@ void ecall_external_oblivious_sort(int op_code,
 
 }
 
-// returns an encrypted random integer
-void ecall_random_id(uint8_t *ptr, uint32_t length) {
-  (void)length;
-  uint8_t internal_buf[HEADER_SIZE + 4];
-
-  *internal_buf = INT;
-  *((uint32_t *) (internal_buf + TYPE_SIZE)) = 4;
-
-  encrypt(internal_buf, HEADER_SIZE + 4, ptr);
-}
-
 void ecall_project(int op_code,
                    uint8_t *input_rows, uint32_t input_rows_length,
                    uint32_t num_rows,

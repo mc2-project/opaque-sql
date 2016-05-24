@@ -66,8 +66,6 @@ enclave {
       [in, count=num_buffers] uint32_t* num_rows,
       [user_check] uint8_t *external_scratch);
 
-    public void ecall_random_id(
-      [in, out, size=length]uint8_t *ptr, uint32_t length);
     public void ecall_aggregate_step1(
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,

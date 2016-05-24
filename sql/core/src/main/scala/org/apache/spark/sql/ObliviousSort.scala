@@ -30,12 +30,7 @@ object ObliviousSort extends java.io.Serializable {
   val NumCores = 1
   val Multiplier = 8 // TODO: fix bug when this is 1
 
-  def time[A](desc: String)(f: => A): A = {
-    val start = System.nanoTime
-    val result = f
-    // println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
-    result
-  }
+  import QED.{time, logPerf}
 
   class Value(r: Int, c: Int, v: Array[Byte]) extends java.io.Serializable {
     def this(r: Int, c: Int) = this(r, c, new Array[Byte](0))
@@ -391,10 +386,8 @@ object ObliviousSort extends java.io.Serializable {
 
     // Skip column sort if there's no parallelism anyway
     if (data.partitions.length == 0) {
-      println("Skipping any sort!")
       sc.emptyRDD[Array[Byte]]
     } else if (data.partitions.length == 1) {
-      println("Skipping column sort")
       data.mapPartitions { rowIter =>
         val (enclave, eid) = QED.initEnclave()
         val rows = rowIter.toArray
@@ -412,7 +405,6 @@ object ObliviousSort extends java.io.Serializable {
         sortedRowIter
       }
     } else {
-      println("Running column sort")
       data.cache()
 
       val len = data.count
@@ -428,13 +420,13 @@ object ObliviousSort extends java.io.Serializable {
       // println("s is " + s + ", r is " + r)
 
       if (r < 2 * math.pow(s, 2).toInt) {
-        println(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len")
+        logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len")
         r = 2 * math.pow(s, 2).toInt
       }
 
       val padded =
         if (len != r * s) {
-          println(s"Padding len from $len to ${r*s}. r=$r, s=$s")
+          logPerf(s"Padding len from $len to ${r*s}. r=$r, s=$s")
           assert(r * s > len)
           val firstPartitionSize =
             data.mapPartitionsWithIndex((index, iter) =>

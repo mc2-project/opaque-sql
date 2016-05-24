@@ -23,6 +23,8 @@ import java.nio.ByteOrder
 import scala.util.Random
 
 import oblivious_sort.ObliviousSort
+import org.apache.log4j.Level
+import org.apache.log4j.LogManager
 import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.spark.sql.QEDOpcode._
@@ -40,6 +42,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
   import QED.time
+
+  LogManager.getLogger(classOf[org.apache.spark.scheduler.TaskSetManager]).setLevel(Level.ERROR)
+  LogManager.getLogger(classOf[org.apache.spark.storage.BlockManager]).setLevel(Level.ERROR)
 
   def byte_to_int(array: Array[Byte], index: Int) = {
     val int_bytes = array.slice(index, index + 4)
@@ -184,9 +189,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-    val sorted = time("Enc sorting: ") {
-      sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("str", "x").encSort($"x").collect
-    }
+    val sorted = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("str", "x").encSort($"x").collect
     assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
@@ -613,19 +616,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows,
       table_p_data.length + table_f_data.length, processed_join_row)
-
-    enclave.StopEnclave(eid)
-  }
-
-
-  test("JNIRandomID") {
-    val eid = enclave.StartEnclave()
-
-    for (v <- 1 to 10) {
-      val buf = enclave.RandomID(eid)
-      val integer = QED.decrypt[Int](enclave, eid, buf)
-      println("Integer is " + integer)
-    }
 
     enclave.StopEnclave(eid)
   }

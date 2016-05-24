@@ -147,7 +147,7 @@ void sort_merge_join(int op_code,
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&current);
     current.init_join_attribute(op_code);
-	
+
     if (current.is_primary()) {
       check(primary.join_attr.compare(&current.join_attr) != 0,
             "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "

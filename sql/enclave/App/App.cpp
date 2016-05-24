@@ -696,25 +696,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   return ret;
 }
 
-
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_RandomID(
-  JNIEnv *env,
-  jobject obj,
-  jlong eid) {
-  (void)obj;
-
-  // size should be SGX
-  const uint32_t random_id_length = ENC_HEADER_SIZE + HEADER_SIZE + 4;
-  jbyteArray ret = env->NewByteArray(ENC_HEADER_SIZE + HEADER_SIZE + 4);
-
-  uint8_t buf[random_id_length];
-  sgx_check_quiet("RandomID", ecall_random_id(eid, buf, random_id_length));
-
-  env->SetByteArrayRegion(ret, 0, random_id_length, (jbyte *) buf);
-
-  return ret;
-}
-
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
   JNIEnv *env,
   jobject obj,
@@ -984,24 +965,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 
   uint32_t actual_output_length = 0;
 
-  uint64_t t;
-  double t_ms = 0;
-  
-  t = 0;
-  {
-    scoped_timer timer(&t);
-    sgx_check("SortMergeJoin",
-	      ecall_sort_merge_join(
-				    eid,
-				    op_code,
-				    input_rows_ptr, input_rows_length,
-				    num_rows,
-				    join_row_ptr, join_row_length,
-				    output, output_length, &actual_output_length));
-  }
-  t_ms = ((double) t) / 1000;
-  printf("SortMergeJoin took %f ms\n", t_ms);
-  
+  sgx_check("SortMergeJoin",
+            ecall_sort_merge_join(
+              eid,
+              op_code,
+              input_rows_ptr, input_rows_length,
+              num_rows,
+              join_row_ptr, join_row_length,
+              output, output_length, &actual_output_length));
   
   jbyteArray ret = env->NewByteArray(actual_output_length);
   env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);

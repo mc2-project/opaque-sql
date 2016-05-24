@@ -35,11 +35,21 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StringType
 
 object QED {
+  private val perf: Boolean = System.getenv("SGX_PERF") == "1"
+
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
-    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    if (perf) {
+      println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    }
     result
+  }
+
+  def logPerf(message: String): Unit = {
+    if (perf) {
+      println(message)
+    }
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
@@ -224,10 +234,6 @@ object QED {
           QED.decrypt[D](enclave, eid, dEnc),
           QED.decrypt[E](enclave, eid, eEnc))
     }
-  }
-
-  def randomId(enclave: SGXEnclave, eid: Long): Array[Byte] = {
-    enclave.RandomID(eid)
   }
 
   def encodeData(value: Array[Byte]): String = {
