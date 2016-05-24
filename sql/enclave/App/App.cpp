@@ -984,15 +984,25 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 
   uint32_t actual_output_length = 0;
 
-  sgx_check("SortMergeJoin",
-            ecall_sort_merge_join(
-              eid,
-              op_code,
-              input_rows_ptr, input_rows_length,
-              num_rows,
-              join_row_ptr, join_row_length,
-              output, output_length, &actual_output_length));
-
+  uint64_t t;
+  double t_ms = 0;
+  
+  t = 0;
+  {
+    scoped_timer timer(&t);
+    sgx_check("SortMergeJoin",
+	      ecall_sort_merge_join(
+				    eid,
+				    op_code,
+				    input_rows_ptr, input_rows_length,
+				    num_rows,
+				    join_row_ptr, join_row_length,
+				    output, output_length, &actual_output_length));
+  }
+  t_ms = ((double) t) / 1000;
+  printf("SortMergeJoin took %f ms\n", t_ms);
+  
+  
   jbyteArray ret = env->NewByteArray(actual_output_length);
   env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
 
