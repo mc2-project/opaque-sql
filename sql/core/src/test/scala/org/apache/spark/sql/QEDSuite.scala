@@ -58,8 +58,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new String(string_bytes)
   }
 
-  val (enclave, eid) = QED.initEnclave()
-
   test("pagerank") {
     QEDBenchmark.pagerank(sqlContext, "32768")
   }
@@ -264,7 +262,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         new String(x, 0, loc, "UTF-8") // or appropriate encoding
     }
 
-    val eid = enclave.StartEnclave()
+    val (enclave, eid) = QED.initEnclave()
 
     // Test encryption and decryption
 
@@ -281,8 +279,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     for (idx <- 0 to plaintext_bytes.length - 1) {
       assert(plaintext_bytes(idx) == decrypted(idx))
     }
-
-    enclave.StopEnclave(eid)
   }
 
   test("JNIObliviousSort1") {
@@ -356,7 +352,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("JNIObliviousSortRow") {
 
-    val eid = enclave.StartEnclave()
+    val (enclave, eid) = QED.initEnclave()
 
     val data = Seq(("test1", 10), ("hello", 1), ("world", 4), ("foo", 2), ("test2", 3) )
 
@@ -433,14 +429,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       QED.decrypt2[String, Int](
         QED.parseRows(sorted_encrypted_data).map(fields => Row(fields: _*)).toSeq)
         === data.sortBy(_._2))
-
-    enclave.StopEnclave(eid)
-
   }
 
   test("JNIAggregation") {
 
-    val eid = enclave.StartEnclave()
+    val (enclave, eid) = QED.initEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
       val encrypted = data.map {
@@ -523,12 +516,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data1, data_1.length, new_agg_row1)
     val partial_result_2 = enclave.AggregateStep2(
       eid, OP_GROUPBY_COL2_SUM_COL3_INT_STEP2.value, enc_data2, data_2.length, new_agg_row2)
-
-    enclave.StopEnclave(eid)
   }
 
   test("JNIJoin") {
-    val eid = enclave.StartEnclave()
+    val (enclave, eid) = QED.initEnclave()
 
     def encrypt_and_serialize(data: Seq[(Int, String, Int)]): Array[Byte] = {
       val encrypted = data.map {
@@ -616,7 +607,5 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
     val joined_rows = enclave.SortMergeJoin(eid, OP_JOIN_COL2.value, sorted_rows,
       table_p_data.length + table_f_data.length, processed_join_row)
-
-    enclave.StopEnclave(eid)
   }
 }
