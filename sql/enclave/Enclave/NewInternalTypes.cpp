@@ -68,6 +68,118 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
   return input_ptr - input;
 }
 
+bool attr_less_than(const uint8_t *a, const uint8_t *b) {
+  const uint8_t *a_ptr = a;
+  const uint8_t *b_ptr = b;
+
+  check(*a_ptr == *b_ptr,
+        "attr_less_than: Can't compare different types %d and %d\n", *a_ptr, *b_ptr);
+  uint8_t type = *a_ptr; a_ptr++; b_ptr++;
+
+  uint32_t a_len = *reinterpret_cast<const uint32_t *>(a_ptr); a_ptr += 4;
+  uint32_t b_len = *reinterpret_cast<const uint32_t *>(b_ptr); b_ptr += 4;
+  switch (type) {
+  case INT:
+  {
+    uint32_t a_val = *reinterpret_cast<const uint32_t *>(a_ptr); a_ptr += 4;
+    uint32_t b_val = *reinterpret_cast<const uint32_t *>(b_ptr); b_ptr += 4;
+    return a_val < b_val;
+  }
+
+  case FLOAT:
+  {
+    uint32_t a_val = *reinterpret_cast<const float *>(a_ptr); a_ptr += 4;
+    uint32_t b_val = *reinterpret_cast<const float *>(b_ptr); b_ptr += 4;
+    return a_val < b_val;
+  }
+
+  case LONG:
+  case DATE:
+  {
+    uint32_t a_val = *reinterpret_cast<const uint64_t *>(a_ptr); a_ptr += 8;
+    uint32_t b_val = *reinterpret_cast<const uint64_t *>(b_ptr); b_ptr += 8;
+    return a_val < b_val;
+  }
+
+  case STRING:
+  case URL_TYPE:
+  case C_CODE:
+  case L_CODE:
+  case IP_TYPE:
+  case USER_AGENT_TYPE:
+  case SEARCH_WORD_TYPE:
+  {
+    uint32_t min_len = a_len < b_len ? a_len : b_len;
+    for (uint32_t i = 0; i < min_len; i++) {
+      if (*a_ptr < *b_ptr) {
+        return true;
+      } else if (*a_ptr > *b_ptr) {
+        return false;
+      }
+      a_ptr++;
+      b_ptr++;
+    }
+
+    if (a_len < b_len) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  default:
+    printf("attr_less_than: Unknown type %d\n", type);
+    assert(false);
+  }
+  return false;
+}
+
+uint32_t attr_key_prefix(const uint8_t *attr) {
+  const uint8_t *attr_ptr = attr;
+  uint8_t type = *attr_ptr; attr_ptr++;
+
+  uint32_t attr_len = *reinterpret_cast<const uint32_t *>(attr_ptr); attr_ptr += 4;
+  switch (type) {
+  case INT:
+  case LONG:
+  case DATE:
+    return *reinterpret_cast<const uint32_t *>(attr_ptr);
+
+  case FLOAT:
+  {
+    // Transform any IEEE float into an unsigned integer that can be sorted using integer comparison
+    // From http://stereopsis.com/radix.html
+    uint32_t bits = *reinterpret_cast<const uint32_t *>(attr_ptr);
+    return bits ^ (-static_cast<int32_t>(bits >> 31) | 0x80000000);
+  }
+
+  case STRING:
+  case URL_TYPE:
+  case C_CODE:
+  case L_CODE:
+  case IP_TYPE:
+  case USER_AGENT_TYPE:
+  case SEARCH_WORD_TYPE:
+  {
+    // Copy up to the first 4 bytes of the string into an integer, zero-padding for strings shorter
+    // than 4 bytes
+    uint32_t bits = 0;
+    uint32_t cpy_len = attr_len < 4 ? attr_len : 4;
+    // Need to ensure big-endian byte order so integer comparison is equivalent to lexicographic
+    // string comparison
+    for (uint32_t i = 0; i < cpy_len; i++) {
+      bits |= static_cast<uint32_t>(attr_ptr[i]) << (24 - 8 * i);
+    }
+    return bits;
+  }
+
+  default:
+    printf("attr_key_prefix: Unknown type %d\n", type);
+    assert(false);
+  }
+  return 0;
+}
+
 void NewRecord::clear() {
   *reinterpret_cast<uint32_t *>(row) = 0;
   row_length = 4;
@@ -163,8 +275,16 @@ void NewRecord::print() const {
     printf(", attr_%d=[type=%d, len=%d, value=", i, type, len);
     switch (type) {
     case INT: printf("%d]", *reinterpret_cast<const uint32_t *>(row_ptr)); break;
+
     case FLOAT: printf("%f]", *reinterpret_cast<const float *>(row_ptr)); break;
+
     case STRING:
+    case URL_TYPE:
+    case C_CODE:
+    case L_CODE:
+    case IP_TYPE:
+    case USER_AGENT_TYPE:
+    case SEARCH_WORD_TYPE:
     {
       char *str = (char *) malloc(len + 1);
       memcpy(str, row_ptr, len);
@@ -173,6 +293,7 @@ void NewRecord::print() const {
       free(str);
       break;
     }
+
     default: printf("?]");
     }
     row_ptr += len;
@@ -186,6 +307,80 @@ void NewRecord::print() const {
 uint32_t NewRecord::write_decrypted(uint8_t *output) const {
   memcpy(output, this->row, this->row_length);
   return this->row_length;
+}
+
+bool NewRecord::less_than(const NewRecord *other, int op_code) const {
+  switch (op_code) {
+  case OP_SORT_COL1:
+    return attr_less_than(get_attr(1), other->get_attr(1));
+  case OP_SORT_COL2:
+    return attr_less_than(get_attr(2), other->get_attr(2));
+  case OP_SORT_COL2_IS_DUMMY_COL1:
+  {
+    bool this_is_dummy = is_dummy_type(get_attr_type(2));
+    bool other_is_dummy = is_dummy_type(other->get_attr_type(2));
+    if (this_is_dummy != other_is_dummy) {
+      return other_is_dummy;
+    } else {
+      return attr_less_than(get_attr(1), other->get_attr(1));
+    }
+  }
+  case OP_SORT_COL3_IS_DUMMY_COL1:
+  {
+    bool this_is_dummy = is_dummy_type(get_attr_type(3));
+    bool other_is_dummy = is_dummy_type(other->get_attr_type(3));
+    if (this_is_dummy != other_is_dummy) {
+      return other_is_dummy;
+    } else {
+      return attr_less_than(get_attr(1), other->get_attr(1));
+    }
+  }
+  case OP_SORT_COL4_IS_DUMMY_COL2:
+  {
+    bool this_is_dummy = is_dummy_type(get_attr_type(4));
+    bool other_is_dummy = is_dummy_type(other->get_attr_type(4));
+    if (this_is_dummy != other_is_dummy) {
+      return other_is_dummy;
+    } else {
+      return attr_less_than(get_attr(2), other->get_attr(2));
+    }
+  }
+  default:
+    printf("NewRecord::less_than: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  return false;
+}
+
+uint32_t NewRecord::get_key_prefix(int op_code) const {
+  switch (op_code) {
+  case OP_SORT_COL1:
+    return attr_key_prefix(get_attr(1));
+  case OP_SORT_COL2:
+    return attr_key_prefix(get_attr(2));
+  case OP_SORT_COL2_IS_DUMMY_COL1:
+  {
+    uint32_t dummy_bit = is_dummy_type(get_attr_type(2)) ? 1 : 0;
+    uint32_t attr_prefix = attr_key_prefix(get_attr(1));
+    return (dummy_bit << 31) | (attr_prefix >> 1);
+  }
+  case OP_SORT_COL3_IS_DUMMY_COL1:
+  {
+    uint32_t dummy_bit = is_dummy_type(get_attr_type(3)) ? 1 : 0;
+    uint32_t attr_prefix = attr_key_prefix(get_attr(1));
+    return (dummy_bit << 31) | (attr_prefix >> 1);
+  }
+  case OP_SORT_COL4_IS_DUMMY_COL2:
+  {
+    uint32_t dummy_bit = is_dummy_type(get_attr_type(4)) ? 1 : 0;
+    uint32_t attr_prefix = attr_key_prefix(get_attr(2));
+    return (dummy_bit << 31) | (attr_prefix >> 1);
+  }
+  default:
+    printf("NewRecord::get_key_prefix: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  return 0;
 }
 
 uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols) {
@@ -203,6 +398,11 @@ uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols) {
 
 const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
   return get_attr_internal(row, attr_idx, num_cols());
+}
+
+uint8_t NewRecord::get_attr_type(uint32_t attr_idx) const {
+  const uint8_t *attr_ptr = get_attr(attr_idx);
+  return *attr_ptr;
 }
 
 uint32_t NewRecord::get_attr_len(uint32_t attr_idx) const {
@@ -283,7 +483,7 @@ uint32_t NewJoinRecord::read_encrypted(uint8_t *input) {
   return enc_size(JOIN_ROW_UPPER_BOUND);
 }
 
-void NewJoinRecord::set(bool is_primary, NewRecord *record) {
+void NewJoinRecord::set(bool is_primary, const NewRecord *record) {
   uint8_t *row_ptr = this->row;
   if (is_primary) {
     memcpy(row_ptr, primary_id, TABLE_ID_SIZE);
@@ -305,15 +505,59 @@ uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
   return enc_size(JOIN_ROW_UPPER_BOUND);
 }
 
-void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) {
+bool NewJoinRecord::less_than(const NewJoinRecord *other, int op_code) const {
+  switch (op_code) {
+  case OP_JOIN_COL1:
+  case OP_JOIN_PAGERANK:
+  {
+    if (attrs_equal(get_attr(1), other->get_attr(1))) {
+      // Join attributes are equal; sort primary rows before foreign rows
+      return is_primary() && !other->is_primary();
+    } else {
+      return attr_less_than(get_attr(1), other->get_attr(1));
+    }
+  }
+  case OP_JOIN_COL2:
+  {
+    if (attrs_equal(get_attr(2), other->get_attr(2))) {
+      // Join attributes are equal; sort primary rows before foreign rows
+      return is_primary() && !other->is_primary();
+    } else {
+      return attr_less_than(get_attr(2), other->get_attr(2));
+    }
+  }
+  default:
+    printf("NewJoinRecord::less_than: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  return false;
+}
+
+uint32_t NewJoinRecord::get_key_prefix(int op_code) const {
+  switch (op_code) {
+  case OP_JOIN_COL1:
+  case OP_JOIN_PAGERANK:
+    return attr_key_prefix(get_attr(1));
+  case OP_JOIN_COL2:
+    return attr_key_prefix(get_attr(2));
+  default:
+    printf("NewJoinRecord::get_key_prefix: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  return 0;
+}
+
+void NewJoinRecord::merge(
+  const NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) const {
+
   uint8_t *merge_ptr = merge->row;
   *( (uint32_t *) merge_ptr) = this->num_cols() + other->num_cols() - 1;
   merge_ptr += 4;
 
-  uint8_t *input_ptr = this->row + TABLE_ID_SIZE + 4;
+  const uint8_t *input_ptr = this->row + TABLE_ID_SIZE + 4;
   uint32_t value_len;
   for (uint32_t i = 0; i < this->num_cols(); i++) {
-    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    value_len = *( (const uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
     memcpy(merge_ptr, input_ptr, value_len);
     merge_ptr += value_len;
     input_ptr += value_len;
@@ -321,7 +565,7 @@ void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, Ne
 
   input_ptr = other->row + TABLE_ID_SIZE + 4;
   for (uint32_t i = 0; i < other->num_cols(); i++) {
-    value_len = *( (uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
+    value_len = *( (const uint32_t *) (input_ptr + TYPE_SIZE)) + HEADER_SIZE;
     if (i + 1 != secondary_join_attr) {
       memcpy(merge_ptr, input_ptr, value_len);
       merge_ptr += value_len;
@@ -330,20 +574,24 @@ void NewJoinRecord::merge(NewJoinRecord *other, uint32_t secondary_join_attr, Ne
   }
 }
 
-bool NewJoinRecord::is_primary() {
+void NewJoinRecord::init_join_attribute(int op_code) {
+  get_join_attribute(op_code, this->num_cols(),
+                     this->row + TABLE_ID_SIZE + 4,
+                     &this->join_attr);
+}
+
+const uint8_t *NewJoinRecord::get_attr(uint32_t attr_idx) const {
+  return get_attr_internal(row + TABLE_ID_SIZE, attr_idx, num_cols());
+}
+
+bool NewJoinRecord::is_primary() const {
   return cmp(this->row, primary_id, TABLE_ID_SIZE) == 0;
 }
 
-bool NewJoinRecord::is_dummy() {
+bool NewJoinRecord::is_dummy() const {
   return test_dummy(this->row, JOIN_ROW_UPPER_BOUND) == 0;
 }
 
 void NewJoinRecord::reset_to_dummy() {
   write_dummy(this->row, JOIN_ROW_UPPER_BOUND);
-}
-
-void NewJoinRecord::init_join_attribute(int op_code) {
-  get_join_attribute(op_code, this->num_cols(),
-                     this->row + TABLE_ID_SIZE + 4,
-                     &this->join_attr);
 }

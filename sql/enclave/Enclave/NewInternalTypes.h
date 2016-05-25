@@ -37,6 +37,10 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
 
 uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols);
 
+bool attr_less_than(const uint8_t *a, const uint8_t *b);
+
+uint32_t attr_key_prefix(const uint8_t *attr);
+
 /**
  * A standard record (row) in plaintext. Supports reading and writing to and from plaintext and
  * encrypted formats. It can be reused for multiple rows by alternating calls to read and write.
@@ -82,11 +86,17 @@ public:
   /** Write out this record in plaintext. Return the number of bytes written. */
   uint32_t write_decrypted(uint8_t *output) const;
 
+  bool less_than(const NewRecord *other, int op_code) const;
+
+  uint32_t get_key_prefix(int op_code) const;
+
   /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
    * the attribute type.
    */
   const uint8_t *get_attr(uint32_t attr_idx) const;
+
+  uint8_t get_attr_type(uint32_t attr_idx) const;
 
   /** Get the length of the attribute at the specified index (1-indexed). */
   uint32_t get_attr_len(uint32_t attr_idx) const;
@@ -186,7 +196,7 @@ public:
   uint32_t read_encrypted(uint8_t *input);
 
   /** Convert a standard record into a join record. */
-  void set(bool is_primary, NewRecord *record);
+  void set(bool is_primary, const NewRecord *record);
 
   /** Copy the contents of other into this. */
   void set(NewJoinRecord *other);
@@ -194,21 +204,31 @@ public:
   /** Encrypt and write out the record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
 
+  bool less_than(const NewJoinRecord *other, int op_code) const;
+
+  uint32_t get_key_prefix(int op_code) const;
+
   /**
    * Given two join rows, concatenate their fields into merge, dropping the join attribute from the
    * foreign row. The attribute to drop (secondary_join_attr) is specified as a 1-indexed column
    * number from the foreign row.
    */
-  void merge(NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge);
+  void merge(const NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) const;
 
   /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);
 
+  /**
+   * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
+   * the attribute type.
+   */
+  const uint8_t *get_attr(uint32_t attr_idx) const;
+
   /** Return true if the record belongs to the primary table based on its table ID. */
-  bool is_primary();
+  bool is_primary() const;
 
   /** Return true if the record contains all zeros, indicating a dummy record. */
-  bool is_dummy();
+  bool is_dummy() const;
 
   /**
    * Zero out the contents of this record. This causes sort-merge join to treat it as a dummy
@@ -216,14 +236,67 @@ public:
    */
   void reset_to_dummy();
 
-  uint32_t num_cols() {
-    return *( (uint32_t *) (row + TABLE_ID_SIZE));
+  uint32_t num_cols() const {
+    return *( (const uint32_t *) (row + TABLE_ID_SIZE));
+  }
+
+  void print() const {
+    NewRecord rec;
+    rec.read_plaintext(row + TABLE_ID_SIZE);
+    printf("JoinRecord[table=%s, row=", is_primary() ? "primary" : "foreign");
+    rec.print();
+    printf("]\n");
   }
 
   join_attribute join_attr;
 
 private:
   uint8_t *row;
+};
+
+template<typename RecordType>
+class SortPointer {
+public:
+  SortPointer() : rec(NULL), key_prefix(0) {}
+  bool is_valid() const {
+    return rec != NULL;
+  }
+  void init(RecordType *rec) {
+    this->rec = rec;
+  }
+  void set(const SortPointer *other) {
+    rec->set(other->rec);
+    key_prefix = other->key_prefix;
+  }
+  void clear() {
+    rec = NULL;
+    key_prefix = 0;
+  }
+  uint32_t read_encrypted(uint8_t *input, int op_code) {
+    uint32_t result = rec->read_encrypted(input);
+    key_prefix = rec->get_key_prefix(op_code);
+    return result;
+  }
+  uint32_t write_encrypted(uint8_t *output) {
+    return rec->write_encrypted(output);
+  }
+  bool less_than(const SortPointer *other, int op_code) const {
+    if (key_prefix < other->key_prefix) {
+      return true;
+    } else if (key_prefix > other->key_prefix) {
+      return false;
+    } else {
+      return rec->less_than(other->rec, op_code);
+    }
+  }
+  void print() const {
+    printf("SortPointer[key_prefix=%d, rec=", key_prefix);
+    rec->print();
+    printf("]\n");
+  }
+private:
+  RecordType *rec;
+  uint32_t key_prefix;
 };
 
 /**
@@ -700,6 +773,10 @@ public:
   void read(NewJoinRecord *row) {
     buf += row->read_encrypted(buf);
   }
+  template<typename RecordType>
+  void read(SortPointer<RecordType> *ptr, int op_code) {
+    buf += ptr->read_encrypted(buf, op_code);
+  }
   template<typename AggregatorType>
   void read(AggregatorType *agg) {
     buf += agg->read_encrypted(buf);
@@ -727,6 +804,10 @@ public:
   }
   void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);
+  }
+  template<typename RecordType>
+  void write(SortPointer<RecordType> *ptr) {
+    buf += ptr->write_encrypted(buf);
   }
   template<typename AggregatorType>
   void write(AggregatorType *agg) {

@@ -197,7 +197,7 @@ void write_dummy(uint8_t *dest, uint32_t len) {
 }
 
 
-int test_dummy(uint8_t *src, uint32_t len) {
+int test_dummy(const uint8_t *src, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     if (*(src + i) != 0) {
       return -1;
@@ -482,4 +482,16 @@ uint32_t get_plaintext_padded_row_size(uint8_t *row) {
   }
 
   return len;
+}
+
+int log_2(int value) {
+  double dvalue = (double) value;
+  int log_value = (int) ceil(log(dvalue) / log(2.0));
+  return log_value;
+}
+
+int pow_2(int value) {
+  double dvalue = (double) value;
+  int pow_value = (int) pow(2, dvalue);
+  return pow_value;
 }

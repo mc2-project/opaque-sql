@@ -585,9 +585,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     return ret;
   }
 
-  uint8_t *scratch = (uint8_t *) malloc(num_items * (ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND));
-
-
   for (uint32_t i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
   }
@@ -606,7 +603,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
       scoped_timer timer(&t);
       sgx_check("Single Partition Oblivious Sort",
                 ecall_external_oblivious_sort(
-                  eid, op_code, 1, buffer_list, buffer_sizes, num_rows, scratch));
+                  eid, op_code, 1, buffer_list, buffer_sizes, num_rows));
     }
 
     double t_ms = ((double) t) / 1000;
@@ -673,7 +670,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
       scoped_timer timer(&t);
       sgx_check("External Oblivious Sort",
                 ecall_external_oblivious_sort(eid, op_code, num_part,
-                                              buffer_list, buffer_sizes, num_rows, scratch));
+                                              buffer_list, buffer_sizes, num_rows));
     }
 
     double t_ms = ((double) t) / 1000;
@@ -691,7 +688,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   env->ReleaseByteArrayElements(input, ptr, 0);
 
   free(input_copy);
-  free(scratch);
 
   return ret;
 }
@@ -1073,8 +1069,6 @@ void test_enclave_sort() {
   printf("num items: %u, single_row_size is %u, total data sorted: %u\n", total_num_rows, single_row_size, total_num_rows * single_row_size);
   uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
 
-  uint8_t *enc_data = (uint8_t *) malloc(ROW_UPPER_BOUND * total_num_rows + ENC_HEADER_SIZE * total_num_rows);
-
   uint64_t t = 0;
 
   uint8_t *input_rows_ptr = input_rows;
@@ -1110,8 +1104,7 @@ void test_enclave_sort() {
       scoped_timer timer(&t);
       sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
                                                           num_part,
-                                                          buffer_list, buffer_sizes, num_rows,
-                                                          enc_data);
+                                                          buffer_list, buffer_sizes, num_rows);
       print_error_message(status);
     }
 
@@ -1148,8 +1141,7 @@ void test_enclave_sort() {
       scoped_timer timer(&t);
       sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
                                                           num_part,
-                                                          buffer_list, buffer_sizes, num_rows,
-                                                          enc_data);
+                                                          buffer_list, buffer_sizes, num_rows);
       print_error_message(status);
     }
 
@@ -1158,8 +1150,6 @@ void test_enclave_sort() {
   }
 
   decrypt_and_print(input_rows, total_num_rows, num_cols);
-
-  free(enc_data);
 }
 
 void test_encryption_perf(int argc, char *argv[]) {

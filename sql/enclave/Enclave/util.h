@@ -36,7 +36,7 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 void clear(uint8_t *dest, uint32_t len);
 
 void write_dummy(uint8_t *dest, uint32_t len);
-int test_dummy(uint8_t *src, uint32_t len);
+int test_dummy(const uint8_t *src, uint32_t len);
 
 void find_attribute(uint8_t *row, uint32_t length, uint32_t num_cols,
                     uint32_t attr_num,
@@ -90,5 +90,9 @@ public:
 };
 
 uint32_t get_plaintext_padded_row_size(uint8_t *row);
+
+int log_2(int value);
+
+int pow_2(int value);
 
 #endif // UTIL_H
