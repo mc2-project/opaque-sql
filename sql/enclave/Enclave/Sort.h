@@ -13,7 +13,6 @@
 #include "Join.h"
 #include "Filter.h"
 #include "Project.h"
-#include "InternalTypes.h"
 
 
 

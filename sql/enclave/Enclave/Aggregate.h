@@ -8,7 +8,6 @@
 #include "math.h"
 #include "Crypto.h"
 #include "util.h"
-#include "InternalTypes.h"
 
 #ifndef AGGREGATE_H
 #define AGGREGATE_H

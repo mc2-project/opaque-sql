@@ -38,7 +38,6 @@
 #include "Filter.h"
 #include "Project.h"
 #include "ObliviousSort.h"
-#include "InternalTypes.h"
 
 #include "Enclave_t.h"
 

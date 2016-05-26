@@ -1,5 +1,4 @@
 #include "Crypto.h"
-#include "InternalTypes.h"
 #include "NewInternalTypes.h"
 #include "math.h"
 #include "sgx_trts.h"

@@ -1,7 +1,5 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
-#include "InternalTypes.h"
-#include "Join.h"
 #include "util.h"
 
 class ProjectAttributes;

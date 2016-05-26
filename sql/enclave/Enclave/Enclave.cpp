@@ -206,11 +206,6 @@ void ecall_aggregate_step2(int op_code,
 
 /**** BEGIN Join ****/
 
-size_t join_row_size(const uint8_t *join_row) {
-  (void)join_row;
-  return (size_t) (enc_size(JOIN_ROW_UPPER_BOUND));
-}
-
 void ecall_join_sort_preprocess(int op_code,
                                 uint8_t *table_id,
                                 uint8_t *input_row, uint32_t input_row_len,
