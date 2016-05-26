@@ -184,7 +184,7 @@ public:
   static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
   static constexpr uint8_t *foreign_id = (uint8_t *) "bbbbbbbb";
 
-  NewJoinRecord() : join_attr() {
+  NewJoinRecord() : join_attr(NULL) {
     row = (uint8_t *) calloc(JOIN_ROW_UPPER_BOUND, sizeof(uint8_t));
   }
 
@@ -218,6 +218,9 @@ public:
   /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);
 
+  /** Return true if both records have the same join attribute. */
+  bool join_attr_equals(const NewJoinRecord *other) const;
+
   /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
    * the attribute type.
@@ -248,10 +251,9 @@ public:
     printf("]\n");
   }
 
-  join_attribute join_attr;
-
 private:
   uint8_t *row;
+  const uint8_t *join_attr; // pointer into row
 };
 
 template<typename RecordType>

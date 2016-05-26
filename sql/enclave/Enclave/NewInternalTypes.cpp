@@ -497,7 +497,11 @@ void NewJoinRecord::set(bool is_primary, const NewRecord *record) {
 
 void NewJoinRecord::set(NewJoinRecord *other) {
   memcpy(this->row, other->row, JOIN_ROW_UPPER_BOUND);
-  this->join_attr.copy_attribute(&other->join_attr);
+  if (other->join_attr != NULL) {
+    this->join_attr = this->row + (other->join_attr - other->row);
+  } else {
+    this->join_attr = NULL;
+  }
 }
 
 uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
@@ -575,9 +579,28 @@ void NewJoinRecord::merge(
 }
 
 void NewJoinRecord::init_join_attribute(int op_code) {
-  get_join_attribute(op_code, this->num_cols(),
-                     this->row + TABLE_ID_SIZE + 4,
-                     &this->join_attr);
+  uint32_t join_attr_idx = 0;
+  switch (op_code) {
+  case OP_JOIN_COL1:
+  case OP_JOIN_PAGERANK:
+    join_attr_idx = 1;
+    break;
+  case OP_JOIN_COL2:
+    join_attr_idx = 2;
+    break;
+  default:
+    printf("NewJoinRecord::init_join_attribute: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  join_attr = get_attr(join_attr_idx);
+}
+
+bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other) const {
+  if (join_attr != NULL && other->join_attr != NULL) {
+    return attrs_equal(join_attr, other->join_attr);
+  } else {
+    return false;
+  }
 }
 
 const uint8_t *NewJoinRecord::get_attr(uint32_t attr_idx) const {

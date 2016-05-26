@@ -149,13 +149,13 @@ void sort_merge_join(int op_code,
     current.init_join_attribute(op_code);
 
     if (current.is_primary()) {
-      check(primary.join_attr.compare(&current.join_attr) != 0,
+      check(!primary.join_attr_equals(&current),
             "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
             "the primary table had the same join attribute\n");
       primary.set(&current); // advance to a new join attribute
       w.write(&dummy);
     } else {
-      if (primary.join_attr.compare(&current.join_attr) != 0) {
+      if (!primary.join_attr_equals(&current)) {
         w.write(&dummy); // drop any foreign table rows without a matching primary table row
       } else {
         primary.merge(&current, secondary_join_attr, &merge);
@@ -167,34 +167,4 @@ void sort_merge_join(int op_code,
   w.close();
   *actual_output_length = w.bytes_written();
   return;
-}
-
-// given a decrypted row and an opcode, extract the join attribute
-void get_join_attribute(int op_code,
-                        uint32_t num_cols, uint8_t *row,
-                        join_attribute *join_attr) {
-  join_attr->reset();
-  uint8_t *row_ptr = row;
-  uint32_t total_value_len = 0;
-  uint32_t join_attr_idx = 0;
-
-  if (op_code == OP_JOIN_COL1 || op_code == OP_JOIN_PAGERANK) {
-    join_attr_idx = 1;
-  } else if (op_code == OP_JOIN_COL2) {
-    join_attr_idx = 2;
-  } else {
-    printf("get_join_attribute: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  // Join both tables on join_attr
-  for (uint32_t i = 0; i < num_cols; i++) {
-    total_value_len = *( (uint32_t *) (row_ptr + TYPE_SIZE)) + TYPE_SIZE + 4;
-    if (i + 1 == join_attr_idx) {
-      join_attr->new_attribute(row_ptr, total_value_len);
-    } else {
-      // TODO: dummy write
-    }
-    row_ptr += total_value_len;
-  }
 }
