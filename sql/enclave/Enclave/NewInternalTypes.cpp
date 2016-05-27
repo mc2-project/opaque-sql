@@ -383,6 +383,23 @@ uint32_t NewRecord::get_key_prefix(int op_code) const {
   return 0;
 }
 
+uint32_t NewRecord::row_upper_bound() const {
+  uint32_t result = 0;
+
+  const uint8_t *row_ptr = row;
+  row_ptr += 4;
+  result += 4;
+
+  for (uint32_t i = 0; i < num_cols(); i++) {
+    uint8_t type = *row_ptr; row_ptr++; result++;
+    uint32_t len = *reinterpret_cast<const uint32_t *>(row_ptr); row_ptr += 4; result += 4;
+    row_ptr += len;
+    result += attr_upper_bound(type);
+  }
+
+  return result;
+}
+
 uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols) {
   check(attr_idx > 0 && attr_idx <= num_cols,
         "attr_idx %d out of bounds (%d cols)\n", attr_idx, num_cols);
@@ -559,6 +576,10 @@ uint32_t NewJoinRecord::get_key_prefix(int op_code) const {
     assert(false);
   }
   return 0;
+}
+
+uint32_t NewJoinRecord::row_upper_bound() const {
+  return JOIN_ROW_UPPER_BOUND;
 }
 
 void NewJoinRecord::merge(

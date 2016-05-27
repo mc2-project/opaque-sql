@@ -95,6 +95,12 @@ public:
   uint32_t get_key_prefix(int op_code) const;
 
   /**
+   * Return the maximum number of bytes that could be written by write() for any row with the same
+   * schema as this row.
+   */
+  uint32_t row_upper_bound() const;
+
+  /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
    * the attribute type.
    */
@@ -208,7 +214,7 @@ public:
   /** Encrypt and write out the record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
 
-/** Convert a standard record into a join record. */
+  /** Convert a standard record into a join record. */
   void set(bool is_primary, const NewRecord *record);
 
   /** Copy the contents of other into this. */
@@ -217,6 +223,12 @@ public:
   bool less_than(const NewJoinRecord *other, int op_code) const;
 
   uint32_t get_key_prefix(int op_code) const;
+
+  /**
+   * Return the maximum number of bytes that could be written by write() for any row with the same
+   * schema as this row.
+   */
+  uint32_t row_upper_bound() const;
 
   /**
    * Given two join rows, concatenate their fields into merge, dropping the join attribute from the
@@ -846,14 +858,15 @@ private:
 };
 
 /**
- * Manages encrypting and writing out multiple rows to an output buffer.
+ * Manages encrypting and writing out multiple rows to an output buffer. All rows must share the
+ * same schema.
  *
  * After writing all rows, make sure to call close().
  */
 class RowWriter {
 public:
   RowWriter(uint8_t *buf)
-    : buf_start(buf), buf_pos(buf), block_num_rows(0), block_padded_len(0) {
+    : buf_start(buf), buf_pos(buf), row_upper_bound(0), block_num_rows(0), block_padded_len(0) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
   }
@@ -869,14 +882,20 @@ public:
           "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
     block_pos += delta;
     block_num_rows++;
-    block_padded_len += ROW_UPPER_BOUND;
+    if (row_upper_bound == 0) {
+      row_upper_bound = row->row_upper_bound();
+    }
+    block_padded_len += row_upper_bound;
   }
 
   void write(NewJoinRecord *row) {
     maybe_finish_block(JOIN_ROW_UPPER_BOUND);
     block_pos += row->write(block_pos);
     block_num_rows++;
-    block_padded_len += JOIN_ROW_UPPER_BOUND;
+    if (row_upper_bound == 0) {
+      row_upper_bound = row->row_upper_bound();
+    }
+    block_padded_len += row_upper_bound;
   }
 
   template<typename RecordType>
@@ -885,10 +904,10 @@ public:
   }
 
   void finish_block() {
-    *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(MAX_BLOCK_SIZE); buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(block_padded_len); buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
-    encrypt(block_start, MAX_BLOCK_SIZE, buf_pos);
-    buf_pos += enc_size(MAX_BLOCK_SIZE);
+    encrypt(block_start, block_padded_len, buf_pos);
+    buf_pos += enc_size(block_padded_len);
 
     block_pos = block_start;
     block_num_rows = 0;
@@ -912,6 +931,7 @@ private:
 
   uint8_t * const buf_start;
   uint8_t *buf_pos;
+  uint32_t row_upper_bound;
 
   uint8_t *block_start;
   uint8_t *block_pos;
