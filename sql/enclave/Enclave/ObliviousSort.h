@@ -12,7 +12,7 @@
 template<typename RecordType>
 void sort_single_buffer(
   int op_code, uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
-  uint32_t sort_ptrs_len);
+  uint32_t sort_ptrs_len, uint32_t *num_comparisons, uint32_t *num_deep_comparisons);
 
 /**
  * Decrypt two sorted, encrypted buffers, merge them using sort_ptrs as scratch space, and
@@ -22,7 +22,8 @@ void sort_single_buffer(
 template<typename RecordType>
 void merge(
   int op_code, uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
-  SortPointer<RecordType> *sort_ptrs);
+  SortPointer<RecordType> *sort_ptrs, uint32_t sort_ptrs_len, uint32_t *num_comparisons,
+  uint32_t *num_deep_comparisons);
 
 /**
  * Sort an arbitrary number of encrypted buffers and write the results back to the same buffers. The

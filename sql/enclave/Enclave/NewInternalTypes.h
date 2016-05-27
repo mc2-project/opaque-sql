@@ -290,12 +290,13 @@ public:
     key_prefix = rec->get_key_prefix(op_code);
     return result;
   }
-  bool less_than(const SortPointer *other, int op_code) const {
+  bool less_than(const SortPointer *other, int op_code, uint32_t *num_deep_comparisons) const {
     if (key_prefix < other->key_prefix) {
       return true;
     } else if (key_prefix > other->key_prefix) {
       return false;
     } else {
+      (*num_deep_comparisons)++;
       return rec->less_than(other->rec, op_code);
     }
   }
