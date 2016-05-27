@@ -210,19 +210,22 @@ void ecall_join_sort_preprocess(int op_code,
                                 uint8_t *table_id,
                                 uint8_t *input_row, uint32_t input_row_len,
                                 uint32_t num_rows,
-                                uint8_t *output_row, uint32_t output_row_len) {
+                                uint8_t *output_row, uint32_t output_row_len,
+                                uint32_t *actual_output_len) {
   (void)op_code;
-  join_sort_preprocess(table_id, input_row, input_row_len, num_rows, output_row, output_row_len);
+  join_sort_preprocess(table_id, input_row, input_row_len, num_rows, output_row, output_row_len,
+                       actual_output_len);
 }
 
 void ecall_scan_collect_last_primary(int op_code,
                                      uint8_t *input_rows, uint32_t input_rows_length,
                                      uint32_t num_rows,
-                                     uint8_t *output, uint32_t output_length) {
+                                     uint8_t *output, uint32_t output_length,
+                                     uint32_t *actual_output_len) {
   scan_collect_last_primary(op_code,
                             input_rows, input_rows_length,
                             num_rows,
-                            output, output_length);
+                            output, output_length, actual_output_len);
 }
 
 void ecall_process_join_boundary(int op_code,
@@ -267,7 +270,64 @@ void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
   *actual_size = (output_ptr - output);
 }
 
+template<typename RecordType>
+void create_block(
+  uint8_t *rows, uint32_t rows_len, uint32_t num_rows,
+  uint8_t *block, uint32_t block_len, uint32_t *actual_size) {
+  (void)rows_len;
+  (void)block_len;
 
+  IndividualRowReader r(rows);
+  RowWriter w(block);
+  RecordType cur;
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    w.write(&cur);
+  }
+  w.close();
+
+  *actual_size = w.bytes_written();
+}
+
+void ecall_create_block(
+  uint8_t *rows, uint32_t rows_len, uint32_t num_rows, bool rows_are_join_rows,
+  uint8_t *block, uint32_t block_len, uint32_t *actual_size) {
+  if (rows_are_join_rows) {
+    create_block<NewJoinRecord>(rows, rows_len, num_rows, block, block_len, actual_size);
+  } else {
+    create_block<NewRecord>(rows, rows_len, num_rows, block, block_len, actual_size);
+  }
+}
+
+template<typename RecordType>
+void split_block(
+  uint8_t *block, uint32_t block_len,
+  uint8_t *rows, uint32_t rows_len, uint32_t num_rows, uint32_t *actual_size) {
+  (void)rows_len;
+  (void)block_len;
+
+  RowReader r(block);
+  IndividualRowWriter w(rows);
+  RecordType cur;
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    w.write(&cur);
+  }
+  w.close();
+
+  *actual_size = w.bytes_written();
+}
+
+void ecall_split_block(
+  uint8_t *block, uint32_t block_len,
+  uint8_t *rows, uint32_t rows_len, uint32_t num_rows, bool rows_are_join_rows,
+  uint32_t *actual_size) {
+  if (rows_are_join_rows) {
+    split_block<NewJoinRecord>(block, block_len, rows, rows_len, num_rows, actual_size);
+  } else {
+    split_block<NewRecord>(block, block_len, rows, rows_len, num_rows, actual_size);
+  }
+}
 
 void ecall_stream_encryption_test() {
 

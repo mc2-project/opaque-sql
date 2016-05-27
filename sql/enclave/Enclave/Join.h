@@ -24,12 +24,14 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 void join_sort_preprocess(uint8_t *table_id,
                           uint8_t *input_row, uint32_t input_row_len,
                           uint32_t num_rows,
-                          uint8_t *output_row, uint32_t output_row_len);
+                          uint8_t *output_row, uint32_t output_row_len,
+                          uint32_t *actual_output_len);
 
 void scan_collect_last_primary(int op_code,
                                uint8_t *input_rows, uint32_t input_rows_length,
                                uint32_t num_rows,
-                               uint8_t *output, uint32_t output_length);
+                               uint8_t *output, uint32_t output_length,
+                               uint32_t *actual_output_len);
 
 void process_join_boundary(int op_code,
                            uint8_t *input_rows, uint32_t input_rows_length,

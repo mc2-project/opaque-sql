@@ -21,7 +21,7 @@ uint32_t attr_upper_bound(uint8_t attr);
  *   Invokes OCALL to display the enclave buffer to the terminal.
  */
 
-void printf(const char *fmt, ...);
+int printf(const char *fmt, ...);
 
 void print_bytes(uint8_t *ptr, uint32_t len);
 

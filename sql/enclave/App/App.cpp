@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <time.h>
+#include <vector>
 
 #ifdef _MSC_VER
 # include <Shlobj.h>
@@ -49,7 +50,6 @@
 #include "sgx_tcrypto.h"
 #include "define.h"
 #include "common.h"
-
 
 class scoped_timer {
 
@@ -589,98 +589,44 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     input_copy[i] = *(ptr + i);
   }
 
-  if (input_len < MAX_SINGLE_SORT_BUFFER) {
+  // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> buffer_sizes;
+  std::vector<uint32_t> num_rows;
 
-    uint8_t *buffer_list[1] = {input_copy};
-    uint32_t buffer_sizes[1] = {input_len};
-    uint32_t num_rows[1];
-    num_rows[0] = (uint32_t) num_items;
+  BlockReader r(input_copy, input_len);
+  uint8_t *cur_block;
+  uint32_t cur_block_size;
+  uint32_t cur_block_num_rows;
+  uint32_t total_rows = 0;
+  r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
+  while (cur_block != NULL) {
+    uint8_t *cur_buffer = cur_block;
+    uint32_t cur_buffer_size = cur_block_size;
+    uint32_t cur_buffer_num_rows = cur_block_num_rows;
 
-    perf("Single partition sort, num_items: %u\n", num_items);
+    r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
+    while (cur_buffer_size + cur_block_size <= MAX_SINGLE_SORT_BUFFER && cur_block != NULL) {
+      cur_buffer_size += cur_block_size;
+      cur_buffer_num_rows += cur_block_num_rows;
 
-    uint64_t t = 0;
-    {
-      scoped_timer timer(&t);
-      sgx_check("Single Partition Oblivious Sort",
-                ecall_external_oblivious_sort(
-                  eid, op_code, 1, buffer_list, buffer_sizes, num_rows));
+      r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
     }
 
-    double t_ms = ((double) t) / 1000;
-    (void)t_ms;
-    perf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
-    //printf("Sort took %f ms\n", t_ms);
-
-  } else {
-
-    perf("Multiple partition sorting\n");
-
-    // try to split the input into partitions if it's too big
-    uint32_t element_size = input_len / num_items;
-    uint32_t elements_per_part = 0;
-
-    if (get_sort_operation((int) op_code) == SORT_SORT) {
-
-      uint8_t *row_ptr = input_copy;
-      uint32_t len = 0;
-      uint32_t num_cols = *( (uint32_t *) row_ptr);
-      row_ptr += 4;
-
-      uint32_t enc_attr_len = 0;
-
-      for (uint32_t i = 0; i < num_cols; i++) {
-        enc_attr_len = *( (uint32_t *) row_ptr);
-        len += enc_attr_len - ENC_HEADER_SIZE;
-        row_ptr += 4 + enc_attr_len;
-      }
-
-      uint32_t single_row_size = len;
-      uint32_t padded_single_row_size = (4 + single_row_size / 16) * 16;
-      elements_per_part = MAX_SORT_BUFFER / padded_single_row_size;
-    } else {
-      elements_per_part = PAR_MAX_ELEMENTS;
-    }
-
-    uint32_t num_part = num_items / elements_per_part;
-    if (input_len % elements_per_part != 0) {
-      num_part += 1;
-    }
-
-    uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_part);
-    uint32_t *buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
-    uint32_t *num_rows = (uint32_t *) malloc(sizeof(uint32_t) * num_part);
-
-    uint8_t *input_ptr = input_copy;
-
-    for (uint32_t i = 0 ; i < num_part; i++) {
-      buffer_list[i] = input_ptr;
-      if (i == num_part - 1) {
-        num_rows[i] = num_items - elements_per_part * i;
-        buffer_sizes[i] = input_len - (input_ptr - input_copy);
-      } else {
-        num_rows[i] = elements_per_part;
-        buffer_sizes[i] = elements_per_part * element_size;
-      }
-
-      input_ptr += buffer_sizes[i];
-    }
-
-    uint64_t t = 0;
-    {
-      scoped_timer timer(&t);
-      sgx_check("External Oblivious Sort",
-                ecall_external_oblivious_sort(eid, op_code, num_part,
-                                              buffer_list, buffer_sizes, num_rows));
-    }
-
-    double t_ms = ((double) t) / 1000;
-    (void)t_ms;
-    perf("Sorting %u items, input_len is %u; sorting took %f ms\n", num_items, input_len, t_ms);
-
-    free(buffer_list);
-    free(buffer_sizes);
-    free(num_rows);
+    buffer_list.push_back(cur_buffer);
+    buffer_sizes.push_back(cur_buffer_size);
+    num_rows.push_back(cur_buffer_num_rows);
+    total_rows += cur_buffer_num_rows;
+    debug("ObliviousSort: Buffer %lu: %d bytes, %d rows\n",
+          buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
   }
+
+  perf("ObliviousSort: Input (%d bytes, %d rows) split into %lu buffers with %d rows\n",
+       input_len, num_items, buffer_list.size(), total_rows);
+
+  sgx_check("External Oblivious Sort",
+            ecall_external_oblivious_sort(
+              eid, op_code, buffer_list.size(), buffer_list.data(), buffer_sizes.data(), num_rows.data()));
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
@@ -850,7 +796,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
 
   uint8_t *enc_table_id_ptr = (uint8_t *) env->GetByteArrayElements(enc_table_id, &if_copy);
 
-  // try to call on each row individually
+  uint32_t actual_output_len = 0;
 
   sgx_check("JoinSortPreprocess",
             ecall_join_sort_preprocess(
@@ -859,11 +805,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
               enc_table_id_ptr,
               input_rows_ptr, input_rows_length,
               num_rows,
-              output_rows_ptr, output_rows_length));
+              output_rows_ptr, output_rows_length, &actual_output_len));
 
 
-  jbyteArray ret = env->NewByteArray(output_rows_length);
-  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+  jbyteArray ret = env->NewByteArray(actual_output_len);
+  env->SetByteArrayRegion(ret, 0, actual_output_len, (jbyte *) output_rows);
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
@@ -919,16 +865,18 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
   uint32_t output_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
   uint8_t *output = (uint8_t *) malloc(output_length);
 
+  uint32_t actual_output_len = 0;
+
   sgx_check("ScanCollectLastPrimary",
             ecall_scan_collect_last_primary(
               eid,
               op_code,
               input_rows_ptr, input_rows_length,
               num_rows,
-              output, output_length));
+              output, output_length, &actual_output_len));
 
-  jbyteArray ret = env->NewByteArray(output_length);
-  env->SetByteArrayRegion(ret, 0, output_length, (jbyte *) output);
+  jbyteArray ret = env->NewByteArray(actual_output_len);
+  env->SetByteArrayRegion(ret, 0, actual_output_len, (jbyte *) output);
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
@@ -979,6 +927,72 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 
   return ret;
 
+}
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_CreateBlock(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray rows, jint num_rows,
+  jboolean rows_are_join_rows) {
+  (void)obj;
+
+  uint32_t rows_len = (uint32_t) env->GetArrayLength(rows);
+  jboolean if_copy = false;
+  uint8_t *rows_ptr = (uint8_t *) env->GetByteArrayElements(rows, &if_copy);
+
+  uint32_t block_len = num_rows * (ROW_UPPER_BOUND + 8);
+  uint8_t *block = (uint8_t *) malloc(block_len);
+
+  debug("CreateBlock: num_rows=%d, rows_len=%d, block_len=%d\n", num_rows, rows_len, block_len);
+
+  uint32_t actual_size = 0;
+
+  sgx_check(
+    "CreateBlock",
+    ecall_create_block(eid, rows_ptr, rows_len, num_rows, rows_are_join_rows,
+                       block, block_len, &actual_size));
+
+  debug("CreateBlock: actual_size=%d\n", actual_size);
+
+  jbyteArray result = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(result, 0, actual_size, (jbyte *) block);
+
+  env->ReleaseByteArrayElements(rows, (jbyte *) rows_ptr, 0);
+
+  free(block);
+
+  return result;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray block, jint num_rows,
+  jboolean rows_are_join_rows) {
+  (void)obj;
+
+  uint32_t block_len = (uint32_t) env->GetArrayLength(block);
+  jboolean if_copy = false;
+  uint8_t *block_ptr = (uint8_t *) env->GetByteArrayElements(block, &if_copy);
+
+  uint32_t rows_len = num_rows * ENC_ROW_UPPER_BOUND;
+  uint8_t *rows = (uint8_t *) malloc(rows_len);
+
+  debug("SplitBlock: num_rows=%d, block_len=%d, rows_len=%d\n", num_rows, block_len, rows_len);
+
+  uint32_t actual_size = 0;
+
+  sgx_check(
+    "SplitBlock",
+    ecall_split_block(eid, block_ptr, block_len,
+                      rows, rows_len, num_rows, rows_are_join_rows, &actual_size));
+
+  debug("SplitBlock: actual_size=%d\n", actual_size);
+
+  jbyteArray result = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(result, 0, actual_size, (jbyte *) rows);
+
+  env->ReleaseByteArrayElements(block, (jbyte *) block_ptr, 0);
+
+  free(rows);
+
+  return result;
 }
 
 uint32_t enc_size(uint32_t len) {
@@ -1054,102 +1068,6 @@ void decrypt_and_print(uint8_t *row, uint32_t num_rows, uint32_t cols) {
       ptr += enc_len;
     }
   }
-}
-
-void test_enclave_sort() {
-  // use op_code = OP_SORT_COL2
-
-  srand(time(NULL));
-
-  int op_code = OP_SORT_COL2;
-  uint32_t total_num_rows = 250 * 1024;
-  uint32_t num_cols = 3;
-  // [int][string][int]
-  uint32_t single_row_size = 4 + num_cols * 4 + enc_size(HEADER_SIZE + 4) * 2 + enc_size(HEADER_SIZE + STRING_UPPER_BOUND);
-  printf("num items: %u, single_row_size is %u, total data sorted: %u\n", total_num_rows, single_row_size, total_num_rows * single_row_size);
-  uint8_t *input_rows = (uint8_t *) malloc(single_row_size * total_num_rows);
-
-  uint64_t t = 0;
-
-  uint8_t *input_rows_ptr = input_rows;
-  uint32_t offset = 0;
-
-  {
-    scoped_timer timer(&t);
-    for (uint32_t i = 0; i < total_num_rows; i++) {
-      offset = format_encrypt_row(input_rows_ptr, i, num_cols);
-      input_rows_ptr += offset;
-    }
-  }
-
-  double t_ms = ((double) t) / 1000;
-  printf("Encryption took %f ms\n", t_ms);
-
-  printf("Encryption done\n");
-  // split the input rows into 64 partitions of (1024 * 4) rows
-  if (total_num_rows * ROW_UPPER_BOUND < MAX_SINGLE_SORT_BUFFER) {
-    printf("Single round sort called\n");
-
-    const uint32_t num_part = 1;
-    uint8_t *buffer_list[1];
-    uint32_t buffer_sizes[1];
-    uint32_t num_rows[1];
-
-    buffer_list[0] = input_rows;
-    buffer_sizes[0] = single_row_size * total_num_rows;
-    num_rows[0] = total_num_rows;
-
-    t = 0;
-    {
-      scoped_timer timer(&t);
-      sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
-                                                          num_part,
-                                                          buffer_list, buffer_sizes, num_rows);
-      print_error_message(status);
-    }
-
-    t_ms = ((double) t) / 1000;
-    printf("Sort took %f ms\n", t_ms);
-
-
-  } else {
-    printf("Multi-round sort called\n");
-
-    const uint32_t num_part = total_num_rows / PAR_MAX_ELEMENTS + 1;
-
-    uint8_t *buffer_list[num_part];
-    uint32_t buffer_sizes[num_part];
-    uint32_t num_rows[num_part];
-
-    input_rows_ptr = input_rows;
-
-    for (uint32_t i = 0 ; i < num_part; i++) {
-      buffer_list[i] = input_rows_ptr;
-      if (i == num_part - 1) {
-        num_rows[i] = total_num_rows - PAR_MAX_ELEMENTS * i;
-        buffer_sizes[i] = single_row_size * total_num_rows - (input_rows_ptr - input_rows);
-      } else {
-        num_rows[i] = PAR_MAX_ELEMENTS;
-        buffer_sizes[i] = PAR_MAX_ELEMENTS * single_row_size;
-      }
-
-      input_rows_ptr += buffer_sizes[i];
-    }
-
-    t = 0;
-    {
-      scoped_timer timer(&t);
-      sgx_status_t status = ecall_external_oblivious_sort(global_eid, op_code,
-                                                          num_part,
-                                                          buffer_list, buffer_sizes, num_rows);
-      print_error_message(status);
-    }
-
-    t_ms = ((double) t) / 1000;
-    printf("Sort took %f ms\n", t_ms);
-  }
-
-  decrypt_and_print(input_rows, total_num_rows, num_cols);
 }
 
 void test_encryption_perf(int argc, char *argv[]) {

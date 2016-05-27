@@ -236,14 +236,15 @@ object QED {
     }
   }
 
-  def encodeData(value: Array[Byte]): String = {
-    val encoded = encoder.encode(value)
-    encoded
+  def createBlock(rows: Array[Array[Byte]], rowsAreJoinRows: Boolean): Array[Byte] = {
+    val (enclave, eid) = QED.initEnclave()
+    enclave.CreateBlock(eid, QED.concatByteArrays(rows), rows.length, rowsAreJoinRows)
   }
 
-  def decodeData(value: String): Array[Byte] = {
-    val decoded = decoder.decodeBuffer(value)
-    decoded
+  def splitBlock(
+      block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Iterator[Array[Byte]] = {
+    val (enclave, eid) = QED.initEnclave()
+    QED.readRows(enclave.SplitBlock(eid, block, numRows, rowsAreJoinRows))
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
@@ -329,10 +330,6 @@ object QED {
 
   def primaryTableId(): Array[Byte] = tableId('a')
   def foreignTableId(): Array[Byte] = tableId('b')
-
-  def genAndWriteData() = {
-    // write this hard-coded set of columns to text file, in csv format
-  }
 
   def attributeIndexOf(a: Attribute, list: Seq[Attribute]): Int = {
     var i = 0

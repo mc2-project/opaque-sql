@@ -12,7 +12,8 @@
 void join_sort_preprocess(uint8_t *table_id,
                           uint8_t *input_row, uint32_t input_row_len,
                           uint32_t num_rows,
-                          uint8_t *output_row, uint32_t output_row_len) {
+                          uint8_t *output_row, uint32_t output_row_len,
+                          uint32_t *actual_output_len) {
   (void)input_row_len;
   (void)output_row_len;
 
@@ -30,12 +31,14 @@ void join_sort_preprocess(uint8_t *table_id,
   }
 
   w.close();
+  *actual_output_len = w.bytes_written();
 }
 
 void scan_collect_last_primary(int op_code,
                                uint8_t *input_rows, uint32_t input_rows_length,
                                uint32_t num_rows,
-                               uint8_t *output, uint32_t output_length) {
+                               uint8_t *output, uint32_t output_length,
+                               uint32_t *actual_output_len) {
   (void)op_code;
   (void)input_rows_length;
   (void)output_length;
@@ -51,9 +54,10 @@ void scan_collect_last_primary(int op_code,
     }
   }
 
-  RowWriter w(output);
+  IndividualRowWriter w(output);
   w.write(&last_primary);
   w.close();
+  *actual_output_len = w.bytes_written();
 }
 
 void process_join_boundary(int op_code,
@@ -65,8 +69,8 @@ void process_join_boundary(int op_code,
   (void)input_rows_length;
   (void)output_rows_size;
 
-  RowReader r(input_rows);
-  RowWriter w(output_rows);
+  IndividualRowReader r(input_rows);
+  IndividualRowWriter w(output_rows);
   NewJoinRecord prev, cur;
   cur.reset_to_dummy();
 
@@ -100,7 +104,7 @@ void sort_merge_join(int op_code,
   NewRecord dummy;
   NewRecord merge;
 
-  RowReader j_reader(join_row);
+  IndividualRowReader j_reader(join_row);
   j_reader.read(&primary);
   if (!primary.is_dummy()) {
     check(primary.is_primary(), "sort_merge_join: join_row must be marked as primary\n");

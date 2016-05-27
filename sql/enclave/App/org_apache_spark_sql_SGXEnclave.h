@@ -102,6 +102,12 @@ extern "C" {
                                                                                      jlong,
                                                                                      jbyteArray);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_CreateBlock(
+    JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
+    JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
+
 #ifdef __cplusplus
 }
 #endif

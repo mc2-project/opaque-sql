@@ -54,7 +54,7 @@ case class ConvertToBlocks(child: SparkPlan)
   override def executeBlocked() = {
     child.execute().mapPartitions { rowIter =>
       val serRows = rowIter.map(_.encSerialize).toArray
-      Iterator(Block(QED.concatByteArrays(serRows), serRows.length))
+      Iterator(Block(QED.createBlock(serRows, false), serRows.length))
     }
   }
 }
@@ -67,7 +67,8 @@ case class ConvertFromBlocks(child: OutputsBlocks)
   override def doExecute() = {
     child.executeBlocked().flatMap { block =>
       val converter = UnsafeProjection.create(schema)
-      QED.parseRows(block.bytes).map(serRow => converter(InternalRow.fromSeq(serRow)))
+      QED.splitBlock(block.bytes, block.numRows, false)
+        .map(serRow => converter(InternalRow.fromSeq(QED.parseRow(serRow))))
     }
   }
 }

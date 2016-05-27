@@ -51,7 +51,7 @@ object ObliviousSort extends java.io.Serializable {
 
     // Concatenate encrypted rows into a buffer
     val nonEmptyRows = valuesSlice.map(_.value).filter(_.length != 0)
-    val concatRows = QED.concatByteArrays(nonEmptyRows)
+    val concatRows = QED.createBlock(nonEmptyRows, opcode.isJoin)
 
     // Sort rows in enclave
     val (enclave, eid) = QED.initEnclave()
@@ -65,14 +65,7 @@ object ObliviousSort extends java.io.Serializable {
     // Copy rows back into values
     val sortedRowIter =
       if (nonEmptyRows.nonEmpty) {
-        if (opcode.isJoin) {
-          // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
-          // them evenly
-          QED.splitBytes(allRowsSorted, nonEmptyRows.length).iterator
-        } else {
-          // Rows may be different lengths but row format is standard, so we must parse each row
-          QED.readRows(allRowsSorted)
-        }
+        QED.splitBlock(allRowsSorted, nonEmptyRows.length, opcode.isJoin)
       } else {
         Iterator.empty
       }
@@ -367,10 +360,10 @@ object ObliviousSort extends java.io.Serializable {
         Block(sortedRows, block.numRows)
       }
     } else {
-      val rows = data.flatMap(block => QED.readRows(block.bytes))
+      val rows = data.flatMap(block => QED.splitBlock(block.bytes, block.numRows, opcode.isJoin))
       ColumnSort(data.context, rows, opcode).mapPartitions { rowIter =>
         val rowArray = rowIter.toArray
-        Iterator(Block(QED.concatByteArrays(rowArray), rowArray.length))
+        Iterator(Block(QED.createBlock(rowArray, opcode.isJoin), rowArray.length))
       }
     }
   }
@@ -378,98 +371,74 @@ object ObliviousSort extends java.io.Serializable {
   // this sorting algorithm is taken from "Tight Bounds on the Complexity of Parallel Sorting"
   def ColumnSort(
       sc: SparkContext, data: RDD[Array[Byte]], opcode: QEDOpcode, r_input: Int = 0, s_input: Int = 0)
-    : RDD[Array[Byte]] = {
+      : RDD[Array[Byte]] = {
 
     // let len be N
-    // divide N into r * s, where s is the number of machines, and r is the size of the 
+    // divide N into r * s, where s is the number of machines, and r is the size of the
     // constraints: s | r; r >= 2 * (s-1)^2
 
-    // Skip column sort if there's no parallelism anyway
-    if (data.partitions.length == 0) {
-      sc.emptyRDD[Array[Byte]]
-    } else if (data.partitions.length == 1) {
-      data.mapPartitions { rowIter =>
-        val (enclave, eid) = QED.initEnclave()
-        val rows = rowIter.toArray
-        val concatRows = QED.concatByteArrays(rows)
-        val sortedRows = enclave.ObliviousSort(eid, opcode.value, concatRows, 0, rows.length)
-        val sortedRowIter =
-          if (opcode.isJoin) {
-            // Row format is nonstandard but rows are guaranteed to be the same length, so we can split
-            // them evenly
-            QED.splitBytes(sortedRows, rows.length).iterator
-          } else {
-            // Rows may be different lengths but row format is standard, so we must parse each row
-            QED.readRows(sortedRows)
-          }
-        sortedRowIter
-      }
-    } else {
-      data.cache()
+    data.cache()
 
-      val len = data.count
+    val len = data.count
 
-      var s = s_input
-      var r = r_input
+    var s = s_input
+    var r = r_input
 
-      if (r_input == 0 && s_input == 0) {
-        s = Multiplier * NumMachines * NumCores
-        r = (math.ceil(len * 1.0 / s)).toInt
-      }
-
-      // println("s is " + s + ", r is " + r)
-
-      if (r < 2 * math.pow(s, 2).toInt) {
-        logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len")
-        r = 2 * math.pow(s, 2).toInt
-      }
-
-      val padded =
-        if (len != r * s) {
-          logPerf(s"Padding len from $len to ${r*s}. r=$r, s=$s")
-          assert(r * s > len)
-          val firstPartitionSize =
-            data.mapPartitionsWithIndex((index, iter) =>
-              if (index == 0) Iterator(iter.size) else Iterator(0)).collect.sum
-          val paddingSize = r * s - len.toInt
-          data.mapPartitionsWithIndex((index, iter) =>
-            if (index == 0) iter.padTo(firstPartitionSize + paddingSize, new Array[Byte](0))
-            else iter)
-        } else {
-          data
-        }
-
-      val numPartitions = NumCores * NumMachines
-      val par_data =
-        time("prepartitioning") {
-          val result = padded.zipWithIndex.map(t => (t._1, t._2.toInt))
-            .groupBy((x: (Array[Byte], Int)) => x._2 / r + 1, numPartitions).flatMap(_._2)
-            .cache()
-          result.count
-          result
-        }
-
-      val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) =>
-        ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
-
-      /* Alternative */
-      val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
-        .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
-      val par_data_i2 = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
-        .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
-      val par_data_final =
-        time("final partition sorting") {
-          val result = par_data_i2
-            .map(v => ((v._1, v._2._1), v._2._2))
-            .sortByKey()
-            .cache()
-          result.count
-          result
-        }
-      /* End Alternative */
-
-      par_data_final.map(_._2).filter(_.nonEmpty)
+    if (r_input == 0 && s_input == 0) {
+      s = Multiplier * NumMachines * NumCores
+      r = (math.ceil(len * 1.0 / s)).toInt
     }
+
+    // println("s is " + s + ", r is " + r)
+
+    if (r < 2 * math.pow(s, 2).toInt) {
+      logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len")
+      r = 2 * math.pow(s, 2).toInt
+    }
+
+    val padded =
+      if (len != r * s) {
+        logPerf(s"Padding len from $len to ${r*s}. r=$r, s=$s")
+        assert(r * s > len)
+        val firstPartitionSize =
+          data.mapPartitionsWithIndex((index, iter) =>
+            if (index == 0) Iterator(iter.size) else Iterator(0)).collect.sum
+        val paddingSize = r * s - len.toInt
+        data.mapPartitionsWithIndex((index, iter) =>
+          if (index == 0) iter.padTo(firstPartitionSize + paddingSize, new Array[Byte](0))
+          else iter)
+      } else {
+        data
+      }
+
+    val numPartitions = NumCores * NumMachines
+    val par_data =
+      time("prepartitioning") {
+        val result = padded.zipWithIndex.map(t => (t._1, t._2.toInt))
+          .groupBy((x: (Array[Byte], Int)) => x._2 / r + 1, numPartitions).flatMap(_._2)
+          .cache()
+        result.count
+        result
+      }
+
+    val par_data_1_2 = par_data.mapPartitionsWithIndex((index, x) =>
+      ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
+
+    val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
+    val par_data_i2 = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
+    val par_data_final =
+      time("final partition sorting") {
+        val result = par_data_i2
+          .map(v => ((v._1, v._2._1), v._2._2))
+          .sortByKey()
+          .cache()
+        result.count
+        result
+      }
+
+    par_data_final.map(_._2).filter(_.nonEmpty)
   }
 
   def GenRandomData(offset: Int, len: Int): Seq[(Int, Int)] ={

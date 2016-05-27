@@ -91,7 +91,11 @@ void merge(
   check(b1.ptr_is_empty && b2.ptr_is_empty,
         "merge: Violated assumptions - output is full but input remains\n");
 
-  // Write the merged result back, splitting it across buffers 1 and 2
+  // Write the merged result back, splitting it across buffers 1 and 2.
+  // Note: RowWriter must ensure that all subsets of n rows have the same size, otherwise the
+  // buffers may overrun their boundaries. For example, suppose each group of the same characters
+  // represents a row. If we merge two buffers [aaaaac] and [bbbddd] to form [aaaaabbbcddd], there
+  // is no way to split the merged result into two buffers of identical size.
   RowWriter w1(buffer1);
   for (uint32_t r = 0; r < buffer1_rows; r++) {
     w1.write(&sort_ptrs[r]);
@@ -118,10 +122,13 @@ void external_oblivious_sort(int op_code,
 
   // Maximum number of rows we will need to store in memory at a time: the contents of two buffers
   // (for merging)
-  uint32_t max_list_length = num_rows[0];
-  if (num_buffers > 1) {
-    max_list_length += num_rows[1];
+  uint32_t max_num_rows = 0;
+  for (uint32_t i = 0; i < num_buffers; i++) {
+    if (max_num_rows < num_rows[i]) {
+      max_num_rows = num_rows[i];
+    }
   }
+  uint32_t max_list_length = max_num_rows * 2;
 
   // Actual record data, in arbitrary and unchanging order
   RecordType *data = new RecordType[max_list_length];

@@ -1,4 +1,8 @@
+#include <assert.h>
+
 #include "define.h"
+
+int printf( const char* format, ... );
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -82,5 +86,26 @@ int get_sort_operation(int op_code);
       assert(result);                           \
     }                                           \
   } while (0)
+
+class BlockReader {
+public:
+  BlockReader(uint8_t *input, uint32_t input_len)
+    : input_start(input), input(input), input_len(input_len) {}
+  void read(uint8_t **block_out, uint32_t *len_out, uint32_t *num_rows_out) {
+    if (input >= input_start + input_len) {
+      *block_out = NULL;
+    } else {
+      *block_out = input;
+      *len_out = 8 + *reinterpret_cast<uint32_t *>(input);
+      *num_rows_out = *reinterpret_cast<uint32_t *>(input + 4);
+      input += *len_out;
+    }
+  }
+
+private:
+  uint8_t * const input_start;
+  uint8_t *input;
+  const uint32_t input_len;
+};
 
 #endif

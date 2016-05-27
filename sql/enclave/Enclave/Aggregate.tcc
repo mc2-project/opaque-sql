@@ -3,7 +3,7 @@
 #include "util.h"
 #include "NewInternalTypes.h"
 
-void printf(const char *fmt, ...);
+int printf(const char *fmt, ...);
 
 template<typename AggregatorType>
 void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
@@ -14,7 +14,7 @@ void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
   (void)output_rows_length;
 
   RowReader r(input_rows);
-  RowWriter w(output_rows);
+  IndividualRowWriter w(output_rows);
   NewRecord cur;
   AggregatorType a;
 
@@ -44,7 +44,7 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
   // boundaries
   uint32_t num_distinct = 0;
   {
-    RowReader r(input_rows);
+    IndividualRowReader r(input_rows);
     AggregatorType prev_last_agg, cur_last_agg;
     NewRecord cur_first_row;
     for (uint32_t i = 0; i < num_rows; i++) {
@@ -67,8 +67,8 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
   //    (b) the last partial aggregate from the previous partition (augmented with previous runs),
   //    (c) the global offset for the item involved in (b) within the set of distinct items
   //    (d) the first row of the next partition
-  RowWriter w(output_rows);
-  RowReader r(input_rows);
+  IndividualRowWriter w(output_rows);
+  IndividualRowReader r(input_rows);
   AggregatorType prev_last_agg, cur_last_agg;
   NewRecord cur_first_row, next_first_row;
   uint32_t prev_last_agg_offset = 0, cur_last_agg_offset = 0;
@@ -128,7 +128,7 @@ void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
   NewRecord cur, next;
   AggregatorType a;
 
-  RowReader boundary_info_reader(boundary_info_rows);
+  IndividualRowReader boundary_info_reader(boundary_info_rows);
   AggregatorType boundary_info;
   NewRecord next_partition_first_row;
   boundary_info_reader.read(&boundary_info);

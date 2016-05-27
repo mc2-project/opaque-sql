@@ -2,8 +2,10 @@
 
 #include "util.h"
 
-class ProjectAttributes;
-void printf(const char *fmt, ...);
+class NewJoinRecord;
+
+int printf(const char *fmt, ...);
+
 #define check(test, ...) do {                   \
     bool result = test;                         \
     if (!result) {                              \
@@ -16,7 +18,9 @@ void printf(const char *fmt, ...);
 #define NEW_INTERNAL_TYPES_H
 
 bool attrs_equal(const uint8_t *a, const uint8_t *b);
+
 uint32_t copy_attr(uint8_t *dst, const uint8_t *src);
+
 template<typename Type>
 uint32_t write_attr(uint8_t *output, Type value, bool dummy);
 template<>
@@ -49,6 +53,8 @@ uint32_t attr_key_prefix(const uint8_t *attr);
  * Note that num_cols is stored as part of the row data, unlike in the existing codebase.
  */
 class NewRecord {
+  friend class NewJoinRecord;
+
 public:
   NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
 
@@ -72,17 +78,17 @@ public:
   /** Append this record with all attributes from the specified record. */
   void append(const NewRecord *other);
 
+  /** Read a plaintext row into this record. Return the number of bytes read. */
+  uint32_t read(const uint8_t *input);
+
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
   uint32_t read_encrypted(uint8_t *input);
 
-  /** Read a plaintext row into this record. Return the number of bytes read. */
-  uint32_t read_plaintext(const uint8_t *input);
+  /** Write out this record in plaintext. Return the number of bytes written. */
+  uint32_t write(uint8_t *output) const;
 
   /** Encrypt and write out this record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
-
-  /** Write out this record in plaintext. Return the number of bytes written. */
-  uint32_t write_decrypted(uint8_t *output) const;
 
   bool less_than(const NewRecord *other, int op_code) const;
 
@@ -156,7 +162,7 @@ public:
     return *( (uint32_t *) row);
   }
 
-// private:
+private:
   void set_num_cols(uint32_t num_cols) {
     *reinterpret_cast<uint32_t *>(row) = num_cols;
   }
@@ -190,17 +196,23 @@ public:
     free(row);
   }
 
+  /** Read a plaintext row into this record. Return the number of bytes read. */
+  uint32_t read(uint8_t *input);
+
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
   uint32_t read_encrypted(uint8_t *input);
 
-  /** Convert a standard record into a join record. */
+  /** Write out the record in plaintext, returning the number of bytes written. */
+  uint32_t write(uint8_t *output);
+
+  /** Encrypt and write out the record, returning the number of bytes written. */
+  uint32_t write_encrypted(uint8_t *output);
+
+/** Convert a standard record into a join record. */
   void set(bool is_primary, const NewRecord *record);
 
   /** Copy the contents of other into this. */
   void set(NewJoinRecord *other);
-
-  /** Encrypt and write out the record, returning the number of bytes written. */
-  uint32_t write_encrypted(uint8_t *output);
 
   bool less_than(const NewJoinRecord *other, int op_code) const;
 
@@ -243,7 +255,7 @@ public:
 
   void print() const {
     NewRecord rec;
-    rec.read_plaintext(row + TABLE_ID_SIZE);
+    rec.read(row + TABLE_ID_SIZE);
     printf("JoinRecord[table=%s, row=", is_primary() ? "primary" : "foreign");
     rec.print();
     printf("]\n");
@@ -256,6 +268,7 @@ private:
 
 template<typename RecordType>
 class SortPointer {
+  friend class RowWriter;
 public:
   SortPointer() : rec(NULL), key_prefix(0) {}
   bool is_valid() const {
@@ -272,13 +285,10 @@ public:
     rec = NULL;
     key_prefix = 0;
   }
-  uint32_t read_encrypted(uint8_t *input, int op_code) {
-    uint32_t result = rec->read_encrypted(input);
+  uint32_t read(uint8_t *input, int op_code) {
+    uint32_t result = rec->read(input);
     key_prefix = rec->get_key_prefix(op_code);
     return result;
-  }
-  uint32_t write_encrypted(uint8_t *output) {
-    return rec->write_encrypted(output);
   }
   bool less_than(const SortPointer *other, int op_code) const {
     if (key_prefix < other->key_prefix) {
@@ -369,7 +379,7 @@ public:
     uint8_t *tmp_ptr = tmp;
     num_distinct = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
     offset = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
-    g.read_plaintext(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    g.read(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
     tmp_ptr += a1.read_partial_result(tmp_ptr);
     free(tmp);
     return input_ptr - input;
@@ -381,7 +391,7 @@ public:
     uint8_t *tmp_ptr = tmp;
     *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
     *reinterpret_cast<uint32_t *>(tmp_ptr) = offset; tmp_ptr += 4;
-    g.write_whole_row_plaintext(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    g.write_whole_row(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
     tmp_ptr += a1.write_partial_result(tmp_ptr);
 
     uint8_t *output_ptr = output;
@@ -494,7 +504,7 @@ public:
     uint8_t *tmp_ptr = tmp;
     num_distinct = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
     offset = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
-    g.read_plaintext(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    g.read(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
     tmp_ptr += a1.read_partial_result(tmp_ptr);
     tmp_ptr += a2.read_partial_result(tmp_ptr);
     free(tmp);
@@ -506,7 +516,7 @@ public:
     uint8_t *tmp_ptr = tmp;
     *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
     *reinterpret_cast<uint32_t *>(tmp_ptr) = offset; tmp_ptr += 4;
-    g.write_whole_row_plaintext(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    g.write_whole_row(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
     tmp_ptr += a1.write_partial_result(tmp_ptr);
     tmp_ptr += a2.write_partial_result(tmp_ptr);
 
@@ -593,8 +603,8 @@ public:
    * the row. If the row is empty (has 0 columns), then this GroupBy object will not track any
    * group.
    */
-  uint32_t read_plaintext(uint8_t *input) {
-    uint32_t result = row.read_plaintext(input);
+  uint32_t read(uint8_t *input) {
+    uint32_t result = row.read(input);
     if (row.num_cols() != 0) {
       this->attr = row.get_attr(Column);
     } else {
@@ -623,8 +633,8 @@ public:
   }
 
   /** Write an entire row containing the grouping column to output and return num bytes written. */
-  uint32_t write_whole_row_plaintext(uint8_t *output) {
-    return row.write_decrypted(output);
+  uint32_t write_whole_row(uint8_t *output) {
+    return row.write(output);
   }
 
   void print() {
@@ -765,17 +775,58 @@ private:
  */
 class RowReader {
 public:
-  RowReader(uint8_t *buf) : buf(buf) {}
+  RowReader(uint8_t *buf) : cur_block_start(buf), buf(buf + 8) {
+    read_block_header();
+  }
+
+  void read_block_header() {
+    cur_block_len = *reinterpret_cast<uint32_t *>(cur_block_start);
+    cur_block_num_rows = *reinterpret_cast<uint32_t *>(cur_block_start + 4);
+    cur_block_rows_read = 0;
+  }
+
+  void maybe_advance_block() {
+    if (cur_block_rows_read >= cur_block_num_rows) {
+      cur_block_start += 8 + cur_block_len;
+      buf = cur_block_start + 8;
+      read_block_header();
+    }
+  }
+
+  void read(NewRecord *row) {
+    maybe_advance_block();
+    buf += row->read(buf);
+    cur_block_rows_read++;
+  }
+  void read(NewJoinRecord *row) {
+    maybe_advance_block();
+    buf += row->read(buf);
+    cur_block_rows_read++;
+  }
+  template<typename RecordType>
+  void read(SortPointer<RecordType> *ptr, int op_code) {
+    maybe_advance_block();
+    buf += ptr->read(buf, op_code);
+    cur_block_rows_read++;
+  }
+
+private:
+  uint8_t *cur_block_start;
+  uint8_t *buf;
+  uint32_t cur_block_len;
+  uint32_t cur_block_num_rows;
+  uint32_t cur_block_rows_read;
+};
+
+class IndividualRowReader {
+public:
+  IndividualRowReader(uint8_t *buf) : buf(buf) {}
 
   void read(NewRecord *row) {
     buf += row->read_encrypted(buf);
   }
   void read(NewJoinRecord *row) {
     buf += row->read_encrypted(buf);
-  }
-  template<typename RecordType>
-  void read(SortPointer<RecordType> *ptr, int op_code) {
-    buf += ptr->read_encrypted(buf, op_code);
   }
   template<typename AggregatorType>
   void read(AggregatorType *agg) {
@@ -789,25 +840,82 @@ private:
 /**
  * Manages encrypting and writing out multiple rows to an output buffer.
  *
- * After writing all rows, make sure to call close(). This currently does nothing but eventually
- * will encrypt all written rows at once.
+ * After writing all rows, make sure to call close().
  */
 class RowWriter {
 public:
-  RowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
+  RowWriter(uint8_t *buf)
+    : buf_start(buf), block_start(buf), buf(buf + 8), block_num_rows(0), block_size(0),
+      block_end(buf + 8) {}
+
+  void write(NewRecord *row) {
+    maybe_finish_block(ROW_UPPER_BOUND);
+    uint32_t delta = row->write(buf);
+    check(delta <= ROW_UPPER_BOUND,
+          "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
+    buf += delta;
+    block_num_rows++;
+    block_size += ROW_UPPER_BOUND;
+    block_end = block_start + 8 + block_size;
+  }
+  void write(NewJoinRecord *row) {
+    maybe_finish_block(JOIN_ROW_UPPER_BOUND);
+    buf += row->write(buf);
+    block_num_rows++;
+    block_size += JOIN_ROW_UPPER_BOUND;
+    block_end = block_start + 8 + block_size;
+  }
+  template<typename RecordType>
+  void write(SortPointer<RecordType> *ptr) {
+    write(ptr->rec);
+  }
+
+  void maybe_finish_block(uint32_t next_row_size) {
+    if (block_size + next_row_size > MAX_BLOCK_SIZE) {
+      finish_block();
+    }
+  }
+
+  void finish_block() {
+    *reinterpret_cast<uint32_t *>(block_start) = block_size;
+    *reinterpret_cast<uint32_t *>(block_start + 4) = block_num_rows;
+    // Start a new block, but don't update block_end yet so that bytes_written is valid (i.e.,
+    // doesn't include the uninitialized header for the new block)
+    block_start = block_end;
+    buf = block_start + 8;
+    block_num_rows = 0;
+    block_size = 0;
+  }
+
+  void close() {
+    finish_block();
+  }
+
+  uint32_t bytes_written() {
+    return block_end - buf_start;
+  }
+
+private:
+  uint8_t * const buf_start;
+  uint8_t *block_start;
+  uint8_t *buf;
+  uint32_t block_num_rows;
+  uint32_t block_size;
+  uint8_t *block_end;
+};
+
+class IndividualRowWriter {
+public:
+  IndividualRowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
 
   void write(NewRecord *row) {
     uint32_t delta = row->write_encrypted(buf);
     check(delta <= enc_size(ROW_UPPER_BOUND),
-          "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
+          "Wrote %d, which is more than enc_size(ROW_UPPER_BOUND)\n", delta);
     buf += delta;
   }
   void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);
-  }
-  template<typename RecordType>
-  void write(SortPointer<RecordType> *ptr) {
-    buf += ptr->write_encrypted(buf);
   }
   template<typename AggregatorType>
   void write(AggregatorType *agg) {

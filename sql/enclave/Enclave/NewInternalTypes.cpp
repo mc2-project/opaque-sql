@@ -212,7 +212,7 @@ void NewRecord::append(const NewRecord *other) {
   set_num_cols(num_cols() + other->num_cols());
 }
 
-uint32_t NewRecord::read_plaintext(const uint8_t *input) {
+uint32_t NewRecord::read(const uint8_t *input) {
   const uint8_t *input_ptr = input;
   uint8_t *row_ptr = this->row;
 
@@ -304,7 +304,7 @@ void NewRecord::print() const {
   check(row_length == row_ptr - row, "row length mismatch: %d != %d\n", row_length, row_ptr - row);
 }
 
-uint32_t NewRecord::write_decrypted(uint8_t *output) const {
+uint32_t NewRecord::write(uint8_t *output) const {
   memcpy(output, this->row, this->row_length);
   return this->row_length;
 }
@@ -478,8 +478,23 @@ bool NewRecord::is_dummy() const {
   return false;
 }
 
+uint32_t NewJoinRecord::read(uint8_t *input) {
+  memcpy(this->row, input, JOIN_ROW_UPPER_BOUND);
+  return JOIN_ROW_UPPER_BOUND;
+}
+
 uint32_t NewJoinRecord::read_encrypted(uint8_t *input) {
   decrypt(input, enc_size(JOIN_ROW_UPPER_BOUND), this->row);
+  return enc_size(JOIN_ROW_UPPER_BOUND);
+}
+
+uint32_t NewJoinRecord::write(uint8_t *output) {
+  memcpy(output, this->row, JOIN_ROW_UPPER_BOUND);
+  return JOIN_ROW_UPPER_BOUND;
+}
+
+uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
+  encrypt(this->row, JOIN_ROW_UPPER_BOUND, output);
   return enc_size(JOIN_ROW_UPPER_BOUND);
 }
 
@@ -492,7 +507,7 @@ void NewJoinRecord::set(bool is_primary, const NewRecord *record) {
   }
   row_ptr += TABLE_ID_SIZE;
 
-  row_ptr += record->write_decrypted(row_ptr);
+  row_ptr += record->write(row_ptr);
 }
 
 void NewJoinRecord::set(NewJoinRecord *other) {
@@ -502,11 +517,6 @@ void NewJoinRecord::set(NewJoinRecord *other) {
   } else {
     this->join_attr = NULL;
   }
-}
-
-uint32_t NewJoinRecord::write_encrypted(uint8_t *output) {
-  encrypt(this->row, JOIN_ROW_UPPER_BOUND, output);
-  return enc_size(JOIN_ROW_UPPER_BOUND);
 }
 
 bool NewJoinRecord::less_than(const NewJoinRecord *other, int op_code) const {
@@ -576,6 +586,8 @@ void NewJoinRecord::merge(
     }
     input_ptr += value_len;
   }
+
+  merge->row_length = merge_ptr - merge->row;
 }
 
 void NewJoinRecord::init_join_attribute(int op_code) {

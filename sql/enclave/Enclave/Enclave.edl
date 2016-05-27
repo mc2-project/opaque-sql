@@ -4,6 +4,7 @@
 enclave {
     
   include "user_types.h" /* buffer_t */
+  include "stdbool.h"
   //include "jni.h"
   //include "jni_md.h"
   //include "define.h"
@@ -89,7 +90,8 @@ enclave {
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length,
       uint32_t num_rows,
-      [out, size=output_length] uint8_t *output, uint32_t output_length);
+      [out, size=output_length] uint8_t *output, uint32_t output_length,
+      [out] uint32_t *actual_output_len);
 
     public void ecall_process_join_boundary(
       int op_code,
@@ -111,12 +113,23 @@ enclave {
       [user_check] uint8_t *table_id,
       [user_check] uint8_t *input_row, uint32_t input_row_len,
       uint32_t num_rows,
-      [user_check] uint8_t *output_row, uint32_t output_row_len);
+      [user_check] uint8_t *output_row, uint32_t output_row_len,
+      [out] uint32_t *actual_output_len);
 
     public void ecall_encrypt_attribute(
       [in, size=input_size] uint8_t *input, uint32_t input_size,
       [out, size=output_size] uint8_t *output, uint32_t output_size,
       [out] uint32_t *actual_size);
+
+    public void ecall_create_block(
+      [user_check] uint8_t *rows, uint32_t rows_len, uint32_t num_rows,
+      bool rows_are_join_rows, [user_check] uint8_t *block, uint32_t block_len,
+      [out] uint32_t *actual_size);
+
+    public void ecall_split_block(
+      [user_check] uint8_t *block, uint32_t block_len,
+      [user_check] uint8_t *rows, uint32_t rows_len, uint32_t num_rows,
+      bool rows_are_join_rows, [out] uint32_t *actual_size);
   };
 
   untrusted {
