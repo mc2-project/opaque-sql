@@ -38,20 +38,6 @@ ifeq ($(SGX_PERF), 1)
 		SGX_COMMON_CFLAGS += -DPERF
 endif
 
-######## Common Settings ########
-
-Common_Cpp_Files := Common/common.cpp
-Common_Include_Paths := -IInclude -ICommon
-
-Common_C_Flags := -fPIC -Wno-attributes $(Common_Include_Paths)
-Common_Cpp_Flags := $(Common_C_Flags) -std=c++11 -Wall -Wextra -Werror
-
-Common_Cpp_Objects := $(Common_Cpp_Files:.cpp=.o)
-
-Common/%.o: Common/%.cpp
-	@$(CXX) $(Common_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
-
 ######## App Settings ########
 
 ifneq ($(SGX_MODE), HW)
@@ -166,11 +152,11 @@ App/%.o: App/%.cpp
 	@$(CXX) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(App_Name): App/Enclave_u.o $(App_Cpp_Objects) $(Common_Cpp_Objects)
+$(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-$(App_SO_Name): App/Enclave_u.o $(App_Cpp_Objects) $(Common_Cpp_Objects)
+$(App_SO_Name): App/Enclave_u.o $(App_Cpp_Objects)
 	@$(CXX) $^ $(App_Link_Flags) -shared -o $@
 	@echo "LINK =>  $@"
 
@@ -188,7 +174,7 @@ Enclave/%.o: Enclave/%.cpp
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects) $(Common_Cpp_Objects)
+$(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects)
 	@$(CXX) $^ -o $@  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -199,4 +185,4 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
-	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* $(Common_Cpp_Objects)
+	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*

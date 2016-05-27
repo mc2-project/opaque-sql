@@ -36,8 +36,7 @@ void merge(
 template<typename RecordType>
 void external_oblivious_sort(int op_code,
                              uint32_t num_buffers,
-                             uint8_t **buffer_list,
-                             uint32_t *num_rows);
+                             uint8_t **buffer_list);
 
 #include "ObliviousSort.tcc"
 

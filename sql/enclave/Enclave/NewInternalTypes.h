@@ -775,47 +775,54 @@ private:
  */
 class RowReader {
 public:
-  RowReader(uint8_t *buf) : cur_block_start(buf), buf(buf + 8) {
-    read_block_header();
+  RowReader(uint8_t *buf) : buf(buf) {
+    block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
+    read_encrypted_block();
   }
 
-  void read_block_header() {
-    cur_block_len = *reinterpret_cast<uint32_t *>(cur_block_start);
-    cur_block_num_rows = *reinterpret_cast<uint32_t *>(cur_block_start + 4);
-    cur_block_rows_read = 0;
-  }
-
-  void maybe_advance_block() {
-    if (cur_block_rows_read >= cur_block_num_rows) {
-      cur_block_start += 8 + cur_block_len;
-      buf = cur_block_start + 8;
-      read_block_header();
-    }
+  ~RowReader() {
+    free(block_start);
   }
 
   void read(NewRecord *row) {
     maybe_advance_block();
-    buf += row->read(buf);
-    cur_block_rows_read++;
+    block_pos += row->read(block_pos);
+    block_rows_read++;
   }
   void read(NewJoinRecord *row) {
     maybe_advance_block();
-    buf += row->read(buf);
-    cur_block_rows_read++;
+    block_pos += row->read(block_pos);
+    block_rows_read++;
   }
   template<typename RecordType>
   void read(SortPointer<RecordType> *ptr, int op_code) {
     maybe_advance_block();
-    buf += ptr->read(buf, op_code);
-    cur_block_rows_read++;
+    block_pos += ptr->read(block_pos, op_code);
+    block_rows_read++;
   }
 
 private:
-  uint8_t *cur_block_start;
+  void read_encrypted_block() {
+    uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    decrypt(buf, block_enc_size, block_start);
+    buf += block_enc_size;
+    block_pos = block_start;
+    block_rows_read = 0;
+  }
+
+  void maybe_advance_block() {
+    if (block_rows_read >= block_num_rows) {
+      read_encrypted_block();
+    }
+  }
+
   uint8_t *buf;
-  uint32_t cur_block_len;
-  uint32_t cur_block_num_rows;
-  uint32_t cur_block_rows_read;
+
+  uint8_t *block_start;
+  uint8_t *block_pos;
+  uint32_t block_num_rows;
+  uint32_t block_rows_read;
 };
 
 class IndividualRowReader {
@@ -845,46 +852,46 @@ private:
 class RowWriter {
 public:
   RowWriter(uint8_t *buf)
-    : buf_start(buf), block_start(buf), buf(buf + 8), block_num_rows(0), block_size(0),
-      block_end(buf + 8) {}
+    : buf_start(buf), buf_pos(buf), block_num_rows(0), block_padded_len(0) {
+    block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
+    block_pos = block_start;
+  }
+
+  ~RowWriter() {
+    free(block_start);
+  }
 
   void write(NewRecord *row) {
     maybe_finish_block(ROW_UPPER_BOUND);
-    uint32_t delta = row->write(buf);
+    uint32_t delta = row->write(block_pos);
     check(delta <= ROW_UPPER_BOUND,
           "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
-    buf += delta;
+    block_pos += delta;
     block_num_rows++;
-    block_size += ROW_UPPER_BOUND;
-    block_end = block_start + 8 + block_size;
+    block_padded_len += ROW_UPPER_BOUND;
   }
+
   void write(NewJoinRecord *row) {
     maybe_finish_block(JOIN_ROW_UPPER_BOUND);
-    buf += row->write(buf);
+    block_pos += row->write(block_pos);
     block_num_rows++;
-    block_size += JOIN_ROW_UPPER_BOUND;
-    block_end = block_start + 8 + block_size;
+    block_padded_len += JOIN_ROW_UPPER_BOUND;
   }
+
   template<typename RecordType>
   void write(SortPointer<RecordType> *ptr) {
     write(ptr->rec);
   }
 
-  void maybe_finish_block(uint32_t next_row_size) {
-    if (block_size + next_row_size > MAX_BLOCK_SIZE) {
-      finish_block();
-    }
-  }
-
   void finish_block() {
-    *reinterpret_cast<uint32_t *>(block_start) = block_size;
-    *reinterpret_cast<uint32_t *>(block_start + 4) = block_num_rows;
-    // Start a new block, but don't update block_end yet so that bytes_written is valid (i.e.,
-    // doesn't include the uninitialized header for the new block)
-    block_start = block_end;
-    buf = block_start + 8;
+    *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(MAX_BLOCK_SIZE); buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
+    encrypt(block_start, MAX_BLOCK_SIZE, buf_pos);
+    buf_pos += enc_size(MAX_BLOCK_SIZE);
+
+    block_pos = block_start;
     block_num_rows = 0;
-    block_size = 0;
+    block_padded_len = 0;
   }
 
   void close() {
@@ -892,16 +899,23 @@ public:
   }
 
   uint32_t bytes_written() {
-    return block_end - buf_start;
+    return buf_pos - buf_start;
   }
 
 private:
+  void maybe_finish_block(uint32_t next_row_size) {
+    if (block_padded_len + next_row_size > MAX_BLOCK_SIZE) {
+      finish_block();
+    }
+  }
+
   uint8_t * const buf_start;
+  uint8_t *buf_pos;
+
   uint8_t *block_start;
-  uint8_t *buf;
+  uint8_t *block_pos;
   uint32_t block_num_rows;
-  uint32_t block_size;
-  uint8_t *block_end;
+  uint32_t block_padded_len;
 };
 
 class IndividualRowWriter {

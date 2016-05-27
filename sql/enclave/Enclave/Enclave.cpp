@@ -65,8 +65,7 @@ void ecall_test_int(int *ptr) {
 }
 
 void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **buffer_list,
-                                   uint32_t *buffer_lengths, uint32_t *num_rows) {
-  (void)buffer_lengths;
+                                   uint32_t *num_rows) {
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {

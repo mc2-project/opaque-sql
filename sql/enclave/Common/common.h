@@ -65,7 +65,27 @@ enum OPCODE {
   OP_JOIN_PAGERANK = 37,
 };
 
-int get_sort_operation(int op_code);
+inline static int get_sort_operation(int op_code) {
+  switch(op_code) {
+
+  case OP_SORT_COL1:
+  case OP_SORT_COL2:
+  case OP_SORT_COL2_IS_DUMMY_COL1:
+  case OP_SORT_COL3_IS_DUMMY_COL1:
+  case OP_SORT_COL4_IS_DUMMY_COL2:
+    return SORT_SORT;
+    break;
+
+  case OP_JOIN_COL1:
+  case OP_JOIN_COL2:
+  case OP_JOIN_PAGERANK:
+    return SORT_JOIN;
+    break;
+
+  default:
+    return -1;
+  }
+}
 
 #ifdef DEBUG
 #define debug(...) printf(__VA_ARGS__)
@@ -107,5 +127,18 @@ private:
   uint8_t *input;
   const uint32_t input_len;
 };
+
+inline static uint32_t block_size_upper_bound(uint32_t num_rows) {
+  uint32_t max_row_len = JOIN_ROW_UPPER_BOUND;
+  uint32_t max_rows_per_block = (MAX_BLOCK_SIZE - 28) / max_row_len; // 28 = ENC_HEADER_SIZE
+  uint32_t max_num_blocks = num_rows / max_rows_per_block;
+  if (num_rows % max_rows_per_block != 0) {
+    max_num_blocks++;
+  }
+  if (max_num_blocks == 0) {
+    max_num_blocks = 1;
+  }
+  return max_num_blocks * (BLOCK_HEADER_SIZE + 28 + MAX_BLOCK_SIZE);
+}
 
 #endif

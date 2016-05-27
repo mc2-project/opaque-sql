@@ -13,15 +13,15 @@
 // distinct items, offset, sort attribute, aggregation attribute
 //#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
+#define BLOCK_HEADER_SIZE 8 // block format: [uint32_t len][uint32_t num_rows]enc{...}
 
 #define TYPE_SIZE (1)
 #define LEN_SIZE (4)
 #define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
 
 #define TABLE_ID_SIZE (8)
-//#define JOIN_ROW_UPPER_BOUND (ROW_UPPER_BOUND + TABLE_ID_SIZE)
-#define ENC_JOIN_ROW_UPPER_BOUND (ENC_HEADER_SIZE + ROW_UPPER_BOUND + TABLE_ID_SIZE)
-#define ENC_ROW_UPPER_BOUND (ENC_HEADER_SIZE + ROW_UPPER_BOUND * 2)
+#define MAX_ROW_ATTRIBUTES 20
+#define ENC_ROW_UPPER_BOUND (ROW_UPPER_BOUND + ENC_HEADER_SIZE * MAX_ROW_ATTRIBUTES)
 
 #define AGG_UPPER_BOUND (ROW_UPPER_BOUND + 128)
 #define JOIN_ROW_UPPER_BOUND AGG_UPPER_BOUND
@@ -46,8 +46,9 @@
       SORT_JOIN = 2
     };
 
-#define MAX_SINGLE_SORT_BUFFER (70 * 1024 * 1024)
-#define MAX_BLOCK_SIZE 100000
-// #define MAX_SINGLE_SORT_BUFFER (2 * 1024 * 1024 * 1024u) // for simulation mode
+#define MAX_SORT_BUFFER (2 * 1024 * 1024)
+// #define MAX_SORT_BUFFER (1 * 1024 * 1024 * 1024u) // for simulation mode
+
+#define MAX_BLOCK_SIZE 1000000
 
 #endif // DEFINE_H
