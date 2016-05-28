@@ -111,7 +111,8 @@ class BlockReader {
 public:
   BlockReader(uint8_t *input, uint32_t input_len)
     : input_start(input), input(input), input_len(input_len) {}
-  void read(uint8_t **block_out, uint32_t *len_out, uint32_t *num_rows_out) {
+  void read(uint8_t **block_out, uint32_t *len_out, uint32_t *num_rows_out,
+            uint32_t *row_upper_bound_out) {
     if (input >= input_start + input_len) {
       *block_out = NULL;
     } else {
@@ -119,7 +120,7 @@ public:
       uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(input); input += 4;
       *len_out = block_enc_size; *len_out += 4;
       *num_rows_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
-      input += 4; *len_out += 4; // row_upper_bound
+      *row_upper_bound_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
       input += block_enc_size;
     }
   }

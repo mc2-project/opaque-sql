@@ -591,25 +591,28 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
+  uint32_t row_upper_bound = 0;
 
   BlockReader r(input_copy, input_len);
-  uint32_t row_upper_bound = r.get_row_upper_bound();
   uint8_t *cur_block;
   uint32_t cur_block_size;
   uint32_t cur_block_num_rows;
   uint32_t total_rows = 0;
-  r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
+  r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
   while (cur_block != NULL) {
     uint8_t *cur_buffer = cur_block;
     uint32_t cur_buffer_size = cur_block_size;
     uint32_t cur_buffer_num_rows = cur_block_num_rows;
+    uint32_t cur_row_upper_bound;
 
-    r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
+    r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
     while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
       cur_buffer_size += cur_block_size;
       cur_buffer_num_rows += cur_block_num_rows;
+      row_upper_bound =
+        cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
 
-      r.read(&cur_block, &cur_block_size, &cur_block_num_rows);
+      r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
     }
 
     buffer_list.push_back(cur_buffer);
@@ -619,8 +622,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
           buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
   }
 
-  perf("ObliviousSort: Input (%d bytes, %d rows) split into %lu buffers with %d rows\n",
-       input_len, num_items, buffer_list.size(), total_rows);
+  perf("ObliviousSort: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
+       input_len, num_items, buffer_list.size(), row_upper_bound);
 
   sgx_check("External Oblivious Sort",
             ecall_external_oblivious_sort(

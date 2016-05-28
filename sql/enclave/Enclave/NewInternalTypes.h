@@ -926,7 +926,11 @@ public:
 
   void write(NewJoinRecord *row) {
     maybe_finish_block(ROW_UPPER_BOUND);
-    block_pos += row->write(block_pos);
+    uint32_t delta = row->write(block_pos);
+    check(delta <= ((row_upper_bound == 0) ? ROW_UPPER_BOUND : row_upper_bound),
+          "Wrote %d, which is more than row_upper_bound = %d\n",
+          delta, row_upper_bound == 0 ? ROW_UPPER_BOUND : row_upper_bound);
+    block_pos += delta;
     block_num_rows++;
     if (row_upper_bound == 0) {
       row_upper_bound = row->row_upper_bound();
