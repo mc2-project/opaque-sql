@@ -6,28 +6,20 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-// defines an upper bound on the size of the aggregation value
-// only the plaintext size
-#define PARTIAL_AGG_UPPER_BOUND (128) // this only includes the partial aggregation
 #define ROW_UPPER_BOUND (16 * 50)
-// distinct items, offset, sort attribute, aggregation attribute
-//#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
 
 // block format: [uint32_t len][uint32_t num_rows][uint32_t row_upper_bound]enc{...}
 #define BLOCK_HEADER_SIZE 12
 
-
 #define TYPE_SIZE (1)
 #define LEN_SIZE (4)
 #define HEADER_SIZE (TYPE_SIZE + LEN_SIZE)
 
-#define TABLE_ID_SIZE (8)
 #define MAX_ROW_ATTRIBUTES 20
 #define ENC_ROW_UPPER_BOUND (ROW_UPPER_BOUND + ENC_HEADER_SIZE * MAX_ROW_ATTRIBUTES)
 
 #define AGG_UPPER_BOUND (ROW_UPPER_BOUND + 128)
-#define JOIN_ROW_UPPER_BOUND AGG_UPPER_BOUND
 
 #define INT_UPPER_BOUND (4)
 #define STRING_UPPER_BOUND (256)
@@ -41,13 +33,10 @@
 
 #define ATTRIBUTE_UPPER_BOUND (512)
 
-//#define HALF_MAX_SORT_BUFFER (8 * 1024 * 1024)
-//#define MAX_ELEMENTS ((100 * 1024 * 1024) / JOIN_ROW_UPPER_BOUND)
-
-    enum SORT_OP {
-      SORT_SORT = 1,
-      SORT_JOIN = 2
-    };
+enum SORT_OP {
+  SORT_SORT = 1,
+  SORT_JOIN = 2
+};
 
 #define MAX_SORT_BUFFER (2 * 1024 * 1024)
 // #define MAX_SORT_BUFFER (1 * 1024 * 1024 * 1024u) // for simulation mode

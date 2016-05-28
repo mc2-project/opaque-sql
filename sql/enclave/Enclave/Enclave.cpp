@@ -208,13 +208,13 @@ void ecall_aggregate_step2(int op_code,
 /**** BEGIN Join ****/
 
 void ecall_join_sort_preprocess(int op_code,
-                                uint8_t *table_id,
+                                bool is_primary,
                                 uint8_t *input_row, uint32_t input_row_len,
                                 uint32_t num_rows,
                                 uint8_t *output_row, uint32_t output_row_len,
                                 uint32_t *actual_output_len) {
   (void)op_code;
-  join_sort_preprocess(table_id, input_row, input_row_len, num_rows, output_row, output_row_len,
+  join_sort_preprocess(is_primary, input_row, input_row_len, num_rows, output_row, output_row_len,
                        actual_output_len);
 }
 

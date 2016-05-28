@@ -328,9 +328,6 @@ object QED {
     result
   }
 
-  def primaryTableId(): Array[Byte] = tableId('a')
-  def foreignTableId(): Array[Byte] = tableId('b')
-
   def attributeIndexOf(a: Attribute, list: Seq[Attribute]): Int = {
     var i = 0
     while (i < list.size) {

@@ -135,7 +135,7 @@ private:
 };
 
 inline static uint32_t block_size_upper_bound(uint32_t num_rows) {
-  uint32_t max_row_len = JOIN_ROW_UPPER_BOUND;
+  uint32_t max_row_len = ROW_UPPER_BOUND;
   uint32_t max_rows_per_block = (MAX_BLOCK_SIZE - 28) / max_row_len; // 28 = ENC_HEADER_SIZE
   uint32_t max_num_blocks = num_rows / max_rows_per_block;
   if (num_rows % max_rows_per_block != 0) {

@@ -777,7 +777,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   jobject obj,
   jlong eid,
   jint op_code,
-  jbyteArray enc_table_id,
+  jboolean is_primary,
   jbyteArray input_rows,
   jint num_rows) {
   (void)obj;
@@ -791,15 +791,13 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
 
-  uint8_t *enc_table_id_ptr = (uint8_t *) env->GetByteArrayElements(enc_table_id, &if_copy);
-
   uint32_t actual_output_len = 0;
 
   sgx_check("JoinSortPreprocess",
             ecall_join_sort_preprocess(
               eid,
               op_code,
-              enc_table_id_ptr,
+              is_primary,
               input_rows_ptr, input_rows_length,
               num_rows,
               output_rows_ptr, output_rows_length, &actual_output_len));
@@ -824,7 +822,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t single_row_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
+  uint32_t single_row_length = ENC_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
@@ -859,7 +857,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t output_length = ENC_HEADER_SIZE + JOIN_ROW_UPPER_BOUND;
+  uint32_t output_length = ENC_ROW_UPPER_BOUND;
   uint8_t *output = (uint8_t *) malloc(output_length);
 
   uint32_t actual_output_len = 0;

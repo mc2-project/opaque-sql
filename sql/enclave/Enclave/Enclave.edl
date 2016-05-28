@@ -110,7 +110,7 @@ enclave {
 
     public void ecall_join_sort_preprocess(
       int op_code,
-      [user_check] uint8_t *table_id,
+      bool is_primary,
       [user_check] uint8_t *input_row, uint32_t input_row_len,
       uint32_t num_rows,
       [user_check] uint8_t *output_row, uint32_t output_row_len,

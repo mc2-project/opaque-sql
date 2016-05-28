@@ -80,7 +80,7 @@ class SGXEnclave extends java.io.Serializable {
   @native def JoinSortPreprocess(
     eid: Long,
     op_code: Int,
-    enc_table_id: Array[Byte],
+    is_primary: Boolean,
     input_rows: Array[Byte],
     num_rows: Int
   ): Array[Byte]

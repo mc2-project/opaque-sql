@@ -53,8 +53,6 @@ uint32_t attr_key_prefix(const uint8_t *attr);
  * Note that num_cols is stored as part of the row data, unlike in the existing codebase.
  */
 class NewRecord {
-  friend class NewJoinRecord;
-
 public:
   NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
 
@@ -120,6 +118,10 @@ public:
    */
   const uint8_t *get_attr_value(uint32_t attr_idx) const;
 
+  uint8_t *translate_attr_ptr(const NewRecord *other, const uint8_t *other_attr_ptr) const {
+    return row + (other_attr_ptr - other->row);
+  }
+
   /**
    * Set the value of the attribute at the specified index (1-indexed) to a new value of the same
    * length by copying the same number of bytes from new_attr_value as the existing attribute
@@ -173,7 +175,6 @@ private:
     *reinterpret_cast<uint32_t *>(row) = num_cols;
   }
 
-
   uint8_t *row;
   uint32_t row_length;
 };
@@ -181,8 +182,7 @@ private:
 /**
  * A record tagged with a table ID for use when joining a primary table with a foreign table.
  *
- * The table ID is stored in the first 8 bytes of the row, after which is a row in the standard
- * format (see NewRecord).
+ * The table ID is stored as the first attribute of the row.
  *
  * This record type can optionally provide access to a join attribute, which is a specific attribute
  * from each primary and foreign row on which the join is performed. To access the join attribute,
@@ -191,38 +191,46 @@ private:
  */
 class NewJoinRecord {
 public:
-  static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
-  static constexpr uint8_t *foreign_id = (uint8_t *) "bbbbbbbb";
+  static const uint32_t primary_id = 0;
+  static const uint32_t foreign_id = 1;
 
-  NewJoinRecord() : NewJoinRecord(JOIN_ROW_UPPER_BOUND) {}
+  NewJoinRecord() : NewJoinRecord(ROW_UPPER_BOUND) {}
 
-  NewJoinRecord(uint32_t upper_bound) : join_attr(NULL) {
-    check(upper_bound == JOIN_ROW_UPPER_BOUND,
-          "NewJoinRecord cannot support upper bound of %d\n", upper_bound);
-    row = (uint8_t *) calloc(JOIN_ROW_UPPER_BOUND, sizeof(uint8_t));
-  }
-
-  ~NewJoinRecord() {
-    free(row);
-  }
+  NewJoinRecord(uint32_t upper_bound) : row(upper_bound), join_attr(NULL) {}
 
   /** Read a plaintext row into this record. Return the number of bytes read. */
-  uint32_t read(uint8_t *input);
+  uint32_t read(uint8_t *input) {
+    return row.read(input);
+  }
 
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
-  uint32_t read_encrypted(uint8_t *input);
+  uint32_t read_encrypted(uint8_t *input) {
+    return row.read_encrypted(input);
+  }
 
   /** Write out the record in plaintext, returning the number of bytes written. */
-  uint32_t write(uint8_t *output);
+  uint32_t write(uint8_t *output) {
+    return row.write(output);
+  }
 
   /** Encrypt and write out the record, returning the number of bytes written. */
-  uint32_t write_encrypted(uint8_t *output);
+  uint32_t write_encrypted(uint8_t *output) {
+    return row.write_encrypted(output);
+  }
 
   /** Convert a standard record into a join record. */
-  void set(bool is_primary, const NewRecord *record);
+  void set(bool is_primary, const NewRecord *record) {
+    row.clear();
+    uint32_t table_id = is_primary ? primary_id : foreign_id;
+    row.add_attr(INT, 4, reinterpret_cast<const uint8_t *>(&table_id));
+    row.append(record);
+  }
 
   /** Copy the contents of other into this. */
-  void set(NewJoinRecord *other);
+  void set(NewJoinRecord *other) {
+    row.set(&other->row);
+    join_attr = row.translate_attr_ptr(&other->row, other->join_attr);
+  }
 
   bool less_than(const NewJoinRecord *other, int op_code) const;
 
@@ -232,14 +240,30 @@ public:
    * Return the maximum number of bytes that could be written by write() for any row with the same
    * schema as this row.
    */
-  uint32_t row_upper_bound() const;
+  uint32_t row_upper_bound() const {
+    // Currently we have to return a high upper bound because otherwise join_sort_preprocess will
+    // return blocks with different upper bounds (one upper bound for the primary table and another
+    // for the foreign table). TODO: return row.row_upper_bound() here, then merge blocks and take
+    // the max of their upper bounds.
+    return ROW_UPPER_BOUND;
+  }
 
   /**
    * Given two join rows, concatenate their fields into merge, dropping the join attribute from the
    * foreign row. The attribute to drop (secondary_join_attr) is specified as a 1-indexed column
    * number from the foreign row.
    */
-  void merge(const NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) const;
+  void merge(const NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) const {
+    merge->clear();
+    for (uint32_t i = 1; i < this->row.num_cols(); i++) {
+      merge->add_attr(&this->row, i + 1);
+    }
+    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
+      if (i != secondary_join_attr) {
+        merge->add_attr(&other->row, i + 1);
+      }
+    }
+  }
 
   /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);
@@ -251,34 +275,40 @@ public:
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
    * the attribute type.
    */
-  const uint8_t *get_attr(uint32_t attr_idx) const;
+  const uint8_t *get_attr(uint32_t attr_idx) const {
+    return row.get_attr(attr_idx + 1);
+  }
 
   /** Return true if the record belongs to the primary table based on its table ID. */
-  bool is_primary() const;
+  bool is_primary() const {
+    return *reinterpret_cast<const uint32_t *>(row.get_attr_value(1)) == primary_id;
+  }
 
   /** Return true if the record contains all zeros, indicating a dummy record. */
-  bool is_dummy() const;
+  bool is_dummy() const {
+    return row.num_cols() == 0;
+  }
 
   /**
    * Zero out the contents of this record. This causes sort-merge join to treat it as a dummy
    * record.
    */
-  void reset_to_dummy();
+  void reset_to_dummy() {
+    row.clear();
+  }
 
   uint32_t num_cols() const {
-    return *( (const uint32_t *) (row + TABLE_ID_SIZE));
+    return row.num_cols() - 1;
   }
 
   void print() const {
-    NewRecord rec;
-    rec.read(row + TABLE_ID_SIZE);
-    printf("JoinRecord[table=%s, row=", is_primary() ? "primary" : "foreign");
-    rec.print();
+    printf("JoinRecord[row=");
+    row.print();
     printf("]\n");
   }
 
 private:
-  uint8_t *row;
+  NewRecord row;
   const uint8_t *join_attr; // pointer into row
 };
 
@@ -895,7 +925,7 @@ public:
   }
 
   void write(NewJoinRecord *row) {
-    maybe_finish_block(JOIN_ROW_UPPER_BOUND);
+    maybe_finish_block(ROW_UPPER_BOUND);
     block_pos += row->write(block_pos);
     block_num_rows++;
     if (row_upper_bound == 0) {

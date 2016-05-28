@@ -21,7 +21,7 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 //    dummy row for each primary row. (sort_merge_join)
 // 6. Filter out the dummy rows using an oblivious filter.
 
-void join_sort_preprocess(uint8_t *table_id,
+void join_sort_preprocess(bool is_primary,
                           uint8_t *input_row, uint32_t input_row_len,
                           uint32_t num_rows,
                           uint8_t *output_row, uint32_t output_row_len,

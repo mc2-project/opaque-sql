@@ -71,13 +71,8 @@ extern "C" {
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jbyteArray);
 
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(JNIEnv *,
-                                                                                       jobject,
-                                                                                       jlong,
-                                                                                       jint,
-                                                                                       jbyteArray,
-                                                                                       jbyteArray,
-                                                                                       jint);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(
+    JNIEnv *, jobject, jlong, jint, jboolean, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *,
                                                                                            jobject,

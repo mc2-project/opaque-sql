@@ -9,15 +9,13 @@
 
 #include "Join.h"
 
-void join_sort_preprocess(uint8_t *table_id,
+void join_sort_preprocess(bool is_primary,
                           uint8_t *input_row, uint32_t input_row_len,
                           uint32_t num_rows,
                           uint8_t *output_row, uint32_t output_row_len,
                           uint32_t *actual_output_len) {
   (void)input_row_len;
   (void)output_row_len;
-
-  bool is_primary = cmp(table_id, (uint8_t *) NewJoinRecord::primary_id, TABLE_ID_SIZE) == 0;
 
   RowReader r(input_row);
   RowWriter w(output_row);
