@@ -124,10 +124,6 @@ public:
       input += block_enc_size;
     }
   }
-  uint32_t get_row_upper_bound() {
-    check(input < input_start + input_len, "BlockReader: input exhausted");
-    return *reinterpret_cast<uint32_t *>(input + 8);
-  }
 
 private:
   uint8_t * const input_start;

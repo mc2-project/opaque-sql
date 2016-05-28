@@ -208,14 +208,17 @@ void ecall_aggregate_step2(int op_code,
 /**** BEGIN Join ****/
 
 void ecall_join_sort_preprocess(int op_code,
-                                bool is_primary,
-                                uint8_t *input_row, uint32_t input_row_len,
-                                uint32_t num_rows,
-                                uint8_t *output_row, uint32_t output_row_len,
+                                uint8_t *primary_rows, uint32_t primary_rows_len,
+                                uint32_t num_primary_rows,
+                                uint8_t *foreign_rows, uint32_t foreign_rows_len,
+                                uint32_t num_foreign_rows,
+                                uint8_t *output_rows, uint32_t output_rows_len,
                                 uint32_t *actual_output_len) {
   (void)op_code;
-  join_sort_preprocess(is_primary, input_row, input_row_len, num_rows, output_row, output_row_len,
-                       actual_output_len);
+  join_sort_preprocess(
+    primary_rows, primary_rows_len, num_primary_rows,
+    foreign_rows, foreign_rows_len, num_foreign_rows,
+    output_rows, output_rows_len, actual_output_len);
 }
 
 void ecall_scan_collect_last_primary(int op_code,

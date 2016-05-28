@@ -9,22 +9,49 @@
 
 #include "Join.h"
 
-void join_sort_preprocess(bool is_primary,
-                          uint8_t *input_row, uint32_t input_row_len,
-                          uint32_t num_rows,
-                          uint8_t *output_row, uint32_t output_row_len,
-                          uint32_t *actual_output_len) {
-  (void)input_row_len;
-  (void)output_row_len;
+void join_sort_preprocess(
+  uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
+  uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
+  uint8_t *output_rows, uint32_t output_rows_len, uint32_t *actual_output_len) {
+  (void)primary_rows_len;
+  (void)foreign_rows_len;
+  (void)output_rows_len;
 
-  RowReader r(input_row);
-  RowWriter w(output_row);
+  // Set the row upper bound for the output rows to the max of the primary and foreign row sizes by
+  // reading a row from each, converting it to the output format, and taking the max upper bound
+  uint32_t row_upper_bound;
+  {
+    RowReader r1(primary_rows);
+    RowReader r2(foreign_rows);
+    NewRecord a;
+    NewJoinRecord b;
+    r1.read(&a);
+    b.set(true, &a);
+    row_upper_bound = b.row_upper_bound();
+    debug("a upper bound %d\n", b.row_upper_bound());
+    r2.read(&a);
+    b.set(false, &a);
+    debug("b upper bound %d\n", b.row_upper_bound());
+    if (b.row_upper_bound() > row_upper_bound) {
+      row_upper_bound = b.row_upper_bound();
+    }
+  }
+
+  RowWriter w(output_rows, row_upper_bound);
   NewRecord a;
   NewJoinRecord b;
 
-  for (uint32_t i = 0; i < num_rows; i++) {
-    r.read(&a);
-    b.set(is_primary, &a);
+  RowReader primary(primary_rows);
+  for (uint32_t i = 0; i < num_primary_rows; i++) {
+    primary.read(&a);
+    b.set(true, &a);
+    w.write(&b);
+  }
+
+  RowReader foreign(foreign_rows);
+  for (uint32_t i = 0; i < num_foreign_rows; i++) {
+    foreign.read(&a);
+    b.set(false, &a);
     w.write(&b);
   }
 

@@ -281,19 +281,16 @@ case class EncSortMergeJoin(
       val leftBlockArray = leftBlockIter.toArray
       assert(leftBlockArray.length == 1)
       val leftBlock = leftBlockArray.head
-      val leftProcessed = enclave.JoinSortPreprocess(
-        eid, joinOpcode.value, true,
-        leftBlock.bytes, leftBlock.numRows)
 
       val rightBlockArray = rightBlockIter.toArray
       assert(rightBlockArray.length == 1)
       val rightBlock = rightBlockArray.head
-      val rightProcessed = enclave.JoinSortPreprocess(
-        eid, joinOpcode.value, false,
+
+      val processed = enclave.JoinSortPreprocess(
+        eid, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
         rightBlock.bytes, rightBlock.numRows)
 
-      Iterator(Block(QED.concatByteArrays(Array(leftProcessed, rightProcessed)),
-        leftBlock.numRows + rightBlock.numRows))
+      Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
     }
     time("join - preprocess") { processed.cache.count }
 

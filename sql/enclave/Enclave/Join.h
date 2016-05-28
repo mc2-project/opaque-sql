@@ -21,11 +21,10 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 //    dummy row for each primary row. (sort_merge_join)
 // 6. Filter out the dummy rows using an oblivious filter.
 
-void join_sort_preprocess(bool is_primary,
-                          uint8_t *input_row, uint32_t input_row_len,
-                          uint32_t num_rows,
-                          uint8_t *output_row, uint32_t output_row_len,
-                          uint32_t *actual_output_len);
+void join_sort_preprocess(
+  uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
+  uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
+  uint8_t *output_rows, uint32_t output_rows_len, uint32_t *actual_output_len);
 
 void scan_collect_last_primary(int op_code,
                                uint8_t *input_rows, uint32_t input_rows_length,

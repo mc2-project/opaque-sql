@@ -110,10 +110,9 @@ enclave {
 
     public void ecall_join_sort_preprocess(
       int op_code,
-      bool is_primary,
-      [user_check] uint8_t *input_row, uint32_t input_row_len,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_row, uint32_t output_row_len,
+      [user_check] uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
+      [user_check] uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
+      [user_check] uint8_t *output_rows, uint32_t output_rows_len,
       [out] uint32_t *actual_output_len);
 
     public void ecall_encrypt_attribute(

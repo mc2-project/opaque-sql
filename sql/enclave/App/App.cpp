@@ -780,17 +780,21 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   jobject obj,
   jlong eid,
   jint op_code,
-  jboolean is_primary,
-  jbyteArray input_rows,
-  jint num_rows) {
+  jbyteArray primary_rows,
+  jint num_primary_rows,
+  jbyteArray foreign_rows,
+  jint num_foreign_rows) {
   (void)obj;
 
   jboolean if_copy;
 
-  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+  uint32_t primary_rows_length = (uint32_t) env->GetArrayLength(primary_rows);
+  uint8_t *primary_rows_ptr = (uint8_t *) env->GetByteArrayElements(primary_rows, &if_copy);
 
-  uint32_t output_rows_length = block_size_upper_bound(num_rows);
+  uint32_t foreign_rows_length = (uint32_t) env->GetArrayLength(foreign_rows);
+  uint8_t *foreign_rows_ptr = (uint8_t *) env->GetByteArrayElements(foreign_rows, &if_copy);
+
+  uint32_t output_rows_length = block_size_upper_bound(num_primary_rows + num_foreign_rows);
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
 
@@ -800,16 +804,16 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
             ecall_join_sort_preprocess(
               eid,
               op_code,
-              is_primary,
-              input_rows_ptr, input_rows_length,
-              num_rows,
+              primary_rows_ptr, primary_rows_length, num_primary_rows,
+              foreign_rows_ptr, foreign_rows_length, num_foreign_rows,
               output_rows_ptr, output_rows_length, &actual_output_len));
 
 
   jbyteArray ret = env->NewByteArray(actual_output_len);
   env->SetByteArrayRegion(ret, 0, actual_output_len, (jbyte *) output_rows);
 
-  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+  env->ReleaseByteArrayElements(primary_rows, (jbyte *) primary_rows_ptr, 0);
+  env->ReleaseByteArrayElements(foreign_rows, (jbyte *) foreign_rows_ptr, 0);
 
   free(output_rows);
 

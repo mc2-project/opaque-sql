@@ -241,11 +241,7 @@ public:
    * schema as this row.
    */
   uint32_t row_upper_bound() const {
-    // Currently we have to return a high upper bound because otherwise join_sort_preprocess will
-    // return blocks with different upper bounds (one upper bound for the primary table and another
-    // for the foreign table). TODO: return row.row_upper_bound() here, then merge blocks and take
-    // the max of their upper bounds.
-    return ROW_UPPER_BOUND;
+    return row.row_upper_bound();
   }
 
   /**
@@ -893,18 +889,21 @@ private:
 };
 
 /**
- * Manages encrypting and writing out multiple rows to an output buffer. All rows must share the
- * same schema.
+ * Manages encrypting and writing out multiple rows to an output buffer. Either all rows must share
+ * the same schema, or a row upper bound must be passed to the constructor.
  *
  * After writing all rows, make sure to call close().
  */
 class RowWriter {
 public:
-  RowWriter(uint8_t *buf)
-    : buf_start(buf), buf_pos(buf), row_upper_bound(0), block_num_rows(0), block_padded_len(0) {
+  RowWriter(uint8_t *buf, uint32_t row_upper_bound)
+    : buf_start(buf), buf_pos(buf), row_upper_bound(row_upper_bound), block_num_rows(0),
+      block_padded_len(0) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
   }
+
+  RowWriter(uint8_t *buf) : RowWriter(buf, 0) {}
 
   ~RowWriter() {
     free(block_start);
