@@ -3,7 +3,6 @@
 #include "ObliviousSort.h"
 
 #include <algorithm>
-#include <vector>
 
 #include "common.h"
 #include "util.h"
@@ -139,9 +138,12 @@ void external_oblivious_sort(int op_code,
   uint32_t max_list_length = max_num_rows * 2;
 
   // Actual record data, in arbitrary and unchanging order
-  std::vector<RecordType> data(max_list_length, RecordType(row_upper_bound));
+  RecordType *data = (RecordType *) malloc(max_list_length * sizeof(RecordType));
+  for (uint32_t i = 0; i < max_list_length; i++) {
+    new(&data[i]) RecordType(row_upper_bound);
+  }
   perf("external_oblivious_sort: data occupies %d bytes in enclave memory\n",
-       data.size() * (sizeof(RecordType) + row_upper_bound));
+       max_list_length * (sizeof(RecordType) + row_upper_bound));
 
   // Pointers to the record data. Only the pointers will be sorted, not the records themselves
   SortPointer<RecordType> *sort_ptrs = new SortPointer<RecordType>[max_list_length];
@@ -191,4 +193,8 @@ void external_oblivious_sort(int op_code,
        num_comparisons, num_deep_comparisons);
 
   delete[] sort_ptrs;
+  for (uint32_t i = 0; i < max_list_length; i++) {
+    data[i].~RecordType();
+  }
+  free(data);
 }
