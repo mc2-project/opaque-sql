@@ -194,7 +194,11 @@ public:
   static constexpr uint8_t *primary_id = (uint8_t *) "aaaaaaaa";
   static constexpr uint8_t *foreign_id = (uint8_t *) "bbbbbbbb";
 
-  NewJoinRecord() : join_attr(NULL) {
+  NewJoinRecord() : NewJoinRecord(JOIN_ROW_UPPER_BOUND) {}
+
+  NewJoinRecord(uint32_t upper_bound) : join_attr(NULL) {
+    check(upper_bound == JOIN_ROW_UPPER_BOUND,
+          "NewJoinRecord cannot support upper bound of %d\n", upper_bound);
     row = (uint8_t *) calloc(JOIN_ROW_UPPER_BOUND, sizeof(uint8_t));
   }
 
@@ -818,6 +822,7 @@ private:
   void read_encrypted_block() {
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    buf += 4; // row_upper_bound
     decrypt(buf, block_enc_size, block_start);
     buf += block_enc_size;
     block_pos = block_start;
@@ -878,8 +883,9 @@ public:
   void write(NewRecord *row) {
     maybe_finish_block(ROW_UPPER_BOUND);
     uint32_t delta = row->write(block_pos);
-    check(delta <= ROW_UPPER_BOUND,
-          "Wrote %d, which is more than ROW_UPPER_BOUND\n", delta);
+    check(delta <= ((row_upper_bound == 0) ? ROW_UPPER_BOUND : row_upper_bound),
+          "Wrote %d, which is more than row_upper_bound = %d\n",
+          delta, row_upper_bound == 0 ? ROW_UPPER_BOUND : row_upper_bound);
     block_pos += delta;
     block_num_rows++;
     if (row_upper_bound == 0) {
@@ -906,6 +912,7 @@ public:
   void finish_block() {
     *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(block_padded_len); buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
     encrypt(block_start, block_padded_len, buf_pos);
     buf_pos += enc_size(block_padded_len);
 

@@ -63,7 +63,8 @@ enclave {
       int op_code,
       uint32_t num_buffers,
       [user_check] uint8_t **buffer_list,
-      [in, count=num_buffers] uint32_t *num_rows);
+      [in, count=num_buffers] uint32_t *num_rows,
+      uint32_t row_upper_bound);
 
     public void ecall_aggregate_step1(
       int op_code,

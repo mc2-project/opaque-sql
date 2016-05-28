@@ -116,10 +116,16 @@ public:
       *block_out = NULL;
     } else {
       *block_out = input;
-      *len_out = 8 + *reinterpret_cast<uint32_t *>(input);
-      *num_rows_out = *reinterpret_cast<uint32_t *>(input + 4);
-      input += *len_out;
+      uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(input); input += 4;
+      *len_out = block_enc_size; *len_out += 4;
+      *num_rows_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
+      input += 4; *len_out += 4; // row_upper_bound
+      input += block_enc_size;
     }
+  }
+  uint32_t get_row_upper_bound() {
+    check(input < input_start + input_len, "BlockReader: input exhausted");
+    return *reinterpret_cast<uint32_t *>(input + 8);
   }
 
 private:

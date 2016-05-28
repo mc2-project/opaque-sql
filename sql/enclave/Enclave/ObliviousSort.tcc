@@ -1,6 +1,9 @@
+// -*- mode: C++ -*-
+
 #include "ObliviousSort.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "common.h"
 #include "util.h"
@@ -117,7 +120,8 @@ template<typename RecordType>
 void external_oblivious_sort(int op_code,
                              uint32_t num_buffers,
                              uint8_t **buffer_list,
-                             uint32_t *num_rows) {
+                             uint32_t *num_rows,
+                             uint32_t row_upper_bound) {
   int len = num_buffers;
   int log_len = log_2(len) + 1;
   int offset = 0;
@@ -135,13 +139,17 @@ void external_oblivious_sort(int op_code,
   uint32_t max_list_length = max_num_rows * 2;
 
   // Actual record data, in arbitrary and unchanging order
-  RecordType *data = new RecordType[max_list_length];
+  std::vector<RecordType> data(max_list_length, RecordType(row_upper_bound));
+  perf("external_oblivious_sort: data occupies %d bytes in enclave memory\n",
+       data.size() * (sizeof(RecordType) + row_upper_bound));
 
   // Pointers to the record data. Only the pointers will be sorted, not the records themselves
   SortPointer<RecordType> *sort_ptrs = new SortPointer<RecordType>[max_list_length];
   for (uint32_t i = 0; i < max_list_length; i++) {
     sort_ptrs[i].init(&data[i]);
   }
+  perf("external_oblivious_sort: sort_ptrs occupies %d bytes in enclave memory\n",
+       max_list_length * sizeof(SortPointer<RecordType>));
 
   uint32_t num_comparisons = 0, num_deep_comparisons = 0;
 
@@ -183,5 +191,4 @@ void external_oblivious_sort(int op_code,
        num_comparisons, num_deep_comparisons);
 
   delete[] sort_ptrs;
-  delete[] data;
 }

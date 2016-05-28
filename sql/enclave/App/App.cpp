@@ -593,6 +593,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   std::vector<uint32_t> num_rows;
 
   BlockReader r(input_copy, input_len);
+  uint32_t row_upper_bound = r.get_row_upper_bound();
   uint8_t *cur_block;
   uint32_t cur_block_size;
   uint32_t cur_block_num_rows;
@@ -623,7 +624,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
 
   sgx_check("External Oblivious Sort",
             ecall_external_oblivious_sort(
-              eid, op_code, buffer_list.size(), buffer_list.data(), num_rows.data()));
+              eid, op_code, buffer_list.size(), buffer_list.data(), num_rows.data(),
+              row_upper_bound));
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);

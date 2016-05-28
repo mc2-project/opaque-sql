@@ -35,9 +35,8 @@ void merge(
  * re-encrypt when writing the results back to the buffers.
  */
 template<typename RecordType>
-void external_oblivious_sort(int op_code,
-                             uint32_t num_buffers,
-                             uint8_t **buffer_list);
+void external_oblivious_sort(
+  int op_code, uint32_t num_buffers, uint8_t **buffer_list, uint32_t row_upper_bound);
 
 #include "ObliviousSort.tcc"
 

@@ -65,15 +65,17 @@ void ecall_test_int(int *ptr) {
 }
 
 void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **buffer_list,
-                                   uint32_t *num_rows) {
+                                   uint32_t *num_rows, uint32_t row_upper_bound) {
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
-    external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows);
+    external_oblivious_sort<NewRecord>(
+      op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
     break;
   case SORT_JOIN:
-    external_oblivious_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows);
+    external_oblivious_sort<NewJoinRecord>(
+      op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
     break;
   default:
     printf("ecall_external_oblivious_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);

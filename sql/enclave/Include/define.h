@@ -13,7 +13,10 @@
 // distinct items, offset, sort attribute, aggregation attribute
 //#define AGG_UPPER_BOUND (4 + 4 + ROW_UPPER_BOUND + PARTIAL_AGG_UPPER_BOUND)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
-#define BLOCK_HEADER_SIZE 8 // block format: [uint32_t len][uint32_t num_rows]enc{...}
+
+// block format: [uint32_t len][uint32_t num_rows][uint32_t row_upper_bound]enc{...}
+#define BLOCK_HEADER_SIZE 12
+
 
 #define TYPE_SIZE (1)
 #define LEN_SIZE (4)
