@@ -43,14 +43,11 @@ object QEDBenchmark {
     val sc = new SparkContext(sparkConf)
     val sqlContext = new SQLContext(sc)
 
-    // time("spark sql sort") {
-    //   QEDBenchmark.sortSparkSQL(sqlContext, 256 * 1024)
-    // }
+    // Warmup
+    QEDBenchmark.pagerank(sqlContext, 256.toString)
+    QEDBenchmark.pagerank(sqlContext, 256.toString)
 
-    // time("opaque sort") {
-    //   QEDBenchmark.sortOpaque(sqlContext, 256 * 1024)
-    // }
-
+    // Run
     QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
 
     QEDBenchmark.bd1Opaque(sqlContext, "1million")
@@ -63,10 +60,9 @@ object QEDBenchmark {
 
     QEDBenchmark.bd3Opaque(sqlContext, "1million")
 
-    QEDBenchmark.pagerank(sqlContext, "4096")
-    QEDBenchmark.pagerank(sqlContext, "8192")
-    QEDBenchmark.pagerank(sqlContext, "16384")
-    QEDBenchmark.pagerank(sqlContext, "32768")
+    for (i <- 8 to 20) {
+      QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString)
+    }
 
     sc.stop()
   }
@@ -80,7 +76,7 @@ object QEDBenchmark {
           StructField("dst", IntegerType, false),
           StructField("isVertex", IntegerType, false))))
       .option("delimiter", " ")
-      .csv(s"/home/ankurd/PageRank$size.in")
+      .csv(s"$dataDir/pagerank-files/PageRank$size.in")
     val edges = data.filter($"isVertex" === lit(0))
       .select($"src", $"dst", lit(1.0f).as("weight"))
       .repartition(numPartitions(sqlContext, distributed))
