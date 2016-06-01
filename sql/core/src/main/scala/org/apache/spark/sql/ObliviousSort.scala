@@ -25,10 +25,7 @@ import org.apache.spark.storage.StorageLevel
 
 object ObliviousSort extends java.io.Serializable {
 
-  // TODO(ankurdave): Use SparkContext to determine these
-  val NumMachines = 2
-  val NumCores = 1
-  val Multiplier = 8 // TODO: fix bug when this is 1
+  val Multiplier = 2 // TODO: fix bug when this is 1
 
   import QED.{time, logPerf}
 
@@ -138,7 +135,8 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def ColumnSortStep3(
-      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode)
+      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode,
+      NumMachines: Int, NumCores: Int)
     : Iterator[Value] = {
 
     var len = 0
@@ -219,8 +217,9 @@ object ObliviousSort extends java.io.Serializable {
     ret_result.iterator
   }
 
-  def ColumnSortFinal(key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode)
-    : Iterator[(Int, (Int, Array[Byte]))] = {
+  def ColumnSortFinal(
+      key: (Int, Iterable[(Int, Array[Byte])]), r: Int, s: Int, opcode: QEDOpcode,
+      NumMachines: Int, NumCores: Int): Iterator[(Int, (Int, Array[Byte]))] = {
 
     var result = Array.empty[Value]
     var num_columns = 0
@@ -361,10 +360,12 @@ object ObliviousSort extends java.io.Serializable {
       }
     } else {
       val rows = data.flatMap(block => QED.splitBlock(block.bytes, block.numRows, opcode.isJoin))
-      ColumnSort(data.context, rows, opcode).mapPartitions { rowIter =>
+      val result = ColumnSort(data.context, rows, opcode).mapPartitions { rowIter =>
         val rowArray = rowIter.toArray
         Iterator(Block(QED.createBlock(rowArray, opcode.isJoin), rowArray.length))
       }
+      assert(result.partitions.length == data.partitions.length)
+      result
     }
   }
 
@@ -372,6 +373,9 @@ object ObliviousSort extends java.io.Serializable {
   def ColumnSort(
       sc: SparkContext, data: RDD[Array[Byte]], opcode: QEDOpcode, r_input: Int = 0, s_input: Int = 0)
       : RDD[Array[Byte]] = {
+
+    val NumMachines = data.partitions.length
+    val NumCores = 1
 
     // let len be N
     // divide N into r * s, where s is the number of machines, and r is the size of the
@@ -425,9 +429,9 @@ object ObliviousSort extends java.io.Serializable {
       ColumnSortParFunction1(index, x, NumCores * NumMachines, r, s, opcode))
 
     val par_data_intermediate = par_data_1_2.map(x => (x.column, (x.row, x.value)))
-      .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortStep3(x, r, s, opcode, NumMachines, NumCores))
     val par_data_i2 = par_data_intermediate.map(x => (x.column, (x.row, x.value)))
-      .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode))
+      .groupByKey(numPartitions).flatMap(x => ColumnSortFinal(x, r, s, opcode, NumMachines, NumCores))
     val par_data_final =
       time("final partition sorting") {
         val result = par_data_i2

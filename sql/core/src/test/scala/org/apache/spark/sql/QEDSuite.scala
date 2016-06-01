@@ -30,6 +30,8 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.execution.Block
+import org.apache.spark.sql.execution.ConvertToBlocks
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.test.SharedSQLContext
@@ -99,6 +101,30 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
+  test("columnsort on join rows") {
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = sparkContext.makeRDD(QED.encrypt2(p_data), 5)
+    val f = sparkContext.makeRDD(QED.encrypt3(f_data), 5)
+    val j = p.zipPartitions(f) { (pIter, fIter) =>
+      val (enclave, eid) = QED.initEnclave()
+      val pArr = pIter.toArray
+      val fArr = fIter.toArray
+      val p = QED.createBlock(
+        pArr.map(r => InternalRow.fromSeq(r.productIterator.toSeq)).map(_.encSerialize), false)
+      val f = QED.createBlock(
+        fArr.map(r => InternalRow.fromSeq(r.productIterator.toSeq)).map(_.encSerialize), false)
+      val r = enclave.JoinSortPreprocess(
+        eid, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
+      Iterator(Block(r, pArr.length + fArr.length))
+    }
+    val sorted = ObliviousSort.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
+      QED.splitBlock(block.bytes, block.numRows, true)
+        .map(serRow => Row.fromSeq(QED.parseRow(serRow)))
+    }
+    assert(sorted.collect.length === p_data.length + f_data.length)
+  }
+
   test("encFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
     val words = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("word", "count")
@@ -160,7 +186,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("encAggregate - final run split across multiple partitions") {
     val data = for (i <- 0 until 256) yield (i, "A", 1)
-    val words = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count")
+    val words = sparkContext.makeRDD(QED.encrypt3(data), 2).toDF("id", "word", "count")
 
     val summed = words.encAggregate(OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
       $"word", $"count".as("totalCount"))
@@ -195,6 +221,12 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
     val sorted = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("str", "x").encSort($"x").collect
     assert(QED.decrypt2[String, Float](sorted) === data.sortBy(_._2))
+  }
+
+  test("encSort multiple partitions") {
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
+    val sorted = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count").encSort($"word").collect
+    assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
   }
 
   test("encJoin") {
