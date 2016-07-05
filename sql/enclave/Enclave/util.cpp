@@ -209,3 +209,5 @@ int pow_2(int value) {
   int pow_value = (int) pow(2, dvalue);
   return pow_value;
 }
+
+

@@ -338,7 +338,9 @@ public:
     } else if (key_prefix > other->key_prefix) {
       return false;
     } else {
-      (*num_deep_comparisons)++;
+	  if (num_deep_comparisons != NULL) {
+		(*num_deep_comparisons)++;
+	  }
       return rec->less_than(other->rec, op_code);
     }
   }
@@ -842,6 +844,11 @@ public:
     maybe_advance_block();
     block_pos += ptr->read(block_pos, op_code);
     block_rows_read++;
+  }
+
+  void reset_block(uint8_t *new_buffer) {
+	buf = new_buffer;
+	read_encrypted_block();
   }
 
 private:

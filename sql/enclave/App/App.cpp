@@ -1125,7 +1125,73 @@ void test_stream_encryption() {
   ecall_stream_encryption_test(global_eid);
 }
 
-/* Application entry */
+
+// tests non-oblivious external sort
+void test_external_sort() {
+  
+  // data per encrypted block
+  uint32_t num_cols = 3;
+  uint8_t column_types[3] = {INT, INT, INT};
+  uint32_t num_rows_per_block = 4;
+
+  uint32_t num_bufs = 3;
+  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t enc_buf_size = 0;
+  uint8_t *buf_ptr = buf;
+
+  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
+
+  printf("Before random block gen\n");
+  
+  for (uint32_t i = 0; i < num_bufs; i++) {
+  	ecall_generate_random_encrypted_block(global_eid,
+  										  num_cols, column_types, num_rows_per_block,
+  										  buf_ptr, &enc_buf_size);
+
+	printf("enc_buf_size is %u\n", enc_buf_size);
+  	buffer_list[i] = buf_ptr;
+  	buf_ptr += enc_buf_size;
+  }
+
+  // allocate scratch pad
+  uint8_t *scratch = (uint8_t *) malloc(num_bufs * 128 * 1024);
+  uint32_t row_upper_bound = 0;
+
+  std::vector<uint32_t> num_rows;
+  for (uint32_t i = 0; i < num_bufs; i++) {
+	num_rows.push_back(num_rows_per_block);
+  }
+
+  row_upper_bound = *((uint32_t *) (buffer_list[0] + 8));
+  printf("[test_external_sort] row_upper_bound is %u\n", row_upper_bound);
+
+  for (uint32_t i = 0; i < num_bufs; i++) {
+  	ecall_row_parser(global_eid, buffer_list[i]);
+  }
+
+
+  int op_code = OP_SORT_COL1;
+
+  printf("Before external sort\n");
+  
+  ecall_external_sort(global_eid,
+					  op_code,
+					  num_bufs,
+					  buffer_list,
+					  num_rows.data(),
+					  row_upper_bound,
+					  scratch);
+
+  printf("After external sort\n");
+
+  for (uint32_t i = 0; i < num_bufs; i++) {
+	ecall_row_parser(global_eid, buffer_list[i]);
+  }
+    
+}
+
+/* application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -1148,7 +1214,8 @@ int SGX_CDECL main(int argc, char *argv[])
     return -1;
   }
 
-  test_stream_encryption();
+  //test_stream_encryption();
+  test_external_sort();
   
   /* Destroy the enclave */
   sgx_destroy_enclave(global_eid);
