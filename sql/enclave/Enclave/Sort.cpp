@@ -156,6 +156,8 @@ uint32_t external_merge_helper(int op_code,
 	}
   }
 
+  printf("[external_merge_helper] num_readers: %u, total_rows: %u, num_buffers: %u\n", num_readers, total_rows, num_buffers);
+
   writer->init(output_buffer, row_upper_bound, num_buffers, total_rows);
   
   for (uint32_t i = 0; i < num_readers; i++) {
@@ -221,17 +223,20 @@ uint32_t external_merge(int op_code,
   uint32_t num_rows_out = 0;
   uint32_t rows_upper_bound_out = 0;
 
-  for (uint32_t i = offset; i < num_streams; i++) {
+  for (uint32_t i = 0; i < num_streams; i++) {
 
 	while (true) {
 	  
-	  blocks[i].read(&block_out, &len_out, &num_rows_out, &rows_upper_bound_out);
+	  blocks[i + offset].read(&block_out, &len_out, &num_rows_out, &rows_upper_bound_out);
+	  //printf("[external_merge] len_out: %u, num_rows_out: %u, rows_upper_bound_out %u\n", len_out, num_rows_out, rows_upper_bound_out);
 	  
-	  if (block_out == NULL) break;
+	  if (block_out == NULL) {
+		//printf("[external_merge] offset %u has null block\n", i);
+		break;
+	  }
 		  
 	  readers[i].add_buf(block_out, num_rows_out);
-	  printf("[external_merge] num_rows_out is %u\n", num_rows_out);
-	} 
+	}
 
 	readers[i].init();
   }
@@ -337,6 +342,8 @@ void external_sort(int op_code,
 	  printf("read_buffers size is %u, write_buffers size is %u\n", read_buffers.size(), write_buffers.size());
 	  
 	  for (uint32_t i = 0; i < read_buffers.size(); i += max_num_streams) {
+
+		printf("Round %u\n", i);
 
 		if (read_buffers.size() - i == 1) {
 		  memcpy(output_buffers_ptr, read_buffers[i].get_buf(), read_buffers[i].get_len());

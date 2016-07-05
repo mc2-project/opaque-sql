@@ -1134,7 +1134,7 @@ void test_external_sort() {
   uint8_t column_types[3] = {INT, INT, INT};
   uint32_t num_rows_per_block = 4;
 
-  uint32_t num_bufs = 3;
+  uint32_t num_bufs = 5;
   uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
 
   uint32_t enc_buf_size = 0;
