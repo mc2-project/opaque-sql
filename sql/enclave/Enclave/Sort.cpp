@@ -448,6 +448,8 @@ void find_range_bounds(int op_code,
 
   uint32_t current_rows_in_part = 0;
 
+  printf("[find_range_bounds] total_num_rows is %u, num_rows_per_part is %u\n", total_num_rows, num_rows_per_part);
+
   // each partition should get all of the range boundaries
   for (uint32_t i = 0; i < total_num_rows; i++) {
 	row_reader.read(&row);
@@ -515,7 +517,7 @@ void sort_partition(int op_code,
 	
 	// compare currently read row & boundary_row
 	if (!row.less_than(&boundary_row, op_code) && stream < num_partitions - 1) {
-	  printf("[sort_partition] stream is %u\n", stream);
+	  //printf("[sort_partition] stream is %u\n", stream);
 	  
 	  writer.finish_block();
 	  offset = writer.bytes_written();
@@ -530,7 +532,7 @@ void sort_partition(int op_code,
 	writer.write(&row);
   }
 
-  printf("[sort_partition] final stream is %u\n", stream);
+  //printf("[sort_partition] final stream is %u\n", stream);
   
   writer.close();
 

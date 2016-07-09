@@ -1252,19 +1252,25 @@ void test_distributed_external_sort() {
   uint8_t *sort_partition = (uint8_t *) malloc(num_bufs * 128 * 1024);
   uint8_t **partitioned_buffers = (uint8_t **) malloc((num_bufs + 1) * sizeof(uint8_t *));
 
+  for (uint32_t i = 0; i < num_bufs + 1; i++) {
+	partitioned_buffers[i] = NULL;
+  }
+
 
   printf("[test_distributed_external_sort] Sort partition\n");
   ecall_sort_partition(global_eid,
 					   op_code,
-					   num_bufs,
-					   output_rows, output_rows_len,
+					   1,
+					   buffer_list[0], num_rows_per_block,
 					   boundary_rows,
 					   num_bufs + 1,
 					   sort_partition, partitioned_buffers,
 					   scratch);
 
-  for (uint32_t i = 0; i < num_bufs; i++) {
-	ecall_row_parser(global_eid, partitioned_buffers[i]);
+  for (uint32_t i = 0; i < num_bufs + 1; i++) {
+	if (partitioned_buffers[i] != NULL) {
+	  ecall_row_parser(global_eid, partitioned_buffers[i]);
+	}
   }
 
   free(buf);
