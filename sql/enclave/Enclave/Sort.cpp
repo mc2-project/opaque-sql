@@ -377,7 +377,8 @@ void external_sort(int op_code,
 // given a block of encrypted data, output a smaller block of sampled data
 template<typename RecordType>
 void sample(uint8_t *input_rows,
-			uint8_t *output_rows) {
+			uint8_t *output_rows,
+			uint32_t *output_rows_size) {
   
   // sample ~5% of the rows
   uint32_t num_output_rows_ = 0;
@@ -404,37 +405,48 @@ void sample(uint8_t *input_rows,
   }
 
   row_writer.close();
+  *output_rows_size = row_writer.bytes_written();
+  
 }
 
 
 template<typename RecordType>
 void find_range_bounds(int op_code, 
 					   uint32_t num_buffers,
-					   uint8_t **buffer_list,
-					   uint32_t *num_rows,
-					   uint32_t row_upper_bound,
+					   uint8_t *input_rows,
+					   uint32_t input_rows_len,
 					   uint8_t *scratch,
-					   uint8_t *output_buffer) {
-
+					   uint8_t *output_rows,
+					   uint32_t *output_rows_len) {
+  
   // first, sort these rows, then divide into num_buffers for range boundaries
+  
+  BlockReader r(input_rows, input_rows_len);
+
+  uint32_t len_out = 0;
+  uint8_t **buffer_list = (uint8_t **) malloc(num_buffers * sizeof(uint8_t *));
+  uint32_t *num_rows = (uint32_t *) malloc(num_buffers * sizeof(uint32_t));
+  uint32_t row_upper_bound = 0;
+
+  for (uint32_t i = 0; i < num_buffers; i++) {
+	r.read(buffer_list + i, &len_out, num_rows + i, &row_upper_bound);
+  }
   
   external_sort<RecordType>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
   
   uint32_t total_num_rows = 0;
-
   for (uint32_t i = 0; i < num_buffers; i++) {
 	total_num_rows += num_rows[i];
   }
   
   uint32_t num_rows_per_part = total_num_rows / num_buffers;
 
-  RowReader row_reader(buffer_list);
-  RowWriter row_writer(output_buffer, row_upper_bound);
+  RowReader row_reader(input_rows);
+  RowWriter row_writer(output_rows, row_upper_bound);
 
   RecordType row;
 
   uint32_t current_rows_in_part = 0;
-  uint32_t write_len = 0;
 
   // each partition should get all of the range boundaries
   for (uint32_t i = 0; i < total_num_rows; i++) {
@@ -447,59 +459,107 @@ void find_range_bounds(int op_code,
 	  ++current_rows_in_part;
 	}
   }
+
+  row_writer.close();
+  *output_rows_len = row_writer.bytes_written();
+
+  free(buffer_list);
+  free(num_rows);
 }
 
 // non-oblivoius distributed sort on a single partition
 template<typename RecordType>
-void non_oblivious_sort(int op_code,
-						uint8_t *buffer,
-						uint32_t buffer_len,
-						uint32_t num_rows,
-						uint8_t *boundary,
-						uint8_t num_boundary_rows,
-						uint8_t *scratch1,
-						uint8_t *scfatch2,
-						uint8_t *output) {
+void sort_partition(int op_code,
+					uint32_t num_buffers,
+					uint8_t *input_rows,
+					uint32_t input_rows_len,
+					uint8_t *boundary_rows,
+					uint8_t num_partitions,
+					uint8_t *output,
+					uint8_t **output_stream_list,
+					uint8_t *scratch) {
 
-  // uint8_t *buffer_list[1] = {buffer};
-  // uint32_t buffer_lengths[1] = {buffer_len};
-  // uint32_t num_rows_list[1] = {num_rows};
+  // sort locally, then look at the boundary rows to output a number of streams
+  BlockReader r(input_rows, input_rows_len);
 
-  // external_sort(op_code, 1, buffer_list, buffer_lengths, num_rows_list, scratch1, scratch2);
+  uint32_t len_out = 0;
+  uint8_t **buffer_list = (uint8_t **) malloc(num_buffers * sizeof(uint8_t *));
+  uint32_t *num_rows = (uint32_t *) malloc(num_buffers * sizeof(uint32_t));
+  uint32_t row_upper_bound = 0;
+  uint32_t total_rows = 0;
 
-  // // scan the sorted buffer, and output one partition for boundary
-  // uint8_t *output_ptr = output;
-
-  // NewRecord row;
-  // NewRecord boundary_row;
-
-  // StreamRowReader row_reader;
-  // row_reader.add_buf(buffer_list[0]);
-
-  // StreamRowReader boundary_row_reader;
-  // boundary_row_reader.add_buf(boundary);
-
-  // StreamRowWriter row_writer;
-  // row_writer.add_buf(output_ptr);
-
-  // int ret = 0;
-
-  // for (uint32_t i = 0; i < num_rows; i++) {
-  // 	row_reader.read(&row);
-	
-  // 	ret = row.compare(&boundary_row);
-
-  // 	if (ret > -1) {
-  // 	  // advance boundary_row_reader, reset row_writer
-  // 	  boundary_row_reader.read(&row);
-  // 	  row_writer.finish();
-  // 	  row_writer.reset();
-  // 	  row_writer.add_buf(output_ptr);
-  // 	}
-
-  // 	output_ptr += row_writer.write();
-  // }
+  for (uint32_t i = 0; i < num_buffers; i++) {
+	r.read(buffer_list + i, &len_out, num_rows + i, &row_upper_bound);
+	total_rows += num_rows[i];
+  }
   
+  external_sort<RecordType>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+
+  printf("[sort_partition] external sort done, total num rows is %u\n", total_rows);
+
+  RecordType row;
+  RecordType boundary_row;
+  uint32_t stream = 0;
+
+  RowReader reader(input_rows);
+  RowReader boundary_reader(boundary_rows);
+  boundary_reader.read(&boundary_row);
+
+  RowWriter writer(output, row_upper_bound);
+  uint32_t offset = 0;
+  output_stream_list[stream] = output + offset;
+
+  // for each row, compare with the boundary rows
+  for (uint32_t i = 0; i < total_rows; i++) {
+	reader.read(&row);
+	
+	// compare currently read row & boundary_row
+	if (!row.less_than(&boundary_row, op_code) && stream < num_partitions - 1) {
+	  printf("[sort_partition] stream is %u\n", stream);
+	  
+	  writer.finish_block();
+	  offset = writer.bytes_written();
+	  ++stream;
+
+	  output_stream_list[stream] = output + offset;
+	  
+	  if (stream < num_partitions - 1) {
+		boundary_reader.read(&boundary_row);
+	  }
+	} 
+	writer.write(&row);
+  }
+
+  printf("[sort_partition] final stream is %u\n", stream);
+  
+  writer.close();
+
+  free(buffer_list);
+  free(num_rows);
+}
+
+template<typename RecordType>
+void sort(int op_code,
+		  uint32_t num_buffers,
+		  uint8_t *input_rows,
+		  uint32_t input_rows_len,
+		  uint8_t *scratch) {
+
+  BlockReader r(input_rows, input_rows_len);
+  
+  uint32_t len_out = 0;
+  uint8_t **buffer_list = (uint8_t **) malloc(num_buffers * sizeof(uint8_t *));
+  uint32_t *num_rows = (uint32_t *) malloc(num_buffers * sizeof(uint32_t));
+  uint32_t row_upper_bound = 0;
+  
+  for (uint32_t i = 0; i < num_buffers; i++) {
+	r.read(buffer_list + i, &len_out, num_rows + i, &row_upper_bound);
+  }
+  
+  external_sort<RecordType>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+
+  free(buffer_list);
+  free(num_rows);
 }
 
 template void external_sort<NewRecord>(int op_code,
@@ -515,3 +575,42 @@ template void external_sort<NewJoinRecord>(int op_code,
 										   uint32_t *num_rows,
 										   uint32_t row_upper_bound,
 										   uint8_t *scratch);
+
+template void sample<NewRecord>(uint8_t *input_rows, uint8_t *output_rows, uint32_t *output_rows_len);
+template void sample<NewJoinRecord>(uint8_t *input_rows, uint8_t *output_rows, uint32_t *output_rows_len);
+
+template void find_range_bounds<NewRecord>(int op_code, 
+										   uint32_t num_buffers,
+										   uint8_t *input_rows,
+										   uint32_t input_rows_len,
+										   uint8_t *scratch,
+										   uint8_t *output_rows,
+										   uint32_t *output_rows_len);
+
+template void find_range_bounds<NewJoinRecord>(int op_code, 
+											   uint32_t num_buffers,
+											   uint8_t *input_rows,
+											   uint32_t input_rows_len,
+											   uint8_t *scratch,
+											   uint8_t *output_rows,
+											   uint32_t *output_rows_len);
+
+template void sort_partition<NewRecord>(int op_code,
+										uint32_t num_buffers,
+										uint8_t *input_rows,
+										uint32_t input_rows_len,
+										uint8_t *boundary_rows,
+										uint8_t num_partitions,
+										uint8_t *output,
+										uint8_t **output_stream_list,
+										uint8_t *scratch);
+
+template void sort_partition<NewJoinRecord>(int op_code,
+											uint32_t num_buffers,
+											uint8_t *input_rows,
+											uint32_t input_rows_len,
+											uint8_t *boundary_rows,
+											uint8_t num_partitions,
+											uint8_t *output,
+											uint8_t **output_stream_list,
+											uint8_t *scratch);

@@ -1191,6 +1191,91 @@ void test_external_sort() {
     
 }
 
+void test_distributed_external_sort() {
+
+  int op_code = OP_SORT_COL1;
+
+  // data per encrypted block
+  uint32_t num_cols = 3;
+  uint8_t column_types[3] = {INT, INT, INT};
+  uint32_t num_rows_per_block = 100;
+
+  uint32_t num_bufs = 5;
+  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t enc_buf_size = 0;
+  uint8_t *buf_ptr = buf;
+
+  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
+
+  printf("Before random block gen\n");
+  
+  for (uint32_t i = 0; i < num_bufs; i++) {
+  	ecall_generate_random_encrypted_block(global_eid,
+  										  num_cols, column_types, num_rows_per_block,
+  										  buf_ptr, &enc_buf_size);
+
+	printf("enc_buf_size is %u\n", enc_buf_size);
+  	buffer_list[i] = buf_ptr;
+  	buf_ptr += enc_buf_size;
+  }
+
+  uint8_t *output_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
+  uint32_t output_rows_len = 0;
+
+  uint8_t *scratch = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint8_t *boundary_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
+  uint32_t boundary_rows_len = 0;
+  
+
+  for (uint32_t i = 0; i < num_bufs; i++) {
+	uint32_t temp = 0;
+	ecall_sample(global_eid, op_code, buffer_list[i], output_rows + output_rows_len, &temp);
+	output_rows_len += temp;
+  }
+
+  
+  printf("[test_distributed_external_sort] output_rows_len is %u\n", output_rows_len);
+  ecall_find_range_bounds(global_eid,
+						  op_code,
+						  num_bufs,
+						  output_rows,
+						  output_rows_len,
+						  scratch,
+						  boundary_rows,
+						  &boundary_rows_len);
+
+  printf("[test_distributed_external_sort] Getting boundary rows\n");
+  ecall_row_parser(global_eid, boundary_rows);
+
+  uint8_t *sort_partition = (uint8_t *) malloc(num_bufs * 128 * 1024);
+  uint8_t **partitioned_buffers = (uint8_t **) malloc((num_bufs + 1) * sizeof(uint8_t *));
+
+
+  printf("[test_distributed_external_sort] Sort partition\n");
+  ecall_sort_partition(global_eid,
+					   op_code,
+					   num_bufs,
+					   output_rows, output_rows_len,
+					   boundary_rows,
+					   num_bufs + 1,
+					   sort_partition, partitioned_buffers,
+					   scratch);
+
+  for (uint32_t i = 0; i < num_bufs; i++) {
+	ecall_row_parser(global_eid, partitioned_buffers[i]);
+  }
+
+  free(buf);
+  free(output_rows);
+  free(buffer_list);
+  free(scratch);
+  free(boundary_rows);
+  free(sort_partition);
+  free(partitioned_buffers);
+}
+
 /* application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
@@ -1215,7 +1300,8 @@ int SGX_CDECL main(int argc, char *argv[])
   }
 
   //test_stream_encryption();
-  test_external_sort();
+  //test_external_sort();
+  test_distributed_external_sort();
   
   /* Destroy the enclave */
   sgx_destroy_enclave(global_eid);

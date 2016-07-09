@@ -143,6 +143,31 @@ enclave {
 									[user_check] uint32_t *num_rows,
 									uint32_t row_upper_bound,
 									[user_check] uint8_t *scratch);
+
+																  
+    public void ecall_sample(int op_code,
+							 [user_check] uint8_t *input_rows,
+							 [user_check] uint8_t *output_rows,
+							 [out] uint32_t *output_rows_len);
+
+	public void ecall_find_range_bounds(int op_code,
+										uint32_t num_bufs,
+										[user_check] uint8_t *input_rows,
+										uint32_t input_rows_len,
+										[user_check] uint8_t *scratch,
+										[user_check] uint8_t *output_rows,
+										[out] uint32_t *output_rows_len);
+
+	public void ecall_sort_partition(int op_code,
+									 uint32_t num_bufs,
+									 [user_check] uint8_t *input_rows,
+									 uint32_t input_rows_len,
+									 [user_check] uint8_t *boundary_rows,
+									 uint8_t num_partitions,
+									 [user_check] uint8_t *output,
+									 [user_check] uint8_t **output_stream_list,
+									 [user_check] uint8_t *scratch);
+	
   };
 
   untrusted {
