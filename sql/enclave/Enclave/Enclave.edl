@@ -134,7 +134,8 @@ enclave {
 													  [in, count=num_cols] uint8_t *column_types,
 													  uint32_t num_rows,
 													  [user_check] uint8_t *output_buffer,
-													  [out] uint32_t *encrypted_buffer_size);
+													  [out] uint32_t *encrypted_buffer_size,
+													  uint8_t type);
 																							
     public void ecall_row_parser([user_check] uint8_t *enc_block);
 	public void ecall_external_sort(int op_code,
@@ -167,6 +168,12 @@ enclave {
 									 [user_check] uint8_t *output,
 									 [user_check] uint8_t **output_stream_list,
 									 [user_check] uint8_t *scratch);
+
+    public void ecall_non_oblivious_aggregate(int op_code,
+											  [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+											  uint32_t num_rows,
+											  [user_check] uint8_t *output_rows, uint32_t output_rows_length,
+											  [out] uint32_t *actual_size);
 	
   };
 

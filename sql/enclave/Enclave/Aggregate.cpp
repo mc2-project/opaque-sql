@@ -32,11 +32,3 @@ void hash(int op_code,
   
 }
 
-
-// non-oblivious aggregation
-void non_oblivious_aggregate() {
-  
-
-}
-
-

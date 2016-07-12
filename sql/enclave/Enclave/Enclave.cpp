@@ -377,12 +377,14 @@ void ecall_generate_random_encrypted_block(uint32_t num_cols,
 										   uint8_t *column_types,
 										   uint32_t num_rows,
 										   uint8_t *output_buffer,
-										   uint32_t *encrypted_buffer_size) {
+										   uint32_t *encrypted_buffer_size,
+										   uint8_t type) {
   
   uint32_t ret = generate_encrypted_block(num_cols,
 										  column_types,
 										  num_rows,
-										  output_buffer);
+										  output_buffer,
+										  type);
   *encrypted_buffer_size = ret;
 }
 
@@ -530,4 +532,24 @@ void ecall_row_parser(uint8_t *enc_block) {
 	reader.read(&row);
 	row.print();
   }
+}
+
+
+void ecall_non_oblivious_aggregate(int op_code,
+								   uint8_t *input_rows, uint32_t input_rows_length,
+								   uint32_t num_rows,
+								   uint8_t *output_rows, uint32_t output_rows_length,
+								   uint32_t *actual_size) {
+  
+  switch (op_code) {
+  case OP_GROUPBY_COL1_SUM_COL2_INT:
+    non_oblivious_aggregate<Aggregator1<GroupBy<1>, Sum<2, uint32_t> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
+  default:
+    printf("ecall_aggregate_step1: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+
 }

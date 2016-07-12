@@ -85,6 +85,12 @@ void final_aggregation(int op_code,
                        uint32_t num_rows,
                        uint8_t *ret, uint32_t ret_length);
 
+template<typename AggregatorType>
+void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
+							 uint32_t num_rows,
+							 uint8_t *output_rows, uint32_t output_rows_length,
+							 uint32_t *actual_output_rows_length);
+
 #include "Aggregate.tcc"
 
 #endif // AGGREGATE_H

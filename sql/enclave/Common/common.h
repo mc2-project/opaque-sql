@@ -7,6 +7,12 @@ int printf( const char* format, ... );
 #ifndef COMMON_H
 #define COMMON_H
 
+enum DATA_GEN_TYPE : uint8_t {
+  DATA_GEN_REGULAR,
+  DATA_GEN_AGG,
+  DATA_GEN_JOIN
+};
+
 // Make sure to update the functions in common.cpp and util.cpp when you add a
 // type here.
 enum TYPE {
@@ -63,6 +69,9 @@ enum OPCODE {
   OP_PROJECT_SWAP_COL1_COL2 = 41,
   OP_PROJECT_SWAP_COL2_COL3 = 42,
   OP_JOIN_PAGERANK = 37,
+
+  OP_GROUPBY_COL1_SUM_COL2_INT = 300
+  ,
 };
 
 inline static int get_sort_operation(int op_code) {
