@@ -1,6 +1,7 @@
 #include "DataGen.h"
 #include "common.h"
 
+// All of these generate fake rows for unit tests
 
 uint32_t generate_random_aggregate_attribute(uint8_t attribute_type,
 											 uint8_t *output_buffer) {
@@ -16,7 +17,6 @@ uint32_t generate_random_aggregate_attribute(uint8_t attribute_type,
 	}
   } else if (attribute_type == INT) {
 	sgx_read_rand(output_ptr + HEADER_SIZE, 1);
-	// AND this with mask
 	uint32_t *int_ptr = (uint32_t *) (output_ptr + HEADER_SIZE);
 	uint32_t int_val = *int_ptr % 4;
 	*int_ptr = int_val;
@@ -52,7 +52,7 @@ uint32_t generate_random_attribute(uint8_t attribute_type,
 }
 
 uint32_t generate_non_random_attribute(uint8_t attribute_type,
-								   uint8_t *output_buffer) {
+									   uint8_t *output_buffer) {
   uint8_t *output_ptr = output_buffer;
 
   *((uint8_t *) output_ptr) = attribute_type;
@@ -66,6 +66,57 @@ uint32_t generate_non_random_attribute(uint8_t attribute_type,
   } else if (attribute_type == INT) {
 	uint32_t *int_ptr = (uint32_t *) (output_ptr + HEADER_SIZE);
 	*int_ptr = 1;
+  }  else {
+	sgx_read_rand(output_ptr + HEADER_SIZE, attr_upper_bound(attribute_type));
+  }
+
+  return attr_upper_bound(attribute_type) + HEADER_SIZE;
+}
+
+
+uint32_t generate_random_join_p_attribute(uint8_t attribute_type,
+										  uint8_t *output_buffer) {
+  // primary has to be unique
+  static int current_int = 0;
+  
+  uint8_t *output_ptr = output_buffer;
+
+  *((uint8_t *) output_ptr) = attribute_type;
+  *((uint32_t *) (output_ptr + TYPE_SIZE)) = attr_upper_bound(attribute_type);
+
+  if (attribute_type == STRING) {
+	// let's just always copy 'a' attr_upper_bound # of times
+	for (uint32_t i = 0; i < attr_upper_bound(attribute_type); i++) {
+	  *(output_ptr + HEADER_SIZE + i) = 'a';
+	}
+  } else if (attribute_type == INT) {
+	uint32_t *int_ptr = (uint32_t *) (output_ptr + HEADER_SIZE);
+	*int_ptr = current_int;
+	++current_int;
+  }  else {
+	sgx_read_rand(output_ptr + HEADER_SIZE, attr_upper_bound(attribute_type));
+  }
+
+  return attr_upper_bound(attribute_type) + HEADER_SIZE;
+}
+
+uint32_t generate_random_join_f_attribute(uint8_t attribute_type,
+										  uint8_t *output_buffer) {
+  uint8_t *output_ptr = output_buffer;
+
+  *((uint8_t *) output_ptr) = attribute_type;
+  *((uint32_t *) (output_ptr + TYPE_SIZE)) = attr_upper_bound(attribute_type);
+
+  if (attribute_type == STRING) {
+	// let's just always copy 'a' attr_upper_bound # of times
+	for (uint32_t i = 0; i < attr_upper_bound(attribute_type); i++) {
+	  *(output_ptr + HEADER_SIZE + i) = 'a';
+	}
+  } else if (attribute_type == INT) {
+	sgx_read_rand(output_ptr + HEADER_SIZE, 1);
+	uint32_t *int_ptr = (uint32_t *) (output_ptr + HEADER_SIZE);
+	uint32_t int_val = *int_ptr % 4;
+	*int_ptr = int_val;
   }  else {
 	sgx_read_rand(output_ptr + HEADER_SIZE, attr_upper_bound(attribute_type));
   }
@@ -95,13 +146,34 @@ uint32_t generate_random_row(uint32_t num_cols, uint8_t *column_types,
 		}
 	  }
 	  break;
-	case DATA_GEN_JOIN:
-	  offset = generate_random_attribute(column_types[i], output_ptr);
+	  
+	case DATA_GEN_JOIN_P:
+	  {
+		if (i == 0) {
+		  offset = generate_random_join_p_attribute(column_types[i], output_ptr);
+		} else {
+		  offset = generate_random_attribute(column_types[i], output_ptr);
+		}
+	  }
 	  break;
+	  
+	case DATA_GEN_JOIN_F:
+	  {
+		if (i == 0) {
+		  offset = generate_random_join_f_attribute(column_types[i], output_ptr);
+		} else {
+		  offset = generate_random_attribute(column_types[i], output_ptr);
+		}
+	  }
+	  break;
+	  
 	case DATA_GEN_REGULAR:
-	  offset = generate_random_attribute(column_types[i], output_ptr);
+	  {
+		offset = generate_random_attribute(column_types[i], output_ptr);
+	  }
 	  break;
 	}
+	
 	output_ptr += offset;
   }
 

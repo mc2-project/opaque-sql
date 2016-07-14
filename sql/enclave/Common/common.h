@@ -9,8 +9,9 @@ int printf( const char* format, ... );
 
 enum DATA_GEN_TYPE : uint8_t {
   DATA_GEN_REGULAR,
-  DATA_GEN_AGG,
-  DATA_GEN_JOIN
+	DATA_GEN_AGG,
+	DATA_GEN_JOIN_P,
+	DATA_GEN_JOIN_F
 };
 
 // Make sure to update the functions in common.cpp and util.cpp when you add a

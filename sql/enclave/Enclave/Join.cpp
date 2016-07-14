@@ -196,3 +196,50 @@ void sort_merge_join(int op_code,
   *actual_output_length = w.bytes_written();
   return;
 }
+
+
+void non_oblivious_sort_merge_join(int op_code,
+								   uint8_t *input_rows, uint32_t input_rows_length,
+								   uint32_t num_rows,
+								   uint8_t *output_rows, uint32_t output_rows_length,
+								   uint32_t *actual_output_length) {
+  (void) input_rows_length;
+  (void) output_rows_length;
+  
+  RowReader reader(input_rows);
+  RowWriter writer(output_rows);
+
+  NewJoinRecord primary, current;
+  NewRecord merge;
+
+  uint32_t secondary_join_attr = 0;
+
+  switch (op_code) {
+  case OP_JOIN_COL1:
+    secondary_join_attr = 1;
+    break;
+  default:
+    printf("non_oblivious_sort_merge_join: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    reader.read(&current);
+    current.init_join_attribute(op_code);
+
+    if (current.is_primary()) {
+      check(!primary.join_attr_equals(&current),
+            "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
+            "the primary table had the same join attribute\n");
+      primary.set(&current); // advance to a new join attribute
+    } else {
+      if (primary.join_attr_equals(&current)) {
+        primary.merge(&current, secondary_join_attr, &merge);
+        writer.write(&merge);
+      }
+    }
+  }
+
+  writer.close();
+  *actual_output_length = writer.bytes_written();
+}

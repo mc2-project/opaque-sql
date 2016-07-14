@@ -553,3 +553,26 @@ void ecall_non_oblivious_aggregate(int op_code,
   }
 
 }
+
+
+void ecall_non_oblivious_sort_merge_join(int op_code,
+										 uint8_t *input_rows, uint32_t input_rows_length,
+										 uint32_t num_rows,
+										 uint8_t *output_rows, uint32_t output_rows_length,
+										 uint32_t *actual_output_length) {
+  switch(op_code) {
+  case OP_JOIN_COL1:
+	{
+	  non_oblivious_sort_merge_join(op_code,
+									input_rows, input_rows_length,
+									num_rows,
+									output_rows, output_rows_length,
+									actual_output_length);
+	}
+	break;
+
+  default:
+    printf("ecall_non_oblivious_sort_merge_join: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+}
