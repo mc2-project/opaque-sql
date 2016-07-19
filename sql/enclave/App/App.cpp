@@ -997,6 +997,84 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   return result;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(JNIEnv *env,
+																			   jobject obj,
+																			   jlong eid,
+																			   jint op_code,
+																			   jbyteArray input,
+																			   jint num_items) {
+  (void)obj;
+
+  if (num_items == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    return ret;
+  }
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
+
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
+  uint8_t *scratch = (uint8_t *) malloc(input_len);
+
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+  }
+
+  // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> num_rows;
+  uint32_t row_upper_bound = 0;
+
+  BlockReader r(input_copy, input_len);
+  uint8_t *cur_block;
+  uint32_t cur_block_size;
+  uint32_t cur_block_num_rows;
+  uint32_t total_rows = 0;
+  r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
+  while (cur_block != NULL) {
+    uint8_t *cur_buffer = cur_block;
+    uint32_t cur_buffer_size = cur_block_size;
+    uint32_t cur_buffer_num_rows = cur_block_num_rows;
+    uint32_t cur_row_upper_bound;
+
+    r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
+      cur_buffer_size += cur_block_size;
+      cur_buffer_num_rows += cur_block_num_rows;
+      row_upper_bound =
+        cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
+
+      r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    }
+
+    buffer_list.push_back(cur_buffer);
+    num_rows.push_back(cur_buffer_num_rows);
+    total_rows += cur_buffer_num_rows;
+    debug("ExternalSort: Buffer %lu: %d bytes, %d rows\n",
+          buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
+  }
+
+  perf("ExternalSort: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
+       input_len, num_items, buffer_list.size(), row_upper_bound);
+
+  sgx_check("External non-oblivious sort",
+            ecall_external_oblivious_sort(
+              eid, op_code, buffer_list.size(), buffer_list.data(), num_rows.data(),
+              row_upper_bound));
+
+  jbyteArray ret = env->NewByteArray(input_len);
+  env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
+
+  env->ReleaseByteArrayElements(input, ptr, 0);
+
+  free(input_copy);
+  free(scratch);
+
+  return ret;  
+  
+}
+
 uint32_t enc_size(uint32_t len) {
   return len + ENC_HEADER_SIZE;
 }
@@ -1130,11 +1208,11 @@ void test_stream_encryption() {
 void test_external_sort() {
   
   // data per encrypted block
-  uint32_t num_cols = 3;
-  uint8_t column_types[3] = {INT, INT, INT};
-  uint32_t num_rows_per_block = 4;
+  uint32_t num_cols = 2;
+  uint8_t column_types[7] = {INT, INT, INT, INT, INT, INT, INT};
+  uint32_t num_rows_per_block = 12;
 
-  uint32_t num_bufs = 5;
+  uint32_t num_bufs = 11;
   uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
 
   uint32_t enc_buf_size = 0;
@@ -1197,7 +1275,7 @@ void test_distributed_external_sort() {
 
   // data per encrypted block
   uint32_t num_cols = 3;
-  uint8_t column_types[3] = {INT, INT, INT};
+  uint8_t column_types[4] = {INT, INT, INT};
   uint32_t num_rows_per_block = 100;
 
   uint32_t num_bufs = 5;
@@ -1268,9 +1346,9 @@ void test_distributed_external_sort() {
 					   scratch);
 
   for (uint32_t i = 0; i < num_bufs + 1; i++) {
-	if (partitioned_buffers[i] != NULL) {
-	  ecall_row_parser(global_eid, partitioned_buffers[i]);
-	}
+  	if (partitioned_buffers[i] != NULL) {
+  	  ecall_row_parser(global_eid, partitioned_buffers[i]);
+  	}
   }
 
   free(buf);
@@ -1468,6 +1546,41 @@ void test_non_oblivious_join() {
   free(joined_rows);
 }
 
+
+void test_debug() {
+  // data per encrypted block
+  uint32_t num_cols = 4;
+  uint8_t column_types[7] = {INT, INT, INT, INT, INT, INT, INT};
+  uint32_t num_rows_per_block = 83;
+
+  uint32_t num_bufs = 1;
+  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t enc_buf_size = 0;
+  uint8_t *buf_ptr = buf;
+
+  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
+
+  printf("Before random block gen\n");
+  
+  for (uint32_t i = 0; i < num_bufs; i++) {
+  	ecall_generate_random_encrypted_block(global_eid,
+  										  num_cols, column_types, num_rows_per_block,
+  										  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
+
+	printf("enc_buf_size is %u\n", enc_buf_size);
+  	buffer_list[i] = buf_ptr;
+  	buf_ptr += enc_buf_size;
+  }
+
+  uint8_t *copy_buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  ecall_row_parser(global_eid, buffer_list[0]);
+  
+  free(buf);
+  free(copy_buf);
+}
+
 /* application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
@@ -1494,8 +1607,10 @@ int SGX_CDECL main(int argc, char *argv[])
   //test_stream_encryption();
   //test_external_sort();
   //test_distributed_external_sort();
-  //test_non_oblivious_aggregation();
-  test_non_oblivious_join();
+  test_non_oblivious_aggregation();
+  //test_non_oblivious_join();
+
+  //test_debug();
   
   /* Destroy the enclave */
   sgx_destroy_enclave(global_eid);

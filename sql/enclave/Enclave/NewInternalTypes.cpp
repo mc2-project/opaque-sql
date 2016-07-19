@@ -23,6 +23,18 @@ uint32_t copy_attr(uint8_t *dst, const uint8_t *src) {
   return dst_ptr - dst;
 }
 
+uint32_t stream_copy_attr(StreamRowReader *reader, uint8_t *dst) {
+  uint8_t *dst_ptr = dst;
+  reader->read_bytes(dst_ptr, TYPE_SIZE);
+  dst_ptr += TYPE_SIZE;
+  reader->read_bytes(dst_ptr, 4);
+  uint32_t len = *reinterpret_cast<const uint32_t *>(dst_ptr);
+  dst_ptr += 4;
+  reader->read_bytes(dst_ptr, len);
+  dst_ptr += len;
+  return dst_ptr - dst;
+}
+
 template<>
 uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy) {
   uint8_t *output_ptr = output;
@@ -231,6 +243,26 @@ uint32_t NewRecord::read(const uint8_t *input) {
   return (input_ptr - input);
 }
 
+
+uint32_t NewRecord::read(StreamRowReader *reader) {
+
+  uint8_t *row_ptr = this->row;
+
+  // read # of cols
+  reader->read_bytes(row_ptr, 4);
+  row_ptr += 4;
+
+  printf("[NewRecord::read] num_cols is %u\n", num_cols());
+
+  for (uint32_t i = 0; i < num_cols(); i++) {
+	row_ptr += stream_copy_attr(reader, row_ptr);
+  }
+
+  this->row_length = (row_ptr - row);
+
+  return (row_ptr - row);
+}
+
 uint32_t NewRecord::read_encrypted(uint8_t *input) {
   uint8_t *input_ptr = input;
   uint8_t *row_ptr = this->row;
@@ -306,6 +338,11 @@ void NewRecord::print() const {
 
 uint32_t NewRecord::write(uint8_t *output) const {
   memcpy(output, this->row, this->row_length);
+  return this->row_length;
+}
+
+uint32_t NewRecord::write(StreamRowWriter *writer) const {
+  writer->write_bytes(this->row, this->row_length);
   return this->row_length;
 }
 
@@ -560,4 +597,11 @@ bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other) const {
   } else {
     return false;
   }
+}
+
+StreamRowReader::StreamRowReader(uint8_t *buf) {
+  this->buf = buf;
+  cipher = NULL;
+  
+  this->read_encrypted_block();
 }

@@ -3,6 +3,8 @@
 #include "util.h"
 
 class NewJoinRecord;
+class StreamRowReader;
+class StreamRowWriter;
 
 int printf(const char *fmt, ...);
 
@@ -79,11 +81,17 @@ public:
   /** Read a plaintext row into this record. Return the number of bytes read. */
   uint32_t read(const uint8_t *input);
 
+  /** Read a plaintext row using streaming decryption */
+  uint32_t read(StreamRowReader *reader);
+
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
   uint32_t read_encrypted(uint8_t *input);
 
   /** Write out this record in plaintext. Return the number of bytes written. */
   uint32_t write(uint8_t *output) const;
+
+  /** Write out this record in plaintext using streaming encryption */
+  uint32_t write(StreamRowWriter *writer) const;
 
   /** Encrypt and write out this record, returning the number of bytes written. */
   uint32_t write_encrypted(uint8_t *output);
@@ -203,6 +211,11 @@ public:
     return row.read(input);
   }
 
+  /** Read a plaintext row using streaming decryption */
+  uint32_t read(StreamRowReader *reader) {
+	return row.read(reader);
+  }
+
   /** Read and decrypt an encrypted row into this record. Return the number of bytes read. */
   uint32_t read_encrypted(uint8_t *input) {
     return row.read_encrypted(input);
@@ -211,6 +224,11 @@ public:
   /** Write out the record in plaintext, returning the number of bytes written. */
   uint32_t write(uint8_t *output) {
     return row.write(output);
+  }
+
+  /** Write out the record in plaintext, returning the number of bytes written. */
+  uint32_t write(StreamRowWriter *writer) {
+    return row.write(writer);
   }
 
   /** Encrypt and write out the record, returning the number of bytes written. */
@@ -311,6 +329,7 @@ private:
 template<typename RecordType>
 class SortPointer {
   friend class RowWriter;
+  friend class StreamRowWriter;
 public:
   SortPointer() : rec(NULL), key_prefix(0) {}
   bool is_valid() const {
@@ -332,6 +351,13 @@ public:
     key_prefix = rec->get_key_prefix(op_code);
     return result;
   }
+
+  uint32_t read(StreamRowReader *reader, int op_code) {
+    uint32_t result = rec->read(reader);
+    key_prefix = rec->get_key_prefix(op_code);
+    return result;
+  }
+  
   bool less_than(const SortPointer *other, int op_code, uint32_t *num_deep_comparisons) const {
     if (key_prefix < other->key_prefix) {
       return true;
@@ -1013,6 +1039,177 @@ public:
 private:
   uint8_t * const buf_start;
   uint8_t *buf;
+};
+
+
+/**
+ * Uses stream cipher to read a set of rows from a sequence of encrypted blocks
+ * Similar to RowReader, this class does not check bounds, so the user should know how many rows there are
+ */
+class StreamRowReader {
+ public:
+  StreamRowReader(uint8_t *buf);
+
+  ~StreamRowReader() {
+	delete cipher;
+  }
+
+  void read(NewRecord *row) {
+	maybe_advance_block();
+	block_pos += row->read(this);
+	++block_rows_read;
+  }
+
+  void read(NewJoinRecord *row) {
+	maybe_advance_block();
+	block_pos += row->read(this);
+	++block_rows_read;
+  }
+
+  template<typename RecordType>
+  void read(SortPointer<RecordType> *ptr, int op_code) {
+    maybe_advance_block();
+    block_pos += ptr->read(this, op_code);
+    block_rows_read++;
+  }
+
+  void read_bytes(uint8_t *output, uint32_t num_bytes) {
+	cipher->decrypt(output, num_bytes);
+  }
+
+  void reset_block(uint8_t *new_buffer) {
+	buf = new_buffer;
+	read_encrypted_block();
+  }
+
+ private:
+  void read_encrypted_block() {
+    uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf);
+	buf += 4;
+    block_num_rows = *reinterpret_cast<uint32_t *>(buf);
+	buf += 4;
+    buf += 4; // row_upper_bound
+
+	printf("[StreamRowReader::read_encrypted_block] block_enc_size is %u, block_num_rows is %u\n", block_enc_size, block_num_rows);	
+
+	if (cipher == NULL) {
+	  cipher = new StreamDecipher(buf, block_enc_size);
+	} else {
+	  cipher->reset(buf, block_enc_size);
+	}
+	
+    buf += block_enc_size;
+	block_start = buf;
+    block_pos = block_start;
+    block_rows_read = 0;
+  }
+
+  void maybe_advance_block() {
+    if (block_rows_read >= block_num_rows) {
+      read_encrypted_block();
+    }
+  }
+
+
+  StreamDecipher *cipher;
+  uint8_t *buf;
+  uint8_t *block_start;
+  uint8_t *block_pos;
+  uint32_t block_num_rows;
+  uint32_t block_rows_read;
+};
+
+
+/**
+ * Manages writing out encrypted rows to a single encrypted buffer; supports streaming
+ */
+class StreamRowWriter {
+ public:
+  StreamRowWriter(uint8_t *buf) {
+	buf_start = buf;
+	buf_pos = buf;
+	cipher = new StreamCipher(buf_start + 12);
+	block_len = 0;
+	block_num_rows = 0;
+  }
+
+  ~StreamRowWriter() {
+	delete cipher;
+  }
+
+  uint32_t write(NewRecord *row) {
+	maybe_finish_block();
+	uint32_t len = row->write(this);
+	++block_num_rows;
+
+	return len;
+  }
+
+  uint32_t write(NewJoinRecord *row) {
+	maybe_finish_block();
+	uint32_t len = row->write(this);
+	++block_num_rows;
+
+	return len;
+  }
+
+  template<typename RecordType>
+  void write(SortPointer<RecordType> *ptr) {
+    write(ptr->rec);
+  }
+
+  void write_bytes(uint8_t *input, uint32_t size) {
+	cipher->encrypt(input, size);
+  }
+  
+  void finish() {
+	finish_block();
+  }
+
+  void close() {
+	finish_block();
+  }
+
+  uint32_t bytes_written() {
+	return buf_pos - buf_start;
+  }
+
+ private:
+
+  void finish_block() {
+	cipher->finish();
+	uint32_t w_bytes = cipher->bytes_written();
+
+	*reinterpret_cast<uint32_t *>(buf_pos) = w_bytes;
+	buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows;
+	buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = ROW_UPPER_BOUND;
+	buf_pos += 4;
+
+	printf("[StreamRowWriter::finish_block] w_bytes is %u, block_num_rows is %u\n", w_bytes, block_num_rows);
+
+	block_num_rows = 0;
+	block_len = 0;
+	buf_pos += w_bytes;
+	
+	cipher->reset(buf_pos + 12);
+  }
+
+  void maybe_finish_block() {
+	if (block_len > MAX_BLOCK_SIZE) {
+	  finish_block();
+	}
+  }
+  
+  StreamCipher *cipher;
+
+  uint8_t * buf_start;
+  uint8_t *buf_pos;
+  uint32_t row_upper_bound;
+
+  uint32_t block_num_rows;
+  uint32_t block_len;
 };
 
 #include "NewInternalTypes.tcc"

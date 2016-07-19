@@ -35,7 +35,13 @@ class StreamCipher {
 
   ~StreamCipher();
 
-  void encrypt(uint8_t *plaintext, uint32_t size, bool if_final);
+  void encrypt(uint8_t *plaintext, uint32_t size);
+
+  void reset(uint8_t *new_ciphertext_ptr);
+
+  void finish();
+
+  uint32_t bytes_written();
 
   uint32_t ciphertext_size;
 
@@ -53,14 +59,17 @@ class StreamCipher {
 
 // Given a ciphertext, stream decipher into different plaintext
 // [ciphertext length][ciphertext IV][ciphertext MAC][ciphertext]
+// no bounds checking
 class StreamDecipher {
 
  public:
-  StreamDecipher(uint8_t *ciphertext_ptr);
+  StreamDecipher(uint8_t *ciphertext_ptr, uint32_t enc_size);
 
   ~StreamDecipher();
 
   void decrypt(uint8_t *plaintext_ptr, uint32_t size);
+
+  void reset(uint8_t *new_ciphertext_ptr, uint32_t enc_size);
 
   uint8_t *iv_ptr;
   uint8_t *mac_ptr;

@@ -32,7 +32,7 @@ public:
   }
 
   void init() {
-	reader = new RowReader(buffers[0]);
+	reader = new StreamRowReader(buffers[0]);
 	current_buf = 0;
 	rows_left = num_rows[0];
   }
@@ -54,7 +54,7 @@ public:
 	return true;
   }
 
-  RowReader *reader;
+  StreamRowReader *reader;
   uint8_t *buffers[32];
   uint32_t num_rows[32];
   uint32_t num_bufs;
@@ -89,7 +89,7 @@ public:
   void init(uint8_t *output_buf, uint32_t row_upper_bound,
 			uint32_t num_buffers, uint32_t total_rows) {
 	// the writer must be periodically reset so that the rows are split into num_buffers blocks
-	writer = new RowWriter(output_buf, row_upper_bound);
+	writer = new StreamRowWriter(output_buf);
 	this->output_buf = output_buf;
 	this->row_upper_bound = row_upper_bound;
 	this->num_buffers = num_buffers;
@@ -104,7 +104,7 @@ public:
 	  bytes_written_ += writer->bytes_written();
 	  delete writer;
 	  writer = NULL;
-	  writer = new RowWriter(output_buf + bytes_written_, row_upper_bound);
+	  writer = new StreamRowWriter(output_buf + bytes_written_);
 	  current_num_rows = 0;
 	  ++current_buf;
 	}
@@ -121,7 +121,7 @@ public:
 	return bytes_written_;
   }
   
-  RowWriter *writer;
+  StreamRowWriter *writer;
   uint8_t *output_buf;
   uint32_t current_num_rows;
   uint32_t row_upper_bound;
@@ -306,7 +306,7 @@ void external_sort(int op_code,
 	printf("Sort single buffers done\n");
 
 	// now, merge these together in rounds
-	uint32_t max_num_streams = 2;
+	uint32_t max_num_streams = 4;
 	uint32_t num_streams = num_buffers < max_num_streams ? num_buffers : max_num_streams;
 
 	
@@ -441,8 +441,8 @@ void find_range_bounds(int op_code,
   
   uint32_t num_rows_per_part = total_num_rows / num_buffers;
 
-  RowReader row_reader(input_rows);
-  RowWriter row_writer(output_rows, row_upper_bound);
+  StreamRowReader row_reader(input_rows);
+  StreamRowWriter row_writer(output_rows);
 
   RecordType row;
 
@@ -503,11 +503,11 @@ void sort_partition(int op_code,
   RecordType boundary_row;
   uint32_t stream = 0;
 
-  RowReader reader(input_rows);
-  RowReader boundary_reader(boundary_rows);
+  StreamRowReader reader(input_rows);
+  StreamRowReader boundary_reader(boundary_rows);
   boundary_reader.read(&boundary_row);
 
-  RowWriter writer(output, row_upper_bound);
+  StreamRowWriter writer(output);
   uint32_t offset = 0;
   output_stream_list[stream] = output + offset;
 
@@ -519,7 +519,7 @@ void sort_partition(int op_code,
 	if (!row.less_than(&boundary_row, op_code) && stream < num_partitions - 1) {
 	  //printf("[sort_partition] stream is %u\n", stream);
 	  
-	  writer.finish_block();
+	  writer.close();
 	  offset = writer.bytes_written();
 	  ++stream;
 
@@ -528,11 +528,12 @@ void sort_partition(int op_code,
 	  if (stream < num_partitions - 1) {
 		boundary_reader.read(&boundary_row);
 	  }
-	} 
+	}
+	
 	writer.write(&row);
   }
 
-  //printf("[sort_partition] final stream is %u\n", stream);
+  printf("[sort_partition] final stream is %u\n", stream);
   
   writer.close();
 

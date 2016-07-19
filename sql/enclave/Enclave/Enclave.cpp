@@ -345,14 +345,15 @@ void ecall_stream_encryption_test() {
   uint8_t *plaintext_ptr = NULL;
   
   StreamCipher enc(ciphertext);
-  StreamDecipher dec(ciphertext);
+  StreamDecipher dec(ciphertext, enc_size(22 * 2 + 23));
 
   plaintext_ptr =  (uint8_t *) plaintext1;
-  enc.encrypt(plaintext_ptr, 22, false);
-  enc.encrypt(plaintext_ptr, 22, false);
+  enc.encrypt(plaintext_ptr, 22);
+  enc.encrypt(plaintext_ptr, 22);
   
   plaintext_ptr = (uint8_t *) plaintext2;
-  enc.encrypt(plaintext_ptr, 23, true);
+  enc.encrypt(plaintext_ptr, 23);
+  enc.finish();
 
   uint32_t enc_size;
   memcpy(&enc_size, ciphertext, sizeof(uint32_t));
@@ -521,7 +522,7 @@ void ecall_sort_partition(int op_code,
 
 void ecall_row_parser(uint8_t *enc_block) {
 
-  RowReader reader(enc_block);
+  StreamRowReader reader(enc_block);
   NewRecord row;
 
   uint32_t num_rows = 0;
@@ -530,6 +531,7 @@ void ecall_row_parser(uint8_t *enc_block) {
   
   for (uint32_t i = 0; i < num_rows; i++) {
 	reader.read(&row);
+	printf("Row %u\t\t", i);
 	row.print();
   }
 }

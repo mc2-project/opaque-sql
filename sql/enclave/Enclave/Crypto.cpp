@@ -67,16 +67,8 @@ uint32_t dec_size(uint32_t ciphertext_size) {
 
 
 StreamCipher::StreamCipher(uint8_t *ciphertext_ptr) {
-  
-  iv_ptr = ciphertext_ptr + 4;
-  mac_ptr = ciphertext_ptr + 4 + SGX_AESGCM_IV_SIZE;
-  cipher_ptr = ciphertext_ptr + 4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-  current_cipher_ptr = cipher_ptr;
-  
-  sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
-  
-  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
-  leftover_plaintext_size = 0;
+  cipher = NULL;
+  reset(ciphertext_ptr);
 }
 
 
@@ -85,22 +77,43 @@ StreamCipher::~StreamCipher() {
 }
 
 
-void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size, bool if_final) {
+void StreamCipher::reset(uint8_t *new_ciphertext_ptr) {
+  iv_ptr = new_ciphertext_ptr;
+  mac_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE;
+  cipher_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  current_cipher_ptr = cipher_ptr;
+  
+  sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
+
+  if (cipher != NULL) {
+	delete cipher;
+  }
+  
+  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  leftover_plaintext_size = 0; 
+}
+
+void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size) {
 
   uint32_t merge_bytes = 0;
   uint32_t copy_bytes = 0;
+  (void)merge_bytes;
 
-  if (leftover_plaintext_size > 0) {
-	copy_bytes = (leftover_plaintext_size + size <= AES_BLOCK_SIZE) ? size : AES_BLOCK_SIZE - leftover_plaintext_size;
+  // simply copy to buffer if there isn't enough to encrypt
+  if (leftover_plaintext_size + size < AES_BLOCK_SIZE) {
 	cpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
-	merge_bytes = leftover_plaintext_size + copy_bytes;
+	leftover_plaintext_size += size;
+	return;
   }
 
-  // if necessary, encrypt leftover bytes first
-  if (merge_bytes > 0) {
-	cipher->encrypt(leftover_plaintext, merge_bytes, current_cipher_ptr, merge_bytes);
-	current_cipher_ptr += merge_bytes;
-  }
+  // otherwise, there must be enough bytes to at least encrypt a single AES block
+  copy_bytes = AES_BLOCK_SIZE - leftover_plaintext_size;
+  cpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
+  // go ahead and encrypt
+  cipher->encrypt(leftover_plaintext, AES_BLOCK_SIZE, current_cipher_ptr, AES_BLOCK_SIZE);
+  current_cipher_ptr += AES_BLOCK_SIZE;
+
+  leftover_plaintext_size = 0;
 	  
   // otherwise, encrypt in blocks
   uint32_t new_leftover_size = (size - copy_bytes) % AES_BLOCK_SIZE;
@@ -117,34 +130,48 @@ void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size, bool if_final) {
 	leftover_plaintext_size = new_leftover_size;
   }
 
-  if (if_final) {
-	// if there are leftover bytes, encrypt those as well
-	cipher->encrypt(leftover_plaintext, new_leftover_size, current_cipher_ptr, new_leftover_size);
-	current_cipher_ptr += new_leftover_size;
-	
-	*( (uint32_t *) (iv_ptr - 4)) = (current_cipher_ptr - cipher_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
-  }
 }
 
+void StreamCipher::finish() {
+  if (leftover_plaintext_size > 0) {
+	cipher->encrypt(leftover_plaintext, leftover_plaintext_size, current_cipher_ptr, leftover_plaintext_size);
+	current_cipher_ptr += leftover_plaintext_size;
+  }
 
+  // also need to copy over the final MAC
+  memcpy(mac_ptr, cipher->tag().t, SGX_AESGCM_MAC_SIZE);
 
-StreamDecipher::StreamDecipher(uint8_t *ciphertext_ptr) {
+  //*( (uint32_t *) (iv_ptr - 4)) = (current_cipher_ptr - cipher_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+}
 
-  total_cipher_size = *( (uint32_t *) ciphertext_ptr) - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+uint32_t StreamCipher::bytes_written() {
+  return current_cipher_ptr - iv_ptr;
+}
 
-  iv_ptr = ciphertext_ptr + 4;
-  mac_ptr = ciphertext_ptr + 4 + SGX_AESGCM_IV_SIZE;
-  cipher_ptr = ciphertext_ptr + 4 + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-  current_cipher_ptr = cipher_ptr;
-
-  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
-  leftover_plaintext_size = 0;
-  leftover_plaintext_ptr = leftover_plaintext;
-
+StreamDecipher::StreamDecipher(uint8_t *ciphertext_ptr, uint32_t enc_size) {
+  cipher = NULL;
+  reset(ciphertext_ptr, enc_size);
 }
 
 StreamDecipher::~StreamDecipher() {
   delete cipher;
+}
+
+void StreamDecipher::reset(uint8_t *new_ciphertext_ptr, uint32_t enc_size) {
+  this->total_cipher_size = enc_size - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+
+  iv_ptr = new_ciphertext_ptr;
+  mac_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE;
+  cipher_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  current_cipher_ptr = cipher_ptr;
+
+  if (cipher != NULL) {
+	delete cipher;
+  }
+  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);  
+  
+  leftover_plaintext_size = 0;
+  leftover_plaintext_ptr = leftover_plaintext;
 }
 
 void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
@@ -157,7 +184,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
 	leftover_plaintext_size -= size;
 	return;
   }
-  
+
   // if there are bytes left over from leftover_plaintext, copy that first
   if (leftover_plaintext_size > 0) {
 	cpy(plaintext_ptr, leftover_plaintext_ptr, leftover_plaintext_size);
@@ -177,6 +204,14 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
   uint32_t final_size = (size - copied_bytes) % AES_BLOCK_SIZE;
   total_cipher_size = total_cipher_size - copied_bytes - decrypt_bytes;
 
+  printf("[StreamDecipher::decrypt] size is %u, leftover_plaintext_size is %u, decrypt_bytes is %u, copied_bytes is %u, final_size is %u, total_cipher_size is %u\n",
+  		 size,
+  		 leftover_plaintext_size,
+  		 decrypt_bytes,
+  		 copied_bytes,
+  		 final_size,
+  		 total_cipher_size);
+
   if (total_cipher_size > AES_BLOCK_SIZE) {
 	// decrypt AES_BLOCK_SIZE into leftover_plaintext
 	cipher->decrypt(current_cipher_ptr, AES_BLOCK_SIZE, leftover_plaintext, AES_BLOCK_SIZE);
@@ -188,6 +223,18 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
 	leftover_plaintext_size = total_cipher_size;
 	current_cipher_ptr += total_cipher_size;
   }
+
+  // printf("[StreamDecipher::decrypt] size is %u, leftover_plaintext_size is %u, decrypt_bytes is %u, copied_bytes is %u, final_size is %u, total_cipher_size is %u\n",
+  // 		 size,
+  // 		 leftover_plaintext_size,
+  // 		 decrypt_bytes,
+  // 		 copied_bytes,
+  // 		 final_size,
+  // 		 total_cipher_size);
+
+
+  //uint32_t *test_ptr = (uint32_t *) leftover_plaintext_ptr;
+  //printf("test_ptr is %u\n", *test_ptr);
 
   // copy final_size 
   cpy(plaintext_ptr + copied_bytes + decrypt_bytes, leftover_plaintext_ptr, final_size);

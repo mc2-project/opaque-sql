@@ -207,15 +207,17 @@ uint32_t generate_encrypted_block(uint32_t num_cols, uint8_t *column_types,
 	row_upper_bound += attr_upper_bound(column_types[i]);
   }
 
-  uint8_t *buf = (uint8_t *) malloc(num_rows * row_upper_bound);
+  uint8_t *buf = (uint8_t *) malloc(num_rows * row_upper_bound + 1);
 
-  generate_random_rows(num_cols, column_types,
-					   num_rows, buf, type);
+  uint32_t written_bytes = generate_random_rows(num_cols, column_types, num_rows, buf, type);
+
+  printf("[generate_encrypted_block] Row upper bound is %u, num_cols is %u, written_bytes is %u\n", row_upper_bound, num_cols, written_bytes);
   
   // just encrypt this entire block into output_buffer
   *((uint32_t *) (output_buffer)) = enc_size(num_rows * row_upper_bound);
   *((uint32_t *) (output_buffer + 4)) = num_rows;
   *((uint32_t *) (output_buffer + 8)) = row_upper_bound;
+
   encrypt(buf, num_rows * row_upper_bound, output_buffer + 12);
   
   free(buf);
