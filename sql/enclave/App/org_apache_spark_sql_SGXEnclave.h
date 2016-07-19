@@ -110,6 +110,21 @@ extern "C" {
 																				 jbyteArray,
 																				 jint,
 																				 jint);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(JNIEnv *,
+																						  jobject,
+																						  jlong,
+																						  jint,
+																						  jbyteArray,
+																						  jint,
+																						  jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(JNIEnv *,
+																							  jobject,
+																							  jlong,
+																							  jint,
+																							  jbyteArray,
+																							  jint);
   
 #ifdef __cplusplus
 }

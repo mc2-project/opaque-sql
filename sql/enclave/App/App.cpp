@@ -1024,8 +1024,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
+  uint32_t num_bufs = 0;
   uint32_t row_upper_bound = 0;
-
+  
   BlockReader r(input_copy, input_len);
   uint8_t *cur_block;
   uint32_t cur_block_size;
@@ -1059,9 +1060,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
        input_len, num_items, buffer_list.size(), row_upper_bound);
 
   sgx_check("External non-oblivious sort",
-            ecall_external_oblivious_sort(
-              eid, op_code, buffer_list.size(), buffer_list.data(), num_rows.data(),
-              row_upper_bound));
+			ecall_external_sort(eid,
+								op_code,
+								num_bufs,
+								buffer_list.data(),
+								num_rows.data(),
+								row_upper_bound,
+								scratch));
+
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
@@ -1074,6 +1080,87 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   return ret;  
   
 }
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(JNIEnv *env,
+																						jobject obj,
+																						jlong eid,
+																						jint op_code,
+																						jbyteArray input_rows,
+																						jint num_rows) {
+  
+  (void)obj;
+
+  jboolean if_copy;
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+    return ret;
+  }
+
+  uint32_t actual_size = 0;
+
+  uint32_t output_rows_length = block_size_upper_bound(num_rows);
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+
+  sgx_check("Non-oblivious aggregation",
+            ecall_non_oblivious_aggregate(eid, op_code,
+										  input_rows_ptr, input_rows_length,
+										  num_rows,
+										  output_rows, output_rows_length,
+										  &actual_size));
+
+  jbyteArray ret = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;
+}
+
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(JNIEnv *env,
+																							jobject obj,
+																							jlong eid,
+																							jint op_code,
+																							jbyteArray input_rows,
+																							jint num_rows) {
+  (void)obj;
+
+  jboolean if_copy;
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  uint32_t output_length = block_size_upper_bound(num_rows);
+  uint8_t *output = (uint8_t *) malloc(output_length);
+
+
+  uint32_t actual_output_length = 0;
+
+  sgx_check("Non-oblivious SortMergeJoin",
+			ecall_non_oblivious_sort_merge_join(eid,
+												op_code,
+												input_rows_ptr, input_rows_length,
+												num_rows,
+												output, output_length,
+												&actual_output_length));
+  
+  jbyteArray ret = env->NewByteArray(actual_output_length);
+  env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output);
+
+  return ret;
+
+}
+
 
 uint32_t enc_size(uint32_t len) {
   return len + ENC_HEADER_SIZE;
