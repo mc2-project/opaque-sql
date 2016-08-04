@@ -172,7 +172,7 @@ void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
   RowReader reader(input_rows);
   RowWriter writer(output_rows);
 
-  NewRecord prev_row, cur_row;
+  NewRecord prev_row, cur_row, output_row;
   AggregatorType agg;
 
   uint32_t num_output_rows_result = 0;
@@ -185,18 +185,21 @@ void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
 	agg.aggregate(&prev_row);
 	reader.read(&cur_row);
 	
-	if (!agg.grouping_attrs_equal(&cur_row)) {
-	  agg.append_result(&prev_row, false);
-	  writer.write(&prev_row);
+    if (!agg.grouping_attrs_equal(&cur_row)) {
+      output_row.clear();
+      agg.append_result(&output_row, false);
+      writer.write(&output_row);
       num_output_rows_result++;
 	  if (i == num_rows - 1) {
         writer.write(&cur_row);
         num_output_rows_result++;
 	  }
 	} else if (i == num_rows - 1) {
-	  agg.aggregate(&cur_row);
-	  agg.append_result(&cur_row, false);
-	  writer.write(&cur_row);
+      agg.aggregate(&cur_row);
+
+      output_row.clear();
+      agg.append_result(&output_row, false);
+      writer.write(&output_row);
       num_output_rows_result++;
 	}
 
