@@ -1081,13 +1081,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(JNIEnv *env,
-																						jobject obj,
-																						jlong eid,
-																						jint op_code,
-																						jbyteArray input_rows,
-																						jint num_rows) {
-  
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  jobject num_output_rows_obj) {
   (void)obj;
 
   jboolean if_copy;
@@ -1104,16 +1100,21 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
 
   uint32_t output_rows_length = block_size_upper_bound(num_rows);
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+  uint32_t num_output_rows = 0;
 
   sgx_check("Non-oblivious aggregation",
             ecall_non_oblivious_aggregate(eid, op_code,
 										  input_rows_ptr, input_rows_length,
 										  num_rows,
 										  output_rows, output_rows_length,
-										  &actual_size));
+                                          &actual_size, &num_output_rows));
 
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
@@ -1123,12 +1124,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(JNIEnv *env,
-																							jobject obj,
-																							jlong eid,
-																							jint op_code,
-																							jbyteArray input_rows,
-																							jint num_rows) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  jobject num_output_rows_obj) {
   (void)obj;
 
   jboolean if_copy;
@@ -1139,8 +1137,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSo
   uint32_t output_length = block_size_upper_bound(num_rows);
   uint8_t *output = (uint8_t *) malloc(output_length);
 
-
   uint32_t actual_output_length = 0;
+  uint32_t num_output_rows = 0;
 
   sgx_check("Non-oblivious SortMergeJoin",
 			ecall_non_oblivious_sort_merge_join(eid,
@@ -1148,10 +1146,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSo
 												input_rows_ptr, input_rows_length,
 												num_rows,
 												output, output_length,
-												&actual_output_length));
+                                                &actual_output_length, &num_output_rows));
   
   jbyteArray ret = env->NewByteArray(actual_output_length);
   env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
@@ -1504,12 +1506,13 @@ void test_non_oblivious_aggregation() {
 
   uint8_t *output_rows = (uint8_t *) malloc(128 * 1024 * num_bufs);
   uint32_t actual_output_size = 0;
+  uint32_t num_output_rows = 0;
 
   ecall_non_oblivious_aggregate(global_eid,
 								op_code,
 								buffer_list[0], 128 * 1024 * num_bufs, num_rows_per_block * num_bufs,
 								output_rows, 128 * 1024 * num_bufs,
-								&actual_output_size);
+                                &actual_output_size, &num_output_rows);
 
   ecall_row_parser(global_eid, output_rows);
 
@@ -1612,12 +1615,13 @@ void test_non_oblivious_join() {
 
   uint8_t *joined_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
   uint32_t join_output_length = 0;
+  uint32_t num_output_rows = 0;
   
   ecall_non_oblivious_sort_merge_join(global_eid,
 									  op_code,
 									  preprocess_output_rows, num_bufs * 128 * 1024, num_rows_per_block_p + num_rows_per_block_f,
 									  joined_rows, num_bufs * 128 * 1024,
-									  &join_output_length);
+                                      &join_output_length, &num_output_rows);
 
 
   ecall_row_parser(global_eid, joined_rows);

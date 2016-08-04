@@ -988,6 +988,10 @@ class Dataset[T] private[sql](
     ConvertFromBlocks(EncFilter(condition.expr, opcode, Permute(ConvertToBlocks(logicalPlan))))
   }
 
+  def nonObliviousFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
+    ConvertFromBlocks(EncFilter(condition.expr, opcode, ConvertToBlocks(logicalPlan)))
+  }
+
   def encPermute(): Dataset[T] = withTypedPlan {
     ConvertFromBlocks(Permute(ConvertToBlocks(logicalPlan)))
   }
@@ -1002,8 +1006,23 @@ class Dataset[T] private[sql](
         EncSort(groupByCol.expr, ConvertToBlocks(logicalPlan))))
   }
 
+  def nonObliviousAggregate(
+      opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
+    ConvertFromBlocks(
+      NonObliviousAggregate(
+        opcode,
+        UnresolvedAlias(groupByCol.expr),
+        aggCols.map(_.named),
+        aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
+        EncSort(groupByCol.expr, ConvertToBlocks(logicalPlan)))) // TODO: replace EncSort with NonObliviousSort
+  }
+
   def encSort(col: Column): DataFrame = withPlan {
     ConvertFromBlocks(EncSort(col.expr, ConvertToBlocks(logicalPlan)))
+  }
+
+  def nonObliviousSort(col: Column): DataFrame = withPlan {
+    ConvertFromBlocks(NonObliviousSort(col.expr, ConvertToBlocks(logicalPlan)))
   }
 
   /**
@@ -1017,6 +1036,19 @@ class Dataset[T] private[sql](
     : DataFrame = withPlan {
     ConvertFromBlocks(
       EncJoin(
+        ConvertToBlocks(logicalPlan),
+        ConvertToBlocks(right.logicalPlan),
+        leftCol.expr, rightCol.expr, opcode))
+  }
+
+  def nonObliviousJoin(
+      right: DataFrame,
+      leftCol: Column,
+      rightCol: Column,
+      opcode: Option[QEDOpcode] = None)
+    : DataFrame = withPlan {
+    ConvertFromBlocks(
+      NonObliviousJoin(
         ConvertToBlocks(logicalPlan),
         ConvertToBlocks(right.logicalPlan),
         leftCol.expr, rightCol.expr, opcode))

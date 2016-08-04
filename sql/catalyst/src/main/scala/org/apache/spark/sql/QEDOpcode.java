@@ -45,7 +45,9 @@ public enum QEDOpcode {
     OP_PROJECT_DROP_COL1(40),
     OP_PROJECT_SWAP_COL1_COL2(41),
     OP_PROJECT_SWAP_COL2_COL3(42),
-    OP_JOIN_PAGERANK(37);
+    OP_JOIN_PAGERANK(37),
+
+    OP_GROUPBY_COL1_SUM_COL2_INT(300);
 
     private int _value;
 

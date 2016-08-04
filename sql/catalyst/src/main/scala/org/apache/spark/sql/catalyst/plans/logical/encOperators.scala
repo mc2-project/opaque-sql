@@ -67,6 +67,11 @@ case class EncSort(sortExpr: Expression, child: OutputsBlocks)
   override def output: Seq[Attribute] = child.output
 }
 
+case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+  override def output: Seq[Attribute] = child.output
+}
+
 case class EncAggregate(
     opcode: QEDOpcode,
     groupingExpression: NamedExpression,
@@ -79,7 +84,31 @@ case class EncAggregate(
   override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
 }
 
+case class NonObliviousAggregate(
+    opcode: QEDOpcode,
+    groupingExpression: NamedExpression,
+    aggExpressions: Seq[NamedExpression],
+    aggOutputs: Seq[Attribute],
+    child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
+  override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
+  override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
+}
+
 case class EncJoin(
+    left: OutputsBlocks,
+    right: OutputsBlocks,
+    leftCol: Expression,
+    rightCol: Expression,
+    opcode: Option[QEDOpcode])
+  extends BinaryNode with OutputsBlocks {
+
+  override def output: Seq[Attribute] =
+    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+}
+
+case class NonObliviousJoin(
     left: OutputsBlocks,
     right: OutputsBlocks,
     leftCol: Expression,

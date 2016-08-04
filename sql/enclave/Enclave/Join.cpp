@@ -202,7 +202,7 @@ void non_oblivious_sort_merge_join(int op_code,
 								   uint8_t *input_rows, uint32_t input_rows_length,
 								   uint32_t num_rows,
 								   uint8_t *output_rows, uint32_t output_rows_length,
-								   uint32_t *actual_output_length) {
+                                   uint32_t *actual_output_length, uint32_t *num_output_rows) {
   (void) input_rows_length;
   (void) output_rows_length;
   
@@ -223,6 +223,7 @@ void non_oblivious_sort_merge_join(int op_code,
     assert(false);
   }
 
+  uint32_t num_output_rows_result = 0;
   for (uint32_t i = 0; i < num_rows; i++) {
     reader.read(&current);
     current.init_join_attribute(op_code);
@@ -236,10 +237,12 @@ void non_oblivious_sort_merge_join(int op_code,
       if (primary.join_attr_equals(&current)) {
         primary.merge(&current, secondary_join_attr, &merge);
         writer.write(&merge);
+        num_output_rows_result++;
       }
     }
   }
 
   writer.close();
   *actual_output_length = writer.bytes_written();
+  *num_output_rows = num_output_rows_result;
 }

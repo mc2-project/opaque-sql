@@ -49,5 +49,5 @@ void non_oblivious_sort_merge_join(int op_code,
 								   uint8_t *input_rows, uint32_t input_rows_length,
 								   uint32_t num_rows,
 								   uint8_t *output_rows, uint32_t output_rows_length,
-								   uint32_t *actual_output_length);
+                                   uint32_t *actual_output_length, uint32_t *num_output_rows);
 #endif

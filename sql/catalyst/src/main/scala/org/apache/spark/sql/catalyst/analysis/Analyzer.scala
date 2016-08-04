@@ -190,6 +190,11 @@ class Analyzer(
         EncAggregate(
           opcode, assignAliases(Seq(groupingExpression)).head, aggExpressions, aggOutputs, child)
 
+      case NonObliviousAggregate(opcode, groupingExpression, aggExpressions, aggOutputs, child)
+          if child.resolved && hasUnresolvedAlias(Seq(groupingExpression)) =>
+        NonObliviousAggregate(
+          opcode, assignAliases(Seq(groupingExpression)).head, aggExpressions, aggOutputs, child)
+
       case g: GroupingSets if g.child.resolved && hasUnresolvedAlias(g.aggregations) =>
         g.copy(aggregations = assignAliases(g.aggregations))
 

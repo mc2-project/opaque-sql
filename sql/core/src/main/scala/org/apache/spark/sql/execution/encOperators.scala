@@ -139,6 +139,27 @@ case class EncSort(sortExpr: Expression, child: OutputsBlocks)
   }
 }
 
+case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
+    val sortAttrPos = QED.attributeIndexOf(sortExpr.references.toSeq(0), child.output)
+    val opcode = sortAttrPos match {
+      case 0 => OP_SORT_COL1
+      case 1 => OP_SORT_COL2
+    }
+    val childRDD = child.executeBlocked()
+    assert(childRDD.partitions.length <= 1)
+    childRDD.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val sortedRows = enclave.ExternalSort(eid, opcode.value, block.bytes, block.numRows)
+      Block(sortedRows, block.numRows)
+    }
+  }
+}
+
 case class EncAggregate(
     opcode: QEDOpcode,
     groupingExpression: NamedExpression,
@@ -244,6 +265,41 @@ case class EncAggregate(
   }
 }
 
+case class NonObliviousAggregate(
+    opcode: QEDOpcode,
+    groupingExpression: NamedExpression,
+    aggExpressions: Seq[NamedExpression],
+    aggOutputs: Seq[Attribute],
+    output: Seq[Attribute],
+    child: OutputsBlocks)
+  extends UnaryNode with OutputsBlocks {
+
+  import QED.time
+
+  override def executeBlocked(): RDD[Block] = {
+    val groupingExprPos = QED.attributeIndexOf(groupingExpression.references.toSeq(0), child.output)
+    val aggExprsPos = aggExpressions.map(expr => QED.attributeIndexOf(expr.references.toSeq(0), child.output)).toList
+    val aggOpcode =
+      (opcode, child.output.size, groupingExprPos, aggExprsPos) match {
+        case (OP_GROUPBY_COL1_SUM_COL2_INT, 2, 0, List(1)) =>
+          OP_GROUPBY_COL1_SUM_COL2_INT
+      }
+
+    val childRDD = child.executeBlocked().cache()
+    time("aggregate - force child") { childRDD.count }
+    // Process boundaries
+    val aggregates = childRDD.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val resultBytes = enclave.NonObliviousAggregate(
+        eid, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(resultBytes, numOutputRows.value)
+    }
+    aggregates.cache.count
+    aggregates
+  }
+}
+
 case class EncSortMergeJoin(
     left: OutputsBlocks,
     right: OutputsBlocks,
@@ -339,5 +395,75 @@ case class EncSortMergeJoin(
     }
     time("join - filter dummies") { nonDummy.cache.count }
     nonDummy
+  }
+}
+
+case class NonObliviousSortMergeJoin(
+    left: OutputsBlocks,
+    right: OutputsBlocks,
+    leftCol: Expression,
+    rightCol: Expression,
+    opcode: Option[QEDOpcode])
+  extends BinaryNode with OutputsBlocks {
+
+  import QED.time
+
+  override def output: Seq[Attribute] =
+    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+
+  override def executeBlocked() = {
+    val leftColPos = QED.attributeIndexOf(leftCol.references.toSeq(0), left.output)
+    val rightColPos = QED.attributeIndexOf(rightCol.references.toSeq(0), right.output)
+    val joinOpcode =
+      ((left.output.size, right.output.size, leftColPos, rightColPos, opcode): @unchecked) match {
+        case (2, 3, 0, 0, None) =>
+          OP_JOIN_COL1
+      }
+
+    val leftRDD = left.executeBlocked()
+    val rightRDD = right.executeBlocked()
+    time("Force left child of NonObliviousSortMergeJoin") { leftRDD.cache.count }
+    time("Force right child of NonObliviousSortMergeJoin") { rightRDD.cache.count }
+
+    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+      val (enclave, eid) = QED.initEnclave()
+
+      val leftBlockArray = leftBlockIter.toArray
+      assert(leftBlockArray.length == 1)
+      val leftBlock = leftBlockArray.head
+
+      val rightBlockArray = rightBlockIter.toArray
+      assert(rightBlockArray.length == 1)
+      val rightBlock = rightBlockArray.head
+
+      val processed = enclave.JoinSortPreprocess(
+        eid, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
+        rightBlock.bytes, rightBlock.numRows)
+
+      Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
+    }
+    time("join - preprocess") { processed.cache.count }
+
+    val sorted = time("join - sort") {
+      assert(processed.partitions.length <= 1)
+      val result = processed.map { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val sortedRows = enclave.ExternalSort(eid, joinOpcode.value, block.bytes, block.numRows)
+        Block(sortedRows, block.numRows)
+      }
+      result.cache.count
+      result
+    }
+
+    val joined = sorted.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val joined = enclave.NonObliviousSortMergeJoin(
+        eid, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(joined, numOutputRows.value)
+    }
+    time("join - sort merge join") { joined.cache.count }
+
+    joined
   }
 }

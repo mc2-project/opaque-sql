@@ -103,28 +103,14 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
     JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(JNIEnv *,
-																				 jobject,
-																				 jlong,
-																				 jint,
-																				 jbyteArray,
-																				 jint,
-																				 jint);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(JNIEnv *,
-																						  jobject,
-																						  jlong,
-																						  jint,
-																						  jbyteArray,
-																						  jint,
-																						  jbyteArray);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(JNIEnv *,
-																							  jobject,
-																							  jlong,
-																							  jint,
-																							  jbyteArray,
-																							  jint);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
   
 #ifdef __cplusplus
 }

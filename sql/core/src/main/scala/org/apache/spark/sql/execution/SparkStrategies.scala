@@ -366,14 +366,25 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.Permute(planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
       case logical.EncSort(sortExpr, child) =>
         execution.EncSort(sortExpr, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case logical.NonObliviousSort(sortExpr, child) =>
+        execution.NonObliviousSort(sortExpr, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
       case logical.EncJoin(left, right, leftCol, rightCol, opcode) =>
         execution.EncSortMergeJoin(
           planLater(left).asInstanceOf[OutputsBlocks], planLater(right).asInstanceOf[OutputsBlocks],
           leftCol, rightCol, opcode) :: Nil
+      case logical.NonObliviousJoin(left, right, leftCol, rightCol, opcode) =>
+        execution.NonObliviousSortMergeJoin(
+          planLater(left).asInstanceOf[OutputsBlocks], planLater(right).asInstanceOf[OutputsBlocks],
+          leftCol, rightCol, opcode) :: Nil
       case a @ logical.EncAggregate(
-          opcode, groupingExpressions, aggExpressions, aggOutputs, child) =>
+          opcode, groupingExpression, aggExpressions, aggOutputs, child) =>
         execution.EncAggregate(
-          opcode, groupingExpressions, aggExpressions, aggOutputs, a.output,
+          opcode, groupingExpression, aggExpressions, aggOutputs, a.output,
+          planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+      case a @ logical.NonObliviousAggregate(
+          opcode, groupingExpression, aggExpressions, aggOutputs, child) =>
+        execution.NonObliviousAggregate(
+          opcode, groupingExpression, aggExpressions, aggOutputs, a.output,
           planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
       case logical.ConvertToBlocks(child) =>
         execution.ConvertToBlocks(planLater(child)) :: Nil

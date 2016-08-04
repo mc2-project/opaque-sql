@@ -169,6 +169,21 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt1[Int](permuted).sorted === array)
   }
 
+  ignore("nonObliviousAggregate") {
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (abc(i), 1)
+    val words = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("word", "count")
+
+    val summed = words.nonObliviousAggregate(OP_GROUPBY_COL1_SUM_COL2_INT,
+      $"word", $"count".as("totalCount"))
+    assert(QED.decrypt2[String, Int](summed.collect) ===
+      data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
+  }
+
   test("encAggregate") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
