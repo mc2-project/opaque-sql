@@ -1014,7 +1014,7 @@ class Dataset[T] private[sql](
         UnresolvedAlias(groupByCol.expr),
         aggCols.map(_.named),
         aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
-        EncSort(groupByCol.expr, ConvertToBlocks(logicalPlan)))) // TODO: replace EncSort with NonObliviousSort
+        NonObliviousSort(groupByCol.expr, ConvertToBlocks(logicalPlan))))
   }
 
   def encSort(col: Column): DataFrame = withPlan {

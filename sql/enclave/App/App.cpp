@@ -1024,7 +1024,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
-  uint32_t num_bufs = 0;
   uint32_t row_upper_bound = 0;
   
   BlockReader r(input_copy, input_len);
@@ -1062,7 +1061,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   sgx_check("External non-oblivious sort",
 			ecall_external_sort(eid,
 								op_code,
-								num_bufs,
+                                buffer_list.size(),
 								buffer_list.data(),
 								num_rows.data(),
 								row_upper_bound,
