@@ -169,7 +169,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt1[Int](permuted).sorted === array)
   }
 
-  ignore("nonObliviousAggregate") {
+  test("nonObliviousAggregate") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
       case 1 => "B"
