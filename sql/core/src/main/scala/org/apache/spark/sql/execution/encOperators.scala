@@ -151,11 +151,15 @@ case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
       case 1 => OP_SORT_COL2
     }
     val childRDD = child.executeBlocked()
-    assert(childRDD.partitions.length <= 1)
-    childRDD.map { block =>
-      val (enclave, eid) = QED.initEnclave()
-      val sortedRows = enclave.ExternalSort(eid, opcode.value, block.bytes, block.numRows)
-      Block(sortedRows, block.numRows)
+
+    if (childRDD.partitions.length <= 1) {
+      childRDD.map { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val sortedRows = enclave.ExternalSort(eid, opcode.value, block.bytes, block.numRows)
+        Block(sortedRows, block.numRows)
+      }
+    } else {
+      ???
     }
   }
 }

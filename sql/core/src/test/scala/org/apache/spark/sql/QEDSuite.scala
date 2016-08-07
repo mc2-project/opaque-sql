@@ -158,6 +158,15 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       filteredDates.sorted)
   }
 
+  test("nonObliviousFilter") {
+    val data = for (i <- 0 until 256) yield ("foo", i)
+    val words = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("word", "count")
+    assert(QED.decrypt2(words.collect) === data)
+
+    val filtered = words.nonObliviousFilter($"count", OP_FILTER_COL2_GT3)
+    assert(QED.decrypt2[String, Int](filtered.collect).sorted === data.filter(_._2 > 3).sorted)
+  }
+
   test("encPermute") {
     val array = (0 until 256).toArray
     val permuted =
@@ -232,6 +241,13 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
   }
 
+  test("nonObliviousSort") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
+    val sorted = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("str", "x")
+      .nonObliviousSort($"x").collect
+    assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
+  }
+
   test("encSort by float") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
     val sorted = sparkContext.makeRDD(QED.encrypt2(data), 1).toDF("str", "x").encSort($"x").collect
@@ -241,6 +257,13 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   test("encSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count").encSort($"word").collect
+    assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
+  }
+
+  ignore("nonObliviousSort multiple partitions") {
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
+    val sorted = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count")
+      .nonObliviousSort($"word").collect
     assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
   }
 
