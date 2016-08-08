@@ -204,13 +204,13 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
   uint32_t final_size = (size - copied_bytes) % AES_BLOCK_SIZE;
   total_cipher_size = total_cipher_size - copied_bytes - decrypt_bytes;
 
-  printf("[StreamDecipher::decrypt] size is %u, leftover_plaintext_size is %u, decrypt_bytes is %u, copied_bytes is %u, final_size is %u, total_cipher_size is %u\n",
-  		 size,
-  		 leftover_plaintext_size,
-  		 decrypt_bytes,
-  		 copied_bytes,
-  		 final_size,
-  		 total_cipher_size);
+  // printf("[StreamDecipher::decrypt] size is %u, leftover_plaintext_size is %u, decrypt_bytes is %u, copied_bytes is %u, final_size is %u, total_cipher_size is %u\n",
+  // 		 size,
+  // 		 leftover_plaintext_size,
+  // 		 decrypt_bytes,
+  // 		 copied_bytes,
+  // 		 final_size,
+  // 		 total_cipher_size);
 
   if (total_cipher_size > AES_BLOCK_SIZE) {
 	// decrypt AES_BLOCK_SIZE into leftover_plaintext

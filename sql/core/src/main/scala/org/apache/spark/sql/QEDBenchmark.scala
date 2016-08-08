@@ -52,13 +52,19 @@ object QEDBenchmark {
 
     QEDBenchmark.bd1Opaque(sqlContext, "1million")
 
+    QEDBenchmark.bd1Encrypted(sqlContext, "1million")
+
     QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
 
     QEDBenchmark.bd2Opaque(sqlContext, "1million")
 
+    QEDBenchmark.bd2Encrypted(sqlContext, "1million")
+
     QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
 
     QEDBenchmark.bd3Opaque(sqlContext, "1million")
+
+    QEDBenchmark.bd3Encrypted(sqlContext, "1million")
 
     for (i <- 8 to 20) {
       QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString)

@@ -252,8 +252,6 @@ uint32_t NewRecord::read(StreamRowReader *reader) {
   reader->read_bytes(row_ptr, 4);
   row_ptr += 4;
 
-  printf("[NewRecord::read] num_cols is %u\n", num_cols());
-
   for (uint32_t i = 0; i < num_cols(); i++) {
 	row_ptr += stream_copy_attr(reader, row_ptr);
   }
