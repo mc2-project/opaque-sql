@@ -287,6 +287,10 @@ case class NonObliviousAggregate(
       (opcode, child.output.size, groupingExprPos, aggExprsPos) match {
         case (OP_GROUPBY_COL1_SUM_COL2_INT, 2, 0, List(1)) =>
           OP_GROUPBY_COL1_SUM_COL2_INT
+        case (OP_GROUPBY_COL1_SUM_COL2_FLOAT, 2, 0, List(1)) =>
+          OP_GROUPBY_COL1_SUM_COL2_FLOAT
+        case (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT, 3, 0, List(1, 2)) =>
+          OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT
       }
 
     val childRDD = child.executeBlocked().cache()

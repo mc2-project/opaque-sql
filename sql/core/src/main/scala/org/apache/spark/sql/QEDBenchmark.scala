@@ -137,6 +137,25 @@ object QEDBenchmark {
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
   }
 
+  def bd1Encrypted(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+    import sqlContext.implicits._
+    val rankingsDF = rankings(sqlContext, size)
+      .mapPartitions(QED.bd1Encrypt3)
+      .toDF("pageURL", "pageRank", "avgDuration")
+      .coalesce(numPartitions(sqlContext, distributed))
+      .cache()
+    rankingsDF.count
+    val result = time("big data 1 encrypted") {
+      val df = rankingsDF.select($"pageURL", $"pageRank").nonObliviousFilter($"pageRank", OP_BD1)
+      val count = df.count
+      println("big data 1 encrypted - num rows: " + count)
+      df
+    }
+    rankingsDF.unpersist()
+    result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
+  }
+
   def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size).cache()
@@ -170,6 +189,31 @@ object QEDBenchmark {
           $"sourceIP", $"adRevenue".as("totalAdRevenue"))
       val count = df.count
       println("big data 2 - num rows: " + count)
+      df
+    }
+    uservisitsDF.unpersist()
+    result.mapPartitions(QED.bd2Decrypt2).toDF("sourceIPSubstr", "adRevenue")
+  }
+
+  def bd2Encrypted(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+    import sqlContext.implicits._
+    val uservisitsDF = uservisits(sqlContext, size)
+      .mapPartitions(QED.bd2Encrypt9)
+      .toDF("sourceIP", "destURL", "visitDate",
+        "adRevenue", "userAgent", "countryCode",
+        "languageCode", "searchWord", "duration")
+      .coalesce(numPartitions(sqlContext, distributed))
+      .cache()
+    uservisitsDF.count
+    val result = time("big data 2 encrypted") {
+      val df = uservisitsDF
+        .select($"sourceIP", $"adRevenue")
+        .encProject(OP_BD2, $"sourceIP", $"adRevenue")
+        .nonObliviousAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT,
+          $"sourceIP", $"adRevenue".as("totalAdRevenue"))
+      val count = df.count
+      println("big data 2 encrypted - num rows: " + count)
       df
     }
     uservisitsDF.unpersist()
@@ -237,6 +281,49 @@ object QEDBenchmark {
           .encSort($"totalRevenue")
       val count = df.count
       println("big data 3 - num rows: " + count)
+      df
+    }
+    uservisitsDF.unpersist()
+    rankingsDF.unpersist()
+    result.mapPartitions(QED.bd3Decrypt3).toDF("sourceIP", "totalRevenue", "avgPageRank")
+  }
+
+  def bd3Encrypted(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+    import sqlContext.implicits._
+    val uservisitsDF = uservisits(sqlContext, size)
+      .mapPartitions(QED.bd2Encrypt9)
+      .toDF("sourceIP", "destURL", "visitDate",
+        "adRevenue", "userAgent", "countryCode",
+        "languageCode", "searchWord", "duration")
+      .coalesce(numPartitions(sqlContext, distributed))
+      .cache()
+    uservisitsDF.count
+    val rankingsDF = rankings(sqlContext, size)
+      .mapPartitions(QED.bd1Encrypt3)
+      .toDF("pageURL", "pageRank", "avgDuration")
+      .coalesce(numPartitions(sqlContext, distributed))
+      .cache()
+    rankingsDF.count
+
+    val result = time("big data 3 encrypted") {
+      val df =
+        rankingsDF
+          .select($"pageURL", $"pageRank")
+          .nonObliviousJoin(
+            uservisitsDF
+              .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
+              .nonObliviousFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
+              .encProject(OP_PROJECT_DROP_COL1, $"destURL", $"sourceIP", $"adRevenue"),
+            rankingsDF("pageURL"), uservisitsDF("destURL"))
+          .encProject(OP_PROJECT_DROP_COL1, $"pageRank", $"sourceIP", $"adRevenue")
+          .encProject(OP_PROJECT_SWAP_COL1_COL2, $"sourceIP", $"pageRank", $"adRevenue")
+          .nonObliviousAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT,
+            $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
+          .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
+          .nonObliviousSort($"totalRevenue")
+      val count = df.count
+      println("big data 3 encrypted - num rows: " + count)
       df
     }
     uservisitsDF.unpersist()

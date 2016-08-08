@@ -549,6 +549,16 @@ void ecall_non_oblivious_aggregate(int op_code,
       input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
       actual_size, num_output_rows);
     break;
+  case OP_GROUPBY_COL1_SUM_COL2_FLOAT:
+    non_oblivious_aggregate<Aggregator1<GroupBy<1>, Sum<2, float> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
+    break;
+  case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT:
+    non_oblivious_aggregate<Aggregator2<GroupBy<1>, Avg<2, uint32_t>, Sum<3, float> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
+    break;
   default:
     printf("ecall_non_oblivious_aggregate: Unknown opcode %d\n", op_code);
     assert(false);

@@ -65,29 +65,38 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("big data 1") {
-    assert(QEDBenchmark.bd1SparkSQL(sqlContext, "tiny").collect ===
-      QEDBenchmark.bd1Opaque(sqlContext, "tiny").collect)
+    val answer = QEDBenchmark.bd1SparkSQL(sqlContext, "tiny").collect
+    assert(answer === QEDBenchmark.bd1Opaque(sqlContext, "tiny").collect)
+    assert(answer === QEDBenchmark.bd1Encrypted(sqlContext, "tiny").collect)
   }
 
   test("big data 2") {
-    val a = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny").collect.sortBy(_.getString(0)).map {
+    val answer = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny").collect.sortBy(_.getString(0)).map {
       case Row(str: String, f: Double) => Row(str, "%.2f".format(f))
     }
 
-    val b = QEDBenchmark.bd2Opaque(sqlContext, "tiny").collect.map {
+    def checkAnswer(xs: Seq[Row]): Unit = {
+      assert(answer.length === xs.length)
+      for ((x, y) <- answer.zip(xs)) {
+        assert(x === y)
+      }
+    }
+
+    val opaque = QEDBenchmark.bd2Opaque(sqlContext, "tiny").collect.map {
       case Row(str: String, f: Float) => Row(str, "%.2f".format(f))
     }
+    checkAnswer(opaque)
 
-    assert(a.length === b.length)
-
-    for ((x, y) <- a.zip(b)) {
-      assert(x === y)
+    val encrypted = QEDBenchmark.bd2Encrypted(sqlContext, "tiny").collect.map {
+      case Row(str: String, f: Float) => Row(str, "%.2f".format(f))
     }
+    checkAnswer(encrypted)
   }
 
   test("big data 3") {
-    assert(QEDBenchmark.bd3SparkSQL(sqlContext, "tiny").collect ===
-      QEDBenchmark.bd3Opaque(sqlContext, "tiny").collect)
+    val answer = QEDBenchmark.bd3SparkSQL(sqlContext, "tiny").collect
+    assert(answer === QEDBenchmark.bd3Opaque(sqlContext, "tiny").collect)
+    assert(answer === QEDBenchmark.bd3Encrypted(sqlContext, "tiny").collect)
   }
 
   test("columnsort padding") {
