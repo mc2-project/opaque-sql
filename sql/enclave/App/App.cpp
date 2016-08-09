@@ -1695,10 +1695,10 @@ int SGX_CDECL main(int argc, char *argv[])
   }
 
   //test_stream_encryption();
-  //test_external_sort();
-  //test_distributed_external_sort();
+  test_external_sort();
+  test_distributed_external_sort();
   test_non_oblivious_aggregation();
-  //test_non_oblivious_join();
+  test_non_oblivious_join();
 
   //test_debug();
   

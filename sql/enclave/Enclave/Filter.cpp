@@ -30,9 +30,9 @@ bool filter_single_row(int op_code, NewRecord *cur) {
   switch (op_code) {
   case OP_FILTER_COL2_GT3:
     return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 3;
-  case OP_BD1:
+  case OP_BD1_FILTER:
     return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 1000;
-  case OP_FILTER_NOT_DUMMY:
+  case OP_BD2_FILTER_NOT_DUMMY || OP_FILTER_NOT_DUMMY:
     return !cur->is_dummy();
   case OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01:
   {

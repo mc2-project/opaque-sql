@@ -61,4 +61,4 @@ class HeapSortItem {
 };
 
 
-#endif /* !_SORT_H_ */
+#endif /* _SORT_H_ */
