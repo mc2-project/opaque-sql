@@ -413,6 +413,18 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
 
   uint32_t actual_output_rows_length = 0;
 
+  printf("[Java_org_apache_spark_sql_SGXEnclave_Project] op_code is %u, input_rows_ptr: %p, input_rows_length: %u, num_rows: %u\n",
+		 op_code,
+		 input_rows_ptr,
+		 input_rows_length,
+		 num_rows);
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+    return ret;
+  }
+
   sgx_check("Project",
             ecall_project(
               eid, op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
@@ -1034,20 +1046,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
   while (cur_block != NULL) {
     uint8_t *cur_buffer = cur_block;
-    uint32_t cur_buffer_size = cur_block_size;
     uint32_t cur_buffer_num_rows = cur_block_num_rows;
     uint32_t cur_row_upper_bound;
 
     r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
-    while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
-      cur_buffer_size += cur_block_size;
-      cur_buffer_num_rows += cur_block_num_rows;
-      row_upper_bound =
-        cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
-
-      r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
-    }
-
     buffer_list.push_back(cur_buffer);
     num_rows.push_back(cur_buffer_num_rows);
     total_rows += cur_buffer_num_rows;
@@ -1298,10 +1300,17 @@ void test_external_sort() {
   // data per encrypted block
   uint32_t num_cols = 2;
   uint8_t column_types[7] = {INT, INT, INT, INT, INT, INT, INT};
-  uint32_t num_rows_per_block = 12;
+  //uint32_t num_rows_per_block = 12;
 
-  uint32_t num_bufs = 11;
+  uint32_t num_bufs = 20;
   uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t num_rows_per_block[20] = {
+	10, 11, 12, 7, 1,
+	9, 5, 11, 10, 8,
+	11, 5, 8, 12, 9,
+	9, 7, 11, 13, 8,	
+  };
 
   uint32_t enc_buf_size = 0;
   uint8_t *buf_ptr = buf;
@@ -1312,7 +1321,7 @@ void test_external_sort() {
   
   for (uint32_t i = 0; i < num_bufs; i++) {
   	ecall_generate_random_encrypted_block(global_eid,
-  										  num_cols, column_types, num_rows_per_block,
+  										  num_cols, column_types, num_rows_per_block[i],
   										  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
 
 	printf("enc_buf_size is %u\n", enc_buf_size);
@@ -1324,16 +1333,18 @@ void test_external_sort() {
   uint8_t *scratch = (uint8_t *) malloc(num_bufs * 128 * 1024);
   uint32_t row_upper_bound = 0;
 
+  uint32_t total_num_rows = 0;
   std::vector<uint32_t> num_rows;
   for (uint32_t i = 0; i < num_bufs; i++) {
-	num_rows.push_back(num_rows_per_block);
+	num_rows.push_back(num_rows_per_block[i]);
+	total_num_rows += num_rows_per_block[i];
   }
 
   row_upper_bound = *((uint32_t *) (buffer_list[0] + 8));
   printf("[test_external_sort] row_upper_bound is %u\n", row_upper_bound);
 
   for (uint32_t i = 0; i < num_bufs; i++) {
-  	ecall_row_parser(global_eid, buffer_list[i]);
+  	ecall_row_parser(global_eid, buffer_list[i], 0);
   }
 
 
@@ -1351,9 +1362,7 @@ void test_external_sort() {
 
   printf("After external sort\n");
 
-  for (uint32_t i = 0; i < num_bufs; i++) {
-	ecall_row_parser(global_eid, buffer_list[i]);
-  }
+  ecall_row_parser(global_eid, buffer_list[0], total_num_rows);
     
 }
 
@@ -1413,7 +1422,7 @@ void test_distributed_external_sort() {
 						  &boundary_rows_len);
 
   printf("[test_distributed_external_sort] Getting boundary rows\n");
-  ecall_row_parser(global_eid, boundary_rows);
+  ecall_row_parser(global_eid, boundary_rows, 0);
 
   uint8_t *sort_partition = (uint8_t *) malloc(num_bufs * 128 * 1024);
   uint8_t **partitioned_buffers = (uint8_t **) malloc((num_bufs + 1) * sizeof(uint8_t *));
@@ -1435,7 +1444,7 @@ void test_distributed_external_sort() {
 
   for (uint32_t i = 0; i < num_bufs + 1; i++) {
   	if (partitioned_buffers[i] != NULL) {
-  	  ecall_row_parser(global_eid, partitioned_buffers[i]);
+  	  ecall_row_parser(global_eid, partitioned_buffers[i], 0);
   	}
   }
 
@@ -1490,7 +1499,7 @@ void test_non_oblivious_aggregation() {
 
   uint32_t row_upper_bound = *((uint32_t *) (buffer_list[0] + 8));
 
-  ecall_row_parser(global_eid, buffer_list[0]);
+  ecall_row_parser(global_eid, buffer_list[0], 0);
 
   // sort single partition
   ecall_external_sort(global_eid,
@@ -1501,7 +1510,7 @@ void test_non_oblivious_aggregation() {
 					  row_upper_bound,
 					  scratch);
 
-  ecall_row_parser(global_eid, buffer_list[0]);
+  ecall_row_parser(global_eid, buffer_list[0], 0);
 
   uint8_t *output_rows = (uint8_t *) malloc(128 * 1024 * num_bufs);
   uint32_t actual_output_size = 0;
@@ -1513,7 +1522,7 @@ void test_non_oblivious_aggregation() {
 								output_rows, 128 * 1024 * num_bufs,
                                 &actual_output_size, &num_output_rows);
 
-  ecall_row_parser(global_eid, output_rows);
+  ecall_row_parser(global_eid, output_rows, 0);
 
   free(buffer_list);
   free(num_rows);
@@ -1568,9 +1577,9 @@ void test_non_oblivious_join() {
   (void) row_upper_bound;
 
   printf("Primary table\n");
-  ecall_row_parser(global_eid, primary_table);
+  ecall_row_parser(global_eid, primary_table, 0);
   printf("Foreign table\n");  
-  ecall_row_parser(global_eid, foreign_table);
+  ecall_row_parser(global_eid, foreign_table, 0);
 
   uint8_t *preprocess_output_rows = (uint8_t *) malloc(128 * 1024 * num_bufs);
   uint32_t preprocess_output_rows_len = 0;
@@ -1582,7 +1591,7 @@ void test_non_oblivious_join() {
 							 foreign_table, 128 * 1024 * num_bufs, num_rows_per_block_f,
 							 preprocess_output_rows, 128 * 1024 * num_bufs, &preprocess_output_rows_len);
 
-  ecall_row_parser(global_eid, preprocess_output_rows);
+  ecall_row_parser(global_eid, preprocess_output_rows, 0);
   
   // sort all rows
   // allocate scratch pad
@@ -1610,7 +1619,7 @@ void test_non_oblivious_join() {
 
 
   printf("[test_non_oblivious_join] after external sorting\n");
-  ecall_row_parser(global_eid, preprocess_output_rows);
+  ecall_row_parser(global_eid, preprocess_output_rows, 0);
 
   uint8_t *joined_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
   uint32_t join_output_length = 0;
@@ -1623,7 +1632,7 @@ void test_non_oblivious_join() {
                                       &join_output_length, &num_output_rows);
 
 
-  ecall_row_parser(global_eid, joined_rows);
+  ecall_row_parser(global_eid, joined_rows, 0);
 
   // clean up 
   
@@ -1665,7 +1674,7 @@ void test_debug() {
 
   uint8_t *copy_buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
 
-  ecall_row_parser(global_eid, buffer_list[0]);
+  ecall_row_parser(global_eid, buffer_list[0], 0);
   
   free(buf);
   free(copy_buf);
@@ -1696,9 +1705,9 @@ int SGX_CDECL main(int argc, char *argv[])
 
   //test_stream_encryption();
   test_external_sort();
-  test_distributed_external_sort();
-  test_non_oblivious_aggregation();
-  test_non_oblivious_join();
+  //test_distributed_external_sort();
+  //test_non_oblivious_aggregation();
+  //test_non_oblivious_join();
 
   //test_debug();
   

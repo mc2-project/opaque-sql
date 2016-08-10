@@ -520,13 +520,15 @@ void ecall_sort_partition(int op_code,
 }
 
 
-void ecall_row_parser(uint8_t *enc_block) {
+void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
 
   StreamRowReader reader(enc_block);
   NewRecord row;
 
-  uint32_t num_rows = 0;
-  num_rows = *((uint32_t *) (enc_block + 4));
+  uint32_t num_rows = input_num_rows;
+  if (num_rows == 0) {
+	num_rows = *((uint32_t *) (enc_block + 4));
+  }
   printf("[ecall_row_parser] num_rows is %u\n", num_rows);
   
   for (uint32_t i = 0; i < num_rows; i++) {

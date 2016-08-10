@@ -55,8 +55,8 @@ public:
   }
 
   StreamRowReader *reader;
-  uint8_t *buffers[32];
-  uint32_t num_rows[32];
+  uint8_t *buffers[1024];
+  uint32_t num_rows[1024];
   uint32_t num_bufs;
   uint32_t current_buf;
   uint32_t rows_left;
@@ -78,6 +78,7 @@ public:
 	current_buf = 0;
 	current_num_rows = 0;
 	bytes_written_ = 0;
+	rows_written_ = 0;
   }
 
   ~StreamWriter() {
@@ -110,15 +111,17 @@ public:
 	}
 	writer->write<RecordType>(sort_ptr);
 	++current_num_rows;
+	++rows_written_;
   }
 
   void close() {
 	writer->close();
 	bytes_written_ += writer->bytes_written();
+	printf("[StreamWriter::close] bytes_written_ is %u, rows written is %u\n", bytes_written_, rows_written_);
   }
 
   uint32_t bytes_written() {
-	return bytes_written_;
+   	return bytes_written_;
   }
   
   StreamRowWriter *writer;
@@ -130,6 +133,7 @@ public:
   uint32_t total_rows;
   uint32_t avg_rows;
   uint32_t bytes_written_;
+  uint32_t rows_written_;
 };
 
 
@@ -152,6 +156,7 @@ uint32_t external_merge_helper(int op_code,
   for (uint32_t i = 0; i < num_readers; i++) {
 	num_buffers += readers[i].num_bufs;
 	for (uint32_t j = 0; j < readers[i].num_bufs; j++) {
+	  //printf("[external_merge_helper] reader %u buffer %u has rows %u\n", i, j, readers[i].num_rows[j]);
 	  total_rows += readers[i].num_rows[j];
 	}
   }
@@ -176,6 +181,8 @@ uint32_t external_merge_helper(int op_code,
 				   });
 	
 	HeapSortItem<SortPointer<RecordType> > *value = heap.front();
+	
+	// DEBUG
 	// SortPointer<RecordType> *temp_value = reinterpret_cast<SortPointer<RecordType> *> (value->v);
 	// printf("Writing out the following row from with index %u\n", value->index);
 	// temp_value->print();
@@ -228,7 +235,7 @@ uint32_t external_merge(int op_code,
 	while (true) {
 	  
 	  blocks[i + offset].read(&block_out, &len_out, &num_rows_out, &rows_upper_bound_out);
-	  //printf("[external_merge] len_out: %u, num_rows_out: %u, rows_upper_bound_out %u\n", len_out, num_rows_out, rows_upper_bound_out);
+	  printf("[external_merge] len_out: %u, num_rows_out: %u, rows_upper_bound_out %u\n", len_out, num_rows_out, rows_upper_bound_out);
 	  
 	  if (block_out == NULL) {
 		//printf("[external_merge] offset %u has null block\n", i);
@@ -266,11 +273,13 @@ void external_sort(int op_code,
   printf("External sort called\n");
 
   uint32_t max_num_rows = 0;
+  uint32_t total_num_rows = 0;
   
   for (uint32_t i = 0; i < num_buffers; i++) {
     if (max_num_rows < num_rows[i]) {
       max_num_rows = num_rows[i];
     }
+	total_num_rows += num_rows[i];
   }
 
   uint32_t max_list_length = max_num_rows * 2;
@@ -303,10 +312,10 @@ void external_sort(int op_code,
                          row_upper_bound, &num_comparisons, &num_deep_comparisons);
     }
 
-	printf("Sort single buffers done\n");
+	printf("Sort single buffers done, total num buffers: %u, total_num_rows: %u\n", num_buffers, total_num_rows);
 
 	// now, merge these together in rounds
-	uint32_t max_num_streams = 4;
+	uint32_t max_num_streams = 40;
 	uint32_t num_streams = num_buffers < max_num_streams ? num_buffers : max_num_streams;
 
 	
@@ -362,15 +371,24 @@ void external_sort(int op_code,
 
 		  write_buffers.push_back(BlockReader(output_buffers_ptr, output_buffers_len));
 		  output_buffers_ptr += output_buffers_len;
+		  
 		}
+		
+	  }
+
+	  RowReader r(buffer_list[0]);
+	  NewRecord row;
+	  for (uint32_t i = 0; i < total_num_rows; i++) {
+		r.read(&row);
 	  }
 	  
 	}
 
+
   }
 
   delete [] sort_ptrs;
-
+  
 }
 
 

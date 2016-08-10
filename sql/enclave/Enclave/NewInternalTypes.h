@@ -1090,7 +1090,7 @@ class StreamRowReader {
 	buf += 4;
     buf += 4; // row_upper_bound
 
-	printf("[StreamRowReader::read_encrypted_block] block_enc_size is %u, block_num_rows is %u\n", block_enc_size, block_num_rows);	
+	//printf("[StreamRowReader::read_encrypted_block %u] block_enc_size is %u, block_num_rows is %u\n", cur_block_num, block_enc_size, block_num_rows);	
 
 	if (cipher == NULL) {
 	  cipher = new StreamDecipher(buf, block_enc_size);
@@ -1102,6 +1102,7 @@ class StreamRowReader {
 	block_start = buf;
     block_pos = block_start;
     block_rows_read = 0;
+	++cur_block_num;
   }
 
   void maybe_advance_block() {
@@ -1117,6 +1118,7 @@ class StreamRowReader {
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_rows_read;
+  uint32_t cur_block_num;
 };
 
 
@@ -1187,7 +1189,7 @@ class StreamRowWriter {
     *reinterpret_cast<uint32_t *>(buf_pos) = ROW_UPPER_BOUND;
 	buf_pos += 4;
 
-	printf("[StreamRowWriter::finish_block] w_bytes is %u, block_num_rows is %u\n", w_bytes, block_num_rows);
+	debug("[StreamRowWriter::finish_block] w_bytes is %u, block_num_rows is %u\n", w_bytes, block_num_rows);
 
 	block_num_rows = 0;
 	block_len = 0;

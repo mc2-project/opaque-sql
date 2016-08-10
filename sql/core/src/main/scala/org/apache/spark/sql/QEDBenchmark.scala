@@ -44,31 +44,31 @@ object QEDBenchmark {
     val sqlContext = new SQLContext(sc)
 
     // Warmup
-    QEDBenchmark.pagerank(sqlContext, 256.toString)
-    QEDBenchmark.pagerank(sqlContext, 256.toString)
+    // QEDBenchmark.pagerank(sqlContext, 256.toString)
+    // QEDBenchmark.pagerank(sqlContext, 256.toString)
 
     // Run
-    QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
+    // QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd1Opaque(sqlContext, "1million")
+    // QEDBenchmark.bd1Opaque(sqlContext, "1million")
 
-    QEDBenchmark.bd1Encrypted(sqlContext, "1million")
+    // QEDBenchmark.bd1Encrypted(sqlContext, "1million")
 
-    QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
+    // QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd2Opaque(sqlContext, "1million")
+    // QEDBenchmark.bd2Opaque(sqlContext, "1million")
 
-    QEDBenchmark.bd2Encrypted(sqlContext, "1million")
+    // QEDBenchmark.bd2Encrypted(sqlContext, "1million")
 
-    QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
+    // QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd3Opaque(sqlContext, "1million")
+    // QEDBenchmark.bd3Opaque(sqlContext, "1million")
 
     QEDBenchmark.bd3Encrypted(sqlContext, "1million")
 
-    for (i <- 8 to 20) {
-      QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString)
-    }
+    // for (i <- 8 to 20) {
+    //   QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString)
+    // }
 
     sc.stop()
   }
@@ -285,6 +285,7 @@ object QEDBenchmark {
             $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
           .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
           .encSort($"totalRevenue")
+      df.explain(true)
       val count = df.count
       println("big data 3 - num rows: " + count)
       df
@@ -328,6 +329,7 @@ object QEDBenchmark {
             $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
           .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
           .nonObliviousSort($"totalRevenue")
+      df.explain(true)
       val count = df.count
       println("big data 3 encrypted - num rows: " + count)
       df

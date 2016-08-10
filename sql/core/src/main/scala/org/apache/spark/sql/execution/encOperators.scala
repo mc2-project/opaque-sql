@@ -80,8 +80,12 @@ case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, chil
 
   override def executeBlocked() = child.executeBlocked().map { block =>
     val (enclave, eid) = QED.initEnclave()
-    val serResult = enclave.Project(eid, opcode.value, block.bytes, block.numRows)
-    Block(serResult, block.numRows)
+    if (block.numRows == 0) {
+      Block(Array.empty[Byte], 0)
+    } else {
+      val serResult = enclave.Project(eid, opcode.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
+    }
   }
 }
 
@@ -294,8 +298,10 @@ case class NonObliviousAggregate(
       }
 
     val childRDD = child.executeBlocked().cache()
-    time("aggregate - force child") { childRDD.count }
-    // Process boundaries
+    val count = time("aggregate - force child") { childRDD.count }
+    println(s"count is $count")
+    if (count == 0) return sqlContext.sparkContext.emptyRDD[Block]
+
     val aggregates = childRDD.map { block =>
       val (enclave, eid) = QED.initEnclave()
       val numOutputRows = new MutableInteger

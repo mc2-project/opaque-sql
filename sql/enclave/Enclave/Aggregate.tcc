@@ -183,7 +183,7 @@ void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
 	}
 
 	agg.aggregate(&prev_row);
-	reader.read(&cur_row);
+	reader.read(&cur_row); 
 	
     if (!agg.grouping_attrs_equal(&cur_row)) {
       output_row.clear();

@@ -600,6 +600,7 @@ bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other) const {
 StreamRowReader::StreamRowReader(uint8_t *buf) {
   this->buf = buf;
   cipher = NULL;
+  cur_block_num = 0;
   
   this->read_encrypted_block();
 }
