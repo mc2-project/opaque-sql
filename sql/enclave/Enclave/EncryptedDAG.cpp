@@ -7,11 +7,18 @@ class Node {
 
   Node(uint32_t id, uint32_t num_parents, uint32_t num_children) {
 	this->id = id;
-	parents = malloc(sizeof(Node *) * num_parents);
-	children = malloc(sizeof(Node *) * num_children);
 
 	this->num_parents = num_parents;
 	this->num_children = num_children;
+
+	if (num_parents > 0) {
+	  parents = malloc(sizeof(Node *) * num_parents);
+	}
+
+	if (num_children > 0) {
+	  children = malloc(sizeof(Node *) * num_children);
+	}
+
   }
 
   ~Node() {
@@ -52,6 +59,56 @@ public:
   uint32_t get_task_id(int op_code, int index) {
 	return task_id_parser(this, op_code, index);
   }
+
+  std::vector<uint32_t> get_task_id_parents(uint32_t task_id) {
+	// find the correct task in nodes
+	// return a list of parents' task IDs
+
+	Node *node = NULL;
+
+	for (uint32_t i = 0; i < num_nodes; i++) {
+	  if (nodes[i]->id == task_id) {
+		node = nodes[i];
+	  }
+	}
+
+	std::vector<uint32_t> parents;
+
+	if (node == NULL) {
+	  return parents;
+	}
+
+	for (uint32_t i = 0; i < node->num_parents; i++) {
+	  parents.push_back(node->parents[i]);
+	}
+
+	return parents;
+  }
+
+  std::vector<uint32_t> get_task_id_children(uint32_t task_id) {
+	// find the correct task in nodes
+	// return a list of parents' task IDs
+
+	Node *node = NULL;
+
+	for (uint32_t i = 0; i < num_nodes; i++) {
+	  if (nodes[i]->id == task_id) {
+		node = nodes[i];
+	  }
+	}
+
+	std::vector<uint32_t> children;
+
+	if (node == NULL) {
+	  return children;
+	}
+
+	for (uint32_t i = 0; i < node->num_children; i++) {
+	  children.push_back(node->children[i]);
+	}
+
+	return children;
+  }  
 
   Node **nodes;
   uint32_t num_nodes;
@@ -432,6 +489,80 @@ public:
 	  }
 	  break;
 
+	  // single machine encrypted version
+	case DID_ENC_BD1_SINGLE:
+	  {
+		// there are only two rounds, one for external sort, then one for filter
+		num_nodes = 2;
+		dag = new DAG(num_nodes, DID_ENC_BD1_SINGLE);
+
+		// permute
+		dag->nodes[0] = new Node(TID_BD1_PERMUTE_ROUND1, 0, 1);
+		// filter
+		dag->nodes[1] = new Node(TID_BD1_FILTER, 1, 0);
+		
+		dag->nodes[0]->children[0] = dag->nodes[1];
+		dag->nodes[1]->parents[0] = dag->nodes[0];
+	  }
+	  break;
+
+	case DID_ENC_BD2_SINGLE:
+	  {
+		// sort, aggregate, project
+		num_nodes = 3;
+		dag = new DAG(num_nodes, DID_ENC_BD2_SINGLE);
+
+		// sort
+		dag->nodes[0] = new Node(TID_BD2_AGG_SORT1_ROUND1, 0, 1);
+		// group by
+		dag->nodes[1] = new Node(TID_BD2_GROUPBY_STEP1, 1, 1);
+		// project
+		dag->nodes[2] = new Node(TID_BD2_PROJECT, 1, 0);
+
+		dag->nodes[0]->children[0] = dag->nodes[1];
+		dag->nodes[1]->parents[0] = dag->nodes[0];
+		dag->nodes[1]->children[0] = dag->nodes[2];
+		dag->nodes[2]->parents[0] = dag->nodes[1];
+	  }
+	  break;
+
+	case DID_ENC_BD3_SINGLE:
+	  {
+		// sort, join, sort, agg, project, sort
+		num_nodes = 6;
+		dag = new DAG(num_nodes, DID_ENC_BD3_SINGLE);
+
+		// sort
+		dag->nodes[0] = new Node(TID_BD3_SORT1_STEP1, 0, 1);
+		// join
+		dag->nodes[1] = new Node(TID_BD3_JOIN_STEP1, 1, 1);
+		// sort
+		dag->nodes[2] = new Node(TID_BD3_AGG_SORT2_STEP1, 1, 1);
+		// agg
+		dag->nodes[3] = new Node(TID_BD3_GROUPBY_STEP1, 1, 1);
+		// project
+		dag->nodes[4] = new Node(TID_BD3_PROJECT2, 1, 1);
+		// sort
+		dag->nodes[5] = new Node(TID_BD3_SORT_STEP1, 1, 0);
+
+		dag->nodes[0]->children[0] = dag->nodes[1];
+		
+		dag->nodes[1]->parents[0] = dag->nodes[0];
+		dag->nodes[1]->children[0] = dag->nodes[2];
+		
+		dag->nodes[2]->parents[0] = dag->nodes[1];
+		dag->nodes[2]->children[0] = dag->nodes[3];
+		
+		dag->nodes[3]->parents[0] = dag->nodes[2];
+		dag->nodes[3]->children[0] = dag->nodes[4];
+		
+		dag->nodes[4]->parents[0] = dag->nodes[3];
+		dag->nodes[4]->children[0] = dag->nodes[5];
+		
+		dag->nodes[5]->parents[0] = dag->nodes[4];
+	  }
+	  break;
+	  
 	default:
 	  {
 		check(false, "DAGGenerator::genDAG(): cannot generate DAG, op code not found");

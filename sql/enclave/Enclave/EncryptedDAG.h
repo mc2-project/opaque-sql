@@ -61,14 +61,19 @@ enum TASK_ID {
   TID_BD3_SORT_STEP2 = 15100,
   TID_BD3_SORT_STEP3 = 15200,
 
-  
 
 };
 
 enum DAG_ID {
   DID_BD1,
   DID_BD2,
-  DID_BD3
+  DID_BD3,
+
+  DID_ENC_BD1,
+  DID_ENC_BD2,
+  DID_ENC_BD3,
+
+  DID_ENC_BD1_SINGLE,
 };
 
 uint32_t task_id_parser(DAG *dag, int op_code, int index);
