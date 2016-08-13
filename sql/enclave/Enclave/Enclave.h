@@ -40,6 +40,7 @@
 #include "ObliviousSort.h"
 #include "DataGen.h"
 #include "Sort.h"
+#include "ColumnSort.h"
 
 #include "Enclave_t.h"
 

@@ -603,4 +603,5 @@ StreamRowReader::StreamRowReader(uint8_t *buf) {
   cur_block_num = 0;
   
   this->read_encrypted_block();
+  verify_set = new std::set<uint32_t>();
 }

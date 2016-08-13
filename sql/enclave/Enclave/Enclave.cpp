@@ -581,3 +581,81 @@ void ecall_non_oblivious_sort_merge_join(int op_code,
                                 output_rows, output_rows_length,
                                 actual_output_length, num_output_rows);
 }
+
+// Column sort
+//
+// Step 1: Sort locally
+// Step 2: Shuffle to transpose
+// Step 3: Sort locally
+// Step 4: Shuffle to un-transpose
+// Step 5: Sort locally
+// Step 6: Shift down
+// Step 7: Sort locally
+// Step 8: Shift up
+
+void ecall_column_sort(int op_code,
+					   int round, 
+					   uint8_t *input_rows,
+					   uint32_t *num_rows,
+					   uint8_t **buffer_list,
+					   uint32_t num_buffers, 
+					   uint32_t row_upper_bound,
+					   uint32_t column,
+					   uint32_t r,
+					   uint32_t s,
+					   uint8_t **output_buffers,
+					   uint32_t *output_buffer_sizes) {
+
+  uint32_t total_num_rows = 0;
+
+  for (uint32_t i = 0; i < num_buffers; i++) {
+	total_num_rows += num_rows[i];
+  }
+  
+  int sort_op = get_sort_operation(op_code);
+  switch (sort_op) {
+  case SORT_SORT:
+	{
+	  if (round == 1) {
+		external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		transpose<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else if (round == 2) {
+		external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		untranspose<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else if (round == 3) {
+		external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		shiftdown<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else {
+		external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		shiftup<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  }
+	}
+	
+	break;
+
+  case SORT_JOIN:
+	{
+	  if (round == 1) {
+		external_oblivious_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		transpose<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else if (round == 2) {
+		external_oblivious_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		untranspose<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else if (round == 3) {
+		external_oblivious_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		shiftdown<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  } else {
+		external_oblivious_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
+		shiftup<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+	  }
+
+	}
+	
+	break;
+	
+  default:
+    printf("ecall_sample: Unknown sort type %d for opcode %d\n", sort_op, op_code);
+    assert(false);
+  }
+  
+}

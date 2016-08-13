@@ -1,6 +1,7 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include "util.h"
+#include <set>
 
 class NewJoinRecord;
 class StreamRowReader;
@@ -849,10 +850,12 @@ public:
   RowReader(uint8_t *buf) : buf(buf) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     read_encrypted_block();
+	verify_set = new std::set<uint32_t>();
   }
 
   ~RowReader() {
     free(block_start);
+	delete verify_set;
   }
 
   void read(NewRecord *row) {
@@ -877,7 +880,35 @@ public:
 	read_encrypted_block();
   }
 
+  void close_and_verify(int op_code, uint32_t num_part, int index) {
+	(void)op_code;
+	(void)num_part;
+	(void)index;
+	// verify set intersection
+	/* uint32_t benchmark_op_code = get_benchmark_op_code(op_code); */
+	/* DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part); */
+	/* uint32_t self_task_id = task_id_parser(dag, op_code, index); */
+
+	/* std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id); */
+	
+	/* bool verified = set_verify(input_set, verify_set); */
+
+	/* if (!verified) { */
+	/*   // the OS is malicious -- it's the apocalypse! */
+	/*   // or maybe our implementation is wrong */
+	/* } */
+	
+	/* delete input_set; */
+	/* delete dag; */
+  }
+
 private:
+  void add_parent(uint32_t task_id) {
+	// simply add the task ID to the verify set
+	verify_set->insert(task_id);
+  }
+
+  
   void read_encrypted_block() {
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
@@ -900,6 +931,7 @@ private:
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_rows_read;
+  std::set<uint32_t> *verify_set;
 };
 
 class IndividualRowReader {
@@ -1052,6 +1084,7 @@ class StreamRowReader {
 
   ~StreamRowReader() {
 	delete cipher;
+	delete verify_set;
   }
 
   void read(NewRecord *row) {
@@ -1082,7 +1115,17 @@ class StreamRowReader {
 	read_encrypted_block();
   }
 
+  void close_and_verify() {
+	// TODO: verify set intersection
+  }
+
  private:
+  
+  void add_parent(uint32_t task_id) {
+	// simply add the task ID to the verify set
+	verify_set->insert(task_id);
+  }
+  
   void read_encrypted_block() {
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf);
 	buf += 4;
@@ -1119,6 +1162,7 @@ class StreamRowReader {
   uint32_t block_num_rows;
   uint32_t block_rows_read;
   uint32_t cur_block_num;
+  std::set<uint32_t> *verify_set;
 };
 
 

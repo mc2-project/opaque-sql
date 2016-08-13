@@ -2,6 +2,33 @@
 
 // this code is able to generate the correct DAG based on the op_code/benchmark
 
+// true if two are exactly equal
+// false otherwise
+bool set_verify(std::set<uint32_t> *set1,
+				std::set<uint32_t> *set2) {
+  
+  std::set<uint32_t>::iterator it_begin = set1->begin();
+  std::set<uint32_t>::iterator it_end = set1->end();
+  std::set<uint32_t>::iterator it;
+
+  for (it = it_begin; it != it_end; it++) {
+	if (set2->find(*it) == set2->end()) {
+	  return false;
+	}
+  }
+
+  it_begin = set2->begin();
+  it_end = set2->end();
+
+  for (it = it_begin; it != it_end; it++) {
+	if (set1->find(*it) == set1->end()) {
+	  return false;
+	}
+  }
+
+  return true;
+}
+
 
 class Node {
 
@@ -60,7 +87,7 @@ public:
 	return task_id_parser(this, op_code, index);
   }
 
-  std::vector<uint32_t> get_task_id_parents(uint32_t task_id) {
+  std::set<uint32_t> *get_task_id_parents(uint32_t task_id) {
 	// find the correct task in nodes
 	// return a list of parents' task IDs
 
@@ -72,20 +99,20 @@ public:
 	  }
 	}
 
-	std::vector<uint32_t> parents;
+	std::set<uint32_t> *parents = new std::set<uint32_t>();
 
 	if (node == NULL) {
 	  return parents;
 	}
 
 	for (uint32_t i = 0; i < node->num_parents; i++) {
-	  parents.push_back(node->parents[i]);
+	  parents.insert(node->parents[i]);
 	}
 
 	return parents;
   }
 
-  std::vector<uint32_t> get_task_id_children(uint32_t task_id) {
+  std::set<uint32_t> *get_task_id_children(uint32_t task_id) {
 	// find the correct task in nodes
 	// return a list of parents' task IDs
 
@@ -97,14 +124,14 @@ public:
 	  }
 	}
 
-	std::vector<uint32_t> children;
+	std::set<uint32_t> *children = new std::set<uint32_t>();
 
 	if (node == NULL) {
 	  return children;
 	}
 
 	for (uint32_t i = 0; i < node->num_children; i++) {
-	  children.push_back(node->children[i]);
+	  children->insert(node->children[i]);
 	}
 
 	return children;
@@ -115,6 +142,17 @@ public:
   uint32_t DAG_id;
 };
 
+
+uint32_t get_benchmark_op_code(uint32_t op_code) {
+  uint32_t benchmark_op_code = BD1;
+  
+  switch(op_code) {
+  default:
+	check(false, "op_code not found");
+  }
+
+  return benchmark_op_code;
+}
 
 // index defines the index of the partition
 uint32_t task_id_parser(DAG *dag, int op_code, int index) {

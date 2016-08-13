@@ -1082,6 +1082,125 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSort(JNIEnv *env,
+																			 jobject obj,
+																			 jlong eid,
+																			 jint op_code,
+																			 jint round,
+																			 jbyteArray input,
+																			 jint num_items,
+																			 jint r,
+																			 jint s,
+																			 jint column) {
+
+
+
+  (void)obj;
+
+  if (num_items == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    return ret;
+  }
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
+
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
+
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+  }
+
+  // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> num_rows;
+  uint32_t row_upper_bound = 0;
+
+  BlockReader reader(input_copy, input_len);
+  uint8_t *cur_block;
+  uint32_t cur_block_size;
+  uint32_t cur_block_num_rows;
+  uint32_t total_rows = 0;
+  reader.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
+  while (cur_block != NULL) {
+    uint8_t *cur_buffer = cur_block;
+    uint32_t cur_buffer_size = cur_block_size;
+    uint32_t cur_buffer_num_rows = cur_block_num_rows;
+    uint32_t cur_row_upper_bound;
+
+    reader.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
+      cur_buffer_size += cur_block_size;
+      cur_buffer_num_rows += cur_block_num_rows;
+      row_upper_bound =
+        cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
+
+      reader.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    }
+
+    buffer_list.push_back(cur_buffer);
+    num_rows.push_back(cur_buffer_num_rows);
+    total_rows += cur_buffer_num_rows;
+    debug("ColumnSort: Buffer %lu: %d bytes, %d rows\n",
+          buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
+  }
+
+  perf("ColumnSort: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
+       input_len, num_items, buffer_list.size(), row_upper_bound);
+  
+  uint32_t total_data_size = row_upper_bound * num_items;
+  uint32_t per_column_data_size = ((total_data_size / s) + 1 ) * row_upper_bound;
+  uint32_t per_column_blocks = (per_column_data_size / MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
+  uint32_t estimated_column_size = per_column_blocks * (12 + 12 + 16) + per_column_data_size;
+
+  // TODO: construct total of s output buffers
+  uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
+  for (uint32_t i = 0; i < (uint32_t) s; i++) {
+	output_buffers[i] = (uint8_t *) malloc(estimated_column_size);
+  }
+
+  uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
+
+  ecall_column_sort(eid,
+					op_code, round, input_copy, num_rows.data(),
+					buffer_list.data(), buffer_list.size(), row_upper_bound,
+					column, r, s,
+					output_buffers, output_buffer_sizes);
+
+  // serialize the buffers onto one big buffer
+  uint32_t final_size = 0;
+  for (uint32_t i = 0; i < (uint32_t) s; i++) {
+	final_size += output_buffer_sizes[i] + 4 + 4; // column ID, of column length
+  }
+
+  uint8_t *output = (uint8_t *) malloc(final_size);
+  uint8_t *output_ptr = output;
+
+  for (uint32_t i = 0; i < (uint32_t) s; i++) {
+	*((uint32_t *) output_ptr) = i + 1;
+	output_ptr += 4;
+	*((uint32_t *) output_ptr) = output_buffer_sizes[i];
+	output_ptr += 4;
+
+	memcpy(output_ptr, output_buffers[i], output_buffer_sizes[i]);
+  }
+
+  jbyteArray ret = env->NewByteArray(final_size);
+  env->SetByteArrayRegion(ret, 0, final_size, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input, ptr, 0);
+
+  free(input_copy);
+  free(output_buffers);
+  free(output);
+  free(output_buffer_sizes);
+
+  return ret;
+  
+}
+
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {

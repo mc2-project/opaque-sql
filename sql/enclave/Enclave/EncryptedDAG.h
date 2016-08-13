@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "util.h"
+#include <set>
 
 class Node;
 class DAG;
