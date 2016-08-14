@@ -981,6 +981,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   jboolean rows_are_join_rows) {
   (void)obj;
 
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    return ret;
+  }
+
   uint32_t block_len = (uint32_t) env->GetArrayLength(block);
   jboolean if_copy = false;
   uint8_t *block_ptr = (uint8_t *) env->GetByteArrayElements(block, &if_copy);
