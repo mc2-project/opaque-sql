@@ -24,36 +24,27 @@ class QEDBenchmarkSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  // test("spark sql sort") {
-  //   QEDBenchmark.sortSparkSQL(sqlContext, 256 * 1024)
-  // }
-
-  // test("opaque sort") {
-  //   QEDBenchmark.sortOpaque(sqlContext, 256 * 1024)
-  // }
-
-  // test("big data 1 - spark sql") {
-  //   QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
-  // }
-
-  // test("big data 1") {
-  //   QEDBenchmark.bd1Opaque(sqlContext, "1node")
-  // }
-
-  // test("big data 2 - spark sql") {
-  //   QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
-  // }
-
-  // test("big data 2") {
-  //   QEDBenchmark.bd2Opaque(sqlContext, "1node")
-  // }
-
-  test("bd3 oblivious") {
-    QEDBenchmark.bd2Opaque(sqlContext, "1million")
+  test("spark sql sort") {
+    QEDBenchmark.sortSparkSQL(sqlContext, 256 * 1024)
   }
 
+  test("opaque sort") {
+    QEDBenchmark.sortOpaque(sqlContext, 256 * 1024)
+  }
 
-  test("bd3 encrypted") {
-    QEDBenchmark.bd3Encrypted(sqlContext, "1million")
+  test("big data 1 - spark sql") {
+    QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
+  }
+
+  test("big data 1") {
+    QEDBenchmark.bd1Opaque(sqlContext, "1node")
+  }
+
+  test("big data 2 - spark sql") {
+    QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
+  }
+
+  test("big data 2") {
+    QEDBenchmark.bd2Opaque(sqlContext, "1node")
   }
 }
