@@ -103,6 +103,9 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
     JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
 
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
+    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jint, jintArray, jintArray);
+
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 

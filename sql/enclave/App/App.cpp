@@ -1008,6 +1008,69 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   return result;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input, jint num_rows,
+  jint num_partitions, jintArray offsets, jintArray rows_per_partition) {
+  (void) obj;
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    return ret;
+  }
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy = false;
+  uint8_t *input_ptr = (uint8_t *) env->GetByteArrayElements(input, &if_copy);
+
+  uint8_t *sampled = (uint8_t *) malloc(input_len);
+  uint32_t sampled_size = 0;
+  sgx_check(
+    "Sample",
+    ecall_sample(eid, op_code, input_ptr, sampled, &sampled_size));
+
+  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  uint8_t *boundary_rows = (uint8_t *) malloc(input_len);
+  uint32_t boundary_rows_len = 0;
+  sgx_check(
+    "Find Range Bounds",
+    ecall_find_range_bounds(
+      eid, op_code, 1, sampled, sampled_size, scratch, boundary_rows,
+      &boundary_rows_len));
+
+  uint8_t *output = (uint8_t *) malloc(input_len);
+  uint32_t *output_partitions_num_rows = (uint32_t *) malloc(num_partitions * sizeof(uint32_t));
+  uint8_t **output_partition_boundaries =
+    (uint8_t **) malloc((num_partitions + 1) * sizeof(uint8_t *));
+  sgx_check(
+    "Partition Input For Sort",
+    ecall_sort_partition(
+      eid, op_code, 1, input_ptr, input_len, boundary_rows, num_partitions, output,
+      output_partitions_num_rows, output_partition_boundaries, scratch));
+
+  jint *offsets_ptr = env->GetIntArrayElements(offsets, &if_copy);
+  jint *rows_per_partition_ptr = env->GetIntArrayElements(rows_per_partition, &if_copy);
+  for (jint i = 0; i < num_partitions; ++i) {
+    rows_per_partition_ptr[i] = output_partitions_num_rows[i];
+    offsets_ptr[i] = output_partition_boundaries[i] - output;
+  }
+
+  jbyteArray result = env->NewByteArray(input_len);
+  env->SetByteArrayRegion(result, 0, input_len, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input, (jbyte *) input_ptr, 0);
+  env->ReleaseIntArrayElements(offsets, offsets_ptr, 0);
+  env->ReleaseIntArrayElements(rows_per_partition, rows_per_partition_ptr, 0);
+
+  free(sampled);
+  free(scratch);
+  free(boundary_rows);
+  free(output);
+  free(output_partitions_num_rows);
+  free(output_partition_boundaries);
+
+  return result;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(JNIEnv *env,
 																			   jobject obj,
 																			   jlong eid,
@@ -1482,98 +1545,6 @@ void test_external_sort() {
   ecall_row_parser(global_eid, buffer_list[0], total_num_rows);
     
 }
-
-void test_distributed_external_sort() {
-
-  int op_code = OP_SORT_COL1;
-
-  // data per encrypted block
-  uint32_t num_cols = 3;
-  uint8_t column_types[4] = {INT, INT, INT};
-  uint32_t num_rows_per_block = 100;
-
-  uint32_t num_bufs = 5;
-  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
-
-  uint32_t enc_buf_size = 0;
-  uint8_t *buf_ptr = buf;
-
-  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
-
-  printf("Before random block gen\n");
-  
-  for (uint32_t i = 0; i < num_bufs; i++) {
-  	ecall_generate_random_encrypted_block(global_eid,
-  										  num_cols, column_types, num_rows_per_block,
-  										  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
-
-	printf("enc_buf_size is %u\n", enc_buf_size);
-  	buffer_list[i] = buf_ptr;
-  	buf_ptr += enc_buf_size;
-  }
-
-  uint8_t *output_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
-  uint32_t output_rows_len = 0;
-
-  uint8_t *scratch = (uint8_t *) malloc(num_bufs * 128 * 1024);
-
-  uint8_t *boundary_rows = (uint8_t *) malloc(num_bufs * 128 * 1024);
-  uint32_t boundary_rows_len = 0;
-  
-
-  for (uint32_t i = 0; i < num_bufs; i++) {
-	uint32_t temp = 0;
-	ecall_sample(global_eid, op_code, buffer_list[i], output_rows + output_rows_len, &temp);
-	output_rows_len += temp;
-  }
-
-  
-  printf("[test_distributed_external_sort] output_rows_len is %u\n", output_rows_len);
-  ecall_find_range_bounds(global_eid,
-						  op_code,
-						  num_bufs,
-						  output_rows,
-						  output_rows_len,
-						  scratch,
-						  boundary_rows,
-						  &boundary_rows_len);
-
-  printf("[test_distributed_external_sort] Getting boundary rows\n");
-  ecall_row_parser(global_eid, boundary_rows, 0);
-
-  uint8_t *sort_partition = (uint8_t *) malloc(num_bufs * 128 * 1024);
-  uint8_t **partitioned_buffers = (uint8_t **) malloc((num_bufs + 1) * sizeof(uint8_t *));
-
-  for (uint32_t i = 0; i < num_bufs + 1; i++) {
-	partitioned_buffers[i] = NULL;
-  }
-
-
-  printf("[test_distributed_external_sort] Sort partition\n");
-  ecall_sort_partition(global_eid,
-					   op_code,
-					   1,
-					   buffer_list[0], num_rows_per_block,
-					   boundary_rows,
-					   num_bufs + 1,
-					   sort_partition, partitioned_buffers,
-					   scratch);
-
-  for (uint32_t i = 0; i < num_bufs + 1; i++) {
-  	if (partitioned_buffers[i] != NULL) {
-  	  ecall_row_parser(global_eid, partitioned_buffers[i], 0);
-  	}
-  }
-
-  free(buf);
-  free(output_rows);
-  free(buffer_list);
-  free(scratch);
-  free(boundary_rows);
-  free(sort_partition);
-  free(partitioned_buffers);
-}
-
 
 void test_non_oblivious_aggregation() {
 

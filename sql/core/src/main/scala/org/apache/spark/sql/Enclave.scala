@@ -50,6 +50,16 @@ class SGXEnclave extends java.io.Serializable {
     num_items: Int
   ): Array[Byte]
 
+  @native def PartitionForSort(
+    enclave_id: Long,
+    op_code: Int,
+    input: Array[Byte],
+    num_rows: Int,
+    num_partitions: Int,
+    offsets: Array[Int],
+    rows_per_partition: Array[Int]
+  ): Array[Byte]
+
   @native def ExternalSort(
     enclave_id: Long,
     op_code: Int,

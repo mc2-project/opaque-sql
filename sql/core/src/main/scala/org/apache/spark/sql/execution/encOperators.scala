@@ -152,14 +152,32 @@ case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
     }
     val childRDD = child.executeBlocked()
 
-    if (childRDD.partitions.length <= 1) {
+    val numPartitions = childRDD.partitions.length
+    if (numPartitions <= 1) {
       childRDD.map { block =>
         val (enclave, eid) = QED.initEnclave()
         val sortedRows = enclave.ExternalSort(eid, opcode.value, block.bytes, block.numRows)
         Block(sortedRows, block.numRows)
       }
     } else {
-      ???
+      childRDD.flatMap { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val offsets = new Array[Int](numPartitions)
+        val rowsPerPartition = new Array[Int](numPartitions)
+        val partitions = enclave.PartitionForSort(
+          eid, opcode.value, block.bytes, block.numRows, numPartitions, offsets, rowsPerPartition)
+        offsets.sliding(2).zip(rowsPerPartition.iterator).zipWithIndex.map {
+          case ((Array(start, end), numRows), i) =>
+            (i, Block(partitions.slice(start, end), numRows))
+        }
+      }.groupByKey(numPartitions).map {
+        case (i, blocks) =>
+          val (enclave, eid) = QED.initEnclave()
+          val input = QED.concatByteArrays(blocks.map(_.bytes).toArray)
+          val numRows = blocks.map(_.numRows).sum
+          val sortedRows = enclave.ExternalSort(eid, opcode.value, input, numRows)
+          Block(sortedRows, numRows)
+      }
     }
   }
 }

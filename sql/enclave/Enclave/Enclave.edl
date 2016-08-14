@@ -167,6 +167,7 @@ enclave {
 									 [user_check] uint8_t *boundary_rows,
 									 uint8_t num_partitions,
 									 [user_check] uint8_t *output,
+                                     [user_check] uint32_t *output_partitions_num_rows,
 									 [user_check] uint8_t **output_stream_list,
 									 [user_check] uint8_t *scratch);
 

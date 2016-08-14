@@ -49,6 +49,7 @@ void sort_partition(int op_code,
 					uint8_t *boundary_rows,
 					uint8_t num_partitions,
 					uint8_t *output,
+                    uint32_t *output_partitions_num_rows,
 					uint8_t **output_stream_list,
 					uint8_t *scratch);
 

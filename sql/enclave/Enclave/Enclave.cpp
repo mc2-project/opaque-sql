@@ -467,7 +467,7 @@ void ecall_find_range_bounds(int op_code,
 	break;
 	
   default:
-    printf("ecall_sample: Unknown sort type %d for opcode %d\n", sort_op, op_code);
+    printf("ecall_find_range_bounds: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
   }  
   
@@ -481,6 +481,7 @@ void ecall_sort_partition(int op_code,
 						  uint8_t *boundary_rows,
 						  uint8_t num_partitions,
 						  uint8_t *output,
+                          uint32_t *output_partitions_num_rows,
 						  uint8_t **output_stream_list,
 						  uint8_t *scratch) {
 
@@ -494,7 +495,8 @@ void ecall_sort_partition(int op_code,
 							  input_rows_len,
 							  boundary_rows,
 							  num_partitions,
-							  output,
+                              output,
+                              output_partitions_num_rows,
 							  output_stream_list,
 							  scratch);
 
@@ -508,6 +510,7 @@ void ecall_sort_partition(int op_code,
 								  boundary_rows,
 								  num_partitions,
 								  output,
+                                  output_partitions_num_rows,
 								  output_stream_list,
 								  scratch);
 	break;

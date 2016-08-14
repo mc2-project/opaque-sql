@@ -495,7 +495,8 @@ void sort_partition(int op_code,
 					uint32_t input_rows_len,
 					uint8_t *boundary_rows,
 					uint8_t num_partitions,
-					uint8_t *output,
+                    uint8_t *output,
+                    uint32_t *output_partitions_num_rows,
 					uint8_t **output_stream_list,
 					uint8_t *scratch) {
 
@@ -527,6 +528,7 @@ void sort_partition(int op_code,
 
   StreamRowWriter writer(output);
   uint32_t offset = 0;
+  uint32_t cur_num_rows = 0;
   output_stream_list[stream] = output + offset;
 
   // for each row, compare with the boundary rows
@@ -534,21 +536,24 @@ void sort_partition(int op_code,
 	reader.read(&row);
 	
 	// compare currently read row & boundary_row
-	if (!row.less_than(&boundary_row, op_code) && stream < num_partitions - 1) {
+    if (!row.less_than(&boundary_row, op_code) && stream < num_partitions) {
 	  //printf("[sort_partition] stream is %u\n", stream);
 	  
 	  writer.close();
 	  offset = writer.bytes_written();
+      output_partitions_num_rows[stream] = cur_num_rows;
+      cur_num_rows = 0;
 	  ++stream;
 
 	  output_stream_list[stream] = output + offset;
-	  
-	  if (stream < num_partitions - 1) {
+
+      if (stream < num_partitions) {
 		boundary_reader.read(&boundary_row);
 	  }
 	}
 	
-	writer.write(&row);
+    writer.write(&row);
+    ++cur_num_rows;
   }
 
   printf("[sort_partition] final stream is %u\n", stream);
@@ -623,6 +628,7 @@ template void sort_partition<NewRecord>(int op_code,
 										uint8_t *boundary_rows,
 										uint8_t num_partitions,
 										uint8_t *output,
+                                        uint32_t *output_partitions_num_rows,
 										uint8_t **output_stream_list,
 										uint8_t *scratch);
 
@@ -633,5 +639,6 @@ template void sort_partition<NewJoinRecord>(int op_code,
 											uint8_t *boundary_rows,
 											uint8_t num_partitions,
 											uint8_t *output,
+                                            uint32_t *output_partitions_num_rows,
 											uint8_t **output_stream_list,
 											uint8_t *scratch);
