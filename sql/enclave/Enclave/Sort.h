@@ -51,15 +51,6 @@ void sort_partition(int op_code,
 					uint8_t *output,
                     uint32_t *output_partitions_num_rows,
 					uint8_t **output_stream_list,
-					uint8_t *scratch);
-
-
-template<typename T>
-class HeapSortItem {
- public:
-  uint32_t index;
-  T *v;
-};
-
+                    uint8_t *scratch);
 
 #endif /* _SORT_H_ */

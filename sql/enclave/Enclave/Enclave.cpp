@@ -390,7 +390,6 @@ void ecall_generate_random_encrypted_block(uint32_t num_cols,
 }
 
 
-// input: a list of encrypted blocks
 void ecall_external_sort(int op_code,
 						 uint32_t num_buffers,
 						 uint8_t **buffer_list,
@@ -401,16 +400,17 @@ void ecall_external_sort(int op_code,
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
-    external_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+    external_sort<NewRecord>(
+      op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
     break;
   case SORT_JOIN:
-    external_sort<NewJoinRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+    external_sort<NewJoinRecord>(
+      op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
     break;
   default:
     printf("ecall_external_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
   }
-
 }
 
 // given a stream of blocks, sample these rows

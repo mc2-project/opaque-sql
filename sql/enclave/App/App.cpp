@@ -566,6 +566,48 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
   printf("Test!\n");
 }
 
+/**
+ * Divide the input rows into a number of buffers of bounded size. The input will be divided at
+ * block boundaries. The buffers and their respective sizes will be written into buffer_list and
+ * buffers_num_rows.
+ */
+void split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
+                std::vector<uint8_t *> &buffer_list, std::vector<uint32_t> &buffers_num_rows,
+                uint32_t *row_upper_bound) {
+  BlockReader r(input, input_len);
+  uint8_t *cur_block;
+  uint32_t cur_block_size;
+  uint32_t cur_block_num_rows;
+  uint32_t total_rows = 0;
+  r.read(&cur_block, &cur_block_size, &cur_block_num_rows, row_upper_bound);
+  while (cur_block != NULL) {
+    uint8_t *cur_buffer = cur_block;
+    uint32_t cur_buffer_size = cur_block_size;
+    uint32_t cur_buffer_num_rows = cur_block_num_rows;
+    uint32_t cur_row_upper_bound;
+
+    r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
+      cur_buffer_size += cur_block_size;
+      cur_buffer_num_rows += cur_block_num_rows;
+      *row_upper_bound =
+        cur_row_upper_bound > *row_upper_bound ? cur_row_upper_bound : *row_upper_bound;
+
+      r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+    }
+
+    buffer_list.push_back(cur_buffer);
+    buffers_num_rows.push_back(cur_buffer_num_rows);
+    total_rows += cur_buffer_num_rows;
+    debug("split_rows: Buffer %lu: %d bytes, %d rows\n",
+          buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
+  }
+  // Sentinel pointer to the end of the input
+  buffer_list.push_back(input + input_len);
+
+  perf("split_rows: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
+       input_len, num_rows, buffer_list.size() - 1, *row_upper_bound);
+}
 
 // the op_code allows the internal sort code to decide which comparator to use
 // assume that the elements are of equal size!
@@ -594,46 +636,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
     input_copy[i] = *(ptr + i);
   }
 
-  // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
   uint32_t row_upper_bound = 0;
-
-  BlockReader r(input_copy, input_len);
-  uint8_t *cur_block;
-  uint32_t cur_block_size;
-  uint32_t cur_block_num_rows;
-  uint32_t total_rows = 0;
-  r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
-  while (cur_block != NULL) {
-    uint8_t *cur_buffer = cur_block;
-    uint32_t cur_buffer_size = cur_block_size;
-    uint32_t cur_buffer_num_rows = cur_block_num_rows;
-    uint32_t cur_row_upper_bound;
-
-    r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
-    while (cur_buffer_size + cur_block_size <= MAX_SORT_BUFFER && cur_block != NULL) {
-      cur_buffer_size += cur_block_size;
-      cur_buffer_num_rows += cur_block_num_rows;
-      row_upper_bound =
-        cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
-
-      r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
-    }
-
-    buffer_list.push_back(cur_buffer);
-    num_rows.push_back(cur_buffer_num_rows);
-    total_rows += cur_buffer_num_rows;
-    debug("ObliviousSort: Buffer %lu: %d bytes, %d rows\n",
-          buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
-  }
-
-  perf("ObliviousSort: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
-       input_len, num_items, buffer_list.size(), row_upper_bound);
+  split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
 
   sgx_check("External Oblivious Sort",
             ecall_external_oblivious_sort(
-              eid, op_code, buffer_list.size(), buffer_list.data(), num_rows.data(),
+              eid, op_code, buffer_list.size() - 1, buffer_list.data(), num_rows.data(),
               row_upper_bound));
 
   jbyteArray ret = env->NewByteArray(input_len);
@@ -1034,7 +1044,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
   sgx_check(
     "Find Range Bounds",
     ecall_find_range_bounds(
-      eid, op_code, 1, sampled, sampled_size, scratch, boundary_rows,
+      eid, op_code, num_partitions, sampled, sampled_size, scratch, boundary_rows,
       &boundary_rows_len));
 
   uint8_t *output = (uint8_t *) malloc(input_len);
@@ -1099,35 +1109,14 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
   uint32_t row_upper_bound = 0;
-  
-  BlockReader r(input_copy, input_len);
-  uint8_t *cur_block;
-  uint32_t cur_block_size;
-  uint32_t cur_block_num_rows;
-  uint32_t total_rows = 0;
-  r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
-  while (cur_block != NULL) {
-    uint8_t *cur_buffer = cur_block;
-    uint32_t cur_buffer_num_rows = cur_block_num_rows;
-    uint32_t cur_row_upper_bound;
-
-    r.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
-    buffer_list.push_back(cur_buffer);
-    num_rows.push_back(cur_buffer_num_rows);
-    total_rows += cur_buffer_num_rows;
-    debug("ExternalSort: Buffer %lu: %d rows\n",
-          buffer_list.size(), cur_buffer_num_rows);
-  }
-
-  perf("ExternalSort: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
-       input_len, num_items, buffer_list.size(), row_upper_bound);
+  split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
 
   sgx_check("External non-oblivious sort",
 			ecall_external_sort(eid,
 								op_code,
-                                buffer_list.size(),
+                                buffer_list.size() - 1,
 								buffer_list.data(),
-								num_rows.data(),
+                                num_rows.data(),
 								row_upper_bound,
 								scratch));
 

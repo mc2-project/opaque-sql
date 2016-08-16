@@ -43,4 +43,6 @@ enum SORT_OP {
 
 #define MAX_BLOCK_SIZE 1000000
 
+#define MAX_NUM_STREAMS 40u
+
 #endif // DEFINE_H

@@ -371,6 +371,7 @@ public:
       return rec->less_than(other->rec, op_code);
     }
   }
+
   void print() const {
     printf("SortPointer[key_prefix=%d, rec=", key_prefix);
     rec->print();
@@ -841,17 +842,16 @@ private:
  *
  * To read rows, initialize an empty row object and repeatedly call the appropriate read function
  * with it, which will populate the row object with the next row.
- *
- * This class performs no bounds checking; the caller is responsible for knowing how many rows the
- * buffer contains.
  */
 class RowReader {
 public:
-  RowReader(uint8_t *buf) : buf(buf) {
+  RowReader(uint8_t *buf, uint8_t *buf_end) : buf(buf), buf_end(buf_end) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     read_encrypted_block();
 	verify_set = new std::set<uint32_t>();
   }
+
+  RowReader(uint8_t *buf) : RowReader(buf, NULL) {}
 
   ~RowReader() {
     free(block_start);
@@ -875,9 +875,10 @@ public:
     block_rows_read++;
   }
 
-  void reset_block(uint8_t *new_buffer) {
-	buf = new_buffer;
-	read_encrypted_block();
+  bool has_next() const {
+    bool rows_remain_in_block = block_rows_read < block_num_rows;
+    bool blocks_remain_in_buf = buf < buf_end;
+    return rows_remain_in_block || blocks_remain_in_buf;
   }
 
   void close_and_verify(int op_code, uint32_t num_part, int index) {
@@ -926,6 +927,7 @@ private:
   }
 
   uint8_t *buf;
+  uint8_t * const buf_end;
 
   uint8_t *block_start;
   uint8_t *block_pos;
@@ -1075,12 +1077,24 @@ private:
 
 
 /**
- * Uses stream cipher to read a set of rows from a sequence of encrypted blocks
- * Similar to RowReader, this class does not check bounds, so the user should know how many rows there are
+ * Manages reading multiple stream-encrypted rows from a buffer. Rows are organized into blocks of
+ * up to MAX_BLOCK_SIZE bytes.
+ *
+ * To read rows, initialize an empty row object and repeatedly call the appropriate read function
+ * with it, which will populate the row object with the next row.
+ *
+ * This class performs no bounds checking; the caller is responsible for knowing how many rows the
+ * buffer contains.
  */
 class StreamRowReader {
  public:
-  StreamRowReader(uint8_t *buf);
+  StreamRowReader(uint8_t *buf, uint8_t *buf_end)
+    : cipher(NULL), buf(buf), buf_end(buf_end), cur_block_num(0) {
+    this->read_encrypted_block();
+    verify_set = new std::set<uint32_t>();
+  }
+
+  StreamRowReader(uint8_t *buf) : StreamRowReader(buf, NULL) {}
 
   ~StreamRowReader() {
 	delete cipher;
@@ -1110,9 +1124,10 @@ class StreamRowReader {
 	cipher->decrypt(output, num_bytes);
   }
 
-  void reset_block(uint8_t *new_buffer) {
-	buf = new_buffer;
-	read_encrypted_block();
+  bool has_next() const {
+    bool rows_remain_in_block = block_rows_read < block_num_rows;
+    bool blocks_remain_in_buf = buf < buf_end;
+    return rows_remain_in_block || blocks_remain_in_buf;
   }
 
   void close_and_verify() {
@@ -1127,15 +1142,11 @@ class StreamRowReader {
   }
   
   void read_encrypted_block() {
-    uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf);
-	buf += 4;
-    block_num_rows = *reinterpret_cast<uint32_t *>(buf);
-	buf += 4;
+    uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     buf += 4; // row_upper_bound
 
-	//printf("[StreamRowReader::read_encrypted_block %u] block_enc_size is %u, block_num_rows is %u\n", cur_block_num, block_enc_size, block_num_rows);	
-
-	if (cipher == NULL) {
+    if (cipher == NULL) {
 	  cipher = new StreamDecipher(buf, block_enc_size);
 	} else {
 	  cipher->reset(buf, block_enc_size);
@@ -1157,6 +1168,7 @@ class StreamRowReader {
 
   StreamDecipher *cipher;
   uint8_t *buf;
+  uint8_t *buf_end;
   uint8_t *block_start;
   uint8_t *block_pos;
   uint32_t block_num_rows;
