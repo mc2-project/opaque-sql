@@ -1797,6 +1797,111 @@ void test_debug() {
   free(copy_buf);
 }
 
+void test_enclave_column_sort() {
+  // data per encrypted block
+  int op_code = OP_SORT_COL1;
+  uint32_t num_cols = 3;
+  uint8_t column_types[7] = {INT, INT, INT, INT, INT, INT, INT};
+
+  uint32_t r = 32;
+  uint32_t s = 2;
+
+  uint32_t num_bufs = s;
+  uint32_t num_rows_per_block = r;
+  
+  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t enc_buf_size = 0;
+  uint8_t *buf_ptr = buf;
+
+  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
+  uint32_t row_upper_bound = 0;
+
+  printf("Before random block gen\n");
+  
+  for (uint32_t i = 0; i < num_bufs; i++) {
+  	ecall_generate_random_encrypted_block(global_eid,
+  										  num_cols, column_types, num_rows_per_block,
+  										  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
+
+	printf("enc_buf_size is %u\n", enc_buf_size);
+  	buffer_list[i] = buf_ptr;
+	row_upper_bound = *((uint32_t *) (buf_ptr + 8));
+  	buf_ptr += enc_buf_size;
+  }
+
+  uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
+  uint8_t **output_buffer_ptrs = (uint8_t **) malloc(sizeof(uint8_t *) * s);
+  uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * s);
+  uint32_t *output_buffer_total_sizes = (uint32_t *) malloc(sizeof(uint32_t) * s);
+
+  for (uint32_t i = 0; i < s; i++) {
+	output_buffers[i] = (uint8_t *) malloc(128 * 1024);
+	output_buffer_ptrs[i] = output_buffers[i];
+	output_buffer_sizes[i] = 0;
+	output_buffer_total_sizes[i] = 0;
+  }
+
+  std::vector<uint32_t> num_rows;
+  for (uint32_t i = 0; i < s; i++) {
+	num_rows.push_back(num_rows_per_block);
+  }
+
+  for (uint32_t i = 0; i < 4; i++) {
+	printf("Starting round %u\n", i);
+	
+	for (uint32_t c = 0; c < s; c++) {
+	  ecall_column_sort(global_eid, op_code, i+1,
+						buffer_list[c], num_rows.data(), buffer_list+c, 1,
+						row_upper_bound,
+						c+1, r, s,
+						output_buffer_ptrs, output_buffer_sizes);
+
+	  for (uint32_t j = 0; j < s; j++) {
+		output_buffer_ptrs[j] += output_buffer_sizes[j];
+		output_buffer_total_sizes[j] += output_buffer_sizes[j];
+		
+		printf("[test_enclave_column_sort] output_buffer_sizes[j] is %u\n", output_buffer_sizes[j]);
+	  }
+
+	}
+
+	// at the end of each round, piece together the output buffers
+	buf_ptr = buf;
+	for (uint32_t j = 0; j < s; j++) {
+
+	  if (i == 3 && j == s - 1) {
+		uint32_t size = output_buffer_total_sizes[j] - output_buffer_sizes[j];
+		memcpy(buf_ptr, output_buffers[j] + output_buffer_sizes[s-1], size);
+		memcpy(buf_ptr + size, output_buffers[j], size);
+	  } else {
+		memcpy(buf_ptr, output_buffers[j], output_buffer_total_sizes[j]);
+	  }
+	  buffer_list[j] = buf_ptr;
+	  buf_ptr += output_buffer_total_sizes[j];
+	  
+	  // clear these variables
+	  output_buffer_ptrs[j] = output_buffers[j];
+	  output_buffer_total_sizes[j] = 0;
+	}
+
+	printf("End round %u\n\n", i);
+  }
+
+  ecall_row_parser(global_eid, buf, r * s);
+  
+
+  for (uint32_t i = 0; i < s; i++) {
+	free(output_buffers[i]);
+  }
+  
+  free(output_buffers);
+  free(output_buffer_ptrs);
+  free(output_buffer_sizes);
+  free(output_buffer_total_sizes);
+  
+}
+
 /* application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
@@ -1821,10 +1926,11 @@ int SGX_CDECL main(int argc, char *argv[])
   }
 
   //test_stream_encryption();
-  test_external_sort();
+  //test_external_sort();
   //test_distributed_external_sort();
   //test_non_oblivious_aggregation();
   //test_non_oblivious_join();
+  test_enclave_column_sort();
 
   //test_debug();
   

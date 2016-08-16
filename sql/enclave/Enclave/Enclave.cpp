@@ -616,6 +616,13 @@ void ecall_column_sort(int op_code,
   switch (sort_op) {
   case SORT_SORT:
 	{
+	  	RowReader reader(input_rows);
+		NewRecord row;
+		
+		printf("Num buffers is %u, num_rows is %u, total_num_rows is %u, column is %u\n", num_buffers, num_rows[0], total_num_rows, column);
+		printf("input_rows is %p, buffer_list[0] is %p\n", input_rows, buffer_list[0]);
+		printf("output_buffers: %p\n", output_buffers[0]);
+
 	  if (round == 1) {
 		external_oblivious_sort<NewRecord>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound);
 		transpose<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
