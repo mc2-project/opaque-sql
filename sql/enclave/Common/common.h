@@ -163,8 +163,6 @@ public:
   BlockReader(uint8_t *input, uint32_t input_len)
     : input_start(input), input(input), input_len(input_len) {}
 
-  ~BlockReader() {}
-  
   void read(uint8_t **block_out, uint32_t *len_out, uint32_t *num_rows_out,
             uint32_t *row_upper_bound_out) {
     if (input >= input_start + input_len) {
@@ -179,18 +177,10 @@ public:
     }
   }
 
-  uint8_t *get_buf() {
-	return input_start;
-  }
-
-  uint32_t get_len() {
-	return input_len;
-  }
-
 private:
-  uint8_t * input_start;
+  uint8_t * const input_start;
   uint8_t *input;
-  uint32_t input_len;
+  const uint32_t input_len;
 };
 
 inline static uint32_t block_size_upper_bound(uint32_t num_rows) {
