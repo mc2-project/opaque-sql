@@ -25,9 +25,9 @@ void external_merge(int op_code,
   check(sort_ptrs_len >= num_runs,
         "external_merge: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_runs);
 
-  std::vector<StreamRowReader> readers;
+  std::vector<StreamRowReader *> readers;
   for (uint32_t i = 0; i < num_runs; i++) {
-    readers.push_back(StreamRowReader(runs[run_start + i], runs[run_start + i + 1]));
+    readers.push_back(new StreamRowReader(runs[run_start + i], runs[run_start + i + 1]));
   }
 
   auto compare = [op_code, num_comparisons, num_deep_comparisons](const MergeItem<RecordType> &a,
@@ -40,7 +40,7 @@ void external_merge(int op_code,
   for (uint32_t i = 0; i < num_runs; i++) {
     MergeItem<RecordType> item;
     item.v = sort_ptrs[i];
-    readers[i].read(&item.v, op_code);
+    readers[i]->read(&item.v, op_code);
     item.reader_idx = i;
     queue.push(item);
   }
@@ -52,8 +52,8 @@ void external_merge(int op_code,
     queue.pop();
     w.write(&item.v);
     // Read another row from the same run that this one came from
-    if (readers[item.reader_idx].has_next()) {
-      readers[item.reader_idx].read(&item.v, op_code);
+    if (readers[item.reader_idx]->has_next()) {
+      readers[item.reader_idx]->read(&item.v, op_code);
       queue.push(item);
     }
   }
@@ -61,6 +61,10 @@ void external_merge(int op_code,
 
   // Overwrite the runs with scratch, merging them into one big run
   memcpy(runs[run_start], scratch, w.bytes_written());
+
+  for (uint32_t i = 0; i < num_runs; i++) {
+    delete readers[i];
+  }
 }
 
 template<typename RecordType>
