@@ -1018,9 +1018,88 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input, jint num_rows,
-  jint num_partitions, jintArray offsets, jintArray rows_per_partition) {
+  jobject num_output_rows_obj) {
+  (void)obj;
+
+  uint32_t input_length = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy;
+  uint8_t *input_ptr = (uint8_t *) env->GetByteArrayElements(input, &if_copy);
+
+  uint32_t output_length = block_size_upper_bound(num_rows);
+  uint8_t *output = (uint8_t *) malloc(output_length);
+
+  uint32_t actual_output_length = 0;
+  uint32_t num_output_rows = 0;
+
+  sgx_check("Sample",
+            ecall_sample(
+              eid, op_code, input_ptr, input_length, num_rows, output,
+              &actual_output_length, &num_output_rows));
+
+  jbyteArray ret = env->NewByteArray(actual_output_length);
+  env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
+
+  env->ReleaseByteArrayElements(input, (jbyte *) input_ptr, 0);
+
+  free(output);
+
+  return ret;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBounds(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jint num_partitions, jbyteArray input,
+  jint num_rows) {
+  (void)obj;
+
+  if (num_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    return ret;
+  }
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
+
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
+  uint8_t *scratch = (uint8_t *) malloc(input_len);
+
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+  }
+
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> buffer_num_rows;
+  uint32_t row_upper_bound = 0;
+  split_rows(input_copy, input_len, num_rows, buffer_list, buffer_num_rows, &row_upper_bound);
+
+  uint8_t *output = (uint8_t *) malloc(input_len);
+  uint32_t actual_output_length = 0;
+  sgx_check("Find Range Bounds",
+            ecall_find_range_bounds(
+              eid, op_code, num_partitions, buffer_list.size() - 1, buffer_list.data(),
+              buffer_num_rows.data(), row_upper_bound, output, &actual_output_length, scratch));
+
+  jbyteArray ret = env->NewByteArray(actual_output_length);
+  env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
+
+  env->ReleaseByteArrayElements(input, ptr, 0);
+
+  free(input_copy);
+  free(scratch);
+  free(output);
+
+  return ret;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
+  JNIEnv *env, jobject obj, jlong eid, jint op_code, jint num_partitions, jbyteArray input,
+  jint num_rows, jbyteArray boundary_rows, jintArray offsets, jintArray rows_per_partition) {
   (void) obj;
 
   if (num_rows == 0) {
@@ -1030,53 +1109,54 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
 
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
-  uint8_t *input_ptr = (uint8_t *) env->GetByteArrayElements(input, &if_copy);
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
-  uint8_t *sampled = (uint8_t *) malloc(input_len);
-  uint32_t sampled_size = 0;
-  sgx_check(
-    "Sample",
-    ecall_sample(eid, op_code, input_ptr, sampled, &sampled_size));
+  uint8_t *boundary_rows_ptr = (uint8_t *) env->GetByteArrayElements(boundary_rows, &if_copy);
 
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
   uint8_t *scratch = (uint8_t *) malloc(input_len);
-  uint8_t *boundary_rows = (uint8_t *) malloc(input_len);
-  uint32_t boundary_rows_len = 0;
-  sgx_check(
-    "Find Range Bounds",
-    ecall_find_range_bounds(
-      eid, op_code, num_partitions, sampled, sampled_size, scratch, boundary_rows,
-      &boundary_rows_len));
 
-  uint8_t *output = (uint8_t *) malloc(input_len);
-  uint32_t *output_partitions_num_rows = (uint32_t *) malloc(num_partitions * sizeof(uint32_t));
-  uint8_t **output_partition_boundaries =
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+  }
+
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> buffer_num_rows;
+  uint32_t row_upper_bound = 0;
+  split_rows(input_copy, input_len, num_rows, buffer_list, buffer_num_rows, &row_upper_bound);
+
+  uint32_t output_len = 2 * input_len; // need extra space for the increased number of block
+                                       // headers. TODO: use block_size_upper_bound
+  uint8_t *output = (uint8_t *) malloc(output_len);
+  uint8_t **output_partition_ptrs =
     (uint8_t **) malloc((num_partitions + 1) * sizeof(uint8_t *));
-  sgx_check(
-    "Partition Input For Sort",
-    ecall_sort_partition(
-      eid, op_code, 1, input_ptr, input_len, boundary_rows, num_partitions, output,
-      output_partitions_num_rows, output_partition_boundaries, scratch));
+  uint32_t *output_partition_num_rows = (uint32_t *) malloc(num_partitions * sizeof(uint32_t));
+  sgx_check("Partition For Sort",
+            ecall_partition_for_sort(
+              eid, op_code, num_partitions, buffer_list.size() - 1, buffer_list.data(),
+              buffer_num_rows.data(), row_upper_bound, boundary_rows_ptr, output, output_partition_ptrs,
+              output_partition_num_rows, scratch));
 
   jint *offsets_ptr = env->GetIntArrayElements(offsets, &if_copy);
   jint *rows_per_partition_ptr = env->GetIntArrayElements(rows_per_partition, &if_copy);
-  for (jint i = 0; i < num_partitions; ++i) {
-    rows_per_partition_ptr[i] = output_partitions_num_rows[i];
-    offsets_ptr[i] = output_partition_boundaries[i] - output;
+  for (jint i = 0; i < num_partitions; i++) {
+    offsets_ptr[i] = output_partition_ptrs[i] - output;
+    rows_per_partition_ptr[i] = output_partition_num_rows[i];
   }
+  offsets_ptr[num_partitions] = output_partition_ptrs[num_partitions] - output;
 
-  jbyteArray result = env->NewByteArray(input_len);
-  env->SetByteArrayRegion(result, 0, input_len, (jbyte *) output);
+  jbyteArray result = env->NewByteArray(output_len);
+  env->SetByteArrayRegion(result, 0, output_len, (jbyte *) output);
 
-  env->ReleaseByteArrayElements(input, (jbyte *) input_ptr, 0);
+  env->ReleaseByteArrayElements(input, ptr, 0);
   env->ReleaseIntArrayElements(offsets, offsets_ptr, 0);
   env->ReleaseIntArrayElements(rows_per_partition, rows_per_partition_ptr, 0);
 
-  free(sampled);
+  free(input_copy);
   free(scratch);
-  free(boundary_rows);
   free(output);
-  free(output_partitions_num_rows);
-  free(output_partition_boundaries);
+  free(output_partition_ptrs);
+  free(output_partition_num_rows);
 
   return result;
 }
@@ -1105,7 +1185,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
     input_copy[i] = *(ptr + i);
   }
 
-  // Divide the input into buffers of bounded size. Each buffer will contain one or more blocks.
   std::vector<uint8_t *> buffer_list;
   std::vector<uint32_t> num_rows;
   uint32_t row_upper_bound = 0;
@@ -1118,8 +1197,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
 								buffer_list.data(),
                                 num_rows.data(),
 								row_upper_bound,
-								scratch));
-
+                                scratch));
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
@@ -1129,8 +1207,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   free(input_copy);
   free(scratch);
 
-  return ret;  
-  
+  return ret;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSort(JNIEnv *env,

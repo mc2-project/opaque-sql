@@ -413,20 +413,24 @@ void ecall_external_sort(int op_code,
   }
 }
 
-// given a stream of blocks, sample these rows
-void ecall_sample(int op_code, 
-				  uint8_t *input_rows,
+void ecall_sample(int op_code,
+                  uint8_t *input_rows,
+                  uint32_t input_rows_len,
+                  uint32_t num_rows,
 				  uint8_t *output_rows,
-				  uint32_t *output_rows_len) {
+                  uint32_t *output_rows_len,
+                  uint32_t *num_output_rows) {
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
-	sample<NewRecord>(input_rows, output_rows, output_rows_len);
+    sample<NewRecord>(
+      input_rows, input_rows_len, num_rows, output_rows, output_rows_len, num_output_rows);
 	break;
 
   case SORT_JOIN:
-	sample<NewJoinRecord>(input_rows, output_rows, output_rows_len);
+    sample<NewJoinRecord>(
+      input_rows, input_rows_len, num_rows, output_rows, output_rows_len, num_output_rows);
 	break;
 	
   default:
@@ -436,92 +440,68 @@ void ecall_sample(int op_code,
   
 }
 
-
-// given a list of encrypted buffers, sample and find range bounds
 void ecall_find_range_bounds(int op_code,
-							 uint32_t num_buffers,
-							 uint8_t *input_rows,
-							 uint32_t input_rows_len,
-							 uint8_t *scratch,
-							 uint8_t *output_rows,
-							 uint32_t *output_rows_len) {
+                             uint32_t num_partitions,
+                             uint32_t num_buffers,
+                             uint8_t **buffer_list,
+                             uint32_t *num_rows,
+                             uint32_t row_upper_bound,
+                             uint8_t *output_rows,
+                             uint32_t *output_rows_len,
+                             uint8_t *scratch) {
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
-	find_range_bounds<NewRecord>(op_code, num_buffers,
-								 input_rows,
-								 input_rows_len,
-								 scratch,
-								 output_rows,
-								 output_rows_len);
+    find_range_bounds<NewRecord>(
+      op_code, num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, output_rows,
+      output_rows_len, scratch);
 	break;
 
   case SORT_JOIN:
-	find_range_bounds<NewJoinRecord>(op_code, num_buffers,
-									 input_rows,
-									 input_rows_len,
-									 scratch,
-									 output_rows,
-									 output_rows_len);
+    find_range_bounds<NewJoinRecord>(
+      op_code, num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, output_rows,
+      output_rows_len, scratch);
 	break;
 	
   default:
     printf("ecall_find_range_bounds: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
   }  
-  
 }
 
-
-void ecall_sort_partition(int op_code,
-						  uint32_t num_buffers,
-						  uint8_t *input_rows,
-						  uint32_t input_rows_len,
-						  uint8_t *boundary_rows,
-						  uint8_t num_partitions,
-						  uint8_t *output,
-                          uint32_t *output_partitions_num_rows,
-						  uint8_t **output_stream_list,
-						  uint8_t *scratch) {
+void ecall_partition_for_sort(int op_code,
+                              uint8_t num_partitions,
+                              uint32_t num_buffers,
+                              uint8_t **buffer_list,
+                              uint32_t *num_rows,
+                              uint32_t row_upper_bound,
+                              uint8_t *boundary_rows,
+                              uint8_t *output,
+                              uint8_t **output_partition_ptrs,
+                              uint32_t *output_partition_num_rows,
+                              uint8_t *scratch) {
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
 
   case SORT_SORT:
-	sort_partition<NewRecord>(op_code,
-							  num_buffers,
-							  input_rows,
-							  input_rows_len,
-							  boundary_rows,
-							  num_partitions,
-                              output,
-                              output_partitions_num_rows,
-							  output_stream_list,
-							  scratch);
-
+    partition_for_sort<NewRecord>(
+      op_code, num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
+      output, output_partition_ptrs, output_partition_num_rows, scratch);
 	break;
 
   case SORT_JOIN:
-	sort_partition<NewJoinRecord>(op_code,
-								  num_buffers,
-								  input_rows,
-								  input_rows_len,
-								  boundary_rows,
-								  num_partitions,
-								  output,
-                                  output_partitions_num_rows,
-								  output_stream_list,
-								  scratch);
-	break;
+    partition_for_sort<NewJoinRecord>(
+      op_code, num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
+      output, output_partition_ptrs, output_partition_num_rows, scratch);
+    break;
 
   default:
-    printf("ecall_sort_partition: Unknown sort type %d for opcode %d\n", sort_op, op_code);
+    printf("ecall_partition_for_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
-	
   }
 }
-
 
 void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
 

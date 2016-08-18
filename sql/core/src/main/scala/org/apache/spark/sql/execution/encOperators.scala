@@ -142,6 +142,8 @@ case class EncSort(sortExpr: Expression, child: OutputsBlocks)
 case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
+  import QED.time
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
@@ -150,7 +152,7 @@ case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
       case 0 => OP_SORT_COL1
       case 1 => OP_SORT_COL2
     }
-    val childRDD = child.executeBlocked()
+    val childRDD = child.executeBlocked().cache()
 
     val numPartitions = childRDD.partitions.length
     if (numPartitions <= 1) {
@@ -160,17 +162,38 @@ case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
         Block(sortedRows, block.numRows)
       }
     } else {
+      // Collect a sample of the input rows
+      val sampled = time("non-oblivious sort - Sample") {
+        childRDD.map { block =>
+          val (enclave, eid) = QED.initEnclave()
+          val numOutputRows = new MutableInteger
+          val sampledBlock = enclave.Sample(
+            eid, opcode.value, block.bytes, block.numRows, numOutputRows)
+          Block(sampledBlock, numOutputRows.value)
+        }.collect
+      }
+      // Find range boundaries locally
+      val (enclave, eid) = QED.initEnclave()
+      val boundaries = time("non-oblivious sort - FindRangeBounds") {
+        enclave.FindRangeBounds(
+          eid, opcode.value, numPartitions, QED.concatByteArrays(sampled.map(_.bytes)),
+          sampled.map(_.numRows).sum)
+      }
+      // Broadcast the range boundaries and use them to partition the input
       childRDD.flatMap { block =>
         val (enclave, eid) = QED.initEnclave()
-        val offsets = new Array[Int](numPartitions)
+        val offsets = new Array[Int](numPartitions + 1)
         val rowsPerPartition = new Array[Int](numPartitions)
         val partitions = enclave.PartitionForSort(
-          eid, opcode.value, block.bytes, block.numRows, numPartitions, offsets, rowsPerPartition)
+          eid, opcode.value, numPartitions, block.bytes, block.numRows, boundaries, offsets,
+          rowsPerPartition)
         offsets.sliding(2).zip(rowsPerPartition.iterator).zipWithIndex.map {
           case ((Array(start, end), numRows), i) =>
             (i, Block(partitions.slice(start, end), numRows))
         }
-      }.groupByKey(numPartitions).map {
+      }
+      // Shuffle the input to achieve range partitioning and sort locally
+        .groupByKey(numPartitions).map {
         case (i, blocks) =>
           val (enclave, eid) = QED.initEnclave()
           val input = QED.concatByteArrays(blocks.map(_.bytes).toArray)

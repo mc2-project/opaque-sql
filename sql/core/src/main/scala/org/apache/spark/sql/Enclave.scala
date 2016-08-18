@@ -50,12 +50,29 @@ class SGXEnclave extends java.io.Serializable {
     num_items: Int
   ): Array[Byte]
 
-  @native def PartitionForSort(
+  @native def Sample(
     enclave_id: Long,
     op_code: Int,
     input: Array[Byte],
     num_rows: Int,
+    num_output_rows: MutableInteger
+  ): Array[Byte]
+
+  @native def FindRangeBounds(
+    enclave_id: Long,
+    op_code: Int,
     num_partitions: Int,
+    input: Array[Byte],
+    num_rows: Int
+  ): Array[Byte]
+
+  @native def PartitionForSort(
+    enclave_id: Long,
+    op_code: Int,
+    num_partitions: Int,
+    input: Array[Byte],
+    num_rows: Int,
+    boundary_rows: Array[Byte],
     offsets: Array[Int],
     rows_per_partition: Array[Int]
   ): Array[Byte]

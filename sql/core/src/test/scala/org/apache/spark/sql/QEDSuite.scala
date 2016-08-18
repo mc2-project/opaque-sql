@@ -269,7 +269,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
   }
 
-  ignore("nonObliviousSort multiple partitions") {
+  test("nonObliviousSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = sparkContext.makeRDD(QED.encrypt3(data), 3).toDF("id", "word", "count")
       .nonObliviousSort($"word").collect
