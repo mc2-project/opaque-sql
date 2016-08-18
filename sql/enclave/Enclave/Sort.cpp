@@ -18,6 +18,7 @@ void external_merge(int op_code,
                     uint32_t num_runs,
                     SortPointer<RecordType> *sort_ptrs,
                     uint32_t sort_ptrs_len,
+                    uint32_t row_upper_bound,
                     uint8_t *scratch,
                     uint32_t *num_comparisons,
                     uint32_t *num_deep_comparisons) {
@@ -46,7 +47,7 @@ void external_merge(int op_code,
   }
 
   // Sort the runs into scratch
-  RowWriter w(scratch);
+  RowWriter w(scratch, row_upper_bound);
   while (!queue.empty()) {
     MergeItem<RecordType> item = queue.top();
     queue.pop();
@@ -122,8 +123,8 @@ void external_sort(int op_code,
       debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
       external_merge<RecordType>(
-        op_code, runs, run_start, num_runs, sort_ptrs, max_list_length, scratch, &num_comparisons,
-        &num_deep_comparisons);
+        op_code, runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
+        &num_comparisons, &num_deep_comparisons);
 
       new_runs.push_back(runs[run_start]);
     }
