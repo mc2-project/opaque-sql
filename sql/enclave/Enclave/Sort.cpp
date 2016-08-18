@@ -245,7 +245,7 @@ void partition_for_sort(int op_code,
   // Scan through the sorted input rows and copy them to the output, marking the beginning of each
   // range with a pointer. A range contains all rows greater than or equal to one boundary row and
   // less than the next boundary row. The first range contains all rows less than the first boundary
-  // row, and the last range contains all rows greater than the last boundary row.
+  // row, and the last range contains all rows greater than or equal to the last boundary row.
   RowReader r(buffer_list[0]);
   RowReader b(boundary_rows);
   RowWriter w(output);
