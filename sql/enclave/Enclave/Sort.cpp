@@ -209,7 +209,7 @@ void find_range_bounds(int op_code,
   uint32_t num_rows_per_part = total_num_rows / num_partitions;
 
   RowReader r(buffer_list[0]);
-  RowWriter w(output_rows);
+  RowWriter w(output_rows, row_upper_bound);
   RecordType row;
   uint32_t current_rows_in_part = 0;
   for (uint32_t i = 0; i < total_num_rows; i++) {
@@ -253,7 +253,7 @@ void partition_for_sort(int op_code,
   // row, and the last range contains all rows greater than or equal to the last boundary row.
   RowReader r(buffer_list[0]);
   RowReader b(boundary_rows);
-  RowWriter w(output);
+  RowWriter w(output, row_upper_bound);
   RecordType row;
   RecordType boundary_row;
   uint32_t out_idx = 0;
