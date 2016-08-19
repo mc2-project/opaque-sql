@@ -43,7 +43,6 @@
 
 #include "sgx_trts.h"
 #include "sgx_urts.h"
-#include "sgx_status.h"
 #include "App.h"
 #include "Enclave_u.h"
 #include "org_apache_spark_sql_SGXEnclave.h"
