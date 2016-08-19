@@ -573,6 +573,8 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
 void split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
                 std::vector<uint8_t *> &buffer_list, std::vector<uint32_t> &buffers_num_rows,
                 uint32_t *row_upper_bound) {
+  (void)num_rows;
+
   BlockReader r(input, input_len);
   uint8_t *cur_block;
   uint32_t cur_block_size;
