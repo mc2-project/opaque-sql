@@ -142,8 +142,6 @@ case class EncSort(sortExpr: Expression, child: OutputsBlocks)
 case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
-  import QED.time
-
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
@@ -152,7 +150,15 @@ case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
       case 0 => OP_SORT_COL1
       case 1 => OP_SORT_COL2
     }
-    val childRDD = child.executeBlocked().cache()
+    NonObliviousSort.sort(child.executeBlocked(), opcode)
+  }
+}
+
+object NonObliviousSort {
+  import QED.time
+
+  def sort(childRDD: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
+    childRDD.cache()
 
     val numPartitions = childRDD.partitions.length
     if (numPartitions <= 1) {
@@ -494,12 +500,7 @@ case class NonObliviousSortMergeJoin(
     time("join - preprocess") { processed.cache.count }
 
     val sorted = time("join - sort") {
-      assert(processed.partitions.length <= 1)
-      val result = processed.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val sortedRows = enclave.ExternalSort(eid, joinOpcode.value, block.bytes, block.numRows)
-        Block(sortedRows, block.numRows)
-      }
+      val result = NonObliviousSort.sort(processed, joinOpcode)
       result.cache.count
       result
     }
