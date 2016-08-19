@@ -131,7 +131,7 @@ object QEDBenchmark {
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
     val result = time("big data 1") {
@@ -150,7 +150,7 @@ object QEDBenchmark {
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
     val result = time("big data 1 encrypted") {
@@ -185,7 +185,7 @@ object QEDBenchmark {
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val result = time("big data 2") {
@@ -210,7 +210,7 @@ object QEDBenchmark {
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val result = time("big data 2 encrypted") {
@@ -260,13 +260,13 @@ object QEDBenchmark {
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
 
@@ -303,13 +303,13 @@ object QEDBenchmark {
       .toDF("sourceIP", "destURL", "visitDate",
         "adRevenue", "userAgent", "countryCode",
         "languageCode", "searchWord", "duration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     uservisitsDF.count
     val rankingsDF = rankings(sqlContext, size)
       .mapPartitions(QED.bd1Encrypt3)
       .toDF("pageURL", "pageRank", "avgDuration")
-      .coalesce(numPartitions(sqlContext, distributed))
+      .repartition(numPartitions(sqlContext, distributed))
       .cache()
     rankingsDF.count
 
