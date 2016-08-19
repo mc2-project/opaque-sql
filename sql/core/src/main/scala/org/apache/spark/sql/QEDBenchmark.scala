@@ -42,32 +42,33 @@ object QEDBenchmark {
     val sparkConf = new SparkConf().setAppName("QEDBenchmark")
     val sc = new SparkContext(sparkConf)
     val sqlContext = new SQLContext(sc)
+    val distributed = !sc.isLocal
 
     // Warmup
-    QEDBenchmark.pagerank(sqlContext, 256.toString)
-    QEDBenchmark.pagerank(sqlContext, 256.toString)
+    QEDBenchmark.bd2Encrypted(sqlContext, "tiny", distributed)
+    QEDBenchmark.bd2Encrypted(sqlContext, "tiny", distributed)
 
     // Run
     QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd1Opaque(sqlContext, "1million")
+    QEDBenchmark.bd1Opaque(sqlContext, "1million", distributed)
 
-    QEDBenchmark.bd1Encrypted(sqlContext, "1million")
+    QEDBenchmark.bd1Encrypted(sqlContext, "1million", distributed)
 
     QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd2Opaque(sqlContext, "1million")
+    QEDBenchmark.bd2Opaque(sqlContext, "1million", distributed)
 
-    QEDBenchmark.bd2Encrypted(sqlContext, "1million")
+    QEDBenchmark.bd2Encrypted(sqlContext, "1million", distributed)
 
     QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
 
-    QEDBenchmark.bd3Opaque(sqlContext, "1million")
+    QEDBenchmark.bd3Opaque(sqlContext, "1million", distributed)
 
-    QEDBenchmark.bd3Encrypted(sqlContext, "1million")
+    QEDBenchmark.bd3Encrypted(sqlContext, "1million", distributed)
 
     for (i <- 8 to 20) {
-      QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString)
+      QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString, distributed)
     }
 
     sc.stop()
