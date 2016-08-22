@@ -30,117 +30,99 @@ bool set_verify(std::set<uint32_t> *set1,
 }
 
 
-class Node {
+Node::Node(uint32_t id, uint32_t num_parents, uint32_t num_children) {
+  this->id = id;
 
-  Node(uint32_t id, uint32_t num_parents, uint32_t num_children) {
-	this->id = id;
+  this->num_parents = num_parents;
+  this->num_children = num_children;
 
-	this->num_parents = num_parents;
-	this->num_children = num_children;
-
-	if (num_parents > 0) {
-	  parents = malloc(sizeof(Node *) * num_parents);
-	}
-
-	if (num_children > 0) {
-	  children = malloc(sizeof(Node *) * num_children);
-	}
-
+  if (num_parents > 0) {
+	parents = (Node **) malloc(sizeof(Node *) * num_parents);
   }
 
-  ~Node() {
-	// delete pointers to parents & children
-	free(parents);
-	free(children);
+  if (num_children > 0) {
+	children = (Node **) malloc(sizeof(Node *) * num_children);
   }
 
-  uint32_t get_id() {
-	return id;
+}
+
+Node::~Node() {
+  // delete pointers to parents & children
+  free(parents);
+  free(children);
+}
+
+uint32_t Node::get_id() {
+  return id;
+}
+
+
+DAG::DAG(uint32_t num_nodes, uint32_t DAG_id) {
+  this->num_nodes = num_nodes;
+  nodes = (Node **) malloc(sizeof(Node *) * num_nodes);
+  this->DAG_id = DAG_id;
+}
+
+DAG::~DAG() {
+  for (uint32_t i = 0; i < num_nodes; i++) {
+	delete nodes[i];
   }
+  free(nodes);
+}
 
-  Node **parents;
-  uint32_t num_parents;
-  
-  Node **children;
-  uint32_t num_children;
-  
-  uint32_t id;
-};
+uint32_t DAG::get_task_id(int op_code, int index) {
+  return task_id_parser(this, op_code, index);
+}
 
+std::set<uint32_t> * DAG::get_task_id_parents(uint32_t task_id) {
+  // find the correct task in nodes
+  // return a list of parents' task IDs
 
-class DAG {
+  Node *node = NULL;
 
-public:
-  DAG(uint32_t num_nodes, uint32_t DAG_id) {
-	this->num_nodes = num_nodes;
-	nodes = malloc(sizeof(Node *) * num_nodes)
-  }
-
-  ~DAG() {
-	for (uint32_t i = 0; i < num_nodes; i++) {
-	  delete nodes[i];
+  for (uint32_t i = 0; i < num_nodes; i++) {
+	if (nodes[i]->id == task_id) {
+	  node = nodes[i];
 	}
-	free(nodes);
-  }
-  
-  uint32_t get_task_id(int op_code, int index) {
-	return task_id_parser(this, op_code, index);
   }
 
-  std::set<uint32_t> *get_task_id_parents(uint32_t task_id) {
-	// find the correct task in nodes
-	// return a list of parents' task IDs
+  std::set<uint32_t> *parents = new std::set<uint32_t>();
 
-	Node *node = NULL;
-
-	for (uint32_t i = 0; i < num_nodes; i++) {
-	  if (nodes[i]->id == task_id) {
-		node = nodes[i];
-	  }
-	}
-
-	std::set<uint32_t> *parents = new std::set<uint32_t>();
-
-	if (node == NULL) {
-	  return parents;
-	}
-
-	for (uint32_t i = 0; i < node->num_parents; i++) {
-	  parents.insert(node->parents[i]);
-	}
-
+  if (node == NULL) {
 	return parents;
   }
 
-  std::set<uint32_t> *get_task_id_children(uint32_t task_id) {
-	// find the correct task in nodes
-	// return a list of parents' task IDs
+  for (uint32_t i = 0; i < node->num_parents; i++) {
+	parents->insert(node->parents[i]->id);
+  }
 
-	Node *node = NULL;
+  return parents;
+}
 
-	for (uint32_t i = 0; i < num_nodes; i++) {
-	  if (nodes[i]->id == task_id) {
-		node = nodes[i];
-	  }
+std::set<uint32_t> * DAG::get_task_id_children(uint32_t task_id) {
+  // find the correct task in nodes
+  // return a list of parents' task IDs
+
+  Node *node = NULL;
+
+  for (uint32_t i = 0; i < num_nodes; i++) {
+	if (nodes[i]->id == task_id) {
+	  node = nodes[i];
 	}
+  }
 
-	std::set<uint32_t> *children = new std::set<uint32_t>();
+  std::set<uint32_t> *children_list = new std::set<uint32_t>();
 
-	if (node == NULL) {
-	  return children;
-	}
+  if (node == NULL) {
+	return children_list;
+  }
 
-	for (uint32_t i = 0; i < node->num_children; i++) {
-	  children->insert(node->children[i]);
-	}
+  for (uint32_t i = 0; i < node->num_children; i++) {
+	children_list->insert(node->children[i]->id);
+  }
 
-	return children;
-  }  
-
-  Node **nodes;
-  uint32_t num_nodes;
-  uint32_t DAG_id;
-};
+  return children_list;
+}
 
 
 uint32_t get_benchmark_op_code(uint32_t op_code) {
@@ -158,6 +140,7 @@ uint32_t get_benchmark_op_code(uint32_t op_code) {
 uint32_t task_id_parser(DAG *dag, int op_code, int index) {
 
   uint32_t tid = 0;
+  (void) dag;
 
   switch(op_code) {
 	/** BD1 **/
@@ -195,7 +178,7 @@ uint32_t task_id_parser(DAG *dag, int op_code, int index) {
 	break;
 
   case OP_BD2_GROUPBY_STEP3:
-	tid = TID_BD2_GROUP_STEP3;
+	tid = TID_BD2_GROUPBY_STEP3;
 	break;
 
   case OP_BD2_SORT1_STEP1:
@@ -278,12 +261,13 @@ uint32_t task_id_parser(DAG *dag, int op_code, int index) {
 class DAGGenerator {
 
 public:
-  static DAG genDAG(int benchmark_op_code, uint32_t num_part) {
+  static DAG *genDAG(int benchmark_op_code, uint32_t num_part) {
 
 	DAG *dag = NULL;
 
 	uint32_t num_nodes = 0;
-	std::vector<Nodes *> nodes;
+	std::vector<Node *> nodes;
+	uint32_t offset = 0;
 	
 	switch(benchmark_op_code) {
 	case BD1:
@@ -294,60 +278,35 @@ public:
 
 		// the first 3 rounds are permute
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i] = new Node(i + TID_BD1_PERMUTE_ROUND1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND1, 1, num_part);
 		}
+		offset += num_part;
 
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part] = new Node(i + TID_BD1_PERMUTE_ROUND2, num_part, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND2, num_part, num_part);
 		}
+		offset += num_part;
 
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*2] = new Node(i + TID_BD1_PERMUTE_ROUND3, num_part, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND3, num_part, 1);
 		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND4, num_part, 1);
+		}
+		offset += num_part;
 
 		// filter
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3] = new Node(i + TID_BD1_FILTER, 1, now);
+		  dag->nodes[i+offset] = new Node(i + TID_BD1_FILTER, 1, num_part);
 		}
+		offset += num_part;
 
-		
-		// 1 that all nodes have been created, set the pointers
+		offset = 0;
 
-		// permute round 1
-		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i]->parents[0] = NULL;
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i]->children[j] = dag->nodes[j+num_part];
-		  }
-		}
-
-		// permute round 2
-		for (uint32_t i = 0; i < num_part; i++) {
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i+num_part]->parents[j] = dag->nodes[j];
-		  }
-
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i]->children[j] = dag->nodes[j+num_part*@];
-		  }
-		}
-
-		// permute round 3		
-		for (uint32_t i = 0; i < num_part; i++) {
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i+num_part*2]->parents[j] = dag->nodes[j+num_part];
-		  }
-		  dag->nodes[i]->children[0] = dag->nodes[i + num_part*3];
-		}
-
-		// filter round
-		for (uint32_t i = 0; i < num_part; i++) {
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i+num_part*2]->parents[j] = dag->nodes[j+num_part];
-		  }
-		  dag->nodes[i]->children[0] = dag->nodes[i + num_part*3];
-		}
-	  
+		offset += sort_set_edges(dag, num_part, offset, OTHER);
+		offset += filter_set_edges(dag, num_part, offset, LAST);	  
 	  }
 	  break;
 
@@ -355,95 +314,82 @@ public:
 	  {
 		num_nodes = num_part * (3 + 2 + 3 + 1 + 1) + 1;
 		dag = new DAG(num_nodes, DID_BD2);
-		uint32_t offset = 0;
 		
 		// AGG sort 1 (3 rounds)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part] = new Node(i + TID_BD2_AGG_SORT1_ROUND2, num_part, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND2, num_part, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*2] = new Node(i + TID_BD2_AGG_SORT1_ROUND2, num_part, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND3, num_part, num_part);
 		}
+		offset += num_part;
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND4, num_part, 1);
+		}
+		offset += num_part;
 
 		// group by (3 rounds, 2nd round has only one task)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
 		}
-		dag->nodes[num_part*3+1] = new Node(i + TID_BD2_GROUPBY_STEP2, num_part, num_part);
+		offset += num_part;
+		dag->nodes[offset] = new Node(TID_BD2_GROUPBY_STEP2, num_part, num_part);
+		offset++;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3+1] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
 		}
+		offset += num_part;
 		
-		// AGG sort 2 (3 rounds)
+		// AGG sort 2 (4 rounds)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*4+1] = new Node(i + TID_BD2_AGG_SORT2_ROUND1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND1, 1, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*5+1] = new Node(i + TID_BD2_AGG_SORT2_ROUND2, num_part, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND2, num_part, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*6+1] = new Node(i + TID_BD2_AGG_SORT2_ROUND3, num_part, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND3, num_part, num_part);
 		}
+		offset += num_part;
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND4, num_part, 1);
+		}
+		offset += num_part;
 
 		// filter
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*7+1] = new Node(i + TID_BD2_FILTER, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_FILTER, 1, 1);
 		}
-
+		offset += num_part;
 		// project
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*8+1] = new Node(i + TID_BD2_PROJECT, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_PROJECT, 1, 1);
 		}
+		offset += num_part;
+
+		offset = 0;
 
 		// set parents & children
-		// AGG sort 1 (3 rounds)
- 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i]->parents[0] = NULL;
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i]->children[j] = dag->nodes[j+num_part];
-		  }
-		}
-		for (uint32_t i = 0; i < num_part; i++) {
-		  for (uint32_t j = 0; j++) {
-			dag->nodes[i+num_part]->parents[j] = dag->nodes[j];
-			dag->nodes[i+num_part]->children[j] = dag->nodes[j+num_part*2];
-		  }
-		}
-		for (uint32_t i = 0; i < num_part; i++) {
-		  for (uint32_t j = 0; j++) {
-			dag->nodes[i+num_part*2]->parents[j] = dag->nodes[j+num_part];
-		  }
-		  dag->nodes[i+num_part*2]->children[0] = dag->nodes[i+num_part*3];
-		}
+		// AGG sort 1
+		offset += sort_set_edges(dag, num_part, offset, FIRST);
 
 		// group by (3 rounds)
-		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3]->parents[0] = dag->nodes[i+num_part*2];
-		  dag->nodes[i+num_part*3]->children[0] = dag->nodes[j+num_part*3+1];
-		}
-		for (uint32_t j = 0; j < num_part; j++) {
-		  dag->nodes[num_part*3+1]->parents[j] = dag->nodes[j+num_part*3];
-		  dag->nodes[num_part*3+1]->children[j] = dag->nodes[j+num_part*3+1];
-		}
-		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3+1]->parents[0] = dag->nodes[num_part*3+1];
-		  for (uint32_t j = 0; j < num_part; j++) {
-			dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
-		  }
-		}
-
-		offset = num_part * 4 + 1;
+		offset += agg_set_edges(dag, num_part, offset, OTHER);
 		
 		// AGG sort 2
-		offset += sort_set_edges(dag, num_part, offset, false);
+		offset += sort_set_edges(dag, num_part, offset, OTHER);
 
 		// filter
-		offset += filter_set_edges(dag, num_part, offset, false);
+		offset += filter_set_edges(dag, num_part, offset, OTHER);
 
-		offset += project_set_edges(dag, num_part, offset, true);
+		offset += project_set_edges(dag, num_part, offset, LAST);
 		
 	  }
 	  break;
@@ -452,95 +398,133 @@ public:
 	  {
 		num_nodes = num_part * (1 + 3 + 2 + 3 + 1 + 1 + 2 + 1 + 3) + 1 + 1;
 		dag = new DAG(num_nodes, DID_BD2);
+		offset = 0;
 		
 		// sort preprocess
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i] = new Node(i + TID_BD3_SORT_PREPROCESS, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_PREPROCESS, 1, 1);
 		}
+		offset += num_part;
 
-		// sort1 (3 rounds)
+		// sort1 (4 rounds)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*1] = new Node(i + TID_BD3_SORT1_STEP1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP1, 1, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*2] = new Node(i + TID_BD3_SORT1_STEP2, num_part, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP2, num_part, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*3] = new Node(i + TID_BD3_SORT1_STEP3, num_part, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP3, num_part, num_part);
 		}
+		offset += num_part;
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP4, num_part, 1);
+		}
+		offset += num_part;
 
 		// join (3 rounds)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*4] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
 		}
-		dag->nodes[i+num_part*4+1] = new Node(i + TID_BD3_JOIN_STEP2, num_part, num_part);
+		offset += num_part;
+		dag->nodes[offset] = new Node(TID_BD3_JOIN_STEP2, num_part, num_part);
+		offset++;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*5+1] = new Node(i + TID_BD3_JOIN_STEP3, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP3, 1, 1);
 		}
+		offset += num_part;
 
-		// permute (3 rounds)
+		// permute (4 rounds)
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*6+1] = new Node(i + TID_BD3_PERMUTE_STEP1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_PERMUTE_STEP1, 1, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*7+1] = new Node(i + TID_BD3_PERMUTE_STEP2, num_part, num_part);
+		  dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP2, num_part, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*8+1] = new Node(i + TID_BD3_PERMUTE_STEP3, num_part, 1);
+		  dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP3, num_part, num_part);
 		}
+		offset += num_part;
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP4, num_part, 1);
+		}
+		offset += num_part;
 		
 		// filter
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*9+1] = new Node(i + TID_BD3_FILTER1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_FILTER1, 1, 1);
 		}
+		offset += num_part;
 
 		// project
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*10+1] = new Node(i + TID_BD3_PROJECT1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT1, 1, 1);
 		}
+		offset += num_part;
 
 		// aggregate
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*11+1] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
 		}
-		dag->nodes[i+num_part*11+2] = new Node(i + TID_BD3_GROUPBY_STEP2, num_part, num_part);
+		offset += num_part;
+		dag->nodes[offset] = new Node(TID_BD3_GROUPBY_STEP2, num_part, num_part);
+		offset += 1;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*12+2] = new Node(i + TID_BD3_GROUPBY_STEP3, 1, 1);
-		}	   
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP3, 1, 1);
+		}
+		offset += num_part;
 
 		// project
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*13+2] = new Node(i + TID_BD3_PROJECT2, 1, 1);
-		}		
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT2, 1, 1);
+		}
+		offset += num_part;
 		
 		// sort
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*14+2] = new Node(i + TID_BD3_SORT_STEP1, 1, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP1, 1, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*15+2] = new Node(i + TID_BD3_SORT_STEP2, num_part, num_part);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP2, num_part, num_part);
 		}
+		offset += num_part;
 		for (uint32_t i = 0; i < num_part; i++) {
-		  dag->nodes[i+num_part*16+2] = new Node(i + TID_BD3_SORT_STEP3, num_part, 1);
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP3, num_part, num_part);
 		}
-		
+		offset += num_part;
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP4, num_part, 1);
+		}
+		offset += num_part;
+
+		// define all parents and children
+		offset = 0;
+		offset += sort_preprocess_set_edges(dag, num_part, offset, FIRST);
+		offset += sort_set_edges(dag, num_part, offset, OTHER);
+		offset += join_set_edges(dag, num_part, offset, OTHER);
+		offset += sort_set_edges(dag, num_part, offset, OTHER);
+		offset += filter_set_edges(dag, num_part, offset, OTHER);
+		offset += project_set_edges(dag, num_part, offset, OTHER);
+		offset += agg_set_edges(dag, num_part, offset, OTHER);
+		offset += project_set_edges(dag, num_part, offset, OTHER);
+		offset += sort_set_edges(dag, num_part, offset, OTHER);
 	  }
 	  break;
 
 	  // single machine encrypted version
 	case DID_ENC_BD1_SINGLE:
 	  {
-		// there are only two rounds, one for external sort, then one for filter
-		num_nodes = 2;
+		// there is only one round -- only a filter is needed
+		num_nodes = 1;
 		dag = new DAG(num_nodes, DID_ENC_BD1_SINGLE);
 
-		// permute
-		dag->nodes[0] = new Node(TID_BD1_PERMUTE_ROUND1, 0, 1);
 		// filter
-		dag->nodes[1] = new Node(TID_BD1_FILTER, 1, 0);
-		
-		dag->nodes[0]->children[0] = dag->nodes[1];
-		dag->nodes[1]->parents[0] = dag->nodes[0];
+		dag->nodes[0] = new Node(TID_BD1_FILTER, 0, 0);
 	  }
 	  break;
 
@@ -600,6 +584,147 @@ public:
 		dag->nodes[5]->parents[0] = dag->nodes[4];
 	  }
 	  break;
+
+	case DID_ENC_BD1:
+	  {
+		// there is only one round -- only a filter is needed
+		num_nodes = num_part;
+		dag = new DAG(num_nodes, DID_ENC_BD1);
+
+		// filter
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i] = new Node(i + TID_BD1_FILTER, 0, 0);
+		}
+	  }
+	  break;
+
+	case DID_ENC_BD2:
+	  {
+		// sort, aggregate, project
+		num_nodes = num_part * 5 + 1;
+		dag = new DAG(num_nodes, DID_ENC_BD1);
+
+		offset = 0;
+
+		// create the nodes
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, 1);
+		}
+		offset += num_part;
+
+		dag->nodes[offset] = new Node(TID_BD2_AGG_SORT1_ROUND2, num_part, num_part);
+		offset += 1;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND3, 1, num_part);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND4, num_part, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD2_PROJECT, 1, 1);
+		}
+		offset += num_part;
+
+		// sort
+		offset += enc_sort_set_edges(dag, num_part, offset, FIRST);
+
+		// agg
+		offset += enc_agg_set_edges(dag, num_part, offset, OTHER);
+
+		// project
+		offset += project_set_edges(dag, num_part, offset, LAST);
+
+	  }
+	  break;
+
+	case DID_ENC_BD3:
+	  {
+		// sort, join, sort, agg, project, sort
+		num_nodes = 0;
+		dag = new DAG(num_nodes, DID_ENC_BD1);
+
+		offset = 0;
+
+		// create the sort, join, sort, agg, project nodes
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i] = new Node(i + TID_BD3_SORT1_STEP1, 1, 1);
+		}
+		offset += num_part;
+
+		dag->nodes[offset] = new Node(TID_BD3_SORT1_STEP2, num_part, num_part);
+		offset += 1;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP3, 1, num_part);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP4, num_part, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP1, 1, 1);
+		}
+		offset += num_part;
+
+		dag->nodes[offset] = new Node(TID_BD3_AGG_SORT2_STEP2, num_part, num_part);
+		offset += 1;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP3, 1, num_part);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP4, num_part, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
+		}
+		offset += num_part;
+
+		for (uint32_t i = 0; i < num_part; i++) {
+		  dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT2, 1, 1);
+		}
+		offset += num_part;
+
+		offset = 0;
+
+		// sort
+		offset += enc_sort_set_edges(dag, num_part, offset, FIRST);
+
+		// join
+		offset += enc_join_set_edges(dag, num_part, offset, OTHER);
+
+		// sort
+		offset += enc_sort_set_edges(dag, num_part, offset, OTHER);
+
+		// agg
+		offset += enc_agg_set_edges(dag, num_part, offset, OTHER);
+
+		// project
+		offset += project_set_edges(dag, num_part, offset, LAST);
+	  }
+	  break;
 	  
 	default:
 	  {
@@ -607,6 +732,8 @@ public:
 	  }
 	  break;
 	}
+
+	return dag;
   }
 
   

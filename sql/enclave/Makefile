@@ -88,7 +88,7 @@ else
 	Crypto_Library_Name := sgx_tcrypto
 endif
 
-Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
+Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Aggregate.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
 Enclave_Include_Paths := -IInclude -IEnclave -ICommon -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
