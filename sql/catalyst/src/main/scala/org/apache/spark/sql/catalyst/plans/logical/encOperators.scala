@@ -46,13 +46,13 @@ case class ConvertFromBlocks(child: OutputsBlocks) extends UnaryNode {
   override def references: AttributeSet = inputSet
 }
 
-case class EncProject(projectList: Seq[NamedExpression], opcode: QEDOpcode, child: OutputsBlocks)
+case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 }
 
-case class EncFilter(condition: Expression, opcode: QEDOpcode, child: OutputsBlocks)
+case class EncFilter(condition: Expression, child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
   override def output: Seq[Attribute] = child.output
@@ -62,60 +62,52 @@ case class Permute(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
 }
 
-case class EncSort(sortExpr: Expression, child: OutputsBlocks)
+case class EncSort(sortExprs: Seq[Expression], child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
 }
 
-case class NonObliviousSort(sortExpr: Expression, child: OutputsBlocks)
+case class NonObliviousSort(sortExprs: Seq[Expression], child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
 }
 
 case class EncAggregate(
-    opcode: QEDOpcode,
-    groupingExpression: NamedExpression,
+    groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    aggOutputs: Seq[Attribute],
     child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
-  override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
-  override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
+  override def producedAttributes: AttributeSet =
+    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 }
 
 case class NonObliviousAggregate(
-    opcode: QEDOpcode,
-    groupingExpression: NamedExpression,
+    groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    aggOutputs: Seq[Attribute],
     child: OutputsBlocks)
   extends UnaryNode with OutputsBlocks {
 
-  override def producedAttributes: AttributeSet = AttributeSet(aggOutputs)
-  override def output: Seq[Attribute] = groupingExpression.toAttribute +: aggOutputs
+  override def producedAttributes: AttributeSet =
+    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 }
 
 case class EncJoin(
     left: OutputsBlocks,
     right: OutputsBlocks,
-    leftCol: Expression,
-    rightCol: Expression,
-    opcode: Option[QEDOpcode])
+    joinExpr: Expression)
   extends BinaryNode with OutputsBlocks {
 
-  override def output: Seq[Attribute] =
-    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+  override def output: Seq[Attribute] = left.output ++ right.output
 }
 
 case class NonObliviousJoin(
     left: OutputsBlocks,
     right: OutputsBlocks,
-    leftCol: Expression,
-    rightCol: Expression,
-    opcode: Option[QEDOpcode])
+    joinExpr: Expression)
   extends BinaryNode with OutputsBlocks {
 
-  override def output: Seq[Attribute] =
-    left.output ++ right.output.filter(a => !rightCol.references.contains(a))
+  override def output: Seq[Attribute] = left.output ++ right.output
 }

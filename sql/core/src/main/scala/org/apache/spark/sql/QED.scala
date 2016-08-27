@@ -159,75 +159,68 @@ object QED {
     result.asInstanceOf[T]
   }
 
-  def encrypt1[A](rows: Seq[A]): Seq[Array[Byte]] = {
+  def encrypt1[A](rows: Seq[A]): Seq[Array[Array[Byte]]] = {
     val (enclave, eid) = initEnclave()
-    rows.map {
-      a => QED.encrypt(enclave, eid, a)
-    }
-  }
-  def encrypt2[A, B](rows: Seq[(A, B)]): Seq[(Array[Byte], Array[Byte])] = {
-    val (enclave, eid) = initEnclave()
-    rows.map {
-      case (a, b) => (QED.encrypt(enclave, eid, a), QED.encrypt(enclave, eid, b))
-    }
-  }
-  def encrypt3[A, B, C](rows: Seq[(A, B, C)]): Seq[(Array[Byte], Array[Byte], Array[Byte])] = {
-    val (enclave, eid) = initEnclave()
-    rows.map {
-      case (a, b, c) =>
-        (QED.encrypt(enclave, eid, a),
-          QED.encrypt(enclave, eid, b),
-          QED.encrypt(enclave, eid, c))
-    }
-  }
-  def encrypt4[A, B, C, D](rows: Seq[(A, B, C, D)]): Seq[(Array[Byte], Array[Byte], Array[Byte], Array[Byte])] = {
-    val (enclave, eid) = initEnclave()
-    rows.map {
-      case (a, b, c, d) =>
-        (QED.encrypt(enclave, eid, a),
-          QED.encrypt(enclave, eid, b),
-          QED.encrypt(enclave, eid, c),
-          QED.encrypt(enclave, eid, d))
-    }
+    rows.map(row => Array(QED.encrypt(enclave, eid, row)))
   }
 
-  def decrypt1[A](rows: Seq[Row]): Seq[A] = {
+  def encryptN(rows: Seq[Product]): Seq[Array[Array[Byte]]] = {
+    val (enclave, eid) = initEnclave()
+    rows.map(row => row.productIterator.map(field => QED.encrypt(enclave, eid, field)).toArray)
+  }
+
+  def encryptRows(rows: Seq[Row]): Seq[Array[Array[Byte]]] = {
+    val (enclave, eid) = initEnclave()
+    rows.map(row => row.toSeq.map(field => QED.encrypt(enclave, eid, field)).toArray)
+  }
+
+  def decrypt1[A](rows: Seq[Array[Array[Byte]]]): Seq[A] = {
     val (enclave, eid) = initEnclave()
     rows.map {
-      case Row(aEnc: Array[Byte]) =>
+      case Array(aEnc: Array[Byte]) =>
         QED.decrypt[A](enclave, eid, aEnc)
     }
   }
-  def decrypt2[A, B](rows: Seq[Row]): Seq[(A, B)] = {
+  def decrypt2[A, B](rows: Seq[Array[Array[Byte]]]): Seq[(A, B)] = {
     val (enclave, eid) = initEnclave()
     rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte]) =>
+      case Array(aEnc: Array[Byte], bEnc: Array[Byte]) =>
         (QED.decrypt[A](enclave, eid, aEnc), QED.decrypt[B](enclave, eid, bEnc))
     }
   }
-  def decrypt3[A, B, C](rows: Seq[Row]): Seq[(A, B, C)] = {
+  def decrypt3[A, B, C](rows: Seq[Array[Array[Byte]]]): Seq[(A, B, C)] = {
     val (enclave, eid) = initEnclave()
     rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte]) =>
+      case Array(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte]) =>
         (QED.decrypt[A](enclave, eid, aEnc),
           QED.decrypt[B](enclave, eid, bEnc),
           QED.decrypt[C](enclave, eid, cEnc))
     }
   }
-  def decrypt4[A, B, C, D](rows: Seq[Row]): Seq[(A, B, C, D)] = {
+  def decryptN(rows: Seq[Array[Array[Byte]]]): Seq[Seq[Any]] = {
+    val (enclave, eid) = initEnclave()
+    rows.toSeq.map { fields =>
+      fields.toSeq.map { field =>
+        QED.decrypt[Any](enclave, eid, field)
+      }
+    }
+  }
+  def decrypt4[A, B, C, D](rows: Seq[Array[Array[Byte]]]): Seq[(A, B, C, D)] = {
     val (enclave, eid) = initEnclave()
     rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte]) =>
+      case Array(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte]) =>
         (QED.decrypt[A](enclave, eid, aEnc),
           QED.decrypt[B](enclave, eid, bEnc),
           QED.decrypt[C](enclave, eid, cEnc),
           QED.decrypt[D](enclave, eid, dEnc))
     }
   }
-  def decrypt5[A, B, C, D, E](rows: Seq[Row]): Seq[(A, B, C, D, E)] = {
+  def decrypt5[A, B, C, D, E](rows: Seq[Array[Array[Byte]]]): Seq[(A, B, C, D, E)] = {
     val (enclave, eid) = initEnclave()
     rows.map {
-      case Row(aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte], eEnc: Array[Byte]) =>
+      case Array(
+        aEnc: Array[Byte], bEnc: Array[Byte], cEnc: Array[Byte], dEnc: Array[Byte],
+        eEnc: Array[Byte]) =>
         (QED.decrypt[A](enclave, eid, aEnc),
           QED.decrypt[B](enclave, eid, bEnc),
           QED.decrypt[C](enclave, eid, cEnc),
@@ -328,24 +321,12 @@ object QED {
     result
   }
 
-  def attributeIndexOf(a: Attribute, list: Seq[Attribute]): Int = {
-    var i = 0
-    while (i < list.size) {
-      if (list(i) semanticEquals a) {
-        return i
-      }
-      i += 1
-    }
-    return -1
-  }
-
-  def bd1Encrypt3(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
+  def bd1Encrypt2(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
-      case Row(u: String, r: Int, d: Int) =>
-        (QED.encrypt(enclave, eid, u, Some(QEDColumnType.URL_TYPE)),
-          QED.encrypt(enclave, eid, r),
-          QED.encrypt(enclave, eid, d))
+      case Row(u: String, r: Int) =>
+        Array(QED.encrypt(enclave, eid, u, Some(QEDColumnType.URL_TYPE)),
+          QED.encrypt(enclave, eid, r))
     }
   }
 
@@ -357,40 +338,26 @@ object QED {
     }
   }
 
-  def bd2Encrypt9(iter: Iterator[Row])
-      : Iterator[(
-        Array[Byte], Array[Byte], Array[Byte],
-        Array[Byte], Array[Byte], Array[Byte],
-        Array[Byte], Array[Byte], Array[Byte])] = {
+  def bd2Encrypt2(iter: Iterator[Row])
+      : Iterator[Array[Array[Byte]]] = {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
       case Row(
         si: String,
-        du: String,
-        vd: java.sql.Date,
-        ar: Float,
-        ua: String,
-        cc: String,
-        lc: String,
-        sw: String,
-        d: Int) =>
-        (QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)),
-          QED.encrypt(enclave, eid, du, Some(QEDColumnType.URL_TYPE)),
-          QED.encrypt(enclave, eid, vd),
-          QED.encrypt(enclave, eid, ar),
-          QED.encrypt(enclave, eid, ua, Some(QEDColumnType.USER_AGENT_TYPE)),
-          QED.encrypt(enclave, eid, cc, Some(QEDColumnType.C_CODE)),
-          QED.encrypt(enclave, eid, lc, Some(QEDColumnType.L_CODE)),
-          QED.encrypt(enclave, eid, sw, Some(QEDColumnType.SEARCH_WORD_TYPE)),
-          QED.encrypt(enclave, eid, d))
+        ar: Float) =>
+        Array(QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)),
+          QED.encrypt(enclave, eid, ar))
     }
   }
 
-  def bd2Decrypt2(iter: Iterator[Row]): Iterator[(String, Float)] = {
+  def bd3EncryptUV(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
-      case Row(sis: Array[Byte], ar: Array[Byte]) =>
-        (QED.decrypt[String](enclave, eid, sis), QED.decrypt[Float](enclave, eid, ar))
+      case Row(vd: java.sql.Date, du: String, si: String, ar: Float) =>
+        Array(QED.encrypt(enclave, eid, vd),
+          QED.encrypt(enclave, eid, du, Some(QEDColumnType.URL_TYPE)),
+          QED.encrypt(enclave, eid, si, Some(QEDColumnType.IP_TYPE)),
+          QED.encrypt(enclave, eid, ar))
     }
   }
 
@@ -404,21 +371,21 @@ object QED {
   }
 
   def pagerankEncryptEdges(iter: Iterator[Row])
-    : Iterator[(Array[Byte], Array[Byte], Array[Byte])] = {
+    : Iterator[Array[Array[Byte]]] = {
 
     val (enclave, eid) = QED.initEnclave()
     iter.map {
       case Row(src: Int, dst: Int, weight: Float) =>
-        (QED.encrypt(enclave, eid, src), QED.encrypt(enclave, eid, dst),
+        Array(QED.encrypt(enclave, eid, src), QED.encrypt(enclave, eid, dst),
           QED.encrypt(enclave, eid, weight))
     }
   }
 
-  def pagerankEncryptVertices(iter: Iterator[Row]): Iterator[(Array[Byte], Array[Byte])] = {
+  def pagerankEncryptVertices(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
       case Row(id: Int, rank: Float) =>
-        (QED.encrypt(enclave, eid, id), QED.encrypt(enclave, eid, rank))
+        Array(QED.encrypt(enclave, eid, id), QED.encrypt(enclave, eid, rank))
     }
   }
 

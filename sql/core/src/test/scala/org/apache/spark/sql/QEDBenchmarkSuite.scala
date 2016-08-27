@@ -24,14 +24,6 @@ class QEDBenchmarkSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  test("spark sql sort") {
-    QEDBenchmark.sortSparkSQL(sqlContext, 256 * 1024)
-  }
-
-  test("opaque sort") {
-    QEDBenchmark.sortOpaque(sqlContext, 256 * 1024)
-  }
-
   test("big data 1 - spark sql") {
     QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
   }

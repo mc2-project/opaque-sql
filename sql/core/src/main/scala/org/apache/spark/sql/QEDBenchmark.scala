@@ -23,8 +23,11 @@ import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
 import org.apache.spark.sql.QEDOpcode._
+import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.functions.substring
+import org.apache.spark.sql.functions.sum
+import org.apache.spark.sql.functions.year
 import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.types.FloatType
@@ -84,28 +87,34 @@ object QEDBenchmark {
           StructField("isVertex", IntegerType, false))))
       .option("delimiter", " ")
       .csv(s"$dataDir/pagerank-files/PageRank$size.in")
-    val edges = data.filter($"isVertex" === lit(0))
-      .select($"src", $"dst", lit(1.0f).as("weight"))
-      .repartition(numPartitions(sqlContext, distributed))
-      .mapPartitions(QED.pagerankEncryptEdges)
-      .toDF("src", "dst", "weight")
-      .cache()
-    val vertices = data.filter($"isVertex" === lit(1))
-      .select($"src".as("id"), lit(1.0f).as("rank"))
-      .repartition(numPartitions(sqlContext, distributed))
-      .mapPartitions(QED.pagerankEncryptVertices)
-      .toDF("id", "rank")
-      .cache()
+    val edges = sqlContext.createEncryptedDataFrame(
+      data.filter($"isVertex" === lit(0))
+        .select($"src", $"dst", lit(1.0f).as("weight"))
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.pagerankEncryptEdges),
+        StructType(Seq(
+          StructField("src", IntegerType),
+          StructField("dst", IntegerType),
+          StructField("weight", FloatType))))
+    val vertices = sqlContext.createEncryptedDataFrame(
+      data.filter($"isVertex" === lit(1))
+        .select($"src".as("id"), lit(1.0f).as("rank"))
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.pagerankEncryptVertices),
+        StructType(Seq(
+          StructField("id", IntegerType),
+          StructField("rank", FloatType))))
     val numEdges = edges.count
     val numVertices = vertices.count
     val newV =
       time(s"pagerank $size") {
         val result =
-          vertices.encJoin(edges, $"id", $"src", Some(OP_JOIN_PAGERANK))
-            .encProject(OP_PROJECT_PAGERANK_WEIGHT_RANK, $"dst", $"rank".as("weightedRank"))
-            .encAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
-              $"dst", $"weightedRank".as("totalIncomingRank"))
-            .encProject(OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK, $"dst", $"totalIncomingRank".as("rank"))
+          vertices.encJoin(edges, $"id" === $"src")
+            .encSelect($"dst", ($"rank" * $"weight").as("weightedRank"))
+            .groupBy("dst").encAgg(sum("weightedRank").as("totalIncomingRank"))
+            .encSelect($"dst", (lit(0.15) + lit(0.85) * $"totalIncomingRank").as("rank"))
         result.count
         result
       }
@@ -122,48 +131,54 @@ object QEDBenchmark {
       println("big data 1 spark sql - num rows: " + count)
       df
     }
-    rankingsDF.unpersist()
     result
   }
 
   def bd1Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
     import sqlContext.implicits._
-    val rankingsDF = rankings(sqlContext, size)
-      .mapPartitions(QED.bd1Encrypt3)
-      .toDF("pageURL", "pageRank", "avgDuration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val rankingsDF = sqlContext.createEncryptedDataFrame(
+      rankings(sqlContext, size)
+        .select($"pageURL", $"pageRank")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd1Encrypt2),
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType),
+        StructField("avgDuration", IntegerType))))
     rankingsDF.count
     val result = time("big data 1") {
-      val df = rankingsDF.select($"pageURL", $"pageRank").encFilter($"pageRank", OP_BD1)
+      val df = rankingsDF.encFilter($"pageRank" > 1000)
       val count = df.count
       println("big data 1 - num rows: " + count)
       df
     }
-    rankingsDF.unpersist()
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
   }
 
   def bd1Encrypted(
       sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
     import sqlContext.implicits._
-    val rankingsDF = rankings(sqlContext, size)
-      .mapPartitions(QED.bd1Encrypt3)
-      .toDF("pageURL", "pageRank", "avgDuration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val rankingsDF = sqlContext.createEncryptedDataFrame(
+      rankings(sqlContext, size)
+        .select($"pageURL", $"pageRank")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd1Encrypt2),
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType))))
     rankingsDF.count
     val result = time("big data 1 encrypted") {
-      val df = rankingsDF.select($"pageURL", $"pageRank").nonObliviousFilter($"pageRank", OP_BD1)
+      val df = rankingsDF.nonObliviousFilter($"pageRank" > 1000)
       val count = df.count
       println("big data 1 encrypted - num rows: " + count)
       df
     }
-    rankingsDF.unpersist()
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
   }
 
-  def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
+  def bd2SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Float)] = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
@@ -174,62 +189,60 @@ object QEDBenchmark {
       println("big data 2 spark sql - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    result
+    result.collect.map { case Row(a: String, b: Double) => (a, b.toFloat) }
   }
 
-  def bd2Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+  def bd2Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
+    : Seq[(String, Float)] = {
     import sqlContext.implicits._
-    val uservisitsDF = uservisits(sqlContext, size)
-      .mapPartitions(QED.bd2Encrypt9)
-      .toDF("sourceIP", "destURL", "visitDate",
-        "adRevenue", "userAgent", "countryCode",
-        "languageCode", "searchWord", "duration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val uservisitsDF = sqlContext.createEncryptedDataFrame(
+      uservisits(sqlContext, size)
+        .select($"sourceIP", $"adRevenue")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd2Encrypt2),
+      StructType(Seq(
+        StructField("sourceIP", StringType),
+        StructField("adRevenue", FloatType))))
     uservisitsDF.count
     val result = time("big data 2") {
       val df = uservisitsDF
-        .select($"sourceIP", $"adRevenue")
-        .encProject(OP_BD2, $"sourceIP", $"adRevenue")
-        .encAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
-          $"sourceIP", $"adRevenue".as("totalAdRevenue"))
+        .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
+        .groupBy("sourceIP").encAgg(sum("adRevenue").as("totalAdRevenue"))
       val count = df.count
       println("big data 2 - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    result.mapPartitions(QED.bd2Decrypt2).toDF("sourceIPSubstr", "adRevenue")
+    QED.decrypt2[String, Float](result.encCollect)
   }
 
   def bd2Encrypted(
-      sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+      sqlContext: SQLContext, size: String, distributed: Boolean = false)
+    : Seq[(String, Float)] = {
     import sqlContext.implicits._
-    val uservisitsDF = uservisits(sqlContext, size)
-      .mapPartitions(QED.bd2Encrypt9)
-      .toDF("sourceIP", "destURL", "visitDate",
-        "adRevenue", "userAgent", "countryCode",
-        "languageCode", "searchWord", "duration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val uservisitsDF = sqlContext.createEncryptedDataFrame(
+      uservisits(sqlContext, size)
+        .select($"sourceIP", $"adRevenue")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd2Encrypt2),
+      StructType(Seq(
+        StructField("sourceIP", StringType),
+        StructField("adRevenue", FloatType))))
     uservisitsDF.count
     val result = time("big data 2 encrypted") {
       val df = uservisitsDF
-        .select($"sourceIP", $"adRevenue")
-        .encProject(OP_BD2, $"sourceIP", $"adRevenue")
-        .nonObliviousAggregate(OP_GROUPBY_COL1_SUM_COL2_FLOAT,
-          $"sourceIP", $"adRevenue".as("totalAdRevenue"))
+        .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
+        .groupBy("sourceIP").nonObliviousAgg(sum("adRevenue").as("totalAdRevenue"))
       val count = df.count
       println("big data 2 encrypted - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    result.mapPartitions(QED.bd2Decrypt2).toDF("sourceIPSubstr", "adRevenue")
+    QED.decrypt2[String, Float](result.encCollect)
   }
 
-  def bd3SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
+  def bd3SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Float, Float)] = {
     import sqlContext.implicits._
-    import org.apache.spark.sql.functions.{lit, sum, avg}
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
     val rankingsDF = rankings(sqlContext, size).cache()
@@ -248,94 +261,101 @@ object QEDBenchmark {
       println("big data 3 spark sql - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    rankingsDF.unpersist()
-    result
+    result.collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
   }
 
-  def bd3Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+  def bd3Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
+    : Seq[(String, Float, Float)] = {
     import sqlContext.implicits._
-    val uservisitsDF = uservisits(sqlContext, size)
-      .mapPartitions(QED.bd2Encrypt9)
-      .toDF("sourceIP", "destURL", "visitDate",
-        "adRevenue", "userAgent", "countryCode",
-        "languageCode", "searchWord", "duration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val uservisitsDF = sqlContext.createEncryptedDataFrame(
+      uservisits(sqlContext, size)
+        .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd3EncryptUV),
+      StructType(Seq(
+        StructField("visitDate", DateType),
+        StructField("destURL", StringType),
+        StructField("sourceIP", StringType),
+        StructField("adRevenue", FloatType))))
     uservisitsDF.count
-    val rankingsDF = rankings(sqlContext, size)
-      .mapPartitions(QED.bd1Encrypt3)
-      .toDF("pageURL", "pageRank", "avgDuration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val rankingsDF = sqlContext.createEncryptedDataFrame(
+      rankings(sqlContext, size)
+        .select($"pageURL", $"pageRank")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd1Encrypt2),
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType))))
     rankingsDF.count
 
     val result = time("big data 3") {
       val df =
         rankingsDF
-          .select($"pageURL", $"pageRank")
           .encJoin(
             uservisitsDF
-              .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-              .encFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
-              .encProject(OP_PROJECT_DROP_COL1, $"destURL", $"sourceIP", $"adRevenue"),
-            rankingsDF("pageURL"), uservisitsDF("destURL"))
-          .encProject(OP_PROJECT_DROP_COL1, $"pageRank", $"sourceIP", $"adRevenue")
-          .encProject(OP_PROJECT_SWAP_COL1_COL2, $"sourceIP", $"pageRank", $"adRevenue")
-          .encAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
-            $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
-          .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
+              .encFilter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
+              .encSelect($"destURL", $"sourceIP", $"adRevenue"),
+            rankingsDF("pageURL") === uservisitsDF("destURL"))
+          .encSelect($"pageRank", $"sourceIP", $"adRevenue")
+          .encSelect($"sourceIP", $"pageRank", $"adRevenue")
+          .groupBy("sourceIP")
+          .encAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
+          .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
           .encSort($"totalRevenue")
       val count = df.count
       println("big data 3 - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    rankingsDF.unpersist()
-    result.mapPartitions(QED.bd3Decrypt3).toDF("sourceIP", "totalRevenue", "avgPageRank")
+    QED.decrypt3[String, Float, Float](result.encCollect)
   }
 
-  def bd3Encrypted(
-      sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
+  def bd3Encrypted(sqlContext: SQLContext, size: String, distributed: Boolean = false)
+    : Seq[(String, Float, Float)] = {
     import sqlContext.implicits._
-    val uservisitsDF = uservisits(sqlContext, size)
-      .mapPartitions(QED.bd2Encrypt9)
-      .toDF("sourceIP", "destURL", "visitDate",
-        "adRevenue", "userAgent", "countryCode",
-        "languageCode", "searchWord", "duration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val uservisitsDF = sqlContext.createEncryptedDataFrame(
+      uservisits(sqlContext, size)
+        .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd3EncryptUV),
+      StructType(Seq(
+        StructField("visitDate", DateType),
+        StructField("destURL", StringType),
+        StructField("sourceIP", StringType),
+        StructField("adRevenue", FloatType))))
     uservisitsDF.count
-    val rankingsDF = rankings(sqlContext, size)
-      .mapPartitions(QED.bd1Encrypt3)
-      .toDF("pageURL", "pageRank", "avgDuration")
-      .repartition(numPartitions(sqlContext, distributed))
-      .cache()
+    val rankingsDF = sqlContext.createEncryptedDataFrame(
+      rankings(sqlContext, size)
+        .select($"pageURL", $"pageRank")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.bd1Encrypt2),
+      StructType(Seq(
+        StructField("pageURL", StringType),
+        StructField("pageRank", IntegerType))))
     rankingsDF.count
 
-    val result = time("big data 3 encrypted") {
+    val result = time("big data 3") {
       val df =
         rankingsDF
-          .select($"pageURL", $"pageRank")
           .nonObliviousJoin(
             uservisitsDF
-              .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-              .nonObliviousFilter($"visitDate", OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01)
-              .encProject(OP_PROJECT_DROP_COL1, $"destURL", $"sourceIP", $"adRevenue"),
-            rankingsDF("pageURL"), uservisitsDF("destURL"))
-          .encProject(OP_PROJECT_DROP_COL1, $"pageRank", $"sourceIP", $"adRevenue")
-          .encProject(OP_PROJECT_SWAP_COL1_COL2, $"sourceIP", $"pageRank", $"adRevenue")
-          .nonObliviousAggregate(OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT,
-            $"sourceIP", $"pageRank".as("avgPageRank"), $"adRevenue".as("totalRevenue"))
-          .encProject(OP_PROJECT_SWAP_COL2_COL3, $"sourceIP", $"totalRevenue", $"avgPageRank")
+              .nonObliviousFilter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
+              .encSelect($"destURL", $"sourceIP", $"adRevenue"),
+            rankingsDF("pageURL") === uservisitsDF("destURL"))
+          .encSelect($"pageRank", $"sourceIP", $"adRevenue")
+          .encSelect($"sourceIP", $"pageRank", $"adRevenue")
+          .groupBy("sourceIP")
+          .nonObliviousAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
+          .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
           .nonObliviousSort($"totalRevenue")
       val count = df.count
       println("big data 3 encrypted - num rows: " + count)
       df
     }
-    uservisitsDF.unpersist()
-    rankingsDF.unpersist()
-    result.mapPartitions(QED.bd3Decrypt3).toDF("sourceIP", "totalRevenue", "avgPageRank")
+    QED.decrypt3[String, Float, Float](result.encCollect)
   }
 
   def numPartitions(sqlContext: SQLContext, distributed: Boolean): Int =
@@ -362,24 +382,4 @@ object QEDBenchmark {
         StructField("searchWord", StringType),
         StructField("duration", IntegerType))))
       .csv(s"$dataDir/big-data-benchmark-files/uservisits/$size")
-
-  def sortSparkSQL(sqlContext: SQLContext, n: Int) {
-    import sqlContext.implicits._
-    val data = Random.shuffle((0 until n).map(x => (x.toString, x)).toSeq)
-    val sorted = time("spark sql sorting") {
-      val df = sqlContext.sparkContext.makeRDD(data).toDF("str", "x").sort($"x")
-      df.count()
-      df
-    }
-  }
-
-  def sortOpaque(sqlContext: SQLContext, n: Int) {
-    import sqlContext.implicits._
-    val data = Random.shuffle((0 until n).map(x => (x.toString, x)).toSeq)
-    val sorted = time("Enc sorting: ") {
-      val df = sqlContext.sparkContext.makeRDD(QED.encrypt2(data)).toDF("str", "x").encSort($"x")
-      df.count()
-      df
-    }
-  }
 }

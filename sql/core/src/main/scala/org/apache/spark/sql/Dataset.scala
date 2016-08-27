@@ -980,78 +980,47 @@ class Dataset[T] private[sql](
       c5: TypedColumn[T, U5]): Dataset[(U1, U2, U3, U4, U5)] =
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
-  def encProject(opcode: QEDOpcode, cols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(EncProject(cols.map(_.named), opcode, ConvertToBlocks(logicalPlan)))
+  def encSelect(cols: Column*): DataFrame = withPlan {
+    ConvertFromBlocks(EncProject(cols.map(_.named), ConvertToBlocks(logicalPlan)))
   }
 
-  def encFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(EncFilter(condition.expr, opcode, Permute(ConvertToBlocks(logicalPlan))))
+  def encFilter(condition: Column): Dataset[T] = withTypedPlan {
+    ConvertFromBlocks(EncFilter(condition.expr, Permute(ConvertToBlocks(logicalPlan))))
   }
 
-  def nonObliviousFilter(condition: Column, opcode: QEDOpcode): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(EncFilter(condition.expr, opcode, ConvertToBlocks(logicalPlan)))
+  def nonObliviousFilter(condition: Column): Dataset[T] = withTypedPlan {
+    ConvertFromBlocks(EncFilter(condition.expr, ConvertToBlocks(logicalPlan)))
   }
 
   def encPermute(): Dataset[T] = withTypedPlan {
     ConvertFromBlocks(Permute(ConvertToBlocks(logicalPlan)))
   }
 
-  def encAggregate(opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(
-      EncAggregate(
-        opcode,
-        UnresolvedAlias(groupByCol.expr),
-        aggCols.map(_.named),
-        aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
-        EncSort(groupByCol.expr, ConvertToBlocks(logicalPlan))))
+  def encSort(cols: Column*): DataFrame = withPlan {
+    ConvertFromBlocks(EncSort(cols.map(_.expr), ConvertToBlocks(logicalPlan)))
   }
 
-  def nonObliviousAggregate(
-      opcode: QEDOpcode, groupByCol: Column, aggCols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(
-      NonObliviousAggregate(
-        opcode,
-        UnresolvedAlias(groupByCol.expr),
-        aggCols.map(_.named),
-        aggCols.map(col => AttributeReference(col.named.toAttribute.name, BinaryType, true)()),
-        NonObliviousSort(groupByCol.expr, ConvertToBlocks(logicalPlan))))
-  }
-
-  def encSort(col: Column): DataFrame = withPlan {
-    ConvertFromBlocks(EncSort(col.expr, ConvertToBlocks(logicalPlan)))
-  }
-
-  def nonObliviousSort(col: Column): DataFrame = withPlan {
-    ConvertFromBlocks(NonObliviousSort(col.expr, ConvertToBlocks(logicalPlan)))
+  def nonObliviousSort(cols: Column*): DataFrame = withPlan {
+    ConvertFromBlocks(NonObliviousSort(cols.map(_.expr), ConvertToBlocks(logicalPlan)))
   }
 
   /**
    * Inner equi-join this DataFrame on the specified columns assuming a primary-foreign relationship.
    */
-  def encJoin(
-      right: DataFrame,
-      leftCol: Column,
-      rightCol: Column,
-      opcode: Option[QEDOpcode] = None)
-    : DataFrame = withPlan {
+  def encJoin(right: DataFrame, joinExpr: Column): DataFrame = withPlan {
     ConvertFromBlocks(
       EncJoin(
         ConvertToBlocks(logicalPlan),
         ConvertToBlocks(right.logicalPlan),
-        leftCol.expr, rightCol.expr, opcode))
+        joinExpr.expr))
   }
 
-  def nonObliviousJoin(
-      right: DataFrame,
-      leftCol: Column,
-      rightCol: Column,
-      opcode: Option[QEDOpcode] = None)
-    : DataFrame = withPlan {
+  def nonObliviousJoin(right: DataFrame, joinExpr: Column): DataFrame = withPlan {
     ConvertFromBlocks(
       NonObliviousJoin(
         ConvertToBlocks(logicalPlan),
         ConvertToBlocks(right.logicalPlan),
-        leftCol.expr, rightCol.expr, opcode))
+        joinExpr.expr))
   }
 
   /**
@@ -2071,6 +2040,13 @@ class Dataset[T] private[sql](
       val values = queryExecution.executedPlan.executeCollect().map(boundTEncoder.fromRow)
       java.util.Arrays.asList(values : _*)
     }
+  }
+
+  def encCollect(): Array[Array[Array[Byte]]] = {
+    def execute(): Array[Array[Array[Byte]]] = withNewExecutionId {
+      queryExecution.executedPlan.executeCollect().map(_.toEncArray)
+    }
+    withCallback("encCollect", toDF())(_ => execute())
   }
 
   private def collect(needCallback: Boolean): Array[T] = {

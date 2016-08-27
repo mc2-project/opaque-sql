@@ -62,6 +62,17 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
 
   def toSeq(schema: StructType): Seq[Any] = toSeq(schema.map(_.dataType))
 
+  def toEncArray(): Array[Array[Byte]] = {
+    val len = numFields
+    val values = new Array[Array[Byte]](len)
+    var i = 0
+    while (i < len) {
+      values(i) = getBinary(i)
+      i += 1
+    }
+    values
+  }
+
   def encSerializedSize: Int =
     4 + 4 * numFields + (0 until numFields).map(i => getBinary(i).length).sum
 
