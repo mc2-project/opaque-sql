@@ -132,6 +132,11 @@ void ecall_aggregate_step1(int op_code,
       input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
       actual_size);
     break;
+  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1:
+    aggregate_step1<Aggregator1<GroupBy2<1, 2>, Sum<3, float> > >(
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
   default:
     printf("ecall_aggregate_step1: Unknown opcode %d\n", op_code);
     assert(false);
@@ -161,6 +166,11 @@ void ecall_process_boundary_records(int op_code,
     break;
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1:
     aggregate_process_boundaries<Aggregator2<GroupBy<1>, Avg<2, uint32_t>, Sum<3, float> > >(
+      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
+      actual_out_agg_row_size);
+    break;
+  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1:
+    aggregate_process_boundaries<Aggregator1<GroupBy2<1, 2>, Sum<3, float> > >(
       rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
       actual_out_agg_row_size);
     break;
@@ -194,6 +204,11 @@ void ecall_aggregate_step2(int op_code,
     break;
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2:
     aggregate_step2<Aggregator2<GroupBy<1>, Avg<2, uint32_t>, Sum<3, float> > >(
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2:
+    aggregate_step2<Aggregator1<GroupBy2<1, 2>, Sum<3, float> > >(
       input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
       output_rows, output_rows_length, actual_size);
     break;

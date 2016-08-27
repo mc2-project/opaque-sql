@@ -40,13 +40,14 @@ enum TYPE {
   /* FINAL_AGG_FLOAT = 8 */
 };
 
-// Make sure to update the functions in common.cpp when you add an opcode here.
+// Make sure to update the functions below when you add an opcode here.
 enum OPCODE {
   OP_BD1_FILTER = 11,
   OP_BD2 = 10,  
   OP_SORT_INTEGERS_TEST = 90,
   OP_SORT_COL1 = 2,
   OP_SORT_COL2 = 50,
+  OP_SORT_COL1_COL2 = 54,
   OP_SORT_COL2_IS_DUMMY_COL1 = 53,
   OP_SORT_COL3_IS_DUMMY_COL1 = 52,
   OP_SORT_COL4_IS_DUMMY_COL2 = 51,
@@ -58,6 +59,8 @@ enum OPCODE {
   OP_GROUPBY_COL2_SUM_COL3_INT_STEP2 = 101,
   OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1 = 104,
   OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2 = 105,
+  OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1 = 109,
+  OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2 = 110,
   OP_JOIN_COL1 = 106,
   OP_JOIN_COL2 = 3,
   OP_FILTER_COL2_GT3 = 30,
@@ -121,17 +124,16 @@ inline static int get_sort_operation(int op_code) {
 
   case OP_SORT_COL1:
   case OP_SORT_COL2:
+  case OP_SORT_COL1_COL2:
   case OP_SORT_COL2_IS_DUMMY_COL1:
   case OP_SORT_COL3_IS_DUMMY_COL1:
   case OP_SORT_COL4_IS_DUMMY_COL2:
     return SORT_SORT;
-    break;
 
   case OP_JOIN_COL1:
   case OP_JOIN_COL2:
   case OP_JOIN_PAGERANK:
     return SORT_JOIN;
-    break;
 
   default:
     return -1;

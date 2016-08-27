@@ -350,6 +350,10 @@ bool NewRecord::less_than(const NewRecord *other, int op_code) const {
     return attr_less_than(get_attr(1), other->get_attr(1));
   case OP_SORT_COL2:
     return attr_less_than(get_attr(2), other->get_attr(2));
+  case OP_SORT_COL1_COL2:
+    return attr_less_than(get_attr(1), other->get_attr(1))
+      || (!attr_less_than(other->get_attr(1), get_attr(1))
+          && attr_less_than(get_attr(2), other->get_attr(2)));
   case OP_SORT_COL2_IS_DUMMY_COL1:
   {
     bool this_is_dummy = is_dummy_type(get_attr_type(2));
@@ -393,6 +397,8 @@ uint32_t NewRecord::get_key_prefix(int op_code) const {
     return attr_key_prefix(get_attr(1));
   case OP_SORT_COL2:
     return attr_key_prefix(get_attr(2));
+  case OP_SORT_COL1_COL2:
+    return attr_key_prefix(get_attr(1));
   case OP_SORT_COL2_IS_DUMMY_COL1:
   {
     uint32_t dummy_bit = is_dummy_type(get_attr_type(2)) ? 1 : 0;
@@ -498,6 +504,11 @@ void NewRecord::add_attr(const NewRecord *other, uint32_t attr_idx) {
   set_num_cols(num_cols() + 1);
 }
 
+void NewRecord::add_attr(const uint8_t *attr_ptr) {
+  row_length += copy_attr(row + row_length, attr_ptr);
+  set_num_cols(num_cols() + 1);
+}
+
 void NewRecord::add_attr(uint8_t type, uint32_t len, const uint8_t *value) {
   uint8_t *row_ptr = row + row_length;
   *row_ptr = type; row_ptr++;
@@ -530,32 +541,94 @@ bool NewRecord::is_dummy() const {
   return false;
 }
 
+void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
+  uint32_t num_output_cols = 0;
+  uint8_t types[20];
+
+  switch (op_code) {
+  case OP_JOIN_COL2:
+    num_output_cols = 5;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_INT;
+    break;
+  case OP_JOIN_COL1:
+    num_output_cols = 4;
+    types[0] = DUMMY_STRING;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_STRING;
+    types[3] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_PAGERANK:
+    num_output_cols = 4;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_FLOAT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_FLOAT;
+    break;
+  default:
+    printf("NewJoinRecord::init_dummy: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+  dummy->init(types, num_output_cols);
+}
+
 bool NewJoinRecord::less_than(const NewJoinRecord *other, int op_code) const {
+  uint32_t primary_join_attr_idx = 0, foreign_join_attr_idx = 0;
   switch (op_code) {
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
-  {
-    if (attrs_equal(get_attr(1), other->get_attr(1))) {
-      // Join attributes are equal; sort primary rows before foreign rows
-      return is_primary() && !other->is_primary();
-    } else {
-      return attr_less_than(get_attr(1), other->get_attr(1));
-    }
-  }
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 1;
+    break;
   case OP_JOIN_COL2:
-  {
-    if (attrs_equal(get_attr(2), other->get_attr(2))) {
-      // Join attributes are equal; sort primary rows before foreign rows
-      return is_primary() && !other->is_primary();
-    } else {
-      return attr_less_than(get_attr(2), other->get_attr(2));
-    }
-  }
+    primary_join_attr_idx = 2;
+    foreign_join_attr_idx = 2;
+    break;
   default:
     printf("NewJoinRecord::less_than: Unknown opcode %d\n", op_code);
     assert(false);
   }
-  return false;
+  uint32_t this_join_attr_idx =
+    is_primary() ? primary_join_attr_idx : foreign_join_attr_idx;
+  uint32_t other_join_attr_idx =
+    other->is_primary() ? primary_join_attr_idx : foreign_join_attr_idx;
+  if (attrs_equal(get_attr(this_join_attr_idx), other->get_attr(other_join_attr_idx))) {
+    // Join attributes are equal; sort primary rows before foreign rows
+    return is_primary() && !other->is_primary();
+  } else {
+    return attr_less_than(get_attr(this_join_attr_idx), other->get_attr(other_join_attr_idx));
+  }
+}
+
+void NewJoinRecord::merge(const NewJoinRecord *other, NewRecord *merge, int op_code) const {
+  merge->clear();
+  for (uint32_t i = 1; i < this->row.num_cols(); i++) {
+    merge->add_attr(&this->row, i + 1);
+  }
+
+  uint32_t secondary_join_attr = 0;
+
+  switch (op_code) {
+  case OP_JOIN_COL1:
+  case OP_JOIN_PAGERANK:
+    secondary_join_attr = 1;
+    break;
+  case OP_JOIN_COL2:
+    secondary_join_attr = 2;
+    break;
+  default:
+    printf("NewJoinRecord::merge: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+
+  for (uint32_t i = 1; i < other->row.num_cols(); i++) {
+    if (i != secondary_join_attr) {
+      merge->add_attr(&other->row, i + 1);
+    }
+  }
 }
 
 uint32_t NewJoinRecord::get_key_prefix(int op_code) const {
@@ -589,10 +662,19 @@ void NewJoinRecord::init_join_attribute(int op_code) {
   join_attr = get_attr(join_attr_idx);
 }
 
-bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other) const {
-  if (join_attr != NULL && other->join_attr != NULL) {
-    return attrs_equal(join_attr, other->join_attr);
-  } else {
-    return false;
+bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other, int op_code) const {
+  switch (op_code) {
+  case OP_JOIN_COL1:
+  case OP_JOIN_PAGERANK:
+  case OP_JOIN_COL2:
+    if (join_attr != NULL && other->join_attr != NULL) {
+      return attrs_equal(join_attr, other->join_attr);
+    } else {
+      return false;
+    }
+  default:
+    printf("NewJoinRecord::init_join_attribute: Unknown opcode %d\n", op_code);
+    assert(false);
   }
+  return false;
 }

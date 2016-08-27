@@ -257,6 +257,8 @@ case class EncSort(sortExprs: Seq[Expression], child: OutputsBlocks)
         OP_SORT_COL1
       case Seq(Col(2, _)) =>
         OP_SORT_COL2
+      case Seq(Col(1, _), Col(2, _)) =>
+        OP_SORT_COL1_COL2
     }
     ObliviousSort.sortBlocks(child.executeBlocked(), opcode)
   }
@@ -384,6 +386,13 @@ case class EncAggregate(
           Alias(AggregateExpression(Sum(Col(3, FloatType)), Complete, false), _))) =>
           (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
             OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_NOT_DUMMY)
+
+        case (Seq(Col(1, _), Col(2, _)), Seq(Col(1, _), Col(2, _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), Complete, false), _))) =>
+          (OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1,
+            OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
       }

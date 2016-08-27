@@ -145,27 +145,20 @@ public:
   void add_attr(const NewRecord *other, uint32_t attr_idx);
 
   /**
+   * Append an attribute to the record by copying the attribute at the specified location.
+   */
+  void add_attr(const uint8_t *attr_ptr);
+
+  /**
    * Append an attribute to the record.
    */
   void add_attr(uint8_t type, uint32_t len, const uint8_t *value);
 
   /**
-   * Append an attribute to the record. The AttrGeneratorType must have a method with the following
-   * signature:
-   *
-   *     uint32_t write_result(uint8_t *output) const;
+   * Append an attribute to the record.
    */
-  template<typename AttrGeneratorType>
-  void add_attr(const AttrGeneratorType *attr);
-
-  /**
-   * Append an attribute to the record. The AttrGeneratorType must have a method with the following
-   * signature:
-   *
-   *     uint32_t write_result(uint8_t *output, bool dummy) const;
-   */
-  template<typename AttrGeneratorType>
-  void add_attr(const AttrGeneratorType *attr, bool dummy);
+  template<typename Type>
+  void add_attr_val(Type value, bool dummy);
 
   /** Mark this record as a dummy by setting all its types to dummy types. */
   void mark_dummy();
@@ -202,6 +195,8 @@ class NewJoinRecord {
 public:
   static const uint32_t primary_id = 0;
   static const uint32_t foreign_id = 1;
+
+  static void init_dummy(NewRecord *dummy, int op_code);
 
   NewJoinRecord() : NewJoinRecord(ROW_UPPER_BOUND) {}
 
@@ -264,27 +259,16 @@ public:
   }
 
   /**
-   * Given two join rows, concatenate their fields into merge, dropping the join attribute from the
-   * foreign row. The attribute to drop (secondary_join_attr) is specified as a 1-indexed column
-   * number from the foreign row.
+   * Given two join rows, concatenate their fields into merge, dropping the join attributes from the
+   * foreign row.
    */
-  void merge(const NewJoinRecord *other, uint32_t secondary_join_attr, NewRecord *merge) const {
-    merge->clear();
-    for (uint32_t i = 1; i < this->row.num_cols(); i++) {
-      merge->add_attr(&this->row, i + 1);
-    }
-    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
-      if (i != secondary_join_attr) {
-        merge->add_attr(&other->row, i + 1);
-      }
-    }
-  }
+  void merge(const NewJoinRecord *other, NewRecord *merge, int op_code) const;
 
   /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);
 
   /** Return true if both records have the same join attribute. */
-  bool join_attr_equals(const NewJoinRecord *other) const;
+  bool join_attr_equals(const NewJoinRecord *other, int op_code) const;
 
   /**
    * Get a pointer to the attribute at the specified index (1-indexed). The pointer will begin at
@@ -436,8 +420,8 @@ public:
    * aggregation attribute. If dummy is true, mark the aggregation attribute as a dummy.
    */
   void append_result(NewRecord *record, bool dummy) {
-    record->add_attr(&g);
-    record->add_attr(&a1, dummy);
+    g.append_result(record);
+    a1.append_result(record, dummy);
   }
 
   /** Read and decrypt a saved aggregation state. */
@@ -561,9 +545,9 @@ public:
    * aggregation attributes. If dummy is true, mark the aggregation attributes as dummies.
    */
   void append_result(NewRecord *record, bool dummy) {
-    record->add_attr(&g);
-    record->add_attr(&a1, dummy);
-    record->add_attr(&a2, dummy);
+    g.append_result(record);
+    a1.append_result(record, dummy);
+    a2.append_result(record, dummy);
   }
 
   uint32_t read_encrypted(uint8_t *input) {
@@ -695,14 +679,9 @@ public:
     }
   }
 
-  /** Write the grouping attribute as plaintext to output and return the number of bytes written. */
-  uint32_t write_grouping_attr(uint8_t *output) {
-    return copy_attr(output, attr);
-  }
-
-  /** Write the grouping attribute as plaintext to output and return the number of bytes written. */
-  uint32_t write_result(uint8_t *output) const {
-    return copy_attr(output, attr);
+  /** Write the grouping attribute by appending it to the given record. */
+  void append_result(NewRecord *rec) const {
+    rec->add_attr(attr);
   }
 
   /** Write an entire row containing the grouping column to output and return num bytes written. */
@@ -722,11 +701,94 @@ private:
 };
 
 /**
+ * Holds state for an ongoing group-by operation. The columns to group by are selected by specifying
+ * Column1 and Column2 (1-indexed). Supports reading the grouping column from a record
+ * (constructor),
+ */
+template<uint32_t Column1, uint32_t Column2>
+class GroupBy2 {
+public:
+  GroupBy2() : row(), attr1(NULL), attr2(NULL) {}
+
+  GroupBy2(NewRecord *record) : row() {
+    row.set(record);
+    if (row.num_cols() != 0) {
+      this->attr1 = row.get_attr(Column1);
+      this->attr2 = row.get_attr(Column2);
+    } else {
+      this->attr1 = NULL;
+      this->attr2 = NULL;
+    }
+  }
+
+  /** Update this GroupBy object to track a different group. */
+  void set(GroupBy2 *other) {
+    row.set(&other->row);
+    if (row.num_cols() != 0) {
+      this->attr1 = row.get_attr(Column1);
+      this->attr2 = row.get_attr(Column2);
+    } else {
+      this->attr1 = NULL;
+      this->attr2 = NULL;
+    }
+  }
+
+  /**
+   * Read an entire plaintext row and extract the grouping columns. Return the number of bytes in
+   * the row. If the row is empty (has 0 columns), then this GroupBy object will not track any
+   * group.
+   */
+  uint32_t read(uint8_t *input) {
+    uint32_t result = row.read(input);
+    if (row.num_cols() != 0) {
+      this->attr1 = row.get_attr(Column1);
+      this->attr2 = row.get_attr(Column2);
+    } else {
+      this->attr1 = NULL;
+      this->attr2 = NULL;
+    }
+    return result;
+  }
+
+  /** Return true if both GroupBy objects are tracking the same group. */
+  bool equals(GroupBy2 *other) {
+    if (this->attr1 != NULL && other->attr1 != NULL
+        && this->attr2 != NULL && other->attr2 != NULL) {
+      return attrs_equal(this->attr1, other->attr1) && attrs_equal(this->attr2, other->attr2);
+    } else {
+      return false;
+    }
+  }
+
+  /** Write the grouping attributes by appending them to the given record. */
+  void append_result(NewRecord *rec) const {
+    rec->add_attr(attr1);
+    rec->add_attr(attr2);
+  }
+
+  /** Write an entire row containing the grouping column to output and return num bytes written. */
+  uint32_t write_whole_row(uint8_t *output) {
+    return row.write(output);
+  }
+
+  void print() {
+    printf("GroupBy2[Column1=%d, Column2=%d, row=", Column1, Column2);
+    row.print();
+    printf("]\n");
+  }
+
+private:
+  NewRecord row;
+  const uint8_t *attr1; // pointer into row
+  const uint8_t *attr2; // pointer into row
+};
+
+/**
  * Holds state for an ongoing sum aggregation operation. The column to sum is selected by specifying
  * Column (1-indexed) and the type of that column is specified using Type. Supports resetting and
  * aggregating (methods zero and add), reading/writing partial aggregation state (methods
  * read_partial_result and write_partial_result), and writing the final aggregation result (method
- * write_result).
+ * append_result).
  */
 template<uint32_t Column, typename Type>
 class Sum {
@@ -760,12 +822,12 @@ public:
 
   /** Write the partial sum as a single plaintext attribute and return num bytes written. */
   uint32_t write_partial_result(uint8_t *output) {
-    return write_result(output, false);
+    return write_attr<Type>(output, sum, false);
   }
 
-  /** Write the final sum as a single plaintext attribute and return num bytes written. */
-  uint32_t write_result(uint8_t *output, bool dummy) const {
-    return write_attr<Type>(output, sum, dummy);
+  /** Write the final sum by appending it to the given record. */
+  void append_result(NewRecord *rec, bool dummy) const {
+    rec->add_attr_val<Type>(sum, dummy);
   }
 
   void print() {
@@ -820,12 +882,10 @@ public:
     return output_ptr - output;
   }
 
-  /** Write the final average as one plaintext attr of type Type; return num bytes written. */
-  uint32_t write_result(uint8_t *output, bool dummy) const {
-    double avg = static_cast<double>(sum) / static_cast<double>(count);
-    uint8_t *output_ptr = output;
-    output_ptr += write_attr<Type>(output_ptr, static_cast<Type>(avg), dummy);
-    return output_ptr - output;
+  /** Write the final average by appending it to the given record. */
+  void append_result(NewRecord *rec, bool dummy) const {
+    Type avg = static_cast<Type>(static_cast<double>(sum) / static_cast<double>(count));
+    rec->add_attr_val<Type>(avg, dummy);
   }
 
   void print() {
