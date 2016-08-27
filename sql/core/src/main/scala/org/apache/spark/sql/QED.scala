@@ -389,4 +389,66 @@ object QED {
     }
   }
 
+  def tpch9EncryptPart(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(pk: Int, n: String) =>
+        Array(QED.encrypt(enclave, eid, pk),
+          QED.encrypt(enclave, eid, n))
+    }
+  }
+
+  def tpch9EncryptSupplier(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(sk: Int, nk: Int) =>
+        Array(QED.encrypt(enclave, eid, sk),
+          QED.encrypt(enclave, eid, nk))
+    }
+  }
+
+  def tpch9EncryptLineitem(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(ok: Int, pk: Int, sk: Int, q: Int, ep: Float, d: Float) =>
+        Array(
+          QED.encrypt(enclave, eid, ok),
+          QED.encrypt(enclave, eid, pk),
+          QED.encrypt(enclave, eid, sk),
+          QED.encrypt(enclave, eid, q),
+          QED.encrypt(enclave, eid, ep),
+          QED.encrypt(enclave, eid, d))
+    }
+  }
+
+  def tpch9EncryptPartsupp(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(pk: Int, sk: Int, sc: Float) =>
+        Array(
+          QED.encrypt(enclave, eid, pk),
+          QED.encrypt(enclave, eid, sk),
+          QED.encrypt(enclave, eid, sc))
+    }
+  }
+
+  def tpch9EncryptOrders(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(ok: Int, od: java.util.Date) =>
+        Array(
+          QED.encrypt(enclave, eid, ok),
+          QED.encrypt(enclave, eid, od))
+    }
+  }
+
+  def tpch9EncryptNation(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(nk: Int, n: String) =>
+        Array(
+          QED.encrypt(enclave, eid, nk),
+          QED.encrypt(enclave, eid, n))
+    }
+  }
 }

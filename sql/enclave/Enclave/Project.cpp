@@ -1,5 +1,7 @@
 #include "Project.h"
 
+#include <time.h>
+
 void project(int op_code,
              uint8_t *input_rows, uint32_t input_rows_length,
              uint32_t num_rows,
@@ -49,6 +51,48 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     float incoming_rank = *reinterpret_cast<const float *>(in->get_attr_value(2));
     float result = 0.15 + 0.85 * incoming_rank;
     out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&result));
+    break;
+  }
+  case OP_PROJECT_TPCH9GENERIC:
+  {
+    out->clear();
+    out->add_attr(in, 2);
+    out->add_attr(in, 5);
+    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(10));
+    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(11));
+    float ps_supplycost = *reinterpret_cast<const float *>(in->get_attr_value(7));
+    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(9));
+    float result = static_cast<float>(
+      static_cast<double>(l_extendedprice) * (1.0L - l_discount)
+      - static_cast<double>(ps_supplycost) * l_quantity);
+    out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&result));
+    break;
+  }
+  case OP_PROJECT_TPCH9OPAQUE:
+  {
+    out->clear();
+    out->add_attr(in, 4);
+    out->add_attr(in, 2);
+    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(10));
+    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(11));
+    float ps_supplycost = *reinterpret_cast<const float *>(in->get_attr_value(8));
+    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(9));
+    float result = static_cast<float>(
+      static_cast<double>(l_extendedprice) * (1.0L - l_discount)
+      - static_cast<double>(ps_supplycost) * l_quantity);
+    out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&result));
+    break;
+  }
+  case OP_PROJECT_TPCH9_ORDER_YEAR:
+  {
+    out->clear();
+    out->add_attr(in, 1);
+
+    uint64_t date = *reinterpret_cast<const uint64_t *>(in->get_attr_value(2));
+    struct tm tm;
+    secs_to_tm(date, &tm);
+    uint32_t result = 1900 + tm.tm_year;
+    out->add_attr(INT, 4, reinterpret_cast<const uint8_t *>(&result));
     break;
   }
   case OP_PROJECT_ADD_RANDOM_ID:

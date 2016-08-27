@@ -358,6 +358,116 @@ object QEDBenchmark {
     QED.decrypt3[String, Float, Float](result.encCollect)
   }
 
+  /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
+  def tpch9SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Int, Float)] = {
+    import sqlContext.implicits._
+    val partDF = part(sqlContext, size)
+    val supplierDF = supplier(sqlContext, size)
+    val lineitemDF = lineitem(sqlContext, size)
+    val partsuppDF = partsupp(sqlContext, size)
+    val ordersDF = orders(sqlContext, size)
+    val nationDF = nation(sqlContext, size)
+
+    val result = time("TPC-H Query 9 - Spark SQL") {
+      val df =
+        nationDF // 6. nation
+          .join(
+            supplierDF // 5. supplier
+              .join(
+                ordersDF.select($"o_orderkey", year($"o_orderdate").as("o_year")) // 4. orders
+                  .join(
+                    partsuppDF.join( // 3. partsupp
+                      partDF // 1. part
+                        .filter($"p_name".contains("maroon"))
+                        .join(lineitemDF, $"p_partkey" === $"l_partkey"), // 2. lineitem
+                      $"ps_suppkey" === $"l_suppkey" && $"ps_partkey" === $"p_partkey"),
+                    $"l_orderkey" === $"o_orderkey"),
+                $"ps_suppkey" === $"s_suppkey"),
+            $"s_nationkey" === $"n_nationkey")
+          .select(
+            $"n_name",
+            $"o_year",
+            ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
+              .as("amount"))
+          .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
+      val count = df.count
+      println("TPC-H Query 9 - Spark SQL - num rows: " + count)
+      df
+    }
+    result.collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }
+  }
+
+  /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
+  def tpch9Generic(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false)
+    : Seq[(String, Int, Float)] = {
+    import sqlContext.implicits._
+    val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
+      tpch9EncryptedDFs(sqlContext, size, distributed)
+    val result = time("TPC-H Query 9 - generic join order") {
+      val df =
+        nationDF // 6. nation
+          .encJoin(
+            supplierDF // 5. supplier
+              .encJoin(
+                ordersDF.encSelect($"o_orderkey", year($"o_orderdate").as("o_year")) // 4. orders
+                  .encJoin(
+                    partsuppDF.encJoin( // 3. partsupp
+                      partDF // 1. part
+                        .nonObliviousFilter($"p_name".contains("maroon"))
+                        .encJoin(lineitemDF, $"p_partkey" === $"l_partkey"), // 2. lineitem
+                      $"ps_suppkey" === $"l_suppkey" && $"ps_partkey" === $"p_partkey"),
+                    $"l_orderkey" === $"o_orderkey"),
+                $"ps_suppkey" === $"s_suppkey"),
+            $"s_nationkey" === $"n_nationkey")
+          .encSelect(
+            $"n_name",
+            $"o_year",
+            ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
+              .as("amount"))
+          .groupBy("n_name", "o_year").encAgg(sum($"amount").as("sum_profit"))
+      QED.decrypt3[String, Int, Float](df.encCollect)
+    }
+    println("TPC-H Query 9 - generic join order - num rows: " + result.size)
+    result
+  }
+
+  /** TPC-H query 9 - Product Type Profit Measure Query - Opaque join order */
+  def tpch9Opaque(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false)
+      : Seq[(String, Int, Float)] = {
+    import sqlContext.implicits._
+    val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
+      tpch9EncryptedDFs(sqlContext, size, distributed)
+    val result = time("TPC-H Query 9 - opaque join order") {
+      val df =
+        ordersDF.encSelect($"o_orderkey", year($"o_orderdate").as("o_year")) // 6. orders
+          .encJoin(
+            (nationDF // 4. nation
+              .nonObliviousJoin(
+                supplierDF // 3. supplier
+                  .nonObliviousJoin(
+                    partDF // 1. part
+                      .nonObliviousFilter($"p_name".contains("maroon"))
+                      .nonObliviousJoin(partsuppDF, $"p_partkey" === $"ps_partkey"), // 2. partsupp
+                    $"ps_suppkey" === $"s_suppkey"),
+                $"s_nationkey" === $"n_nationkey"))
+              .encJoin(
+                lineitemDF, // 5. lineitem
+                $"s_suppkey" === $"l_suppkey" && $"p_partkey" === $"l_partkey"),
+            $"l_orderkey" === $"o_orderkey")
+          .encSelect(
+            $"n_name",
+            $"o_year",
+            ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
+              .as("amount"))
+          .groupBy("n_name", "o_year").encAgg(sum($"amount").as("sum_profit"))
+      QED.decrypt3[String, Int, Float](df.encCollect)
+    }
+    println("TPC-H Query 9 - opaque join order - num rows: " + result.size)
+    result
+  }
+
   def numPartitions(sqlContext: SQLContext, distributed: Boolean): Int =
     if (distributed) sqlContext.sparkContext.defaultParallelism else 1
 
@@ -382,4 +492,163 @@ object QEDBenchmark {
         StructField("searchWord", StringType),
         StructField("duration", IntegerType))))
       .csv(s"$dataDir/big-data-benchmark-files/uservisits/$size")
+
+  def part(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("p_partkey", IntegerType),
+        StructField("p_name", StringType),
+        StructField("p_mfgr", StringType),
+        StructField("p_brand", StringType),
+        StructField("p_type", StringType),
+        StructField("p_size", IntegerType),
+        StructField("p_container", StringType),
+        StructField("p_retailprice", FloatType),
+        StructField("p_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/part.tbl")
+
+  def supplier(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("s_suppkey", IntegerType),
+        StructField("s_name", StringType),
+        StructField("s_address", StringType),
+        StructField("s_nationkey", IntegerType),
+        StructField("s_phone", StringType),
+        StructField("s_acctbal", FloatType),
+        StructField("s_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/supplier.tbl")
+
+  def lineitem(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("l_orderkey", IntegerType),
+        StructField("l_partkey", IntegerType),
+        StructField("l_suppkey", IntegerType),
+        StructField("l_linenumber", IntegerType),
+        StructField("l_quantity", IntegerType),
+        StructField("l_extendedprice", FloatType),
+        StructField("l_discount", FloatType),
+        StructField("l_tax", FloatType),
+        StructField("l_returnflag", StringType),
+        StructField("l_linestatus", StringType),
+        StructField("l_shipdate", DateType),
+        StructField("l_commitdate", DateType),
+        StructField("l_receiptdate", DateType),
+        StructField("l_shipinstruct", StringType),
+        StructField("l_shipmode", StringType),
+        StructField("l_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/lineitem.tbl")
+
+  def partsupp(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("ps_partkey", IntegerType),
+        StructField("ps_suppkey", IntegerType),
+        StructField("ps_availqty", IntegerType),
+        StructField("ps_supplycost", FloatType),
+        StructField("ps_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/partsupp.tbl")
+
+  def orders(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("o_orderkey", IntegerType),
+        StructField("o_custkey", IntegerType),
+        StructField("o_orderstatus", StringType),
+        StructField("o_totalprice", FloatType),
+        StructField("o_orderdate", DateType),
+        StructField("o_orderpriority", StringType),
+        StructField("o_clerk", StringType),
+        StructField("o_shippriority", IntegerType),
+        StructField("o_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/orders.tbl")
+
+  def nation(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read.schema(
+      StructType(Seq(
+        StructField("n_nationkey", IntegerType),
+        StructField("n_name", StringType),
+        StructField("n_regionkey", IntegerType),
+        StructField("n_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"$dataDir/tpch/$size/nation.tbl")
+
+  private def tpch9EncryptedDFs(sqlContext: SQLContext, size: String, distributed: Boolean)
+      : (DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame) = {
+    import sqlContext.implicits._
+    val partDF = sqlContext.createEncryptedDataFrame(
+      part(sqlContext, size)
+        .select($"p_partkey", $"p_name")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptPart),
+      StructType(Seq(
+        StructField("p_partkey", IntegerType),
+        StructField("p_name", StringType))))
+    val supplierDF = sqlContext.createEncryptedDataFrame(
+      supplier(sqlContext, size)
+        .select($"s_suppkey", $"s_nationkey")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptSupplier),
+      StructType(Seq(
+        StructField("s_suppkey", IntegerType),
+        StructField("s_nationkey", IntegerType))))
+    val lineitemDF = sqlContext.createEncryptedDataFrame(
+      lineitem(sqlContext, size)
+        .select(
+          $"l_orderkey", $"l_partkey", $"l_suppkey", $"l_quantity", $"l_extendedprice",
+          $"l_discount")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptLineitem),
+      StructType(Seq(
+        StructField("l_orderkey", IntegerType),
+        StructField("l_partkey", IntegerType),
+        StructField("l_suppkey", IntegerType),
+        StructField("l_quantity", IntegerType),
+        StructField("l_extendedprice", FloatType),
+        StructField("l_discount", FloatType))))
+    val partsuppDF = sqlContext.createEncryptedDataFrame(
+      partsupp(sqlContext, size)
+        .select($"ps_partkey", $"ps_suppkey", $"ps_supplycost")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptPartsupp),
+      StructType(Seq(
+        StructField("ps_partkey", IntegerType),
+        StructField("ps_suppkey", IntegerType),
+        StructField("ps_supplycost", FloatType))))
+    val ordersDF = sqlContext.createEncryptedDataFrame(
+      orders(sqlContext, size)
+        .select($"o_orderkey", $"o_orderdate")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptOrders),
+      StructType(Seq(
+        StructField("o_orderkey", IntegerType),
+        StructField("o_orderdate", DateType))))
+    val nationDF = sqlContext.createEncryptedDataFrame(
+      nation(sqlContext, size)
+        .select($"n_nationkey", $"n_name")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.tpch9EncryptNation),
+      StructType(Seq(
+        StructField("n_nationkey", IntegerType),
+        StructField("n_name", StringType))))
+    (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
+  }
 }

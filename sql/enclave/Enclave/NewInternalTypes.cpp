@@ -568,6 +568,117 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[2] = DUMMY_INT;
     types[3] = DUMMY_FLOAT;
     break;
+  case OP_JOIN_TPCH9GENERIC_NATION:
+    num_output_cols = 11;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_INT;
+    types[6] = DUMMY_FLOAT;
+    types[7] = DUMMY_STRING;
+    types[8] = DUMMY_INT;
+    types[9] = DUMMY_FLOAT;
+    types[10] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+    num_output_cols = 10;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_FLOAT;
+    types[6] = DUMMY_STRING;
+    types[7] = DUMMY_INT;
+    types[8] = DUMMY_FLOAT;
+    types[9] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+    num_output_cols = 9;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_FLOAT;
+    types[5] = DUMMY_STRING;
+    types[6] = DUMMY_INT;
+    types[7] = DUMMY_FLOAT;
+    types[8] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+    num_output_cols = 8;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_FLOAT;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_INT;
+    types[6] = DUMMY_FLOAT;
+    types[7] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+    num_output_cols = 7;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_FLOAT;
+    types[6] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+    num_output_cols = 11;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_INT;
+    types[6] = DUMMY_STRING;
+    types[7] = DUMMY_FLOAT;
+    types[8] = DUMMY_INT;
+    types[9] = DUMMY_FLOAT;
+    types[10] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+    num_output_cols = 10;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_STRING;
+    types[5] = DUMMY_FLOAT;
+    types[6] = DUMMY_INT;
+    types[7] = DUMMY_INT;
+    types[8] = DUMMY_FLOAT;
+    types[9] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+    num_output_cols = 6;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_INT;
+    types[4] = DUMMY_STRING;
+    types[5] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+    num_output_cols = 5;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_FLOAT;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
+    num_output_cols = 4;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_FLOAT;
+    break;
   default:
     printf("NewJoinRecord::init_dummy: Unknown opcode %d\n", op_code);
     assert(false);
@@ -586,6 +697,74 @@ bool NewJoinRecord::less_than(const NewJoinRecord *other, int op_code) const {
   case OP_JOIN_COL2:
     primary_join_attr_idx = 2;
     foreign_join_attr_idx = 2;
+    break;
+  case OP_JOIN_TPCH9GENERIC_NATION:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 2;
+    break;
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 4;
+    break;
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 5;
+    break;
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+  {
+    uint32_t this_join_attr_idx_1 = is_primary() ? 2 : 4;
+    uint32_t this_join_attr_idx_2 = is_primary() ? 1 : 1;
+    uint32_t other_join_attr_idx_1 = other->is_primary() ? 2 : 4;
+    uint32_t other_join_attr_idx_2 = other->is_primary() ? 1 : 1;
+    if (attrs_equal(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1))) {
+      if (attrs_equal(get_attr(this_join_attr_idx_2), other->get_attr(other_join_attr_idx_2))) {
+        // Join attributes are equal; sort primary rows before foreign rows
+        return is_primary() && !other->is_primary();
+      } else {
+        return attr_less_than(get_attr(this_join_attr_idx_2),
+                              other->get_attr(other_join_attr_idx_2));
+      }
+    } else {
+      return attr_less_than(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1));
+    }
+  }
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 2;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 7;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+  {
+    uint32_t this_join_attr_idx_1 = is_primary() ? 3 : 3;
+    uint32_t this_join_attr_idx_2 = is_primary() ? 4 : 2;
+    uint32_t other_join_attr_idx_1 = other->is_primary() ? 3 : 3;
+    uint32_t other_join_attr_idx_2 = other->is_primary() ? 4 : 2;
+    if (attrs_equal(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1))) {
+      if (attrs_equal(get_attr(this_join_attr_idx_2), other->get_attr(other_join_attr_idx_2))) {
+        // Join attributes are equal; sort primary rows before foreign rows
+        return is_primary() && !other->is_primary();
+      } else {
+        return attr_less_than(get_attr(this_join_attr_idx_2),
+                              other->get_attr(other_join_attr_idx_2));
+      }
+    } else {
+      return attr_less_than(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1));
+    }
+  }
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 2;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 3;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
+    primary_join_attr_idx = 1;
+    foreign_join_attr_idx = 1;
     break;
   default:
     printf("NewJoinRecord::less_than: Unknown opcode %d\n", op_code);
@@ -614,11 +793,41 @@ void NewJoinRecord::merge(const NewJoinRecord *other, NewRecord *merge, int op_c
   switch (op_code) {
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
     secondary_join_attr = 1;
     break;
   case OP_JOIN_COL2:
+  case OP_JOIN_TPCH9GENERIC_NATION:
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+  case OP_JOIN_TPCH9OPAQUE_NATION:
     secondary_join_attr = 2;
     break;
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+    secondary_join_attr = 3;
+    break;
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+    secondary_join_attr = 4;
+    break;
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+    secondary_join_attr = 5;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+    secondary_join_attr = 7;
+    break;
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
+      if (i != 1 && i != 4) {
+        merge->add_attr(&other->row, i + 1);
+      }
+    }
+    return;
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
+      if (i != 4 && i != 2) {
+        merge->add_attr(&other->row, i + 1);
+      }
+    }
+    return;
   default:
     printf("NewJoinRecord::merge: Unknown opcode %d\n", op_code);
     assert(false);
@@ -635,9 +844,26 @@ uint32_t NewJoinRecord::get_key_prefix(int op_code) const {
   switch (op_code) {
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
     return attr_key_prefix(get_attr(1));
   case OP_JOIN_COL2:
     return attr_key_prefix(get_attr(2));
+  case OP_JOIN_TPCH9GENERIC_NATION:
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+    return attr_key_prefix(get_attr(is_primary() ? 1 : 2));
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+    return attr_key_prefix(get_attr(is_primary() ? 1 : 3));
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+    return attr_key_prefix(get_attr(is_primary() ? 1 : 4));
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+    return attr_key_prefix(get_attr(is_primary() ? 1 : 5));
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+    return attr_key_prefix(get_attr(is_primary() ? 1 : 7));
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+    return attr_key_prefix(get_attr(is_primary() ? 2 : 4));
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+    return attr_key_prefix(get_attr(is_primary() ? 3 : 3));
   default:
     printf("NewJoinRecord::get_key_prefix: Unknown opcode %d\n", op_code);
     assert(false);
@@ -650,11 +876,35 @@ void NewJoinRecord::init_join_attribute(int op_code) {
   switch (op_code) {
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
     join_attr_idx = 1;
     break;
   case OP_JOIN_COL2:
     join_attr_idx = 2;
     break;
+  case OP_JOIN_TPCH9GENERIC_NATION:
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+    join_attr_idx = is_primary() ? 1 : 2;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+    join_attr_idx = is_primary() ? 1 : 3;
+    break;
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+    join_attr_idx = is_primary() ? 1 : 4;
+    break;
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+    join_attr_idx = is_primary() ? 1 : 5;
+    break;
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+    join_attr_idx = is_primary() ? 1 : 7;
+    break;
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+    // No-op: join_attr_equals does all the work
+    return;
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+    // No-op: join_attr_equals does all the work
+    return;
   default:
     printf("NewJoinRecord::init_join_attribute: Unknown opcode %d\n", op_code);
     assert(false);
@@ -667,8 +917,38 @@ bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other, int op_code) co
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
   case OP_JOIN_COL2:
+  case OP_JOIN_TPCH9GENERIC_NATION:
+  case OP_JOIN_TPCH9GENERIC_SUPPLIER:
+  case OP_JOIN_TPCH9GENERIC_ORDERS:
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+  case OP_JOIN_TPCH9OPAQUE_ORDERS:
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
     if (join_attr != NULL && other->join_attr != NULL) {
       return attrs_equal(join_attr, other->join_attr);
+    } else {
+      return false;
+    }
+  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
+    if (!is_dummy() && !other->is_dummy()) {
+      uint32_t this_join_attr_idx_1 = is_primary() ? 2 : 4;
+      uint32_t this_join_attr_idx_2 = is_primary() ? 1 : 1;
+      uint32_t other_join_attr_idx_1 = other->is_primary() ? 2 : 4;
+      uint32_t other_join_attr_idx_2 = other->is_primary() ? 1 : 1;
+      return attrs_equal(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1))
+        && attrs_equal(get_attr(this_join_attr_idx_2), other->get_attr(other_join_attr_idx_2));
+    } else {
+      return false;
+    }
+  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
+    if (!is_dummy() && !other->is_dummy()) {
+      uint32_t this_join_attr_idx_1 = is_primary() ? 3 : 3;
+      uint32_t this_join_attr_idx_2 = is_primary() ? 4 : 2;
+      uint32_t other_join_attr_idx_1 = other->is_primary() ? 3 : 3;
+      uint32_t other_join_attr_idx_2 = other->is_primary() ? 4 : 2;
+      return attrs_equal(get_attr(this_join_attr_idx_1), other->get_attr(other_join_attr_idx_1))
+        && attrs_equal(get_attr(this_join_attr_idx_2), other->get_attr(other_join_attr_idx_2));
     } else {
       return false;
     }

@@ -1,5 +1,7 @@
 #include "Filter.h"
 
+#include <string>
+
 void filter(int op_code,
             uint8_t *input_rows, uint32_t input_rows_length,
             uint32_t num_rows,
@@ -39,6 +41,12 @@ bool filter_single_row(int op_code, NewRecord *cur) {
   {
     uint64_t date = *reinterpret_cast<const uint64_t *>(cur->get_attr_value(1));
     return date >= 315561600 && date <= 323424000;
+  }
+  case OP_FILTER_COL2_CONTAINS_MAROON:
+  {
+    std::string p_name(
+      reinterpret_cast<const char *>(cur->get_attr_value(2)), cur->get_attr_len(2));
+    return p_name.find("maroon") != std::string::npos;
   }
   default:
     printf("filter_single_row: unknown opcode %d\n", op_code);

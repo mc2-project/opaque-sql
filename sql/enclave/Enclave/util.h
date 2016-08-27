@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 #include "Enclave_t.h"  /* print_string */
 #include "define.h"
@@ -40,5 +41,7 @@ void decrypt_attribute(uint8_t **input, uint8_t **output);
 int log_2(int value);
 
 int pow_2(int value);
+
+int secs_to_tm(long long t, struct tm *tm);
 
 #endif // UTIL_H

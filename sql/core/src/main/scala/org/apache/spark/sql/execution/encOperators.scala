@@ -184,6 +184,18 @@ case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
         OP_PROJECT_SWAP_COL1_COL2
       case Seq(Col(1, _), Col(3, _), Col(2, _)) =>
         OP_PROJECT_SWAP_COL2_COL3
+      case Seq(Col(2, _), Col(5, _),
+        Alias(Subtract(
+          Multiply(Col(10, _), Subtract(Literal(1.0, FloatType), Col(11, _))),
+          Multiply(Col(7, _), Col(9, _))), _)) =>
+        OP_PROJECT_TPCH9GENERIC
+      case Seq(Col(4, _), Col(2, _),
+        Alias(Subtract(
+          Multiply(Col(10, _), Subtract(Literal(1.0, FloatType), Col(11, _))),
+          Multiply(Col(8, _), Col(9, _))), _)) =>
+        OP_PROJECT_TPCH9OPAQUE
+      case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
+        OP_PROJECT_TPCH9_ORDER_YEAR
     }
     child.executeBlocked().map { block =>
       val (enclave, eid) = QED.initEnclave()
@@ -214,6 +226,9 @@ case class EncFilter(condition: Expression, child: OutputsBlocks)
           if start == UTF8String.fromString("1980-01-01")
           && end == UTF8String.fromString("1980-04-01") =>
         OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01
+      case Contains(Col(2, _), Literal(maroon, StringType))
+          if maroon == UTF8String.fromString("maroon") =>
+        OP_FILTER_COL2_CONTAINS_MAROON
     }
     child.executeBlocked().map { block =>
       val (enclave, eid) = QED.initEnclave()
@@ -630,6 +645,60 @@ object OpaqueJoinUtils {
       case (Seq(IntegerType, FloatType), Seq(IntegerType, IntegerType, FloatType),
         Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
         (OP_JOIN_PAGERANK, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, StringType),
+        Seq(IntegerType, IntegerType, IntegerType, IntegerType, IntegerType, FloatType, StringType,
+          IntegerType, FloatType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
+        (OP_JOIN_TPCH9GENERIC_NATION, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, IntegerType),
+        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, StringType, IntegerType,
+          FloatType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(4, _)), None) =>
+        (OP_JOIN_TPCH9GENERIC_SUPPLIER, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, IntegerType),
+        Seq(IntegerType, IntegerType, FloatType, StringType, IntegerType, IntegerType, FloatType,
+          FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(5, _)), None) =>
+        (OP_JOIN_TPCH9GENERIC_ORDERS, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, IntegerType, FloatType),
+        Seq(IntegerType, StringType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
+        Seq(LeftCol(2, _), LeftCol(1, _)), Seq(RightCol(4, _), RightCol(1, _)), None) =>
+        (OP_JOIN_TPCH9GENERIC_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, StringType),
+        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
+        (OP_JOIN_TPCH9GENERIC_PART_LINEITEM, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, IntegerType),
+        Seq(IntegerType, StringType, IntegerType, IntegerType, StringType, FloatType, IntegerType,
+          IntegerType, FloatType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(7, _)), None) =>
+        (OP_JOIN_TPCH9OPAQUE_ORDERS, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, StringType, IntegerType, IntegerType, StringType, FloatType),
+        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
+        Seq(LeftCol(3, _), LeftCol(4, _)), Seq(RightCol(3, _), RightCol(2, _)), None) =>
+        (OP_JOIN_TPCH9OPAQUE_LINEITEM, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, StringType),
+        Seq(IntegerType, IntegerType, IntegerType, StringType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
+        (OP_JOIN_TPCH9OPAQUE_NATION, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, IntegerType),
+        Seq(IntegerType, StringType, IntegerType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(3, _)), None) =>
+        (OP_JOIN_TPCH9OPAQUE_SUPPLIER, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(IntegerType, StringType),
+        Seq(IntegerType, IntegerType, FloatType),
+        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
+        (OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
     }
     (joinOpcode, dummySortOpcode, dummyFilterOpcode)
   }

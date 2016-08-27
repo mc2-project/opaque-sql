@@ -97,6 +97,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(answer === QEDBenchmark.bd3Encrypted(sqlContext, "tiny"))
   }
 
+  test("TPC-H query 9") {
+    val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small").sorted
+    val b = QEDBenchmark.tpch9Generic(sqlContext, "sf_small").sorted
+    val c = QEDBenchmark.tpch9Opaque(sqlContext, "sf_small").sorted
+    assert(a.size === b.size)
+    assert(a.map { case (a, b, c) => (a, b)} === b.map { case (a, b, c) => (a, b)})
+    assert(a.size === c.size)
+    assert(a.map { case (a, b, c) => (a, b)} === c.map { case (a, b, c) => (a, b)})
+  }
+
   test("columnsort padding") {
     val data = Random.shuffle((0 until 3).map(x => (x.toString, x)).toSeq)
     val encData = QED.encryptN(data).map {

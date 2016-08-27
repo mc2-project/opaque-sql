@@ -6,7 +6,7 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-#define ROW_UPPER_BOUND (16 * 50)
+#define ROW_UPPER_BOUND (1000)
 #define ENC_HEADER_SIZE (SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE)
 
 // block format: [uint32_t len][uint32_t num_rows][uint32_t row_upper_bound]enc{...}
