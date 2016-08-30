@@ -58,10 +58,10 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->clear();
     out->add_attr(in, 2);
     out->add_attr(in, 5);
-    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(10));
-    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(11));
+    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(9));
+    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(10));
     float ps_supplycost = *reinterpret_cast<const float *>(in->get_attr_value(7));
-    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(9));
+    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(8));
     float result = static_cast<float>(
       static_cast<double>(l_extendedprice) * (1.0L - l_discount)
       - static_cast<double>(ps_supplycost) * l_quantity);
@@ -73,10 +73,10 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->clear();
     out->add_attr(in, 4);
     out->add_attr(in, 2);
-    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(10));
-    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(11));
-    float ps_supplycost = *reinterpret_cast<const float *>(in->get_attr_value(8));
-    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(9));
+    float l_extendedprice = *reinterpret_cast<const float *>(in->get_attr_value(9));
+    float l_discount = *reinterpret_cast<const float *>(in->get_attr_value(10));
+    float ps_supplycost = *reinterpret_cast<const float *>(in->get_attr_value(7));
+    uint32_t l_quantity = *reinterpret_cast<const uint32_t *>(in->get_attr_value(8));
     float result = static_cast<float>(
       static_cast<double>(l_extendedprice) * (1.0L - l_discount)
       - static_cast<double>(ps_supplycost) * l_quantity);
@@ -108,6 +108,14 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->clear();
     for (uint32_t i = 2; i <= in->num_cols(); i++) {
       out->add_attr(in, i);
+    }
+    break;
+  case OP_PROJECT_DROP_COL2:
+    out->clear();
+    for (uint32_t i = 1; i <= in->num_cols(); i++) {
+      if (i != 2) {
+        out->add_attr(in, i);
+      }
     }
     break;
   case OP_PROJECT_SWAP_COL1_COL2:
