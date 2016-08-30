@@ -196,18 +196,26 @@ enclave {
       [user_check] uint8_t *output_rows, uint32_t output_rows_length,
       [out] uint32_t *actual_output_length, [out] uint32_t *num_output_rows);
 
-	public void ecall_column_sort(int op_code,
-								  int round, 
-								  [user_check] uint8_t *input_rows,
-								  [user_check] uint32_t *num_rows,
-								  [user_check] uint8_t **buffer_list,
-								  uint32_t num_buffers,
-								  uint32_t row_upper_bound,
-								  uint32_t column,
-								  uint32_t r,
-								  uint32_t s,
-								  [user_check] uint8_t **output_buffers,
-								  [out,count=s] uint32_t *output_buffer_sizes);
+    public void ecall_column_sort(int op_code,
+				  int round, 
+				  [user_check] uint8_t *input_rows,
+				  [user_check] uint32_t *num_rows,
+				  [user_check] uint8_t **buffer_list,
+				  uint32_t num_buffers,
+				  uint32_t row_upper_bound,
+				  uint32_t column,
+				  uint32_t r,
+				  uint32_t s,
+				  [user_check] uint8_t **output_buffers,
+				  [out,count=s] uint32_t *output_buffer_sizes);
+
+    public void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
+								  [user_check] uint8_t *column_types,
+								  uint32_t num_rows,
+								  [user_check] uint8_t *output_buffer,
+								  [user_check] uint32_t *encrypted_buffer_size,
+								  uint8_t type,
+								  uint32_t opcode);
 
   };
 

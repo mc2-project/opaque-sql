@@ -162,8 +162,8 @@ void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
 // a single scan, assume that external_sort is already called
 template<typename AggregatorType>
 void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
-							 uint32_t num_rows,
-							 uint8_t *output_rows, uint32_t output_rows_length,
+			     uint32_t num_rows,
+			     uint8_t *output_rows, uint32_t output_rows_length,
                              uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
 
   (void)input_rows_length;
@@ -171,42 +171,46 @@ void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
   
   RowReader reader(input_rows);
   RowWriter writer(output_rows);
+  writer.set_part_index(0);
+  writer.set_opcode(OP_TEST_AGG);
 
   NewRecord prev_row, cur_row, output_row;
   AggregatorType agg;
 
   uint32_t num_output_rows_result = 0;
   for (uint32_t i = 0; i < num_rows; i++) {
-	if (i == 0) {
-	  reader.read(&prev_row);
-	  continue;
-	}
+    if (i == 0) {
+      reader.read(&prev_row);
+      continue;
+    }
 
-	agg.aggregate(&prev_row);
-	reader.read(&cur_row); 
+    agg.aggregate(&prev_row);
+    reader.read(&cur_row); 
 	
     if (!agg.grouping_attrs_equal(&cur_row)) {
       output_row.clear();
       agg.append_result(&output_row, false);
       writer.write(&output_row);
       num_output_rows_result++;
-	  if (i == num_rows - 1) {
+      if (i == num_rows - 1) {
         writer.write(&cur_row);
         num_output_rows_result++;
-	  }
-	} else if (i == num_rows - 1) {
+      }
+    } else if (i == num_rows - 1) {
       agg.aggregate(&cur_row);
 
       output_row.clear();
       agg.append_result(&output_row, false);
       writer.write(&output_row);
       num_output_rows_result++;
-	}
+    }
 
-	prev_row.set(&cur_row);
+    prev_row.set(&cur_row);
   }
 
   writer.close();
   *actual_output_rows_length = writer.bytes_written();
   *num_output_rows = num_output_rows_result;
+
+  reader.close_and_verify(OP_TEST_AGG, 1, 0);
 }

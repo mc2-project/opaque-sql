@@ -33,6 +33,8 @@ void sort_single_buffer(
     });
 
   RowWriter w(buffer, row_upper_bound);
+  w.set_part_index(0);
+  w.set_opcode(op_code);
   for (uint32_t i = 0; i < num_rows; i++) {
     w.write(&sort_ptrs[i]);
   }

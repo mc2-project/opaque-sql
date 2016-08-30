@@ -390,27 +390,44 @@ void ecall_stream_encryption_test() {
 }
 
 void ecall_generate_random_encrypted_block(uint32_t num_cols,
-										   uint8_t *column_types,
-										   uint32_t num_rows,
-										   uint8_t *output_buffer,
-										   uint32_t *encrypted_buffer_size,
-										   uint8_t type) {
+					   uint8_t *column_types,
+					   uint32_t num_rows,
+					   uint8_t *output_buffer,
+					   uint32_t *encrypted_buffer_size,
+					   uint8_t type) {
   
   uint32_t ret = generate_encrypted_block(num_cols,
-										  column_types,
-										  num_rows,
-										  output_buffer,
-										  type);
+					  column_types,
+					  num_rows,
+					  output_buffer,
+					  type);
+  *encrypted_buffer_size = ret;
+}
+
+void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
+						       uint8_t *column_types,
+						       uint32_t num_rows,
+						       uint8_t *output_buffer,
+						       uint32_t *encrypted_buffer_size,
+						       uint8_t type,
+						       uint32_t opcode) {
+  
+  uint32_t ret = generate_encrypted_block_with_opcode(num_cols,
+						      column_types,
+						      num_rows,
+						      output_buffer,
+						      type,
+						      opcode);
   *encrypted_buffer_size = ret;
 }
 
 
 void ecall_external_sort(int op_code,
-						 uint32_t num_buffers,
-						 uint8_t **buffer_list,
-						 uint32_t *num_rows,
-						 uint32_t row_upper_bound,
-						 uint8_t *scratch) {
+			 uint32_t num_buffers,
+			 uint8_t **buffer_list,
+			 uint32_t *num_rows,
+			 uint32_t row_upper_bound,
+			 uint8_t *scratch) {
   
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
@@ -525,7 +542,7 @@ void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
 
   uint32_t num_rows = input_num_rows;
   if (num_rows == 0) {
-	num_rows = *((uint32_t *) (enc_block + 4));
+    num_rows = *((uint32_t *) (enc_block + 4));
   }
   printf("[ecall_row_parser] num_rows is %u\n", num_rows);
   
@@ -538,13 +555,14 @@ void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
 
 
 void ecall_non_oblivious_aggregate(int op_code,
-								   uint8_t *input_rows, uint32_t input_rows_length,
-								   uint32_t num_rows,
-								   uint8_t *output_rows, uint32_t output_rows_length,
+				   uint8_t *input_rows, uint32_t input_rows_length,
+				   uint32_t num_rows,
+				   uint8_t *output_rows, uint32_t output_rows_length,
                                    uint32_t *actual_size, uint32_t *num_output_rows) {
   
   switch (op_code) {
   case OP_GROUPBY_COL1_SUM_COL2_INT:
+  case OP_TEST_AGG:
     non_oblivious_aggregate<Aggregator1<GroupBy<1>, Sum<2, uint32_t> > >(
       input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
       actual_size, num_output_rows);

@@ -76,6 +76,9 @@ enum TASK_ID {
   TID_BD3_SORT_STEP3 = 15200,
   TID_BD3_SORT_STEP4 = 15300,
 
+
+  TID_TEST_SORT = 20000,
+  TID_TEST_AGG = 20010,
 };
 
 enum DAG_ID {
@@ -90,6 +93,8 @@ enum DAG_ID {
   DID_ENC_BD1_SINGLE,
   DID_ENC_BD2_SINGLE,
   DID_ENC_BD3_SINGLE,
+
+  TEST_VERIFY,
 };
 
 enum ROUND_ORDER {
@@ -114,6 +119,8 @@ class Node {
   uint32_t id;
 };
 
+uint32_t task_id_parser(int op_code, int index);
+
 class DAG {
  public:
   DAG(uint32_t num_nodes, uint32_t DAG_id);
@@ -133,172 +140,42 @@ uint32_t task_id_parser(DAG *dag, int op_code, int index);
 // Note: following *_set_edges() functions assume that all nodes have been created already
 
 // Sort has 4 rounds
-uint32_t sort_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
+uint32_t sort_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 
-  // first, 4 rounds of setting parents and children
+uint32_t filter_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 
-  for (uint32_t i = 0; i < num_part; i++) {
-	for (uint32_t j = 0; j < num_part; j++) {
-	  dag->nodes[i+offset]->children[j] = dag->nodes[j+num_part+offset];
-	}
-  }
-  
-  for (uint32_t i = 0; i < num_part; i++) {
-	for (uint32_t j = 0; j < num_part; j++) {
-	  dag->nodes[i+num_part+offset]->parents[j] = dag->nodes[j+offset];
-	  dag->nodes[i+num_part+offset]->children[j] = dag->nodes[j+num_part*2+offset];
-	}
-  }
-  
-  for (uint32_t i = 0; i < num_part; i++) {
-	for (uint32_t j = 0; j < num_part; j++) {
-	  dag->nodes[i+num_part*2+offset]->parents[j] = dag->nodes[j+num_part+offset];
-	  dag->nodes[i+num_part*2+offset]->children[j] = dag->nodes[j+num_part*3+offset];
-	}
-  }
+uint32_t project_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 
-  for (uint32_t i = 0; i < num_part; i++) {
-	for (uint32_t j = 0; j < num_part; j++) {
-	  dag->nodes[i+num_part*3+offset]->parents[j] = dag->nodes[j+num_part*2+offset];
-	}
-  }
-
-  // set next stage's parents
-  if (round_order != LAST) {
-	// set parents for the next round
-	for (uint32_t i = 0; i < num_part; i++) {
-	  for (uint32_t j = 0; j < num_part; j++) {
-		dag->nodes[i+num_part*3+offset]->children[j] = dag->nodes[i+num_part*4+offset];
-		dag->nodes[i+num_part*4+offset]->parents[j] = dag->nodes[i+num_part*3+offset];
-	  }
-	}
-  }
-
-  return num_part * 4;
-}
-
-uint32_t filter_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
-  if (round_order != LAST) {
-	// set parents for the next round
-	for (uint32_t i = 0; i < num_part; i++) {
-	  dag->nodes[i+offset]->children[0] = dag->nodes[i+num_part+offset];
-	  dag->nodes[i+num_part+offset]->parents[0] = dag->nodes[i+offset];
-	}
-  }
-
-  return num_part;
-}
-
-uint32_t project_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
-  return filter_set_edges(dag, num_part, offset, round_order);
-}
-
-uint32_t sort_preprocess_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
-  return filter_set_edges(dag, num_part, offset, round_order);
-}
-
+uint32_t sort_preprocess_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 
 // GROUP BY edges
-uint32_t agg_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
-  for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset]->children[0] = dag->nodes[num_part+1+offset];
-  }
-  
-  for (uint32_t j = 0; j < num_part; j++) {
-	dag->nodes[offset+num_part+1]->parents[j] = dag->nodes[j+offset];
-	dag->nodes[offset+num_part+1]->children[j] = dag->nodes[j+num_part+1+offset];
-  }
-
-  if (round_order != LAST) {
-	for (uint32_t i = 0; i < num_part; i++) {
-	  dag->nodes[i+num_part+1+offset]->parents[0] = dag->nodes[num_part+1+offset];
-	  for (uint32_t j = 0; j < num_part; j++) {
-		dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
-	  }
-	}
-  }
-
-  return num_part * 2 + 1;
-}
-
+uint32_t agg_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 // JOIN edges
-uint32_t join_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
-  for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset]->children[0] = dag->nodes[num_part+1+offset];
-  }
-  
-  for (uint32_t j = 0; j < num_part; j++) {
-	dag->nodes[offset+num_part+1]->parents[j] = dag->nodes[j+offset];
-	dag->nodes[offset+num_part+1]->children[j] = dag->nodes[j+num_part+1+offset];
-  }
-
-  if (round_order != LAST) {
-	for (uint32_t i = 0; i < num_part; i++) {
-	  dag->nodes[i+num_part+1+offset]->parents[0] = dag->nodes[num_part+1+offset];
-	  for (uint32_t j = 0; j < num_part; j++) {
-		dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
-	  }
-	}
-  }
-
-  return num_part * 2 + 1;
-}
+uint32_t join_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order);
 
 // Encryption mode SORT edges
 uint32_t enc_sort_set_edges(DAG *dag,
-							uint32_t num_part,
-							uint32_t offset,
-							int round_order) {
-  // First, sample from each partition
-  for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset]->children[0] = dag->nodes[num_part+offset];
-	dag->nodes[num_part+offset]->parents[i] = dag->nodes[i+offset];
-  }
-
-  // send boundaries to everywhere
-  for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[num_part+offset]->children[i] = dag->nodes[i+offset+num_part+1];
-	dag->nodes[i+offset+num_part+1]->parents[0] = dag->nodes[num_part+offset];
-  }
-  
-  // using the boundaries, do a local sort and send to every partition
-  for (uint32_t i = 0; i < num_part; i++) {
-	for (uint32_t j = 0; j < num_part; j++) {
-	  dag->nodes[i+num_part*2+offset+1]->parents[j] = dag->nodes[j+num_part+offset+1];
-	}
-  }
-
-  if (round_order != LAST) {
-	for (uint32_t i = 0; i < num_part; i++) {
-	  dag->nodes[i+offset+num_part+2]->parents[0] = dag->nodes[i+num_part+offset+1];
-	  dag->nodes[i+num_part+offset+1]->children[0] = dag->nodes[i+offset+num_part+2];
-	}
-  }
-
-  return num_part * 3 + 1;
-}
+			    uint32_t num_part,
+			    uint32_t offset,
+			    int round_order);
 
 uint32_t enc_agg_set_edges(DAG *dag,
-						   uint32_t num_part,
-						   uint32_t offset,
-						   int round_order) {
-  // one pass only
-  if (round_order != LAST) {
-	// set parents for the next round
-	for (uint32_t i = 0; i < num_part; i++) {
-	  dag->nodes[i+offset]->children[0] = dag->nodes[i+num_part+offset];
-	  dag->nodes[i+num_part+offset]->parents[0] = dag->nodes[i+offset];
-	}
-  }
-
-  return num_part;
-}
+			   uint32_t num_part,
+			   uint32_t offset,
+			   int round_order);
 
 uint32_t enc_join_set_edges(DAG * dag,
-							uint32_t num_part,
-							uint32_t offset,
-							int round_order) {
-  return enc_agg_set_edges(dag, num_part, offset, round_order);
-}
+			    uint32_t num_part,
+			    uint32_t offset,
+			    int round_order);
+
+uint32_t get_benchmark_op_code(uint32_t op_code);
+class DAGGenerator {
+ public:
+  static DAG *genDAG(int benchmark_op_code, uint32_t num_part);
+};
+
+bool set_verify(std::set<uint32_t> *set1,
+		std::set<uint32_t> *set2);
 
 #endif /* _ENCRYPTED_DAG_H_ */

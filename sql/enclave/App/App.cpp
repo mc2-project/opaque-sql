@@ -1721,13 +1721,13 @@ void test_non_oblivious_join() {
   
 
   ecall_generate_random_encrypted_block(global_eid,
-										num_cols_p, column_types_p, num_rows_per_block_p,
-										primary_table, &enc_buf_size, DATA_GEN_JOIN_P);
+					num_cols_p, column_types_p, num_rows_per_block_p,
+					primary_table, &enc_buf_size, DATA_GEN_JOIN_P);
   
   ecall_generate_random_encrypted_block(global_eid,
-										num_cols_f, column_types_f, num_rows_per_block_f,
-										foreign_table, &enc_buf_size, DATA_GEN_JOIN_F);
-
+					num_cols_f, column_types_f, num_rows_per_block_f,
+					foreign_table, &enc_buf_size, DATA_GEN_JOIN_F);
+  
   uint32_t row_upper_bound = *((uint32_t *) (primary_table + 8));
   (void) row_upper_bound;
 
@@ -1741,10 +1741,10 @@ void test_non_oblivious_join() {
   
 
   ecall_join_sort_preprocess(global_eid,
-							 op_code,
-							 primary_table, 128 * 1024 * num_bufs, num_rows_per_block_p,
-							 foreign_table, 128 * 1024 * num_bufs, num_rows_per_block_f,
-							 preprocess_output_rows, 128 * 1024 * num_bufs, &preprocess_output_rows_len);
+			     op_code,
+			     primary_table, 128 * 1024 * num_bufs, num_rows_per_block_p,
+			     foreign_table, 128 * 1024 * num_bufs, num_rows_per_block_f,
+			     preprocess_output_rows, 128 * 1024 * num_bufs, &preprocess_output_rows_len);
 
   ecall_row_parser(global_eid, preprocess_output_rows, 0);
   
@@ -1765,12 +1765,12 @@ void test_non_oblivious_join() {
   buffer_list.push_back(preprocess_output_rows);
 
   ecall_external_sort(global_eid,
-					  op_code,
-					  num_bufs,
-					  buffer_list.data(),
-					  num_rows.data(),
-					  row_upper_bound,
-					  scratch);
+		      op_code,
+		      num_bufs,
+		      buffer_list.data(),
+		      num_rows.data(),
+		      row_upper_bound,
+		      scratch);
 
 
   printf("[test_non_oblivious_join] after external sorting\n");
@@ -1858,14 +1858,14 @@ void test_enclave_column_sort() {
   printf("Before random block gen\n");
   
   for (uint32_t i = 0; i < num_bufs; i++) {
-  	ecall_generate_random_encrypted_block(global_eid,
-  										  num_cols, column_types, num_rows_per_block,
-  										  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
-
-	printf("enc_buf_size is %u\n", enc_buf_size);
-  	buffer_list[i] = buf_ptr;
-	row_upper_bound = *((uint32_t *) (buf_ptr + 8));
-  	buf_ptr += enc_buf_size;
+    ecall_generate_random_encrypted_block(global_eid,
+					  num_cols, column_types, num_rows_per_block,
+					  buf_ptr, &enc_buf_size, DATA_GEN_REGULAR);
+    
+    printf("enc_buf_size is %u\n", enc_buf_size);
+    buffer_list[i] = buf_ptr;
+    row_upper_bound = *((uint32_t *) (buf_ptr + 8));
+    buf_ptr += enc_buf_size;
   }
 
   uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
@@ -1940,6 +1940,85 @@ void test_enclave_column_sort() {
   
 }
 
+void test_enclave_verification() {
+  int op_code_sort = OP_TEST_SORT;
+  int op_code_agg = OP_TEST_AGG;
+
+  (void)op_code_sort;
+  (void)op_code_agg;
+
+  // data per encrypted block
+  uint32_t num_cols = 3;
+  uint8_t column_types[3] = {INT, INT, INT};
+  uint32_t num_rows_per_block = 10;
+
+  uint32_t num_bufs = 1;
+  uint8_t *buf = (uint8_t *) malloc(num_bufs * 128 * 1024);
+
+  uint32_t enc_buf_size = 0;
+  uint8_t *buf_ptr = buf;
+
+  uint8_t **buffer_list = (uint8_t **) malloc(sizeof(uint8_t *) * num_bufs);
+  uint32_t *num_rows = (uint32_t *) malloc(sizeof(uint32_t) * num_bufs);
+  uint8_t *scratch = (uint8_t *) malloc(128 * 1024 * num_bufs);
+
+  for (uint32_t i = 0; i < num_bufs; i++) {
+    num_rows[i] = num_rows_per_block;
+  }
+
+  printf("Before random agg block gen\n");
+  
+  for (uint32_t i = 0; i < num_bufs; i++) {
+    ecall_generate_random_encrypted_block_with_opcode(global_eid,
+						      num_cols,
+						      column_types,
+						      num_rows_per_block,
+						      buf_ptr, &enc_buf_size,
+						      DATA_GEN_AGG,
+						      op_code_sort);
+
+    printf("enc_buf_size is %u\n", enc_buf_size);
+    buffer_list[i] = buf_ptr;
+    buf_ptr += enc_buf_size;
+  }
+
+  uint32_t row_upper_bound = *((uint32_t *) (buffer_list[0] + 8));
+
+  ecall_row_parser(global_eid, buffer_list[0], 0);
+
+  printf("test_enclave_verification: Sorting\n");
+
+  // sort single partition
+  ecall_external_sort(global_eid,
+		      OP_TEST_SORT,
+		      num_bufs,
+		      buffer_list,
+		      num_rows,
+		      row_upper_bound,
+		      scratch);
+
+  printf("test_enclave_verification: Sorting done\n");
+
+  ecall_row_parser(global_eid, buffer_list[0], 0);
+
+  uint8_t *output_rows = (uint8_t *) malloc(128 * 1024 * num_bufs);
+  uint32_t actual_output_size = 0;
+  uint32_t num_output_rows = 0;
+
+  ecall_non_oblivious_aggregate(global_eid,
+				OP_TEST_AGG,
+				buffer_list[0], 128 * 1024 * num_bufs,
+				num_rows_per_block * num_bufs,
+				output_rows, 128 * 1024 * num_bufs,
+                                &actual_output_size, &num_output_rows);
+
+  free(buffer_list);
+  free(num_rows);
+  free(scratch);
+  free(output_rows);
+
+}
+
 /* application entry */
 //SGX_CDECL
 int SGX_CDECL main(int argc, char *argv[])
@@ -1968,7 +2047,9 @@ int SGX_CDECL main(int argc, char *argv[])
   //test_distributed_external_sort();
   //test_non_oblivious_aggregation();
   //test_non_oblivious_join();
-  test_enclave_column_sort();
+  //test_enclave_column_sort();
+
+  test_enclave_verification();
 
   //test_debug();
   

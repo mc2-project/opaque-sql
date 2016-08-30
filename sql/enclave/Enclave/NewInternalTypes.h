@@ -2,6 +2,7 @@
 
 #include "util.h"
 #include <set>
+#include "EncryptedDAG.h"
 
 class NewJoinRecord;
 class StreamRowReader;
@@ -349,9 +350,9 @@ public:
     } else if (key_prefix > other->key_prefix) {
       return false;
     } else {
-	  if (num_deep_comparisons != NULL) {
-		(*num_deep_comparisons)++;
-	  }
+      if (num_deep_comparisons != NULL) {
+	(*num_deep_comparisons)++;
+      }
       return rec->less_than(other->rec, op_code);
     }
   }
@@ -907,15 +908,15 @@ class RowReader {
 public:
   RowReader(uint8_t *buf, uint8_t *buf_end) : buf(buf), buf_end(buf_end) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
+    verify_set = new std::set<uint32_t>();
     read_encrypted_block();
-	verify_set = new std::set<uint32_t>();
   }
 
-  RowReader(uint8_t *buf) : RowReader(buf, NULL) {}
+  RowReader(uint8_t *buf) : RowReader(buf, NULL) { }
 
   ~RowReader() {
     free(block_start);
-	delete verify_set;
+    delete verify_set;
   }
 
   void read(NewRecord *row) {
@@ -942,31 +943,37 @@ public:
   }
 
   void close_and_verify(int op_code, uint32_t num_part, int index) {
-	(void)op_code;
-	(void)num_part;
-	(void)index;
-	// verify set intersection
-	/* uint32_t benchmark_op_code = get_benchmark_op_code(op_code); */
-	/* DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part); */
-	/* uint32_t self_task_id = task_id_parser(dag, op_code, index); */
+    (void)op_code;
+    (void)num_part;
+    (void)index;
+    
+    // verify set intersection
+    uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
+    DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
+    uint32_t self_task_id = task_id_parser(op_code, index);
 
-	/* std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id); */
-	
-	/* bool verified = set_verify(input_set, verify_set); */
+    std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id);
 
-	/* if (!verified) { */
-	/*   // the OS is malicious -- it's the apocalypse! */
-	/*   // or maybe our implementation is wrong */
-	/* } */
+    printf("benchmark op code: %u\n", benchmark_op_code);
 	
-	/* delete input_set; */
-	/* delete dag; */
+    bool verified = set_verify(input_set, verify_set);
+
+    if (!verified) {
+      // the OS is malicious -- it's the apocalypse!
+      // or maybe our implementation is wrong
+      printf("RowReader::close_and_verify(): Incorrect DAG!\n");
+    } else {
+      printf("RowReader::close_and_verify(): Correct DAG\n");
+    }
+	
+    delete input_set;
+    delete dag;
   }
 
 private:
   void add_parent(uint32_t task_id) {
-	// simply add the task ID to the verify set
-	verify_set->insert(task_id);
+    // simply add the task ID to the verify set
+    verify_set->insert(task_id);
   }
 
   
@@ -974,6 +981,10 @@ private:
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     buf += 4; // row_upper_bound
+
+    uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    add_parent(task_id);
+    
     decrypt(buf, block_enc_size, block_start);
     buf += block_enc_size;
     block_pos = block_start;
@@ -1028,12 +1039,25 @@ public:
       block_padded_len(0) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
+    opcode = 0;
+    part = 0;
   }
 
-  RowWriter(uint8_t *buf) : RowWriter(buf, 0) {}
+  RowWriter(uint8_t *buf) : RowWriter(buf, 0) {
+    opcode = 0;
+    part = 0;
+  }
 
   ~RowWriter() {
     free(block_start);
+  }
+
+  void set_opcode(uint32_t opcode) {
+    this->opcode = opcode;
+  }
+
+  void set_part_index(uint32_t part) {
+    this->part = part;
   }
 
   void write(NewRecord *row) {
@@ -1073,6 +1097,10 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(block_padded_len); buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
+    
+    uint32_t task_id = task_id_parser(opcode, part);
+    *reinterpret_cast<uint32_t *>(buf_pos) = task_id; buf_pos += 4;
+    
     encrypt(block_start, block_padded_len, buf_pos);
     buf_pos += enc_size(block_padded_len);
 
@@ -1104,6 +1132,9 @@ private:
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_padded_len;
+
+  uint32_t opcode;
+  uint32_t part;
 };
 
 class IndividualRowWriter {
@@ -1150,27 +1181,27 @@ class StreamRowReader {
  public:
   StreamRowReader(uint8_t *buf, uint8_t *buf_end)
     : cipher(NULL), buf(buf), buf_end(buf_end), cur_block_num(0) {
-    this->read_encrypted_block();
     verify_set = new std::set<uint32_t>();
+    this->read_encrypted_block();
   }
 
-  StreamRowReader(uint8_t *buf) : StreamRowReader(buf, NULL) {}
+  StreamRowReader(uint8_t *buf) : StreamRowReader(buf, NULL) { }
 
   ~StreamRowReader() {
-	delete cipher;
-	delete verify_set;
+    delete cipher;
+    delete verify_set;
   }
 
   void read(NewRecord *row) {
-	maybe_advance_block();
-	block_pos += row->read(this);
-	++block_rows_read;
+    maybe_advance_block();
+    block_pos += row->read(this);
+    ++block_rows_read;
   }
 
   void read(NewJoinRecord *row) {
-	maybe_advance_block();
-	block_pos += row->read(this);
-	++block_rows_read;
+    maybe_advance_block();
+    block_pos += row->read(this);
+    ++block_rows_read;
   }
 
   template<typename RecordType>
@@ -1181,7 +1212,7 @@ class StreamRowReader {
   }
 
   void read_bytes(uint8_t *output, uint32_t num_bytes) {
-	cipher->decrypt(output, num_bytes);
+    cipher->decrypt(output, num_bytes);
   }
 
   bool has_next() const {
@@ -1190,15 +1221,32 @@ class StreamRowReader {
     return rows_remain_in_block || blocks_remain_in_buf;
   }
 
-  void close_and_verify() {
-	// TODO: verify set intersection
+
+  void close_and_verify(int op_code, uint32_t num_part, int index) {
+    // verify set intersection
+    uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
+    DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
+    uint32_t self_task_id = task_id_parser(op_code, index);
+
+    std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id);
+	
+    bool verified = set_verify(input_set, verify_set);
+
+    if (!verified) {
+      // the OS is malicious -- it's the apocalypse!
+      // or maybe our implementation is wrong
+      printf("StreamRowReader::close_and_verify(): Incorrect DAG!\n");
+    }
+	
+    delete input_set;
+    delete dag;
   }
 
  private:
   
   void add_parent(uint32_t task_id) {
-	// simply add the task ID to the verify set
-	verify_set->insert(task_id);
+    // simply add the task ID to the verify set
+    verify_set->insert(task_id);
   }
   
   void read_encrypted_block() {
@@ -1206,17 +1254,22 @@ class StreamRowReader {
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     buf += 4; // row_upper_bound
 
+    uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    printf("StreamRowReader::read_encrypted_block(): block_enc_size: %u, block_num_rows: %u, task_id: %u\n", block_enc_size, block_num_rows, task_id);
+    add_parent(task_id);
+   
+
     if (cipher == NULL) {
-	  cipher = new StreamDecipher(buf, block_enc_size);
-	} else {
-	  cipher->reset(buf, block_enc_size);
-	}
-	
+      cipher = new StreamDecipher(buf, block_enc_size);
+    } else {
+      cipher->reset(buf, block_enc_size);
+    }
+    
     buf += block_enc_size;
-	block_start = buf;
+    block_start = buf;
     block_pos = block_start;
     block_rows_read = 0;
-	++cur_block_num;
+    ++cur_block_num;
   }
 
   void maybe_advance_block() {
@@ -1244,15 +1297,25 @@ class StreamRowReader {
 class StreamRowWriter {
  public:
   StreamRowWriter(uint8_t *buf) {
-	buf_start = buf;
-	buf_pos = buf;
-	cipher = new StreamCipher(buf_start + 12);
-	block_len = 0;
-	block_num_rows = 0;
+    buf_start = buf;
+    buf_pos = buf;
+    cipher = new StreamCipher(buf_start + 12);
+    block_len = 0;
+    block_num_rows = 0;
+    opcode = 0;
+    part = 0;
   }
 
   ~StreamRowWriter() {
 	delete cipher;
+  }
+
+  void set_opcode(uint32_t opcode) {
+    this->opcode = opcode;
+  }
+
+  void set_part_index(uint32_t part) {
+    this->part = part;
   }
 
   uint32_t write(NewRecord *row) {
@@ -1295,29 +1358,32 @@ class StreamRowWriter {
  private:
 
   void finish_block() {
-	cipher->finish();
-	uint32_t w_bytes = cipher->bytes_written();
+    cipher->finish();
+    uint32_t w_bytes = cipher->bytes_written();
 
-	*reinterpret_cast<uint32_t *>(buf_pos) = w_bytes;
-	buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = w_bytes;
+    buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows;
-	buf_pos += 4;
+    buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = ROW_UPPER_BOUND;
-	buf_pos += 4;
+    buf_pos += 4;
 
-	debug("[StreamRowWriter::finish_block] w_bytes is %u, block_num_rows is %u\n", w_bytes, block_num_rows);
+    uint32_t task_id = task_id_parser(opcode, part);
+    *reinterpret_cast<uint32_t *>(buf_pos) = task_id; buf_pos += 4;
 
-	block_num_rows = 0;
-	block_len = 0;
-	buf_pos += w_bytes;
+    debug("[StreamRowWriter::finish_block] w_bytes is %u, block_num_rows is %u\n", w_bytes, block_num_rows);
+
+    block_num_rows = 0;
+    block_len = 0;
+    buf_pos += w_bytes;
 	
-	cipher->reset(buf_pos + 12);
+    cipher->reset(buf_pos + 12);
   }
 
   void maybe_finish_block() {
-	if (block_len > MAX_BLOCK_SIZE) {
-	  finish_block();
-	}
+    if (block_len > MAX_BLOCK_SIZE) {
+      finish_block();
+    }
   }
   
   StreamCipher *cipher;
@@ -1328,6 +1394,9 @@ class StreamRowWriter {
 
   uint32_t block_num_rows;
   uint32_t block_len;
+
+  uint32_t opcode;
+  uint32_t part;
 };
 
 #include "NewInternalTypes.tcc"

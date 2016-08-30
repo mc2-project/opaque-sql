@@ -9,9 +9,9 @@ int printf( const char* format, ... );
 
 enum DATA_GEN_TYPE : uint8_t {
   DATA_GEN_REGULAR,
-	DATA_GEN_AGG,
-	DATA_GEN_JOIN_P,
-	DATA_GEN_JOIN_F
+    DATA_GEN_AGG,
+    DATA_GEN_JOIN_P,
+    DATA_GEN_JOIN_F
 };
 
 // Make sure to update the functions in common.cpp and util.cpp when you add a
@@ -130,6 +130,8 @@ enum OPCODE {
   BD2 = 10001,
   BD3 = 10002,
 
+  OP_TEST_SORT = 1000000,
+  OP_TEST_AGG = 1000100,
 };
 
 
@@ -142,6 +144,7 @@ inline static int get_sort_operation(int op_code) {
   case OP_SORT_COL2_IS_DUMMY_COL1:
   case OP_SORT_COL3_IS_DUMMY_COL1:
   case OP_SORT_COL4_IS_DUMMY_COL2:
+  case OP_TEST_SORT:
     return SORT_SORT;
 
   case OP_JOIN_COL1:
@@ -199,6 +202,10 @@ public:
       *len_out = block_enc_size; *len_out += 4;
       *num_rows_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
       *row_upper_bound_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
+      
+      uint32_t opcode = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
+      (void) opcode;
+      
       input += block_enc_size;
     }
   }

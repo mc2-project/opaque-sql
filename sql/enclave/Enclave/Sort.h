@@ -34,10 +34,10 @@
  */
 template<typename RecordType>
 void external_sort(int op_code,
-				   uint32_t num_buffers,
-				   uint8_t **buffer_list,
-				   uint32_t *num_rows,
-				   uint32_t row_upper_bound,
+		   uint32_t num_buffers,
+		   uint8_t **buffer_list,
+		   uint32_t *num_rows,
+		   uint32_t row_upper_bound,
                    uint8_t *scratch);
 
 /**

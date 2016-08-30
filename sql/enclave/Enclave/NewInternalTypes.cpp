@@ -347,6 +347,7 @@ uint32_t NewRecord::write(StreamRowWriter *writer) const {
 bool NewRecord::less_than(const NewRecord *other, int op_code) const {
   switch (op_code) {
   case OP_SORT_COL1:
+  case OP_TEST_SORT:
     return attr_less_than(get_attr(1), other->get_attr(1));
   case OP_SORT_COL2:
     return attr_less_than(get_attr(2), other->get_attr(2));
@@ -394,6 +395,7 @@ bool NewRecord::less_than(const NewRecord *other, int op_code) const {
 uint32_t NewRecord::get_key_prefix(int op_code) const {
   switch (op_code) {
   case OP_SORT_COL1:
+  case OP_TEST_SORT:
     return attr_key_prefix(get_attr(1));
   case OP_SORT_COL2:
     return attr_key_prefix(get_attr(2));

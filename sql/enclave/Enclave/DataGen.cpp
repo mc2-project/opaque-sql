@@ -197,9 +197,9 @@ uint32_t generate_random_rows(uint32_t num_cols, uint8_t *column_types,
 }
 
 uint32_t generate_encrypted_block(uint32_t num_cols, uint8_t *column_types,
-								  uint32_t num_rows,
-								  uint8_t *output_buffer,
-								  uint8_t type) {
+				  uint32_t num_rows,
+				  uint8_t *output_buffer,
+				  uint8_t type) {
   
   uint32_t row_upper_bound = 4 + HEADER_SIZE * num_cols;
 
@@ -223,4 +223,36 @@ uint32_t generate_encrypted_block(uint32_t num_cols, uint8_t *column_types,
   free(buf);
 
   return 12 + enc_size(num_rows * row_upper_bound);
+}
+
+
+uint32_t generate_encrypted_block_with_opcode(uint32_t num_cols, uint8_t *column_types,
+					      uint32_t num_rows,
+					      uint8_t *output_buffer,
+					      uint8_t type,
+					      uint32_t opcode) {
+  
+  uint32_t row_upper_bound = 4 + HEADER_SIZE * num_cols;
+
+  for (uint32_t i = 0; i < num_cols; i++) {
+    row_upper_bound += attr_upper_bound(column_types[i]);
+  }
+
+  uint8_t *buf = (uint8_t *) malloc(num_rows * row_upper_bound + 1);
+
+  uint32_t written_bytes = generate_random_rows(num_cols, column_types, num_rows, buf, type);
+
+  printf("[generate_encrypted_block] Row upper bound is %u, num_cols is %u, written_bytes is %u\n", row_upper_bound, num_cols, written_bytes);
+  
+  // just encrypt this entire block into output_buffer
+  *((uint32_t *) (output_buffer)) = enc_size(num_rows * row_upper_bound);
+  *((uint32_t *) (output_buffer + 4)) = num_rows;
+  *((uint32_t *) (output_buffer + 8)) = row_upper_bound;
+  *((uint32_t *) (output_buffer + 12)) = opcode;
+
+  encrypt(buf, num_rows * row_upper_bound, output_buffer + 16);
+  
+  free(buf);
+
+  return 16 + enc_size(num_rows * row_upper_bound);
 }
