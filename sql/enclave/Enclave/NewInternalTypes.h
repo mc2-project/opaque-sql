@@ -199,6 +199,13 @@ public:
 
   static void init_dummy(NewRecord *dummy, int op_code);
 
+  /**
+   * Return the 1-indexed primary or foreign join attribute index associated with the given opcode,
+   * if the opcode represents a one-column equijoin. If the opcode represents another kind of join,
+   * return 0.
+   */
+  static uint32_t opcode_to_join_attr_idx(int op_code, bool is_primary);
+
   NewJoinRecord() : NewJoinRecord(ROW_UPPER_BOUND) {}
 
   NewJoinRecord(uint32_t upper_bound) : row(upper_bound), join_attr(NULL) {}
