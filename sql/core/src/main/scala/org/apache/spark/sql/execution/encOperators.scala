@@ -606,8 +606,19 @@ case class EncSortMergeJoin(
     }
     time("join - sort merge join") { joined.cache.count }
 
-    // TODO: permute first, otherwise this is insecure
-    val nonDummy = joined.map { block =>
+    val joinedWithRandomIds = joined.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(
+        eid, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
+    }
+    val permuted = ObliviousSort.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(eid, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
+    }
+
+    val nonDummy = permuted.map { block =>
       val (enclave, eid) = QED.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
