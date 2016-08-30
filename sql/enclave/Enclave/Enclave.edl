@@ -217,6 +217,19 @@ enclave {
 								  uint8_t type,
 								  uint32_t opcode);
 
+	public void ecall_count_rows([user_check] uint8_t *input_rows,
+								 uint32_t buffer_size,
+								 [out] uint32_t *output_rows);
+
+	public void ecall_column_sort_preprocess(int op_code,
+                                             [user_check] uint8_t *input_rows,
+											 uint32_t num_rows,
+											 uint32_t row_upper_bound,
+											 uint32_t index_offset,
+											 uint32_t r,
+											 uint32_t s,
+                                             [user_check] uint8_t **output_buffers,
+                                             [user_check] uint32_t *output_buffer_sizes);
   };
 
   untrusted {

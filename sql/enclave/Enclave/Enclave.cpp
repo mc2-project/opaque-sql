@@ -787,3 +787,35 @@ void ecall_column_sort(int op_code,
 
   verify_set.verify();
 }
+
+void ecall_count_rows(uint8_t *input_rows,
+					  uint32_t buffer_size,
+                      uint32_t *output_rows) {
+  count_rows(input_rows, buffer_size, output_rows);
+}
+
+
+void ecall_column_sort_preprocess(int op_code,
+								  uint8_t *input_rows,
+								  uint32_t num_rows,
+								  uint32_t row_upper_bound,
+								  uint32_t index_offset,
+								  uint32_t r,
+								  uint32_t s, //  r * s is the total number of items being sorted
+								  uint8_t **output_buffers,
+								  uint32_t *output_buffer_sizes) {
+  int sort_op = get_sort_operation(op_code);
+  switch (sort_op) {
+  case SORT_SORT:
+	{
+	  column_sort_preprocess<NewRecord>(input_rows, num_rows, row_upper_bound, index_offset, r, s, output_buffers, output_buffer_sizes);
+	}
+	break;
+  case SORT_JOIN:
+	{
+	  column_sort_preprocess<NewJoinRecord>(input_rows, num_rows, row_upper_bound, index_offset, r, s, output_buffers, output_buffer_sizes);
+	}
+	break;
+  }
+
+}

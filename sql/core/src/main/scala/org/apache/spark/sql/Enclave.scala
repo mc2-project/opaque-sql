@@ -169,4 +169,9 @@ class SGXEnclave extends java.io.Serializable {
   @native def SplitBlock(
       eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 
+  @native def EnclaveColumnSort(
+    eid: Long, op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, offset: Int) : Array[Byte]
+
+  @native def CountNumRows(
+    eid: Long, input_rows: Array[Byte]) : Int
 }
