@@ -17,11 +17,13 @@ bool is_dummy_type(uint8_t attr_type) {
   case IP_TYPE:
   case USER_AGENT_TYPE:
   case SEARCH_WORD_TYPE:
+  case TPCH_NATION_NAME_TYPE:
     return false;
 
   case DUMMY_INT:
   case DUMMY_FLOAT:
   case DUMMY_STRING:
+  case DUMMY_TPCH_NATION_NAME_TYPE:
     return true;
 
   default:
@@ -41,6 +43,9 @@ uint8_t get_dummy_type(uint8_t attr_type) {
 
   case STRING:
     return DUMMY_STRING;
+
+  case TPCH_NATION_NAME_TYPE:
+    return DUMMY_TPCH_NATION_NAME_TYPE;
 
   default:
     return attr_type;
@@ -80,6 +85,10 @@ uint32_t attr_upper_bound(uint8_t attr_type) {
 
   case SEARCH_WORD_TYPE:
     return SEARCH_WORD_UPPER_BOUND;
+
+  case DUMMY_TPCH_NATION_NAME_TYPE:
+  case TPCH_NATION_NAME_TYPE:
+    return TPCH_NATION_NAME_UPPER_BOUND;
 
   default:
     printf("attr_upper_bound: Unknown type %d\n", attr_type);
