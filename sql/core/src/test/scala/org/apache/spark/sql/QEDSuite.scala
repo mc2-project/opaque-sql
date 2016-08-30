@@ -454,4 +454,22 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       assert(plaintext_bytes(idx) == decrypted(idx))
     }
   }
+
+  test("NewColumnSort") {
+    val data = Random.shuffle((0 until 32).map(x => (x.toString, x)).toSeq)
+    val encData = QED.encrypt2(data).map {
+      case (str, x) => InternalRow(str, x).encSerialize
+    }
+    val p = QED.createBlock(encData.toArray, false)
+    val blocks = new Array[Block](1)
+    blocks(0) = Block(p, p.length)
+
+    val result = ObliviousSort.NewColumnSort(sparkContext, sparkContext.makeRDD(blocks, 1), OP_SORT_COL2, 16, 2).flatMap { block =>
+      QED.splitBlock(block.bytes, block.numRows, true)
+        .map(serRow => Row.fromSeq(QED.parseRow(serRow)))
+    }
+
+    assert(QED.decrypt2[String, Int](result.collect) === data.sortBy(_._2))
+  }
+
 }
