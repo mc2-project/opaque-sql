@@ -53,26 +53,24 @@ object QEDBenchmark {
 
     // Run
     QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
-
     QEDBenchmark.bd1Opaque(sqlContext, "1million", distributed)
-
     QEDBenchmark.bd1Encrypted(sqlContext, "1million", distributed)
 
     QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
-
     QEDBenchmark.bd2Opaque(sqlContext, "1million", distributed)
-
     QEDBenchmark.bd2Encrypted(sqlContext, "1million", distributed)
 
     QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
-
     QEDBenchmark.bd3Opaque(sqlContext, "1million", distributed)
-
     QEDBenchmark.bd3Encrypted(sqlContext, "1million", distributed)
 
     for (i <- 8 to 20) {
       QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString, distributed)
     }
+
+    QEDBenchmark.tpch9SparkSQL(sqlContext, "sf0.2")
+    QEDBenchmark.tpch9Generic(sqlContext, "sf0.2")
+    QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2")
 
     sc.stop()
   }

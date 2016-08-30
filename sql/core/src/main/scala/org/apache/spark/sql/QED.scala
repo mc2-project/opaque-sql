@@ -125,6 +125,11 @@ object QED {
         val utf8 = s.getBytes("UTF-8")
         buf.putInt(utf8.length)
         buf.put(utf8)
+      case (s: String, Some(TPCH_NATION_NAME_TYPE)) =>
+        buf.put(TPCH_NATION_NAME_TYPE.value)
+        val utf8 = s.getBytes("UTF-8")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
     }
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
@@ -145,7 +150,7 @@ object QED {
         buf.getInt()
       case t if t == STRING.value || t == URL_TYPE.value || t == C_CODE.value ||
           t == L_CODE.value || t == IP_TYPE.value || t == USER_AGENT_TYPE.value ||
-          t == SEARCH_WORD_TYPE.value =>
+          t == SEARCH_WORD_TYPE.value || t == TPCH_NATION_NAME_TYPE.value =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
         new String(sBytes, "UTF-8")
@@ -448,7 +453,7 @@ object QED {
       case Row(nk: Int, n: String) =>
         Array(
           QED.encrypt(enclave, eid, nk),
-          QED.encrypt(enclave, eid, n))
+          QED.encrypt(enclave, eid, n, Some(QEDColumnType.TPCH_NATION_NAME_TYPE)))
     }
   }
 }

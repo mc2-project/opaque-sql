@@ -30,9 +30,11 @@ public enum QEDColumnType {
     IP_TYPE((byte)9),
     USER_AGENT_TYPE((byte)10),
     SEARCH_WORD_TYPE((byte)11),
+    TPCH_NATION_NAME_TYPE((byte)12),
     DUMMY_INT((byte)100),
     DUMMY_FLOAT((byte)101),
-    DUMMY_STRING((byte)102);
+    DUMMY_STRING((byte)102),
+    DUMMY_TPCH_NATION_NAME_TYPE((byte)112);
 
     private byte _value;
 

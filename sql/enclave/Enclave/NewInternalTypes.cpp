@@ -120,6 +120,7 @@ bool attr_less_than(const uint8_t *a, const uint8_t *b) {
   case IP_TYPE:
   case USER_AGENT_TYPE:
   case SEARCH_WORD_TYPE:
+  case TPCH_NATION_NAME_TYPE:
   {
     uint32_t min_len = a_len < b_len ? a_len : b_len;
     for (uint32_t i = 0; i < min_len; i++) {
@@ -172,6 +173,7 @@ uint32_t attr_key_prefix(const uint8_t *attr) {
   case IP_TYPE:
   case USER_AGENT_TYPE:
   case SEARCH_WORD_TYPE:
+  case TPCH_NATION_NAME_TYPE:
   {
     // Copy up to the first 4 bytes of the string into an integer, zero-padding for strings shorter
     // than 4 bytes
@@ -315,6 +317,7 @@ void NewRecord::print() const {
     case IP_TYPE:
     case USER_AGENT_TYPE:
     case SEARCH_WORD_TYPE:
+    case TPCH_NATION_NAME_TYPE:
     {
       char *str = (char *) malloc(len + 1);
       memcpy(str, row_ptr, len);
@@ -571,7 +574,7 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
   case OP_JOIN_TPCH9GENERIC_NATION:
     num_output_cols = 10;
     types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
+    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
     types[2] = DUMMY_INT;
     types[3] = DUMMY_INT;
     types[4] = DUMMY_INT;
@@ -628,7 +631,7 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[0] = DUMMY_INT;
     types[1] = DUMMY_INT;
     types[2] = DUMMY_INT;
-    types[3] = DUMMY_STRING;
+    types[3] = DUMMY_TPCH_NATION_NAME_TYPE;
     types[4] = DUMMY_INT;
     types[5] = DUMMY_INT;
     types[6] = DUMMY_FLOAT;
@@ -639,7 +642,7 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
   case OP_JOIN_TPCH9OPAQUE_LINEITEM:
     num_output_cols = 9;
     types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
+    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
     types[2] = DUMMY_INT;
     types[3] = DUMMY_INT;
     types[4] = DUMMY_FLOAT;
@@ -651,7 +654,7 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
   case OP_JOIN_TPCH9OPAQUE_NATION:
     num_output_cols = 5;
     types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
+    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
     types[2] = DUMMY_INT;
     types[3] = DUMMY_INT;
     types[4] = DUMMY_FLOAT;
