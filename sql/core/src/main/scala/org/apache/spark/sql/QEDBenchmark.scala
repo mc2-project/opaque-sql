@@ -415,6 +415,7 @@ object QEDBenchmark {
                     partsuppDF.encJoin( // 3. partsupp
                       partDF // 1. part
                         .nonObliviousFilter($"p_name".contains("maroon"))
+                        .encSelect($"p_partkey")
                         .encJoin(lineitemDF, $"p_partkey" === $"l_partkey"), // 2. lineitem
                       $"ps_suppkey" === $"l_suppkey" && $"ps_partkey" === $"p_partkey"),
                     $"l_orderkey" === $"o_orderkey"),
@@ -449,6 +450,7 @@ object QEDBenchmark {
                   .nonObliviousJoin(
                     partDF // 1. part
                       .nonObliviousFilter($"p_name".contains("maroon"))
+                      .encSelect($"p_partkey")
                       .nonObliviousJoin(partsuppDF, $"p_partkey" === $"ps_partkey"), // 2. partsupp
                     $"ps_suppkey" === $"s_suppkey"),
                 $"s_nationkey" === $"n_nationkey"))
