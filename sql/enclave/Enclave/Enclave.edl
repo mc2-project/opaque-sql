@@ -225,11 +225,30 @@ enclave {
                                              [user_check] uint8_t *input_rows,
 											 uint32_t num_rows,
 											 uint32_t row_upper_bound,
-											 uint32_t index_offset,
+                                             uint32_t offset,
 											 uint32_t r,
 											 uint32_t s,
                                              [user_check] uint8_t **output_buffers,
                                              [user_check] uint32_t *output_buffer_sizes);
+
+    public void ecall_column_sort_padding(int op_code,
+                                          [user_check] uint8_t *input_rows,
+                                          uint32_t num_rows,
+                                          uint32_t row_upper_bound,
+                                          uint32_t r,
+                                          uint32_t s,
+                                          [user_check] uint8_t *output_rows,
+                                          [out] uint32_t *output_rows_size);
+
+    public void ecall_column_sort_filter(int op_code,
+                                         [user_check] uint8_t *input_rows,
+                                         uint32_t offset,
+                                         uint32_t column,
+                                         uint32_t num_rows,
+                                         uint32_t row_upper_bound,
+                                         [user_check] uint8_t *output_rows,
+                                         [out] uint32_t *output_rows_size,
+                                         [out] uint32_t *num_output_rows);
   };
 
   untrusted {

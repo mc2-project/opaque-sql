@@ -570,9 +570,9 @@ JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEn
  * block boundaries. The buffers and their respective sizes will be written into buffer_list and
  * buffers_num_rows.
  */
-void split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
-                std::vector<uint8_t *> &buffer_list, std::vector<uint32_t> &buffers_num_rows,
-                uint32_t *row_upper_bound) {
+uint32_t split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
+                    std::vector<uint8_t *> &buffer_list, std::vector<uint32_t> &buffers_num_rows,
+                    uint32_t *row_upper_bound) {
   (void)num_rows;
 
   BlockReader r(input, input_len);
@@ -608,6 +608,8 @@ void split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
 
   perf("split_rows: Input (%d bytes, %d rows) split into %lu buffers, row upper bound %d\n",
        input_len, num_rows, buffer_list.size() - 1, *row_upper_bound);
+
+  return total_rows;
 }
 
 // the op_code allows the internal sort code to decide which comparator to use
@@ -1211,23 +1213,78 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   return ret;
 }
 
+
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilter(
+  JNIEnv *env, jobject obj,
+  jlong eid, jint op_code, jbyteArray input_rows, jint column, jint offset,
+  jint num_rows, jobject num_output_rows_obj) {
+  (void)obj;
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input_rows);
+  jboolean if_copy = false;
+  jbyte *input_rows_ptr = env->GetByteArrayElements(input_rows, &if_copy);
+
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
+  uint8_t *input_copy_ptr = input_copy;
+
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(input_rows_ptr + i);
+  }
+
+  std::vector<uint8_t *> buffer_list;
+  std::vector<uint32_t> buffer_num_rows;
+  uint32_t row_upper_bound = 0;
+  uint32_t total_rows = split_rows(input_copy, input_len, num_rows, buffer_list, buffer_num_rows, &row_upper_bound);
+
+  printf("SGXEnclave_ColumnSortFilter: total_rows=%u, num_rows=%u\n", total_rows, num_rows);
+
+  uint8_t *output_rows = (uint8_t *) malloc(input_len);
+  uint32_t output_rows_size = 0;
+  uint32_t num_output_rows = 0;
+
+  ecall_column_sort_filter(eid, op_code, input_copy_ptr, (uint32_t) column, (uint32_t) offset,
+                           total_rows, row_upper_bound, output_rows, &output_rows_size, &num_output_rows);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
+
+  if (num_output_rows == 0) {
+    jbyteArray ret = env->NewByteArray(0);
+    free(output_rows);
+    free(input_copy);
+
+    return ret;
+  }
+  jbyteArray ret = env->NewByteArray(output_rows_size);
+  env->SetByteArrayRegion(ret, 0, output_rows_size, (jbyte *) output_rows);
+
+  free(output_rows);
+  free(input_copy);
+
+  return ret;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(JNIEnv *env,
 																					jobject obj,
 																					jlong eid,
 																					jint op_code,
 																					jint round,
-																					jbyteArray input,
+                                                                                    jbyteArray input,
 																					jint r,
 																					jint s,
 																					jint column,
-																					jint index_offset) {
+                                                                                    jint current_part,
+                                                                                    jint num_part,
+                                                                                    jint offset) {
 
   (void)obj;
-
+  (void)current_part;
+  (void)num_part;
 
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
 
-  printf("SGXEnclave_EnclaveColumnSort: round %u, input_len: %u\n", round, input_len);
+  printf("SGXEnclave_EnclaveColumnSort: round %u, input_len: %u, r=%u, s=%u\n", round, input_len, r, s);
 
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
@@ -1272,29 +1329,58 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
           buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
   }
 
-  uint32_t total_data_size = row_upper_bound * total_rows;
-  uint32_t per_column_data_size = ((total_data_size / s) + 1 ) * row_upper_bound;
-  uint32_t per_column_blocks = (per_column_data_size / MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
-  uint32_t estimated_column_size = per_column_blocks * (12 + 12 + 16) + per_column_data_size;
+  // TODO: current allocation very inefficient, change this
+  uint32_t per_column_data_size = r * row_upper_bound;
+  uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
+  uint32_t estimated_column_size = per_column_blocks * (16 + 12 + 16) + per_column_data_size;
 
-  // TODO: construct total of s output buffers
+  printf("ColumnSort[%u]: total_rows: %u, estimated rows: %u, estimated_column_size=%u, estimated per_column_blocks=%u, row_upper_bound: %u\n",
+         round, total_rows, r,
+         estimated_column_size, per_column_blocks, row_upper_bound);
+
+  // construct total of s output buffers
   uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
-  for (uint32_t i = 0; i < (uint32_t) s; i++) {
-	output_buffers[i] = (uint8_t *) malloc(estimated_column_size);
-  }
-
   uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
+  for (uint32_t i = 0; i < (uint32_t) s; i++) {
+    if (estimated_column_size > 0) {
+      output_buffers[i] = (uint8_t *) malloc(estimated_column_size);
+    } else {
+      output_buffers[i] = NULL;
+    }
+    output_buffer_sizes[i] = 0;
+  }
 
   if (round == 0) {
     ecall_column_sort_preprocess(eid,
                                  op_code, input_copy, total_rows, row_upper_bound,
-                                 (uint32_t) index_offset, r, s, output_buffers, output_buffer_sizes);
+                                 (uint32_t) offset, r, s, output_buffers, output_buffer_sizes);
+  } else if (round == 1) {
+    uint32_t output_rows_size = 0;
+    ecall_column_sort_padding(eid,
+                              op_code, input_copy, total_rows, row_upper_bound,
+                              r, s, output_buffers[0], &output_rows_size);
+
+    printf("Padding %u to %u\n", input_len, output_rows_size);
+
+    jbyteArray ret = env->NewByteArray(output_rows_size);
+    env->SetByteArrayRegion(ret, 0, output_rows_size, (jbyte *) output_buffers[0]);
+    env->ReleaseByteArrayElements(input, ptr, 0);
+
+    free(input_copy);
+    for (uint32_t i = 0; i < (uint32_t) s; i++) {
+      if (output_buffers[i] != NULL) {
+        free(output_buffers[i]);
+      }
+    }
+    free(output_buffers);
+
+    return ret;
   } else {
-	ecall_column_sort(eid,
-					  op_code, round, input_copy, num_rows.data(),
-					  buffer_list.data(), buffer_list.size(), row_upper_bound,
-					  column, r, s,
-					  output_buffers, output_buffer_sizes);
+    ecall_column_sort(eid,
+                      op_code, round-1, input_copy, num_rows.data(),
+                      buffer_list.data(), buffer_list.size(), row_upper_bound,
+                      column, r, s,
+                      output_buffers, output_buffer_sizes);
   }
 
   // serialize the buffers onto one big buffer
@@ -1307,11 +1393,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   uint8_t *output_ptr = output;
 
   for (uint32_t i = 0; i < (uint32_t) s; i++) {
-	*((uint32_t *) output_ptr) = i + 1;
-	output_ptr += 4;
-	*((uint32_t *) output_ptr) = output_buffer_sizes[i];
+    *((uint32_t *) output_ptr) = i + 1;
     output_ptr += 4;
-
+    *((uint32_t *) output_ptr) = output_buffer_sizes[i];
+    output_ptr += 4;
+    //printf("ColumnSort: outputting column %u size %u, max is %u\n", i+1, output_buffer_sizes[i], r*row_upper_bound);
     memcpy(output_ptr, output_buffers[i], output_buffer_sizes[i]);
     output_ptr += output_buffer_sizes[i];
   }
@@ -1322,6 +1408,11 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   env->ReleaseByteArrayElements(input, ptr, 0);
 
   free(input_copy);
+  for (uint32_t i = 0; i < (uint32_t) s; i++) {
+    if (output_buffers[i] != NULL) {
+      free(output_buffers[i]);
+    }
+  }
   free(output_buffers);
   free(output);
   free(output_buffer_sizes);

@@ -798,8 +798,8 @@ void ecall_count_rows(uint8_t *input_rows,
 void ecall_column_sort_preprocess(int op_code,
 								  uint8_t *input_rows,
 								  uint32_t num_rows,
-								  uint32_t row_upper_bound,
-								  uint32_t index_offset,
+                                  uint32_t row_upper_bound,
+                                  uint32_t offset,
 								  uint32_t r,
 								  uint32_t s, //  r * s is the total number of items being sorted
 								  uint8_t **output_buffers,
@@ -808,14 +808,65 @@ void ecall_column_sort_preprocess(int op_code,
   switch (sort_op) {
   case SORT_SORT:
 	{
-	  column_sort_preprocess<NewRecord>(input_rows, num_rows, row_upper_bound, index_offset, r, s, output_buffers, output_buffer_sizes);
+      column_sort_preprocess<NewRecord>(op_code, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
 	}
 	break;
   case SORT_JOIN:
 	{
-	  column_sort_preprocess<NewJoinRecord>(input_rows, num_rows, row_upper_bound, index_offset, r, s, output_buffers, output_buffer_sizes);
+      column_sort_preprocess<NewJoinRecord>(op_code, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
 	}
 	break;
+  }
+
+}
+
+
+void ecall_column_sort_padding(int op_code,
+                               uint8_t *input_rows,
+                               uint32_t num_rows,
+                               uint32_t row_upper_bound,
+                               uint32_t r,
+                               uint32_t s,
+                               uint8_t *output_rows, uint32_t *output_rows_size) {
+
+  int sort_op = get_sort_operation(op_code);
+  switch (sort_op) {
+  case SORT_SORT:
+    {
+      column_sort_padding<NewRecord>(op_code, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
+    }
+    break;
+  case SORT_JOIN:
+    {
+      column_sort_padding<NewJoinRecord>(op_code, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
+    }
+    break;
+  }
+}
+
+
+void ecall_column_sort_filter(int op_code,
+                              uint8_t *input_rows,
+                              uint32_t column,
+                              uint32_t offset,
+                              uint32_t num_rows,
+                              uint32_t row_upper_bound,
+                              uint8_t *output_rows,
+                              uint32_t *output_rows_size,
+                              uint32_t *num_output_rows) {
+
+  int sort_op = get_sort_operation(op_code);
+  switch (sort_op) {
+  case SORT_SORT:
+    {
+      column_sort_filter<NewRecord>(op_code, input_rows, column, offset, num_rows, row_upper_bound, output_rows, output_rows_size, num_output_rows);
+    }
+    break;
+  case SORT_JOIN:
+    {
+      column_sort_filter<NewJoinRecord>(op_code, input_rows, column, offset, num_rows, row_upper_bound, output_rows, output_rows_size, num_output_rows);
+    }
+    break;
   }
 
 }
