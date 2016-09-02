@@ -86,7 +86,24 @@ bool attr_less_than(const uint8_t *a, const uint8_t *b) {
 
   check(*a_ptr == *b_ptr,
         "attr_less_than: Can't compare different types %d and %d\n", *a_ptr, *b_ptr);
-  uint8_t type = *a_ptr; a_ptr++; b_ptr++;
+  uint8_t type = *a_ptr;
+
+  uint8_t a_type = *a_ptr;
+  uint8_t b_type = *b_ptr;
+  a_ptr++; b_ptr++;
+
+  // check for dummy types
+
+  bool a_is_dummy = is_dummy_type(a_type);
+  bool b_is_dummy = is_dummy_type(b_type);
+
+  if (a_is_dummy && b_is_dummy) {
+    return false;
+  } else if (a_is_dummy && !b_is_dummy) {
+    return true;
+  } else if (!a_is_dummy && b_is_dummy) {
+    return false;
+  }
 
   uint32_t a_len = *reinterpret_cast<const uint32_t *>(a_ptr); a_ptr += 4;
   uint32_t b_len = *reinterpret_cast<const uint32_t *>(b_ptr); b_ptr += 4;
@@ -150,6 +167,10 @@ bool attr_less_than(const uint8_t *a, const uint8_t *b) {
 uint32_t attr_key_prefix(const uint8_t *attr) {
   const uint8_t *attr_ptr = attr;
   uint8_t type = *attr_ptr; attr_ptr++;
+
+  if (is_dummy_type(type)) {
+    return 0xFFFFFFFF;
+  }
 
   uint32_t attr_len = *reinterpret_cast<const uint32_t *>(attr_ptr); attr_ptr += 4;
   switch (type) {
@@ -521,6 +542,11 @@ void NewRecord::add_attr(uint8_t type, uint32_t len, const uint8_t *value) {
   set_num_cols(num_cols() + 1);
 }
 
+void NewRecord::init_dummy(NewRecord *dummy, int op_code) {
+  (void)op_code;
+  dummy->mark_dummy();
+}
+
 void NewRecord::mark_dummy() {
   uint8_t *row_ptr = this->row;
   row_ptr += 4;
@@ -677,6 +703,11 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     assert(false);
   }
   dummy->init(types, num_output_cols);
+}
+
+
+void NewJoinRecord::mark_dummy() {
+  row.mark_dummy();
 }
 
 uint32_t NewJoinRecord::opcode_to_join_attr_idx(int op_code, bool is_primary) {

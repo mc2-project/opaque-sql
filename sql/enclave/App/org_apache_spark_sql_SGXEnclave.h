@@ -122,10 +122,15 @@ extern "C" {
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(
-    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jint, jint, jint, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jint, jint, jint, jint, jint, jint);
 
   JNIEXPORT jint JNICALL Java_org_apache_spark_sql_SGXEnclave_CountNumRows(
     JNIEnv *, jobject, jlong, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilter(
+    JNIEnv *env, jobject obj,
+    jlong eid, jint op_code, jbyteArray input_rows, jint column, jint offset, jint num_rows,
+    jobject num_output_rows_obj);
 
   
 #ifdef __cplusplus

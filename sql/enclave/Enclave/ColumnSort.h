@@ -25,7 +25,7 @@ void transpose(uint8_t *input_rows,
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
-	writers[i] = new RowWriter(output_buffers[i]);
+    writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
   }
   RecordType record;
 
@@ -70,7 +70,7 @@ void untranspose(uint8_t *input_rows,
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
-	writers[i] = new RowWriter(output_buffers[i]);
+    writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
   }
   RecordType record;
 
@@ -117,7 +117,7 @@ void shiftdown(uint8_t *input_rows,
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
-	writers[i] = new RowWriter(output_buffers[i]);
+    writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
   }
   RecordType record;
 
@@ -164,7 +164,7 @@ void shiftup(uint8_t *input_rows,
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
-	writers[i] = new RowWriter(output_buffers[i]);
+    writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
   }
   RecordType record;
 
@@ -205,16 +205,27 @@ void shiftup(uint8_t *input_rows,
 
 
 template<typename RecordType>
-void column_sort_preprocess(uint8_t *input_rows,
+void write_dummy(int op_code, uint32_t num_rows, RowWriter *writer, RecordType *last_row) {
+  (void)op_code;
+  (void)num_rows;
+  (void)writer;
+  (void)last_row;
+}
+
+template<typename RecordType>
+void column_sort_preprocess(int op_code,
+                            uint8_t *input_rows,
 							uint32_t num_rows,
-							uint32_t row_upper_bound,
-							uint32_t index_offset,
+                            uint32_t row_upper_bound,
+                            uint32_t offset,
 							uint32_t r,
-							uint32_t s, //  r * s is the total number of items being sorted
+                            uint32_t s, //  r * s is the total number of items being sorted
 							uint8_t **output_buffers,
                             uint32_t *output_buffer_sizes) {
 
+  (void)op_code;
   (void)row_upper_bound;
+  (void)r;
 
   // using the index offset, we could re-map each row to its new column number
   RowReader reader(input_rows);
@@ -223,7 +234,7 @@ void column_sort_preprocess(uint8_t *input_rows,
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
-	writers[i] = new RowWriter(output_buffers[i]);
+    writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
   }
 
   uint32_t index = 0;
@@ -231,15 +242,15 @@ void column_sort_preprocess(uint8_t *input_rows,
 
   for (uint32_t i = 0; i < num_rows; i++) {
     reader.read(&row);
-	index = index_offset + i;
-
-	new_column = (index / r) + 1;
+    index = offset + i;
+    new_column = (index % s) + 1;
     writers[new_column - 1]->write(&row);
   }
 
   for (uint32_t i = 0; i < s; i++) {
-	writers[i]->close();
+    writers[i]->close();
     output_buffer_sizes[i] = writers[i]->bytes_written();
+    //printf("column_sort_preprocess: bytes_written for column %u is %u\n", i+1, output_buffer_sizes[i]);
   }
 
   for (uint32_t i = 0; i < s; i++) {
@@ -248,8 +259,82 @@ void column_sort_preprocess(uint8_t *input_rows,
   free(writers);
 }
 
+// handle padding after the preprocess step
+template<typename RecordType>
+void column_sort_padding(int op_code,
+                         uint8_t *input_rows,
+                         uint32_t num_rows,
+                         uint32_t row_upper_bound,
+                         uint32_t r,
+                         uint32_t s,
+                         uint8_t *output_rows,
+                         uint32_t *output_rows_size) {
+  (void)row_upper_bound;
+  (void)s;
+
+  RowReader reader(input_rows);
+  RecordType row;
+  RowWriter writer(output_rows, row_upper_bound);
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    reader.read(&row);
+    writer.write(&row);
+  }
+
+  // handles padding
+  write_dummy<RecordType>(op_code, r - num_rows, &writer, &row);
+  writer.close();
+  *output_rows_size = writer.bytes_written();
+}
+
 void count_rows(uint8_t *input_rows,
                 uint32_t buffer_size,
                 uint32_t *output_rows);
+
+template<typename RecordType>
+bool is_dummy(RecordType *row) {
+  (void)row;
+  return false;
+}
+
+// filter out the padded rows
+template<typename RecordType>
+void column_sort_filter(int op_code,
+                        uint8_t *input_rows,
+                        uint32_t column,
+                        uint32_t offset,
+                        uint32_t num_rows,
+                        uint32_t row_upper_bound,
+                        uint8_t *output_rows,
+                        uint32_t *output_rows_size,
+                        uint32_t *num_output_rows) {
+
+  (void)op_code;
+  (void)row_upper_bound;
+
+  printf("column_sort_filter: Entered, column: %u, num_rows is %u, offset=%u\n", column, num_rows, offset);
+
+  RowReader r(input_rows);
+  RowWriter w(output_rows);
+  RecordType cur;
+
+  uint32_t num_output_rows_result = 0;
+  uint32_t index = 0;
+
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&cur);
+    index = (column - 1) * num_rows + i;
+    if (index < offset) {
+      w.write(&cur);
+      num_output_rows_result++;
+    }
+  }
+
+  printf("column_sort_filter: filtered %u rows\n", num_output_rows_result);
+
+  w.close();
+  *output_rows_size = w.bytes_written();
+  *num_output_rows = num_output_rows_result;
+}
 
 #endif

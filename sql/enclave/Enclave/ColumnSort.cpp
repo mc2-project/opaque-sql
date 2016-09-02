@@ -37,3 +37,37 @@ void count_rows(uint8_t *input_rows,
 
   *output_rows = total_num_rows;
 }
+
+template<>
+void write_dummy<NewRecord>(int op_code, uint32_t num_rows, RowWriter *writer, NewRecord *last_row) {
+
+  (void)op_code;
+  last_row->mark_dummy();
+  for (uint32_t i = 0; i < num_rows; i++) {
+    writer->write(last_row);
+  }
+
+}
+
+
+template<>
+void write_dummy<NewJoinRecord>(int op_code, uint32_t num_rows, RowWriter *writer, NewJoinRecord *last_row) {
+
+  (void)op_code;
+  last_row->mark_dummy();
+  for (uint32_t i = 0; i < num_rows; i++) {
+    writer->write(last_row);
+  }
+
+}
+
+
+template<>
+bool is_dummy<NewRecord>(NewRecord *row) {
+  return row->is_dummy();
+}
+
+template<>
+bool is_dummy<NewJoinRecord>(NewJoinRecord *row) {
+  return row->get_row().is_dummy();
+}

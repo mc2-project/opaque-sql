@@ -456,19 +456,38 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("NewColumnSort") {
-    val data = Random.shuffle((0 until 32).map(x => (x.toString, x)).toSeq)
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val encData = QED.encryptN(data).map {
       case Array(str, x) => InternalRow(str, x).encSerialize
     }
     val p = QED.createBlock(encData.toArray, false)
     val blocks = new Array[Block](1)
-    blocks(0) = Block(p, p.length)
+    blocks(0) = Block(p, data.length)
 
-    val result = ObliviousSort.NewColumnSort(sparkContext, sparkContext.makeRDD(blocks, 1), OP_SORT_COL2, 16, 2).flatMap { block =>
+    val result = ObliviousSort.NewColumnSort(sparkContext, sparkContext.makeRDD(blocks, 1), OP_SORT_COL2, 64, 4).flatMap { block =>
       QED.splitBlock(block.bytes, block.numRows, true)
         .map(serRow => QED.parseRow(serRow))}.collect
 
     assert(QED.decrypt2[String, Int](result) === data.sortBy(_._2))
+  }
+
+  test("NewColumnSort -- padding") {
+    val data = Random.shuffle((0 until 30).map(x => (x.toString, x)).toSeq)
+    val encData = QED.encryptN(data).map {
+      case Array(str, x) => InternalRow(str, x).encSerialize
+    }
+    val p = QED.createBlock(encData.toArray, false)
+    val blocks = new Array[Block](1)
+    blocks(0) = Block(p, data.length)
+
+    val result = ObliviousSort.NewColumnSort(sparkContext, sparkContext.makeRDD(blocks, 1), OP_SORT_COL2).flatMap { block =>
+      QED.splitBlock(block.bytes, block.numRows, true)
+        .map(serRow => QED.parseRow(serRow))}.collect
+
+    assert(QED.decrypt2[String, Int](result) === data.sortBy(_._2))
+    for (v <- QED.decrypt2[String, Int](result)) {
+      println(v)
+    }
   }
 
 }

@@ -67,6 +67,8 @@ public:
     free(row);
   }
 
+  static void init_dummy(NewRecord *dummy, int op_code);
+
   /** Delete all attributes from the record. */
   void clear();
 
@@ -295,6 +297,9 @@ public:
     return row.num_cols() == 0;
   }
 
+  /** Mark each attribute as a dummy attribute, used for column sort padding **/
+  void mark_dummy();
+
   /**
    * Zero out the contents of this record. This causes sort-merge join to treat it as a dummy
    * record.
@@ -311,6 +316,10 @@ public:
     printf("JoinRecord[row=");
     row.print();
     printf("]\n");
+  }
+
+  NewRecord get_row() {
+    return row;
   }
 
 private:
@@ -978,11 +987,18 @@ private:
 
   
   void read_encrypted_block() {
-    uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
-    block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
-    buf += 4; // row_upper_bound
-    decrypt(buf, block_enc_size, block_start);
-    buf += block_enc_size;
+    uint32_t block_enc_size = 0;
+    while (true) {
+      block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+      block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+      printf("read_encrypted_block: block_num_rows=%u\n", block_num_rows);
+      buf += 4; // row_upper_bound
+      decrypt(buf, block_enc_size, block_start);
+      buf += block_enc_size;
+
+      if (block_num_rows > 0)
+        break;
+    }
     block_pos = block_start;
     block_rows_read = 0;
   }

@@ -170,8 +170,11 @@ class SGXEnclave extends java.io.Serializable {
       eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 
   @native def EnclaveColumnSort(
-    eid: Long, op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, offset: Int) : Array[Byte]
+    eid: Long, op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, current_part: Int, num_part: Int, offset: Int) : Array[Byte]
 
   @native def CountNumRows(
     eid: Long, input_rows: Array[Byte]) : Int
+
+  @native def ColumnSortFilter(
+    eid: Long, op_code: Int, input_rows: Array[Byte], column: Int, offset: Int, num_rows: Int, ret_num_rows: MutableInteger): Array[Byte]
 }
