@@ -68,9 +68,9 @@ object QEDBenchmark {
       QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString, distributed)
     }
 
-    QEDBenchmark.tpch9SparkSQL(sqlContext, "sf0.2")
-    QEDBenchmark.tpch9Generic(sqlContext, "sf0.2")
-    QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2")
+    QEDBenchmark.tpch9SparkSQL(sqlContext, "sf0.2", None)
+    QEDBenchmark.tpch9Generic(sqlContext, "sf0.2", None)
+    QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2", None)
 
     sc.stop()
   }
@@ -357,7 +357,9 @@ object QEDBenchmark {
   }
 
   /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
-  def tpch9SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Int, Float)] = {
+  def tpch9SparkSQL(
+      sqlContext: SQLContext, size: String, quantityThreshold: Option[Int])
+    : Seq[(String, Int, Float)] = {
     import sqlContext.implicits._
     val partDF = part(sqlContext, size)
     val supplierDF = supplier(sqlContext, size)
@@ -377,7 +379,13 @@ object QEDBenchmark {
                     partsuppDF.join( // 3. partsupp
                       partDF // 1. part
                         .filter($"p_name".contains("maroon"))
-                        .join(lineitemDF, $"p_partkey" === $"l_partkey"), // 2. lineitem
+                        .join(
+                          // 2. lineitem
+                          quantityThreshold match {
+                            case Some(q) => lineitemDF.filter($"l_quantity" > lit(q))
+                            case None => lineitemDF
+                          },
+                          $"p_partkey" === $"l_partkey"),
                       $"ps_suppkey" === $"l_suppkey" && $"ps_partkey" === $"p_partkey"),
                     $"l_orderkey" === $"o_orderkey"),
                 $"ps_suppkey" === $"s_suppkey"),
@@ -397,7 +405,8 @@ object QEDBenchmark {
 
   /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
   def tpch9Generic(
-      sqlContext: SQLContext, size: String, distributed: Boolean = false)
+      sqlContext: SQLContext, size: String, quantityThreshold: Option[Int],
+      distributed: Boolean = false)
     : Seq[(String, Int, Float)] = {
     import sqlContext.implicits._
     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
@@ -414,7 +423,13 @@ object QEDBenchmark {
                       partDF // 1. part
                         .nonObliviousFilter($"p_name".contains("maroon"))
                         .encSelect($"p_partkey")
-                        .encJoin(lineitemDF, $"p_partkey" === $"l_partkey"), // 2. lineitem
+                        .encJoin(
+                          // 2. lineitem
+                          quantityThreshold match {
+                            case Some(q) => lineitemDF.nonObliviousFilter($"l_quantity" > lit(q))
+                            case None => lineitemDF
+                          },
+                          $"p_partkey" === $"l_partkey"),
                       $"ps_suppkey" === $"l_suppkey" && $"ps_partkey" === $"p_partkey"),
                     $"l_orderkey" === $"o_orderkey"),
                 $"ps_suppkey" === $"s_suppkey"),
@@ -433,8 +448,9 @@ object QEDBenchmark {
 
   /** TPC-H query 9 - Product Type Profit Measure Query - Opaque join order */
   def tpch9Opaque(
-      sqlContext: SQLContext, size: String, distributed: Boolean = false)
-      : Seq[(String, Int, Float)] = {
+      sqlContext: SQLContext, size: String, quantityThreshold: Option[Int],
+      distributed: Boolean = false)
+    : Seq[(String, Int, Float)] = {
     import sqlContext.implicits._
     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
       tpch9EncryptedDFs(sqlContext, size, distributed)
@@ -453,7 +469,11 @@ object QEDBenchmark {
                     $"ps_suppkey" === $"s_suppkey"),
                 $"s_nationkey" === $"n_nationkey"))
               .encJoin(
-                lineitemDF, // 5. lineitem
+                // 5. lineitem
+                quantityThreshold match {
+                  case Some(q) => lineitemDF.nonObliviousFilter($"l_quantity" > lit(q))
+                  case None => lineitemDF
+                },
                 $"s_suppkey" === $"l_suppkey" && $"p_partkey" === $"l_partkey"),
             $"l_orderkey" === $"o_orderkey")
           .encSelect(

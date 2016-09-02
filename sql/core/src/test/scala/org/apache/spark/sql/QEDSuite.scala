@@ -98,9 +98,9 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("TPC-H query 9") {
-    val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small").sorted
-    val b = QEDBenchmark.tpch9Generic(sqlContext, "sf_small").sorted
-    val c = QEDBenchmark.tpch9Opaque(sqlContext, "sf_small").sorted
+    val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small", Some(25)).sorted
+    val b = QEDBenchmark.tpch9Generic(sqlContext, "sf_small", Some(25)).sorted
+    val c = QEDBenchmark.tpch9Opaque(sqlContext, "sf_small", Some(25)).sorted
     assert(a.size === b.size)
     assert(a.map { case (a, b, c) => (a, b)} === b.map { case (a, b, c) => (a, b)})
     assert(a.size === c.size)

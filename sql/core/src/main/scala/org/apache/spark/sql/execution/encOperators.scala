@@ -231,6 +231,12 @@ case class EncFilter(condition: Expression, child: OutputsBlocks)
       case Contains(Col(2, _), Literal(maroon, StringType))
           if maroon == UTF8String.fromString("maroon") =>
         OP_FILTER_COL2_CONTAINS_MAROON
+      case GreaterThan(Col(4, _), Literal(25, _)) =>
+        OP_FILTER_COL4_GT_25
+      case GreaterThan(Col(4, _), Literal(40, _)) =>
+        OP_FILTER_COL4_GT_40
+      case GreaterThan(Col(4, _), Literal(45, _)) =>
+        OP_FILTER_COL4_GT_45
     }
     child.executeBlocked().map { block =>
       val (enclave, eid) = QED.initEnclave()

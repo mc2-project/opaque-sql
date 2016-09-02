@@ -34,6 +34,12 @@ bool filter_single_row(int op_code, NewRecord *cur) {
   switch (op_code) {
   case OP_FILTER_COL2_GT3:
     return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 3;
+  case OP_FILTER_COL4_GT_25:
+    return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(4)) > 25;
+  case OP_FILTER_COL4_GT_40:
+    return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(4)) > 40;
+  case OP_FILTER_COL4_GT_45:
+    return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(4)) > 45;
   case OP_BD1_FILTER:
     return *reinterpret_cast<const uint32_t *>(cur->get_attr_value(2)) > 1000;
   case OP_BD2_FILTER_NOT_DUMMY:
