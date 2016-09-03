@@ -16,6 +16,7 @@
 #include "Filter.h"
 #include "Project.h"
 #include "common.h"
+#include "EncryptedDAG.h"
 
 /**
  * Sort an arbitrary number of encrypted buffers and write the results back to the same buffers. The
@@ -34,10 +35,11 @@
  */
 template<typename RecordType>
 void external_sort(int op_code,
-		   uint32_t num_buffers,
-		   uint8_t **buffer_list,
-		   uint32_t *num_rows,
-		   uint32_t row_upper_bound,
+                   Verify *verify_set,
+                   uint32_t num_buffers,
+                   uint8_t **buffer_list,
+                   uint32_t *num_rows,
+                   uint32_t row_upper_bound,
                    uint8_t *scratch);
 
 /**
@@ -45,7 +47,8 @@ void external_sort(int op_code,
  * single machine.
  */
 template<typename RecordType>
-void sample(uint8_t *input_rows,
+void sample(Verify *verify_set,
+            uint8_t *input_rows,
             uint32_t input_rows_len,
             uint32_t num_rows,
             uint8_t *output_rows,
@@ -62,6 +65,7 @@ void sample(uint8_t *input_rows,
  */
 template<typename RecordType>
 void find_range_bounds(int op_code,
+                       Verify *verify_set,
                        uint32_t num_partitions,
                        uint32_t num_buffers,
                        uint8_t **buffer_list,
@@ -85,6 +89,7 @@ void find_range_bounds(int op_code,
  */
 template<typename RecordType>
 void partition_for_sort(int op_code,
+                        Verify *verify_set,
                         uint8_t num_partitions,
                         uint32_t num_buffers,
                         uint8_t **buffer_list,

@@ -19,6 +19,14 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext)
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext);
 
+void encrypt_with_aad(uint8_t *plaintext, uint32_t plaintext_length,
+                      uint8_t *ciphertext,
+                      uint8_t *aad, uint32_t aad_len);
+
+void decrypt_with_aad(const uint8_t *ciphertext, uint32_t ciphertext_length,
+                      uint8_t *plaintext,
+                      uint8_t *aad, uint32_t aad_len);
+
 uint32_t enc_size(uint32_t plaintext_size);
 uint32_t dec_size(uint32_t ciphertext_size);
 

@@ -13,6 +13,7 @@ class MergeItem {
 
 template<typename RecordType>
 void external_merge(int op_code,
+                    Verify *verify_set,
                     std::vector<uint8_t *> &runs,
                     uint32_t run_start,
                     uint32_t num_runs,
@@ -48,8 +49,7 @@ void external_merge(int op_code,
 
   // Sort the runs into scratch
   RowWriter w(scratch, row_upper_bound);
-  w.set_part_index(0);
-  w.set_opcode(op_code);
+  w.set_self_task_id(verify_set->get_self_task_id());
   while (!queue.empty()) {
     MergeItem<RecordType> item = queue.top();
     queue.pop();
@@ -73,11 +73,12 @@ void external_merge(int op_code,
 
 template<typename RecordType>
 void external_sort(int op_code,
-		   uint32_t num_buffers,
-		   uint8_t **buffer_list,
+                   Verify *verify_set,
+                   uint32_t num_buffers,
+                   uint8_t **buffer_list,
                    uint32_t *num_rows,
-		   uint32_t row_upper_bound,
-		   uint8_t *scratch) {
+                   uint32_t row_upper_bound,
+                   uint8_t *scratch) {
 
   // Maximum number of rows we will need to store in memory at a time: the contents of the largest
   // buffer
@@ -109,7 +110,8 @@ void external_sort(int op_code,
   // Sort each buffer individually
   for (uint32_t i = 0; i < num_buffers; i++) {
     debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
-    sort_single_buffer(op_code, buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
+    sort_single_buffer(op_code, verify_set,
+                       buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
                        row_upper_bound, &num_comparisons, &num_deep_comparisons);
   }
 
@@ -131,9 +133,9 @@ void external_sort(int op_code,
         std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(runs.size() - 1) - run_start);
       debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
-      external_merge<RecordType>(
-        op_code, runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
-        &num_comparisons, &num_deep_comparisons);
+      external_merge<RecordType>(op_code, verify_set,
+                                 runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
+                                 &num_comparisons, &num_deep_comparisons);
 
       new_runs.push_back(runs[run_start]);
     }
@@ -153,7 +155,8 @@ void external_sort(int op_code,
 }
 
 template<typename RecordType>
-void sample(uint8_t *input_rows,
+void sample(Verify *verify_set,
+            uint8_t *input_rows,
             uint32_t input_rows_len,
             uint32_t num_rows,
 			uint8_t *output_rows,
@@ -178,8 +181,9 @@ void sample(uint8_t *input_rows,
   unsigned char buf[2];
   uint16_t *buf_ptr = (uint16_t *) buf;
 
-  RowReader r(input_rows);
+  RowReader r(input_rows, verify_set);
   RowWriter w(output_rows, row_upper_bound);
+  w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
   uint32_t num_output_rows_result = 0;
   for (uint32_t i = 0; i < num_rows; i++) {
@@ -198,6 +202,7 @@ void sample(uint8_t *input_rows,
 
 template<typename RecordType>
 void find_range_bounds(int op_code,
+                       Verify *verify_set,
                        uint32_t num_partitions,
 					   uint32_t num_buffers,
                        uint8_t **buffer_list,
@@ -208,7 +213,7 @@ void find_range_bounds(int op_code,
                        uint8_t *scratch) {
 
   // Sort the input rows
-  external_sort<RecordType>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
 
   // Split them into one range per partition
   uint32_t total_num_rows = 0;
@@ -219,6 +224,7 @@ void find_range_bounds(int op_code,
 
   RowReader r(buffer_list[0]);
   RowWriter w(output_rows, row_upper_bound);
+  w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
   uint32_t current_rows_in_part = 0;
   for (uint32_t i = 0; i < total_num_rows; i++) {
@@ -237,6 +243,7 @@ void find_range_bounds(int op_code,
 
 template<typename RecordType>
 void partition_for_sort(int op_code,
+                        Verify *verify_set,
                         uint8_t num_partitions,
                         uint32_t num_buffers,
                         uint8_t **buffer_list,
@@ -249,7 +256,7 @@ void partition_for_sort(int op_code,
                         uint8_t *scratch) {
 
   // Sort the input rows
-  external_sort<RecordType>(op_code, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
 
   uint32_t total_num_rows = 0;
   for (uint32_t i = 0; i < num_buffers; i++) {
@@ -261,8 +268,9 @@ void partition_for_sort(int op_code,
   // less than the next boundary row. The first range contains all rows less than the first boundary
   // row, and the last range contains all rows greater than or equal to the last boundary row.
   RowReader r(buffer_list[0]);
-  RowReader b(boundary_rows);
+  RowReader b(boundary_rows, verify_set);
   RowWriter w(output, row_upper_bound);
+  w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
   RecordType boundary_row;
   uint32_t out_idx = 0;
@@ -304,6 +312,7 @@ void partition_for_sort(int op_code,
 
 template void external_sort<NewRecord>(
   int op_code,
+  Verify *verify_set,
   uint32_t num_buffers,
   uint8_t **buffer_list,
   uint32_t *num_rows,
@@ -312,6 +321,7 @@ template void external_sort<NewRecord>(
 
 template void external_sort<NewJoinRecord>(
   int op_code,
+  Verify *verify_set,
   uint32_t num_buffers,
   uint8_t **buffer_list,
   uint32_t *num_rows,
@@ -319,6 +329,7 @@ template void external_sort<NewJoinRecord>(
   uint8_t *scratch);
 
 template void sample<NewRecord>(
+  Verify *verify_set,
   uint8_t *input_rows,
   uint32_t input_rows_len,
   uint32_t num_rows,
@@ -327,6 +338,7 @@ template void sample<NewRecord>(
   uint32_t *num_output_rows);
 
 template void sample<NewJoinRecord>(
+  Verify *verify_set,
   uint8_t *input_rows,
   uint32_t input_rows_len,
   uint32_t num_rows,
@@ -336,6 +348,7 @@ template void sample<NewJoinRecord>(
 
 template void find_range_bounds<NewRecord>(
   int op_code,
+  Verify *verify_set,
   uint32_t num_partitions,
   uint32_t num_buffers,
   uint8_t **buffer_list,
@@ -347,6 +360,7 @@ template void find_range_bounds<NewRecord>(
 
 template void find_range_bounds<NewJoinRecord>(
   int op_code,
+  Verify *verify_set,
   uint32_t num_partitions,
   uint32_t num_buffers,
   uint8_t **buffer_list,
@@ -358,6 +372,7 @@ template void find_range_bounds<NewJoinRecord>(
 
 template void partition_for_sort<NewRecord>(
   int op_code,
+  Verify *verify_set,
   uint8_t num_partitions,
   uint32_t num_buffers,
   uint8_t **buffer_list,
@@ -371,6 +386,7 @@ template void partition_for_sort<NewRecord>(
 
 template void partition_for_sort<NewJoinRecord>(
   int op_code,
+  Verify *verify_set,
   uint8_t num_partitions,
   uint32_t num_buffers,
   uint8_t **buffer_list,

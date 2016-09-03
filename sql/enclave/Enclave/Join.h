@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "util.h"
+#include "EncryptedDAG.h"
 
 int cmp(const uint8_t *value1, const uint8_t *value2, uint32_t len);
 void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
@@ -22,30 +23,34 @@ void cpy(uint8_t *dest, uint8_t *src, uint32_t len);
 // 6. Filter out the dummy rows using an oblivious filter.
 
 void join_sort_preprocess(
+  Verify *verify_set,
   uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
   uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
   uint8_t *output_rows, uint32_t output_rows_len, uint32_t *actual_output_len);
 
 void scan_collect_last_primary(int op_code,
+                               Verify *verify_set,
                                uint8_t *input_rows, uint32_t input_rows_length,
                                uint32_t num_rows,
                                uint8_t *output, uint32_t output_length,
                                uint32_t *actual_output_len);
 
 void process_join_boundary(int op_code,
+                           Verify *verify_set,
                            uint8_t *input_rows, uint32_t input_rows_length,
                            uint32_t num_rows,
                            uint8_t *output_rows, uint32_t output_rows_size,
                            uint32_t *actual_output_length);
 
 void sort_merge_join(int op_code,
+                     Verify *verify_set,
                      uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *join_row, uint32_t join_row_length,
                      uint8_t *output, uint32_t output_length,
                      uint32_t *actual_output_length);
 
-void non_oblivious_sort_merge_join(int op_code,
+void non_oblivious_sort_merge_join(int op_code, Verify *verify_set,
 								   uint8_t *input_rows, uint32_t input_rows_length,
 								   uint32_t num_rows,
 								   uint8_t *output_rows, uint32_t output_rows_length,

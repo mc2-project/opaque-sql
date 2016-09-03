@@ -6,15 +6,17 @@
 int printf(const char *fmt, ...);
 
 template<typename AggregatorType>
-void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_step1(Verify *verify_set,
+                     uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size) {
   (void)input_rows_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows);
-  IndividualRowWriter w(output_rows);
+  RowReader r(input_rows, verify_set);
+  IndividualRowWriterV w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
   NewRecord cur;
   AggregatorType a;
 
@@ -33,7 +35,8 @@ void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
 }
 
 template<typename AggregatorType>
-void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_process_boundaries(Verify *verify_set,
+                                  uint8_t *input_rows, uint32_t input_rows_length,
                                   uint32_t num_rows,
                                   uint8_t *output_rows, uint32_t output_rows_length,
                                   uint32_t *actual_output_rows_length) {
@@ -44,7 +47,7 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
   // boundaries
   uint32_t num_distinct = 0;
   {
-    IndividualRowReader r(input_rows);
+    IndividualRowReaderV r(input_rows, verify_set);
     AggregatorType prev_last_agg, cur_last_agg;
     NewRecord cur_first_row;
     for (uint32_t i = 0; i < num_rows; i++) {
@@ -67,8 +70,9 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
   //    (b) the last partial aggregate from the previous partition (augmented with previous runs),
   //    (c) the global offset for the item involved in (b) within the set of distinct items
   //    (d) the first row of the next partition
-  IndividualRowWriter w(output_rows);
-  IndividualRowReader r(input_rows);
+  IndividualRowWriterV w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
+  IndividualRowReaderV r(input_rows, verify_set);
   AggregatorType prev_last_agg, cur_last_agg;
   NewRecord cur_first_row, next_first_row;
   uint32_t prev_last_agg_offset = 0, cur_last_agg_offset = 0;
@@ -114,7 +118,8 @@ void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_lengt
 }
 
 template<typename AggregatorType>
-void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_step2(Verify *verify_set,
+                     uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *boundary_info_rows, uint32_t boundary_info_rows_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
@@ -123,12 +128,13 @@ void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
   (void)boundary_info_rows_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows);
+  RowReader r(input_rows, verify_set);
   RowWriter w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
   NewRecord cur, next;
   AggregatorType a;
 
-  IndividualRowReader boundary_info_reader(boundary_info_rows);
+  IndividualRowReaderV boundary_info_reader(boundary_info_rows, verify_set);
   AggregatorType boundary_info;
   NewRecord next_partition_first_row;
   boundary_info_reader.read(&boundary_info);
@@ -161,18 +167,18 @@ void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
 // non-oblivious aggregation
 // a single scan, assume that external_sort is already called
 template<typename AggregatorType>
-void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
-			     uint32_t num_rows,
-			     uint8_t *output_rows, uint32_t output_rows_length,
+void non_oblivious_aggregate(Verify *verify_set,
+                             uint8_t *input_rows, uint32_t input_rows_length,
+                             uint32_t num_rows,
+                             uint8_t *output_rows, uint32_t output_rows_length,
                              uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
 
   (void)input_rows_length;
   (void)output_rows_length;
   
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter writer(output_rows);
-  writer.set_part_index(0);
-  writer.set_opcode(OP_TEST_AGG);
+  writer.set_self_task_id(verify_set->get_self_task_id());
 
   NewRecord prev_row, cur_row, output_row;
   AggregatorType agg;
@@ -211,6 +217,4 @@ void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
   writer.close();
   *actual_output_rows_length = writer.bytes_written();
   *num_output_rows = num_output_rows_result;
-
-  reader.close_and_verify(OP_TEST_AGG, 1, 0);
 }

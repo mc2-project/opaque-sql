@@ -8,6 +8,7 @@
 #include "math.h"
 #include "Crypto.h"
 #include "util.h"
+#include "EncryptedDAG.h"
 
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
@@ -58,19 +59,22 @@
 // TODO: change the [in] pointers to [user_check]
 
 template<typename AggregatorType>
-void aggregate_step1(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_step1(Verify *verify_set,
+                     uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size);
 
 template<typename AggregatorType>
-void aggregate_process_boundaries(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_process_boundaries(Verify *verify_set,
+                                  uint8_t *input_rows, uint32_t input_rows_length,
                                   uint32_t num_rows,
                                   uint8_t *output_rows, uint32_t output_rows_length,
                                   uint32_t *actual_output_rows_length);
 
 template<typename AggregatorType>
-void aggregate_step2(uint8_t *input_rows, uint32_t input_rows_length,
+void aggregate_step2(Verify *verify_set,
+                     uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *boundary_info_rows, uint32_t boundary_info_rows_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
@@ -86,7 +90,8 @@ void final_aggregation(int op_code,
                        uint8_t *ret, uint32_t ret_length);
 
 template<typename AggregatorType>
-void non_oblivious_aggregate(uint8_t *input_rows, uint32_t input_rows_length,
+void non_oblivious_aggregate(Verify *verify_set,
+                             uint8_t *input_rows, uint32_t input_rows_length,
 							 uint32_t num_rows,
 							 uint8_t *output_rows, uint32_t output_rows_length,
                              uint32_t *actual_output_rows_length,

@@ -12,14 +12,15 @@ int pow_2(int value);
 
 template<typename RecordType>
 void sort_single_buffer(
-  int op_code, uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  int op_code, Verify *verify_set,
+  uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
   uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
   uint32_t *num_deep_comparisons) {
 
   check(sort_ptrs_len >= num_rows,
         "sort_single_buffer: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_rows);
 
-  RowReader r(buffer);
+  RowReader r(buffer, verify_set);
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&sort_ptrs[i], op_code);
   }
@@ -33,8 +34,7 @@ void sort_single_buffer(
     });
 
   RowWriter w(buffer, row_upper_bound);
-  w.set_part_index(0);
-  w.set_opcode(op_code);
+  w.set_self_task_id(verify_set->get_self_task_id());
   for (uint32_t i = 0; i < num_rows; i++) {
     w.write(&sort_ptrs[i]);
   }
@@ -42,10 +42,10 @@ void sort_single_buffer(
 }
 
 template<typename RecordType>
-void merge(
-  int op_code, uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
-  SortPointer<RecordType> *sort_ptrs, uint32_t sort_ptrs_len, uint32_t row_upper_bound,
-  uint32_t *num_comparisons, uint32_t *num_deep_comparisons) {
+void merge(int op_code, Verify *verify_set,
+           uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
+           SortPointer<RecordType> *sort_ptrs, uint32_t sort_ptrs_len, uint32_t row_upper_bound,
+           uint32_t *num_comparisons, uint32_t *num_deep_comparisons) {
 
   check(sort_ptrs_len >= buffer1_rows + buffer2_rows,
         "merge: sort_ptrs is not large enough (%d vs %d)\n",
@@ -106,12 +106,14 @@ void merge(
   // represents a row. If we merge two buffers [aaaaac] and [bbbddd] to form [aaaaabbbcddd], there
   // is no way to split the merged result into two buffers of identical size.
   RowWriter w1(buffer1, row_upper_bound);
+  w1.set_self_task_id(verify_set->get_self_task_id());
   for (uint32_t r = 0; r < buffer1_rows; r++) {
     w1.write(&sort_ptrs[r]);
   }
   w1.close();
 
   RowWriter w2(buffer2, row_upper_bound);
+  w2.set_self_task_id(verify_set->get_self_task_id());
   for (uint32_t r = buffer1_rows; r < buffer1_rows + buffer2_rows; r++) {
     w2.write(&sort_ptrs[r]);
   }
@@ -120,6 +122,7 @@ void merge(
 
 template<typename RecordType>
 void external_oblivious_sort(int op_code,
+                             Verify *verify_set,
                              uint32_t num_buffers,
                              uint8_t **buffer_list,
                              uint32_t *num_rows,
@@ -160,13 +163,13 @@ void external_oblivious_sort(int op_code,
 
   if (num_buffers == 1) {
     debug("Sorting single buffer with %d rows, opcode %d\n", num_rows[0], op_code);
-    sort_single_buffer(op_code, buffer_list[0], num_rows[0], sort_ptrs, max_list_length,
+    sort_single_buffer(op_code, verify_set, buffer_list[0], num_rows[0], sort_ptrs, max_list_length,
                        row_upper_bound, &num_comparisons, &num_deep_comparisons);
   } else {
     // Sort each buffer individually
     for (uint32_t i = 0; i < num_buffers; i++) {
       debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
-      sort_single_buffer(op_code, buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
+      sort_single_buffer(op_code, verify_set, buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
                          row_upper_bound, &num_comparisons, &num_deep_comparisons);
     }
 
@@ -182,7 +185,8 @@ void external_oblivious_sort(int op_code,
             if (pair_idx < offset + len) {
               debug("Merging buffers %d and %d with %d, %d rows\n",
                     idx, pair_idx, num_rows[idx], num_rows[pair_idx]);
-              merge(op_code, buffer_list[idx], num_rows[idx], buffer_list[pair_idx],
+              merge(op_code, verify_set,
+                    buffer_list[idx], num_rows[idx], buffer_list[pair_idx],
                     num_rows[pair_idx], sort_ptrs, max_list_length, row_upper_bound,
                     &num_comparisons, &num_deep_comparisons);
             }

@@ -906,17 +906,17 @@ private:
  */
 class RowReader {
 public:
-  RowReader(uint8_t *buf, uint8_t *buf_end) : buf(buf), buf_end(buf_end) {
+ RowReader(uint8_t *buf, uint8_t *buf_end, Verify *verify_set) : buf(buf), buf_end(buf_end), verify_set(verify_set) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
-    verify_set = new std::set<uint32_t>();
     read_encrypted_block();
   }
 
-  RowReader(uint8_t *buf) : RowReader(buf, NULL) { }
+ RowReader(uint8_t *buf, uint8_t *buf_end) : RowReader(buf, buf_end, NULL) { }
+ RowReader(uint8_t *buf) : RowReader(buf, NULL, NULL) { }
+ RowReader(uint8_t *buf, Verify *verify_set) : RowReader(buf, NULL, verify_set) { }
 
   ~RowReader() {
     free(block_start);
-    delete verify_set;
   }
 
   void read(NewRecord *row) {
@@ -946,37 +946,17 @@ public:
     (void)op_code;
     (void)num_part;
     (void)index;
-    
-    // verify set intersection
-    uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
-    DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
-    uint32_t self_task_id = task_id_parser(op_code, index);
 
-    std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id);
-
-    printf("benchmark op code: %u\n", benchmark_op_code);
-	
-    bool verified = set_verify(input_set, verify_set);
-
-    if (!verified) {
-      // the OS is malicious -- it's the apocalypse!
-      // or maybe our implementation is wrong
-      printf("RowReader::close_and_verify(): Incorrect DAG!\n");
-    } else {
-      printf("RowReader::close_and_verify(): Correct DAG\n");
-    }
-	
-    delete input_set;
-    delete dag;
   }
 
 private:
   void add_parent(uint32_t task_id) {
     // simply add the task ID to the verify set
-    verify_set->insert(task_id);
+    if (verify_set != NULL) {
+      verify_set->add_node(task_id);
+    }
   }
 
-  
   void read_encrypted_block() {
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
@@ -985,7 +965,7 @@ private:
     uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     add_parent(task_id);
     
-    decrypt(buf, block_enc_size, block_start);
+    decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
     buf += block_enc_size;
     block_pos = block_start;
     block_rows_read = 0;
@@ -1004,12 +984,48 @@ private:
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_rows_read;
-  std::set<uint32_t> *verify_set;
+
+  Verify *verify_set;
+};
+
+class IndividualRowReaderV {
+public:
+ IndividualRowReaderV(uint8_t *buf_input, Verify *verify_set) {
+    // read the task ID
+
+   buf = buf_input;
+   this->verify_set = verify_set;
+
+    if (verify_set != NULL) {
+
+      uint32_t self_task_id = *reinterpret_cast<uint32_t *>(buf_input);
+      buf += 4;
+
+      verify_set->add_node(self_task_id);
+    }
+  }
+
+ IndividualRowReaderV(uint8_t *buf) : IndividualRowReaderV(buf, NULL) {}
+
+  void read(NewRecord *row) {
+    buf += row->read_encrypted(buf);
+  }
+  void read(NewJoinRecord *row) {
+    buf += row->read_encrypted(buf);
+  }
+  template<typename AggregatorType>
+  void read(AggregatorType *agg) {
+    buf += agg->read_encrypted(buf);
+  }
+
+private:
+  uint8_t *buf;
+  Verify *verify_set;
 };
 
 class IndividualRowReader {
 public:
-  IndividualRowReader(uint8_t *buf) : buf(buf) {}
+ IndividualRowReader(uint8_t *buf_input) { buf = buf_input; }
 
   void read(NewRecord *row) {
     buf += row->read_encrypted(buf);
@@ -1026,6 +1042,7 @@ private:
   uint8_t *buf;
 };
 
+
 /**
  * Manages encrypting and writing out multiple rows to an output buffer. Either all rows must share
  * the same schema, or a row upper bound must be passed to the constructor.
@@ -1037,27 +1054,19 @@ public:
   RowWriter(uint8_t *buf, uint32_t row_upper_bound)
     : buf_start(buf), buf_pos(buf), row_upper_bound(row_upper_bound), block_num_rows(0),
       block_padded_len(0) {
+    self_task_id = 0;
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
-    opcode = 0;
-    part = 0;
   }
 
-  RowWriter(uint8_t *buf) : RowWriter(buf, 0) {
-    opcode = 0;
-    part = 0;
-  }
+  RowWriter(uint8_t *buf) : RowWriter(buf, 0) { }
 
   ~RowWriter() {
     free(block_start);
   }
 
-  void set_opcode(uint32_t opcode) {
-    this->opcode = opcode;
-  }
-
-  void set_part_index(uint32_t part) {
-    this->part = part;
+  void set_self_task_id(uint32_t self_task_id) {
+    this->self_task_id = self_task_id;
   }
 
   void write(NewRecord *row) {
@@ -1097,11 +1106,9 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = enc_size(block_padded_len); buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
+    *reinterpret_cast<uint32_t *>(buf_pos) = self_task_id; buf_pos += 4;
     
-    uint32_t task_id = task_id_parser(opcode, part);
-    *reinterpret_cast<uint32_t *>(buf_pos) = task_id; buf_pos += 4;
-    
-    encrypt(block_start, block_padded_len, buf_pos);
+    encrypt_with_aad(block_start, block_padded_len, buf_pos, buf_pos - 16, 16);
     buf_pos += enc_size(block_padded_len);
 
     block_pos = block_start;
@@ -1133,13 +1140,15 @@ private:
   uint32_t block_num_rows;
   uint32_t block_padded_len;
 
-  uint32_t opcode;
-  uint32_t part;
+  uint32_t self_task_id;
 };
 
-class IndividualRowWriter {
+class IndividualRowWriterV {
 public:
-  IndividualRowWriter(uint8_t *buf) : buf_start(buf), buf(buf) {}
+ IndividualRowWriterV(uint8_t *buf) : buf_start(buf), buf(buf) {
+    this->buf = buf_start + 4;
+    self_task_id = 0;
+  }
 
   void write(NewRecord *row) {
     uint32_t delta = row->write_encrypted(buf);
@@ -1147,15 +1156,59 @@ public:
           "Wrote %d, which is more than enc_size(ROW_UPPER_BOUND)\n", delta);
     buf += delta;
   }
+
   void write(NewJoinRecord *row) {
     buf += row->write_encrypted(buf);
   }
+
   template<typename AggregatorType>
   void write(AggregatorType *agg) {
     buf += agg->write_encrypted(buf);
   }
 
-  void close() {}
+  void set_self_task_id(uint32_t self_task_id) {
+    this->self_task_id = self_task_id;
+  }
+
+  void close() {
+    //assert(self_task_id != 0);
+    uint8_t *temp_buf = buf_start;
+    *reinterpret_cast<uint32_t *>(temp_buf) = self_task_id;
+  }
+
+  uint32_t bytes_written() {
+    return buf - buf_start;
+  }
+
+private:
+  uint8_t * const buf_start;
+  uint8_t *buf;
+  uint32_t self_task_id;
+};
+
+
+class IndividualRowWriter {
+public:
+ IndividualRowWriter(uint8_t *buf) : buf_start(buf), buf(buf) { }
+
+  void write(NewRecord *row) {
+    uint32_t delta = row->write_encrypted(buf);
+    check(delta <= enc_size(ROW_UPPER_BOUND),
+          "Wrote %d, which is more than enc_size(ROW_UPPER_BOUND)\n", delta);
+    buf += delta;
+  }
+
+  void write(NewJoinRecord *row) {
+    buf += row->write_encrypted(buf);
+  }
+
+  template<typename AggregatorType>
+  void write(AggregatorType *agg) {
+    buf += agg->write_encrypted(buf);
+  }
+
+  void close() {
+  }
 
   uint32_t bytes_written() {
     return buf - buf_start;
@@ -1165,6 +1218,7 @@ private:
   uint8_t * const buf_start;
   uint8_t *buf;
 };
+
 
 
 /**
@@ -1223,23 +1277,9 @@ class StreamRowReader {
 
 
   void close_and_verify(int op_code, uint32_t num_part, int index) {
-    // verify set intersection
-    uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
-    DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
-    uint32_t self_task_id = task_id_parser(op_code, index);
-
-    std::set<uint32_t> *input_set = dag->get_task_id_parents(self_task_id);
-	
-    bool verified = set_verify(input_set, verify_set);
-
-    if (!verified) {
-      // the OS is malicious -- it's the apocalypse!
-      // or maybe our implementation is wrong
-      printf("StreamRowReader::close_and_verify(): Incorrect DAG!\n");
-    }
-	
-    delete input_set;
-    delete dag;
+    (void) op_code;
+    (void) num_part;
+    (void) index;
   }
 
  private:

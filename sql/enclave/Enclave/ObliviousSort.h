@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "NewInternalTypes.h"
+#include "EncryptedDAG.h"
 
 #ifndef OBLIVIOUS_SORT_H
 #define OBLIVIOUS_SORT_H
@@ -11,7 +12,8 @@
  */
 template<typename RecordType>
 void sort_single_buffer(
-  int op_code, uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  int op_code, Verify *verify_set,
+  uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
   uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
   uint32_t *num_deep_comparisons);
 
@@ -21,8 +23,8 @@ void sort_single_buffer(
  * buffers. The length of sort_ptrs must be at least buffer1_rows + buffer2_rows.
  */
 template<typename RecordType>
-void merge(
-  int op_code, uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
+void merge(int op_code, Verify *verify,
+  uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
   SortPointer<RecordType> *sort_ptrs, uint32_t sort_ptrs_len, uint32_t row_upper_bound,
   uint32_t *num_comparisons, uint32_t *num_deep_comparisons);
 
@@ -37,7 +39,8 @@ void merge(
  */
 template<typename RecordType>
 void external_oblivious_sort(
-  int op_code, uint32_t num_buffers, uint8_t **buffer_list, uint32_t row_upper_bound);
+  int op_code, Verify *verify_set,
+  uint32_t num_buffers, uint8_t **buffer_list, uint32_t row_upper_bound);
 
 #include "ObliviousSort.tcc"
 

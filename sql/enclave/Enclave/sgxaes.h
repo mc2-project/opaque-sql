@@ -74,7 +74,7 @@ extern "C" {
 						  const unsigned char* X0, 
 						  unsigned char* TAG);
 
-	/* Hashes the Additional Authenticated Data, should be used before enc/dec.
+    /* Hashes the Additional Authenticated Data, should be used before enc/dec.
 	   Operates on whole blocks only. Partial blocks should be padded externally. */
 	void intel_aes_gcmAAD(unsigned char Htbl[16*AES_BLOCK_SIZE], 
 						  const unsigned char *AAD, 

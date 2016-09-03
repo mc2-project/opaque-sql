@@ -79,6 +79,8 @@ enum TASK_ID {
 
   TID_TEST_SORT = 20000,
   TID_TEST_AGG = 20010,
+
+  TID_TEST = 50000,
 };
 
 enum DAG_ID {
@@ -94,7 +96,8 @@ enum DAG_ID {
   DID_ENC_BD2_SINGLE,
   DID_ENC_BD3_SINGLE,
 
-  TEST_VERIFY,
+  DID_TEST_VERIFY,
+  DID_TEST,
 };
 
 enum ROUND_ORDER {
@@ -170,12 +173,46 @@ uint32_t enc_join_set_edges(DAG * dag,
 			    int round_order);
 
 uint32_t get_benchmark_op_code(uint32_t op_code);
+
 class DAGGenerator {
  public:
   static DAG *genDAG(int benchmark_op_code, uint32_t num_part);
 };
 
 bool set_verify(std::set<uint32_t> *set1,
-		std::set<uint32_t> *set2);
+                std::set<uint32_t> *set2);
+
+class Verify {
+  // this class helps keep track of the incoming edges for a particular task
+  // it's a wrapper around std::set
+
+ public:
+  Verify(uint32_t op_code,
+         uint32_t num_part,
+         uint32_t index);
+
+  ~Verify();
+
+  bool verify();
+  std::set<uint32_t> *get_set();
+  void add_node(uint32_t node);
+
+  uint32_t get_index() {
+    return index;
+  }
+
+  uint32_t get_num_part() {
+    return num_part;
+  }
+
+  uint32_t get_self_task_id();
+
+ private:
+  uint32_t num_part;
+  uint32_t index;
+  uint32_t op_code;
+  uint32_t self_task_id;
+  std::set<uint32_t> *parents;
+};
 
 #endif /* _ENCRYPTED_DAG_H_ */

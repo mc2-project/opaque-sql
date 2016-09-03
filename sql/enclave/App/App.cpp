@@ -715,8 +715,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
 
 
   // output rows length should be input_rows length + num_rows * PARTIAL_AGG_UPPER_BOUND
-  uint32_t single_row_size = 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND;
-  single_row_size += ENC_HEADER_SIZE + ROW_UPPER_BOUND;
+  uint32_t single_row_size = 4 + 4 + ENC_HEADER_SIZE + AGG_UPPER_BOUND; // +4 for DAG task ID information
+  single_row_size += 4 + ENC_HEADER_SIZE + ROW_UPPER_BOUND;
   uint32_t out_agg_rows_length = single_row_size * num_rows;
 
   uint8_t *out_agg_rows = (uint8_t *) malloc(out_agg_rows_length);
@@ -846,7 +846,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t single_row_length = ENC_ROW_UPPER_BOUND;
+  uint32_t single_row_length = 4 + ENC_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
@@ -881,7 +881,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t output_length = ENC_ROW_UPPER_BOUND;
+  uint32_t output_length = 4 + ENC_ROW_UPPER_BOUND;
   uint8_t *output = (uint8_t *) malloc(output_length);
 
   uint32_t actual_output_len = 0;
@@ -995,7 +995,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   jboolean if_copy = false;
   uint8_t *block_ptr = (uint8_t *) env->GetByteArrayElements(block, &if_copy);
 
-  uint32_t rows_len = num_rows * ENC_ROW_UPPER_BOUND;
+  uint32_t rows_len = num_rows * (4 + ENC_ROW_UPPER_BOUND);
   uint8_t *rows = (uint8_t *) malloc(rows_len);
 
   debug("SplitBlock: num_rows=%d, block_len=%d, rows_len=%d\n", num_rows, block_len, rows_len);

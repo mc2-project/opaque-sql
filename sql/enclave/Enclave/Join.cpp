@@ -10,6 +10,7 @@
 #include "Join.h"
 
 void join_sort_preprocess(
+  Verify *verify_set,
   uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
   uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
   uint8_t *output_rows, uint32_t output_rows_len, uint32_t *actual_output_len) {
@@ -38,17 +39,18 @@ void join_sort_preprocess(
   }
 
   RowWriter w(output_rows, row_upper_bound);
+  w.set_self_task_id(verify_set->get_self_task_id());
   NewRecord a;
   NewJoinRecord b;
 
-  RowReader primary(primary_rows);
+  RowReader primary(primary_rows, verify_set);
   for (uint32_t i = 0; i < num_primary_rows; i++) {
     primary.read(&a);
     b.set(true, &a);
     w.write(&b);
   }
 
-  RowReader foreign(foreign_rows);
+  RowReader foreign(foreign_rows, verify_set);
   for (uint32_t i = 0; i < num_foreign_rows; i++) {
     foreign.read(&a);
     b.set(false, &a);
@@ -60,6 +62,7 @@ void join_sort_preprocess(
 }
 
 void scan_collect_last_primary(int op_code,
+                               Verify *verify_set,
                                uint8_t *input_rows, uint32_t input_rows_length,
                                uint32_t num_rows,
                                uint8_t *output, uint32_t output_length,
@@ -68,7 +71,7 @@ void scan_collect_last_primary(int op_code,
   (void)input_rows_length;
   (void)output_length;
 
-  RowReader r(input_rows);
+  RowReader r(input_rows, verify_set);
   NewJoinRecord cur, last_primary;
   last_primary.reset_to_dummy();
 
@@ -79,13 +82,15 @@ void scan_collect_last_primary(int op_code,
     }
   }
 
-  IndividualRowWriter w(output);
+  IndividualRowWriterV w(output);
+  w.set_self_task_id(verify_set->get_self_task_id());
   w.write(&last_primary);
   w.close();
   *actual_output_len = w.bytes_written();
 }
 
 void process_join_boundary(int op_code,
+                           Verify *verify_set,
                            uint8_t *input_rows, uint32_t input_rows_length,
                            uint32_t num_rows,
                            uint8_t *output_rows, uint32_t output_rows_size,
@@ -94,8 +99,9 @@ void process_join_boundary(int op_code,
   (void)input_rows_length;
   (void)output_rows_size;
 
-  IndividualRowReader r(input_rows);
-  IndividualRowWriter w(output_rows);
+  IndividualRowReaderV r(input_rows, verify_set);
+  IndividualRowWriterV w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
   NewJoinRecord prev, cur;
   cur.reset_to_dummy();
 
@@ -114,6 +120,7 @@ void process_join_boundary(int op_code,
 }
 
 void sort_merge_join(int op_code,
+                     Verify *verify_set,
                      uint8_t *input_rows, uint32_t input_rows_length,
                      uint32_t num_rows,
                      uint8_t *join_row, uint32_t join_row_length,
@@ -123,13 +130,14 @@ void sort_merge_join(int op_code,
   (void)join_row_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows);
+  RowReader r(input_rows, verify_set);
   RowWriter w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
   NewJoinRecord primary, current;
   NewRecord dummy;
   NewRecord merge;
 
-  IndividualRowReader j_reader(join_row);
+  IndividualRowReaderV j_reader(join_row, verify_set);
   j_reader.read(&primary);
   if (!primary.is_dummy()) {
     check(primary.is_primary(), "sort_merge_join: join_row must be marked as primary\n");
@@ -164,7 +172,7 @@ void sort_merge_join(int op_code,
 }
 
 
-void non_oblivious_sort_merge_join(int op_code,
+void non_oblivious_sort_merge_join(int op_code, Verify *verify_set,
 								   uint8_t *input_rows, uint32_t input_rows_length,
 								   uint32_t num_rows,
 								   uint8_t *output_rows, uint32_t output_rows_length,
@@ -172,8 +180,9 @@ void non_oblivious_sort_merge_join(int op_code,
   (void) input_rows_length;
   (void) output_rows_length;
   
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter writer(output_rows);
+  writer.set_self_task_id(verify_set->get_self_task_id());
 
   NewJoinRecord primary, current;
   NewRecord merge;

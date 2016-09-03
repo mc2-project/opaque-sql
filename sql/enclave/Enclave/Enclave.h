@@ -41,6 +41,7 @@
 #include "DataGen.h"
 #include "Sort.h"
 #include "ColumnSort.h"
+#include "EncryptedDAG.h"
 
 #include "Enclave_t.h"
 
