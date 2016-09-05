@@ -217,7 +217,7 @@ enclave {
 								  uint8_t type,
 								  uint32_t opcode);
 
-	public void ecall_count_rows([user_check] uint8_t *input_rows,
+    public void ecall_count_rows([user_check] uint8_t *input_rows,
 								 uint32_t buffer_size,
 								 [out] uint32_t *output_rows);
 

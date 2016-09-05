@@ -1399,7 +1399,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     output_ptr += 4;
     *((uint32_t *) output_ptr) = output_buffer_sizes[i];
     output_ptr += 4;
-    printf("ColumnSort: outputting column %u size %u, max is %u\n", i+1, output_buffer_sizes[i], r*row_upper_bound);
+    //printf("ColumnSort: outputting column %u size %u, max is %u\n", i+1, output_buffer_sizes[i], r*row_upper_bound);
     memcpy(output_ptr, output_buffers[i], output_buffer_sizes[i]);
     output_ptr += output_buffer_sizes[i];
   }

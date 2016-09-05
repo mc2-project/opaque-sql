@@ -988,6 +988,7 @@ private:
 
       if (block_num_rows > 0)
         break;
+
       counter++;
     }
     block_pos = block_start;

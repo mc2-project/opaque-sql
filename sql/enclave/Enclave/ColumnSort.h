@@ -305,7 +305,7 @@ void column_sort_padding(int op_code,
   writer.close();
   *output_rows_size = writer.bytes_written();
 
-  printf("column_sort_padding: padding %u rows, from %u to %u, total bytes written: %u\n", r - num_rows, num_rows, r, writer.bytes_written());
+  //printf("column_sort_padding: padding %u rows, from %u to %u, total bytes written: %u\n", r - num_rows, num_rows, r, writer.bytes_written());
 }
 
 void count_rows(uint8_t *input_rows,

@@ -814,12 +814,12 @@ void ecall_column_sort_preprocess(int op_code,
   case SORT_SORT:
 	{
       column_sort_preprocess<NewRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
-	}
+    }
 	break;
   case SORT_JOIN:
 	{
       column_sort_preprocess<NewJoinRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
-	}
+    }
 	break;
   }
 
@@ -842,6 +842,7 @@ void ecall_column_sort_padding(int op_code,
   switch (sort_op) {
   case SORT_SORT:
     {
+
       column_sort_padding<NewRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
     }
     break;
@@ -874,6 +875,7 @@ void ecall_column_sort_filter(int op_code,
   switch (sort_op) {
   case SORT_SORT:
     {
+
       column_sort_filter<NewRecord>(op_code, &verify_set,
                                     input_rows, column, offset,
                                     num_rows, row_upper_bound,
@@ -882,6 +884,7 @@ void ecall_column_sort_filter(int op_code,
     break;
   case SORT_JOIN:
     {
+
       column_sort_filter<NewJoinRecord>(op_code, &verify_set,
                                         input_rows, column, offset,
                                         num_rows, row_upper_bound,
@@ -889,6 +892,7 @@ void ecall_column_sort_filter(int op_code,
     }
     break;
   }
+
 
   verify_set.verify();
 }
