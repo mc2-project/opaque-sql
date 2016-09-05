@@ -734,7 +734,7 @@ void ecall_column_sort(int op_code,
   uint32_t num_part = 1;
   uint32_t index = 0;
   Verify verify_set(op_code, num_part, index);
-  
+
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
@@ -745,16 +745,16 @@ void ecall_column_sort(int op_code,
 
 	  if (round == 1) {
         external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		transpose<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        transpose<NewRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else if (round == 2) {
         external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		untranspose<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        untranspose<NewRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else if (round == 3) {
         external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		shiftdown<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        shiftdown<NewRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else {
         external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		shiftup<NewRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        shiftup<NewRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  }
 	}
 	
@@ -764,16 +764,16 @@ void ecall_column_sort(int op_code,
 	{
 	  if (round == 1) {
         external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		transpose<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        transpose<NewJoinRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else if (round == 2) {
         external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		untranspose<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        untranspose<NewJoinRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else if (round == 3) {
         external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		shiftdown<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        shiftdown<NewJoinRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  } else {
         external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-		shiftup<NewJoinRecord>(input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
+        shiftup<NewJoinRecord>(&verify_set, input_rows, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
 	  }
 
 	}
@@ -801,23 +801,29 @@ void ecall_column_sort_preprocess(int op_code,
                                   uint32_t row_upper_bound,
                                   uint32_t offset,
 								  uint32_t r,
-								  uint32_t s, //  r * s is the total number of items being sorted
+                                  uint32_t s,
 								  uint8_t **output_buffers,
-								  uint32_t *output_buffer_sizes) {
+                                  uint32_t *output_buffer_sizes) {
+
+  uint32_t num_part = 1;
+  uint32_t index = 0;
+  Verify verify_set(op_code, num_part, index);
+
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
 	{
-      column_sort_preprocess<NewRecord>(op_code, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
+      column_sort_preprocess<NewRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
 	}
 	break;
   case SORT_JOIN:
 	{
-      column_sort_preprocess<NewJoinRecord>(op_code, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
+      column_sort_preprocess<NewJoinRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, offset, r, s, output_buffers, output_buffer_sizes);
 	}
 	break;
   }
 
+  verify_set.verify();
 }
 
 
@@ -828,20 +834,25 @@ void ecall_column_sort_padding(int op_code,
                                uint32_t r,
                                uint32_t s,
                                uint8_t *output_rows, uint32_t *output_rows_size) {
+  uint32_t num_part = 1;
+  uint32_t index = 0;
+  Verify verify_set(op_code, num_part, index);
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
     {
-      column_sort_padding<NewRecord>(op_code, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
+      column_sort_padding<NewRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
     }
     break;
   case SORT_JOIN:
     {
-      column_sort_padding<NewJoinRecord>(op_code, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
+      column_sort_padding<NewJoinRecord>(op_code, &verify_set, input_rows, num_rows, row_upper_bound, r, s, output_rows, output_rows_size);
     }
     break;
   }
+
+  verify_set.verify();
 }
 
 
@@ -855,18 +866,29 @@ void ecall_column_sort_filter(int op_code,
                               uint32_t *output_rows_size,
                               uint32_t *num_output_rows) {
 
+  uint32_t num_part = 1;
+  uint32_t index = 0;
+  Verify verify_set(op_code, num_part, index);
+
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
     {
-      column_sort_filter<NewRecord>(op_code, input_rows, column, offset, num_rows, row_upper_bound, output_rows, output_rows_size, num_output_rows);
+      column_sort_filter<NewRecord>(op_code, &verify_set,
+                                    input_rows, column, offset,
+                                    num_rows, row_upper_bound,
+                                    output_rows, output_rows_size, num_output_rows);
     }
     break;
   case SORT_JOIN:
     {
-      column_sort_filter<NewJoinRecord>(op_code, input_rows, column, offset, num_rows, row_upper_bound, output_rows, output_rows_size, num_output_rows);
+      column_sort_filter<NewJoinRecord>(op_code, &verify_set,
+                                        input_rows, column, offset,
+                                        num_rows, row_upper_bound,
+                                        output_rows, output_rows_size, num_output_rows);
     }
     break;
   }
 
+  verify_set.verify();
 }

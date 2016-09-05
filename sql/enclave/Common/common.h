@@ -206,8 +206,8 @@ public:
       *num_rows_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
       *row_upper_bound_out = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
       
-      uint32_t opcode = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
-      (void) opcode;
+      uint32_t task_id = *reinterpret_cast<uint32_t *>(input); input += 4; *len_out += 4;
+      (void) task_id;
       
       input += block_enc_size;
     }

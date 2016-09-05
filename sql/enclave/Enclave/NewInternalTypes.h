@@ -975,16 +975,20 @@ private:
 
   void read_encrypted_block() {
     uint32_t block_enc_size = 0;
+    uint32_t counter = 0;
     while (true) {
       block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
-      printf("read_encrypted_block: block_num_rows=%u\n", block_num_rows);
       buf += 4; // row_upper_bound
-      decrypt(buf, block_enc_size, block_start);
+      uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+      add_parent(task_id);
+      printf("read_encrypted_block: block_enc_size=%u, block_num_rows=%u, task_id=%u, counter=%u\n", block_enc_size, block_num_rows, task_id, counter);
+      decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
       buf += block_enc_size;
 
       if (block_num_rows > 0)
         break;
+      counter++;
     }
     block_pos = block_start;
     block_rows_read = 0;
@@ -1008,37 +1012,43 @@ private:
 };
 
 class IndividualRowReaderV {
-public:
- IndividualRowReaderV(uint8_t *buf_input, Verify *verify_set) {
+ public:
+  IndividualRowReaderV(uint8_t *buf_input, Verify *verify_set) {
     // read the task ID
+    buf = buf_input;
+    buf_start = buf_input;
+    this->verify_set = verify_set;
 
-   buf = buf_input;
-   this->verify_set = verify_set;
-
-    if (verify_set != NULL) {
-
-      uint32_t self_task_id = *reinterpret_cast<uint32_t *>(buf_input);
-      buf += 4;
-
-      verify_set->add_node(self_task_id);
-    }
   }
 
  IndividualRowReaderV(uint8_t *buf) : IndividualRowReaderV(buf, NULL) {}
 
   void read(NewRecord *row) {
+    read_tag();
     buf += row->read_encrypted(buf);
   }
   void read(NewJoinRecord *row) {
+    read_tag();
     buf += row->read_encrypted(buf);
   }
   template<typename AggregatorType>
-  void read(AggregatorType *agg) {
+    void read(AggregatorType *agg) {
+    read_tag();
     buf += agg->read_encrypted(buf);
   }
 
-private:
+  void read_tag() {
+    if (verify_set != NULL) {
+      uint32_t self_task_id = *reinterpret_cast<uint32_t *>(buf);
+      printf("read_tag(): self_task_id=%u\n", self_task_id);
+      buf += 4;
+      verify_set->add_node(self_task_id);
+    }
+  }
+
+ private:
   uint8_t *buf;
+  uint8_t *buf_start;
   Verify *verify_set;
 };
 
@@ -1126,6 +1136,8 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = block_num_rows; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = self_task_id; buf_pos += 4;
+
+    printf("finish_block: block_enc_size=%u, block_num_rows=%u, task_id=%u\n", enc_size(block_padded_len), block_num_rows, self_task_id);
     
     encrypt_with_aad(block_start, block_padded_len, buf_pos, buf_pos - 16, 16);
     buf_pos += enc_size(block_padded_len);
@@ -1165,11 +1177,12 @@ private:
 class IndividualRowWriterV {
 public:
  IndividualRowWriterV(uint8_t *buf) : buf_start(buf), buf(buf) {
-    this->buf = buf_start + 4;
+    this->buf = buf_start;
     self_task_id = 0;
   }
 
   void write(NewRecord *row) {
+    write_tag();
     uint32_t delta = row->write_encrypted(buf);
     check(delta <= enc_size(ROW_UPPER_BOUND),
           "Wrote %d, which is more than enc_size(ROW_UPPER_BOUND)\n", delta);
@@ -1177,11 +1190,13 @@ public:
   }
 
   void write(NewJoinRecord *row) {
+    write_tag();
     buf += row->write_encrypted(buf);
   }
 
   template<typename AggregatorType>
   void write(AggregatorType *agg) {
+    write_tag();
     buf += agg->write_encrypted(buf);
   }
 
@@ -1189,10 +1204,12 @@ public:
     this->self_task_id = self_task_id;
   }
 
+  void write_tag() {
+    *reinterpret_cast<uint32_t *>(buf) = self_task_id;
+    buf += 4;
+  }
+
   void close() {
-    //assert(self_task_id != 0);
-    uint8_t *temp_buf = buf_start;
-    *reinterpret_cast<uint32_t *>(temp_buf) = self_task_id;
   }
 
   uint32_t bytes_written() {

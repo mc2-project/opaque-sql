@@ -45,11 +45,12 @@ void aggregate_process_boundaries(Verify *verify_set,
 
   // 1. Calculate the global number of distinct items, compensating for runs that span partition
   // boundaries
+
   uint32_t num_distinct = 0;
   {
-    IndividualRowReaderV r(input_rows, verify_set);
     AggregatorType prev_last_agg, cur_last_agg;
     NewRecord cur_first_row;
+    IndividualRowReaderV r(input_rows, verify_set);
     for (uint32_t i = 0; i < num_rows; i++) {
       if (i > 0) prev_last_agg.set(&cur_last_agg);
 
@@ -64,6 +65,8 @@ void aggregate_process_boundaries(Verify *verify_set,
       }
     }
   }
+
+  printf("process_boundary first pass done\n");
 
   // 2. Send the following items to each partition:
   //    (a) global number of distinct items,
@@ -112,6 +115,8 @@ void aggregate_process_boundaries(Verify *verify_set,
       w.write(&cur_first_row);
     }
   }
+
+  printf("process_boundary second pass over\n");
 
   w.close();
   *actual_output_rows_length = w.bytes_written();

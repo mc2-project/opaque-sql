@@ -1305,6 +1305,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   uint32_t cur_block_size;
   uint32_t cur_block_num_rows;
   uint32_t total_rows = 0;
+  uint32_t num_blocks = 0;
   reader.read(&cur_block, &cur_block_size, &cur_block_num_rows, &row_upper_bound);
   while (cur_block != NULL) {
     uint8_t *cur_buffer = cur_block;
@@ -1320,6 +1321,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
         cur_row_upper_bound > row_upper_bound ? cur_row_upper_bound : row_upper_bound;
 
       reader.read(&cur_block, &cur_block_size, &cur_block_num_rows, &cur_row_upper_bound);
+      num_blocks++;
     }
 
     buffer_list.push_back(cur_buffer);
@@ -1334,9 +1336,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
   uint32_t estimated_column_size = per_column_blocks * (16 + 12 + 16) + per_column_data_size;
 
-  printf("ColumnSort[%u]: total_rows: %u, estimated rows: %u, estimated_column_size=%u, estimated per_column_blocks=%u, row_upper_bound: %u\n",
+  printf("ColumnSort[%u]: total_rows: %u, estimated rows: %u, estimated_column_size=%u, estimated per_column_blocks=%u, row_upper_bound: %u, num_blocks: %u\n",
          round, total_rows, r,
-         estimated_column_size, per_column_blocks, row_upper_bound);
+         estimated_column_size, per_column_blocks, row_upper_bound, num_blocks);
 
   // construct total of s output buffers
   uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
@@ -1397,7 +1399,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     output_ptr += 4;
     *((uint32_t *) output_ptr) = output_buffer_sizes[i];
     output_ptr += 4;
-    //printf("ColumnSort: outputting column %u size %u, max is %u\n", i+1, output_buffer_sizes[i], r*row_upper_bound);
+    printf("ColumnSort: outputting column %u size %u, max is %u\n", i+1, output_buffer_sizes[i], r*row_upper_bound);
     memcpy(output_ptr, output_buffers[i], output_buffer_sizes[i]);
     output_ptr += output_buffer_sizes[i];
   }

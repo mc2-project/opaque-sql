@@ -3,10 +3,12 @@
 
 #include "util.h"
 #include "NewInternalTypes.h"
+#include "EncryptedDAG.h"
 
 // splits a sequence of rows (in block format) into several streams
 template<typename RecordType>
-void transpose(uint8_t *input_rows,
+void transpose(Verify *verify_set,
+               uint8_t *input_rows,
 			   uint32_t num_rows,
 			   uint32_t row_upper_bound,
 			   uint32_t column,
@@ -21,11 +23,12 @@ void transpose(uint8_t *input_rows,
   uint32_t new_column = column;
   uint32_t idx = 0;
 
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
     writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
   RecordType record;
 
@@ -51,7 +54,8 @@ void transpose(uint8_t *input_rows,
 
 
 template<typename RecordType>
-void untranspose(uint8_t *input_rows,
+void untranspose(Verify *verify_set,
+                 uint8_t *input_rows,
 				 uint32_t num_rows,
 				 uint32_t row_upper_bound,
 				 uint32_t column,
@@ -66,11 +70,12 @@ void untranspose(uint8_t *input_rows,
   uint32_t new_column = column;
   uint32_t idx = 0;
 
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
     writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
   RecordType record;
 
@@ -97,7 +102,8 @@ void untranspose(uint8_t *input_rows,
 
 
 template<typename RecordType>
-void shiftdown(uint8_t *input_rows,
+void shiftdown(Verify *verify_set,
+               uint8_t *input_rows,
 			   uint32_t num_rows,
 			   uint32_t row_upper_bound,
 			   uint32_t column,
@@ -113,11 +119,12 @@ void shiftdown(uint8_t *input_rows,
   uint32_t idx = 0;
   uint32_t new_idx = 0;
 
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
     writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
   RecordType record;
 
@@ -144,7 +151,8 @@ void shiftdown(uint8_t *input_rows,
 
 
 template<typename RecordType>
-void shiftup(uint8_t *input_rows,
+void shiftup(Verify *verify_set,
+             uint8_t *input_rows,
 			 uint32_t num_rows,
 			 uint32_t row_upper_bound,
 			 uint32_t column,
@@ -160,11 +168,12 @@ void shiftup(uint8_t *input_rows,
   uint32_t idx = 0;
   uint32_t new_idx = 0;
 
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
     writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
   RecordType record;
 
@@ -210,10 +219,17 @@ void write_dummy(int op_code, uint32_t num_rows, RowWriter *writer, RecordType *
   (void)num_rows;
   (void)writer;
   (void)last_row;
+
+  (void)op_code;
+  last_row->mark_dummy();
+  for (uint32_t i = 0; i < num_rows; i++) {
+    writer->write(last_row);
+  }
 }
 
 template<typename RecordType>
 void column_sort_preprocess(int op_code,
+                            Verify *verify_set,
                             uint8_t *input_rows,
 							uint32_t num_rows,
                             uint32_t row_upper_bound,
@@ -228,13 +244,14 @@ void column_sort_preprocess(int op_code,
   (void)r;
 
   // using the index offset, we could re-map each row to its new column number
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RecordType row;
 
   RowWriter **writers = (RowWriter **) malloc(sizeof(RowWriter *) * s);
   // create s number of rowwriters
   for (uint32_t i = 0; i < s; i++) {
     writers[i] = new RowWriter(output_buffers[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
 
   uint32_t index = 0;
@@ -262,6 +279,7 @@ void column_sort_preprocess(int op_code,
 // handle padding after the preprocess step
 template<typename RecordType>
 void column_sort_padding(int op_code,
+                         Verify *verify_set,
                          uint8_t *input_rows,
                          uint32_t num_rows,
                          uint32_t row_upper_bound,
@@ -272,9 +290,10 @@ void column_sort_padding(int op_code,
   (void)row_upper_bound;
   (void)s;
 
-  RowReader reader(input_rows);
+  RowReader reader(input_rows, verify_set);
   RecordType row;
   RowWriter writer(output_rows, row_upper_bound);
+  writer.set_self_task_id(verify_set->get_self_task_id());
 
   for (uint32_t i = 0; i < num_rows; i++) {
     reader.read(&row);
@@ -285,6 +304,8 @@ void column_sort_padding(int op_code,
   write_dummy<RecordType>(op_code, r - num_rows, &writer, &row);
   writer.close();
   *output_rows_size = writer.bytes_written();
+
+  printf("column_sort_padding: padding %u rows, from %u to %u, total bytes written: %u\n", r - num_rows, num_rows, r, writer.bytes_written());
 }
 
 void count_rows(uint8_t *input_rows,
@@ -300,6 +321,7 @@ bool is_dummy(RecordType *row) {
 // filter out the padded rows
 template<typename RecordType>
 void column_sort_filter(int op_code,
+                        Verify *verify_set,
                         uint8_t *input_rows,
                         uint32_t column,
                         uint32_t offset,
@@ -314,8 +336,9 @@ void column_sort_filter(int op_code,
 
   printf("column_sort_filter: Entered, column: %u, num_rows is %u, offset=%u\n", column, num_rows, offset);
 
-  RowReader r(input_rows);
+  RowReader r(input_rows, verify_set);
   RowWriter w(output_rows);
+  w.set_self_task_id(verify_set->get_self_task_id());
   RecordType cur;
 
   uint32_t num_output_rows_result = 0;
