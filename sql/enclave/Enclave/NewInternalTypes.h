@@ -982,7 +982,7 @@ private:
       buf += 4; // row_upper_bound
       uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       add_parent(task_id);
-      printf("read_encrypted_block: block_enc_size=%u, block_num_rows=%u, task_id=%u, counter=%u\n", block_enc_size, block_num_rows, task_id, counter);
+      //printf("read_encrypted_block: block_enc_size=%u, block_num_rows=%u, task_id=%u, counter=%u\n", block_enc_size, block_num_rows, task_id, counter);
       decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
       buf += block_enc_size;
 
@@ -1138,7 +1138,7 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = self_task_id; buf_pos += 4;
 
-    printf("finish_block: block_enc_size=%u, block_num_rows=%u, task_id=%u\n", enc_size(block_padded_len), block_num_rows, self_task_id);
+    //printf("finish_block: block_enc_size=%u, block_num_rows=%u, task_id=%u\n", enc_size(block_padded_len), block_num_rows, self_task_id);
     
     encrypt_with_aad(block_start, block_padded_len, buf_pos, buf_pos - 16, 16);
     buf_pos += enc_size(block_padded_len);

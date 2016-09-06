@@ -144,134 +144,30 @@ std::set<uint32_t> * DAG::get_task_id_children(uint32_t task_id) {
 // index defines the index of the partition
 uint32_t task_id_parser(int op_code, int index) {
 
-  uint32_t tid = 0;
+  uint32_t tid = op_code;
 
-  switch(op_code) {
-    /** BD1 **/
-  case OP_BD1_FILTER:
-    tid = TID_BD1_FILTER;
-    break;
+  /** Use the op_code to define TID**/
 
-  case OP_PERMUTE_BD1_SORT1:
-    tid = TID_BD1_PERMUTE_ROUND1;
-    break;
-
-  case OP_PERMUTE_BD1_SORT2:
-    tid = TID_BD1_PERMUTE_ROUND2;
-    break;
-
-  case OP_PERMUTE_BD1_SORT3:
-    tid = TID_BD1_PERMUTE_ROUND3;
-    break;
-
-    /** BD2 **/
-  case OP_BD2_FILTER_NOT_DUMMY:
-    tid = TID_BD2_FILTER;
-    break;
-
-  case OP_BD2_PROJECT:
-    tid = TID_BD2_PROJECT;
-    break;
-
-  case OP_BD2_GROUPBY_STEP1:
-    tid = TID_BD2_GROUPBY_STEP1;
-    break;
-
-  case OP_BD2_GROUPBY_STEP2:
-    tid = TID_BD2_GROUPBY_STEP2;
-    break;
-
-  case OP_BD2_GROUPBY_STEP3:
-    tid = TID_BD2_GROUPBY_STEP3;
-    break;
-
-  case OP_BD2_SORT1_STEP1:
-    tid = TID_BD2_AGG_SORT1_ROUND1;
-    break;
-	
-  case OP_BD2_SORT1_STEP2:
-    tid = TID_BD2_AGG_SORT1_ROUND2;
-    break;
-	
-  case OP_BD2_SORT1_STEP3:
-    tid = TID_BD2_AGG_SORT1_ROUND3;
-    break;
-	
-  case OP_BD2_SORT2_STEP1:
-    tid = TID_BD2_AGG_SORT2_ROUND1;	
-    break;
-  case OP_BD2_SORT2_STEP2:
-    tid = TID_BD2_AGG_SORT2_ROUND2;	
-    break;
-  case OP_BD2_SORT2_STEP3:
-    tid = TID_BD2_AGG_SORT2_ROUND3;	
-    break;
-	
-    /** BD3 **/
-  case OP_BD3_SORT_PREPROCESS:
-    tid = TID_BD3_SORT_PREPROCESS;
-    break;
-
-  case OP_BD3_SORT1_STEP1:
-    tid = TID_BD3_SORT1_STEP1;
-    break;
-
-  case OP_BD3_SORT1_STEP2:
-    tid = TID_BD3_SORT1_STEP2;
-    break;
-
-  case OP_BD3_SORT1_STEP3:
-    tid = TID_BD3_SORT1_STEP3;
-    break;
-
-  case OP_BD3_JOIN_STEP1:
-    tid = TID_BD3_JOIN_STEP1;
-    break;
-
-  case OP_BD3_JOIN_STEP2:
-    tid = TID_BD3_JOIN_STEP2;
-    break;
-
-  case OP_BD3_JOIN_STEP3:
-    tid = TID_BD3_JOIN_STEP3;
-    break;
-
-  case OP_BD3_FILTER1:
-    tid = TID_BD3_FILTER1;
-    break;
-
-  case OP_BD3_PERMUTE_STEP1:
-    tid = TID_BD3_PERMUTE_STEP1;
-    break;
-	
-  case OP_BD3_PERMUTE_STEP2:
-    tid = TID_BD3_PERMUTE_STEP2;
-    break;
-	
-  case OP_BD3_PERMUTE_STEP3:
-    tid = TID_BD3_PERMUTE_STEP3;
-    break;
-
-    /** TEST **/
-  case OP_TEST_SORT:
-    tid = TID_TEST_SORT;
-    break;
-
-  case OP_TEST_AGG:
-    tid = TID_TEST_AGG;
-    break;
-
-    /** Currently, default is set so that all verification tests pass. Opcodes will be slowly integrated benchmark by benchmark. **/
-  default:
+  /** Currently, default is set so that all verification tests pass. Opcodes will be slowly integrated benchmark by benchmark. **/
     //check(false, "task_id_parser: op_code not recognized");
-    printf("task_id_parser: op_code not recognized\n");
-    tid = TID_TEST;
-    break;
-  }
-
+  printf("task_id_parser: op_code not recognized\n");
   tid = TID_TEST;
   
   return tid + index;  
+}
+
+uint32_t create_node(DAG *dag,
+                     uint32_t num_parents,
+                     uint32_t num_children,
+                     uint32_t num_part,
+                     uint32_t offset,
+                     int op_code) {
+
+  for (uint32_t i = 0; i < num_part; i++) {
+    dag->nodes[i+offset] = new Node(i + op_code, num_parents, num_children);
+  }
+
+  return num_part;
 }
 
 
@@ -287,122 +183,71 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
   case BD1:
     {	  
       // construct num_part of TID_BD1_FILTER
-      num_nodes = num_part * 4;
+      num_nodes = num_part * 8;
       dag = new DAG(num_nodes, DID_BD1);
 
-      // the first 3 rounds are permute
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND1, 1, num_part);
-      }
-      offset += num_part;
+      // Construct nodes
+      offset += create_node(dag, 0, 1, num_part, offset, OP_BD1_SORT_SCAN);
+      offset += create_node(dag, 1, num_part, num_part, offset, OP_BD1_SORT_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD1_SORT_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD1_SORT_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD1_SORT_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD1_SORT_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD1_SORT_ROUND4);
 
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND2, num_part, num_part);
-      }
-      offset += num_part;
+      offset += create_node(dag, num_part, 0, num_part, offset, OP_BD1_FINAL_FILTER);
 
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND3, num_part, 1);
-      }
-      offset += num_part;
-
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD1_PERMUTE_ROUND4, num_part, 1);
-      }
-      offset += num_part;
-
-      // filter
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD1_FILTER, 1, num_part);
-      }
-      offset += num_part;
-
+      // Construct edges
       offset = 0;
-
-      offset += sort_set_edges(dag, num_part, offset, OTHER);
+      offset += sort_set_edges(dag, num_part, offset, FIRST);
       offset += filter_set_edges(dag, num_part, offset, LAST);	  
     }
     break;
 
   case DID_BD2:
     {
-      num_nodes = num_part * (3 + 2 + 3 + 1 + 1) + 1;
+      num_nodes = num_part * 16 + 1;
       dag = new DAG(num_nodes, DID_BD2);
-		
-      // AGG sort 1 (3 rounds)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND2, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND3, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND4, num_part, 1);
-      }
-      offset += num_part;
 
-      // group by (3 rounds, 2nd round has only one task)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
-      }
-      offset += num_part;
-      dag->nodes[offset] = new Node(TID_BD2_GROUPBY_STEP2, num_part, num_part);
-      offset++;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
-      }
-      offset += num_part;
-		
+      // AGG sort 1
+      offset += create_node(dag, 0, num_part, num_part, offset, OP_BD2_SORT1_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD2_SORT1_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT1_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT1_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT1_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT1_ROUND4);
+
+      // group by
+      offset += create_node(dag, num_part, 1, num_part, offset, OP_BD2_GROUPBY_SCAN1);
+      offset += create_node(dag, num_part, num_part, 1, offset, OP_BD2_GROUPBY_COLLECT);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD2_GROUPBY_SCAN2);
+
       // AGG sort 2 (4 rounds)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND1, 1, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND2, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND3, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT2_ROUND4, num_part, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, 1, num_part, num_part, offset, OP_BD2_SORT2_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD2_SORT2_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT2_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT2_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT2_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD2_SORT2_ROUND4);
 
       // filter
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_FILTER, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, num_part, 1, num_part, offset, OP_BD2_FILTER);
+
       // project
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_PROJECT, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD2_PROJECT);
 
       offset = 0;
 
-      // set parents & children
+      // Construct edges
       // AGG sort 1
       offset += sort_set_edges(dag, num_part, offset, FIRST);
-
       // group by (3 rounds)
       offset += agg_set_edges(dag, num_part, offset, OTHER);
-		
       // AGG sort 2
       offset += sort_set_edges(dag, num_part, offset, OTHER);
-
       // filter
       offset += filter_set_edges(dag, num_part, offset, OTHER);
-
+      // filter
       offset += project_set_edges(dag, num_part, offset, LAST);
 		
     }
@@ -411,110 +256,55 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
   case DID_BD3:
     {
       num_nodes = num_part * (1 + 3 + 2 + 3 + 1 + 1 + 2 + 1 + 3) + 1 + 1;
-      dag = new DAG(num_nodes, DID_BD2);
+      dag = new DAG(num_nodes, DID_BD3);
       offset = 0;
 		
-      // sort preprocess
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_PREPROCESS, 1, 1);
-      }
-      offset += num_part;
+      // join sort preprocess
+      offset += create_node(dag, 0, 1, num_part, offset, OP_BD3_JOIN_PREPROCESS);
 
-      // sort1 (4 rounds)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP1, 1, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP2, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP3, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP4, num_part, 1);
-      }
-      offset += num_part;
+      // sort 1 (4 rounds)
+      offset += create_node(dag, 1, num_part, num_part, offset, OP_BD3_SORT1_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_SORT1_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT1_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT1_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT1_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT1_ROUND4);
 
       // join (3 rounds)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
-      }
-      offset += num_part;
-      dag->nodes[offset] = new Node(TID_BD3_JOIN_STEP2, num_part, num_part);
-      offset++;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP3, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, num_part, 1, num_part, offset, OP_BD3_JOIN_SCAN1);
+      offset += create_node(dag, num_part, num_part, 1, offset, OP_BD3_JOIN_COLLECT);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_JOIN_SCAN2);
 
       // permute (4 rounds)
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_PERMUTE_STEP1, 1, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP2, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP3, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+num_part] = new Node(i + TID_BD3_PERMUTE_STEP4, num_part, 1);
-      }
-      offset += num_part;
-		
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_SORT2_SCAN);
+      offset += create_node(dag, 1, num_part, num_part, offset, OP_BD3_SORT2_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_SORT2_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT2_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT2_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT2_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT2_ROUND4);
+
       // filter
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_FILTER1, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, num_part, 1, num_part, offset, OP_BD3_JOIN_FILTER);
 
       // project
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT1, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_JOIN_PROJECT);
 
       // aggregate
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
-      }
-      offset += num_part;
-      dag->nodes[offset] = new Node(TID_BD3_GROUPBY_STEP2, num_part, num_part);
-      offset += 1;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP3, 1, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_AGG_SCAN1);
+      offset += create_node(dag, num_part, num_part, 1, offset, OP_BD3_AGG_COLLECT);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_AGG_SCAN2);
 
       // project
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT2, 1, 1);
-      }
-      offset += num_part;
-		
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_AGG_PROJECT);
+
       // sort
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP1, 1, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP2, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP3, num_part, num_part);
-      }
-      offset += num_part;
-      for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT_STEP4, num_part, 1);
-      }
-      offset += num_part;
+      offset += create_node(dag, 1, num_part, num_part, offset, OP_BD3_SORT3_PREPROCESS);
+      offset += create_node(dag, 1, 1, num_part, offset, OP_BD3_SORT3_PAD);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT3_ROUND1);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT3_ROUND2);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT3_ROUND3);
+      offset += create_node(dag, num_part, num_part, num_part, offset, OP_BD3_SORT3_ROUND4);
 
       // define all parents and children
       offset = 0;
@@ -607,7 +397,7 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
 
       // filter
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i] = new Node(i + TID_BD1_FILTER, 0, 0);
+        dag->nodes[i] = new Node(i + TID_BD1_FILTER, 0, 0);
       }
     }
     break;
@@ -622,7 +412,7 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
 
       // create the nodes
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, 1);
+        dag->nodes[i] = new Node(i + TID_BD2_AGG_SORT1_ROUND1, 1, 1);
       }
       offset += num_part;
 
@@ -630,22 +420,22 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
       offset += 1;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND3, 1, num_part);
+        dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND3, 1, num_part);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND4, num_part, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD2_AGG_SORT1_ROUND4, num_part, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD2_GROUPBY_STEP1, 1, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD2_PROJECT, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD2_PROJECT, 1, 1);
       }
       offset += num_part;
 
@@ -671,7 +461,7 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
 
       // create the sort, join, sort, agg, project nodes
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i] = new Node(i + TID_BD3_SORT1_STEP1, 1, 1);
+        dag->nodes[i] = new Node(i + TID_BD3_SORT1_STEP1, 1, 1);
       }
       offset += num_part;
 
@@ -679,22 +469,22 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
       offset += 1;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP3, 1, num_part);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP3, 1, num_part);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP4, num_part, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_SORT1_STEP4, num_part, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_JOIN_STEP1, 1, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP1, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP1, 1, 1);
       }
       offset += num_part;
 
@@ -702,22 +492,22 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
       offset += 1;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP3, 1, num_part);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP3, 1, num_part);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP4, num_part, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_AGG_SORT2_STEP4, num_part, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_GROUPBY_STEP1, 1, 1);
       }
       offset += num_part;
 
       for (uint32_t i = 0; i < num_part; i++) {
-	dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT2, 1, 1);
+        dag->nodes[i+offset] = new Node(i + TID_BD3_PROJECT2, 1, 1);
       }
       offset += num_part;
 
@@ -774,48 +564,71 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
 }
 
 
-uint32_t sort_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
+uint32_t sort_set_edges(DAG *dag, uint32_t num_part, uint32_t input_offset, int round_order) {
 
-  // first, 4 rounds of setting parents and children
+  uint32_t offset = input_offset;
 
+  // First, scan preprocess
   for (uint32_t i = 0; i < num_part; i++) {
     for (uint32_t j = 0; j < num_part; j++) {
       dag->nodes[i+offset]->children[j] = dag->nodes[j+num_part+offset];
     }
   }
-  
+  offset += num_part;
+
+  // Then, one scan to pad
   for (uint32_t i = 0; i < num_part; i++) {
-    for (uint32_t j = 0; j < num_part; j++) {
-      dag->nodes[i+num_part+offset]->parents[j] = dag->nodes[j+offset];
-      dag->nodes[i+num_part+offset]->children[j] = dag->nodes[j+num_part*2+offset];
-    }
+    dag->nodes[i+offset]->parents[i] = dag->nodes[i+offset-num_part];
+    dag->nodes[i+offset]->children[i] = dag->nodes[i+offset+num_part];
   }
-  
-  for (uint32_t i = 0; i < num_part; i++) {
-    for (uint32_t j = 0; j < num_part; j++) {
-      dag->nodes[i+num_part*2+offset]->parents[j] = dag->nodes[j+num_part+offset];
-      dag->nodes[i+num_part*2+offset]->children[j] = dag->nodes[j+num_part*3+offset];
-    }
-  }
+  offset += num_part;
+
+  // Finally, 4 rounds to sort
 
   for (uint32_t i = 0; i < num_part; i++) {
     for (uint32_t j = 0; j < num_part; j++) {
-      dag->nodes[i+num_part*3+offset]->parents[j] = dag->nodes[j+num_part*2+offset];
+      dag->nodes[i+offset]->parents[j] = dag->nodes[j+offset-num_part];
+      dag->nodes[i+offset]->children[j] = dag->nodes[j+offset+num_part];
     }
   }
+  offset += num_part;
 
+  for (uint32_t i = 0; i < num_part; i++) {
+    for (uint32_t j = 0; j < num_part; j++) {
+      dag->nodes[i+offset]->parents[j] = dag->nodes[j+offset-num_part];
+      dag->nodes[i+offset]->children[j] = dag->nodes[j+offset+num_part];
+    }
+  }
+  offset += num_part;
+
+  for (uint32_t i = 0; i < num_part; i++) {
+    for (uint32_t j = 0; j < num_part; j++) {
+      dag->nodes[i+offset]->parents[j] = dag->nodes[j+offset-num_part];
+      dag->nodes[i+offset]->children[j] = dag->nodes[j+offset+num_part];
+    }
+  }
+  offset += num_part;
+
+  for (uint32_t i = 0; i < num_part; i++) {
+    for (uint32_t j = 0; j < num_part; j++) {
+      dag->nodes[i+offset]->parents[j] = dag->nodes[j+offset-num_part];
+    }
+  }
+  offset += num_part;
+  
   // set next stage's parents
   if (round_order != LAST) {
     // set parents for the next round
     for (uint32_t i = 0; i < num_part; i++) {
       for (uint32_t j = 0; j < num_part; j++) {
-	dag->nodes[i+num_part*3+offset]->children[j] = dag->nodes[i+num_part*4+offset];
-	dag->nodes[i+num_part*4+offset]->parents[j] = dag->nodes[i+num_part*3+offset];
+        dag->nodes[i+offset]->children[j] = dag->nodes[i+offset+num_part];
+        dag->nodes[i+num_part+offset]->parents[j] = dag->nodes[i+offset];
       }
     }
   }
 
-  return num_part * 4;
+  offset += num_part;
+  return (offset - input_offset);
 }
 
 uint32_t filter_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_order) {
@@ -852,7 +665,7 @@ uint32_t agg_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_o
     for (uint32_t i = 0; i < num_part; i++) {
       dag->nodes[i+num_part+1+offset]->parents[0] = dag->nodes[num_part+1+offset];
       for (uint32_t j = 0; j < num_part; j++) {
-	dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
+        dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
       }
     }
   }
@@ -874,7 +687,7 @@ uint32_t join_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_
     for (uint32_t i = 0; i < num_part; i++) {
       dag->nodes[i+num_part+1+offset]->parents[0] = dag->nodes[num_part+1+offset];
       for (uint32_t j = 0; j < num_part; j++) {
-	dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
+        dag->nodes[i]->children[j] = dag->nodes[j+num_part*4+1];
       }
     }
   }
@@ -883,9 +696,9 @@ uint32_t join_set_edges(DAG *dag, uint32_t num_part, uint32_t offset, int round_
 }
 
 uint32_t enc_sort_set_edges(DAG *dag,
-			    uint32_t num_part,
-			    uint32_t offset,
-			    int round_order) {
+                            uint32_t num_part,
+                            uint32_t offset,
+                            int round_order) {
   // First, sample from each partition
   for (uint32_t i = 0; i < num_part; i++) {
     dag->nodes[i+offset]->children[0] = dag->nodes[num_part+offset];
@@ -916,9 +729,9 @@ uint32_t enc_sort_set_edges(DAG *dag,
 }
 
 uint32_t enc_agg_set_edges(DAG *dag,
-			   uint32_t num_part,
-			   uint32_t offset,
-			   int round_order) {
+                           uint32_t num_part,
+                           uint32_t offset,
+                           int round_order) {
   // one pass only
   if (round_order != LAST) {
     // set parents for the next round
@@ -932,9 +745,9 @@ uint32_t enc_agg_set_edges(DAG *dag,
 }
 
 uint32_t enc_join_set_edges(DAG * dag,
-			    uint32_t num_part,
-			    uint32_t offset,
-			    int round_order) {
+                            uint32_t num_part,
+                            uint32_t offset,
+                            int round_order) {
   return enc_agg_set_edges(dag, num_part, offset, round_order);
 }
 
