@@ -89,15 +89,16 @@ void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **
   verify_set.verify();
 }
 
-void ecall_project(int op_code,
+void ecall_project(int index, int num_part,
+                   int op_code,
                    uint8_t *input_rows, uint32_t input_rows_length,
                    uint32_t num_rows,
                    uint8_t *output_rows, uint32_t output_rows_length,
                    uint32_t *actual_output_rows_length) {
 
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  printf("ecall_project: index=%u, num_part=%u\n", index, num_part);
+
+  Verify verify_set(op_code, 1, 0);
 
   project(op_code, &verify_set,
           input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
@@ -106,15 +107,15 @@ void ecall_project(int op_code,
   verify_set.verify();
 }
 
-void ecall_filter(int op_code,
+void ecall_filter(int index, int num_part,
+                  int op_code,
                   uint8_t *input_rows, uint32_t input_rows_length,
                   uint32_t num_rows,
                   uint8_t *output_rows, uint32_t output_rows_length,
                   uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
 
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  printf("ecall_filter: index=%u, num_part=%u\n", index, num_part);
+  Verify verify_set(op_code, 1, 0);
 
   filter(op_code, &verify_set,
          input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
@@ -124,14 +125,15 @@ void ecall_filter(int op_code,
 }
 
 /**** BEGIN Aggregation ****/
-void ecall_aggregate_step1(int op_code,
+void ecall_aggregate_step1(int index, int num_part,
+                           int op_code,
                            uint8_t *input_rows, uint32_t input_rows_length,
                            uint32_t num_rows,
                            uint8_t *output_rows, uint32_t output_rows_length,
                            uint32_t *actual_size) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+
+  printf("ecall_aggregate_step1: index=%u, num_part=%u\n", index, num_part);
+  Verify verify_set(op_code, 1, 0);
 
   switch (op_code) {
   case OP_GROUPBY_COL1_SUM_COL2_INT_STEP1:
@@ -220,15 +222,16 @@ void ecall_process_boundary_records(int op_code,
   verify_set.verify();
 }
 
-void ecall_aggregate_step2(int op_code,
+void ecall_aggregate_step2(int index, int num_part,
+                           int op_code,
                            uint8_t *input_rows, uint32_t input_rows_length,
                            uint32_t num_rows,
                            uint8_t *boundary_info_row_ptr, uint32_t boundary_info_row_length,
                            uint8_t *output_rows, uint32_t output_rows_length,
                            uint32_t *actual_size) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void) index;
+  (void) num_part;
+  Verify verify_set(op_code, 1, 0);
 
   switch (op_code) {
   case OP_GROUPBY_COL1_SUM_COL2_INT_STEP2:
@@ -273,16 +276,17 @@ void ecall_aggregate_step2(int op_code,
 
 /**** BEGIN Join ****/
 
-void ecall_join_sort_preprocess(int op_code,
+void ecall_join_sort_preprocess(int index, int num_part,
+                                int op_code,
                                 uint8_t *primary_rows, uint32_t primary_rows_len,
                                 uint32_t num_primary_rows,
                                 uint8_t *foreign_rows, uint32_t foreign_rows_len,
                                 uint32_t num_foreign_rows,
                                 uint8_t *output_rows, uint32_t output_rows_len,
                                 uint32_t *actual_output_len) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
 
   (void)op_code;
   join_sort_preprocess(
@@ -327,16 +331,16 @@ void ecall_process_join_boundary(int op_code,
 }
 
 
-void ecall_sort_merge_join(int op_code,
+void ecall_sort_merge_join(int index, int num_part,
+                           int op_code,
                            uint8_t *input_rows, uint32_t input_rows_length,
                            uint32_t num_rows,
                            uint8_t *join_row, uint32_t join_row_length,
                            uint8_t *output_rows, uint32_t output_rows_length,
                            uint32_t *actual_output_length) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
   sort_merge_join(op_code, &verify_set,
                   input_rows, input_rows_length, num_rows,
                   join_row, join_row_length,
@@ -494,15 +498,17 @@ void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
 }
 
 
-void ecall_external_sort(int op_code,
+void ecall_external_sort(int index,
+                         int num_part,
+                         int op_code,
                          uint32_t num_buffers,
                          uint8_t **buffer_list,
                          uint32_t *num_rows,
                          uint32_t row_upper_bound,
                          uint8_t *scratch) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
   
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
@@ -522,7 +528,8 @@ void ecall_external_sort(int op_code,
   verify_set.verify();
 }
 
-void ecall_sample(int op_code,
+void ecall_sample(int index, int num_part,
+                  int op_code,
                   uint8_t *input_rows,
                   uint32_t input_rows_len,
                   uint32_t num_rows,
@@ -530,9 +537,9 @@ void ecall_sample(int op_code,
                   uint32_t *output_rows_len,
                   uint32_t *num_output_rows) {
 
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
@@ -589,7 +596,8 @@ void ecall_find_range_bounds(int op_code,
   verify_set.verify();
 }
 
-void ecall_partition_for_sort(int op_code,
+void ecall_partition_for_sort(int index, int num_part,
+                              int op_code,
                               uint8_t num_partitions,
                               uint32_t num_buffers,
                               uint8_t **buffer_list,
@@ -600,9 +608,9 @@ void ecall_partition_for_sort(int op_code,
                               uint8_t **output_partition_ptrs,
                               uint32_t *output_partition_num_rows,
                               uint8_t *scratch) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
@@ -648,14 +656,15 @@ void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
 }
 
 
-void ecall_non_oblivious_aggregate(int op_code,
+void ecall_non_oblivious_aggregate(int index, int num_part,
+                                   int op_code,
                                    uint8_t *input_rows, uint32_t input_rows_length,
                                    uint32_t num_rows,
                                    uint8_t *output_rows, uint32_t output_rows_length,
                                    uint32_t *actual_size, uint32_t *num_output_rows) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, index, num_part);
   
   switch (op_code) {
   case OP_GROUPBY_COL1_SUM_COL2_INT:
@@ -683,15 +692,16 @@ void ecall_non_oblivious_aggregate(int op_code,
 }
 
 
-void ecall_non_oblivious_sort_merge_join(int op_code,
+void ecall_non_oblivious_sort_merge_join(int index, int num_part,
+                                         int op_code,
 										 uint8_t *input_rows, uint32_t input_rows_length,
 										 uint32_t num_rows,
 										 uint8_t *output_rows, uint32_t output_rows_length,
                                          uint32_t *actual_output_length,
                                          uint32_t *num_output_rows) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
 
   non_oblivious_sort_merge_join(op_code, &verify_set,
                                 input_rows, input_rows_length,
@@ -712,7 +722,9 @@ void ecall_non_oblivious_sort_merge_join(int op_code,
 // Step 7: Sort locally
 // Step 8: Shift up
 
-void ecall_column_sort(int op_code,
+void ecall_column_sort(int index,
+                       int num_part,
+                       int op_code,
 					   int round, 
 					   uint8_t *input_rows,
 					   uint32_t *num_rows,
@@ -731,9 +743,9 @@ void ecall_column_sort(int op_code,
 	total_num_rows += num_rows[i];
   }
 
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, 1, 0);
 
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {

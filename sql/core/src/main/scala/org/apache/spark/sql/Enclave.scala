@@ -26,13 +26,16 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def Project(
     eid: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     input_rows: Array[Byte],
     num_rows: Int
   ): Array[Byte]
 
   @native def Filter(
-    enclave_id: Long, op_code: Int, rows: Array[Byte], num_rows: Int,
+    enclave_id: Long, index: Int, numPart: Int,
+    op_code: Int, rows: Array[Byte], num_rows: Int,
     num_output_rows: MutableInteger): Array[Byte]
 
   @native def Encrypt(
@@ -52,6 +55,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def Sample(
     enclave_id: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     input: Array[Byte],
     num_rows: Int,
@@ -68,6 +73,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def PartitionForSort(
     enclave_id: Long,
+    index: Int,
+    num_part: Int,
     op_code: Int,
     num_partitions: Int,
     input: Array[Byte],
@@ -79,6 +86,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def ExternalSort(
     enclave_id: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     input: Array[Byte],
     num_items: Int
@@ -86,6 +95,7 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def AggregateStep1(
     eid: Long,
+    index: Int, numPart: Int,
     op_code: Int,
     input_rows: Array[Byte],
     num_rows: Int): Array[Byte]
@@ -99,6 +109,7 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def AggregateStep2(
     eid: Long,
+    index: Int, numPart: Int,
     op_code: Int,
     input_rows: Array[Byte],
     num_rows: Int,
@@ -113,6 +124,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def NonObliviousAggregate(
     eid: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     rows: Array[Byte],
     num_rows: Int,
@@ -121,6 +134,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def JoinSortPreprocess(
     eid: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     primary_rows: Array[Byte],
     num_primary_rows: Int,
@@ -144,6 +159,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def SortMergeJoin(
     eid: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     input_rows: Array[Byte],
     num_rows: Int,
@@ -152,6 +169,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def NonObliviousSortMergeJoin(
     eid: Long,
+    index: Int,
+    numPart: Int,
     op_code: Int,
     rows: Array[Byte],
     num_rows: Int,
@@ -170,7 +189,9 @@ class SGXEnclave extends java.io.Serializable {
       eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 
   @native def EnclaveColumnSort(
-    eid: Long, op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, current_part: Int, num_part: Int, offset: Int) : Array[Byte]
+    eid: Long,
+    index: Int, numPart: Int,
+    op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, current_part: Int, num_part: Int, offset: Int) : Array[Byte]
 
   @native def CountNumRows(
     eid: Long, input_rows: Array[Byte]) : Int

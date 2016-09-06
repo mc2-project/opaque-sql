@@ -545,7 +545,9 @@ object ObliviousSort extends java.io.Serializable {
       joinArray = joinArray ++ v.bytes
     }
 
-    val ret = enclave.EnclaveColumnSort(eid, op_code.value, 0, joinArray, r, s, 0, index, 0, index_offsets(index))
+    val ret = enclave.EnclaveColumnSort(eid,
+      index, s,
+      op_code.value, 0, joinArray, r, s, 0, index, 0, index_offsets(index))
 
     val ret_array = new Array[(Int, Array[Byte])](1)
     ret_array(0) = (0, ret)
@@ -557,20 +559,26 @@ object ObliviousSort extends java.io.Serializable {
     val (enclave, eid) = QED.initEnclave()
 
     println("ColumnSortPad called============")
-    val ret = enclave.EnclaveColumnSort(eid, op_code.value, 1, data._2, r, s, 0, 0, 0, 0)
+    val ret = enclave.EnclaveColumnSort(eid,
+      data._1, r,
+      op_code.value, 1, data._2, r, s, 0, 0, 0, 0)
 
     (data._1, ret)
   }
 
   def ColumnSortPartition(
-    input: (Int, Array[Byte]), op_code: QEDOpcode,
+    input: (Int, Array[Byte]),
+    index: Int, numpart: Int,
+    op_code: QEDOpcode,
     round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
 
     val cur_column = input._1
     val data = input._2
 
     val (enclave, eid) = QED.initEnclave()
-    val ret = enclave.EnclaveColumnSort(eid, op_code.value, round+1, data, r, s, cur_column, 0, 0, 0)
+    val ret = enclave.EnclaveColumnSort(eid,
+      index, numpart,
+      op_code.value, round+1, data, r, s, cur_column, 0, 0, 0)
 
     (cur_column, ret)
   }
@@ -635,7 +643,10 @@ object ObliviousSort extends java.io.Serializable {
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
 
-    val parsed_data = data.mapPartitionsWithIndex((index, x) => ColumnSortPreProcess(index, x, offsets, opcode, r, s))
+    val parsed_data = data.mapPartitionsWithIndex(
+      (index, x) =>
+      ColumnSortPreProcess(index, x, offsets, opcode, r, s)
+    )
       .flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 0, r, s))
@@ -644,29 +655,41 @@ object ObliviousSort extends java.io.Serializable {
 
     println("Round 0 done, round 1 begin")
 
-    val data_1 = padded_data.map(x => ColumnSortPartition(x, opcode, 1, r, s))
-      .flatMap(x => ParseData(x, r, s))
+    val data_1 = padded_data.mapPartitionsWithIndex {
+      (index, l) => l.toList.map { x =>
+        ColumnSortPartition(x, index, s, opcode, 1, r, s)
+      }.iterator
+    }.flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 1, r, s))
 
     println("Round 1 done, round 2 begin")
 
-    val data_2 = data_1.map(x => ColumnSortPartition(x, opcode, 2, r, s))
-      .flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
+    val data_2 = data_1.mapPartitionsWithIndex {
+      (index, l) => l.toList.map { x =>
+        ColumnSortPartition(x, index, s, opcode, 2, r, s)
+      }.iterator
+    }.flatMap(x => ParseData(x, r, s))
+    .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 2, r, s))
 
     println("Round 2 done, round 3 begin")
 
-    val data_3 = data_2.map(x => ColumnSortPartition(x, opcode, 3, r, s))
-      .flatMap(x => ParseData(x, r, s))
+    val data_3 = data_2.mapPartitionsWithIndex {
+      (index, l) => l.toList.map { x =>
+        ColumnSortPartition(x, index, s, opcode, 3, r, s)
+        }.iterator
+    }.flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 3, r, s))
 
     println("Round 3 done, round 4 begin")
 
-    val data_4 = data_3.map(x => ColumnSortPartition(x, opcode, 4, r, s))
-      .flatMap(x => ParseData(x, r, s))
+    val data_4 = data_3.mapPartitionsWithIndex{
+      (index, l) => l.toList.map { x =>
+        ColumnSortPartition(x, index, s, opcode, 4, r, s)
+      }.iterator
+    }.flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 4, r, s))
       .sortByKey()

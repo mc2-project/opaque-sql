@@ -24,10 +24,10 @@ extern "C" {
   (JNIEnv *, jobject, jlong);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
 
   /*
    * Class:     org_apache_spark_sql_SGXEnclave
@@ -62,17 +62,17 @@ extern "C" {
   (JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jbyteArray);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jbyteArray);
 
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(JNIEnv *,
                                                                                            jobject,
@@ -84,13 +84,8 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBoundary(
     JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
 
-  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(JNIEnv *,
-                                                                                  jobject,
-                                                                                  jlong,
-                                                                                  jint,
-                                                                                  jbyteArray,
-                                                                                  jint,
-                                                                                  jbyteArray);
+  JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribute(JNIEnv *,
                                                                                      jobject,
@@ -104,25 +99,25 @@ extern "C" {
     JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBounds(
     JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
-    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jint, jbyteArray, jintArray, jintArray);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jint, jbyteArray, jint, jbyteArray, jintArray, jintArray);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(
-    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jint, jint, jint, jint, jint, jint);
+    JNIEnv *, jobject, jlong, jint, jint, jint, jint, jbyteArray, jint, jint, jint, jint, jint, jint);
 
   JNIEXPORT jint JNICALL Java_org_apache_spark_sql_SGXEnclave_CountNumRows(
     JNIEnv *, jobject, jlong, jbyteArray);

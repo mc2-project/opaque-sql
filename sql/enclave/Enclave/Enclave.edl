@@ -31,6 +31,8 @@ enclave {
    */
   trusted {
     public void ecall_project(
+      int index,
+      int num_part,
       int op_code,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
@@ -39,6 +41,8 @@ enclave {
       uint32_t output_rows_length,
       [out] uint32_t *actual_output_rows_length);
     public void ecall_filter(
+      int index,
+      int num_part,
       int op_code,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
@@ -67,6 +71,7 @@ enclave {
       uint32_t row_upper_bound);
 
     public void ecall_aggregate_step1(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
       [user_check] uint8_t *output_rows, uint32_t output_rows_length,
@@ -78,6 +83,7 @@ enclave {
       [out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size,
       [out, size=4] uint32_t *actual_out_agg_row_size);
     public void ecall_aggregate_step2(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
       [in, size=boundary_info_row_length] uint8_t *boundary_info_row_ptr,
@@ -101,6 +107,7 @@ enclave {
       [out, size=4] uint32_t *actual_output_length);
 
     public void ecall_sort_merge_join(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length,
       uint32_t num_rows,
@@ -109,6 +116,7 @@ enclave {
       [out, size=4] uint32_t *actual_output_length);
 
     public void ecall_join_sort_preprocess(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
       [user_check] uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
@@ -141,6 +149,7 @@ enclave {
 								 uint32_t input_num_rows);
 
     public void ecall_external_sort(
+      int index, int num_part,
       int op_code,
       uint32_t num_buffers,
       [user_check] uint8_t **buffer_list,
@@ -149,6 +158,7 @@ enclave {
       [user_check] uint8_t *scratch);
 																  
     public void ecall_sample(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_len,
@@ -169,6 +179,7 @@ enclave {
       [user_check] uint8_t *scratch);
 
     public void ecall_partition_for_sort(
+      int index, int num_part,
       int op_code,
       uint8_t num_partitions,
       uint32_t num_buffers,
@@ -182,6 +193,7 @@ enclave {
       [user_check] uint8_t *scratch);
 
     public void ecall_non_oblivious_aggregate(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length,
       uint32_t num_rows,
@@ -190,13 +202,16 @@ enclave {
 
 
     public void ecall_non_oblivious_sort_merge_join(
+      int index, int num_part,
       int op_code,
       [user_check] uint8_t *input_rows, uint32_t input_rows_length,
       uint32_t num_rows,
       [user_check] uint8_t *output_rows, uint32_t output_rows_length,
       [out] uint32_t *actual_output_length, [out] uint32_t *num_output_rows);
 
-    public void ecall_column_sort(int op_code,
+    public void ecall_column_sort(
+                  int index, int num_part,
+                  int op_code,
 				  int round, 
 				  [user_check] uint8_t *input_rows,
 				  [user_check] uint32_t *num_rows,

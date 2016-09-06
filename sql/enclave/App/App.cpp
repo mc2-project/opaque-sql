@@ -399,7 +399,8 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(
 // read a chunk of buffer from the scala program
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -420,7 +421,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
 
   sgx_check("Project",
             ecall_project(
-              eid, op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
+              eid, index, num_part,
+              op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
               output_rows_length, &actual_output_rows_length));
 
   jbyteArray ret = env->NewByteArray(actual_output_rows_length);
@@ -434,7 +436,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
@@ -450,7 +454,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
 
   sgx_check("Filter",
             ecall_filter(
-              eid, op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
+              eid,
+              index, num_part,
+              op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
               output_rows_length, &actual_output_rows_length, &num_output_rows));
 
   jbyteArray ret = env->NewByteArray(actual_output_rows_length);
@@ -663,6 +669,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
   JNIEnv *env,
   jobject obj,
   jlong eid,
+  jint index,
+  jint num_part,
   jint op_code,
   jbyteArray input_rows,
   jint num_rows) {
@@ -684,8 +692,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
 
   sgx_check("Aggregate step 1",
-            ecall_aggregate_step1(
-              eid, op_code,
+            ecall_aggregate_step1(eid, index, num_part,
+              op_code,
               input_rows_ptr, input_rows_length,
               num_rows,
               output_rows, output_rows_length,
@@ -743,7 +751,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows,
   jbyteArray boundary_info_row) {
   (void)obj;
 
@@ -768,7 +778,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2
 
   sgx_check("Aggregate step 2",
             ecall_aggregate_step2(
-              eid, op_code,
+              eid,
+              index, num_part,
+              op_code,
               input_rows_ptr, input_rows_length,
               num_rows,
               boundary_info_row_ptr, boundary_info_row_length,
@@ -798,6 +810,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   JNIEnv *env,
   jobject obj,
   jlong eid,
+  jint index,
+  jint num_part,
   jint op_code,
   jbyteArray primary_rows,
   jint num_primary_rows,
@@ -822,6 +836,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   sgx_check("JoinSortPreprocess",
             ecall_join_sort_preprocess(
               eid,
+              index, num_part,
               op_code,
               primary_rows_ptr, primary_rows_length, num_primary_rows,
               foreign_rows_ptr, foreign_rows_length, num_foreign_rows,
@@ -911,6 +926,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
   JNIEnv *env,
   jobject obj,
   jlong eid,
+  jint index,
+  jint num_part,
   jint op_code,
   jbyteArray input_rows,
   jint num_rows,
@@ -933,6 +950,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
   sgx_check("SortMergeJoin",
             ecall_sort_merge_join(
               eid,
+              index, num_part,
               op_code,
               input_rows_ptr, input_rows_length,
               num_rows,
@@ -1022,7 +1040,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input, jint num_rows,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
@@ -1038,7 +1058,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
 
   sgx_check("Sample",
             ecall_sample(
-              eid, op_code, input_ptr, input_length, num_rows, output,
+              eid,
+              index, num_part,
+              op_code, input_ptr, input_length, num_rows, output,
               &actual_output_length, &num_output_rows));
 
   jbyteArray ret = env->NewByteArray(actual_output_length);
@@ -1101,7 +1123,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBound
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jint num_partitions, jbyteArray input,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jint num_partitions, jbyteArray input,
   jint num_rows, jbyteArray boundary_rows, jintArray offsets, jintArray rows_per_partition) {
   (void) obj;
 
@@ -1136,7 +1160,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
   uint32_t *output_partition_num_rows = (uint32_t *) malloc(num_partitions * sizeof(uint32_t));
   sgx_check("Partition For Sort",
             ecall_partition_for_sort(
-              eid, op_code, num_partitions, buffer_list.size() - 1, buffer_list.data(),
+              eid,
+              index, num_part,
+              op_code, num_partitions, buffer_list.size() - 1, buffer_list.data(),
               buffer_num_rows.data(), row_upper_bound, boundary_rows_ptr, output, output_partition_ptrs,
               output_partition_num_rows, scratch));
 
@@ -1164,12 +1190,15 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(JNIEnv *env,
-																			   jobject obj,
-																			   jlong eid,
-																			   jint op_code,
-																			   jbyteArray input,
-																			   jint num_items) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
+    JNIEnv *env,
+    jobject obj,
+    jlong eid,
+    jint index,
+    jint num_part,
+    jint op_code,
+    jbyteArray input,
+    jint num_items) {
   (void)obj;
 
   if (num_items == 0) {
@@ -1194,7 +1223,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(J
   split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
 
   sgx_check("External non-oblivious sort",
-			ecall_external_sort(eid,
+            ecall_external_sort(eid,
+                                index, num_part,
 								op_code,
                                 buffer_list.size() - 1,
 								buffer_list.data(),
@@ -1265,18 +1295,21 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilt
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(JNIEnv *env,
-																					jobject obj,
-																					jlong eid,
-																					jint op_code,
-																					jint round,
-                                                                                    jbyteArray input,
-																					jint r,
-																					jint s,
-																					jint column,
-                                                                                    jint current_part,
-                                                                                    jint num_part,
-                                                                                    jint offset) {
+JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(
+    JNIEnv *env,
+    jobject obj,
+    jlong eid,
+    jint index,
+    jint number_part,
+    jint op_code,
+    jint round,
+    jbyteArray input,
+    jint r,
+    jint s,
+    jint column,
+    jint current_part,
+    jint num_part,
+    jint offset) {
 
   (void)obj;
   (void)current_part;
@@ -1379,6 +1412,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     return ret;
   } else {
     ecall_column_sort(eid,
+                      index, number_part,
                       op_code, round-1, input_copy, num_rows.data(),
                       buffer_list.data(), buffer_list.size(), row_upper_bound,
                       column, r, s,
@@ -1442,7 +1476,9 @@ JNIEXPORT jint JNICALL Java_org_apache_spark_sql_SGXEnclave_CountNumRows(JNIEnv 
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
@@ -1462,7 +1498,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
   uint32_t num_output_rows = 0;
 
   sgx_check("Non-oblivious aggregation",
-            ecall_non_oblivious_aggregate(eid, op_code,
+            ecall_non_oblivious_aggregate(eid,
+                                          index, num_part,
+                                          op_code,
 										  input_rows_ptr, input_rows_length,
 										  num_rows,
 										  output_rows, output_rows_length,
@@ -1484,7 +1522,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
 
 
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(
-  JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows,
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
@@ -1500,7 +1540,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSo
   uint32_t num_output_rows = 0;
 
   sgx_check("Non-oblivious SortMergeJoin",
-			ecall_non_oblivious_sort_merge_join(eid,
+            ecall_non_oblivious_sort_merge_join(eid,
+                                                index, num_part,
 												op_code,
 												input_rows_ptr, input_rows_length,
 												num_rows,
@@ -1711,6 +1752,7 @@ void test_external_sort() {
   printf("Before external sort\n");
   
   ecall_external_sort(global_eid,
+                      0, 1,
 					  op_code,
 					  num_bufs,
 					  buffer_list,
@@ -1769,6 +1811,7 @@ void test_non_oblivious_aggregation() {
 
   // sort single partition
   ecall_external_sort(global_eid,
+                      0, 1,
 					  OP_SORT_COL1,
 					  num_bufs,
 					  buffer_list,
@@ -1783,6 +1826,7 @@ void test_non_oblivious_aggregation() {
   uint32_t num_output_rows = 0;
 
   ecall_non_oblivious_aggregate(global_eid,
+                                0, 1,
 								op_code,
 								buffer_list[0], 128 * 1024 * num_bufs, num_rows_per_block * num_bufs,
 								output_rows, 128 * 1024 * num_bufs,
@@ -1852,6 +1896,7 @@ void test_non_oblivious_join() {
   
 
   ecall_join_sort_preprocess(global_eid,
+                 1, 0,
 			     op_code,
 			     primary_table, 128 * 1024 * num_bufs, num_rows_per_block_p,
 			     foreign_table, 128 * 1024 * num_bufs, num_rows_per_block_f,
@@ -1876,12 +1921,13 @@ void test_non_oblivious_join() {
   buffer_list.push_back(preprocess_output_rows);
 
   ecall_external_sort(global_eid,
-		      op_code,
-		      num_bufs,
-		      buffer_list.data(),
-		      num_rows.data(),
-		      row_upper_bound,
-		      scratch);
+                      0, 1,
+                      op_code,
+                      num_bufs,
+                      buffer_list.data(),
+                      num_rows.data(),
+                      row_upper_bound,
+                      scratch);
 
 
   printf("[test_non_oblivious_join] after external sorting\n");
@@ -1892,6 +1938,7 @@ void test_non_oblivious_join() {
   uint32_t num_output_rows = 0;
   
   ecall_non_oblivious_sort_merge_join(global_eid,
+                                      0, 1,
 									  op_code,
 									  preprocess_output_rows, num_bufs * 128 * 1024, num_rows_per_block_p + num_rows_per_block_f,
 									  joined_rows, num_bufs * 128 * 1024,
@@ -2000,7 +2047,8 @@ void test_enclave_column_sort() {
 	printf("Starting round %u\n", i);
 	
 	for (uint32_t c = 0; c < s; c++) {
-	  ecall_column_sort(global_eid, op_code, i+1,
+      ecall_column_sort(global_eid, 1, 0,
+                        op_code, i+1,
 						buffer_list[c], num_rows.data(), buffer_list+c, 1,
 						row_upper_bound,
 						c+1, r, s,
@@ -2101,12 +2149,13 @@ void test_enclave_verification() {
 
   // sort single partition
   ecall_external_sort(global_eid,
-		      OP_TEST_SORT,
-		      num_bufs,
-		      buffer_list,
-		      num_rows,
-		      row_upper_bound,
-		      scratch);
+                      0, 1,
+                      OP_TEST_SORT,
+                      num_bufs,
+                      buffer_list,
+                      num_rows,
+                      row_upper_bound,
+                      scratch);
 
   printf("test_enclave_verification: Sorting done\n");
 
@@ -2117,10 +2166,11 @@ void test_enclave_verification() {
   uint32_t num_output_rows = 0;
 
   ecall_non_oblivious_aggregate(global_eid,
-				OP_TEST_AGG,
-				buffer_list[0], 128 * 1024 * num_bufs,
-				num_rows_per_block * num_bufs,
-				output_rows, 128 * 1024 * num_bufs,
+                                0, 1,
+                                OP_TEST_AGG,
+                                buffer_list[0], 128 * 1024 * num_bufs,
+                                num_rows_per_block * num_bufs,
+                                output_rows, 128 * 1024 * num_bufs,
                                 &actual_output_size, &num_output_rows);
 
   free(buffer_list);

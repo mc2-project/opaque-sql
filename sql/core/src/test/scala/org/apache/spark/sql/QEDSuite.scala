@@ -136,7 +136,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
       val f = QED.createBlock(
         fArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
       val r = enclave.JoinSortPreprocess(
-        eid, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
+        eid, 0, 5, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
       Iterator(Block(r, pArr.length + fArr.length))
     }
     val sorted = ObliviousSort.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
