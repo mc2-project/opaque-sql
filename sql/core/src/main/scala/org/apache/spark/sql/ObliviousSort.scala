@@ -558,7 +558,6 @@ object ObliviousSort extends java.io.Serializable {
   def ColumnSortPad(data: (Int, Array[Byte]), r: Int, s: Int, op_code: QEDOpcode): (Int, Array[Byte]) = {
     val (enclave, eid) = QED.initEnclave()
 
-    println("ColumnSortPad called============")
     val ret = enclave.EnclaveColumnSort(eid,
       data._1, r,
       op_code.value, 1, data._2, r, s, 0, 0, 0, 0)
@@ -619,10 +618,6 @@ object ObliviousSort extends java.io.Serializable {
       len += numRows(idx)._2
     }
 
-    for (v <- offsets) {
-      println(s"v is $v")
-    }
-
     var s = s_input
     var r = r_input
 
@@ -653,8 +648,6 @@ object ObliviousSort extends java.io.Serializable {
 
     val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
 
-    println("Round 0 done, round 1 begin")
-
     val data_1 = padded_data.mapPartitionsWithIndex {
       (index, l) => l.toList.map { x =>
         ColumnSortPartition(x, index, s, opcode, 1, r, s)
@@ -662,8 +655,6 @@ object ObliviousSort extends java.io.Serializable {
     }.flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 1, r, s))
-
-    println("Round 1 done, round 2 begin")
 
     val data_2 = data_1.mapPartitionsWithIndex {
       (index, l) => l.toList.map { x =>
@@ -673,8 +664,6 @@ object ObliviousSort extends java.io.Serializable {
     .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 2, r, s))
 
-    println("Round 2 done, round 3 begin")
-
     val data_3 = data_2.mapPartitionsWithIndex {
       (index, l) => l.toList.map { x =>
         ColumnSortPartition(x, index, s, opcode, 3, r, s)
@@ -682,8 +671,6 @@ object ObliviousSort extends java.io.Serializable {
     }.flatMap(x => ParseData(x, r, s))
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 3, r, s))
-
-    println("Round 3 done, round 4 begin")
 
     val data_4 = data_3.mapPartitionsWithIndex{
       (index, l) => l.toList.map { x =>
@@ -693,8 +680,6 @@ object ObliviousSort extends java.io.Serializable {
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 4, r, s))
       .sortByKey()
-
-    println("Round 4 done")
 
     val result = data_4.map{x => FinalFilter(x._1, x._2, r, len, opcode)}
       .filter(x => x._1.nonEmpty)

@@ -66,8 +66,6 @@ void aggregate_process_boundaries(Verify *verify_set,
     }
   }
 
-  printf("process_boundary first pass done\n");
-
   // 2. Send the following items to each partition:
   //    (a) global number of distinct items,
   //    (b) the last partial aggregate from the previous partition (augmented with previous runs),
@@ -115,8 +113,6 @@ void aggregate_process_boundaries(Verify *verify_set,
       w.write(&cur_first_row);
     }
   }
-
-  printf("process_boundary second pass over\n");
 
   w.close();
   *actual_output_rows_length = w.bytes_written();

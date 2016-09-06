@@ -489,9 +489,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
         .map(serRow => QED.parseRow(serRow))}.collect
 
     assert(QED.decrypt2[String, Int](result) === data.sortBy(_._2))
-    for (v <- QED.decrypt2[String, Int](result)) {
-      println(v)
-    }
   }
 
 }

@@ -1266,8 +1266,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilt
   uint32_t row_upper_bound = 0;
   uint32_t total_rows = split_rows(input_copy, input_len, num_rows, buffer_list, buffer_num_rows, &row_upper_bound);
 
-  printf("SGXEnclave_ColumnSortFilter: total_rows=%u, num_rows=%u\n", total_rows, num_rows);
-
   uint8_t *output_rows = (uint8_t *) malloc(input_len);
   uint32_t output_rows_size = 0;
   uint32_t num_output_rows = 0;
@@ -1316,8 +1314,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   (void)num_part;
 
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
-
-  printf("SGXEnclave_EnclaveColumnSort: round %u, input_len: %u, r=%u, s=%u\n", round, input_len, r, s);
 
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
@@ -1369,10 +1365,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
   uint32_t estimated_column_size = per_column_blocks * (16 + 12 + 16) + per_column_data_size;
 
-  printf("ColumnSort[%u]: total_rows: %u, estimated rows: %u, estimated_column_size=%u, estimated per_column_blocks=%u, row_upper_bound: %u, num_blocks: %u\n",
-         round, total_rows, r,
-         estimated_column_size, per_column_blocks, row_upper_bound, num_blocks);
-
   // construct total of s output buffers
   uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
   uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
@@ -1394,8 +1386,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     ecall_column_sort_padding(eid,
                               op_code, input_copy, total_rows, row_upper_bound,
                               r, s, output_buffers[0], &output_rows_size);
-
-    printf("Padding %u to %u\n", input_len, output_rows_size);
 
     jbyteArray ret = env->NewByteArray(output_rows_size);
     env->SetByteArrayRegion(ret, 0, output_rows_size, (jbyte *) output_buffers[0]);

@@ -149,8 +149,7 @@ uint32_t task_id_parser(int op_code, int index) {
   /** Use the op_code to define TID**/
 
   /** Currently, default is set so that all verification tests pass. Opcodes will be slowly integrated benchmark by benchmark. **/
-    //check(false, "task_id_parser: op_code not recognized");
-  printf("task_id_parser: op_code not recognized\n");
+  // check(false, "task_id_parser: op_code not recognized");
   tid = TID_TEST;
   
   return tid + index;  
@@ -781,7 +780,7 @@ bool Verify::verify() {
 
   uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
   if (benchmark_op_code == DID_TEST) {
-    printf("Verify::verify(): DAG not yet supported!\n");
+    // printf("Verify::verify(): DAG not yet supported!\n");
   } else {
     DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
 

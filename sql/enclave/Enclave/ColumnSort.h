@@ -334,8 +334,6 @@ void column_sort_filter(int op_code,
   (void)op_code;
   (void)row_upper_bound;
 
-  printf("column_sort_filter: Entered, column: %u, num_rows is %u, offset=%u\n", column, num_rows, offset);
-
   RowReader r(input_rows, verify_set);
   RowWriter w(output_rows);
   w.set_self_task_id(verify_set->get_self_task_id());
@@ -352,8 +350,6 @@ void column_sort_filter(int op_code,
       num_output_rows_result++;
     }
   }
-
-  printf("column_sort_filter: filtered %u rows\n", num_output_rows_result);
 
   w.close();
   *output_rows_size = w.bytes_written();

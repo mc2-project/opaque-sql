@@ -982,7 +982,6 @@ private:
       buf += 4; // row_upper_bound
       uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       add_parent(task_id);
-      //printf("read_encrypted_block: block_enc_size=%u, block_num_rows=%u, task_id=%u, counter=%u\n", block_enc_size, block_num_rows, task_id, counter);
       decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
       buf += block_enc_size;
 
@@ -1041,7 +1040,6 @@ class IndividualRowReaderV {
   void read_tag() {
     if (verify_set != NULL) {
       uint32_t self_task_id = *reinterpret_cast<uint32_t *>(buf);
-      printf("read_tag(): self_task_id=%u\n", self_task_id);
       buf += 4;
       verify_set->add_node(self_task_id);
     }
@@ -1138,8 +1136,6 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = row_upper_bound; buf_pos += 4;
     *reinterpret_cast<uint32_t *>(buf_pos) = self_task_id; buf_pos += 4;
 
-    //printf("finish_block: block_enc_size=%u, block_num_rows=%u, task_id=%u\n", enc_size(block_padded_len), block_num_rows, self_task_id);
-    
     encrypt_with_aad(block_start, block_padded_len, buf_pos, buf_pos - 16, 16);
     buf_pos += enc_size(block_padded_len);
 
@@ -1332,7 +1328,6 @@ class StreamRowReader {
     buf += 4; // row_upper_bound
 
     uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
-    printf("StreamRowReader::read_encrypted_block(): block_enc_size: %u, block_num_rows: %u, task_id: %u\n", block_enc_size, block_num_rows, task_id);
     add_parent(task_id);
    
 

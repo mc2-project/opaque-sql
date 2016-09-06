@@ -95,8 +95,8 @@ void ecall_project(int index, int num_part,
                    uint32_t num_rows,
                    uint8_t *output_rows, uint32_t output_rows_length,
                    uint32_t *actual_output_rows_length) {
-
-  printf("ecall_project: index=%u, num_part=%u\n", index, num_part);
+  (void)index;
+  (void)num_part;
 
   Verify verify_set(op_code, 1, 0);
 
@@ -113,8 +113,9 @@ void ecall_filter(int index, int num_part,
                   uint32_t num_rows,
                   uint8_t *output_rows, uint32_t output_rows_length,
                   uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+  (void)index;
+  (void)num_part;
 
-  printf("ecall_filter: index=%u, num_part=%u\n", index, num_part);
   Verify verify_set(op_code, 1, 0);
 
   filter(op_code, &verify_set,
@@ -131,8 +132,9 @@ void ecall_aggregate_step1(int index, int num_part,
                            uint32_t num_rows,
                            uint8_t *output_rows, uint32_t output_rows_length,
                            uint32_t *actual_size) {
+  (void)index;
+  (void)num_part;
 
-  printf("ecall_aggregate_step1: index=%u, num_part=%u\n", index, num_part);
   Verify verify_set(op_code, 1, 0);
 
   switch (op_code) {

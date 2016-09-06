@@ -105,8 +105,6 @@ void external_sort(int op_code,
 
   uint32_t num_comparisons = 0, num_deep_comparisons = 0;
 
-  printf("Sort single buffer starting\n");
-
   // Sort each buffer individually
   for (uint32_t i = 0; i < num_buffers; i++) {
     debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
@@ -115,15 +113,12 @@ void external_sort(int op_code,
                        row_upper_bound, &num_comparisons, &num_deep_comparisons);
   }
 
-  printf("Sort single buffer is done\n");
-
   // Each buffer now forms a sorted run. Keep a pointer to the beginning of each run, plus a
   // sentinel pointer to the end of the last run
   std::vector<uint8_t *> runs(buffer_list, buffer_list + num_buffers + 1);
 
   // Merge sorted runs, merging up to MAX_NUM_STREAMS runs at a time
   while (runs.size() - 1 > 1) {
-    printf("run's size is %u\n", runs.size());
     perf("external_sort: Merging %d runs, up to %d at a time\n",
          runs.size() - 1, MAX_NUM_STREAMS);
 
