@@ -73,8 +73,12 @@ object QEDBenchmark {
     QEDBenchmark.tpch9Generic(sqlContext, "sf0.2", None)
     QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2", None)
 
-    QEDBenchmark.diseaseQuery(sqlContext)
-    QEDBenchmark.diseaseQuery(sqlContext)
+    QEDBenchmark.diseaseQuery(sqlContext, "500")
+    QEDBenchmark.diseaseQuery(sqlContext, "500")
+
+    for (i <- 1 to 8) {
+      QEDBenchmark.diseaseQuery(sqlContext, (math.pow(2, i) * 500).toInt.toString)
+    }
 
     sc.stop()
   }
@@ -492,7 +496,7 @@ object QEDBenchmark {
     result
   }
 
-  def diseaseQuery(sqlContext: SQLContext, distributed: Boolean = false): Unit = {
+  def diseaseQuery(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {
     import sqlContext.implicits._
     val diseaseSchema = StructType(Seq(
       StructField("d_disease_id", StringType),
@@ -516,7 +520,7 @@ object QEDBenchmark {
       // sqlContext.createDataFrame(Seq((1, "d1", "patient 1"), (2, "d2", "patient 2")))
       sqlContext.read.schema(patientSchema)
         .format("csv")
-        .load(s"$dataDir/disease/patient.csv")
+        .load(s"$dataDir/disease/patient-$size.csv")
         .repartition(numPartitions(sqlContext, distributed))
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptPatient),
@@ -541,7 +545,7 @@ object QEDBenchmark {
         .mapPartitions(QED.diseaseQueryEncryptTreatment),
       groupedTreatmentSchema)
 
-    time("Disease Query - default join order") {
+    time(s"Disease Query $size - default join order") {
       treatmentDF.encJoin(
         diseaseDF.encJoin(
           patientDF,
@@ -550,7 +554,7 @@ object QEDBenchmark {
         .encCollect
     }
 
-    time("Disease Query - Opaque join order") {
+    time(s"Disease Query $size - Opaque join order") {
       diseaseDF
         .nonObliviousJoin(treatmentDF, $"d_disease_id" === $"t_disease_id")
         .encJoin(patientDF, $"d_disease_id" === $"p_disease_id")

@@ -108,7 +108,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("disease query") {
-    QEDBenchmark.diseaseQuery(sqlContext)
+    QEDBenchmark.diseaseQuery(sqlContext, "500")
   }
 
   test("columnsort padding") {
