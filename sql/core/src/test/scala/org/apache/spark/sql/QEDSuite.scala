@@ -107,6 +107,10 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(a.map { case (a, b, c) => (a, b)} === c.map { case (a, b, c) => (a, b)})
   }
 
+  test("disease query") {
+    QEDBenchmark.diseaseQuery(sqlContext)
+  }
+
   test("columnsort padding") {
     val data = Random.shuffle((0 until 3).map(x => (x.toString, x)).toSeq)
     val encData = QED.encryptN(data).map {

@@ -456,4 +456,35 @@ object QED {
           QED.encrypt(enclave, eid, n, Some(QEDColumnType.TPCH_NATION_NAME_TYPE)))
     }
   }
+
+  def diseaseQueryEncryptDisease(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(di: String, n: String) =>
+        Array(
+          QED.encrypt(enclave, eid, di),
+          QED.encrypt(enclave, eid, n))
+    }
+  }
+
+  def diseaseQueryEncryptPatient(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(i: Int, di: String, n: String) =>
+        Array(
+          QED.encrypt(enclave, eid, i),
+          QED.encrypt(enclave, eid, di),
+          QED.encrypt(enclave, eid, n))
+    }
+  }
+
+  def diseaseQueryEncryptTreatment(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(di: String, c: Int) =>
+        Array(
+          QED.encrypt(enclave, eid, di),
+          QED.encrypt(enclave, eid, c))
+    }
+  }
 }

@@ -717,6 +717,26 @@ object OpaqueJoinUtils {
         Seq(IntegerType, IntegerType, FloatType),
         Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
         (OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(StringType, IntegerType),
+        Seq(StringType, StringType, IntegerType, StringType),
+        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
+        (OP_JOIN_DISEASEDEFAULT_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(StringType, StringType),
+        Seq(IntegerType, StringType, StringType),
+        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
+        (OP_JOIN_DISEASEDEFAULT_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(StringType, StringType, IntegerType),
+        Seq(IntegerType, StringType, StringType),
+        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
+        (OP_JOIN_DISEASEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case (Seq(StringType, StringType),
+        Seq(StringType, IntegerType),
+        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
+        (OP_JOIN_DISEASEOPAQUE_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
     }
     (joinOpcode, dummySortOpcode, dummyFilterOpcode)
   }

@@ -25,6 +25,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.QEDOpcode._
 import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions.min
 import org.apache.spark.sql.functions.substring
 import org.apache.spark.sql.functions.sum
 import org.apache.spark.sql.functions.year
@@ -71,6 +72,9 @@ object QEDBenchmark {
     QEDBenchmark.tpch9SparkSQL(sqlContext, "sf0.2", None)
     QEDBenchmark.tpch9Generic(sqlContext, "sf0.2", None)
     QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2", None)
+
+    QEDBenchmark.diseaseQuery(sqlContext)
+    QEDBenchmark.diseaseQuery(sqlContext)
 
     sc.stop()
   }
@@ -486,6 +490,72 @@ object QEDBenchmark {
     }
     println("TPC-H Query 9 - opaque join order - num rows: " + result.size)
     result
+  }
+
+  def diseaseQuery(sqlContext: SQLContext, distributed: Boolean = false): Unit = {
+    import sqlContext.implicits._
+    val diseaseSchema = StructType(Seq(
+      StructField("d_disease_id", StringType),
+      StructField("d_name", StringType)))
+    val diseaseDF = sqlContext.createEncryptedDataFrame(
+      // sqlContext.createDataFrame(Seq(("d1", "disease 1"), ("d2", "disease 2")))
+      sqlContext.read.schema(diseaseSchema)
+        .format("csv")
+        .option("delimiter", "|")
+        .load(s"$dataDir/disease/icd_codes.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptDisease),
+      diseaseSchema)
+
+    val patientSchema = StructType(Seq(
+      StructField("p_id", IntegerType),
+      StructField("p_disease_id", StringType),
+      StructField("p_name", StringType)))
+    val patientDF = sqlContext.createEncryptedDataFrame(
+      // sqlContext.createDataFrame(Seq((1, "d1", "patient 1"), (2, "d2", "patient 2")))
+      sqlContext.read.schema(patientSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/patient.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptPatient),
+      patientSchema)
+
+    val treatmentSchema = StructType(Seq(
+      StructField("t_id", IntegerType),
+      StructField("t_disease_id", StringType),
+      StructField("t_name", StringType),
+      StructField("t_cost", IntegerType)))
+    val groupedTreatmentSchema = StructType(Seq(
+      StructField("t_disease_id", StringType),
+      StructField("t_min_cost", IntegerType)))
+    val treatmentDF = sqlContext.createEncryptedDataFrame(
+      // sqlContext.createDataFrame(Seq((3, "d1", "treatment 1", 100))).toDF("t_id", "t_disease_id", "t_name", "t_cost")
+      sqlContext.read.schema(treatmentSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/treatment.csv")
+        .groupBy($"t_disease_id").agg(min("t_cost").as("t_min_cost"))
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptTreatment),
+      groupedTreatmentSchema)
+
+    time("Disease Query - default join order") {
+      treatmentDF.encJoin(
+        diseaseDF.encJoin(
+          patientDF,
+          $"d_disease_id" === $"p_disease_id"),
+        $"d_disease_id" === $"t_disease_id")
+        .encCollect
+    }
+
+    time("Disease Query - Opaque join order") {
+      diseaseDF
+        .nonObliviousJoin(treatmentDF, $"d_disease_id" === $"t_disease_id")
+        .encJoin(patientDF, $"d_disease_id" === $"p_disease_id")
+        .encCollect
+    }
   }
 
   def numPartitions(sqlContext: SQLContext, distributed: Boolean): Int =
