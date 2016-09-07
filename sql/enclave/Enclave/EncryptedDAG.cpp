@@ -11,17 +11,17 @@ bool set_verify(std::set<uint32_t> *set1,
   std::set<uint32_t>::iterator it_end = set1->end();
   std::set<uint32_t>::iterator it;
 
-  printf("Set 1\n");
-  for (it = it_begin; it != it_end; it++) {
-    printf("%u\n", *it);
-  }
+  // printf("Set 1\n");
+  // for (it = it_begin; it != it_end; it++) {
+  //   printf("%u\n", *it);
+  // }
 
   it_begin = set2->begin();
   it_end = set2->end();
-  printf("Set 2\n");
-  for (it = it_begin; it != it_end; it++) {
-    printf("%u\n", *it);
-  }
+  // printf("Set 2\n");
+  // for (it = it_begin; it != it_end; it++) {
+  //   printf("%u\n", *it);
+  // }
   
   it_begin = set1->begin();
   it_end = set1->end();
@@ -97,7 +97,7 @@ std::set<uint32_t> * DAG::get_task_id_parents(uint32_t task_id) {
   Node *node = NULL;
 
   for (uint32_t i = 0; i < num_nodes; i++) {
-    printf("DAG::get_task_id_parents(): num_nodes is %u, nodes[i]->id is %u\n", num_nodes, nodes[i]->id);
+    //printf("DAG::get_task_id_parents(): num_nodes is %u, nodes[i]->id is %u, task_id is %u\n", num_nodes, nodes[i]->id, task_id);
     if (nodes[i]->id == task_id) {
       node = nodes[i];
     }
@@ -254,10 +254,10 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
 
   case DID_BD3:
     {
-      num_nodes = num_part * (1 + 3 + 2 + 3 + 1 + 1 + 2 + 1 + 3) + 1 + 1;
+      num_nodes = num_part * (1 + 6 + 2 + 7 + 1 + 1 + 2 + 1 + 6) + 2;
       dag = new DAG(num_nodes, DID_BD3);
       offset = 0;
-		
+
       // join sort preprocess
       offset += create_node(dag, 0, 1, num_part, offset, OP_BD3_JOIN_PREPROCESS);
 
@@ -315,7 +315,7 @@ DAG * DAGGenerator::genDAG(int benchmark_op_code, uint32_t num_part) {
       offset += project_set_edges(dag, num_part, offset, OTHER);
       offset += agg_set_edges(dag, num_part, offset, OTHER);
       offset += project_set_edges(dag, num_part, offset, OTHER);
-      offset += sort_set_edges(dag, num_part, offset, OTHER);
+      offset += sort_set_edges(dag, num_part, offset, LAST);
     }
     break;
 
@@ -625,8 +625,6 @@ uint32_t sort_set_edges(DAG *dag, uint32_t num_part, uint32_t input_offset, int 
       }
     }
   }
-
-  offset += num_part;
   return (offset - input_offset);
 }
 
@@ -762,10 +760,18 @@ Verify::Verify(uint32_t op_code, uint32_t num_part, uint32_t index) {
   this->num_part = num_part;
   this->index = index;
   self_task_id = task_id_parser(op_code, index);
+
+  mac_obj = new MAC;
 }
 
 Verify::~Verify() {
   delete parents;
+  delete mac_obj;
+}
+
+void Verify::mac(uint8_t *mac_ptr) {
+  (void)mac_ptr;
+  mac_obj->mac(mac_ptr, SGX_AESGCM_MAC_SIZE);
 }
 
 std::set<uint32_t> *Verify::get_set() {
@@ -781,6 +787,10 @@ bool Verify::verify() {
   uint32_t benchmark_op_code = get_benchmark_op_code(op_code);
   if (benchmark_op_code == DID_TEST) {
     // printf("Verify::verify(): DAG not yet supported!\n");
+    DAG *dag = DAGGenerator::genDAG(DID_BD3, num_part);
+    std::set<uint32_t> *input_set = dag->get_task_id_parents(0);
+    set_verify(input_set, this->parents);
+
   } else {
     DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
 

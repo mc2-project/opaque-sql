@@ -945,6 +945,7 @@ public:
     block_pos += row->read(block_pos);
     block_rows_read++;
   }
+
   template<typename RecordType>
   void read(SortPointer<RecordType> *ptr, int op_code) {
     maybe_advance_block();
@@ -982,7 +983,11 @@ private:
       buf += 4; // row_upper_bound
       uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       add_parent(task_id);
+      if (verify_set != NULL) {
+        verify_set->mac(buf + SGX_AESGCM_IV_SIZE);
+      }
       decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
+
       buf += block_enc_size;
 
       if (block_num_rows > 0)
@@ -1085,12 +1090,16 @@ public:
     self_task_id = 0;
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
+
+    // just use a fake IV
+    mac_obj = new MAC;
   }
 
   RowWriter(uint8_t *buf) : RowWriter(buf, 0) { }
 
   ~RowWriter() {
     free(block_start);
+    delete mac_obj;
   }
 
   void set_self_task_id(uint32_t self_task_id) {
@@ -1137,6 +1146,8 @@ public:
     *reinterpret_cast<uint32_t *>(buf_pos) = self_task_id; buf_pos += 4;
 
     encrypt_with_aad(block_start, block_padded_len, buf_pos, buf_pos - 16, 16);
+    mac_obj->mac(buf_pos + SGX_AESGCM_IV_SIZE, SGX_AESGCM_MAC_SIZE);
+
     buf_pos += enc_size(block_padded_len);
 
     block_pos = block_start;
@@ -1169,6 +1180,8 @@ private:
   uint32_t block_padded_len;
 
   uint32_t self_task_id;
+
+  MAC *mac_obj;
 };
 
 class IndividualRowWriterV {

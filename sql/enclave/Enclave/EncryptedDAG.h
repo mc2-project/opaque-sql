@@ -206,6 +206,7 @@ class Verify {
   }
 
   uint32_t get_self_task_id();
+  void mac(uint8_t *mac_ptr);
 
  private:
   uint32_t num_part;
@@ -213,6 +214,8 @@ class Verify {
   uint32_t op_code;
   uint32_t self_task_id;
   std::set<uint32_t> *parents;
+
+  MAC *mac_obj;
 };
 
 #endif /* _ENCRYPTED_DAG_H_ */

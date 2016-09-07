@@ -92,5 +92,20 @@ class StreamDecipher {
   uint32_t total_cipher_size;
 };
 
+class MAC {
+ public:
+  MAC() {
+    uint8_t iv[SGX_AESGCM_IV_SIZE+1] = "000000000000";
+    cipher = new AesGcm(&ks, iv, SGX_AESGCM_IV_SIZE);
+  }
+
+  ~MAC() {
+    delete cipher;
+  }
+
+  void mac(uint8_t *ptr, uint32_t len);
+
+  AesGcm *cipher;
+};
 
 #endif

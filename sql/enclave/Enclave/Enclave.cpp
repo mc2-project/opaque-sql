@@ -907,6 +907,5 @@ void ecall_column_sort_filter(int op_code,
     break;
   }
 
-
   verify_set.verify();
 }
