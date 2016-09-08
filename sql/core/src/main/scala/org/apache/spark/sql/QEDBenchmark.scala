@@ -38,7 +38,12 @@ import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 
 object QEDBenchmark {
-  import QED.time
+  def time[A](desc: String)(f: => A): A = {
+    val start = System.nanoTime
+    val result = f
+    println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+    result
+  }
 
   def dataDir: String = System.getenv("SPARKSGX_DATA_DIR")
 
@@ -506,7 +511,7 @@ object QEDBenchmark {
       sqlContext.read.schema(diseaseSchema)
         .format("csv")
         .option("delimiter", "|")
-        .load(s"$dataDir/disease/icd_codes.csv")
+        .load(s"$dataDir/disease/icd_codes.tsv")
         .repartition(numPartitions(sqlContext, distributed))
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptDisease),
