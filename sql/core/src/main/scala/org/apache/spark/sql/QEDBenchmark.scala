@@ -155,8 +155,11 @@ object QEDBenchmark {
         .mapPartitions(QED.bd1Encrypt2),
       StructType(Seq(
         StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType),
-        StructField("avgDuration", IntegerType))))
+        StructField("pageRank", IntegerType)
+        //StructField("avgDuration", IntegerType)
+      )
+      )
+    )
     rankingsDF.count
     val result = time("big data 1") {
       val df = rankingsDF.encFilter($"pageRank" > 1000)

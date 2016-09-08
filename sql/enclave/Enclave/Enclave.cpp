@@ -413,6 +413,7 @@ void split_block(
   w.close();
 
   *actual_size = w.bytes_written();
+
 }
 
 void ecall_split_block(
