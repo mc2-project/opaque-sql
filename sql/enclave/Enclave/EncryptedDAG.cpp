@@ -64,8 +64,12 @@ Node::Node(uint32_t id, uint32_t num_parents, uint32_t num_children) {
 
 Node::~Node() {
   // delete pointers to parents & children
-  free(parents);
-  free(children);
+  if (num_parents > 0) {
+    free(parents);
+  }
+  if (num_children > 0) {
+    free(children);
+  }
 }
 
 uint32_t Node::get_id() {
@@ -790,6 +794,8 @@ bool Verify::verify() {
     DAG *dag = DAGGenerator::genDAG(DID_BD3, num_part);
     std::set<uint32_t> *input_set = dag->get_task_id_parents(0);
     set_verify(input_set, this->parents);
+
+    delete dag;
 
   } else {
     DAG *dag = DAGGenerator::genDAG(benchmark_op_code, num_part);
