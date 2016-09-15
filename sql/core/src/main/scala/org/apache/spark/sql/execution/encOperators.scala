@@ -230,17 +230,11 @@ case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
       case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
         OP_PROJECT_TPCH9_ORDER_YEAR
     }
-
-    val numPart = child.executeBlocked().partitions.length
-    child.executeBlocked().mapPartitionsWithIndex {
-      (index: Int, x: Iterator[Block]) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val serResult = enclave.Project(eid, index, numPart, opcode.value, block.bytes, block.numRows)
-        Block(serResult, block.numRows)
-      }.iterator
+    child.executeBlocked().map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(eid, 0, 0, opcode.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
-
   }
 }
 
@@ -275,18 +269,12 @@ case class EncFilter(condition: Expression, child: OutputsBlocks)
       case GreaterThan(Col(4, _), Literal(45, _)) =>
         OP_FILTER_COL4_GT_45
     }
-
-    val filteredNumPart = child.executeBlocked().partitions.length
-    child.executeBlocked().mapPartitionsWithIndex {
-      (index, x) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val numOutputRows = new MutableInteger
-        val filtered = enclave.Filter(
-          eid, index, filteredNumPart,
-          opcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(filtered, numOutputRows.value)
-      }.iterator
+    child.executeBlocked().map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val filtered = enclave.Filter(
+        eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(filtered, numOutputRows.value)
     }
   }
 }
@@ -295,27 +283,17 @@ case class Permute(child: OutputsBlocks) extends UnaryNode with OutputsBlocks {
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
-    val numPart1 = child.executeBlocked().partitions.length
-    val rowsWithRandomIds = child.executeBlocked().mapPartitionsWithIndex {
-      (index, x) => x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val serResult = enclave.Project(
-          eid, index, numPart1,
-          OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
-        Block(serResult, block.numRows)
-      }.iterator
+    val rowsWithRandomIds = child.executeBlocked().map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(
+        eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
-
-    val sorted = ObliviousSort.sortBlocks(rowsWithRandomIds, OP_SORT_COL1)
-    val numPart2 = sorted.partitions.length
-    sorted.mapPartitionsWithIndex { (index, x) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val serResult = enclave.Project(
-          eid, index, numPart2,
-          OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
-        Block(serResult, block.numRows)
-      }.iterator
+    ObliviousSort.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(
+        eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
   }
 }
@@ -372,25 +350,18 @@ object NonObliviousSort {
     if (numPartitions <= 1) {
       childRDD.map { block =>
         val (enclave, eid) = QED.initEnclave()
-        val sortedRows = enclave.ExternalSort(eid,
-          0, 1,
-          opcode.value, block.bytes, block.numRows)
+        val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, block.bytes, block.numRows)
         Block(sortedRows, block.numRows)
       }
     } else {
       // Collect a sample of the input rows
       val sampled = time("non-oblivious sort - Sample") {
-        childRDD.mapPartitionsWithIndex {
-          (index, x) => x.toList.map {
-            block =>
-            val (enclave, eid) = QED.initEnclave()
-            val numOutputRows = new MutableInteger
-            val sampledBlock = enclave.Sample(
-              eid,
-              index, numPartitions,
-              opcode.value, block.bytes, block.numRows, numOutputRows)
-            Block(sampledBlock, numOutputRows.value)
-          }.iterator
+        childRDD.map { block =>
+          val (enclave, eid) = QED.initEnclave()
+          val numOutputRows = new MutableInteger
+          val sampledBlock = enclave.Sample(
+            eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
+          Block(sampledBlock, numOutputRows.value)
         }.collect
       }
       // Find range boundaries locally
@@ -401,36 +372,26 @@ object NonObliviousSort {
           sampled.map(_.numRows).sum)
       }
       // Broadcast the range boundaries and use them to partition the input
-      childRDD.mapPartitionsWithIndex {
-        (index, x) => x.toList.flatMap {
-          block =>
-          val (enclave, eid) = QED.initEnclave()
-          val offsets = new Array[Int](numPartitions + 1)
-          val rowsPerPartition = new Array[Int](numPartitions)
-          val partitions = enclave.PartitionForSort(
-            eid, index, numPartitions,
-            opcode.value, numPartitions, block.bytes, block.numRows, boundaries, offsets,
-            rowsPerPartition)
-
-          offsets.sliding(2).zip(rowsPerPartition.iterator).zipWithIndex.map {
-            case ((Array(start, end), numRows), i) =>
-              (i, Block(partitions.slice(start, end), numRows))
-          }
-        }.iterator
+      childRDD.flatMap { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val offsets = new Array[Int](numPartitions + 1)
+        val rowsPerPartition = new Array[Int](numPartitions)
+        val partitions = enclave.PartitionForSort(
+          eid, 0, 0, opcode.value, numPartitions, block.bytes, block.numRows, boundaries, offsets,
+          rowsPerPartition)
+        offsets.sliding(2).zip(rowsPerPartition.iterator).zipWithIndex.map {
+          case ((Array(start, end), numRows), i) =>
+            (i, Block(partitions.slice(start, end), numRows))
+        }
       }
       // Shuffle the input to achieve range partitioning and sort locally
-        .groupByKey(numPartitions).mapPartitionsWithIndex {
-        (index, x) =>
-        x.toList.map {
-          case (i, blocks) =>
-            val (enclave, eid) = QED.initEnclave()
-            val input = QED.concatByteArrays(blocks.map(_.bytes).toArray)
-            val numRows = blocks.map(_.numRows).sum
-            val sortedRows = enclave.ExternalSort(eid,
-              index, numPartitions,
-              opcode.value, input, numRows)
-            Block(sortedRows, numRows)
-        }.iterator
+        .groupByKey(numPartitions).map {
+        case (i, blocks) =>
+          val (enclave, eid) = QED.initEnclave()
+          val input = QED.concatByteArrays(blocks.map(_.bytes).toArray)
+          val numRows = blocks.map(_.numRows).sum
+          val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, input, numRows)
+          Block(sortedRows, numRows)
       }
     }
   }
@@ -496,17 +457,12 @@ case class EncAggregate(
     val childRDD = child.executeBlocked().cache()
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
-    val numPart = childRDD.partitions.length
-    val boundaries = childRDD.mapPartitionsWithIndex {
-      (index, x) => x.toList.map {
-        block =>
-        val (enclave, eid) = QED.initEnclave()
-        val boundary = enclave.AggregateStep1(
-          eid, index, numPart,
-          aggStep1Opcode.value, block.bytes, block.numRows)
-        // enclave.StopEnclave(eid)
-        boundary
-      }.iterator
+    val boundaries = childRDD.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val boundary = enclave.AggregateStep1(
+        eid, 0, 0, aggStep1Opcode.value, block.bytes, block.numRows)
+      // enclave.StopEnclave(eid)
+      boundary
     }
 
     val boundariesCollected = time("aggregate - step 1") { boundaries.collect }
@@ -523,32 +479,21 @@ case class EncAggregate(
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
     val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries, childRDD.partitions.length)
-    val processBoundaryNumPart = childRDD.partitions.length
-    val partialAggregates1 = childRDD.zipPartitions(processedBoundariesRDD) {
+    val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
       (blockIter, boundaryIter) =>
-      val blockArray = blockIter.toArray
-      assert(blockArray.length == 1)
-      val block = blockArray.head
-      val boundaryArray = boundaryIter.toArray
-      assert(boundaryArray.length == 1)
-      val boundaryRecord = boundaryArray.head
-      Iterator((block, boundaryRecord))
-    }
-
-    val partAggNumPart = partialAggregates1.partitions.length
-    val partialAggregates = partialAggregates1.mapPartitionsWithIndex{ (index, x) =>
-      val l = x.toList
-      assert(l.length == 1)
-      val block = l.head._1
-      val boundaryRecord = l.head._2
-      val (enclave, eid) = QED.initEnclave()
-      assert(block.numRows > 0)
-      val partialAgg = enclave.AggregateStep2(
-        eid, index, partAggNumPart,
-        aggStep2Opcode.value, block.bytes, block.numRows, boundaryRecord)
-      assert(partialAgg.nonEmpty,
-        s"enclave.AggregateStep2($eid, $aggStep2Opcode, ${block.bytes.length}, ${block.numRows}, ${boundaryRecord.length}) returned empty result")
-      Iterator(Block(partialAgg, block.numRows))
+        val blockArray = blockIter.toArray
+        assert(blockArray.length == 1)
+        val block = blockArray.head
+        val boundaryArray = boundaryIter.toArray
+        assert(boundaryArray.length == 1)
+        val boundaryRecord = boundaryArray.head
+        val (enclave, eid) = QED.initEnclave()
+        assert(block.numRows > 0)
+        val partialAgg = enclave.AggregateStep2(
+          eid, 0, 0, aggStep2Opcode.value, block.bytes, block.numRows, boundaryRecord)
+        assert(partialAgg.nonEmpty,
+          s"enclave.AggregateStep2($eid, 0, 0, $aggStep2Opcode, ${block.bytes.length}, ${block.numRows}, ${boundaryRecord.length}) returned empty result")
+        Iterator(Block(partialAgg, block.numRows))
     }
 
     time("aggregate - step 2") { partialAggregates.cache.count }
@@ -562,19 +507,13 @@ case class EncAggregate(
 
     // Filter out the non-final aggregates
     val finalAggregates = time("aggregate - filter out dummies") {
-      val numPart = sortedAggregates.partitions.length
-      val result = sortedAggregates.mapPartitionsWithIndex {
-        (index, x) => x.toList.map {
-          block =>
-          val (enclave, eid) = QED.initEnclave()
-          val numOutputRows = new MutableInteger
-          val filtered = enclave.Filter(
-            eid, index, numPart,
-            aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-          Block(filtered, numOutputRows.value)
-        }.iterator
+      val result = sortedAggregates.map { block =>
+        val (enclave, eid) = QED.initEnclave()
+        val numOutputRows = new MutableInteger
+        val filtered = enclave.Filter(
+          eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+        Block(filtered, numOutputRows.value)
       }
-
       result.cache.count
       result
     }
@@ -619,19 +558,12 @@ case class NonObliviousAggregate(
     val childRDD = child.executeBlocked().cache()
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
-    val childRDDNumPart = childRDD.partitions.length
-    val aggregates = childRDD.mapPartitionsWithIndex {
-      (index, x) =>
-      x.toList.map {
-        block =>
-        val (enclave, eid) = QED.initEnclave()
-        val numOutputRows = new MutableInteger
-        val resultBytes = enclave.NonObliviousAggregate(
-          eid,
-          index, childRDDNumPart,
-          aggOpcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(resultBytes, numOutputRows.value)
-      }.iterator
+    val aggregates = childRDD.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val resultBytes = enclave.NonObliviousAggregate(
+        eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(resultBytes, numOutputRows.value)
     }
     aggregates.cache.count
     aggregates
@@ -660,7 +592,8 @@ case class EncSortMergeJoin(
     time("Force left child of EncSortMergeJoin") { leftRDD.cache.count }
     time("Force right child of EncSortMergeJoin") { rightRDD.cache.count }
 
-    val processed1 = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+      val (enclave, eid) = QED.initEnclave()
 
       val leftBlockArray = leftBlockIter.toArray
       assert(leftBlockArray.length == 1)
@@ -670,20 +603,8 @@ case class EncSortMergeJoin(
       assert(rightBlockArray.length == 1)
       val rightBlock = rightBlockArray.head
 
-      Iterator((leftBlock, rightBlock))
-    }
-
-    val processedNumPart = processed1.partitions.length
-    val processed = processed1.mapPartitionsWithIndex { (index, x) =>
-      val (enclave, eid) = QED.initEnclave()
-      val l = x.toList
-      assert(l.length == 1)
-      val leftBlock = l.head._1
-      val rightBlock = l.head._2
       val processed = enclave.JoinSortPreprocess(
-        eid,
-        index, processedNumPart,
-        joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
+        eid, 0, 0, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
         rightBlock.bytes, rightBlock.numRows)
 
       Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
@@ -713,62 +634,38 @@ case class EncSortMergeJoin(
       sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length),
         sorted.partitions.length)
 
-    val joined1 = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
+    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
       val block = blockIter.next()
       assert(!blockIter.hasNext)
       val joinRow = joinRowIter.next()
       assert(!joinRowIter.hasNext)
-      Iterator((block, joinRow))
-    }
-
-    val numPart = joined1.partitions.length
-    val joined = joined1.mapPartitionsWithIndex { (index, x) =>
       val (enclave, eid) = QED.initEnclave()
-      val l = x.toList
-      assert(l.length == 1)
-      val block = l.head._1
-      val joinRow = l.head._2
       val joined = enclave.SortMergeJoin(
-        eid, index, numPart,
-        joinOpcode.value, block.bytes, block.numRows, joinRow)
+        eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, joinRow)
       Iterator(Block(joined, block.numRows))
     }
     time("join - sort merge join") { joined.cache.count }
 
-    val joinedNumPart = joined.partitions.length
-    val joinedWithRandomIds = joined.mapPartitionsWithIndex { (index, x) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val serResult = enclave.Project(
-          eid, index, joinedNumPart,
-          OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
-        Block(serResult, block.numRows)
-      }.iterator
+    val joinedWithRandomIds = joined.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(
+        eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
-    val permuted = ObliviousSort.sortBlocks(joinedWithRandomIds, OP_SORT_COL1)
-    val permutedNumPart = permuted.partitions.length
-    val filterPermuted = permuted.mapPartitionsWithIndex { (index, x) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val serResult = enclave.Project(
-          eid, index, permutedNumPart,
-          OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
-        Block(serResult, block.numRows)
-      }.iterator
+    val permuted = ObliviousSort.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val serResult = enclave.Project(
+        eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+      Block(serResult, block.numRows)
     }
 
-    val filterPermutedNumPart = filterPermuted.partitions.length
-    val nonDummy = filterPermuted.mapPartitionsWithIndex {
-      (index, x) => x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val numOutputRows = new MutableInteger
-        val filtered = enclave.Filter(
-          eid, index, filterPermutedNumPart,
-          dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(filtered, numOutputRows.value)
-      }.iterator
+    val nonDummy = permuted.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val filtered = enclave.Filter(
+        eid, 0, 0, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(filtered, numOutputRows.value)
     }
-
     time("join - filter dummies") { nonDummy.cache.count }
     nonDummy
   }
@@ -902,7 +799,8 @@ case class NonObliviousSortMergeJoin(
     time("Force left child of NonObliviousSortMergeJoin") { leftRDD.cache.count }
     time("Force right child of NonObliviousSortMergeJoin") { rightRDD.cache.count }
 
-    val processed1 = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+      val (enclave, eid) = QED.initEnclave()
 
       val leftBlockArray = leftBlockIter.toArray
       assert(leftBlockArray.length == 1)
@@ -911,20 +809,9 @@ case class NonObliviousSortMergeJoin(
       val rightBlockArray = rightBlockIter.toArray
       assert(rightBlockArray.length == 1)
       val rightBlock = rightBlockArray.head
-      Iterator((leftBlock, rightBlock))
-    }
 
-    val processedNumPart = processed1.partitions.length
-    val processed = processed1.mapPartitionsWithIndex { (index, x) =>
-      val (enclave, eid) = QED.initEnclave()
-      val l = x.toList
-      assert(l.length == 1)
-      val leftBlock = l.head._1
-      val rightBlock = l.head._2
       val processed = enclave.JoinSortPreprocess(
-        eid,
-        index, processedNumPart,
-        joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
+        eid, 0, 0, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
         rightBlock.bytes, rightBlock.numRows)
 
       Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
@@ -937,18 +824,13 @@ case class NonObliviousSortMergeJoin(
       result
     }
 
-    val numPart = sorted.partitions.length
-    val joined = sorted.mapPartitionsWithIndex { (index, x) =>
-      x.toList.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val numOutputRows = new MutableInteger
-        val joined = enclave.NonObliviousSortMergeJoin(
-          eid, index, numPart,
-          joinOpcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(joined, numOutputRows.value)
-      }.iterator
+    val joined = sorted.map { block =>
+      val (enclave, eid) = QED.initEnclave()
+      val numOutputRows = new MutableInteger
+      val joined = enclave.NonObliviousSortMergeJoin(
+        eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
+      Block(joined, numOutputRows.value)
     }
-
     time("join - sort merge join") { joined.cache.count }
 
     joined
