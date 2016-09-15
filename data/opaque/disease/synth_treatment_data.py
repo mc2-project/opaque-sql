@@ -8,7 +8,6 @@ def make_csv():
   with open('icd_codes.csv') as f:
       txt = f.read()
       for line in txt.split('\n'):
-        print(line)
         try:
           disease_code, name = line.split(',', 1)
         except ValueError:

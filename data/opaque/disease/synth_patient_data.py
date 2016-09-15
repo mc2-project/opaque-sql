@@ -18,8 +18,6 @@ def make_csv():
   patient_id = 0
   write = []
 
-  print len(disease_codes)
-
   num_patients = int(sys.argv[1])
   for i in range(num_patients):
       disease_code = disease_codes[random.randint(0, len(disease_codes) - 1)]

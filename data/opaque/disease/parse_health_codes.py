@@ -4,7 +4,6 @@ def make_csv():
     txt = f.read()
     for l in txt.split('\n'):
       try:
-        print('line: ', l)
         code, name = l.split(' ', 1)
         name = name.lstrip()
         lines.append(code + ',' + name)

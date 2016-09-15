@@ -1,19 +1,23 @@
 #!/bin/bash
 
-set -eu
+set -eux
 
 cd "$(dirname $0)"
 
+set +ux
 source ../../../conf/spark-env.sh
+set -ux
 
-mkdir -p $SPARKSGX_DATA_DIR/disease
+disease_data_dir=${SPARKSGX_DATA_DIR#file:}/disease
+
+mkdir -p $disease_data_dir
 
 python parse_health_codes.py
 sed 's/^\([^,]\+\),/\1|/' icd_codes.csv > icd_codes.tsv
-mv icd_codes.tsv $SPARKSGX_DATA_DIR/disease/
+mv icd_codes.tsv $disease_data_dir
 
 python synth_treatment_data.py
-mv treatment.csv $SPARKSGX_DATA_DIR/disease/
+mv treatment.csv $disease_data_dir
 
 python synth_patient_data.py 125
 python synth_patient_data.py 250
@@ -29,4 +33,6 @@ python synth_patient_data.py 128000
 python synth_patient_data.py 256000
 python synth_patient_data.py 512000
 python synth_patient_data.py 1024000
-mv patient-*.csv $SPARKSGX_DATA_DIR/disease/
+mv patient-*.csv $disease_data_dir
+
+rm icd_codes.csv
