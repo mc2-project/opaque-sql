@@ -370,6 +370,7 @@ object ObliviousSort extends java.io.Serializable {
       // assert(result.partitions.length == data.partitions.length)
 
       val result = NewColumnSort(data.context, data, opcode)
+      assert(result.partitions.length == data.partitions.length)
       result
     }
   }
@@ -498,34 +499,25 @@ object ObliviousSort extends java.io.Serializable {
     columns.iterator
   }
 
-  def ParseDataPostProcess(key: (Int, Iterable[(Int, Array[Byte])]), round: Int, r: Int, s: Int): Iterator[(Int, Array[Byte])] = {
+  def ParseDataPostProcess(
+      key: (Int, Iterable[(Int, Array[Byte])]), round: Int, r: Int, s: Int)
+    : Iterator[(Int, Array[Byte])] = {
 
-    var joinArray = new Array[Byte](0)
     val column = key._1
-
-    var arrays = key._2.toArray
-    if (round == 4) {
-      // we need to reorder the byte arrays according to which previous column they belong
-      if (column == s) {
-        arrays = arrays.sortBy(_._1)
-        for (v <- 1 until arrays.length) {
-          //println(s"ParseDataPostProcess: round=$round, column $column, old_column=${arrays(v)._1}, array size: ${arrays(v)._2.length}")
-          joinArray = joinArray ++ arrays(v)._2
+    val arrays = key._2.toArray
+    val joinArray =
+      if (round == 4) {
+        // we need to reorder the byte arrays according to which previous column they belong
+        val arraysSorted = arrays.sortBy(_._1).map(_._2)
+        if (column == s) {
+          val arraysRotated = arraysSorted.slice(1, arraysSorted.length) :+ arraysSorted(0)
+          QED.concatByteArrays(arraysRotated)
+        } else {
+          QED.concatByteArrays(arraysSorted)
         }
-        joinArray = joinArray ++ arrays(0)._2
       } else {
-        arrays = arrays.sortBy(_._1)
-        for (v <- 0 until arrays.length) {
-          //println(s"ParseDataPostProcess: round=$round, column $column, old_column=${arrays(v)._1}, array size: ${arrays(v)._2.length}")
-          joinArray = joinArray ++ arrays(v)._2
-        }
+        QED.concatByteArrays(arrays.map(_._2))
       }
-    } else {
-      for (v <- arrays) {
-        //println(s"ParseDataPostProcess: round=$round, column $column, old_column=${v._1}, array size: ${v._2.length}")
-        joinArray = joinArray ++ v._2
-      }
-    }
 
     val ret_array = new Array[(Int, Array[Byte])](1)
     ret_array(0) = (key._1, joinArray)
@@ -538,12 +530,7 @@ object ObliviousSort extends java.io.Serializable {
     op_code: QEDOpcode, r: Int, s: Int) : Iterator[(Int, Array[Byte])] = {
 
     val (enclave, eid) = QED.initEnclave()
-    var joinArray = new Array[Byte](0)
-
-    // serialize the blocks' bytes
-    for (v <- data) {
-      joinArray = joinArray ++ v.bytes
-    }
+    val joinArray = QED.concatByteArrays(data.map(_.bytes).toArray)
 
     val ret = enclave.EnclaveColumnSort(eid,
       index, s,
@@ -605,7 +592,8 @@ object ObliviousSort extends java.io.Serializable {
 
     data.cache()
 
-    val numRows = data.mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)
+    val numRows = data
+      .mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)
     var len = 0
 
     val offsets = ArrayBuffer.empty[Int]
@@ -643,47 +631,42 @@ object ObliviousSort extends java.io.Serializable {
       ColumnSortPreProcess(index, x, offsets, opcode, r, s)
     )
       .flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
+      .groupByKey(NumMachines)
       .flatMap(x => ParseDataPostProcess(x, 0, r, s))
 
     val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
 
     val data_1 = padded_data.mapPartitionsWithIndex {
-      (index, l) => l.toList.map { x =>
-        ColumnSortPartition(x, index, s, opcode, 1, r, s)
-      }.iterator
+      (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 1, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
+      .groupByKey(NumMachines)
       .flatMap(x => ParseDataPostProcess(x, 1, r, s))
 
     val data_2 = data_1.mapPartitionsWithIndex {
-      (index, l) => l.toList.map { x =>
-        ColumnSortPartition(x, index, s, opcode, 2, r, s)
-      }.iterator
+      (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 2, r, s))
     }.flatMap(x => ParseData(x, r, s))
-    .groupByKey(s)
+    .groupByKey(NumMachines)
       .flatMap(x => ParseDataPostProcess(x, 2, r, s))
 
     val data_3 = data_2.mapPartitionsWithIndex {
-      (index, l) => l.toList.map { x =>
-        ColumnSortPartition(x, index, s, opcode, 3, r, s)
-        }.iterator
+      (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 3, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
+      .groupByKey(NumMachines)
       .flatMap(x => ParseDataPostProcess(x, 3, r, s))
 
-    val data_4 = data_3.mapPartitionsWithIndex{
-      (index, l) => l.toList.map { x =>
-        ColumnSortPartition(x, index, s, opcode, 4, r, s)
-      }.iterator
+    val data_4 = data_3.mapPartitionsWithIndex {
+      (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 4, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
+      .groupByKey(NumMachines)
       .flatMap(x => ParseDataPostProcess(x, 4, r, s))
       .sortByKey()
 
     val result = data_4.map{x => FinalFilter(x._1, x._2, r, len, opcode)}
       .filter(x => x._1.nonEmpty)
-      .map{x => Block(x._1, x._2)}
+      .mapPartitions { iter =>
+        val array = iter.toArray
+        Iterator(Block(QED.concatByteArrays(array.map(_._1)), array.map(_._2).sum))
+      }
 
     result
   }
