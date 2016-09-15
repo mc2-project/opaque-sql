@@ -111,17 +111,6 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     QEDBenchmark.diseaseQuery(sqlContext, "500")
   }
 
-  test("columnsort padding") {
-    val data = Random.shuffle((0 until 3).map(x => (x.toString, x)).toSeq)
-    val encData = QED.encryptN(data).map {
-      case Array(str, x) => InternalRow(str, x).encSerialize
-    }
-    val sorted = ObliviousSort.ColumnSort(
-      sparkContext, sparkContext.makeRDD(encData, 1), OP_SORT_COL2)
-      .map(row => QED.parseRow(row)).collect
-    assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
-  }
-
   test("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
