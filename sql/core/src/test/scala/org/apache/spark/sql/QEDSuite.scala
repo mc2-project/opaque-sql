@@ -428,6 +428,19 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(QED.decrypt2(df.encCollect) === expected)
   }
 
+  test("encCache") {
+    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+    val df = sqlContext.createEncryptedDataFrame(
+      sparkContext.makeRDD(QED.encryptN(data), 1),
+      StructType(Seq(
+        StructField("a", IntegerType),
+        StructField("b", IntegerType))))
+      .encCache()
+    assert(QED.decrypt2[Int, Int](df.encCollect).sorted === data)
+    val agg = df.groupBy($"a").encAgg(sum("b"))
+    assert(QED.decrypt2[Int, Int](agg.encCollect).sorted === List((1, 12), (2, 4)))
+  }
+
   test("JNIEncrypt") {
 
     def byteArrayToString(x: Array[Byte]) = {

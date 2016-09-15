@@ -98,6 +98,10 @@ case class PhysicalEncryptedRDD(
   protected override def doExecute(): RDD[InternalRow] = {
     rdd.map { r => InternalRow.fromSeq(r) }
   }
+
+  override def executeCollect(): Array[InternalRow] = {
+    rdd.collect().map { r => InternalRow.fromSeq(r) }
+  }
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
@@ -425,11 +429,12 @@ case class EncAggregate(
   override def executeBlocked(): RDD[Block] = {
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
       (groupingExpressions, aggExpressions) match {
-        // case (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1, 2, 0, List(1)) =>
-        //   (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
-        //     OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
-        //     OP_SORT_COL2_IS_DUMMY_COL1,
-        //     OP_FILTER_NOT_DUMMY)
+        case (Seq(Col(1, _)), Seq(Col(1, _),
+          Alias(AggregateExpression(Sum(Col(2, IntegerType)), Complete, false), _))) =>
+          (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
+            OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
           Alias(AggregateExpression(Sum(Col(2, FloatType)), Complete, false), _))) =>

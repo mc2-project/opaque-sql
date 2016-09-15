@@ -2144,6 +2144,11 @@ class Dataset[T] private[sql](
     this
   }
 
+  def encCache(): this.type = {
+    sqlContext.cacheManager.encCacheQuery(this)
+    this
+  }
+
   /**
    * Persist this [[Dataset]] with the default storage level (`MEMORY_AND_DISK`).
    *

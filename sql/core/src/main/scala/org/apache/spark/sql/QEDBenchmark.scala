@@ -108,6 +108,7 @@ object QEDBenchmark {
           StructField("src", IntegerType),
           StructField("dst", IntegerType),
           StructField("weight", FloatType))))
+      .encCache()
     val vertices = sqlContext.createEncryptedDataFrame(
       data.filter($"isVertex" === lit(1))
         .select($"src".as("id"), lit(1.0f).as("rank"))
@@ -117,6 +118,7 @@ object QEDBenchmark {
         StructType(Seq(
           StructField("id", IntegerType),
           StructField("rank", FloatType))))
+      .encCache()
     val numEdges = edges.count
     val numVertices = vertices.count
     val newV =
@@ -155,11 +157,8 @@ object QEDBenchmark {
         .mapPartitions(QED.bd1Encrypt2),
       StructType(Seq(
         StructField("pageURL", StringType),
-        StructField("pageRank", IntegerType)
-        //StructField("avgDuration", IntegerType)
-      )
-      )
-    )
+        StructField("pageRank", IntegerType))))
+      .encCache()
     rankingsDF.count
     val result = time("big data 1") {
       val df = rankingsDF.encFilter($"pageRank" > 1000)
@@ -182,6 +181,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
+      .encCache()
     rankingsDF.count
     val result = time("big data 1 encrypted") {
       val df = rankingsDF.nonObliviousFilter($"pageRank" > 1000)
@@ -218,6 +218,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
+      .encCache()
     uservisitsDF.count
     val result = time("big data 2") {
       val df = uservisitsDF
@@ -243,6 +244,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
+      .encCache()
     uservisitsDF.count
     val result = time("big data 2 encrypted") {
       val df = uservisitsDF
@@ -292,6 +294,7 @@ object QEDBenchmark {
         StructField("destURL", StringType),
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
+      .encCache()
     uservisitsDF.count
     val rankingsDF = sqlContext.createEncryptedDataFrame(
       rankings(sqlContext, size)
@@ -302,6 +305,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
+      .encCache()
     rankingsDF.count
 
     val result = time("big data 3") {
@@ -339,6 +343,7 @@ object QEDBenchmark {
         StructField("destURL", StringType),
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
+      .encCache()
     uservisitsDF.count
     val rankingsDF = sqlContext.createEncryptedDataFrame(
       rankings(sqlContext, size)
@@ -349,6 +354,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
+      .encCache()
     rankingsDF.count
 
     val result = time("big data 3") {
@@ -377,12 +383,12 @@ object QEDBenchmark {
       sqlContext: SQLContext, size: String, quantityThreshold: Option[Int])
     : Seq[(String, Int, Float)] = {
     import sqlContext.implicits._
-    val partDF = part(sqlContext, size)
-    val supplierDF = supplier(sqlContext, size)
-    val lineitemDF = lineitem(sqlContext, size)
-    val partsuppDF = partsupp(sqlContext, size)
-    val ordersDF = orders(sqlContext, size)
-    val nationDF = nation(sqlContext, size)
+    val partDF = part(sqlContext, size).cache()
+    val supplierDF = supplier(sqlContext, size).cache()
+    val lineitemDF = lineitem(sqlContext, size).cache()
+    val partsuppDF = partsupp(sqlContext, size).cache()
+    val ordersDF = orders(sqlContext, size).cache()
+    val nationDF = nation(sqlContext, size).cache()
 
     val result = time("TPC-H Query 9 - Spark SQL") {
       val df =
@@ -519,6 +525,7 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptDisease),
       diseaseSchema)
+      .encCache()
 
     val patientSchema = StructType(Seq(
       StructField("p_id", IntegerType),
@@ -533,6 +540,7 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptPatient),
       patientSchema)
+      .encCache()
 
     val treatmentSchema = StructType(Seq(
       StructField("t_id", IntegerType),
@@ -552,6 +560,7 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptTreatment),
       groupedTreatmentSchema)
+      .encCache()
 
     time(s"Disease Query $size - default join order") {
       treatmentDF.encJoin(
@@ -699,6 +708,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("p_partkey", IntegerType),
         StructField("p_name", StringType))))
+      .encCache()
     val supplierDF = sqlContext.createEncryptedDataFrame(
       supplier(sqlContext, size)
         .select($"s_suppkey", $"s_nationkey")
@@ -708,6 +718,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("s_suppkey", IntegerType),
         StructField("s_nationkey", IntegerType))))
+      .encCache()
     val lineitemDF = sqlContext.createEncryptedDataFrame(
       lineitem(sqlContext, size)
         .select(
@@ -723,6 +734,7 @@ object QEDBenchmark {
         StructField("l_quantity", IntegerType),
         StructField("l_extendedprice", FloatType),
         StructField("l_discount", FloatType))))
+      .encCache()
     val partsuppDF = sqlContext.createEncryptedDataFrame(
       partsupp(sqlContext, size)
         .select($"ps_partkey", $"ps_suppkey", $"ps_supplycost")
@@ -733,6 +745,7 @@ object QEDBenchmark {
         StructField("ps_partkey", IntegerType),
         StructField("ps_suppkey", IntegerType),
         StructField("ps_supplycost", FloatType))))
+      .encCache()
     val ordersDF = sqlContext.createEncryptedDataFrame(
       orders(sqlContext, size)
         .select($"o_orderkey", $"o_orderdate")
@@ -742,6 +755,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("o_orderkey", IntegerType),
         StructField("o_orderdate", DateType))))
+      .encCache()
     val nationDF = sqlContext.createEncryptedDataFrame(
       nation(sqlContext, size)
         .select($"n_nationkey", $"n_name")
@@ -751,6 +765,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("n_nationkey", IntegerType),
         StructField("n_name", StringType))))
+      .encCache()
     (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
   }
 }
