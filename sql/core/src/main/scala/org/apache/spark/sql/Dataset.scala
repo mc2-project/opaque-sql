@@ -24,12 +24,14 @@ import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
 
 import com.fasterxml.jackson.core.JsonFactory
-
 import org.apache.spark.annotation.{DeveloperApi, Experimental}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.api.java.function._
 import org.apache.spark.api.python.PythonRDD
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
+import org.apache.spark.util.Utils
+
 import org.apache.spark.sql.catalyst._
 import org.apache.spark.sql.catalyst.analysis._
 import org.apache.spark.sql.catalyst.encoders._
@@ -39,14 +41,13 @@ import org.apache.spark.sql.catalyst.optimizer.CombineUnions
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
-import org.apache.spark.sql.execution.{FileRelation, LogicalRDD, Queryable, QueryExecution, SQLExecution}
+import org.apache.spark.sql.execution.PhysicalEncryptedRDD
 import org.apache.spark.sql.execution.command.ExplainCommand
-import org.apache.spark.sql.execution.datasources.{CreateTableUsingAsSelect, LogicalRelation}
 import org.apache.spark.sql.execution.datasources.json.JacksonGenerator
+import org.apache.spark.sql.execution.datasources.{CreateTableUsingAsSelect, LogicalRelation}
 import org.apache.spark.sql.execution.python.EvaluatePython
+import org.apache.spark.sql.execution.{FileRelation, LogicalRDD, Queryable, QueryExecution, SQLExecution}
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.util.Utils
 
 private[sql] object Dataset {
   def apply[T: Encoder](sqlContext: SQLContext, logicalPlan: LogicalPlan): Dataset[T] = {
@@ -2047,6 +2048,16 @@ class Dataset[T] private[sql](
       queryExecution.executedPlan.executeCollect().map(_.toEncArray)
     }
     withCallback("encCollect", toDF())(_ => execute())
+  }
+
+  def encForce(): Unit = {
+    val rdd: RDD[_] = queryExecution.executedPlan match {
+      case execution.ConvertFromBlocks(child) => child.executeBlocked()
+      case b: execution.OutputsBlocks => b.executeBlocked()
+      case PhysicalEncryptedRDD(_, rdd) => rdd
+      case plan => plan.execute()
+    }
+    rdd.foreach(x => {})
   }
 
   private def collect(needCallback: Boolean): Array[T] = {

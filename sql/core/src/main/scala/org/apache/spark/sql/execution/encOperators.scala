@@ -55,6 +55,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
 import org.apache.spark.sql.catalyst.expressions.aggregate.Complete
 import org.apache.spark.sql.catalyst.expressions.aggregate.Sum
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.Statistics
@@ -102,6 +103,32 @@ case class PhysicalEncryptedRDD(
   override def executeCollect(): Array[InternalRow] = {
     rdd.collect().map { r => InternalRow.fromSeq(r) }
   }
+}
+
+case class LogicalEncryptedBlockRDD(
+    output: Seq[Attribute],
+    rdd: RDD[Block])(sqlContext: SQLContext)
+  extends LogicalPlan with MultiInstanceRelation with logical.OutputsBlocks {
+
+  override def children: Seq[LogicalPlan] = Nil
+
+  override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
+
+  override def newInstance(): LogicalEncryptedBlockRDD.this.type =
+    LogicalEncryptedBlockRDD(output.map(_.newInstance()), rdd)(sqlContext).asInstanceOf[this.type]
+
+  override def sameResult(plan: LogicalPlan): Boolean = plan match {
+    case LogicalEncryptedBlockRDD(_, otherRDD) => rdd.id == otherRDD.id
+    case _ => false
+  }
+
+  override def producedAttributes: AttributeSet = outputSet
+}
+
+case class PhysicalEncryptedBlockRDD(
+    output: Seq[Attribute],
+    rdd: RDD[Block]) extends LeafNode with OutputsBlocks {
+  override def executeBlocked(): RDD[Block] = rdd
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable

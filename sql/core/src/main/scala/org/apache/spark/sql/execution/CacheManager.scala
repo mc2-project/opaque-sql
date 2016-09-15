@@ -20,15 +20,18 @@ package org.apache.spark.sql.execution
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK
+
+import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 /** Holds a cached logical plan and its data */
 private[sql] case class CachedData(plan: LogicalPlan, cachedRepresentation: InMemoryRelation)
 
-private[sql] case class EncCachedData(plan: LogicalPlan, cachedRepresentation: LogicalEncryptedRDD)
+private[sql] case class EncCachedData(
+    plan: LogicalPlan, cachedRepresentation: LogicalEncryptedBlockRDD)
 
 /**
  * Provides support in a SQLContext for caching query results and automatically using these cached
@@ -109,18 +112,26 @@ private[sql] class CacheManager extends Logging {
   private[sql] def encCacheQuery(
       query: Queryable,
       storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): Unit = writeLock {
-    val planToCache = query.queryExecution.analyzed
+    val planToCache: logical.OutputsBlocks = query.queryExecution.analyzed match {
+      case logical.ConvertFromBlocks(child) => child
+      case r @ LogicalEncryptedRDD(_, _) => logical.ConvertToBlocks(r)
+    }
     if (lookupCachedData(planToCache).nonEmpty) {
       logWarning("Asked to cache already cached data.")
     } else {
       val sqlContext = query.sqlContext
-      encCachedData +=
-        EncCachedData(
-          planToCache,
-          LogicalEncryptedRDD(
-            planToCache.output,
-            sqlContext.executePlan(planToCache).toRdd
-              .map(_.toEncArray).persist(storageLevel))(sqlContext))
+      val cachedRDD =
+        LogicalEncryptedBlockRDD(
+          planToCache.output,
+          sqlContext.executePlan(planToCache)
+            .executedPlan.asInstanceOf[OutputsBlocks]
+            .executeBlocked()
+            .persist(storageLevel))(sqlContext)
+      // We have to force the RDD here because there's no easy way for the user to do it since we
+      // are actually caching a different RDD from the one the user requested (namely the blocked
+      // version) due to the planToCache pattern match above.
+      cachedRDD.rdd.foreach(x => {})
+      encCachedData += EncCachedData(planToCache, cachedRDD)
     }
   }
 

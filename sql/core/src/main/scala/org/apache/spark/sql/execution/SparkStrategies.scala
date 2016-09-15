@@ -475,6 +475,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         python.BatchPythonEvaluation(udf, e.output, planLater(child)) :: Nil
       case LogicalRDD(output, rdd) => PhysicalRDD(output, rdd, "ExistingRDD") :: Nil
       case LogicalEncryptedRDD(output, rdd) => PhysicalEncryptedRDD(output, rdd) :: Nil
+      case LogicalEncryptedBlockRDD(output, rdd) => PhysicalEncryptedBlockRDD(output, rdd) :: Nil
       case BroadcastHint(child) => planLater(child) :: Nil
       case _ => Nil
     }

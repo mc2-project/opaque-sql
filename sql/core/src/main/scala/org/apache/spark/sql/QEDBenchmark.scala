@@ -81,8 +81,8 @@ object QEDBenchmark {
     QEDBenchmark.diseaseQuery(sqlContext, "500")
     QEDBenchmark.diseaseQuery(sqlContext, "500")
 
-    for (i <- 1 to 8) {
-      QEDBenchmark.diseaseQuery(sqlContext, (math.pow(2, i) * 500).toInt.toString)
+    for (i <- 0 until 13) {
+      QEDBenchmark.diseaseQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
     }
 
     sc.stop()
@@ -108,7 +108,7 @@ object QEDBenchmark {
           StructField("src", IntegerType),
           StructField("dst", IntegerType),
           StructField("weight", FloatType))))
-      .encCache()
+    time("load edges") { edges.encCache() }
     val vertices = sqlContext.createEncryptedDataFrame(
       data.filter($"isVertex" === lit(1))
         .select($"src".as("id"), lit(1.0f).as("rank"))
@@ -118,9 +118,7 @@ object QEDBenchmark {
         StructType(Seq(
           StructField("id", IntegerType),
           StructField("rank", FloatType))))
-      .encCache()
-    val numEdges = edges.count
-    val numVertices = vertices.count
+    time("load vertices") { vertices.encCache() }
     val newV =
       time(s"pagerank $size") {
         val result =
@@ -128,7 +126,7 @@ object QEDBenchmark {
             .encSelect($"dst", ($"rank" * $"weight").as("weightedRank"))
             .groupBy("dst").encAgg(sum("weightedRank").as("totalIncomingRank"))
             .encSelect($"dst", (lit(0.15) + lit(0.85) * $"totalIncomingRank").as("rank"))
-        result.count
+        result.encForce()
         result
       }
     newV
@@ -140,8 +138,7 @@ object QEDBenchmark {
     rankingsDF.count
     val result = time("big data 1 - spark sql") {
       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
-      val count = df.count
-      println("big data 1 spark sql - num rows: " + count)
+      df.count
       df
     }
     result
@@ -158,12 +155,10 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
-      .encCache()
-    rankingsDF.count
+    time("load rankings") { rankingsDF.encCache() }
     val result = time("big data 1") {
       val df = rankingsDF.encFilter($"pageRank" > 1000)
-      val count = df.count
-      println("big data 1 - num rows: " + count)
+      df.encForce()
       df
     }
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
@@ -181,12 +176,10 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
-      .encCache()
-    rankingsDF.count
+    time("load rankings") { rankingsDF.encCache() }
     val result = time("big data 1 encrypted") {
       val df = rankingsDF.nonObliviousFilter($"pageRank" > 1000)
-      val count = df.count
-      println("big data 1 encrypted - num rows: " + count)
+      df.encForce()
       df
     }
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
@@ -199,8 +192,7 @@ object QEDBenchmark {
     val result = time("big data 2 - spark sql") {
       val df = uservisitsDF.select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
-      val count = df.count
-      println("big data 2 spark sql - num rows: " + count)
+      df.count
       df
     }
     result.collect.map { case Row(a: String, b: Double) => (a, b.toFloat) }
@@ -218,14 +210,12 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
-      .encCache()
-    uservisitsDF.count
+    time("load uservisits") { uservisitsDF.encCache() }
     val result = time("big data 2") {
       val df = uservisitsDF
         .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
         .groupBy("sourceIP").encAgg(sum("adRevenue").as("totalAdRevenue"))
-      val count = df.count
-      println("big data 2 - num rows: " + count)
+      df.encForce()
       df
     }
     QED.decrypt2[String, Float](result.encCollect)
@@ -244,14 +234,12 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
-      .encCache()
-    uservisitsDF.count
+    time("load uservisits") { uservisitsDF.encCache() }
     val result = time("big data 2 encrypted") {
       val df = uservisitsDF
         .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
         .groupBy("sourceIP").nonObliviousAgg(sum("adRevenue").as("totalAdRevenue"))
-      val count = df.count
-      println("big data 2 encrypted - num rows: " + count)
+      df.encForce()
       df
     }
     QED.decrypt2[String, Float](result.encCollect)
@@ -273,8 +261,7 @@ object QEDBenchmark {
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .orderBy($"totalRevenue".asc)
-      val count = df.count
-      println("big data 3 spark sql - num rows: " + count)
+      df.count
       df
     }
     result.collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
@@ -294,8 +281,7 @@ object QEDBenchmark {
         StructField("destURL", StringType),
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
-      .encCache()
-    uservisitsDF.count
+    time("load uservisits") { uservisitsDF.encCache() }
     val rankingsDF = sqlContext.createEncryptedDataFrame(
       rankings(sqlContext, size)
         .select($"pageURL", $"pageRank")
@@ -305,8 +291,7 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
-      .encCache()
-    rankingsDF.count
+    time("load rankings") { rankingsDF.encCache() }
 
     val result = time("big data 3") {
       val df =
@@ -322,8 +307,7 @@ object QEDBenchmark {
           .encAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
           .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
           .encSort($"totalRevenue")
-      val count = df.count
-      println("big data 3 - num rows: " + count)
+      df.encForce()
       df
     }
     QED.decrypt3[String, Float, Float](result.encCollect)
@@ -343,8 +327,7 @@ object QEDBenchmark {
         StructField("destURL", StringType),
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
-      .encCache()
-    uservisitsDF.count
+    time("load uservisits") { uservisitsDF.encCache() }
     val rankingsDF = sqlContext.createEncryptedDataFrame(
       rankings(sqlContext, size)
         .select($"pageURL", $"pageRank")
@@ -354,10 +337,9 @@ object QEDBenchmark {
       StructType(Seq(
         StructField("pageURL", StringType),
         StructField("pageRank", IntegerType))))
-      .encCache()
-    rankingsDF.count
+    time("load rankings") { rankingsDF.encCache() }
 
-    val result = time("big data 3") {
+    val result = time("big data 3 encrypted") {
       val df =
         rankingsDF
           .nonObliviousJoin(
@@ -371,8 +353,7 @@ object QEDBenchmark {
           .nonObliviousAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
           .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
           .nonObliviousSort($"totalRevenue")
-      val count = df.count
-      println("big data 3 encrypted - num rows: " + count)
+      df.encForce()
       df
     }
     QED.decrypt3[String, Float, Float](result.encCollect)
@@ -418,8 +399,7 @@ object QEDBenchmark {
             ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
               .as("amount"))
           .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
-      val count = df.count
-      println("TPC-H Query 9 - Spark SQL - num rows: " + count)
+      df.count
       df
     }
     result.collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }
@@ -462,10 +442,10 @@ object QEDBenchmark {
             ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
               .as("amount"))
           .groupBy("n_name", "o_year").encAgg(sum($"amount").as("sum_profit"))
-      QED.decrypt3[String, Int, Float](df.encCollect)
+      df.count
+      df
     }
-    println("TPC-H Query 9 - generic join order - num rows: " + result.size)
-    result
+    QED.decrypt3[String, Int, Float](result.encCollect)
   }
 
   /** TPC-H query 9 - Product Type Profit Measure Query - Opaque join order */
@@ -504,10 +484,10 @@ object QEDBenchmark {
             ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
               .as("amount"))
           .groupBy("n_name", "o_year").encAgg(sum($"amount").as("sum_profit"))
-      QED.decrypt3[String, Int, Float](df.encCollect)
+      df.encForce
+      df
     }
-    println("TPC-H Query 9 - opaque join order - num rows: " + result.size)
-    result
+    QED.decrypt3[String, Int, Float](result.encCollect)
   }
 
   def diseaseQuery(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {
@@ -525,7 +505,7 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptDisease),
       diseaseSchema)
-      .encCache()
+    time("load disease") { diseaseDF.encCache() }
 
     val patientSchema = StructType(Seq(
       StructField("p_id", IntegerType),
@@ -540,7 +520,7 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptPatient),
       patientSchema)
-      .encCache()
+    time("load patient") { patientDF.encCache() }
 
     val treatmentSchema = StructType(Seq(
       StructField("t_id", IntegerType),
@@ -560,22 +540,22 @@ object QEDBenchmark {
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptTreatment),
       groupedTreatmentSchema)
-      .encCache()
+    time("load treatment") { treatmentDF.encCache() }
 
     time(s"Disease Query $size - default join order") {
-      treatmentDF.encJoin(
+      val df = treatmentDF.encJoin(
         diseaseDF.encJoin(
           patientDF,
           $"d_disease_id" === $"p_disease_id"),
         $"d_disease_id" === $"t_disease_id")
-        .encCollect
+      df.encForce()
     }
 
     time(s"Disease Query $size - Opaque join order") {
-      diseaseDF
+      val df = diseaseDF
         .nonObliviousJoin(treatmentDF, $"d_disease_id" === $"t_disease_id")
         .encJoin(patientDF, $"d_disease_id" === $"p_disease_id")
-        .encCollect
+      df.encForce()
     }
   }
 
