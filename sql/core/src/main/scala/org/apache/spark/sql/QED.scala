@@ -246,16 +246,22 @@ object QED {
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
-    val totalBytes = arrays.map(_.length).sum
-    val buf = ByteBuffer.allocate(totalBytes)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    for (a <- arrays) {
-      buf.put(a)
+    arrays match {
+      case Array() => Array.empty
+      case Array(bytes) => bytes
+      case _ =>
+        val totalBytes = arrays.map(_.length).sum
+        if (totalBytes > 1000000) println(s"concatByteArrays, ${arrays.length} arrays, $totalBytes bytes")
+        val buf = ByteBuffer.allocate(totalBytes)
+        buf.order(ByteOrder.LITTLE_ENDIAN)
+        for (a <- arrays) {
+          buf.put(a)
+        }
+        buf.flip()
+        val all = new Array[Byte](buf.limit())
+        buf.get(all)
+        all
     }
-    buf.flip()
-    val all = new Array[Byte](buf.limit())
-    buf.get(all)
-    all
   }
 
   def readRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {

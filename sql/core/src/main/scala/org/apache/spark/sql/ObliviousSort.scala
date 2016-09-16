@@ -190,6 +190,10 @@ object ObliviousSort extends java.io.Serializable {
       len += numRows(idx)._2
     }
 
+    if (len == 0) {
+      return data
+    }
+
     var s = s_input
     var r = r_input
 
