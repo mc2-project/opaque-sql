@@ -113,7 +113,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
 
   test("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = sparkContext.makeRDD(QED.encryptN(p_data), 5)
     val f = sparkContext.makeRDD(QED.encryptN(f_data), 5)
     val j = p.zipPartitions(f) { (pIter, fIter) =>
