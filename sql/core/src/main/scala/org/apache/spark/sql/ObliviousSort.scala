@@ -28,7 +28,7 @@ import org.apache.spark.sql.QEDOpcode
 
 object ObliviousSort extends java.io.Serializable {
 
-  val Multiplier = 2 // TODO: fix bug when this is 1
+  val Multiplier = 1 // TODO: fix bug when this is 1
 
   import QED.{time, logPerf}
 
@@ -198,6 +198,7 @@ object ObliviousSort extends java.io.Serializable {
       r = (math.ceil(len * 1.0 / s)).toInt
     }
 
+    // r should be even and a multiple of s
     if (r < 2 * math.pow(s, 2).toInt) {
       r = 2 * math.pow(s, 2).toInt
       logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len, r=$r")
@@ -205,7 +206,7 @@ object ObliviousSort extends java.io.Serializable {
 
     if (r % s != 0) {
       logPerf(s"Padding r from $r to ${(r / s + 1) * s}. s=$s, len=$len, r=$r")
-      r = (r / s + 1) * s
+      r = (r / s + 1) * s * 2
     }
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
@@ -215,7 +216,7 @@ object ObliviousSort extends java.io.Serializable {
       ColumnSortPreProcess(index, x, offsets, opcode, r, s)
     )
       .flatMap(x => ParseData(x, r, s))
-      .groupByKey(NumMachines)
+      .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 0, r, s))
 
     val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
@@ -223,25 +224,25 @@ object ObliviousSort extends java.io.Serializable {
     val data_1 = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 1, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(NumMachines)
+      .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 1, r, s))
 
     val data_2 = data_1.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 2, r, s))
     }.flatMap(x => ParseData(x, r, s))
-    .groupByKey(NumMachines)
+    .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 2, r, s))
 
     val data_3 = data_2.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 3, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(NumMachines)
+      .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 3, r, s))
 
     val data_4 = data_3.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 4, r, s))
     }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(NumMachines)
+      .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 4, r, s))
       .sortByKey()
 
