@@ -22,25 +22,13 @@ import org.apache.spark.SparkContext
 
 import org.apache.spark.sql.test.SharedSQLContext
 
-class QEDBenchmarkSuite extends QueryTest with SharedSQLContext {
-  import testImplicits._
-
+class QEDBenchmarkSuite extends org.scalatest.FunSuite {
   val (enclave, eid) = QED.initEnclave()
 
-  test("big data 1 - spark sql") {
-    QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
+  test("pagerank") {
+    val sparkConf = new SparkConf().setAppName("QEDBenchmarkSuite").setMaster("local[2]")
+    val sc = new SparkContext(sparkConf)
+    val sqlContext = new SQLContext(sc)
+    QEDBenchmark.pagerank(sqlContext, "1024", true)
   }
-
-  test("big data 1") {
-    QEDBenchmark.bd1Opaque(sqlContext, "1node")
-  }
-
-  test("big data 2 - spark sql") {
-    QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
-  }
-
-  test("big data 2") {
-    QEDBenchmark.bd2Opaque(sqlContext, "1node")
-  }
-
 }
