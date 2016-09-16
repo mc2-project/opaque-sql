@@ -688,7 +688,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
 
   uint32_t actual_size = 0;
 
-  uint32_t output_rows_length = 2048 + 12 + 16 + 2048;
+  uint32_t output_rows_length = 2048 + 12 + 16 + 2048 + 2048;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
 
   sgx_check("Aggregate step 1",
@@ -698,6 +698,10 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
               num_rows,
               output_rows, output_rows_length,
               &actual_size));
+
+  assert(output_rows_length >= actual_size);
+
+  //printf("AggregateStep1: actual_size: %u, max_size: output_rows_length: %u\n", actual_size, output_rows_length);
 
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
@@ -863,7 +867,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t single_row_length = 4 + ENC_ROW_UPPER_BOUND;
+  uint32_t single_row_length = 4 + 4 + ENC_ROW_UPPER_BOUND;
   uint32_t output_rows_length = single_row_length * num_rows;
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
   uint8_t *output_rows_ptr = output_rows;
