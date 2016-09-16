@@ -1299,7 +1299,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilt
 
 uint32_t est(uint32_t per_column_data_size) {
 
-  uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
+  uint32_t max_block_size = MAX_BLOCK_SIZE - (16 + 12 + 16);
+
+  uint32_t per_column_blocks = (per_column_data_size % max_block_size == 0) ? per_column_data_size / max_block_size + 1 : per_column_data_size / max_block_size + 2;
   if (per_column_data_size == 0) {
     per_column_blocks = 1;
   }
