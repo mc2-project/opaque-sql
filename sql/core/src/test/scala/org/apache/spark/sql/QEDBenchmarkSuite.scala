@@ -27,26 +27,20 @@ class QEDBenchmarkSuite extends QueryTest with SharedSQLContext {
 
   val (enclave, eid) = QED.initEnclave()
 
-  // test("big data 1 - spark sql") {
-  //   QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
-  // }
+  test("big data 1 - spark sql") {
+    QEDBenchmark.bd1SparkSQL(sqlContext, "1node")
+  }
 
-  // test("big data 1") {
-  //   QEDBenchmark.bd1Opaque(sqlContext, "1node")
-  // }
+  test("big data 1") {
+    QEDBenchmark.bd1Opaque(sqlContext, "1node")
+  }
 
-  // test("big data 2 - spark sql") {
-  //   QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
-  // }
+  test("big data 2 - spark sql") {
+    QEDBenchmark.bd2SparkSQL(sqlContext, "1node")
+  }
 
-  // test("big data 2") {
-  //   QEDBenchmark.bd2Opaque(sqlContext, "1node")
-  // }
+  test("big data 2") {
+    QEDBenchmark.bd2Opaque(sqlContext, "1node")
+  }
 
-  // test("big data 3") {
-  //   val sparkConf = new SparkConf().setAppName("QEDBenchmarkSuite").setMaster("local[5]")
-  //   val sc = new SparkContext(sparkConf)
-  //   val sqlContext = new SQLContext(sc)
-  //   QEDBenchmark.bd3Opaque(sqlContext, "1000000", true)
-  // }
 }
