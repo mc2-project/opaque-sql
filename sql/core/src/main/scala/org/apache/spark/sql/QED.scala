@@ -52,6 +52,31 @@ object QED {
     }
   }
 
+  private def jsonSerialize(x: Any): String = (x: @unchecked) match {
+    case x: Int => x.toString
+    case x: Double => x.toString
+    case x: Boolean => x.toString
+    case x: String => s""""$x""""
+    case x: Option[_] => x match {
+      case Some(x) => jsonSerialize(x)
+      case None => "null"
+    }
+    case x: Map[_, _] => x.map {
+      case (k, v) => s"${jsonSerialize(k)}: ${jsonSerialize(v)}"
+    }.mkString("{", ", ", "}")
+  }
+
+  def timeBenchmark[A](benchmarkAttrs: (String, Any)*)(f: => A): A = {
+    val start = System.nanoTime
+    val result = f
+    val timeMs = (System.nanoTime - start) / 1000000.0
+    val attrs = benchmarkAttrs.toMap + (
+      "time" -> timeMs,
+      "sgx" -> (if (System.getenv("SGX_MODE") == "HW") "hw" else "sim"))
+    println(jsonSerialize(attrs))
+    result
+  }
+
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
@@ -251,7 +276,6 @@ object QED {
       case Array(bytes) => bytes
       case _ =>
         val totalBytes = arrays.map(_.length).sum
-        if (totalBytes > 1000000) println(s"concatByteArrays, ${arrays.length} arrays, $totalBytes bytes")
         val buf = ByteBuffer.allocate(totalBytes)
         buf.order(ByteOrder.LITTLE_ENDIAN)
         for (a <- arrays) {
