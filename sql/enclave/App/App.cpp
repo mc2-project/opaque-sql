@@ -1293,6 +1293,17 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilt
   return ret;
 }
 
+uint32_t est(uint32_t per_column_data_size) {
+
+  uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
+  if (per_column_data_size == 0) {
+    per_column_blocks = 1;
+  }
+  uint32_t estimated_column_size = per_column_blocks * (16 + 12 + 16) + per_column_data_size;
+
+  return 4 + 4 + estimated_column_size;
+}
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
     jobject obj,
@@ -1304,7 +1315,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     jbyteArray input,
     jint r,
     jint s,
-    jint column,
+    jint column_input,
     jint current_part,
     jint num_part,
     jint offset) {
@@ -1365,16 +1376,64 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   uint32_t per_column_blocks = (per_column_data_size % MAX_BLOCK_SIZE == 0) ? per_column_data_size / MAX_BLOCK_SIZE : per_column_data_size / MAX_BLOCK_SIZE + 1;
   uint32_t estimated_column_size = per_column_blocks * (16 + 12 + 16) + per_column_data_size;
 
+  uint32_t total_data_size = (total_rows / s + 1) * row_upper_bound;
+  uint32_t per_shuffle_column_size = r / s * row_upper_bound;
+  uint32_t per_half_column_size = (r ) * row_upper_bound;
+
+  (void) estimated_column_size;
+  (void) total_data_size;
+  (void) per_shuffle_column_size;
+  (void) per_half_column_size;
+
+  //printf("ColumnSort[%u] total_rows: %u, total_data_size: %u, buffer_list.size: %lu, r is %u, s is %u\n", round, total_rows, total_data_size, buffer_list.size(), r, s);
+
   // construct total of s output buffers
   uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
   uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
+  // for (uint32_t i = 0; i < (uint32_t) s; i++) {
+  //   if (estimated_column_size > 0) {
+  //     output_buffers[i] = (uint8_t *) malloc(estimated_column_size);
+  //   } else {
+  //     output_buffers[i] = NULL;
+  //   }
+  //   output_buffer_sizes[i] = 0;
+  // }
+
+  uint32_t column = (uint32_t) column_input;
   for (uint32_t i = 0; i < (uint32_t) s; i++) {
-    if (estimated_column_size > 0) {
-      output_buffers[i] = (uint8_t *) malloc(estimated_column_size);
+    if (round == 0) {
+      output_buffers[i] = (uint8_t *) malloc(est(total_data_size));
+      //printf("ColumnSort[%u] column %u allocating %u bytes\n", round, i, est(total_data_size));
+    } else if (round == 1) {
+      if (i == 0) {
+        output_buffers[i] = (uint8_t *) malloc(est(per_column_data_size));
+        //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i, est(per_column_data_size));
+      } else {
+        output_buffers[i] = (uint8_t *) malloc(est(0));
+        //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i, est(0));
+      }
+    } else if (round == 2 || round == 3) {
+      output_buffers[i] = (uint8_t *) malloc(est(per_shuffle_column_size));
+      //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i, est(per_shuffle_column_size * 2));
+    } else if (round == 4) {
+      if (i + 1 == column || i  == ((column) % s)) {
+        output_buffers[i] = (uint8_t *) malloc(est(per_half_column_size));
+        //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i+1, est(per_half_column_size));
+      } else {
+        output_buffers[i] = (uint8_t *) malloc(est(0));
+        //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i+1, est(0));
+      }
+    } else if (round == 5) {
+      if (i + 1 == column || (i + 1) % s == column - 1) {
+        output_buffers[i] = (uint8_t *) malloc(est(per_half_column_size));
+        //printf("ColumnSort[%u] column is %u, column %u allocating %u bytes\n", round, column, i+1, est(per_half_column_size));
+      } else {
+        output_buffers[i] = (uint8_t *) malloc(est(0));
+      }
     } else {
-      output_buffers[i] = NULL;
+      //printf("Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort: Should not be here!");
+      assert(false);
     }
-    output_buffer_sizes[i] = 0;
   }
 
   if (round == 0) {

@@ -559,6 +559,45 @@ object QEDBenchmark {
     }
   }
 
+  def joinCost(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {
+    import sqlContext.implicits._
+    val diseaseSchema = StructType(Seq(
+      StructField("d_disease_id", StringType),
+      StructField("d_name", StringType)))
+    val diseaseDF = sqlContext.createEncryptedDataFrame(
+      // sqlContext.createDataFrame(Seq(("d1", "disease 1"), ("d2", "disease 2")))
+      sqlContext.read.schema(diseaseSchema)
+        .format("csv")
+        .option("delimiter", "|")
+        .load(s"$dataDir/disease/icd_codes.tsv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptDisease),
+      diseaseSchema)
+
+    val patientSchema = StructType(Seq(
+      StructField("p_id", IntegerType),
+      StructField("p_disease_id", StringType),
+      StructField("p_name", StringType)))
+    val patientDF = sqlContext.createEncryptedDataFrame(
+      // sqlContext.createDataFrame(Seq((1, "d1", "patient 1"), (2, "d2", "patient 2")))
+      sqlContext.read.schema(patientSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/patient-$size.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptPatient),
+      patientSchema)
+
+    time(s"Disease Query $size - Oblivious join") {
+      diseaseDF.encJoin(patientDF, $"d_disease_id" === $"p_disease_id").encCollect
+    }
+
+    // time(s"Disease Query $size - Non-oblivious join") {
+    //   diseaseDF.nonObliviousJoin(patientDF, $"d_disease_id" === $"p_disease_id").encCollect
+    // }
+  }
+
   def numPartitions(sqlContext: SQLContext, distributed: Boolean): Int =
     if (distributed) sqlContext.sparkContext.defaultParallelism else 1
 
