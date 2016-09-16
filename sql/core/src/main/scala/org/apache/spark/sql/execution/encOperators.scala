@@ -630,9 +630,10 @@ case class EncSortMergeJoin(
         lastPrimaryRowsCollected.length)
     }
 
+    val processedJoinRowsSplit = QED.readVerifiedRows(processedJoinRows).toArray
+    assert(processedJoinRowsSplit.length == sorted.partitions.length)
     val processedJoinRowsRDD =
-      sparkContext.parallelize(QED.splitBytes(processedJoinRows, lastPrimaryRowsCollected.length),
-        sorted.partitions.length)
+      sparkContext.parallelize(processedJoinRowsSplit, sorted.partitions.length)
 
     val joined = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
       val block = blockIter.next()

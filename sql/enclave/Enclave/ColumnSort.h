@@ -66,7 +66,6 @@ void untranspose(Verify *verify_set,
   
   uint32_t new_row = 0;
   (void)new_row;
-  (void)row_upper_bound;
   uint32_t new_column = column;
   uint32_t idx = 0;
 
@@ -335,7 +334,7 @@ void column_sort_filter(int op_code,
   (void)row_upper_bound;
 
   RowReader r(input_rows, verify_set);
-  RowWriter w(output_rows);
+  RowWriter w(output_rows, row_upper_bound);
   w.set_self_task_id(verify_set->get_self_task_id());
   RecordType cur;
 

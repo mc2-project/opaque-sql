@@ -267,6 +267,15 @@ object QED {
     }
   }
 
+  def readVerifiedRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
+    val buf = ByteBuffer.wrap(concatRows)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    new Iterator[Array[Byte]] {
+      override def hasNext = buf.hasRemaining
+      override def next() = readVerifiedRow(buf)
+    }
+  }
+
   def parseRows(concatRows: Array[Byte]): Iterator[Array[Array[Byte]]] = {
     val buf = ByteBuffer.wrap(concatRows)
     buf.order(ByteOrder.LITTLE_ENDIAN)
@@ -279,6 +288,21 @@ object QED {
   def readRow(buf: ByteBuffer): Array[Byte] = {
     val buf2 = buf.duplicate()
     buf2.order(ByteOrder.LITTLE_ENDIAN)
+    val numFields = buf2.getInt()
+    for (i <- 0 until numFields) {
+      val fieldLength = buf2.getInt()
+      val field = new Array[Byte](fieldLength)
+      buf2.get(field)
+    }
+    val rowBytes = new Array[Byte](buf2.position - buf.position)
+    buf.get(rowBytes)
+    rowBytes
+  }
+
+  def readVerifiedRow(buf: ByteBuffer): Array[Byte] = {
+    val buf2 = buf.duplicate()
+    buf2.order(ByteOrder.LITTLE_ENDIAN)
+    val taskID = buf2.getInt()
     val numFields = buf2.getInt()
     for (i <- 0 until numFields) {
       val fieldLength = buf2.getInt()
