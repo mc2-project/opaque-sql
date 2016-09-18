@@ -79,6 +79,10 @@ object QEDBenchmark {
     }
 
     for (i <- 0 to 13) {
+      QEDBenchmark.geneQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
+    }
+
+    for (i <- 0 to 13) {
       QEDBenchmark.joinCost(sqlContext, (math.pow(2, i) * 125).toInt.toString)
     }
 
@@ -539,13 +543,12 @@ object QEDBenchmark {
     import sqlContext.implicits._
     val diseaseSchema = StructType(Seq(
       StructField("d_disease_id", StringType),
+      StructField("d_gene_id", IntegerType),
       StructField("d_name", StringType)))
     val diseaseDF = sqlContext.createEncryptedDataFrame(
-      // sqlContext.createDataFrame(Seq(("d1", "disease 1"), ("d2", "disease 2")))
       sqlContext.read.schema(diseaseSchema)
         .format("csv")
-        .option("delimiter", "|")
-        .load(s"$dataDir/disease/icd_codes.tsv")
+        .load(s"$dataDir/disease/disease.csv")
         .repartition(numPartitions(sqlContext, distributed))
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptDisease),
@@ -557,7 +560,6 @@ object QEDBenchmark {
       StructField("p_disease_id", StringType),
       StructField("p_name", StringType)))
     val patientDF = sqlContext.createEncryptedDataFrame(
-      // sqlContext.createDataFrame(Seq((1, "d1", "patient 1"), (2, "d2", "patient 2")))
       sqlContext.read.schema(patientSchema)
         .format("csv")
         .load(s"$dataDir/disease/patient-$size.csv")
@@ -576,7 +578,6 @@ object QEDBenchmark {
       StructField("t_disease_id", StringType),
       StructField("t_min_cost", IntegerType)))
     val treatmentDF = sqlContext.createEncryptedDataFrame(
-      // sqlContext.createDataFrame(Seq((3, "d1", "treatment 1", 100))).toDF("t_id", "t_disease_id", "t_name", "t_cost")
       sqlContext.read.schema(treatmentSchema)
         .format("csv")
         .load(s"$dataDir/disease/treatment.csv")
@@ -609,6 +610,76 @@ object QEDBenchmark {
       "join order" -> "opaque") {
       val df = diseaseDF
         .nonObliviousJoin(treatmentDF, $"d_disease_id" === $"t_disease_id")
+        .encJoin(patientDF, $"d_disease_id" === $"p_disease_id")
+      df.encForce()
+    }
+  }
+
+  def geneQuery(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {
+    import sqlContext.implicits._
+    val diseaseSchema = StructType(Seq(
+      StructField("d_disease_id", StringType),
+      StructField("d_gene_id", IntegerType),
+      StructField("d_name", StringType)))
+    val diseaseDF = sqlContext.createEncryptedDataFrame(
+      sqlContext.read.schema(diseaseSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/disease.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptDisease),
+      diseaseSchema)
+    time("load disease") { diseaseDF.encCache() }
+
+    val patientSchema = StructType(Seq(
+      StructField("p_id", IntegerType),
+      StructField("p_disease_id", StringType),
+      StructField("p_name", StringType)))
+    val patientDF = sqlContext.createEncryptedDataFrame(
+      sqlContext.read.schema(patientSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/patient-$size.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.diseaseQueryEncryptPatient),
+      patientSchema)
+    time("load patient") { patientDF.encCache() }
+
+    val geneSchema = StructType(Seq(
+      StructField("g_id", IntegerType),
+      StructField("g_name", StringType)))
+    val geneDF = sqlContext.createEncryptedDataFrame(
+      sqlContext.read.schema(geneSchema)
+        .format("csv")
+        .load(s"$dataDir/disease/gene.csv")
+        .repartition(numPartitions(sqlContext, distributed))
+        .rdd
+        .mapPartitions(QED.geneQueryEncryptGene),
+      geneSchema)
+    time("load gene") { geneDF.encCache() }
+
+    timeBenchmark(
+      "distributed" -> distributed,
+      "query" -> "gene",
+      "system" -> "opaque",
+      "size" -> size,
+      "join order" -> "generic") {
+      val df = geneDF.encJoin(
+        diseaseDF.encJoin(
+          patientDF,
+          $"d_disease_id" === $"p_disease_id"),
+        $"g_id" === $"d_gene_id")
+      df.encForce()
+    }
+
+    timeBenchmark(
+      "distributed" -> distributed,
+      "query" -> "gene",
+      "system" -> "opaque",
+      "size" -> size,
+      "join order" -> "opaque") {
+      val df = geneDF
+        .nonObliviousJoin(diseaseDF, $"g_id" === $"d_gene_id")
         .encJoin(patientDF, $"d_disease_id" === $"p_disease_id")
       df.encForce()
     }

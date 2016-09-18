@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -eu
+
+cd "$(dirname $0)"
+
+set +u
+source ../../../conf/spark-env.sh
+set -u
+
+disease_data_dir=${SPARKSGX_DATA_DIR#file:}/disease
+
+mkdir -p $disease_data_dir
+
+python synth_all_data.py
+mv *.csv $disease_data_dir

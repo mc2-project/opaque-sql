@@ -514,9 +514,10 @@ object QED {
   def diseaseQueryEncryptDisease(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
     val (enclave, eid) = QED.initEnclave()
     iter.map {
-      case Row(di: String, n: String) =>
+      case Row(di: String, gi: Int, n: String) =>
         Array(
           QED.encrypt(enclave, eid, di),
+          QED.encrypt(enclave, eid, gi),
           QED.encrypt(enclave, eid, n))
     }
   }
@@ -539,6 +540,16 @@ object QED {
         Array(
           QED.encrypt(enclave, eid, di),
           QED.encrypt(enclave, eid, c))
+    }
+  }
+
+  def geneQueryEncryptGene(iter: Iterator[Row]): Iterator[Array[Array[Byte]]] = {
+    val (enclave, eid) = QED.initEnclave()
+    iter.map {
+      case Row(gi: Int, n: String) =>
+        Array(
+          QED.encrypt(enclave, eid, gi),
+          QED.encrypt(enclave, eid, n))
     }
   }
 }

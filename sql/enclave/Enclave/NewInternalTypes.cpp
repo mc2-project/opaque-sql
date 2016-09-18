@@ -701,6 +701,15 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[2] = DUMMY_FLOAT;
     break;
   case OP_JOIN_DISEASEDEFAULT_TREATMENT:
+    num_output_cols = 6;
+    types[0] = DUMMY_STRING;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_INT;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_STRING;
+    break;
+  case OP_JOIN_DISEASEDEFAULT_PATIENT:
     num_output_cols = 5;
     types[0] = DUMMY_STRING;
     types[1] = DUMMY_INT;
@@ -708,26 +717,46 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[3] = DUMMY_INT;
     types[4] = DUMMY_STRING;
     break;
-  case OP_JOIN_DISEASEDEFAULT_PATIENT:
-    num_output_cols = 4;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_STRING;
-    break;
   case OP_JOIN_DISEASEOPAQUE_PATIENT:
-    num_output_cols = 5;
+    num_output_cols = 6;
     types[0] = DUMMY_STRING;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_INT;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_STRING;
     types[3] = DUMMY_INT;
-    types[4] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_STRING;
     break;
   case OP_JOIN_DISEASEOPAQUE_TREATMENT:
-    num_output_cols = 3;
+    num_output_cols = 4;
     types[0] = DUMMY_STRING;
+    types[1] = DUMMY_INT;
+    types[2] = DUMMY_STRING;
+    types[3] = DUMMY_INT;
+    break;
+  case OP_JOIN_GENEDEFAULT_GENE:
+    num_output_cols = 6;
+    types[0] = DUMMY_INT;
     types[1] = DUMMY_STRING;
-    types[2] = DUMMY_INT;
+    types[2] = DUMMY_STRING;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_STRING;
+    break;
+  case OP_JOIN_GENEOPAQUE_GENE:
+    num_output_cols = 4;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_STRING;
+    types[3] = DUMMY_STRING;
+    break;
+  case OP_JOIN_GENEOPAQUE_PATIENT:
+    num_output_cols = 6;
+    types[0] = DUMMY_INT;
+    types[1] = DUMMY_STRING;
+    types[2] = DUMMY_STRING;
+    types[3] = DUMMY_STRING;
+    types[4] = DUMMY_INT;
+    types[5] = DUMMY_STRING;
     break;
   default:
     printf("NewJoinRecord::init_dummy: Unknown opcode %d\n", op_code);
@@ -746,38 +775,33 @@ uint32_t NewJoinRecord::opcode_to_join_attr_idx(int op_code, bool is_primary) {
   switch (op_code) {
   case OP_JOIN_COL1:
   case OP_JOIN_PAGERANK:
+  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
   case OP_JOIN_DISEASEDEFAULT_TREATMENT:
   case OP_JOIN_DISEASEOPAQUE_TREATMENT:
     p = 1; f = 1;
     break;
-  case OP_JOIN_COL2:
-    p = 2; f = 2;
-    break;
   case OP_JOIN_TPCH9GENERIC_NATION:
+  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
+  case OP_JOIN_TPCH9OPAQUE_NATION:
+  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
   case OP_JOIN_DISEASEDEFAULT_PATIENT:
   case OP_JOIN_DISEASEOPAQUE_PATIENT:
+  case OP_JOIN_GENEDEFAULT_GENE:
+  case OP_JOIN_GENEOPAQUE_GENE:
     p = 1; f = 2;
     break;
   case OP_JOIN_TPCH9GENERIC_SUPPLIER:
-    p = 1; f = 4;
-    break;
   case OP_JOIN_TPCH9GENERIC_ORDERS:
     p = 1; f = 4;
-    break;
-  case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
-    p = 1; f = 2;
     break;
   case OP_JOIN_TPCH9OPAQUE_ORDERS:
     p = 1; f = 6;
     break;
-  case OP_JOIN_TPCH9OPAQUE_NATION:
-    p = 1; f = 2;
+  case OP_JOIN_COL2:
+    p = 2; f = 2;
     break;
-  case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
-    p = 1; f = 2;
-    break;
-  case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
-    p = 1; f = 1;
+  case OP_JOIN_GENEOPAQUE_PATIENT:
+    p = 3; f = 2;
     break;
   case OP_JOIN_TPCH9GENERIC_PARTSUPP:
   case OP_JOIN_TPCH9OPAQUE_LINEITEM:
@@ -919,6 +943,9 @@ bool NewJoinRecord::join_attr_equals(const NewJoinRecord *other, int op_code) co
   case OP_JOIN_DISEASEDEFAULT_PATIENT:
   case OP_JOIN_DISEASEOPAQUE_TREATMENT:
   case OP_JOIN_DISEASEOPAQUE_PATIENT:
+  case OP_JOIN_GENEDEFAULT_GENE:
+  case OP_JOIN_GENEOPAQUE_GENE:
+  case OP_JOIN_GENEOPAQUE_PATIENT:
     if (join_attr != NULL && other->join_attr != NULL) {
       return attrs_equal(join_attr, other->join_attr);
     } else {
