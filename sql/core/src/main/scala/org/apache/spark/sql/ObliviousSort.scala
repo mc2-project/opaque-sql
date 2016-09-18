@@ -33,16 +33,21 @@ object ObliviousSort extends java.io.Serializable {
   import QED.{time, logPerf}
 
   def sortBlocks(data: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
-    if (data.partitions.length <= 1) {
-      data.map { block =>
-        val (enclave, eid) = QED.initEnclave()
-        val sortedRows = enclave.ObliviousSort(eid, opcode.value, block.bytes, 0, block.numRows)
-        Block(sortedRows, block.numRows)
-      }
-    } else {
-      val result = NewColumnSort(data.context, data, opcode)
-      assert(result.partitions.length == data.partitions.length)
-      result
+    time("oblivious sort") {
+      val sorted =
+        if (data.partitions.length <= 1) {
+          data.map { block =>
+            val (enclave, eid) = QED.initEnclave()
+            val sortedRows = enclave.ObliviousSort(eid, opcode.value, block.bytes, 0, block.numRows)
+            Block(sortedRows, block.numRows)
+          }
+        } else {
+          val result = NewColumnSort(data.context, data, opcode)
+          assert(result.partitions.length == data.partitions.length)
+          result
+        }
+      sorted.cache().count()
+      sorted
     }
   }
 
