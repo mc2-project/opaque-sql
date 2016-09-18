@@ -34,6 +34,7 @@ object ObliviousSort extends java.io.Serializable {
 
   def sortBlocks(data: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
     time("oblivious sort") {
+      data.cache()
       val sorted =
         if (data.partitions.length <= 1) {
           data.map { block =>
