@@ -198,11 +198,11 @@ object QEDBenchmark {
     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
   }
 
-  def bd2SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Float)] = {
+  def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> !sqlContext.sparkContext.isLocal,
       "query" -> "big data 2",
       "system" -> "spark sql",
@@ -212,11 +212,10 @@ object QEDBenchmark {
       df.count
       df
     }
-    result.collect.map { case Row(a: String, b: Double) => (a, b.toFloat) }
   }
 
   def bd2Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-    : Seq[(String, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = sqlContext.createEncryptedDataFrame(
       uservisits(sqlContext, size)
@@ -228,7 +227,7 @@ object QEDBenchmark {
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
     time("load uservisits") { uservisitsDF.encCache() }
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "big data 2",
       "system" -> "opaque",
@@ -239,12 +238,11 @@ object QEDBenchmark {
       df.encForce()
       df
     }
-    QED.decrypt2[String, Float](result.encCollect)
   }
 
   def bd2Encrypted(
       sqlContext: SQLContext, size: String, distributed: Boolean = false)
-    : Seq[(String, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = sqlContext.createEncryptedDataFrame(
       uservisits(sqlContext, size)
@@ -256,7 +254,7 @@ object QEDBenchmark {
         StructField("sourceIP", StringType),
         StructField("adRevenue", FloatType))))
     time("load uservisits") { uservisitsDF.encCache() }
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "big data 2",
       "system" -> "encrypted",
@@ -267,16 +265,15 @@ object QEDBenchmark {
       df.encForce()
       df
     }
-    QED.decrypt2[String, Float](result.encCollect)
   }
 
-  def bd3SparkSQL(sqlContext: SQLContext, size: String): Seq[(String, Float, Float)] = {
+  def bd3SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = uservisits(sqlContext, size).cache()
     uservisitsDF.count
     val rankingsDF = rankings(sqlContext, size).cache()
     rankingsDF.count
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> !sqlContext.sparkContext.isLocal,
       "query" -> "big data 3",
       "system" -> "spark sql",
@@ -293,11 +290,10 @@ object QEDBenchmark {
       df.count
       df
     }
-    result.collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
   }
 
   def bd3Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-    : Seq[(String, Float, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = sqlContext.createEncryptedDataFrame(
       uservisits(sqlContext, size)
@@ -322,7 +318,7 @@ object QEDBenchmark {
         StructField("pageRank", IntegerType))))
     time("load rankings") { rankingsDF.encCache() }
 
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "big data 3",
       "system" -> "opaque",
@@ -343,11 +339,10 @@ object QEDBenchmark {
       df.encForce()
       df
     }
-    QED.decrypt3[String, Float, Float](result.encCollect)
   }
 
   def bd3Encrypted(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-    : Seq[(String, Float, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val uservisitsDF = sqlContext.createEncryptedDataFrame(
       uservisits(sqlContext, size)
@@ -372,7 +367,7 @@ object QEDBenchmark {
         StructField("pageRank", IntegerType))))
     time("load rankings") { rankingsDF.encCache() }
 
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "big data 3",
       "system" -> "encrypted",
@@ -393,13 +388,12 @@ object QEDBenchmark {
       df.encForce()
       df
     }
-    QED.decrypt3[String, Float, Float](result.encCollect)
   }
 
   /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
   def tpch9SparkSQL(
       sqlContext: SQLContext, size: String, quantityThreshold: Option[Int])
-    : Seq[(String, Int, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val partDF = part(sqlContext, size).cache()
     val supplierDF = supplier(sqlContext, size).cache()
@@ -408,7 +402,7 @@ object QEDBenchmark {
     val ordersDF = orders(sqlContext, size).cache()
     val nationDF = nation(sqlContext, size).cache()
 
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> !sqlContext.sparkContext.isLocal,
       "query" -> "TPC-H Query 9",
       "system" -> "spark sql",
@@ -445,18 +439,17 @@ object QEDBenchmark {
       df.count
       df
     }
-    result.collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }
   }
 
   /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
   def tpch9Generic(
       sqlContext: SQLContext, size: String, quantityThreshold: Option[Int],
       distributed: Boolean = false)
-    : Seq[(String, Int, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
       tpch9EncryptedDFs(sqlContext, size, distributed)
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "TPC-H Query 9",
       "system" -> "opaque",
@@ -493,18 +486,17 @@ object QEDBenchmark {
       df.count
       df
     }
-    QED.decrypt3[String, Int, Float](result.encCollect)
   }
 
   /** TPC-H query 9 - Product Type Profit Measure Query - Opaque join order */
   def tpch9Opaque(
       sqlContext: SQLContext, size: String, quantityThreshold: Option[Int],
       distributed: Boolean = false)
-    : Seq[(String, Int, Float)] = {
+    : DataFrame = {
     import sqlContext.implicits._
     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
       tpch9EncryptedDFs(sqlContext, size, distributed)
-    val result = timeBenchmark(
+    timeBenchmark(
       "distributed" -> distributed,
       "query" -> "TPC-H Query 9",
       "system" -> "opaque",
@@ -540,7 +532,7 @@ object QEDBenchmark {
       df.encForce
       df
     }
-    QED.decrypt3[String, Int, Float](result.encCollect)
+
   }
 
   def diseaseQuery(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {

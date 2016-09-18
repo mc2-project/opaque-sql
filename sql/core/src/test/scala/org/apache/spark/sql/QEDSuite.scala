@@ -76,31 +76,45 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   }
 
   test("big data 2") {
-    val answer = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny").sortBy(_._1).map {
-      case (str: String, f: Float) => (str, "%.2f".format(f))
-    }
+    val answer = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny")
+      .collect
+      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+      .sortBy(_._1)
+      .map {
+        case (str: String, f: Float) => (str, "%.2f".format(f))
+      }
 
-    val opaque = QEDBenchmark.bd2Opaque(sqlContext, "tiny").map {
-      case (str: String, f: Float) => (str, "%.2f".format(f))
-    }
+    val opaque =
+      QED.decrypt2[String, Float](QEDBenchmark.bd2Opaque(sqlContext, "tiny").encCollect)
+        .map {
+          case (str: String, f: Float) => (str, "%.2f".format(f))
+        }
     assert(answer === opaque)
 
-    val encrypted = QEDBenchmark.bd2Encrypted(sqlContext, "tiny").map {
-      case (str: String, f: Float) => (str, "%.2f".format(f))
-    }
+    val encrypted =
+      QED.decrypt2[String, Float](QEDBenchmark.bd2Encrypted(sqlContext, "tiny").encCollect)
+        .map {
+          case (str: String, f: Float) => (str, "%.2f".format(f))
+        }
     assert(answer === encrypted)
   }
 
   test("big data 3") {
     val answer = QEDBenchmark.bd3SparkSQL(sqlContext, "tiny")
-    assert(answer === QEDBenchmark.bd3Opaque(sqlContext, "tiny"))
-    assert(answer === QEDBenchmark.bd3Encrypted(sqlContext, "tiny"))
+      .collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
+    assert(answer === QED.decrypt3[String, Float, Float](
+      QEDBenchmark.bd3Opaque(sqlContext, "tiny").encCollect))
+    assert(answer === QED.decrypt3[String, Float, Float](
+      QEDBenchmark.bd3Encrypted(sqlContext, "tiny").encCollect))
   }
 
   test("TPC-H query 9") {
-    val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small", Some(25)).sorted
-    val b = QEDBenchmark.tpch9Generic(sqlContext, "sf_small", Some(25)).sorted
-    val c = QEDBenchmark.tpch9Opaque(sqlContext, "sf_small", Some(25)).sorted
+    val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small", Some(25))
+      .collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }.sorted
+    val b = QED.decrypt3[String, Int, Float](
+      QEDBenchmark.tpch9Generic(sqlContext, "sf_small", Some(25)).encCollect).sorted
+    val c = QED.decrypt3[String, Int, Float](
+      QEDBenchmark.tpch9Opaque(sqlContext, "sf_small", Some(25)).encCollect).sorted
     assert(a.size === b.size)
     assert(a.map { case (a, b, c) => (a, b)} === b.map { case (a, b, c) => (a, b)})
     assert(a.size === c.size)
