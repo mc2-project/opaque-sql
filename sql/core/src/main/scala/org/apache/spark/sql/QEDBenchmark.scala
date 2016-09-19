@@ -682,17 +682,18 @@ object QEDBenchmark {
     }
   }
 
-  def joinCost(sqlContext: SQLContext, size: String, distributed: Boolean = false): Unit = {
+  def joinCost(
+      sqlContext: SQLContext, size: String, distributed: Boolean = false,
+      onlyOblivious: Boolean = false): Unit = {
     import sqlContext.implicits._
     val diseaseSchema = StructType(Seq(
       StructField("d_disease_id", StringType),
+      StructField("d_gene_id", IntegerType),
       StructField("d_name", StringType)))
     val diseaseDF = sqlContext.createEncryptedDataFrame(
-      // sqlContext.createDataFrame(Seq(("d1", "disease 1"), ("d2", "disease 2")))
       sqlContext.read.schema(diseaseSchema)
         .format("csv")
-        .option("delimiter", "|")
-        .load(s"$dataDir/disease/icd_codes.tsv")
+        .load(s"$dataDir/disease/disease.csv")
         .repartition(numPartitions(sqlContext, distributed))
         .rdd
         .mapPartitions(QED.diseaseQueryEncryptDisease),
@@ -704,7 +705,6 @@ object QEDBenchmark {
       StructField("p_disease_id", StringType),
       StructField("p_name", StringType)))
     val patientDF = sqlContext.createEncryptedDataFrame(
-      // sqlContext.createDataFrame(Seq((1, "d1", "patient 1"), (2, "d2", "patient 2")))
       sqlContext.read.schema(patientSchema)
         .format("csv")
         .load(s"$dataDir/disease/patient-$size.csv")
@@ -722,12 +722,14 @@ object QEDBenchmark {
       diseaseDF.encJoin(patientDF, $"d_disease_id" === $"p_disease_id").encForce()
     }
 
-    timeBenchmark(
-      "distributed" -> distributed,
-      "query" -> "join cost",
-      "system" -> "encrypted",
-      "size" -> size) {
-      diseaseDF.nonObliviousJoin(patientDF, $"d_disease_id" === $"p_disease_id").encForce()
+    if (!onlyOblivious) {
+      timeBenchmark(
+        "distributed" -> distributed,
+        "query" -> "join cost",
+        "system" -> "encrypted",
+        "size" -> size) {
+        diseaseDF.nonObliviousJoin(patientDF, $"d_disease_id" === $"p_disease_id").encForce()
+      }
     }
   }
 
