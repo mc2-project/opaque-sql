@@ -4,7 +4,7 @@ import string
 import sys
 
 name_min_length = 3
-name_max_length = 150
+name_max_length = 16
 
 def randomword():
   return ''.join(random.choice(string.lowercase)
@@ -20,8 +20,8 @@ def main():
       icd_codes.append([d_id, d_name])
 
   num_diseases = len(icd_codes)
-  num_genes = num_diseases * 10
-  num_treatments = num_diseases * 4
+  num_genes = num_diseases * 4
+  num_treatments = num_diseases * 2
 
   print 'Generating disease.csv...'
   with open('disease.csv', 'w') as f:
@@ -46,7 +46,7 @@ def main():
       t_cost = random.randint(1, 50000)
       w.writerow([t_id, t_disease_id, t_name, t_cost])
 
-  for num_patient_exponent in range(14):
+  for num_patient_exponent in range(18):
     num_patients = 125 * 2**num_patient_exponent
     print 'Generating patient-%d.csv...' % (num_patients, )
     with open('patient-%d.csv' % (num_patients, ), 'w') as f:
