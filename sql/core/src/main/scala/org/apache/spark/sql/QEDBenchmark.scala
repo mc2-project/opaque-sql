@@ -74,7 +74,7 @@ object QEDBenchmark {
     QEDBenchmark.tpch9Generic(sqlContext, "sf0.2", None)
     QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2", None)
 
-    for (i <- 0 to 17) {
+    for (i <- 0 to 13) {
       QEDBenchmark.diseaseQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
       QEDBenchmark.geneQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
     }
