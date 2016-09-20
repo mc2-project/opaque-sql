@@ -39,8 +39,8 @@ enum SORT_OP {
   SORT_JOIN = 2
 };
 
-#define MAX_SORT_BUFFER (2 * 1024 * 1024)
-// #define MAX_SORT_BUFFER (1 * 1024 * 1024 * 1024u) // for simulation mode
+#define MAX_SORT_BUFFER (36 * 1024 * 1024)
+// #define MAX_SORT_BUFFER (128 * 1024 * 1024) // for simulation mode
 
 #define MAX_BLOCK_SIZE 1000000
 
