@@ -25,8 +25,6 @@ import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.catalyst.analysis.{Star, UnresolvedAlias, UnresolvedAttribute, UnresolvedFunction}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.plans.logical.ConvertFromBlocks
-import org.apache.spark.sql.catalyst.plans.logical.ConvertToBlocks
 import org.apache.spark.sql.catalyst.plans.logical.EncAggregate
 import org.apache.spark.sql.catalyst.plans.logical.EncSort
 import org.apache.spark.sql.catalyst.plans.logical.NonObliviousAggregate
@@ -219,28 +217,6 @@ class GroupedData protected[sql](
   @scala.annotation.varargs
   def agg(expr: Column, exprs: Column*): DataFrame = {
     toDF((expr +: exprs).map(_.expr))
-  }
-
-  def encAgg(expr: Column, exprs: Column*): DataFrame = {
-    val aggExprs = (expr +: exprs).map(_.expr)
-    Dataset.newDataFrame(
-      df.sqlContext,
-      ConvertFromBlocks(
-        EncAggregate(
-          groupingExprs,
-          (groupingExprs ++ aggExprs).map(alias),
-          EncSort(groupingExprs, ConvertToBlocks(df.logicalPlan)))))
-  }
-
-  def nonObliviousAgg(expr: Column, exprs: Column*): DataFrame = {
-    val aggExprs = (expr +: exprs).map(_.expr)
-    Dataset.newDataFrame(
-      df.sqlContext,
-      ConvertFromBlocks(
-        NonObliviousAggregate(
-          groupingExprs,
-          (groupingExprs ++ aggExprs).map(alias),
-          NonObliviousSort(groupingExprs, ConvertToBlocks(df.logicalPlan)))))
   }
 
   /**

@@ -22,6 +22,7 @@ import java.nio.ByteOrder
 
 import scala.collection.mutable
 
+import org.apache.spark.unsafe.types.UTF8String
 import sun.misc.{BASE64Encoder, BASE64Decoder}
 
 import org.apache.spark.sql.catalyst.InternalRow
@@ -107,6 +108,12 @@ object QED {
         buf.put(INT.value)
         buf.putInt(4)
         buf.putInt(x)
+      case (s: UTF8String, None) =>
+        buf.put(STRING.value)
+        val utf8 = s.getBytes()
+        print(s"Encrypting $s of length ${utf8.length}")
+        buf.putInt(utf8.length)
+        buf.put(utf8)
       case (s: String, None) =>
         buf.put(STRING.value)
         val utf8 = s.getBytes("UTF-8")
@@ -189,6 +196,23 @@ object QED {
     result.asInstanceOf[T]
   }
 
+  def fieldsToRow(fields: Array[Array[Byte]]): Array[Byte] = {
+    val numFields = fields.length
+
+    val rowSize = 4 + 4 * fields.length + fields.map(_.length).sum
+    val buf = ByteBuffer.allocate(rowSize)
+    buf.order(ByteOrder.LITTLE_ENDIAN)
+    buf.putInt(numFields)
+    for (field <- fields) {
+      buf.putInt(field.length)
+      buf.put(field)
+    }
+    buf.flip()
+    val serialized = new Array[Byte](buf.limit())
+    buf.get(serialized)
+    serialized
+  }
+
   def encrypt1[A](rows: Seq[A]): Seq[Array[Array[Byte]]] = {
     val (enclave, eid) = initEnclave()
     rows.map(row => Array(QED.encrypt(enclave, eid, row)))
@@ -202,6 +226,18 @@ object QED {
   def encryptRows(rows: Seq[Row]): Seq[Array[Array[Byte]]] = {
     val (enclave, eid) = initEnclave()
     rows.map(row => row.toSeq.map(field => QED.encrypt(enclave, eid, field)).toArray)
+  }
+
+  def encryptInternalRows(rows: Seq[InternalRow], types: Seq[DataType]): Seq[Array[Array[Byte]]] = {
+    val (enclave, eid) = initEnclave()
+    rows.map(row => row.toSeq(types).map(field => QED.encrypt(enclave, eid, field)).toArray)
+  }
+
+  def encryptInternalRowsIter(rows: Iterator[InternalRow], types: Seq[DataType])
+    : Iterator[Array[Array[Byte]]] = {
+
+    val (enclave, eid) = initEnclave()
+    rows.map(row => row.toSeq(types).map(field => QED.encrypt(enclave, eid, field)).toArray)
   }
 
   def decrypt1[A](rows: Seq[Array[Array[Byte]]]): Seq[A] = {

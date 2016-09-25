@@ -361,21 +361,21 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case logical.EncProject(projectList, child) =>
         execution.EncProject(
-          projectList, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+          projectList, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.EncFilter(condition, child) =>
-        execution.EncFilter(condition, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+        execution.EncFilter(condition, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.Permute(child) =>
-        execution.Permute(planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+        execution.Permute(planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.EncSort(sortExprs, child) =>
-        execution.EncSort(sortExprs, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+        execution.EncSort(sortExprs, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.NonObliviousSort(sortExpr, child) =>
-        execution.NonObliviousSort(sortExpr, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+        execution.NonObliviousSort(sortExpr, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.EncJoin(left, right, joinExpr) =>
         Join(left, right, Inner, Some(joinExpr)) match {
           case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
             execution.EncSortMergeJoin(
-              planLater(left).asInstanceOf[OutputsBlocks],
-              planLater(right).asInstanceOf[OutputsBlocks],
+              planLater(left).asInstanceOf[EncOperator],
+              planLater(right).asInstanceOf[EncOperator],
               leftKeys, rightKeys, condition) :: Nil
           case _ => Nil
         }
@@ -383,23 +383,24 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         Join(left, right, Inner, Some(joinExpr)) match {
           case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
             execution.NonObliviousSortMergeJoin(
-              planLater(left).asInstanceOf[OutputsBlocks],
-              planLater(right).asInstanceOf[OutputsBlocks],
+              planLater(left).asInstanceOf[EncOperator],
+              planLater(right).asInstanceOf[EncOperator],
               leftKeys, rightKeys, condition) :: Nil
           case _ => Nil
         }
       case a @ logical.EncAggregate(
           groupingExpressions, aggExpressions, child) =>
         execution.EncAggregate(
-          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case a @ logical.NonObliviousAggregate(
           groupingExpressions, aggExpressions, child) =>
         execution.NonObliviousAggregate(
-          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
-      case logical.ConvertToBlocks(child) =>
-        execution.ConvertToBlocks(planLater(child)) :: Nil
-      case logical.ConvertFromBlocks(child) =>
-        execution.ConvertFromBlocks(planLater(child).asInstanceOf[OutputsBlocks]) :: Nil
+          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
+      case logical.Encrypt(child) =>
+        execution.Encrypt(planLater(child)) :: Nil
+      case logical.MarkOblivious(child) => planLater(child) :: Nil
+      case logical.EncryptedLocalRelation(output, plaintextData) =>
+        execution.EncryptedLocalTableScan(output, plaintextData) :: Nil
       case _ => Nil
     }
   }
@@ -474,7 +475,6 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case e @ python.EvaluatePython(udf, child, _) =>
         python.BatchPythonEvaluation(udf, e.output, planLater(child)) :: Nil
       case LogicalRDD(output, rdd) => PhysicalRDD(output, rdd, "ExistingRDD") :: Nil
-      case LogicalEncryptedRDD(output, rdd) => PhysicalEncryptedRDD(output, rdd) :: Nil
       case LogicalEncryptedBlockRDD(output, rdd) => PhysicalEncryptedBlockRDD(output, rdd) :: Nil
       case BroadcastHint(child) => planLater(child) :: Nil
       case _ => Nil

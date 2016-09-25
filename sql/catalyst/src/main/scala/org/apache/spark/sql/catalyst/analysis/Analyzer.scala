@@ -181,17 +181,6 @@ class Analyzer(
       case Aggregate(groups, aggs, child) if child.resolved && hasUnresolvedAlias(aggs) =>
         Aggregate(groups, assignAliases(aggs), child)
 
-      case EncProject(projectList, child)
-          if child.resolved && hasUnresolvedAlias(projectList) =>
-        EncProject(assignAliases(projectList), child)
-
-      case EncAggregate(groups, aggs, child) if child.resolved && hasUnresolvedAlias(aggs) =>
-        EncAggregate(groups, assignAliases(aggs), child)
-
-      case NonObliviousAggregate(groups, aggs, child)
-          if child.resolved && hasUnresolvedAlias(aggs) =>
-        NonObliviousAggregate(groups, assignAliases(aggs), child)
-
       case g: GroupingSets if g.child.resolved && hasUnresolvedAlias(g.aggregations) =>
         g.copy(aggregations = assignAliases(g.aggregations))
 
@@ -1459,22 +1448,9 @@ object CleanupAliases extends Rule[LogicalPlan] {
         projectList.map(trimNonTopLevelAliases(_).asInstanceOf[NamedExpression])
       Project(cleanedProjectList, child)
 
-    case EncProject(projectList, child) =>
-      val cleanedProjectList =
-        projectList.map(trimNonTopLevelAliases(_).asInstanceOf[NamedExpression])
-      EncProject(cleanedProjectList, child)
-
     case Aggregate(grouping, aggs, child) =>
       val cleanedAggs = aggs.map(trimNonTopLevelAliases(_).asInstanceOf[NamedExpression])
       Aggregate(grouping.map(trimAliases), cleanedAggs, child)
-
-    case EncAggregate(grouping, aggs, child) =>
-      val cleanedAggs = aggs.map(trimNonTopLevelAliases(_).asInstanceOf[NamedExpression])
-      EncAggregate(grouping.map(trimAliases), cleanedAggs, child)
-
-    case NonObliviousAggregate(grouping, aggs, child) =>
-      val cleanedAggs = aggs.map(trimNonTopLevelAliases(_).asInstanceOf[NamedExpression])
-      NonObliviousAggregate(grouping.map(trimAliases), cleanedAggs, child)
 
     case w @ Window(windowExprs, partitionSpec, orderSpec, child) =>
       val cleanedWindowExprs =

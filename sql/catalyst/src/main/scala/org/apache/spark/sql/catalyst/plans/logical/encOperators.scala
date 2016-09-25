@@ -18,6 +18,8 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.QEDOpcode
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -35,48 +37,69 @@ trait EncOperator extends LogicalPlan {
   override def references: AttributeSet = inputSet
 }
 
-trait OutputsBlocks extends EncOperator
-
-case class ConvertToBlocks(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
+case class Encrypt(child: LogicalPlan) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class ConvertFromBlocks(child: OutputsBlocks) extends UnaryNode {
+case class MarkOblivious(child: EncOperator) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
-  override def references: AttributeSet = inputSet
 }
 
-case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncryptedLocalRelation(output: Seq[Attribute], plaintextData: Seq[InternalRow] = Nil)
+  extends LeafNode with MultiInstanceRelation with EncOperator {
+
+  // A local relation must have resolved output.
+  require(output.forall(_.resolved), "Unresolved attributes found when constructing LocalRelation.")
+
+  /**
+   * Returns an identical copy of this relation with new exprIds for all attributes.  Different
+   * attributes are required when a relation is going to be included multiple times in the same
+   * query.
+   */
+  override final def newInstance(): this.type = {
+    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData).asInstanceOf[this.type]
+  }
+
+  override protected def stringArgs = Iterator(output)
+
+  override def sameResult(plan: LogicalPlan): Boolean = plan match {
+    case EncryptedLocalRelation(otherOutput, otherPlaintextData) =>
+      otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
+    case _ => false
+  }
+}
+
+case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 }
 
-case class EncFilter(condition: Expression, child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncFilter(condition: Expression, child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   override def output: Seq[Attribute] = child.output
 }
 
-case class Permute(child: LogicalPlan) extends UnaryNode with OutputsBlocks {
+case class Permute(child: LogicalPlan) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class EncSort(sortExprs: Seq[Expression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncSort(sortExprs: Seq[Expression], child: EncOperator)
+  extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class NonObliviousSort(sortExprs: Seq[Expression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
+  extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
 case class EncAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+    child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
@@ -86,8 +109,8 @@ case class EncAggregate(
 case class NonObliviousAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+    child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
@@ -95,19 +118,19 @@ case class NonObliviousAggregate(
 }
 
 case class EncJoin(
-    left: OutputsBlocks,
-    right: OutputsBlocks,
+    left: EncOperator,
+    right: EncOperator,
     joinExpr: Expression)
-  extends BinaryNode with OutputsBlocks {
+  extends BinaryNode with EncOperator {
 
   override def output: Seq[Attribute] = left.output ++ right.output
 }
 
 case class NonObliviousJoin(
-    left: OutputsBlocks,
-    right: OutputsBlocks,
+    left: EncOperator,
+    right: EncOperator,
     joinExpr: Expression)
-  extends BinaryNode with OutputsBlocks {
+  extends BinaryNode with EncOperator {
 
   override def output: Seq[Attribute] = left.output ++ right.output
 }

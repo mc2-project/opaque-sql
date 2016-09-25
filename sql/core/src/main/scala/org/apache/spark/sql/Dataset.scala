@@ -41,7 +41,6 @@ import org.apache.spark.sql.catalyst.optimizer.CombineUnions
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
-import org.apache.spark.sql.execution.PhysicalEncryptedRDD
 import org.apache.spark.sql.execution.command.ExplainCommand
 import org.apache.spark.sql.execution.datasources.json.JacksonGenerator
 import org.apache.spark.sql.execution.datasources.{CreateTableUsingAsSelect, LogicalRelation}
@@ -981,47 +980,12 @@ class Dataset[T] private[sql](
       c5: TypedColumn[T, U5]): Dataset[(U1, U2, U3, U4, U5)] =
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
-  def encSelect(cols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(EncProject(cols.map(_.named), ConvertToBlocks(logicalPlan)))
+  def encrypt(): DataFrame = withPlan {
+    Encrypt(logicalPlan)
   }
 
-  def encFilter(condition: Column): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(EncFilter(condition.expr, Permute(ConvertToBlocks(logicalPlan))))
-  }
-
-  def nonObliviousFilter(condition: Column): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(EncFilter(condition.expr, ConvertToBlocks(logicalPlan)))
-  }
-
-  def encPermute(): Dataset[T] = withTypedPlan {
-    ConvertFromBlocks(Permute(ConvertToBlocks(logicalPlan)))
-  }
-
-  def encSort(cols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(EncSort(cols.map(_.expr), ConvertToBlocks(logicalPlan)))
-  }
-
-  def nonObliviousSort(cols: Column*): DataFrame = withPlan {
-    ConvertFromBlocks(NonObliviousSort(cols.map(_.expr), ConvertToBlocks(logicalPlan)))
-  }
-
-  /**
-   * Inner equi-join this DataFrame on the specified columns assuming a primary-foreign relationship.
-   */
-  def encJoin(right: DataFrame, joinExpr: Column): DataFrame = withPlan {
-    ConvertFromBlocks(
-      EncJoin(
-        ConvertToBlocks(logicalPlan),
-        ConvertToBlocks(right.logicalPlan),
-        joinExpr.expr))
-  }
-
-  def nonObliviousJoin(right: DataFrame, joinExpr: Column): DataFrame = withPlan {
-    ConvertFromBlocks(
-      NonObliviousJoin(
-        ConvertToBlocks(logicalPlan),
-        ConvertToBlocks(right.logicalPlan),
-        joinExpr.expr))
+  def oblivious(): DataFrame = withPlan {
+    MarkOblivious(Encrypt(logicalPlan))
   }
 
   /**
@@ -2044,20 +2008,22 @@ class Dataset[T] private[sql](
   }
 
   def encCollect(): Array[Array[Array[Byte]]] = {
-    def execute(): Array[Array[Array[Byte]]] = withNewExecutionId {
-      queryExecution.executedPlan.executeCollect().map(_.toEncArray)
-    }
-    withCallback("encCollect", toDF())(_ => execute())
+    // def execute(): Array[Array[Array[Byte]]] = withNewExecutionId {
+    //   queryExecution.executedPlan.executeCollect().map(_.toEncArray)
+    // }
+    // withCallback("encCollect", toDF())(_ => execute())
+    ???
   }
 
   def encForce(): Unit = {
-    val rdd: RDD[_] = queryExecution.executedPlan match {
-      case execution.ConvertFromBlocks(child) => child.executeBlocked()
-      case b: execution.OutputsBlocks => b.executeBlocked()
-      case PhysicalEncryptedRDD(_, rdd) => rdd
-      case plan => plan.execute()
-    }
-    rdd.foreach(x => {})
+    // val rdd: RDD[_] = queryExecution.executedPlan match {
+    //   case execution.ConvertFromBlocks(child) => child.executeBlocked()
+    //   case b: execution.OutputsBlocks => b.executeBlocked()
+    //   case PhysicalEncryptedRDD(_, rdd) => rdd
+    //   case plan => plan.execute()
+    // }
+    // rdd.foreach(x => {})
+    ???
   }
 
   private def collect(needCallback: Boolean): Array[T] = {

@@ -22,13 +22,13 @@ import org.apache.spark.SparkContext
 
 import org.apache.spark.sql.test.SharedSQLContext
 
-class QEDBenchmarkSuite extends org.scalatest.FunSuite {
-  val (enclave, eid) = QED.initEnclave()
+// class QEDBenchmarkSuite extends org.scalatest.FunSuite {
+//   val (enclave, eid) = QED.initEnclave()
 
-  test("pagerank") {
-    val sparkConf = new SparkConf().setAppName("QEDBenchmarkSuite").setMaster("local[2]")
-    val sc = new SparkContext(sparkConf)
-    val sqlContext = new SQLContext(sc)
-    QEDBenchmark.pagerank(sqlContext, "1024", true)
-  }
-}
+//   test("pagerank") {
+//     val sparkConf = new SparkConf().setAppName("QEDBenchmarkSuite").setMaster("local[2]")
+//     val sc = new SparkContext(sparkConf)
+//     val sqlContext = new SQLContext(sc)
+//     QEDBenchmark.pagerank(sqlContext, "1024", true)
+//   }
+// }

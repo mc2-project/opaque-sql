@@ -78,7 +78,6 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
       CombineFilters,
       CombineLimits,
       CombineUnions,
-      CombineBlockConversion,
       // Constant folding and strength reduction
       NullPropagation,
       OptimizeIn,
@@ -94,9 +93,12 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
     Batch("Decimal Optimizations", FixedPoint(100),
       DecimalAggregates) ::
     Batch("LocalRelation", FixedPoint(100),
-      ConvertToLocalRelation) ::
+      ConvertToLocalRelation,
+      EncryptLocalRelation) ::
     Batch("Subquery", Once,
-      OptimizeSubqueries) :: Nil
+      OptimizeSubqueries) ::
+    Batch("Convert to Encrypted Operators", FixedPoint(100),
+      ConvertToEncryptedOperators) :: Nil
   }
 
   /**
@@ -117,6 +119,39 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
   * specific rules go to the subclasses
   */
 object DefaultOptimizer extends Optimizer
+
+object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
+  def isOblivious(plan: LogicalPlan): Boolean = {
+    isEncrypted(plan) && plan.find {
+      case MarkOblivious(_) => true
+      case _ => false
+    }.nonEmpty
+  }
+
+  def isEncrypted(plan: LogicalPlan): Boolean = {
+    plan.find {
+      case _: EncOperator => true
+      case _ => false
+    }.nonEmpty
+  }
+
+  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
+    case p @ Project(projectList, child) if isEncrypted(child) || isOblivious(child) =>
+      EncProject(projectList, child.asInstanceOf[EncOperator])
+    case p @ Filter(condition, child) if isOblivious(child) =>
+      EncFilter(condition, Permute(child.asInstanceOf[EncOperator]))
+    case p @ Filter(condition, child) if isEncrypted(child) =>
+      EncFilter(condition, child.asInstanceOf[EncOperator])
+    case p @ Join(left, right, Inner, Some(joinExpr)) if isOblivious(p) =>
+      EncJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
+    case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
+      NonObliviousJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
+    case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
+      EncAggregate(groupingExprs, aggExprs, EncSort(groupingExprs, child.asInstanceOf[EncOperator]))
+    case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
+      NonObliviousAggregate(groupingExprs, aggExprs, child.asInstanceOf[EncOperator])
+  }
+}
 
 /**
  * Pushes operations down into a Sample.
@@ -827,16 +862,6 @@ object CombineFilters extends Rule[LogicalPlan] with PredicateHelper {
 }
 
 /**
- * Eliminates adjacent inverse encrypted-block conversion operators.
- */
-object CombineBlockConversion extends Rule[LogicalPlan] {
-  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case ConvertToBlocks(ConvertFromBlocks(child)) => child
-    case ConvertFromBlocks(ConvertToBlocks(child)) => child
-  }
-}
-
-/**
  * Removes filters that can be evaluated trivially.  This can be done through the following ways:
  * 1) by eliding the filter for cases where it will always evaluate to `true`.
  * 2) by substituting a dummy empty relation when the filter will always evaluate to `false`.
@@ -1271,6 +1296,13 @@ object ConvertToLocalRelation extends Rule[LogicalPlan] {
     case Project(projectList, LocalRelation(output, data)) =>
       val projection = new InterpretedProjection(projectList, output)
       LocalRelation(projectList.map(_.toAttribute), data.map(projection))
+  }
+}
+
+object EncryptLocalRelation extends Rule[LogicalPlan] {
+  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
+    case Encrypt(LocalRelation(output, data)) =>
+      EncryptedLocalRelation(output, data)
   }
 }
 

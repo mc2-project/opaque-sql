@@ -112,27 +112,28 @@ private[sql] class CacheManager extends Logging {
   private[sql] def encCacheQuery(
       query: Queryable,
       storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): Unit = writeLock {
-    val planToCache: logical.OutputsBlocks = query.queryExecution.analyzed match {
-      case logical.ConvertFromBlocks(child) => child
-      case r @ LogicalEncryptedRDD(_, _) => logical.ConvertToBlocks(r)
-    }
-    if (lookupCachedData(planToCache).nonEmpty) {
-      logWarning("Asked to cache already cached data.")
-    } else {
-      val sqlContext = query.sqlContext
-      val cachedRDD =
-        LogicalEncryptedBlockRDD(
-          planToCache.output,
-          sqlContext.executePlan(planToCache)
-            .executedPlan.asInstanceOf[OutputsBlocks]
-            .executeBlocked()
-            .persist(storageLevel))(sqlContext)
-      // We have to force the RDD here because there's no easy way for the user to do it since we
-      // are actually caching a different RDD from the one the user requested (namely the blocked
-      // version) due to the planToCache pattern match above.
-      cachedRDD.rdd.foreach(x => {})
-      encCachedData += EncCachedData(planToCache, cachedRDD)
-    }
+    // val planToCache: logical.OutputsBlocks = query.queryExecution.analyzed match {
+    //   case logical.ConvertFromBlocks(child) => child
+    //   case r @ LogicalEncryptedRDD(_, _) => logical.ConvertToBlocks(r)
+    // }
+    // if (lookupCachedData(planToCache).nonEmpty) {
+    //   logWarning("Asked to cache already cached data.")
+    // } else {
+    //   val sqlContext = query.sqlContext
+    //   val cachedRDD =
+    //     LogicalEncryptedBlockRDD(
+    //       planToCache.output,
+    //       sqlContext.executePlan(planToCache)
+    //         .executedPlan.asInstanceOf[OutputsBlocks]
+    //         .executeBlocked()
+    //         .persist(storageLevel))(sqlContext)
+    //   // We have to force the RDD here because there's no easy way for the user to do it since we
+    //   // are actually caching a different RDD from the one the user requested (namely the blocked
+    //   // version) due to the planToCache pattern match above.
+    //   cachedRDD.rdd.foreach(x => {})
+    //   encCachedData += EncCachedData(planToCache, cachedRDD)
+    // }
+    ???
   }
 
   /** Removes the data for the given [[Queryable]] from the cache */

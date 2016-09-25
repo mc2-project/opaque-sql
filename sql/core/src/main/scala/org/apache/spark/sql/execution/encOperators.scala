@@ -72,43 +72,45 @@ import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
-case class LogicalEncryptedRDD(
-    output: Seq[Attribute],
-    rdd: RDD[Array[Array[Byte]]])(sqlContext: SQLContext)
-  extends LogicalPlan with MultiInstanceRelation {
+case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[InternalRow])
+    extends LeafNode with EncOperator {
 
-  override def children: Seq[LogicalPlan] = Nil
-
-  override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
-
-  override def newInstance(): LogicalEncryptedRDD.this.type =
-    LogicalEncryptedRDD(output.map(_.newInstance()), rdd)(sqlContext).asInstanceOf[this.type]
-
-  override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case LogicalEncryptedRDD(_, otherRDD) => rdd.id == otherRDD.id
-    case _ => false
+  private val unsafeRows: Array[InternalRow] = {
+    val proj = UnsafeProjection.create(output, output)
+    plaintextData.map(r => proj(r).copy()).toArray
   }
 
-  override def producedAttributes: AttributeSet = outputSet
+  override def executeBlocked(): RDD[Block] = {
+    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)))
+      .mapPartitions { rowIter =>
+        val serRows = rowIter.map(QED.fieldsToRow).toArray
+        Iterator(Block(QED.createBlock(serRows, false), serRows.length))
+      }
+  }
+
+  override def executeCollect(): Array[InternalRow] = unsafeRows
+
+  override def executeTake(limit: Int): Array[InternalRow] = {
+    unsafeRows.take(limit)
+  }
 }
 
-case class PhysicalEncryptedRDD(
-    output: Seq[Attribute],
-    rdd: RDD[Array[Array[Byte]]]) extends LeafNode {
+case class Encrypt(child: SparkPlan) extends UnaryNode with EncOperator {
+  override def output: Seq[Attribute] = child.output
 
-  protected override def doExecute(): RDD[InternalRow] = {
-    rdd.map { r => InternalRow.fromSeq(r) }
-  }
-
-  override def executeCollect(): Array[InternalRow] = {
-    rdd.collect().map { r => InternalRow.fromSeq(r) }
+  override def executeBlocked(): RDD[Block] = {
+    child.execute().mapPartitions { rowIter =>
+      val serRows = QED.encryptInternalRowsIter(rowIter, output.map(_.dataType))
+        .map(QED.fieldsToRow).toArray
+      Iterator(Block(QED.createBlock(serRows, false), serRows.length))
+    }
   }
 }
 
 case class LogicalEncryptedBlockRDD(
     output: Seq[Attribute],
     rdd: RDD[Block])(sqlContext: SQLContext)
-  extends LogicalPlan with MultiInstanceRelation with logical.OutputsBlocks {
+  extends LogicalPlan with MultiInstanceRelation with logical.EncOperator {
 
   override def children: Seq[LogicalPlan] = Nil
 
@@ -127,41 +129,24 @@ case class LogicalEncryptedBlockRDD(
 
 case class PhysicalEncryptedBlockRDD(
     output: Seq[Attribute],
-    rdd: RDD[Block]) extends LeafNode with OutputsBlocks {
+    rdd: RDD[Block]) extends LeafNode with EncOperator {
   override def executeBlocked(): RDD[Block] = rdd
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
 
-trait OutputsBlocks extends SparkPlan {
+trait EncOperator extends SparkPlan {
   override def doExecute() = throw new UnsupportedOperationException("use executeBlocked")
+
   def executeBlocked(): RDD[Block]
-}
 
-case class ConvertToBlocks(child: SparkPlan)
-  extends UnaryNode with OutputsBlocks {
-
-  override def output: Seq[Attribute] = child.output
-
-  override def executeBlocked() = {
-    child.execute().mapPartitions { rowIter =>
-      val serRows = rowIter.map(_.encSerialize).toArray
-      Iterator(Block(QED.createBlock(serRows, false), serRows.length))
-    }
-  }
-}
-
-case class ConvertFromBlocks(child: OutputsBlocks)
-  extends UnaryNode {
-
-  override def output: Seq[Attribute] = child.output
-
-  override def doExecute() = {
-    child.executeBlocked().flatMap { block =>
-      val converter = UnsafeProjection.create(
-        StructType(output.map(a => StructField(a.name, BinaryType, false))))
-      QED.splitBlock(block.bytes, block.numRows, false)
-        .map(serRow => converter(InternalRow.fromSeq(QED.parseRow(serRow))))
+  override def executeCollect(): Array[InternalRow] = {
+    executeBlocked().collect().flatMap { block =>
+      val converter = UnsafeProjection.create(output)
+      QED.decryptN(
+        QED.splitBlock(block.bytes, block.numRows, false)
+          .map(serRow => QED.parseRow(serRow)).toSeq)
+        .map(rowSeq => converter(InternalRow.fromSeq(rowSeq)))
     }
   }
 }
@@ -187,8 +172,8 @@ trait ColumnNumberMatcher extends Serializable {
     }
 }
 
-case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -238,8 +223,8 @@ case class EncProject(projectList: Seq[NamedExpression], child: OutputsBlocks)
   }
 }
 
-case class EncFilter(condition: Expression, child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncFilter(condition: Expression, child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -279,7 +264,7 @@ case class EncFilter(condition: Expression, child: OutputsBlocks)
   }
 }
 
-case class Permute(child: OutputsBlocks) extends UnaryNode with OutputsBlocks {
+case class Permute(child: EncOperator) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
@@ -298,8 +283,8 @@ case class Permute(child: OutputsBlocks) extends UnaryNode with OutputsBlocks {
   }
 }
 
-case class EncSort(sortExprs: Seq[Expression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class EncSort(sortExprs: Seq[Expression], child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -320,8 +305,8 @@ case class EncSort(sortExprs: Seq[Expression], child: OutputsBlocks)
   }
 }
 
-case class NonObliviousSort(sortExprs: Seq[Expression], child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -405,8 +390,8 @@ object NonObliviousSort {
 case class EncAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+    child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   import QED.time
 
@@ -529,8 +514,8 @@ case class EncAggregate(
 case class NonObliviousAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: OutputsBlocks)
-  extends UnaryNode with OutputsBlocks {
+    child: EncOperator)
+  extends UnaryNode with EncOperator {
 
   import QED.time
 
@@ -576,12 +561,12 @@ case class NonObliviousAggregate(
 }
 
 case class EncSortMergeJoin(
-    left: OutputsBlocks,
-    right: OutputsBlocks,
+    left: EncOperator,
+    right: EncOperator,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
-  extends BinaryNode with OutputsBlocks {
+  extends BinaryNode with EncOperator {
 
   import QED.time
 
@@ -799,12 +784,12 @@ object OpaqueJoinUtils {
 }
 
 case class NonObliviousSortMergeJoin(
-    left: OutputsBlocks,
-    right: OutputsBlocks,
+    left: EncOperator,
+    right: EncOperator,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
-  extends BinaryNode with OutputsBlocks {
+  extends BinaryNode with EncOperator {
 
   import QED.time
 

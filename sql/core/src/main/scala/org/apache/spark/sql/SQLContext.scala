@@ -451,8 +451,9 @@ class SQLContext private[sql](
   }
 
   def createEncryptedDataFrame(encFieldsRDD: RDD[Array[Array[Byte]]], schema: StructType) = {
-    val logicalPlan = LogicalEncryptedRDD(schema.toAttributes, encFieldsRDD)(self)
-    Dataset.newDataFrame(this, logicalPlan)
+    // val logicalPlan = LogicalEncryptedRDD(schema.toAttributes, encFieldsRDD)(self)
+    // Dataset.newDataFrame(this, logicalPlan)
+    ???
   }
 
   def createDataset[T : Encoder](data: Seq[T]): Dataset[T] = {
