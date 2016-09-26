@@ -87,12 +87,6 @@ case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[In
         Iterator(Block(QED.createBlock(serRows, false), serRows.length))
       }
   }
-
-  override def executeCollect(): Array[InternalRow] = unsafeRows
-
-  override def executeTake(limit: Int): Array[InternalRow] = {
-    unsafeRows.take(limit)
-  }
 }
 
 case class Encrypt(child: SparkPlan) extends UnaryNode with EncOperator {
@@ -142,11 +136,10 @@ trait EncOperator extends SparkPlan {
 
   override def executeCollect(): Array[InternalRow] = {
     executeBlocked().collect().flatMap { block =>
-      val converter = UnsafeProjection.create(output)
       QED.decryptN(
         QED.splitBlock(block.bytes, block.numRows, false)
           .map(serRow => QED.parseRow(serRow)).toSeq)
-        .map(rowSeq => converter(InternalRow.fromSeq(rowSeq)))
+        .map(rowSeq => InternalRow.fromSeq(rowSeq))
     }
   }
 }

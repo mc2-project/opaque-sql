@@ -152,15 +152,11 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     val data = for (i <- 0 until 5) yield ("foo", i)
     val words = sqlContext.createDataFrame(data).toDF("word", "count").oblivious
 
-      // sparkContext.makeRDD(QED.encryptN(data), 1),
-      // StructType(Seq(
-      //   StructField("word", StringType),
-      //   StructField("count", IntegerType))))
-    // assert(QED.decrypt2[String, Int](words.encCollect) === data) // TODO
+    assert(words.collect === data.map(Row.fromTuple))
 
     val filtered = words.filter($"count" > lit(3))
     filtered.explain(true)
-    assert(filtered.collect === data.filter(_._2 > 3))
+    assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
   }
 
   // ignore("encFilter on date") {

@@ -185,7 +185,7 @@ object QED {
           t == SEARCH_WORD_TYPE.value || t == TPCH_NATION_NAME_TYPE.value =>
         val sBytes = new Array[Byte](size)
         buf.get(sBytes)
-        new String(sBytes, "UTF-8")
+        UTF8String.fromBytes(sBytes)
       case t if t == FLOAT.value =>
         assert(size == 4)
         buf.getFloat()
@@ -199,7 +199,7 @@ object QED {
   def fieldsToRow(fields: Array[Array[Byte]]): Array[Byte] = {
     val numFields = fields.length
 
-    val rowSize = 4 + 4 * fields.length + fields.map(_.length).sum
+    val rowSize = 4 + 4 * numFields + fields.map(_.length).sum
     val buf = ByteBuffer.allocate(rowSize)
     buf.order(ByteOrder.LITTLE_ENDIAN)
     buf.putInt(numFields)
