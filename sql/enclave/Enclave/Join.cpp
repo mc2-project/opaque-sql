@@ -14,28 +14,33 @@ void join_sort_preprocess(
   uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
   uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
   uint8_t *output_rows, uint32_t output_rows_len, uint32_t *actual_output_len) {
-  (void)primary_rows_len;
-  (void)foreign_rows_len;
   (void)output_rows_len;
 
   // Set the row upper bound for the output rows to the max of the primary and foreign row sizes by
   // reading a row from each, converting it to the output format, and taking the max upper bound
   uint32_t row_upper_bound;
   {
-    RowReader r1(primary_rows);
-    RowReader r2(foreign_rows);
+    uint32_t r1_upper_bound = 0, r2_upper_bound = 0;
     NewRecord a;
     NewJoinRecord b;
-    r1.read(&a);
-    b.set(true, &a);
-    row_upper_bound = b.row_upper_bound();
-    debug("a upper bound %d\n", b.row_upper_bound());
-    r2.read(&a);
-    b.set(false, &a);
-    debug("b upper bound %d\n", b.row_upper_bound());
-    if (b.row_upper_bound() > row_upper_bound) {
-      row_upper_bound = b.row_upper_bound();
+
+    RowReader r1(primary_rows, primary_rows + primary_rows_len);
+    if (r1.has_next()) {
+      r1.read(&a);
+      b.set(true, &a);
+      r1_upper_bound = b.row_upper_bound();
+      debug("a upper bound %d\n", b.row_upper_bound());
     }
+
+    RowReader r2(foreign_rows, foreign_rows + foreign_rows_len);
+    if (r2.has_next()) {
+      r2.read(&a);
+      b.set(false, &a);
+      debug("b upper bound %d\n", b.row_upper_bound());
+      r2_upper_bound = b.row_upper_bound();
+    }
+
+    row_upper_bound = r1_upper_bound > r2_upper_bound ? r1_upper_bound : r2_upper_bound;
   }
 
   RowWriter w(output_rows, row_upper_bound);
@@ -43,14 +48,14 @@ void join_sort_preprocess(
   NewRecord a;
   NewJoinRecord b;
 
-  RowReader primary(primary_rows, verify_set);
+  RowReader primary(primary_rows, primary_rows + primary_rows_len, verify_set);
   for (uint32_t i = 0; i < num_primary_rows; i++) {
     primary.read(&a);
     b.set(true, &a);
     w.write(&b);
   }
 
-  RowReader foreign(foreign_rows, verify_set);
+  RowReader foreign(foreign_rows, foreign_rows + foreign_rows_len, verify_set);
   for (uint32_t i = 0; i < num_foreign_rows; i++) {
     foreign.read(&a);
     b.set(false, &a);
@@ -68,10 +73,9 @@ void scan_collect_last_primary(int op_code,
                                uint8_t *output, uint32_t output_length,
                                uint32_t *actual_output_len) {
   (void)op_code;
-  (void)input_rows_length;
   (void)output_length;
 
-  RowReader r(input_rows, verify_set);
+  RowReader r(input_rows, input_rows + input_rows_length, verify_set);
   NewJoinRecord cur, last_primary;
   last_primary.reset_to_dummy();
 
@@ -126,11 +130,10 @@ void sort_merge_join(int op_code,
                      uint8_t *join_row, uint32_t join_row_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_output_length) {
-  (void)input_rows_length;
   (void)join_row_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows, verify_set);
+  RowReader r(input_rows, input_rows + input_rows_length, verify_set);
   RowWriter w(output_rows);
   w.set_self_task_id(verify_set->get_self_task_id());
   NewJoinRecord primary, current;
@@ -177,10 +180,9 @@ void non_oblivious_sort_merge_join(int op_code, Verify *verify_set,
 								   uint32_t num_rows,
 								   uint8_t *output_rows, uint32_t output_rows_length,
                                    uint32_t *actual_output_length, uint32_t *num_output_rows) {
-  (void) input_rows_length;
   (void) output_rows_length;
   
-  RowReader reader(input_rows, verify_set);
+  RowReader reader(input_rows, input_rows + input_rows_length, verify_set);
   RowWriter writer(output_rows);
   writer.set_self_task_id(verify_set->get_self_task_id());
 

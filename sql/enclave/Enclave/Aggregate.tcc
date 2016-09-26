@@ -11,10 +11,9 @@ void aggregate_step1(Verify *verify_set,
                      uint32_t num_rows,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size) {
-  (void)input_rows_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows, verify_set);
+  RowReader r(input_rows, input_rows + input_rows_length, verify_set);
   IndividualRowWriterV w(output_rows);
   w.set_self_task_id(verify_set->get_self_task_id());
   NewRecord cur;
@@ -125,11 +124,10 @@ void aggregate_step2(Verify *verify_set,
                      uint8_t *boundary_info_rows, uint32_t boundary_info_rows_length,
                      uint8_t *output_rows, uint32_t output_rows_length,
                      uint32_t *actual_size) {
-  (void)input_rows_length;
   (void)boundary_info_rows_length;
   (void)output_rows_length;
 
-  RowReader r(input_rows, verify_set);
+  RowReader r(input_rows, input_rows + input_rows_length, verify_set);
   RowWriter w(output_rows);
   w.set_self_task_id(verify_set->get_self_task_id());
   NewRecord cur, next;
@@ -174,10 +172,9 @@ void non_oblivious_aggregate(Verify *verify_set,
                              uint8_t *output_rows, uint32_t output_rows_length,
                              uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
 
-  (void)input_rows_length;
   (void)output_rows_length;
   
-  RowReader reader(input_rows, verify_set);
+  RowReader reader(input_rows, input_rows + input_rows_length, verify_set);
   RowWriter writer(output_rows);
   writer.set_self_task_id(verify_set->get_self_task_id());
 

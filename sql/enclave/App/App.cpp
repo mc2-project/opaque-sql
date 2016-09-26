@@ -413,12 +413,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
 
   uint32_t actual_output_rows_length = 0;
 
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-    return ret;
-  }
-
   sgx_check("Project",
             ecall_project(
               eid, index, num_part,
@@ -630,11 +624,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   (void)obj;
   (void)offset;
 
-  if (num_items == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
-
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
@@ -680,12 +669,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
   jboolean if_copy;
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-    return ret;
-  }
-
   uint32_t actual_size = 0;
 
   uint32_t output_rows_length = 2048 + 12 + 16 + 2048 + 2048;
@@ -700,8 +683,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
               &actual_size));
 
   assert(output_rows_length >= actual_size);
-
-  //printf("AggregateStep1: actual_size: %u, max_size: output_rows_length: %u\n", actual_size, output_rows_length);
 
   jbyteArray ret = env->NewByteArray(actual_size);
   env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
@@ -767,13 +748,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2
   uint32_t boundary_info_row_length = (uint32_t) env->GetArrayLength(boundary_info_row);
   uint8_t *boundary_info_row_ptr =
     (uint8_t *) env->GetByteArrayElements(boundary_info_row, &if_copy);
-
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-    env->ReleaseByteArrayElements(boundary_info_row, (jbyte *) boundary_info_row_ptr, 0);
-    return ret;
-  }
 
   uint32_t actual_size = 0;
 
@@ -1010,11 +984,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   jboolean rows_are_join_rows) {
   (void)obj;
 
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
-
   uint32_t block_len = (uint32_t) env->GetArrayLength(block);
   jboolean if_copy = false;
   uint8_t *block_ptr = (uint8_t *) env->GetByteArrayElements(block, &if_copy);
@@ -1086,11 +1055,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBound
   jint num_rows) {
   (void)obj;
 
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
-
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
@@ -1133,16 +1097,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
   jint num_rows, jbyteArray boundary_rows, jintArray offsets, jintArray rows_per_partition) {
   (void) obj;
 
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
-
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
   uint8_t *boundary_rows_ptr = (uint8_t *) env->GetByteArrayElements(boundary_rows, &if_copy);
+  uint32_t boundary_rows_len = (uint32_t) env->GetArrayLength(boundary_rows);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len);
   uint8_t *scratch = (uint8_t *) malloc(input_len);
@@ -1167,7 +1127,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
               eid,
               index, num_part,
               op_code, num_partitions, buffer_list.size() - 1, buffer_list.data(),
-              buffer_num_rows.data(), row_upper_bound, boundary_rows_ptr, output, output_partition_ptrs,
+              buffer_num_rows.data(), row_upper_bound,
+              boundary_rows_ptr, boundary_rows_len,
+              output, output_partition_ptrs,
               output_partition_num_rows, scratch));
 
   jint *offsets_ptr = env->GetIntArrayElements(offsets, &if_copy);
@@ -1274,8 +1236,9 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilt
   uint32_t output_rows_size = 0;
   uint32_t num_output_rows = 0;
 
-  ecall_column_sort_filter(eid, op_code, input_copy_ptr, (uint32_t) column, (uint32_t) offset,
-                           total_rows, row_upper_bound, output_rows, &output_rows_size, &num_output_rows);
+  ecall_column_sort_filter(
+    eid, op_code, input_copy_ptr, input_len, (uint32_t) column, (uint32_t) offset,
+    total_rows, row_upper_bound, output_rows, &output_rows_size, &num_output_rows);
 
   jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
   jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
@@ -1376,6 +1339,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
     debug("ColumnSort: Buffer %lu: %d bytes, %d rows\n",
           buffer_list.size(), cur_buffer_size, cur_buffer_num_rows);
   }
+  // Sentinel pointer to the end of the input
+  buffer_list.push_back(input_copy + input_len);
 
   // TODO: current allocation very inefficient, change this
   uint32_t per_column_data_size = r * row_upper_bound;
@@ -1444,12 +1409,12 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
 
   if (round == 0) {
     ecall_column_sort_preprocess(eid,
-                                 op_code, input_copy, total_rows, row_upper_bound,
+                                 op_code, input_copy, input_len, total_rows, row_upper_bound,
                                  (uint32_t) offset, r, s, output_buffers, output_buffer_sizes);
   } else if (round == 1) {
     uint32_t output_rows_size = 0;
     ecall_column_sort_padding(eid,
-                              op_code, input_copy, total_rows, row_upper_bound,
+                              op_code, input_copy, input_len, total_rows, row_upper_bound,
                               r, s, output_buffers[0], &output_rows_size);
 
     jbyteArray ret = env->NewByteArray(output_rows_size);
@@ -1468,8 +1433,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   } else {
     ecall_column_sort(eid,
                       index, number_part,
-                      op_code, round-1, input_copy, num_rows.data(),
-                      buffer_list.data(), buffer_list.size(), row_upper_bound,
+                      op_code, round-1, input_copy, input_len, num_rows.data(),
+                      buffer_list.data(), buffer_list.size() - 1, row_upper_bound,
                       column, r, s,
                       output_buffers, output_buffer_sizes);
   }
@@ -1536,11 +1501,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
   jint op_code, jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
-
-  if (num_rows == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
 
   jboolean if_copy;
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
@@ -2104,7 +2064,8 @@ void test_enclave_column_sort() {
 	for (uint32_t c = 0; c < s; c++) {
       ecall_column_sort(global_eid, 1, 0,
                         op_code, i+1,
-						buffer_list[c], num_rows.data(), buffer_list+c, 1,
+                        buffer_list[c], buffer_list[c + 1] - buffer_list[c],
+                        num_rows.data(), buffer_list+c, 1,
 						row_upper_bound,
 						c+1, r, s,
 						output_buffer_ptrs, output_buffer_sizes);

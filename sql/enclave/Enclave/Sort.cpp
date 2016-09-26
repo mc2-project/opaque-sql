@@ -109,7 +109,7 @@ void external_sort(int op_code,
   for (uint32_t i = 0; i < num_buffers; i++) {
     debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
     sort_single_buffer(op_code, verify_set,
-                       buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
+                       buffer_list[i], buffer_list[i + 1], num_rows[i], sort_ptrs, max_list_length,
                        row_upper_bound, &num_comparisons, &num_deep_comparisons);
   }
 
@@ -176,7 +176,7 @@ void sample(Verify *verify_set,
   unsigned char buf[2];
   uint16_t *buf_ptr = (uint16_t *) buf;
 
-  RowReader r(input_rows, verify_set);
+  RowReader r(input_rows, input_rows + input_rows_len, verify_set);
   RowWriter w(output_rows, row_upper_bound);
   w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
@@ -217,7 +217,7 @@ void find_range_bounds(int op_code,
   }
   uint32_t num_rows_per_part = total_num_rows / num_partitions;
 
-  RowReader r(buffer_list[0]);
+  RowReader r(buffer_list[0], buffer_list[num_buffers]);
   RowWriter w(output_rows, row_upper_bound);
   w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
@@ -245,6 +245,7 @@ void partition_for_sort(int op_code,
                         uint32_t *num_rows,
                         uint32_t row_upper_bound,
                         uint8_t *boundary_rows,
+                        uint32_t boundary_rows_len,
                         uint8_t *output,
                         uint8_t **output_partition_ptrs,
                         uint32_t *output_partition_num_rows,
@@ -262,8 +263,8 @@ void partition_for_sort(int op_code,
   // range with a pointer. A range contains all rows greater than or equal to one boundary row and
   // less than the next boundary row. The first range contains all rows less than the first boundary
   // row, and the last range contains all rows greater than or equal to the last boundary row.
-  RowReader r(buffer_list[0]);
-  RowReader b(boundary_rows, verify_set);
+  RowReader r(buffer_list[0], buffer_list[num_buffers]);
+  RowReader b(boundary_rows, boundary_rows + boundary_rows_len, verify_set);
   RowWriter w(output, row_upper_bound);
   w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
@@ -374,6 +375,7 @@ template void partition_for_sort<NewRecord>(
   uint32_t *num_rows,
   uint32_t row_upper_bound,
   uint8_t *boundary_rows,
+  uint32_t boundary_rows_len,
   uint8_t *output,
   uint8_t **output_partition_ptrs,
   uint32_t *output_partition_num_rows,
@@ -388,6 +390,7 @@ template void partition_for_sort<NewJoinRecord>(
   uint32_t *num_rows,
   uint32_t row_upper_bound,
   uint8_t *boundary_rows,
+  uint32_t boundary_rows_len,
   uint8_t *output,
   uint8_t **output_partition_ptrs,
   uint32_t *output_partition_num_rows,

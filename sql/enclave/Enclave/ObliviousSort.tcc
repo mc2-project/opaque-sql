@@ -13,14 +13,14 @@ int pow_2(int value);
 template<typename RecordType>
 void sort_single_buffer(
   int op_code, Verify *verify_set,
-  uint8_t *buffer, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  uint8_t *buffer, uint8_t *buffer_end, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
   uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
   uint32_t *num_deep_comparisons) {
 
   check(sort_ptrs_len >= num_rows,
         "sort_single_buffer: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_rows);
 
-  RowReader r(buffer, verify_set);
+  RowReader r(buffer, buffer_end, verify_set);
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&sort_ptrs[i], op_code);
   }
@@ -43,7 +43,8 @@ void sort_single_buffer(
 
 template<typename RecordType>
 void merge(int op_code, Verify *verify_set,
-           uint8_t *buffer1, uint32_t buffer1_rows, uint8_t *buffer2, uint32_t buffer2_rows,
+           uint8_t *buffer1, uint8_t *buffer1_end, uint32_t buffer1_rows,
+           uint8_t *buffer2, uint8_t *buffer2_end, uint32_t buffer2_rows,
            SortPointer<RecordType> *sort_ptrs, uint32_t sort_ptrs_len, uint32_t row_upper_bound,
            uint32_t *num_comparisons, uint32_t *num_deep_comparisons) {
 
@@ -52,7 +53,8 @@ void merge(int op_code, Verify *verify_set,
         sort_ptrs_len, buffer1_rows + buffer2_rows);
 
   struct BufferVars {
-    BufferVars(uint8_t *buffer) : r(buffer), rows_read(0), rec(), ptr(), ptr_is_empty(true) {
+    BufferVars(uint8_t *buffer, uint8_t* buffer_end)
+      : r(buffer, buffer_end), rows_read(0), rec(), ptr(), ptr_is_empty(true) {
       ptr.init(&rec);
     }
     RowReader r;
@@ -60,7 +62,7 @@ void merge(int op_code, Verify *verify_set,
     RecordType rec;
     SortPointer<RecordType> ptr;
     bool ptr_is_empty;
-  } b1(buffer1), b2(buffer2);
+  } b1(buffer1, buffer1_end), b2(buffer2, buffer2_end);
 
   for (uint32_t i = 0; i < buffer1_rows + buffer2_rows; i++) {
     // Fill ptr1 and ptr2
@@ -163,14 +165,18 @@ void external_oblivious_sort(int op_code,
 
   if (num_buffers == 1) {
     debug("Sorting single buffer with %d rows, opcode %d\n", num_rows[0], op_code);
-    sort_single_buffer(op_code, verify_set, buffer_list[0], num_rows[0], sort_ptrs, max_list_length,
-                       row_upper_bound, &num_comparisons, &num_deep_comparisons);
+    sort_single_buffer(op_code, verify_set,
+                       buffer_list[0], buffer_list[1], num_rows[0],
+                       sort_ptrs, max_list_length, row_upper_bound,
+                       &num_comparisons, &num_deep_comparisons);
   } else {
     // Sort each buffer individually
     for (uint32_t i = 0; i < num_buffers; i++) {
       debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
-      sort_single_buffer(op_code, verify_set, buffer_list[i], num_rows[i], sort_ptrs, max_list_length,
-                         row_upper_bound, &num_comparisons, &num_deep_comparisons);
+      sort_single_buffer(op_code, verify_set,
+                         buffer_list[i], buffer_list[i + 1], num_rows[i],
+                         sort_ptrs, max_list_length, row_upper_bound,
+                         &num_comparisons, &num_deep_comparisons);
     }
 
     // Merge sorted buffers pairwise
@@ -186,8 +192,9 @@ void external_oblivious_sort(int op_code,
               debug("Merging buffers %d and %d with %d, %d rows\n",
                     idx, pair_idx, num_rows[idx], num_rows[pair_idx]);
               merge(op_code, verify_set,
-                    buffer_list[idx], num_rows[idx], buffer_list[pair_idx],
-                    num_rows[pair_idx], sort_ptrs, max_list_length, row_upper_bound,
+                    buffer_list[idx], buffer_list[idx + 1], num_rows[idx],
+                    buffer_list[pair_idx], buffer_list[pair_idx + 1], num_rows[pair_idx],
+                    sort_ptrs, max_list_length, row_upper_bound,
                     &num_comparisons, &num_deep_comparisons);
             }
           }

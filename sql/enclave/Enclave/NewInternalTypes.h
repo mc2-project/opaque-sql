@@ -922,14 +922,13 @@ private:
  */
 class RowReader {
 public:
- RowReader(uint8_t *buf, uint8_t *buf_end, Verify *verify_set) : buf(buf), buf_end(buf_end), verify_set(verify_set) {
+  RowReader(uint8_t *buf, uint8_t *buf_end, Verify *verify_set)
+    : buf(buf), buf_end(buf_end), block_num_rows(0), block_rows_read(0), verify_set(verify_set) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     read_encrypted_block();
   }
 
- RowReader(uint8_t *buf, uint8_t *buf_end) : RowReader(buf, buf_end, NULL) { }
- RowReader(uint8_t *buf) : RowReader(buf, NULL, NULL) { }
- RowReader(uint8_t *buf, Verify *verify_set) : RowReader(buf, NULL, verify_set) { }
+  RowReader(uint8_t *buf, uint8_t *buf_end) : RowReader(buf, buf_end, NULL) { }
 
   ~RowReader() {
     free(block_start);
@@ -954,9 +953,7 @@ public:
   }
 
   bool has_next() const {
-    bool rows_remain_in_block = block_rows_read < block_num_rows;
-    bool blocks_remain_in_buf = buf < buf_end;
-    return rows_remain_in_block || blocks_remain_in_buf;
+    return block_has_next() || buf_has_next();
   }
 
   void close_and_verify(int op_code, uint32_t num_part, int index) {
@@ -974,14 +971,26 @@ private:
     }
   }
 
+  /** Return true if rows remain in the current block. */
+  bool block_has_next() const {
+    return block_rows_read < block_num_rows;
+  }
+
+  /** Return true if blocks beyond the current one remain in the buffer. */
+  bool buf_has_next() const {
+    return buf < buf_end;
+  }
+
   void read_encrypted_block() {
-    uint32_t block_enc_size = 0;
-    uint32_t counter = 0;
-    while (true) {
-      block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+    while (!block_has_next() && buf_has_next()) {
+      uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
       buf += 4; // row_upper_bound
       uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
+
+      block_pos = block_start;
+      block_rows_read = 0;
+
       add_parent(task_id);
       if (verify_set != NULL) {
         verify_set->mac(buf + SGX_AESGCM_IV_SIZE);
@@ -989,18 +998,11 @@ private:
       decrypt_with_aad(buf, block_enc_size, block_start, buf - 16, 16);
 
       buf += block_enc_size;
-
-      if (block_num_rows > 0)
-        break;
-
-      counter++;
     }
-    block_pos = block_start;
-    block_rows_read = 0;
   }
 
   void maybe_advance_block() {
-    if (block_rows_read >= block_num_rows) {
+    if (!block_has_next()) {
       read_encrypted_block();
     }
   }
