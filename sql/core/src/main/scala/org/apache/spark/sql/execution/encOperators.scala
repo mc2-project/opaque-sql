@@ -81,7 +81,8 @@ case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[In
   }
 
   override def executeBlocked(): RDD[Block] = {
-    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)))
+    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)),
+      1) // TODO: remove this once we support empty partitions
       .mapPartitions { rowIter =>
         val serRows = rowIter.map(QED.fieldsToRow).toArray
         Iterator(Block(QED.createBlock(serRows, false), serRows.length))
