@@ -226,8 +226,12 @@ case class EncFilter(condition: Expression, child: EncOperator)
 
   override def output: Seq[Attribute] = child.output
 
-  override def executeBlocked() = {
+  override def executeBlocked(): RDD[Block] = {
     val opcode = (condition: @unchecked) match {
+      case IsNotNull(_) =>
+        // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
+        // in the encrypted format
+        return child.executeBlocked()
       case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
         OP_FILTER_COL2_GT3
       case GreaterThan(Col(2, _), Literal(1000, IntegerType)) =>
@@ -567,7 +571,7 @@ case class EncSortMergeJoin(
   import QED.time
 
   override def output: Seq[Attribute] =
-    left.output ++ right.output.filter(a => !AttributeSet(rightKeys).contains(a))
+    left.output ++ right.output
 
   override def executeBlocked() = {
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
@@ -790,7 +794,7 @@ case class NonObliviousSortMergeJoin(
   import QED.time
 
   override def output: Seq[Attribute] =
-    left.output ++ right.output.filter(a => !AttributeSet(rightKeys).contains(a))
+    left.output ++ right.output
 
   override def executeBlocked() = {
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =

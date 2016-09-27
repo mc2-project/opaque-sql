@@ -269,10 +269,9 @@ public:
   }
 
   /**
-   * Given two join rows, concatenate their fields into merge, dropping the join attributes from the
-   * foreign row.
+   * Given two join rows, concatenate their fields into merge.
    */
-  void merge(const NewJoinRecord *other, NewRecord *merge, int op_code) const;
+  void merge(const NewJoinRecord *other, NewRecord *merge) const;
 
   /** Read the join attribute from the row data into join_attr. */
   void init_join_attribute(int op_code);

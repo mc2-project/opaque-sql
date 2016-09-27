@@ -163,7 +163,7 @@ void sort_merge_join(int op_code,
       if (!primary.join_attr_equals(&current, op_code)) {
         w.write(&dummy); // drop any foreign table rows without a matching primary table row
       } else {
-        primary.merge(&current, &merge, op_code);
+        primary.merge(&current, &merge);
         w.write(&merge);
       }
     }
@@ -201,7 +201,7 @@ void non_oblivious_sort_merge_join(int op_code, Verify *verify_set,
       primary.set(&current); // advance to a new join attribute
     } else {
       if (primary.join_attr_equals(&current, op_code)) {
-        primary.merge(&current, &merge, op_code);
+        primary.merge(&current, &merge);
         writer.write(&merge);
         num_output_rows_result++;
       }

@@ -869,37 +869,14 @@ bool NewJoinRecord::less_than(const NewJoinRecord *other, int op_code) const {
   }
 }
 
-void NewJoinRecord::merge(const NewJoinRecord *other, NewRecord *merge, int op_code) const {
+void NewJoinRecord::merge(const NewJoinRecord *other, NewRecord *merge) const {
   merge->clear();
   for (uint32_t i = 1; i < this->row.num_cols(); i++) {
     merge->add_attr(&this->row, i + 1);
   }
 
-  switch (op_code) {
-  case OP_JOIN_TPCH9GENERIC_PARTSUPP:
-    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
-      if (i != 1 && i != 3) {
-        merge->add_attr(&other->row, i + 1);
-      }
-    }
-    break;
-  case OP_JOIN_TPCH9OPAQUE_LINEITEM:
-    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
-      if (i != 4 && i != 2) {
-        merge->add_attr(&other->row, i + 1);
-      }
-    }
-    break;
-  default:
-  {
-    uint32_t secondary_join_attr = NewJoinRecord::opcode_to_join_attr_idx(op_code, false);
-    for (uint32_t i = 1; i < other->row.num_cols(); i++) {
-      if (i != secondary_join_attr) {
-        merge->add_attr(&other->row, i + 1);
-      }
-    }
-    break;
-  }
+  for (uint32_t i = 1; i < other->row.num_cols(); i++) {
+    merge->add_attr(&other->row, i + 1);
   }
 }
 
