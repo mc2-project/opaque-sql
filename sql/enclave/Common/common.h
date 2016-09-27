@@ -21,6 +21,7 @@ enum TYPE {
   INT = 1,
   STRING = 2,
   FLOAT = 3,
+  DOUBLE = 14,
   DATE = 4,
   URL_TYPE = 5,
   C_CODE = 6,

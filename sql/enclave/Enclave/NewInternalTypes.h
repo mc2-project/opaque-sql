@@ -806,7 +806,7 @@ private:
  * read_partial_result and write_partial_result), and writing the final aggregation result (method
  * append_result).
  */
-template<uint32_t Column, typename Type>
+template<uint32_t Column, typename InType, typename OutType>
 class Sum {
 public:
   Sum() : sum() {}
@@ -818,12 +818,12 @@ public:
 
   /** Reset the sum to zero. */
   void zero() {
-    sum = Type();
+    sum = OutType();
   }
 
   /** Add in the value from a single record. */
   void add(NewRecord *record) {
-    sum += *reinterpret_cast<const Type *>(record->get_attr_value(Column));
+    sum += *reinterpret_cast<const InType *>(record->get_attr_value(Column));
   }
 
   /** Combine the value from another Sum object. */
@@ -833,17 +833,17 @@ public:
 
   /** Read a partial sum (one plaintext attribute) and return the number of bytes read. */
   uint32_t read_partial_result(uint8_t *input) {
-    return read_attr<Type>(input, reinterpret_cast<uint8_t *>(&sum));
+    return read_attr<OutType>(input, reinterpret_cast<uint8_t *>(&sum));
   }
 
   /** Write the partial sum as a single plaintext attribute and return num bytes written. */
   uint32_t write_partial_result(uint8_t *output) {
-    return write_attr<Type>(output, sum, false);
+    return write_attr<OutType>(output, sum, false);
   }
 
   /** Write the final sum by appending it to the given record. */
   void append_result(NewRecord *rec, bool dummy) const {
-    rec->add_attr_val<Type>(sum, dummy);
+    rec->add_attr_val<OutType>(sum, dummy);
   }
 
   void print() {
@@ -851,13 +851,13 @@ public:
   }
 
 private:
-  Type sum;
+  OutType sum;
 };
 
 /**
  * Holds state for an ongoing average (mean) aggregation operation. See Sum.
  */
-template<uint32_t Column, typename Type>
+template<uint32_t Column, typename InType, typename OutType>
 class Avg {
 public:
   Avg() : sum(), count(0) {}
@@ -868,12 +868,12 @@ public:
   }
 
   void zero() {
-    sum = Type();
+    sum = OutType();
     count = 0;
   }
 
   void add(NewRecord *record) {
-    sum += *reinterpret_cast<const Type *>(record->get_attr_value(Column));
+    sum += *reinterpret_cast<const InType *>(record->get_attr_value(Column));
     count++;
   }
 
@@ -885,23 +885,23 @@ public:
   /** Read a partial average (two plaintext attributes: sum and count) and return num bytes read. */
   uint32_t read_partial_result(uint8_t *input) {
     uint8_t *input_ptr = input;
-    input_ptr += read_attr<Type>(input_ptr, reinterpret_cast<uint8_t *>(&sum));
-    input_ptr += read_attr<uint32_t>(input_ptr, reinterpret_cast<uint8_t *>(&count));
+    input_ptr += read_attr<OutType>(input_ptr, reinterpret_cast<uint8_t *>(&sum));
+    input_ptr += read_attr<uint64_t>(input_ptr, reinterpret_cast<uint8_t *>(&count));
     return input_ptr - input;
   }
 
   /** Write the partial average (two plaintext attrs: sum and count); return num bytes written. */
   uint32_t write_partial_result(uint8_t *output) {
     uint8_t *output_ptr = output;
-    output_ptr += write_attr<Type>(output_ptr, sum, false);
-    output_ptr += write_attr<uint32_t>(output_ptr, count, false);
+    output_ptr += write_attr<OutType>(output_ptr, sum, false);
+    output_ptr += write_attr<uint64_t>(output_ptr, count, false);
     return output_ptr - output;
   }
 
   /** Write the final average by appending it to the given record. */
   void append_result(NewRecord *rec, bool dummy) const {
-    Type avg = static_cast<Type>(static_cast<double>(sum) / static_cast<double>(count));
-    rec->add_attr_val<Type>(avg, dummy);
+    OutType avg = static_cast<OutType>(static_cast<double>(sum) / static_cast<double>(count));
+    rec->add_attr_val<OutType>(avg, dummy);
   }
 
   void print() {
@@ -909,8 +909,8 @@ public:
   }
 
 private:
-  Type sum;
-  uint32_t count;
+  OutType sum;
+  uint64_t count;
 };
 
 /**

@@ -22,6 +22,7 @@ public enum QEDColumnType {
     INT((byte)1),
     STRING((byte)2),
     FLOAT((byte)3),
+    DOUBLE((byte)14),
     DATE((byte)4),
     URL_TYPE((byte)5),
     C_CODE((byte)6),
