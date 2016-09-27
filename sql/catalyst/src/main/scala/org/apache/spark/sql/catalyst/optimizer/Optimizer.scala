@@ -21,9 +21,10 @@ import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 
 import org.apache.spark.sql.catalyst.analysis.{CleanupAliases, DistinctAggregationRewriter, EliminateSubqueryAliases}
+import org.apache.spark.sql.catalyst.expressions.Ascending
+import org.apache.spark.sql.catalyst.expressions.Literal.{FalseLiteral, TrueLiteral}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.Literal.{FalseLiteral, TrueLiteral}
 import org.apache.spark.sql.catalyst.planning.{ExtractFiltersAndInnerJoins, Unions}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -142,12 +143,20 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
       EncFilter(condition, Permute(child.asInstanceOf[EncOperator]))
     case p @ Filter(condition, child) if isEncrypted(child) =>
       EncFilter(condition, child.asInstanceOf[EncOperator])
+    case p @ Sort(order, true, child) if isOblivious(child) =>
+      EncSort(order, child.asInstanceOf[EncOperator])
+    case p @ Sort(order, true, child) if isEncrypted(child) =>
+      NonObliviousSort(order, child.asInstanceOf[EncOperator])
     case p @ Join(left, right, Inner, Some(joinExpr)) if isOblivious(p) =>
       EncJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
     case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
       NonObliviousJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
     case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
-      EncAggregate(groupingExprs, aggExprs, EncSort(groupingExprs, child.asInstanceOf[EncOperator]))
+      EncAggregate(
+        groupingExprs, aggExprs,
+        EncSort(
+          groupingExprs.map(e => SortOrder(e, Ascending)),
+          child.asInstanceOf[EncOperator]))
     case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
       NonObliviousAggregate(groupingExprs, aggExprs, child.asInstanceOf[EncOperator])
   }

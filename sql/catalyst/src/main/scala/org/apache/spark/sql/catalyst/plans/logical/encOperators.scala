@@ -25,6 +25,7 @@ import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
+import org.apache.spark.sql.catalyst.expressions.SortOrder
 
 /**
  * An operator that computes on encrypted data.
@@ -85,12 +86,12 @@ case class Permute(child: LogicalPlan) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class EncSort(sortExprs: Seq[Expression], child: EncOperator)
+case class EncSort(order: Seq[SortOrder], child: EncOperator)
   extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
+case class NonObliviousSort(order: Seq[SortOrder], child: EncOperator)
   extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }

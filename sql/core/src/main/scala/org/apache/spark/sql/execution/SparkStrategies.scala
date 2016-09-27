@@ -366,10 +366,10 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.EncFilter(condition, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.Permute(child) =>
         execution.Permute(planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.EncSort(sortExprs, child) =>
-        execution.EncSort(sortExprs, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.NonObliviousSort(sortExpr, child) =>
-        execution.NonObliviousSort(sortExpr, planLater(child).asInstanceOf[EncOperator]) :: Nil
+      case logical.EncSort(order, child) =>
+        execution.EncSort(order, planLater(child).asInstanceOf[EncOperator]) :: Nil
+      case logical.NonObliviousSort(order, child) =>
+        execution.NonObliviousSort(order, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.EncJoin(left, right, joinExpr) =>
         Join(left, right, Inner, Some(joinExpr)) match {
           case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>

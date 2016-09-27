@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
+import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Cast
@@ -81,8 +82,7 @@ case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[In
   }
 
   override def executeBlocked(): RDD[Block] = {
-    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)),
-      1) // TODO: remove this once we support empty partitions
+    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)))
       .mapPartitions { rowIter =>
         val serRows = rowIter.map(QED.fieldsToRow).toArray
         Iterator(Block(QED.createBlock(serRows, false), serRows.length))
@@ -95,7 +95,7 @@ case class Encrypt(child: SparkPlan) extends UnaryNode with EncOperator {
 
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
-      val serRows = QED.encryptInternalRowsIter(rowIter, output.map(_.dataType))
+      val serRows = QED.encryptInternalRows(rowIter.toSeq, output.map(_.dataType))
         .map(QED.fieldsToRow).toArray
       Iterator(Block(QED.createBlock(serRows, false), serRows.length))
     }
@@ -233,8 +233,10 @@ case class EncFilter(condition: Expression, child: EncOperator)
       case GreaterThan(Col(2, _), Literal(1000, IntegerType)) =>
         OP_BD1
       case And(
-        GreaterThanOrEqual(Cast(Col(1, _), StringType), Literal(start, StringType)),
-        LessThanOrEqual(Cast(Col(1, _), StringType), Literal(end, StringType)))
+        IsNotNull(Cast(Col(1, _), StringType)),
+        And(
+          GreaterThanOrEqual(Cast(Col(1, _), StringType), Literal(start, StringType)),
+          LessThanOrEqual(Cast(Col(1, _), StringType), Literal(end, StringType))))
           if start == UTF8String.fromString("1980-01-01")
           && end == UTF8String.fromString("1980-04-01") =>
         OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01
@@ -277,7 +279,7 @@ case class Permute(child: EncOperator) extends UnaryNode with EncOperator {
   }
 }
 
-case class EncSort(sortExprs: Seq[Expression], child: EncOperator)
+case class EncSort(order: Seq[SortOrder], child: EncOperator)
   extends UnaryNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
@@ -287,12 +289,12 @@ case class EncSort(sortExprs: Seq[Expression], child: EncOperator)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
-    val opcode = sortExprs match {
-      case Seq(Col(1, _)) =>
+    val opcode = order match {
+      case Seq(SortOrder(Col(1, _), Ascending)) =>
         OP_SORT_COL1
-      case Seq(Col(2, _)) =>
+      case Seq(SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL2
-      case Seq(Col(1, _), Col(2, _)) =>
+      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL1_COL2
     }
     ObliviousSort.sortBlocks(child.executeBlocked(), opcode)
@@ -310,9 +312,9 @@ case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
 
   override def executeBlocked() = {
     val opcode = sortExprs match {
-      case Seq(Col(1, _)) =>
+      case Seq(SortOrder(Col(1, _), Ascending)) =>
         OP_SORT_COL1
-      case Seq(Col(2, _)) =>
+      case Seq(SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL2
     }
     NonObliviousSort.sort(child.executeBlocked(), opcode)

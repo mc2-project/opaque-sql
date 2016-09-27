@@ -124,29 +124,31 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //   QEDBenchmark.diseaseQuery(sqlContext, "500")
   // }
 
-  // ignore("columnsort on join rows") {
-  //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-  //   val p = sparkContext.makeRDD(QED.encryptN(p_data), 5)
-  //   val f = sparkContext.makeRDD(QED.encryptN(f_data), 5)
-  //   val j = p.zipPartitions(f) { (pIter, fIter) =>
-  //     val (enclave, eid) = QED.initEnclave()
-  //     val pArr = pIter.toArray
-  //     val fArr = fIter.toArray
-  //     val p = QED.createBlock(
-  //       pArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
-  //     val f = QED.createBlock(
-  //       fArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
-  //     val r = enclave.JoinSortPreprocess(
-  //       eid, 0, 5, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
-  //     Iterator(Block(r, pArr.length + fArr.length))
-  //   }
-  //   val sorted = ObliviousSort.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
-  //     QED.splitBlock(block.bytes, block.numRows, true)
-  //       .map(serRow => Row.fromSeq(QED.parseRow(serRow)))
-  //   }
-  //   assert(sorted.collect.length === p_data.length + f_data.length)
-  // }
+  test("columnsort on join rows") {
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = sparkContext.makeRDD(
+      QED.encryptTuples(p_data, Seq(StringType, IntegerType)), 5)
+    val f = sparkContext.makeRDD(
+      QED.encryptTuples(f_data, Seq(StringType, StringType, FloatType)), 5)
+    val j = p.zipPartitions(f) { (pIter, fIter) =>
+      val (enclave, eid) = QED.initEnclave()
+      val pArr = pIter.toArray
+      val fArr = fIter.toArray
+      val p = QED.createBlock(
+        pArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
+      val f = QED.createBlock(
+        fArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
+      val r = enclave.JoinSortPreprocess(
+        eid, 0, 5, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
+      Iterator(Block(r, pArr.length + fArr.length))
+    }
+    val sorted = ObliviousSort.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
+      QED.splitBlock(block.bytes, block.numRows, true)
+        .map(serRow => Row.fromSeq(QED.parseRow(serRow)))
+    }
+    assert(sorted.collect.length === p_data.length + f_data.length)
+  }
 
   test("encFilter") {
     val data = for (i <- 0 until 5) yield ("foo", i)
@@ -155,88 +157,63 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(words.collect === data.map(Row.fromTuple))
 
     val filtered = words.filter($"count" > lit(3))
-    filtered.explain(true)
     assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
   }
 
-  // ignore("encFilter on date") {
-  //   import java.sql.Date
-  //   val dates = List("1975-01-01", "1980-01-01", "1980-03-02", "1980-04-01", "1990-01-01")
-  //   val filteredDates = List("1980-01-01", "1980-03-02", "1980-04-01")
-  //   val javaDates = dates.map(d =>
-  //     DateTimeUtils.toJavaDate(DateTimeUtils.stringToDate(UTF8String.fromString(d)).get))
-  //   val schema = StructType(Seq(StructField("date", DateType)))
-  //   val data = sqlContext.createDataFrame(sparkContext.makeRDD(javaDates.map(Row(_)), 1), schema)
-  //   val filtered = data.filter($"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
-  //   assert(filtered.collect.map(_.get(0).toString).sorted === filteredDates.sorted)
+  test("encFilter on date") {
+    import java.sql.Date
+    val dates = List("1975-01-01", "1980-01-01", "1980-03-02", "1980-04-01", "1990-01-01")
+    val filteredDates = List("1980-01-01", "1980-03-02", "1980-04-01")
+    val javaDates = dates.map(d =>
+      DateTimeUtils.toJavaDate(DateTimeUtils.stringToDate(UTF8String.fromString(d)).get))
+    val data = sqlContext.createDataFrame(javaDates.map(Tuple1(_))).toDF("date")
+    val filtered = data.filter($"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
+    assert(filtered.collect.map(_.get(0).toString).sorted === filteredDates.sorted)
 
-  //   val encDates = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(javaDates.map(Tuple1(_))), 1), schema)
-  //   val encFiltered = encDates.encFilter(
-  //     $"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
-  //   assert(QED.decrypt1[java.sql.Date](encFiltered.encCollect).map(_.toString).sorted ===
-  //     filteredDates.sorted)
-  // }
+    val encFiltered = data.oblivious.filter(
+      $"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
+    assert(encFiltered.collect.map(_.get(0).toString).sorted ===
+      filteredDates.sorted)
+  }
 
-  // ignore("nonObliviousFilter") {
-  //   val data = for (i <- 0 until 256) yield ("foo", i)
-  //   val words = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
-  //   // assert(QED.decrypt2(words.encCollect) === data) // TODO
+  test("nonObliviousFilter") {
+    val data = for (i <- 0 until 256) yield ("foo", i)
+    val words = sqlContext.createDataFrame(data).toDF("word", "count").encrypted
+    assert(words.collect === data.map(Row.fromTuple))
 
-  //   val filtered = words.nonObliviousFilter($"count" > lit(3))
-  //   assert(QED.decrypt2[String, Int](filtered.encCollect).sorted === data.filter(_._2 > 3).sorted)
-  // }
+    val filtered = words.filter($"count" > lit(3))
+    assert(filtered.collect.sortBy(_.getInt(1)) === data.filter(_._2 > 3).sorted.map(Row.fromTuple))
+  }
 
-  // ignore("encPermute") {
-  //   val array = (0 until 256).toArray
-  //   val permuted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encrypt1(array), 1),
-  //     StructType(Seq(StructField("x", IntegerType))))
-  //     .encPermute().encCollect
-  //   assert(QED.decrypt1[Int](permuted) !== array)
-  //   assert(QED.decrypt1[Int](permuted).sorted === array)
-  // }
+  ignore("nonObliviousAggregate") {
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (abc(i), 1)
+    val words = sqlContext.createDataFrame(data).toDF("word", "count").encrypted
 
-  // ignore("nonObliviousAggregate") {
-  //   def abc(i: Int): String = (i % 3) match {
-  //     case 0 => "A"
-  //     case 1 => "B"
-  //     case 2 => "C"
-  //   }
-  //   val data = for (i <- 0 until 256) yield (abc(i), 1)
-  //   val words = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
+    val summed = words.groupBy($"word").agg(sum("count").as("totalCount"))
+    assert(summed.collect.sortBy(_.getInt(1)) ===
+      data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted.map(Row.fromTuple))
+  }
 
-  //   val summed = words.groupBy($"word").nonObliviousAgg(sum("count").as("totalCount"))
-  //   assert(QED.decrypt2[String, Int](summed.encCollect) ===
-  //     data.groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
-  // }
+  ignore("encAggregate") {
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = sqlContext.createDataFrame(data).toDF("id", "word", "count").oblivious
 
-  // ignore("encAggregate") {
-  //   def abc(i: Int): String = (i % 3) match {
-  //     case 0 => "A"
-  //     case 1 => "B"
-  //     case 2 => "C"
-  //   }
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("id", IntegerType),
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
-
-  //   val summed = words.groupBy("word").encAgg(sum("count").as("totalCount"))
-  //   assert(QED.decrypt2[String, Int](summed.encCollect) ===
-  //     data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
-  // }
+    val summed = words.groupBy("word").agg(sum("count").as("totalCount"))
+    summed.explain(true)
+    assert(summed.collect.sortBy(_.getInt(1)) ===
+      data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted
+      .map(Row.fromTuple))
+  }
 
   // ignore("encAggregate - final run split across multiple partitions") {
   //   val data = for (i <- 0 until 256) yield (i, "A", 1)
@@ -273,64 +250,44 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //     .toSeq.map { case (str, (avgX, avgY)) => (str, avgX, avgY) }.sorted)
   // }
 
-  // ignore("encSort") {
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-  //   val sorted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("str", StringType),
-  //       StructField("x", IntegerType))))
-  //     .encSort($"x").encCollect
-  //   assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
-  // }
+  test("encSort") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
+    val sorted = sqlContext.createDataFrame(sparkContext.makeRDD(data, 1)).toDF("str", "x")
+      .oblivious.sort($"x")
+    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
+  }
 
-  // ignore("nonObliviousSort") {
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-  //   val sorted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("str", StringType),
-  //       StructField("x", IntegerType))))
-  //     .nonObliviousSort($"x").encCollect
-  //   assert(QED.decrypt2[String, Int](sorted) === data.sortBy(_._2))
-  // }
+  test("nonObliviousSort") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
+    val sorted = sqlContext.createDataFrame(sparkContext.makeRDD(data, 1)).toDF("str", "x")
+      .encrypted.sort($"x")
+    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
+  }
 
-  // ignore("encSort by float") {
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
-  //   val sorted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("str", StringType),
-  //       StructField("x", FloatType))))
-  //     .encSort($"x").encCollect
-  //   assert(QED.decrypt2[String, Float](sorted) === data.sortBy(_._2))
-  // }
+  test("encSort by float") {
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
+    val sorted = sqlContext.createDataFrame(sparkContext.makeRDD(data, 1)).toDF("str", "x")
+      .oblivious.sort($"x")
+    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
+  }
 
-  // ignore("encSort multiple partitions") {
-  //   val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
-  //   val sorted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 3),
-  //     StructType(Seq(
-  //       StructField("id", IntegerType),
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
-  //     .encSort($"word").encCollect
-  //   assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
-  // }
+  test("encSort multiple partitions") {
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
+    val sorted = sqlContext.createDataFrame(sparkContext.makeRDD(data, 3))
+      .toDF("id", "word", "count")
+      .oblivious.sort($"word")
+    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
+  }
 
-  // ignore("nonObliviousSort multiple partitions") {
-  //   val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
-  //   val sorted = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 3),
-  //     StructType(Seq(
-  //       StructField("id", IntegerType),
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
-  //     .nonObliviousSort($"word").encCollect
-  //   assert(QED.decrypt3[Int, String, Int](sorted) === data.sortBy(_._2))
-  // }
+  test("nonObliviousSort multiple partitions") {
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
+    val sorted = sqlContext.createDataFrame(sparkContext.makeRDD(data, 3))
+      .toDF("id", "word", "count")
+      .encrypted.sort($"word")
+    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
+  }
 
-  // ignore("encJoin") {
+  // test("encJoin") {
   //   val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
   //   val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
   //   val p = sqlContext.createEncryptedDataFrame(
