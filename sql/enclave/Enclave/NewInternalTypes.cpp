@@ -38,7 +38,7 @@ uint32_t stream_copy_attr(StreamRowReader *reader, uint8_t *dst) {
 template<>
 uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy) {
   uint8_t *output_ptr = output;
-  *output_ptr++ = dummy ? DUMMY_INT : INT;
+  *output_ptr++ = dummy ? get_dummy_type(INT) : INT;
   uint32_t len = attr_upper_bound(INT);
   *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
   *reinterpret_cast<uint32_t *>(output_ptr) = value; output_ptr += len;
@@ -46,12 +46,32 @@ uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy) {
 }
 
 template<>
+uint32_t write_attr<uint64_t>(uint8_t *output, uint64_t value, bool dummy) {
+  uint8_t *output_ptr = output;
+  *output_ptr++ = dummy ? get_dummy_type(LONG) : LONG;
+  uint32_t len = attr_upper_bound(LONG);
+  *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
+  *reinterpret_cast<uint64_t *>(output_ptr) = value; output_ptr += len;
+  return output_ptr - output;
+}
+
+template<>
 uint32_t write_attr<float>(uint8_t *output, float value, bool dummy) {
   uint8_t *output_ptr = output;
-  *output_ptr++ = dummy ? DUMMY_FLOAT : FLOAT;
+  *output_ptr++ = dummy ? get_dummy_type(FLOAT) : FLOAT;
   uint32_t len = attr_upper_bound(FLOAT);
   *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
   *reinterpret_cast<float *>(output_ptr) = value; output_ptr += len;
+  return output_ptr - output;
+}
+
+template<>
+uint32_t write_attr<double>(uint8_t *output, double value, bool dummy) {
+  uint8_t *output_ptr = output;
+  *output_ptr++ = dummy ? get_dummy_type(DOUBLE) : DOUBLE;
+  uint32_t len = attr_upper_bound(DOUBLE);
+  *reinterpret_cast<uint32_t *>(output_ptr) = len; output_ptr += 4;
+  *reinterpret_cast<double *>(output_ptr) = value; output_ptr += len;
   return output_ptr - output;
 }
 
@@ -60,8 +80,16 @@ uint32_t read_attr<uint32_t>(uint8_t *input, uint8_t *value) {
   return read_attr_internal(input, value, INT);
 }
 template<>
+uint32_t read_attr<uint64_t>(uint8_t *input, uint8_t *value) {
+  return read_attr_internal(input, value, LONG);
+}
+template<>
 uint32_t read_attr<float>(uint8_t *input, uint8_t *value) {
   return read_attr_internal(input, value, FLOAT);
+}
+template<>
+uint32_t read_attr<double>(uint8_t *input, uint8_t *value) {
+  return read_attr_internal(input, value, DOUBLE);
 }
 
 uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_type) {
@@ -579,184 +607,184 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
   switch (op_code) {
   case OP_JOIN_COL2:
     num_output_cols = 5;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_INT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(STRING);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(INT);
     break;
   case OP_JOIN_COL1:
     num_output_cols = 4;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(STRING);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_PAGERANK:
     num_output_cols = 4;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_FLOAT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(FLOAT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_NATION:
     num_output_cols = 10;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_INT;
-    types[6] = DUMMY_FLOAT;
-    types[7] = DUMMY_INT;
-    types[8] = DUMMY_FLOAT;
-    types[9] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(TPCH_NATION_NAME_TYPE);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(FLOAT);
+    types[7] = get_dummy_type(INT);
+    types[8] = get_dummy_type(FLOAT);
+    types[9] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_SUPPLIER:
     num_output_cols = 9;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_FLOAT;
-    types[6] = DUMMY_INT;
-    types[7] = DUMMY_FLOAT;
-    types[8] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(FLOAT);
+    types[6] = get_dummy_type(INT);
+    types[7] = get_dummy_type(FLOAT);
+    types[8] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_ORDERS:
     num_output_cols = 8;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_FLOAT;
-    types[5] = DUMMY_INT;
-    types[6] = DUMMY_FLOAT;
-    types[7] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(FLOAT);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(FLOAT);
+    types[7] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_PARTSUPP:
     num_output_cols = 7;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_FLOAT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_FLOAT;
-    types[6] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(FLOAT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(FLOAT);
+    types[6] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_PART_LINEITEM:
     num_output_cols = 6;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_FLOAT;
-    types[5] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(FLOAT);
+    types[5] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9OPAQUE_ORDERS:
     num_output_cols = 10;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_TPCH_NATION_NAME_TYPE;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_INT;
-    types[6] = DUMMY_FLOAT;
-    types[7] = DUMMY_INT;
-    types[8] = DUMMY_FLOAT;
-    types[9] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(TPCH_NATION_NAME_TYPE);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(FLOAT);
+    types[7] = get_dummy_type(INT);
+    types[8] = get_dummy_type(FLOAT);
+    types[9] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9OPAQUE_LINEITEM:
     num_output_cols = 9;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_FLOAT;
-    types[5] = DUMMY_INT;
-    types[6] = DUMMY_INT;
-    types[7] = DUMMY_FLOAT;
-    types[8] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(TPCH_NATION_NAME_TYPE);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(FLOAT);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(INT);
+    types[7] = get_dummy_type(FLOAT);
+    types[8] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9OPAQUE_NATION:
     num_output_cols = 5;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_TPCH_NATION_NAME_TYPE;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(TPCH_NATION_NAME_TYPE);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9OPAQUE_SUPPLIER:
     num_output_cols = 4;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP:
     num_output_cols = 3;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_FLOAT;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_DISEASEDEFAULT_TREATMENT:
     num_output_cols = 6;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_INT;
-    types[3] = DUMMY_STRING;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_STRING;
+    types[0] = get_dummy_type(STRING);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(INT);
+    types[3] = get_dummy_type(STRING);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEDEFAULT_PATIENT:
     num_output_cols = 5;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_STRING;
+    types[0] = get_dummy_type(STRING);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEOPAQUE_PATIENT:
     num_output_cols = 6;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_INT;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_STRING;
+    types[0] = get_dummy_type(STRING);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEOPAQUE_TREATMENT:
     num_output_cols = 4;
-    types[0] = DUMMY_STRING;
-    types[1] = DUMMY_INT;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_INT;
+    types[0] = get_dummy_type(STRING);
+    types[1] = get_dummy_type(INT);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(INT);
     break;
   case OP_JOIN_GENEDEFAULT_GENE:
     num_output_cols = 6;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_STRING;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_STRING;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(STRING);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(STRING);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(STRING);
     break;
   case OP_JOIN_GENEOPAQUE_GENE:
     num_output_cols = 4;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_STRING;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(STRING);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(STRING);
     break;
   case OP_JOIN_GENEOPAQUE_PATIENT:
     num_output_cols = 6;
-    types[0] = DUMMY_INT;
-    types[1] = DUMMY_STRING;
-    types[2] = DUMMY_STRING;
-    types[3] = DUMMY_STRING;
-    types[4] = DUMMY_INT;
-    types[5] = DUMMY_STRING;
+    types[0] = get_dummy_type(INT);
+    types[1] = get_dummy_type(STRING);
+    types[2] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(STRING);
+    types[4] = get_dummy_type(INT);
+    types[5] = get_dummy_type(STRING);
     break;
   default:
     printf("NewJoinRecord::init_dummy: Unknown opcode %d\n", op_code);

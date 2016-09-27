@@ -4,69 +4,31 @@
 #include <limits.h>
 
 bool is_dummy_type(uint8_t attr_type) {
-  switch(attr_type) {
-  case DUMMY:
-  case INT:
-  case STRING:
-  case FLOAT:
-  case DATE:
-  case URL_TYPE:
-  case C_CODE:
-  case L_CODE:
-  case LONG:
-  case IP_TYPE:
-  case USER_AGENT_TYPE:
-  case SEARCH_WORD_TYPE:
-  case TPCH_NATION_NAME_TYPE:
-    return false;
-
-  case DUMMY_INT:
-  case DUMMY_FLOAT:
-  case DUMMY_STRING:
-  case DUMMY_TPCH_NATION_NAME_TYPE:
-    return true;
-
-  default:
-    printf("is_dummy_type: Unknown type %d\n", attr_type);
-    assert(false);
-    return false;
-  }
+  // The high bit of an attribute type is 1 if it represents a dummy
+  return (attr_type & 0x80) != 0;
 }
 
 uint8_t get_dummy_type(uint8_t attr_type) {
-  switch(attr_type) {
-  case INT:
-    return DUMMY_INT;
-
-  case FLOAT:
-    return DUMMY_FLOAT;
-
-  case STRING:
-    return DUMMY_STRING;
-
-  case TPCH_NATION_NAME_TYPE:
-    return DUMMY_TPCH_NATION_NAME_TYPE;
-
-  default:
-    return attr_type;
-  }
+  return attr_type | 0x80;
 }
 
 uint32_t attr_upper_bound(uint8_t attr_type) {
-  switch(attr_type) {
+  switch (attr_type & ~0x80) {
   case INT:
-  case DUMMY_INT:
-  case FLOAT:
-  case DUMMY_FLOAT:
     return INT_UPPER_BOUND;
 
+  case FLOAT:
+    return FLOAT_UPPER_BOUND;
+
   case STRING:
-  case DUMMY_STRING:
     return STRING_UPPER_BOUND;
 
   case DATE:
   case LONG:
     return LONG_UPPER_BOUND;
+
+  case DOUBLE:
+    return DOUBLE_UPPER_BOUND;
 
   case URL_TYPE:
     return URL_UPPER_BOUND;
@@ -86,7 +48,6 @@ uint32_t attr_upper_bound(uint8_t attr_type) {
   case SEARCH_WORD_TYPE:
     return SEARCH_WORD_UPPER_BOUND;
 
-  case DUMMY_TPCH_NATION_NAME_TYPE:
   case TPCH_NATION_NAME_TYPE:
     return TPCH_NATION_NAME_UPPER_BOUND;
 

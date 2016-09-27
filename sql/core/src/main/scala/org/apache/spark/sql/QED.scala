@@ -35,8 +35,10 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.sql.types.FloatType
 import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.types.LongType
 import org.apache.spark.sql.types.StringType
 
 object QED {
@@ -126,10 +128,18 @@ object QED {
         buf.put(FLOAT.value)
         buf.putInt(4)
         buf.putFloat(f)
+      case (f: Double, DoubleType) =>
+        buf.put(DOUBLE.value)
+        buf.putInt(8)
+        buf.putDouble(f)
       case (d: SQLDate, DateType) =>
         buf.put(DATE.value)
         buf.putInt(8)
         buf.putLong(DateTimeUtils.daysToMillis(d) / 1000)
+      case (f: Long, LongType) =>
+        buf.put(LONG.value)
+        buf.putInt(8)
+        buf.putLong(f)
     }
     buf.flip()
     val bytes = new Array[Byte](buf.limit)
@@ -157,9 +167,15 @@ object QED {
       case t if t == FLOAT.value =>
         assert(size == 4)
         buf.getFloat()
+      case t if t == DOUBLE.value =>
+        assert(size == 8)
+        buf.getDouble()
       case t if t == DATE.value =>
         assert(size == 8)
         DateTimeUtils.millisToDays(buf.getLong() * 1000)
+      case t if t == LONG.value =>
+        assert(size == 8)
+        buf.getLong()
     }
     result.asInstanceOf[T]
   }

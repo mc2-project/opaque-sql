@@ -16,32 +16,20 @@ enum DATA_GEN_TYPE : uint8_t {
 
 // Make sure to update the functions in common.cpp and util.cpp when you add a
 // type here.
-enum TYPE {
-  DUMMY = 0,
-  INT = 1,
-  STRING = 2,
-  FLOAT = 3,
-  DOUBLE = 14,
-  DATE = 4,
-  URL_TYPE = 5,
-  C_CODE = 6,
-  L_CODE = 7,
-  LONG = 8,
-  IP_TYPE = 9,
-  USER_AGENT_TYPE = 10,
-  SEARCH_WORD_TYPE = 11,
-  TPCH_NATION_NAME_TYPE = 12,
-
-  DUMMY_INT = 100,
-  DUMMY_FLOAT = 101,
-  DUMMY_STRING = 102,
-  DUMMY_TPCH_NATION_NAME_TYPE = 112,
-
-  /* PARTIAL_AGG_INT = 5, */
-  /* FINAL_AGG_INT = 6, */
-  /* PARTIAL_AGG_FLOAT = 7, */
-  /* FINAL_AGG_FLOAT = 8 */
-};
+constexpr uint8_t DUMMY = 0;
+constexpr uint8_t INT = 1;
+constexpr uint8_t STRING = 2;
+constexpr uint8_t FLOAT = 3;
+constexpr uint8_t DOUBLE = 14;
+constexpr uint8_t DATE = 4;
+constexpr uint8_t URL_TYPE = 5;
+constexpr uint8_t C_CODE = 6;
+constexpr uint8_t L_CODE = 7;
+constexpr uint8_t LONG = 8;
+constexpr uint8_t IP_TYPE = 9;
+constexpr uint8_t USER_AGENT_TYPE = 10;
+constexpr uint8_t SEARCH_WORD_TYPE = 11;
+constexpr uint8_t TPCH_NATION_NAME_TYPE = 12;
 
 // Make sure to update the functions below when you add an opcode here.
 enum OPCODE {

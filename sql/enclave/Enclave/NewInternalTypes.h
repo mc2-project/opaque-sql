@@ -27,17 +27,9 @@ uint32_t copy_attr(uint8_t *dst, const uint8_t *src);
 
 template<typename Type>
 uint32_t write_attr(uint8_t *output, Type value, bool dummy);
-template<>
-uint32_t write_attr<uint32_t>(uint8_t *output, uint32_t value, bool dummy);
-template<>
-uint32_t write_attr<float>(uint8_t *output, float value, bool dummy);
 
 template<typename Type>
 uint32_t read_attr(uint8_t *input, uint8_t *value);
-template<>
-uint32_t read_attr<uint32_t>(uint8_t *input, uint8_t *value);
-template<>
-uint32_t read_attr<float>(uint8_t *input, uint8_t *value);
 
 uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_type);
 
