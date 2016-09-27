@@ -172,9 +172,16 @@ void sample(Verify *verify_set,
     }
   }
   
-  // sample ~5% of the rows
+  // Sample ~5% of the rows or 1000 rows, whichever is greater
   unsigned char buf[2];
   uint16_t *buf_ptr = (uint16_t *) buf;
+
+  uint16_t sampling_ratio;
+  if (num_rows > 1000 * 20) {
+    sampling_ratio = 3276; // 5% of 2^16
+  } else {
+    sampling_ratio = 16383;
+  }
 
   RowReader r(input_rows, input_rows + input_rows_len, verify_set);
   RowWriter w(output_rows, row_upper_bound);
@@ -184,7 +191,7 @@ void sample(Verify *verify_set,
   for (uint32_t i = 0; i < num_rows; i++) {
     r.read(&row);
     sgx_read_rand(buf, 2);
-    if (*buf_ptr <= 3276) {
+    if (*buf_ptr <= sampling_ratio) {
       w.write(&row);
       num_output_rows_result++;
     }

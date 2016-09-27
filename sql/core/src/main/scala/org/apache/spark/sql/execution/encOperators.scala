@@ -190,6 +190,8 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
         OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK
       case Seq(Col(2, _), Col(3, _), Col(4, _)) if child.output.size == 4 =>
         OP_PROJECT_DROP_COL1
+      case Seq(Col(2, _), Col(3, _)) if child.output.size == 3 =>
+        OP_PROJECT_DROP_COL1
       case Seq(Col(1, _)) if child.output.size == 2 =>
         OP_PROJECT_DROP_COL2
       case Seq(Col(2, _), Col(1, _), Col(3, _)) if child.output.size == 3 =>
