@@ -64,17 +64,17 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     new String(string_bytes)
   }
 
-  // ignore("pagerank") {
+  // test("pagerank") {
   //   QEDBenchmark.pagerank(sqlContext, "256")
   // }
 
-  // ignore("big data 1") {
+  // test("big data 1") {
   //   val answer = QEDBenchmark.bd1SparkSQL(sqlContext, "tiny").collect
   //   assert(answer === QEDBenchmark.bd1Opaque(sqlContext, "tiny").collect)
   //   assert(answer === QEDBenchmark.bd1Encrypted(sqlContext, "tiny").collect)
   // }
 
-  // ignore("big data 2") {
+  // test("big data 2") {
   //   val answer = QEDBenchmark.bd2SparkSQL(sqlContext, "tiny")
   //     .collect
   //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
@@ -98,7 +98,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //   assert(answer === encrypted)
   // }
 
-  // ignore("big data 3") {
+  // test("big data 3") {
   //   val answer = QEDBenchmark.bd3SparkSQL(sqlContext, "tiny")
   //     .collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
   //   assert(answer === QED.decrypt3[String, Float, Float](
@@ -107,7 +107,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //     QEDBenchmark.bd3Encrypted(sqlContext, "tiny").encCollect))
   // }
 
-  // ignore("TPC-H query 9") {
+  // test("TPC-H query 9") {
   //   val a = QEDBenchmark.tpch9SparkSQL(sqlContext, "sf_small", Some(25))
   //     .collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }.sorted
   //   val b = QED.decrypt3[String, Int, Float](
@@ -120,7 +120,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   //   assert(a.map { case (a, b, c) => (a, b)} === c.map { case (a, b, c) => (a, b)})
   // }
 
-  // ignore("disease query") {
+  // test("disease query") {
   //   QEDBenchmark.diseaseQuery(sqlContext, "500")
   // }
 
@@ -185,19 +185,19 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(filtered.collect.toSet === data.filter(_._2 > 3).toSet.map(Row.fromTuple))
   }
 
-  // ignore("nonObliviousAggregate") {
-  //   def abc(i: Int): String = (i % 3) match {
-  //     case 0 => "A"
-  //     case 1 => "B"
-  //     case 2 => "C"
-  //   }
-  //   val data = for (i <- 0 until 256) yield (abc(i), 1)
-  //   val words = sqlContext.createDataFrame(data).toDF("word", "count").encrypted
+  test("nonObliviousAggregate") {
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (abc(i), 1)
+    val words = sqlContext.createDataFrame(data).toDF("word", "count").encrypted
 
-  //   val summed = words.groupBy($"word").agg(sum("count").as("totalCount"))
-  //   val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-  //   assert(summed.collect.toSet === expected.map(Row.fromTuple).toSet)
-  // }
+    val summed = words.groupBy($"word").agg(sum("count").as("totalCount"))
+    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+    assert(summed.collect.toSet === expected.map(Row.fromTuple).toSet)
+  }
 
   test("encAggregate") {
     def abc(i: Int): String = (i % 3) match {
@@ -213,40 +213,32 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(summed.collect.toSet === expected.map(Row.fromTuple).toSet)
   }
 
-  // ignore("encAggregate - final run split across multiple partitions") {
-  //   val data = for (i <- 0 until 256) yield (i, "A", 1)
-  //   val words = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 2),
-  //     StructType(Seq(
-  //       StructField("id", IntegerType),
-  //       StructField("word", StringType),
-  //       StructField("count", IntegerType))))
+  test("encAggregate - final run split across multiple partitions") {
+    val data = for (i <- 0 until 256) yield (i, "A", 1)
+    val words = sqlContext.createDataFrame(sparkContext.makeRDD(data, 2))
+      .toDF("id", "word", "count").oblivious
 
-  //   val summed = words.groupBy("word").encAgg(sum("count").as("totalCount"))
-  //   assert(QED.decrypt2[String, Int](summed.encCollect) ===
-  //     data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum).toSeq.sorted)
-  // }
+    val summed = words.groupBy("word").agg(sum("count").as("totalCount"))
+    assert(summed.collect.toSet ===
+      data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum)
+      .map(Row.fromTuple).toSet)
+  }
 
-  // ignore("encAggregate on multiple columns") {
-  //   def abc(i: Int): String = (i % 3) match {
-  //     case 0 => "A"
-  //     case 1 => "B"
-  //     case 2 => "C"
-  //   }
-  //   val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
-  //   val words = sqlContext.createEncryptedDataFrame(
-  //     sparkContext.makeRDD(QED.encryptN(data), 1),
-  //     StructType(Seq(
-  //       StructField("str", StringType),
-  //       StructField("x", IntegerType),
-  //       StructField("y", FloatType))))
+  test("encAggregate on multiple columns") {
+    def abc(i: Int): String = (i % 3) match {
+      case 0 => "A"
+      case 1 => "B"
+      case 2 => "C"
+    }
+    val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
+    val words = sqlContext.createDataFrame(data).toDF("str", "x", "y").oblivious
 
-  //   val summed = words.groupBy("str").encAgg(avg("x").as("avgX"), sum("y").as("totalY"))
-  //   assert(QED.decrypt3[String, Int, Float](summed.encCollect) ===
-  //     data.groupBy(_._1).mapValues(group =>
-  //       (group.map(_._2).sum / group.map(_._2).size, group.map(_._3).sum))
-  //     .toSeq.map { case (str, (avgX, avgY)) => (str, avgX, avgY) }.sorted)
-  // }
+    val summed = words.groupBy("str").agg(avg("x").as("avgX"), sum("y").as("totalY"))
+    assert(summed.collect.toSet ===
+      data.groupBy(_._1).mapValues(group =>
+        (group.map(_._2).sum / group.map(_._2).size, group.map(_._3).sum))
+      .map { case (str, (avgX, avgY)) => (str, avgX, avgY) }.map(Row.fromTuple).toSet)
+  }
 
   test("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
@@ -330,7 +322,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
   }
 
-  // ignore("nonObliviousJoin multiple partitions") {
+  // test("nonObliviousJoin multiple partitions") {
   //   val p_data = for (i <- 0 until 4) yield (i.toString, i * 10)
   //   val f_data = for (i <- 0 until 16 - 4) yield ((i % 4).toString, (i * 10).toString, i.toFloat)
   //   val p = sqlContext.createDataFrame(sparkContext.makeRDD(p_data, 3)).toDF("pk", "x").encrypted
@@ -364,7 +356,7 @@ class QEDSuite extends QueryTest with SharedSQLContext {
     assert(df.collect === expected.map(Row.fromTuple))
   }
 
-  // ignore("encCache") {
+  // test("encCache") {
   //   val data = List((1, 3), (1, 4), (1, 5), (2, 4))
   //   val df = sqlContext.createEncryptedDataFrame(
   //     sparkContext.makeRDD(QED.encryptN(data), 1),

@@ -159,7 +159,7 @@ void ecall_aggregate_step1(int index, int num_part,
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1:
     aggregate_step1<
       Aggregator2<GroupBy<1>,
-                  Avg<2, uint32_t, uint32_t>,
+                  Avg<2, uint32_t, double>,
                   Sum<3, float, double> > >(
                     &verify_set,
                     input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
@@ -210,7 +210,7 @@ void ecall_process_boundary_records(int op_code,
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1:
     aggregate_process_boundaries<
       Aggregator2<GroupBy<1>,
-                  Avg<2, uint32_t, uint32_t>,
+                  Avg<2, uint32_t, double>,
                   Sum<3, float, double> > >(
                     &verify_set,
                     rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
@@ -263,7 +263,7 @@ void ecall_aggregate_step2(int index, int num_part,
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2:
     aggregate_step2<
       Aggregator2<GroupBy<1>,
-                  Avg<2, uint32_t, uint32_t>,
+                  Avg<2, uint32_t, double>,
                   Sum<3, float, double> > >(
                     &verify_set,
                     input_rows, input_rows_length, num_rows, boundary_info_row_ptr,
@@ -693,7 +693,7 @@ void ecall_non_oblivious_aggregate(int index, int num_part,
   case OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT:
     non_oblivious_aggregate<
       Aggregator2<GroupBy<1>,
-                  Avg<2, uint32_t, uint64_t>,
+                  Avg<2, uint32_t, double>,
                   Sum<3, float, double> > >(
                     &verify_set,
                     input_rows, input_rows_length, num_rows, output_rows, output_rows_length,

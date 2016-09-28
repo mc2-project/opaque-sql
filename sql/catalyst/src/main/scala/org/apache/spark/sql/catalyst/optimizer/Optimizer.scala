@@ -158,7 +158,11 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
           groupingExprs.map(e => SortOrder(e, Ascending)),
           child.asInstanceOf[EncOperator]))
     case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
-      NonObliviousAggregate(groupingExprs, aggExprs, child.asInstanceOf[EncOperator])
+      NonObliviousAggregate(
+        groupingExprs, aggExprs,
+        NonObliviousSort(
+          groupingExprs.map(e => SortOrder(e, Ascending)),
+          child.asInstanceOf[EncOperator]))
   }
 }
 
