@@ -17,9 +17,6 @@
 
 package org.apache.spark.sql.catalyst
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -61,39 +58,6 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
   }
 
   def toSeq(schema: StructType): Seq[Any] = toSeq(schema.map(_.dataType))
-
-  def toEncArray(): Array[Array[Byte]] = {
-    val len = numFields
-    val values = new Array[Array[Byte]](len)
-    var i = 0
-    while (i < len) {
-      values(i) = getBinary(i)
-      i += 1
-    }
-    values
-  }
-
-  def encSerializedSize: Int =
-    4 + 4 * numFields + (0 until numFields).map(i => getBinary(i).length).sum
-
-  def encSerialize(buf: ByteBuffer): Unit = {
-    buf.putInt(numFields)
-    for (i <- 0 until numFields) {
-      val field = getBinary(i)
-      buf.putInt(field.length)
-      buf.put(field)
-    }
-  }
-
-  def encSerialize(): Array[Byte] = {
-    val buf = ByteBuffer.allocate(encSerializedSize)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    encSerialize(buf)
-    buf.flip()
-    val serialized = new Array[Byte](buf.limit())
-    buf.get(serialized)
-    serialized
-  }
 }
 
 object InternalRow {

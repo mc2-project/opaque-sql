@@ -21,14 +21,9 @@ import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 import org.apache.spark.annotation.Experimental
-
 import org.apache.spark.sql.catalyst.analysis.{Star, UnresolvedAlias, UnresolvedAttribute, UnresolvedFunction}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.plans.logical.EncAggregate
-import org.apache.spark.sql.catalyst.plans.logical.EncSort
-import org.apache.spark.sql.catalyst.plans.logical.NonObliviousAggregate
-import org.apache.spark.sql.catalyst.plans.logical.NonObliviousSort
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Pivot}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
 import org.apache.spark.sql.internal.SQLConf

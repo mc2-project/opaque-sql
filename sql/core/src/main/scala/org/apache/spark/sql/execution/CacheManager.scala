@@ -20,18 +20,13 @@ package org.apache.spark.sql.execution
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK
 
-import org.apache.spark.sql.execution.columnar.InMemoryRelation
-
 /** Holds a cached logical plan and its data */
 private[sql] case class CachedData(plan: LogicalPlan, cachedRepresentation: InMemoryRelation)
-
-private[sql] case class EncCachedData(
-    plan: LogicalPlan, cachedRepresentation: LogicalEncryptedBlockRDD)
 
 /**
  * Provides support in a SQLContext for caching query results and automatically using these cached
@@ -45,9 +40,6 @@ private[sql] class CacheManager extends Logging {
 
   @transient
   private val cachedData = new scala.collection.mutable.ArrayBuffer[CachedData]
-
-  @transient
-  private val encCachedData = new scala.collection.mutable.ArrayBuffer[EncCachedData]
 
   @transient
   private val cacheLock = new ReentrantReadWriteLock
@@ -74,13 +66,11 @@ private[sql] class CacheManager extends Logging {
   private[sql] def clearCache(): Unit = writeLock {
     cachedData.foreach(_.cachedRepresentation.cachedColumnBuffers.unpersist())
     cachedData.clear()
-    encCachedData.foreach(_.cachedRepresentation.rdd.unpersist())
-    encCachedData.clear()
   }
 
   /** Checks if the cache is empty. */
   private[sql] def isEmpty: Boolean = readLock {
-    cachedData.isEmpty && encCachedData.isEmpty
+    cachedData.isEmpty
   }
 
   /**
@@ -107,33 +97,6 @@ private[sql] class CacheManager extends Logging {
             sqlContext.executePlan(planToCache).executedPlan,
             tableName))
     }
-  }
-
-  private[sql] def encCacheQuery(
-      query: Queryable,
-      storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): Unit = writeLock {
-    // val planToCache: logical.OutputsBlocks = query.queryExecution.analyzed match {
-    //   case logical.ConvertFromBlocks(child) => child
-    //   case r @ LogicalEncryptedRDD(_, _) => logical.ConvertToBlocks(r)
-    // }
-    // if (lookupCachedData(planToCache).nonEmpty) {
-    //   logWarning("Asked to cache already cached data.")
-    // } else {
-    //   val sqlContext = query.sqlContext
-    //   val cachedRDD =
-    //     LogicalEncryptedBlockRDD(
-    //       planToCache.output,
-    //       sqlContext.executePlan(planToCache)
-    //         .executedPlan.asInstanceOf[OutputsBlocks]
-    //         .executeBlocked()
-    //         .persist(storageLevel))(sqlContext)
-    //   // We have to force the RDD here because there's no easy way for the user to do it since we
-    //   // are actually caching a different RDD from the one the user requested (namely the blocked
-    //   // version) due to the planToCache pattern match above.
-    //   cachedRDD.rdd.foreach(x => {})
-    //   encCachedData += EncCachedData(planToCache, cachedRDD)
-    // }
-    ???
   }
 
   /** Removes the data for the given [[Queryable]] from the cache */
@@ -171,19 +134,12 @@ private[sql] class CacheManager extends Logging {
     cachedData.find(cd => plan.sameResult(cd.plan))
   }
 
-  private[sql] def lookupEncCachedData(plan: LogicalPlan): Option[EncCachedData] = readLock {
-    encCachedData.find(cd => plan.sameResult(cd.plan))
-  }
-
   /** Replaces segments of the given logical plan with cached versions where possible. */
   private[sql] def useCachedData(plan: LogicalPlan): LogicalPlan = {
     plan transformDown {
       case currentFragment =>
         lookupCachedData(currentFragment)
           .map(_.cachedRepresentation.withOutput(currentFragment.output))
-          .orElse(
-            lookupEncCachedData(currentFragment)
-              .map(_.cachedRepresentation))
           .getOrElse(currentFragment)
     }
   }

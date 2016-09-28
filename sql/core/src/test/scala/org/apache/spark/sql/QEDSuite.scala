@@ -47,21 +47,12 @@ import org.apache.spark.sql.types.StructType
 class QEDSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
-  import QED.time
-
   LogManager.getLogger(classOf[org.apache.spark.scheduler.TaskSetManager]).setLevel(Level.ERROR)
   LogManager.getLogger(classOf[org.apache.spark.storage.BlockManager]).setLevel(Level.ERROR)
 
-  def byte_to_int(array: Array[Byte], index: Int) = {
-    val int_bytes = array.slice(index, index + 4)
-    val buf = ByteBuffer.wrap(int_bytes)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    buf.getInt
-  }
-
-  def byte_to_string(array: Array[Byte], index: Int, length: Int) = {
-    val string_bytes = array.slice(index, index + length)
-    new String(string_bytes)
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    QED.initSQLContext(sqlContext)
   }
 
   // test("pagerank") {
@@ -127,18 +118,16 @@ class QEDSuite extends QueryTest with SharedSQLContext {
   test("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-    val p = sparkContext.makeRDD(
-      QED.encryptTuples(p_data, Seq(StringType, IntegerType)), 5)
-    val f = sparkContext.makeRDD(
-      QED.encryptTuples(f_data, Seq(StringType, StringType, FloatType)), 5)
+    val pTypes = Seq(StringType, IntegerType)
+    val fTypes = Seq(StringType, StringType, FloatType)
+    val p = sparkContext.makeRDD(QED.encryptTuples(p_data, pTypes), 5)
+    val f = sparkContext.makeRDD(QED.encryptTuples(f_data, fTypes), 5)
     val j = p.zipPartitions(f) { (pIter, fIter) =>
       val (enclave, eid) = QED.initEnclave()
-      val pArr = pIter.toArray
-      val fArr = fIter.toArray
-      val p = QED.createBlock(
-        pArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
-      val f = QED.createBlock(
-        fArr.map(r => InternalRow.fromSeq(r)).map(_.encSerialize), false)
+      val pArr = pIter.map(QED.fieldsToRow).toArray
+      val fArr = fIter.map(QED.fieldsToRow).toArray
+      val p = QED.createBlock(pArr, false)
+      val f = QED.createBlock(fArr, false)
       val r = enclave.JoinSortPreprocess(
         eid, 0, 5, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
       Iterator(Block(r, pArr.length + fArr.length))

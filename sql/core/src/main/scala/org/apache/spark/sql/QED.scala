@@ -30,6 +30,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
+import org.apache.spark.sql.catalyst.optimizer.ConvertToEncryptedOperators
+import org.apache.spark.sql.catalyst.optimizer.EncryptLocalRelation
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.types.BinaryType
@@ -100,6 +102,18 @@ object QED {
   }
 
   var eid = 0L
+
+  def initSQLContext(sqlContext: SQLContext): Unit = {
+    sqlContext.experimental.extraOptimizations =
+      (Seq(EncryptLocalRelation, ConvertToEncryptedOperators) ++
+        sqlContext.experimental.extraOptimizations)
+    // TODO: use this once we rebase to branch-2.0.0, which contains
+    // https://github.com/apache/spark/pull/13426
+    //
+    // sqlContext.experimental.extraStrategies =
+    //   (Seq(org.apache.spark.sql.execution.EncOperators) ++
+    //     sqlContext.experimental.extraStrategies)
+  }
 
   val encoder = new BASE64Encoder()
   val decoder = new BASE64Decoder()

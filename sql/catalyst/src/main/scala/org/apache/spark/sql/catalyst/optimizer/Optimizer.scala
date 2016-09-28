@@ -94,12 +94,9 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
     Batch("Decimal Optimizations", FixedPoint(100),
       DecimalAggregates) ::
     Batch("LocalRelation", FixedPoint(100),
-      ConvertToLocalRelation,
-      EncryptLocalRelation) ::
+      ConvertToLocalRelation) ::
     Batch("Subquery", Once,
-      OptimizeSubqueries) ::
-    Batch("Convert to Encrypted Operators", FixedPoint(100),
-      ConvertToEncryptedOperators) :: Nil
+      OptimizeSubqueries) :: Nil
   }
 
   /**

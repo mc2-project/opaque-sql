@@ -371,7 +371,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.NonObliviousSort(order, child) =>
         execution.NonObliviousSort(order, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.EncJoin(left, right, joinExpr) =>
-        Join(left, right, Inner, Some(joinExpr)) match {
+        logical.Join(left, right, Inner, Some(joinExpr)) match {
           case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
             execution.EncSortMergeJoin(
               planLater(left).asInstanceOf[EncOperator],
@@ -380,7 +380,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           case _ => Nil
         }
       case logical.NonObliviousJoin(left, right, joinExpr) =>
-        Join(left, right, Inner, Some(joinExpr)) match {
+        logical.Join(left, right, Inner, Some(joinExpr)) match {
           case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
             execution.NonObliviousSortMergeJoin(
               planLater(left).asInstanceOf[EncOperator],
@@ -389,11 +389,11 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           case _ => Nil
         }
       case a @ logical.EncAggregate(
-          groupingExpressions, aggExpressions, child) =>
+        groupingExpressions, aggExpressions, child) =>
         execution.EncAggregate(
           groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case a @ logical.NonObliviousAggregate(
-          groupingExpressions, aggExpressions, child) =>
+        groupingExpressions, aggExpressions, child) =>
         execution.NonObliviousAggregate(
           groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
       case logical.Encrypt(child) =>
@@ -401,6 +401,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.MarkOblivious(child) => planLater(child) :: Nil
       case logical.EncryptedLocalRelation(output, plaintextData) =>
         execution.EncryptedLocalTableScan(output, plaintextData) :: Nil
+      case LogicalEncryptedBlockRDD(output, rdd) => PhysicalEncryptedBlockRDD(output, rdd) :: Nil
       case _ => Nil
     }
   }
@@ -475,7 +476,6 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case e @ python.EvaluatePython(udf, child, _) =>
         python.BatchPythonEvaluation(udf, e.output, planLater(child)) :: Nil
       case LogicalRDD(output, rdd) => PhysicalRDD(output, rdd, "ExistingRDD") :: Nil
-      case LogicalEncryptedBlockRDD(output, rdd) => PhysicalEncryptedBlockRDD(output, rdd) :: Nil
       case BroadcastHint(child) => planLater(child) :: Nil
       case _ => Nil
     }
