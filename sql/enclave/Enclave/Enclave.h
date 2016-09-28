@@ -42,6 +42,7 @@
 #include "Sort.h"
 #include "ColumnSort.h"
 #include "EncryptedDAG.h"
+#include "ObliviousAccess.h"
 
 #include "Enclave_t.h"
 

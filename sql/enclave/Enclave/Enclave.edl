@@ -264,6 +264,9 @@ enclave {
                                          [user_check] uint8_t *output_rows,
                                          [out] uint32_t *output_rows_size,
                                          [out] uint32_t *num_output_rows);
+    public void ecall_oblivious_swap([user_check] uint8_t *ptr1,
+                                     [user_check] uint8_t *ptr2,
+                                     uint32_t size);
   };
 
   untrusted {

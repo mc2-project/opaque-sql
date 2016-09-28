@@ -910,3 +910,8 @@ void ecall_column_sort_filter(int op_code,
 
   verify_set.verify();
 }
+
+
+void ecall_oblivious_swap(uint8_t *ptr1, uint8_t *ptr2, uint32_t size) {
+  swap_memory(ptr1, ptr2, size, true);
+}
