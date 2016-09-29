@@ -21,10 +21,9 @@ import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 
 import org.apache.spark.sql.catalyst.analysis.{CleanupAliases, DistinctAggregationRewriter, EliminateSubqueryAliases}
-import org.apache.spark.sql.catalyst.expressions.Ascending
-import org.apache.spark.sql.catalyst.expressions.Literal.{FalseLiteral, TrueLiteral}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.expressions.Literal.{FalseLiteral, TrueLiteral}
 import org.apache.spark.sql.catalyst.planning.{ExtractFiltersAndInnerJoins, Unions}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -117,51 +116,6 @@ abstract class Optimizer extends RuleExecutor[LogicalPlan] {
   * specific rules go to the subclasses
   */
 object DefaultOptimizer extends Optimizer
-
-object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
-  def isOblivious(plan: LogicalPlan): Boolean = {
-    isEncrypted(plan) && plan.find {
-      case MarkOblivious(_) => true
-      case _ => false
-    }.nonEmpty
-  }
-
-  def isEncrypted(plan: LogicalPlan): Boolean = {
-    plan.find {
-      case _: EncOperator => true
-      case _ => false
-    }.nonEmpty
-  }
-
-  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    case p @ Project(projectList, child) if isEncrypted(child) || isOblivious(child) =>
-      EncProject(projectList, child.asInstanceOf[EncOperator])
-    case p @ Filter(condition, child) if isOblivious(child) =>
-      EncFilter(condition, Permute(child.asInstanceOf[EncOperator]))
-    case p @ Filter(condition, child) if isEncrypted(child) =>
-      EncFilter(condition, child.asInstanceOf[EncOperator])
-    case p @ Sort(order, true, child) if isOblivious(child) =>
-      EncSort(order, child.asInstanceOf[EncOperator])
-    case p @ Sort(order, true, child) if isEncrypted(child) =>
-      NonObliviousSort(order, child.asInstanceOf[EncOperator])
-    case p @ Join(left, right, Inner, Some(joinExpr)) if isOblivious(p) =>
-      EncJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
-    case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
-      NonObliviousJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
-    case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
-      EncAggregate(
-        groupingExprs, aggExprs,
-        EncSort(
-          groupingExprs.map(e => SortOrder(e, Ascending)),
-          child.asInstanceOf[EncOperator]))
-    case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
-      NonObliviousAggregate(
-        groupingExprs, aggExprs,
-        NonObliviousSort(
-          groupingExprs.map(e => SortOrder(e, Ascending)),
-          child.asInstanceOf[EncOperator]))
-  }
-}
 
 /**
  * Pushes operations down into a Sample.
@@ -1306,13 +1260,6 @@ object ConvertToLocalRelation extends Rule[LogicalPlan] {
     case Project(projectList, LocalRelation(output, data)) =>
       val projection = new InterpretedProjection(projectList, output)
       LocalRelation(projectList.map(_.toAttribute), data.map(projection))
-  }
-}
-
-object EncryptLocalRelation extends Rule[LogicalPlan] {
-  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case Encrypt(LocalRelation(output, data)) =>
-      EncryptedLocalRelation(output, data)
   }
 }
 

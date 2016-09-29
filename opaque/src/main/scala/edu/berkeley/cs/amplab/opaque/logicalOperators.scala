@@ -15,17 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.catalyst.plans.logical
-
-import org.apache.spark.sql.QEDOpcode
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.expressions.AttributeSet
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.NamedExpression
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
-import org.apache.spark.sql.catalyst.expressions.SortOrder
+package edu.berkeley.cs.amplab.opaque
 
 /**
  * An operator that computes on encrypted data.
@@ -68,6 +58,24 @@ case class EncryptedLocalRelation(output: Seq[Attribute], plaintextData: Seq[Int
       otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
     case _ => false
   }
+}
+
+case class LogicalEncryptedBlockRDD(
+    output: Seq[Attribute],
+    rdd: RDD[Block])
+  extends EncOperator with MultiInstanceRelation {
+
+  override def children: Seq[LogicalPlan] = Nil
+
+  override def newInstance(): LogicalEncryptedBlockRDD.this.type =
+    LogicalEncryptedBlockRDD(output.map(_.newInstance()), rdd).asInstanceOf[this.type]
+
+  override def sameResult(plan: LogicalPlan): Boolean = plan match {
+    case LogicalEncryptedBlockRDD(_, otherRDD) => rdd.id == otherRDD.id
+    case _ => false
+  }
+
+  override def producedAttributes: AttributeSet = outputSet
 }
 
 case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)

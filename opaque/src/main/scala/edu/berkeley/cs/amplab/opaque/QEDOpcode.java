@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql;
+package edu.berkeley.cs.amplab.opaque;
 
 public enum QEDOpcode {
     OP_BD1(11),

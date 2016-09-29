@@ -980,14 +980,6 @@ class Dataset[T] private[sql](
       c5: TypedColumn[T, U5]): Dataset[(U1, U2, U3, U4, U5)] =
     selectUntyped(c1, c2, c3, c4, c5).asInstanceOf[Dataset[(U1, U2, U3, U4, U5)]]
 
-  def encrypted(): DataFrame = withPlan {
-    Encrypt(logicalPlan)
-  }
-
-  def oblivious(): DataFrame = withPlan {
-    MarkOblivious(Encrypt(logicalPlan))
-  }
-
   /**
    * Filters rows using the given condition.
    * {{{

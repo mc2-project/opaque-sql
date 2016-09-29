@@ -42,7 +42,6 @@ class SparkPlanner(
       EquiJoinSelection ::
       InMemoryScans ::
       BasicOperators ::
-      EncOperators ::
       BroadcastNestedLoop ::
       CartesianProduct ::
       DefaultJoin :: Nil)

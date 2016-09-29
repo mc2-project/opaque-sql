@@ -23,17 +23,15 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.planning._
 import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.{BroadcastHint, LogicalPlan}
 import org.apache.spark.sql.catalyst.plans.physical._
-import org.apache.spark.sql.internal.SQLConf
-
 import org.apache.spark.sql.execution
 import org.apache.spark.sql.execution.columnar.{InMemoryColumnarTableScan, InMemoryRelation}
 import org.apache.spark.sql.execution.command.{DescribeCommand => RunnableDescribeCommand, _}
 import org.apache.spark.sql.execution.datasources.{DescribeCommand => LogicalDescribeCommand, _}
 import org.apache.spark.sql.execution.exchange.ShuffleExchange
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight}
+import org.apache.spark.sql.internal.SQLConf
 
 private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   self: SparkPlanner =>
@@ -353,55 +351,6 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           filters,
           identity[Seq[Expression]], // All filters still need to be evaluated.
           InMemoryColumnarTableScan(_, filters, mem)) :: Nil
-      case _ => Nil
-    }
-  }
-
-  object EncOperators extends Strategy {
-    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-      case logical.EncProject(projectList, child) =>
-        execution.EncProject(
-          projectList, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.EncFilter(condition, child) =>
-        execution.EncFilter(condition, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.Permute(child) =>
-        execution.Permute(planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.EncSort(order, child) =>
-        execution.EncSort(order, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.NonObliviousSort(order, child) =>
-        execution.NonObliviousSort(order, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.EncJoin(left, right, joinExpr) =>
-        logical.Join(left, right, Inner, Some(joinExpr)) match {
-          case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-            execution.EncSortMergeJoin(
-              planLater(left).asInstanceOf[EncOperator],
-              planLater(right).asInstanceOf[EncOperator],
-              leftKeys, rightKeys, condition) :: Nil
-          case _ => Nil
-        }
-      case logical.NonObliviousJoin(left, right, joinExpr) =>
-        logical.Join(left, right, Inner, Some(joinExpr)) match {
-          case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-            execution.NonObliviousSortMergeJoin(
-              planLater(left).asInstanceOf[EncOperator],
-              planLater(right).asInstanceOf[EncOperator],
-              leftKeys, rightKeys, condition) :: Nil
-          case _ => Nil
-        }
-      case a @ logical.EncAggregate(
-        groupingExpressions, aggExpressions, child) =>
-        execution.EncAggregate(
-          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case a @ logical.NonObliviousAggregate(
-        groupingExpressions, aggExpressions, child) =>
-        execution.NonObliviousAggregate(
-          groupingExpressions, aggExpressions, planLater(child).asInstanceOf[EncOperator]) :: Nil
-      case logical.Encrypt(child) =>
-        execution.Encrypt(planLater(child)) :: Nil
-      case logical.MarkOblivious(child) => planLater(child) :: Nil
-      case logical.EncryptedLocalRelation(output, plaintextData) =>
-        execution.EncryptedLocalTableScan(output, plaintextData) :: Nil
-      case LogicalEncryptedBlockRDD(output, rdd) => PhysicalEncryptedBlockRDD(output, rdd) :: Nil
       case _ => Nil
     }
   }

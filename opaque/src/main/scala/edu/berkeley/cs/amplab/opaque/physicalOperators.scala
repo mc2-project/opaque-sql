@@ -15,64 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.execution
-
-import scala.collection.mutable.ArrayBuffer
-import scala.math.Ordering
-import scala.reflect.classTag
-
-import oblivious_sort.ObliviousSort
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.MutableInteger
-import org.apache.spark.sql.QED
-import org.apache.spark.sql.QEDOpcode
-import org.apache.spark.sql.QEDOpcode._
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
-import org.apache.spark.sql.catalyst.expressions.Add
-import org.apache.spark.sql.catalyst.expressions.Alias
-import org.apache.spark.sql.catalyst.expressions.And
-import org.apache.spark.sql.catalyst.expressions.Ascending
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.expressions.AttributeSet
-import org.apache.spark.sql.catalyst.expressions.Cast
-import org.apache.spark.sql.catalyst.expressions.Contains
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.GreaterThan
-import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
-import org.apache.spark.sql.catalyst.expressions.IsNotNull
-import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
-import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.catalyst.expressions.Multiply
-import org.apache.spark.sql.catalyst.expressions.NamedExpression
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
-import org.apache.spark.sql.catalyst.expressions.SortOrder
-import org.apache.spark.sql.catalyst.expressions.Substring
-import org.apache.spark.sql.catalyst.expressions.Subtract
-import org.apache.spark.sql.catalyst.expressions.UnsafeProjection
-import org.apache.spark.sql.catalyst.expressions.Year
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.aggregate.Average
-import org.apache.spark.sql.catalyst.expressions.aggregate.Complete
-import org.apache.spark.sql.catalyst.expressions.aggregate.Sum
-import org.apache.spark.sql.catalyst.plans.logical
-import org.apache.spark.sql.catalyst.plans.logical.Join
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.plans.logical.Statistics
-import org.apache.spark.sql.types.BinaryType
-import org.apache.spark.sql.types.DataType
-import org.apache.spark.sql.types.DateType
-import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.types.FloatType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.unsafe.types.UTF8String
-
-import org.apache.spark.sql.execution.metric.SQLMetrics
+package edu.berkeley.cs.amplab.opaque
 
 case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[InternalRow])
     extends LeafNode with EncOperator {
@@ -103,26 +46,6 @@ case class Encrypt(child: SparkPlan) extends UnaryNode with EncOperator {
   }
 }
 
-case class LogicalEncryptedBlockRDD(
-    output: Seq[Attribute],
-    rdd: RDD[Block])(sqlContext: SQLContext)
-  extends LogicalPlan with MultiInstanceRelation with logical.EncOperator {
-
-  override def children: Seq[LogicalPlan] = Nil
-
-  override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
-
-  override def newInstance(): LogicalEncryptedBlockRDD.this.type =
-    LogicalEncryptedBlockRDD(output.map(_.newInstance()), rdd)(sqlContext).asInstanceOf[this.type]
-
-  override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case LogicalEncryptedBlockRDD(_, otherRDD) => rdd.id == otherRDD.id
-    case _ => false
-  }
-
-  override def producedAttributes: AttributeSet = outputSet
-}
-
 case class PhysicalEncryptedBlockRDD(
     output: Seq[Attribute],
     rdd: RDD[Block]) extends LeafNode with EncOperator {
@@ -132,7 +55,10 @@ case class PhysicalEncryptedBlockRDD(
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
 
 trait EncOperator extends SparkPlan {
-  override def doExecute() = throw new UnsupportedOperationException("use executeBlocked")
+  override def doExecute() = {
+    sqlContext.sparkContext.emptyRDD
+    // throw new UnsupportedOperationException("use executeBlocked")
+  }
 
   def executeBlocked(): RDD[Block]
 

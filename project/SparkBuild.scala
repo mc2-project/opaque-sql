@@ -45,10 +45,11 @@ object BuildCommons {
   ).map(ProjectRef(buildLocation, _))
 
   val allProjects@Seq(
-    core, graphx, mllib, repl, networkCommon, networkShuffle, launcher, unsafe, testTags, sketch, _*
+    core, graphx, mllib, repl, networkCommon, networkShuffle, launcher, unsafe, testTags, sketch,
+    opaque, _*
   ) = Seq(
     "core", "graphx", "mllib", "repl", "network-common", "network-shuffle", "launcher", "unsafe",
-    "test-tags", "sketch"
+    "test-tags", "sketch", "opaque"
   ).map(ProjectRef(buildLocation, _)) ++ sqlProjects ++ streamingProjects
 
   val optionallyEnabledProjects@Seq(yarn, java8Tests, sparkGangliaLgpl,
@@ -287,6 +288,8 @@ object SparkBuild extends PomBuild {
 
   enable(DockerIntegrationTests.settings)(dockerIntegrationTests)
 
+  enable(Opaque.settings)(opaque)
+
   /**
    * Adds the ability to run the spark shell directly from SBT without building an assembly
    * jar.
@@ -395,18 +398,6 @@ object OldDeps {
 }
 
 object Catalyst {
-  val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave code")
-  val enclaveBuildSettings = Seq(
-    enclaveBuildTask := {
-      import sys.process._
-      val ret = Seq("sql/enclave/build.sh").!
-      if (ret != 0) error("C++ build failed.")
-    },
-    baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value,
-    compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask),
-    watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
-      ((base / "sql/enclave") ** (("*.cpp" || "*.h") -- "Enclave_u.h" -- "Enclave_t.h")).get
-    })
   lazy val settings = Seq(
     // ANTLR code-generation step.
     //
@@ -458,7 +449,23 @@ object Catalyst {
     resourceGenerators in Compile += Def.task {
       ((sourceManaged in Compile).value ** "*.tokens").get.toSeq
     }.taskValue
-  ) ++ enclaveBuildSettings
+  )
+}
+
+object Opaque {
+  val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave code")
+  val enclaveBuildSettings = Seq(
+    enclaveBuildTask := {
+      import sys.process._
+      val ret = Seq("opaque/src/enclave/build.sh").!
+      if (ret != 0) error("C++ build failed.")
+    },
+    baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value,
+    compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask),
+    watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
+      ((base / "opaque/src/enclave") ** (("*.cpp" || "*.h" || "*.tcc") -- "Enclave_u.h" -- "Enclave_t.h")).get
+    })
+  lazy val settings = enclaveBuildSettings
 }
 
 object SQL {

@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-
-package org.apache.spark.sql
+package edu.berkeley.cs.amplab.opaque
 
 class MutableInteger(var value: Int = 0)
 
