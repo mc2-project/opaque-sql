@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.amplab.opaque.execution
 
 case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[InternalRow])
     extends LeafNode with EncOperator {

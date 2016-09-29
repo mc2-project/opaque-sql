@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.amplab.opaque.logical
 
 /**
  * An operator that computes on encrypted data.
