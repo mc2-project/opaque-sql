@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution
 
+import scala.collection.mutable.ArrayBuffer
 import scala.math.Ordering
 import scala.reflect.classTag
 
@@ -141,6 +142,57 @@ trait EncOperator extends SparkPlan {
         QED.splitBlock(block.bytes, block.numRows, false)
           .map(serRow => QED.parseRow(serRow)).toSeq)
         .map(rowSeq => InternalRow.fromSeq(rowSeq))
+    }
+  }
+
+  override def executeTake(n: Int): Array[InternalRow] = {
+    if (n == 0) {
+      return new Array[InternalRow](0)
+    }
+
+    val childRDD = executeBlocked()
+
+    val buf = new ArrayBuffer[InternalRow]
+    val totalParts = childRDD.partitions.length
+    var partsScanned = 0
+    while (buf.size < n && partsScanned < totalParts) {
+      // The number of partitions to try in this iteration. It is ok for this number to be
+      // greater than totalParts because we actually cap it at totalParts in runJob.
+      var numPartsToTry = 1L
+      if (partsScanned > 0) {
+        // If we didn't find any rows after the first iteration, just try all partitions next.
+        // Otherwise, interpolate the number of partitions we need to try, but overestimate it
+        // by 50%.
+        if (buf.size == 0) {
+          numPartsToTry = totalParts - 1
+        } else {
+          numPartsToTry = (1.5 * n * partsScanned / buf.size).toInt
+        }
+      }
+      numPartsToTry = math.max(0, numPartsToTry)  // guard against negative num of partitions
+
+      val left = n - buf.size
+      val p = partsScanned.until(math.min(partsScanned + numPartsToTry, totalParts).toInt)
+      val sc = sqlContext.sparkContext
+      val res = sc.runJob(childRDD,
+        (it: Iterator[Block]) => if (it.hasNext) Some(it.next()) else None, p)
+
+      res.foreach {
+        case Some(block) =>
+          buf ++= QED.decryptN(
+            QED.splitBlock(block.bytes, block.numRows, false)
+              .map(serRow => QED.parseRow(serRow)).toSeq)
+            .map(rowSeq => InternalRow.fromSeq(rowSeq))
+        case None => {}
+      }
+
+      partsScanned += p.size
+    }
+
+    if (buf.size > n) {
+      buf.take(n).toArray
+    } else {
+      buf.toArray
     }
   }
 }
