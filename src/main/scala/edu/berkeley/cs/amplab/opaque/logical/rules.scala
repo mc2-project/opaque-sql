@@ -15,7 +15,14 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.amplab.opaque.logical
+
+import org.apache.spark.sql.catalyst.expressions.Ascending
+import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
@@ -66,7 +73,7 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
         NonObliviousSort(
           groupingExprs.map(e => SortOrder(e, Ascending)),
           child.asInstanceOf[EncOperator]))
-    case p @ InMemoryRelation(output, _, _, storageLevel, child, tableName) if isEncrypted(child) =>
-      LogicalEncryptedBlockRDD(output, child.asInstanceOf[EncOperator].executeBlocked())
+    // case p @ InMemoryRelation(output, _, _, storageLevel, child, tableName) if isEncrypted(child) =>
+    //   LogicalEncryptedBlockRDD(output, child.asInstanceOf[EncOperator].executeBlocked())
   }
 }

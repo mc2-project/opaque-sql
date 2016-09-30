@@ -15,35 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package edu.berkeley.cs.amplab.opaque
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-import scala.collection.mutable
-
-import org.apache.spark.unsafe.types.UTF8String
-import sun.misc.{BASE64Encoder, BASE64Decoder}
-
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
-import org.apache.spark.sql.catalyst.expressions.codegen.GeneratePredicate
-import org.apache.spark.sql.catalyst.optimizer.ConvertToEncryptedOperators
-import org.apache.spark.sql.catalyst.optimizer.EncryptLocalRelation
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
-import org.apache.spark.sql.types.BinaryType
-import org.apache.spark.sql.types.DataType
-import org.apache.spark.sql.types.DateType
-import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.types.FloatType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.LongType
-import org.apache.spark.sql.types.StringType
+import org.apache.spark.sql.types._
+import org.apache.spark.unsafe.types.UTF8String
 
-object QED {
+import edu.berkeley.cs.amplab.opaque.execution.ColumnType
+import edu.berkeley.cs.amplab.opaque.execution.SGXEnclave
+import edu.berkeley.cs.amplab.opaque.logical.ConvertToEncryptedOperators
+import edu.berkeley.cs.amplab.opaque.logical.EncryptLocalRelation
+
+object Utils {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
 
   def time[A](desc: String)(f: => A): A = {
@@ -89,6 +78,9 @@ object QED {
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
+        if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
+          throw new Exception("Set LIBSGXENCLAVE_PATH")
+        }
         System.load(System.getenv("LIBSGXENCLAVE_PATH"))
         val enclave = new SGXEnclave()
         eid = enclave.StartEnclave()
@@ -107,22 +99,16 @@ object QED {
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToEncryptedOperators) ++
         sqlContext.experimental.extraOptimizations)
-    // TODO: use this once we rebase to branch-2.0.0, which contains
-    // https://github.com/apache/spark/pull/13426
-    //
-    // sqlContext.experimental.extraStrategies =
-    //   (Seq(org.apache.spark.sql.execution.EncOperators) ++
-    //     sqlContext.experimental.extraStrategies)
+    sqlContext.experimental.extraStrategies =
+      (Seq(EncOperators) ++
+        sqlContext.experimental.extraStrategies)
   }
-
-  val encoder = new BASE64Encoder()
-  val decoder = new BASE64Decoder()
 
   def encrypt[T](enclave: SGXEnclave, eid: Long, field: T, tpe: DataType)
     : Array[Byte] = {
     val buf = ByteBuffer.allocate(2048) // TODO: adaptive size
     buf.order(ByteOrder.LITTLE_ENDIAN)
-    import org.apache.spark.sql.QEDColumnType._
+    import ColumnType._
     ((field, tpe): @unchecked) match {
       case (x: Int, IntegerType) =>
         buf.put(INT.value)
@@ -167,7 +153,7 @@ object QED {
     buf.order(ByteOrder.LITTLE_ENDIAN)
     val tpe = buf.get()
     val size = buf.getInt()
-    import org.apache.spark.sql.QEDColumnType._
+    import ColumnType._
     val result = tpe match {
       case t if t == INT.value =>
         assert(size == 4)
@@ -214,14 +200,14 @@ object QED {
   def encryptTuples(rows: Seq[Product], types: Seq[DataType]): Seq[Array[Array[Byte]]] = {
     val (enclave, eid) = initEnclave()
     rows.map(row => row.productIterator.zip(types.iterator).map {
-      case (field, tpe) => QED.encrypt(enclave, eid, field, tpe)
+      case (field, tpe) => Utils.encrypt(enclave, eid, field, tpe)
     }.toArray)
   }
 
   def encryptInternalRows(rows: Seq[InternalRow], types: Seq[DataType]): Seq[Array[Array[Byte]]] = {
     val (enclave, eid) = initEnclave()
     rows.map(row => row.toSeq(types).zip(types).map {
-      case (field, tpe) => QED.encrypt(enclave, eid, field, tpe)
+      case (field, tpe) => Utils.encrypt(enclave, eid, field, tpe)
     }.toArray)
   }
 
@@ -229,20 +215,20 @@ object QED {
     val (enclave, eid) = initEnclave()
     rows.toSeq.map { fields =>
       fields.toSeq.map { field =>
-        QED.decrypt[Any](enclave, eid, field)
+        Utils.decrypt[Any](enclave, eid, field)
       }
     }
   }
 
   def createBlock(rows: Array[Array[Byte]], rowsAreJoinRows: Boolean): Array[Byte] = {
-    val (enclave, eid) = QED.initEnclave()
-    enclave.CreateBlock(eid, QED.concatByteArrays(rows), rows.length, rowsAreJoinRows)
+    val (enclave, eid) = Utils.initEnclave()
+    enclave.CreateBlock(eid, Utils.concatByteArrays(rows), rows.length, rowsAreJoinRows)
   }
 
   def splitBlock(
       block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Iterator[Array[Byte]] = {
-    val (enclave, eid) = QED.initEnclave()
-    QED.readRows(enclave.SplitBlock(eid, block, numRows, rowsAreJoinRows))
+    val (enclave, eid) = Utils.initEnclave()
+    Utils.readRows(enclave.SplitBlock(eid, block, numRows, rowsAreJoinRows))
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

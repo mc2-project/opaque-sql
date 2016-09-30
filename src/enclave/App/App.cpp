@@ -45,7 +45,7 @@
 #include "sgx_urts.h"
 #include "App.h"
 #include "Enclave_u.h"
-#include "org_apache_spark_sql_SGXEnclave.h"
+#include "SGXEnclave.h"
 #include "sgx_tcrypto.h"
 #include "define.h"
 #include "common.h"
@@ -371,7 +371,7 @@ int query_sgx_status()
 #endif
 
 
-JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(
+JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_StartEnclave(
   JNIEnv *env, jobject obj) {
   (void)env;
   (void)obj;
@@ -388,7 +388,7 @@ JNIEXPORT jlong JNICALL Java_org_apache_spark_sql_SGXEnclave_StartEnclave(
 }
 
 
-JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_StopEnclave(
   JNIEnv *env, jobject obj, jlong eid) {
   (void)env;
   (void)obj;
@@ -398,7 +398,7 @@ JNIEXPORT void JNICALL Java_org_apache_spark_sql_SGXEnclave_StopEnclave(
 
 // read a chunk of buffer from the scala program
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Project(
   JNIEnv *env, jobject obj, jlong eid, jint index, jint num_part,
   jint op_code, jbyteArray input_rows, jint num_rows) {
   (void)obj;
@@ -429,7 +429,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Project(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Filter(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jbyteArray input_rows, jint num_rows,
@@ -468,7 +468,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Filter(
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Encrypt(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -496,7 +496,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Encrypt(
   return ciphertext;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Decrypt(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -524,7 +524,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Decrypt(
   return plaintext;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribute(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_EncryptAttribute(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -558,7 +558,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EncryptAttribu
   return ciphertext;
 }
 
-JNIEXPORT void JNICALL SGX_CDECL Java_org_apache_spark_sql_SGXEnclave_Test(JNIEnv *env, jobject obj, jlong eid) {
+JNIEXPORT void JNICALL SGX_CDECL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Test(JNIEnv *env, jobject obj, jlong eid) {
   (void)env;
   (void)obj;
   (void)eid;
@@ -614,7 +614,7 @@ uint32_t split_rows(uint8_t *input, uint32_t input_len, uint32_t num_rows,
 
 // the op_code allows the internal sort code to decide which comparator to use
 // assume that the elements are of equal size!
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(JNIEnv *env,
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ObliviousSort(JNIEnv *env,
                                                                                 jobject obj,
                                                                                 jlong eid,
                                                                                 jint op_code,
@@ -654,7 +654,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ObliviousSort(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_AggregateStep1(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -694,7 +694,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep1
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundary(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ProcessBoundary(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -735,7 +735,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessBoundar
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_AggregateStep2(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_AggregateStep2(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jbyteArray input_rows, jint num_rows,
@@ -784,7 +784,7 @@ void print_bytes_(uint8_t *ptr, uint32_t len) {
   printf("\n");
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPreprocess(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_JoinSortPreprocess(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -832,7 +832,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_JoinSortPrepro
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBoundary(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ProcessJoinBoundary(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jbyteArray input_rows, jint num_rows) {
   (void)obj;
 
@@ -862,7 +862,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ProcessJoinBou
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLastPrimary(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -900,7 +900,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ScanCollectLas
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_SortMergeJoin(
   JNIEnv *env,
   jobject obj,
   jlong eid,
@@ -946,7 +946,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SortMergeJoin(
 
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_CreateBlock(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_CreateBlock(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray rows, jint num_rows,
   jboolean rows_are_join_rows) {
   (void)obj;
@@ -979,7 +979,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_CreateBlock(
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_SplitBlock(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray block, jint num_rows,
   jboolean rows_are_join_rows) {
   (void)obj;
@@ -1012,7 +1012,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_SplitBlock(
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_Sample(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jbyteArray input, jint num_rows,
@@ -1050,7 +1050,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_Sample(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBounds(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_FindRangeBounds(
   JNIEnv *env, jobject obj, jlong eid, jint op_code, jint num_partitions, jbyteArray input,
   jint num_rows) {
   (void)obj;
@@ -1090,7 +1090,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_FindRangeBound
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSort(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_PartitionForSort(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jint num_partitions, jbyteArray input,
@@ -1156,7 +1156,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_PartitionForSo
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ExternalSort(
     JNIEnv *env,
     jobject obj,
     jlong eid,
@@ -1210,7 +1210,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ExternalSort(
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_ColumnSortFilter(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_ColumnSortFilter(
   JNIEnv *env, jobject obj,
   jlong eid, jint op_code, jbyteArray input_rows, jint column, jint offset,
   jint num_rows, jobject num_output_rows_obj) {
@@ -1273,7 +1273,7 @@ uint32_t est(uint32_t per_column_data_size) {
   return 4 + 4 + estimated_column_size;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
     jobject obj,
     jlong eid,
@@ -1402,7 +1402,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
         output_buffers[i] = (uint8_t *) malloc(est(0));
       }
     } else {
-      //printf("Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnSort: Should not be here!");
+      //printf("Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_EnclaveColumnSort: Should not be here!");
       assert(false);
     }
   }
@@ -1477,7 +1477,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_EnclaveColumnS
   
 }
 
-JNIEXPORT jint JNICALL Java_org_apache_spark_sql_SGXEnclave_CountNumRows(JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
+JNIEXPORT jint JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_CountNumRows(JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
 
   (void)obj;
   (void)eid;
@@ -1495,7 +1495,7 @@ JNIEXPORT jint JNICALL Java_org_apache_spark_sql_SGXEnclave_CountNumRows(JNIEnv 
   return (jint) num_rows;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAggregate(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_NonObliviousAggregate(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jbyteArray input_rows, jint num_rows,
@@ -1536,7 +1536,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousAg
 }
 
 
-JNIEXPORT jbyteArray JNICALL Java_org_apache_spark_sql_SGXEnclave_NonObliviousSortMergeJoin(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_amplab_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
   jint op_code, jbyteArray input_rows, jint num_rows,

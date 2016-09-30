@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque;
+package edu.berkeley.cs.amplab.opaque.execution;
 
-public enum QEDOpcode {
+public enum Opcode {
     OP_BD1(11),
     OP_BD2(10),
     OP_SORT_INTEGERS_TEST(90),
@@ -80,7 +80,7 @@ public enum QEDOpcode {
     OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT(302);
     private int _value;
 
-    private QEDOpcode(int _value) {
+    private Opcode(int _value) {
         this._value = _value;
     }
 

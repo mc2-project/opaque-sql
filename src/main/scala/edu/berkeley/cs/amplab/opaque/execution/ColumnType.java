@@ -15,15 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package edu.berkeley.cs.amplab.opaque.execution;
 
-import edu.berkeley.cs.amplab.opaque.logical.Encrypt
-import edu.berkeley.cs.amplab.opaque.logical.MarkOblivious
+public enum ColumnType {
+    DUMMY((byte)0),
+    INT((byte)1),
+    STRING((byte)2),
+    FLOAT((byte)3),
+    DOUBLE((byte)14),
+    DATE((byte)4),
+    URL_TYPE((byte)5),
+    C_CODE((byte)6),
+    L_CODE((byte)7),
+    LONG((byte)8),
+    IP_TYPE((byte)9),
+    USER_AGENT_TYPE((byte)10),
+    SEARCH_WORD_TYPE((byte)11),
+    TPCH_NATION_NAME_TYPE((byte)12);
 
-class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
-  def encrypted(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, Encrypt(ds.logicalPlan))
+    private byte _value;
 
-  def oblivious(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, MarkOblivious(Encrypt(ds.logicalPlan)))
+    private ColumnType(byte value) {
+        this._value = value;
+    }
+
+    public byte value() {
+        return _value;
+    }
 }

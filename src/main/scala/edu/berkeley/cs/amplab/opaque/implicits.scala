@@ -15,31 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql;
+package edu.berkeley.cs.amplab.opaque
 
-public enum QEDColumnType {
-    DUMMY((byte)0),
-    INT((byte)1),
-    STRING((byte)2),
-    FLOAT((byte)3),
-    DOUBLE((byte)14),
-    DATE((byte)4),
-    URL_TYPE((byte)5),
-    C_CODE((byte)6),
-    L_CODE((byte)7),
-    LONG((byte)8),
-    IP_TYPE((byte)9),
-    USER_AGENT_TYPE((byte)10),
-    SEARCH_WORD_TYPE((byte)11),
-    TPCH_NATION_NAME_TYPE((byte)12);
+import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.OpaqueDatasetFunctions
 
-    private byte _value;
-
-    private QEDColumnType(byte value) {
-        this._value = value;
-    }
-
-    public byte value() {
-        return _value;
-    }
+object implicits {
+  implicit def datasetToOpaqueDatasetFunctions[T](ds: Dataset[T]): OpaqueDatasetFunctions[T] =
+    new OpaqueDatasetFunctions[T](ds)
 }

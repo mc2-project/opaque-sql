@@ -15,21 +15,30 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.amplab.opaque.execution
+
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
+import scala.collection.mutable.ArrayBuffer
+
+import edu.berkeley.cs.amplab.opaque.Utils
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 
 object ObliviousSort extends java.io.Serializable {
 
   val Multiplier = 1 // TODO: fix bug when this is 1
 
-  import QED.{time, logPerf}
+  import Utils.{time, logPerf}
 
-  def sortBlocks(data: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
+  def sortBlocks(data: RDD[Block], opcode: Opcode): RDD[Block] = {
     time("oblivious sort") {
       data.cache()
       val sorted =
         if (data.partitions.length <= 1) {
           data.map { block =>
-            val (enclave, eid) = QED.initEnclave()
+            val (enclave, eid) = Utils.initEnclave()
             val sortedRows = enclave.ObliviousSort(eid, opcode.value, block.bytes, 0, block.numRows)
             Block(sortedRows, block.numRows)
           }
@@ -52,7 +61,7 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   def EnclaveCountRows(data: Array[Byte]): Int = {
-    val (enclave, eid) = QED.initEnclave()
+    val (enclave, eid) = Utils.initEnclave()
     enclave.CountNumRows(eid, data)
   }
 
@@ -92,12 +101,12 @@ object ObliviousSort extends java.io.Serializable {
         val arraysSorted = arrays.sortBy(_._1).map(_._2)
         if (column == s) {
           val arraysRotated = arraysSorted.slice(1, arraysSorted.length) :+ arraysSorted(0)
-          QED.concatByteArrays(arraysRotated)
+          Utils.concatByteArrays(arraysRotated)
         } else {
-          QED.concatByteArrays(arraysSorted)
+          Utils.concatByteArrays(arraysSorted)
         }
       } else {
-        QED.concatByteArrays(arrays.map(_._2))
+        Utils.concatByteArrays(arrays.map(_._2))
       }
 
     val ret_array = new Array[(Int, Array[Byte])](1)
@@ -108,10 +117,10 @@ object ObliviousSort extends java.io.Serializable {
 
   def ColumnSortPreProcess(
     index: Int, data: Iterator[Block], index_offsets: Seq[Int],
-    op_code: QEDOpcode, r: Int, s: Int) : Iterator[(Int, Array[Byte])] = {
+    op_code: Opcode, r: Int, s: Int) : Iterator[(Int, Array[Byte])] = {
 
-    val (enclave, eid) = QED.initEnclave()
-    val joinArray = QED.concatByteArrays(data.map(_.bytes).toArray)
+    val (enclave, eid) = Utils.initEnclave()
+    val joinArray = Utils.concatByteArrays(data.map(_.bytes).toArray)
 
     val ret = enclave.EnclaveColumnSort(eid,
       index, s,
@@ -123,8 +132,8 @@ object ObliviousSort extends java.io.Serializable {
     ret_array.iterator
   }
 
-  def ColumnSortPad(data: (Int, Array[Byte]), r: Int, s: Int, op_code: QEDOpcode): (Int, Array[Byte]) = {
-    val (enclave, eid) = QED.initEnclave()
+  def ColumnSortPad(data: (Int, Array[Byte]), r: Int, s: Int, op_code: Opcode): (Int, Array[Byte]) = {
+    val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
       data._1, r,
@@ -136,13 +145,13 @@ object ObliviousSort extends java.io.Serializable {
   def ColumnSortPartition(
     input: (Int, Array[Byte]),
     index: Int, numpart: Int,
-    op_code: QEDOpcode,
+    op_code: Opcode,
     round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
 
     val cur_column = input._1
     val data = input._2
 
-    val (enclave, eid) = QED.initEnclave()
+    val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
       index, numpart,
       op_code.value, round+1, data, r, s, cur_column, 0, 0, 0)
@@ -151,8 +160,8 @@ object ObliviousSort extends java.io.Serializable {
   }
 
   // The job is to cut off the last x number of rows
-  def FinalFilter(column: Int, data: Array[Byte], r: Int, offset: Int, op_code: QEDOpcode) : (Array[Byte], Int) = {
-    val (enclave, eid) = QED.initEnclave()
+  def FinalFilter(column: Int, data: Array[Byte], r: Int, offset: Int, op_code: Opcode) : (Array[Byte], Int) = {
+    val (enclave, eid) = Utils.initEnclave()
 
     var num_output_rows = new MutableInteger
     val ret = enclave.ColumnSortFilter(eid, op_code.value, data, column, offset, r, num_output_rows)
@@ -160,7 +169,7 @@ object ObliviousSort extends java.io.Serializable {
     (ret, num_output_rows.value)
   }
 
-  def NewColumnSort(sc: SparkContext, data: RDD[Block], opcode: QEDOpcode, r_input: Int = 0, s_input: Int = 0)
+  def NewColumnSort(sc: SparkContext, data: RDD[Block], opcode: Opcode, r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // parse the bytes and split into blocks, one for each destination column
 
@@ -254,7 +263,7 @@ object ObliviousSort extends java.io.Serializable {
       .filter(x => x._1.nonEmpty)
       .mapPartitions { iter =>
         val array = iter.toArray
-        Iterator(Block(QED.concatByteArrays(array.map(_._1)), array.map(_._2).sum))
+        Iterator(Block(Utils.concatByteArrays(array.map(_._1)), array.map(_._2).sum))
       }
 
     result

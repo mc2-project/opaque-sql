@@ -17,8 +17,41 @@
 
 package edu.berkeley.cs.amplab.opaque.execution
 
+import scala.collection.mutable.ArrayBuffer
+
+import edu.berkeley.cs.amplab.opaque.Utils
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.plans.physical.Partitioning
+import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.types._
+import org.apache.spark.unsafe.types.UTF8String
+
+trait LeafExecNode extends SparkPlan {
+  override final def children: Seq[SparkPlan] = Nil
+  override def producedAttributes: AttributeSet = outputSet
+}
+
+trait UnaryExecNode extends SparkPlan {
+  def child: SparkPlan
+
+  override final def children: Seq[SparkPlan] = child :: Nil
+
+  override def outputPartitioning: Partitioning = child.outputPartitioning
+}
+
+trait BinaryExecNode extends SparkPlan {
+  def left: SparkPlan
+  def right: SparkPlan
+
+  override final def children: Seq[SparkPlan] = Seq(left, right)
+}
+
 case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[InternalRow])
-    extends LeafNode with EncOperator {
+    extends LeafExecNode with EncOperator {
 
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
@@ -26,29 +59,29 @@ case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[In
   }
 
   override def executeBlocked(): RDD[Block] = {
-    sqlContext.sparkContext.parallelize(QED.encryptInternalRows(unsafeRows, output.map(_.dataType)))
+    sqlContext.sparkContext.parallelize(Utils.encryptInternalRows(unsafeRows, output.map(_.dataType)))
       .mapPartitions { rowIter =>
-        val serRows = rowIter.map(QED.fieldsToRow).toArray
-        Iterator(Block(QED.createBlock(serRows, false), serRows.length))
+        val serRows = rowIter.map(Utils.fieldsToRow).toArray
+        Iterator(Block(Utils.createBlock(serRows, false), serRows.length))
       }
   }
 }
 
-case class Encrypt(child: SparkPlan) extends UnaryNode with EncOperator {
+case class Encrypt(child: SparkPlan) extends UnaryExecNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
-      val serRows = QED.encryptInternalRows(rowIter.toSeq, output.map(_.dataType))
-        .map(QED.fieldsToRow).toArray
-      Iterator(Block(QED.createBlock(serRows, false), serRows.length))
+      val serRows = Utils.encryptInternalRows(rowIter.toSeq, output.map(_.dataType))
+        .map(Utils.fieldsToRow).toArray
+      Iterator(Block(Utils.createBlock(serRows, false), serRows.length))
     }
   }
 }
 
 case class PhysicalEncryptedBlockRDD(
     output: Seq[Attribute],
-    rdd: RDD[Block]) extends LeafNode with EncOperator {
+    rdd: RDD[Block]) extends LeafExecNode with EncOperator {
   override def executeBlocked(): RDD[Block] = rdd
 }
 
@@ -64,9 +97,9 @@ trait EncOperator extends SparkPlan {
 
   override def executeCollect(): Array[InternalRow] = {
     executeBlocked().collect().flatMap { block =>
-      QED.decryptN(
-        QED.splitBlock(block.bytes, block.numRows, false)
-          .map(serRow => QED.parseRow(serRow)).toSeq)
+      Utils.decryptN(
+        Utils.splitBlock(block.bytes, block.numRows, false)
+          .map(serRow => Utils.parseRow(serRow)).toSeq)
         .map(rowSeq => InternalRow.fromSeq(rowSeq))
     }
   }
@@ -105,9 +138,9 @@ trait EncOperator extends SparkPlan {
 
       res.foreach {
         case Some(block) =>
-          buf ++= QED.decryptN(
-            QED.splitBlock(block.bytes, block.numRows, false)
-              .map(serRow => QED.parseRow(serRow)).toSeq)
+          buf ++= Utils.decryptN(
+            Utils.splitBlock(block.bytes, block.numRows, false)
+              .map(serRow => Utils.parseRow(serRow)).toSeq)
             .map(rowSeq => InternalRow.fromSeq(rowSeq))
         case None => {}
       }
@@ -145,7 +178,7 @@ trait ColumnNumberMatcher extends Serializable {
 }
 
 case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -154,6 +187,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
+    import Opcode._
     val opcode = (projectList: @unchecked) match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
@@ -190,7 +224,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
         OP_PROJECT_TPCH9_ORDER_YEAR
     }
     child.executeBlocked().map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(eid, 0, 0, opcode.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
@@ -198,7 +232,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
 }
 
 case class EncFilter(condition: Expression, child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -207,6 +241,7 @@ case class EncFilter(condition: Expression, child: EncOperator)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    import Opcode._
     val opcode = (condition: @unchecked) match {
       case IsNotNull(_) =>
         // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
@@ -235,7 +270,7 @@ case class EncFilter(condition: Expression, child: EncOperator)
         OP_FILTER_COL4_GT_45
     }
     child.executeBlocked().map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
         eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
@@ -244,18 +279,19 @@ case class EncFilter(condition: Expression, child: EncOperator)
   }
 }
 
-case class Permute(child: EncOperator) extends UnaryNode with EncOperator {
+case class Permute(child: EncOperator) extends UnaryExecNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
+    import Opcode._
     val rowsWithRandomIds = child.executeBlocked().map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
     ObliviousSort.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
@@ -264,7 +300,7 @@ case class Permute(child: EncOperator) extends UnaryNode with EncOperator {
 }
 
 case class EncSort(order: Seq[SortOrder], child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -273,6 +309,7 @@ case class EncSort(order: Seq[SortOrder], child: EncOperator)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
+    import Opcode._
     val opcode = order match {
       case Seq(SortOrder(Col(1, _), Ascending)) =>
         OP_SORT_COL1
@@ -286,7 +323,7 @@ case class EncSort(order: Seq[SortOrder], child: EncOperator)
 }
 
 case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -295,6 +332,7 @@ case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
+    import Opcode._
     val opcode = sortExprs match {
       case Seq(SortOrder(Col(1, _), Ascending)) =>
         OP_SORT_COL1
@@ -306,9 +344,9 @@ case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
 }
 
 object NonObliviousSort {
-  import QED.time
+  import Utils.time
 
-  def sort(childRDD: RDD[Block], opcode: QEDOpcode): RDD[Block] = {
+  def sort(childRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
     childRDD.cache()
 
     time("non-oblivious sort") {
@@ -316,7 +354,7 @@ object NonObliviousSort {
       val result =
         if (numPartitions <= 1) {
           childRDD.map { block =>
-            val (enclave, eid) = QED.initEnclave()
+            val (enclave, eid) = Utils.initEnclave()
             val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, block.bytes, block.numRows)
             Block(sortedRows, block.numRows)
           }
@@ -324,7 +362,7 @@ object NonObliviousSort {
           // Collect a sample of the input rows
           val sampled = time("non-oblivious sort - Sample") {
             childRDD.map { block =>
-              val (enclave, eid) = QED.initEnclave()
+              val (enclave, eid) = Utils.initEnclave()
               val numOutputRows = new MutableInteger
               val sampledBlock = enclave.Sample(
                 eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
@@ -332,15 +370,15 @@ object NonObliviousSort {
             }.collect
           }
           // Find range boundaries locally
-          val (enclave, eid) = QED.initEnclave()
+          val (enclave, eid) = Utils.initEnclave()
           val boundaries = time("non-oblivious sort - FindRangeBounds") {
             enclave.FindRangeBounds(
-              eid, opcode.value, numPartitions, QED.concatByteArrays(sampled.map(_.bytes)),
+              eid, opcode.value, numPartitions, Utils.concatByteArrays(sampled.map(_.bytes)),
               sampled.map(_.numRows).sum)
           }
           // Broadcast the range boundaries and use them to partition the input
           childRDD.flatMap { block =>
-            val (enclave, eid) = QED.initEnclave()
+            val (enclave, eid) = Utils.initEnclave()
             val offsets = new Array[Int](numPartitions + 1)
             val rowsPerPartition = new Array[Int](numPartitions)
             val partitions = enclave.PartitionForSort(
@@ -354,8 +392,8 @@ object NonObliviousSort {
           // Shuffle the input to achieve range partitioning and sort locally
             .groupByKey(numPartitions).map {
             case (i, blocks) =>
-              val (enclave, eid) = QED.initEnclave()
-              val input = QED.concatByteArrays(blocks.map(_.bytes).toArray)
+              val (enclave, eid) = Utils.initEnclave()
+              val input = Utils.concatByteArrays(blocks.map(_.bytes).toArray)
               val numRows = blocks.map(_.numRows).sum
               val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, input, numRows)
               Block(sortedRows, numRows)
@@ -371,9 +409,9 @@ case class EncAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
     child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
-  import QED.time
+  import Utils.time
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -385,39 +423,40 @@ case class EncAggregate(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
+    import Opcode._
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, IntegerType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
           (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
           (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
             OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(2, _)), Seq(Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, IntegerType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(3, IntegerType)), _, false, _), _))) =>
           (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
             OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), Complete, false), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
           (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
             OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(1, _), Col(2, _)), Seq(Col(1, _), Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
           (OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1,
             OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
@@ -428,7 +467,7 @@ case class EncAggregate(
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val boundaries = childRDD.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val boundary = enclave.AggregateStep1(
         eid, 0, 0, aggStep1Opcode.value, block.bytes, block.numRows)
       // enclave.StopEnclave(eid)
@@ -439,15 +478,15 @@ case class EncAggregate(
     if (boundariesCollected.forall(_.isEmpty)) {
       return sqlContext.sparkContext.emptyRDD[Block]
     }
-    val (enclave, eid) = QED.initEnclave()
+    val (enclave, eid) = Utils.initEnclave()
     val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
       enclave.ProcessBoundary(
         eid, aggStep1Opcode.value,
-        QED.concatByteArrays(boundariesCollected), boundariesCollected.length)
+        Utils.concatByteArrays(boundariesCollected), boundariesCollected.length)
     }
 
     // Send processed boundaries to partitions and generate a mix of partial and final aggregates
-    val processedBoundaries = QED.splitBytes(processedBoundariesConcat, boundariesCollected.length)
+    val processedBoundaries = Utils.splitBytes(processedBoundariesConcat, boundariesCollected.length)
     val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries, childRDD.partitions.length)
     val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
       (blockIter, boundaryIter) =>
@@ -457,7 +496,7 @@ case class EncAggregate(
         val boundaryArray = boundaryIter.toArray
         assert(boundaryArray.length == 1)
         val boundaryRecord = boundaryArray.head
-        val (enclave, eid) = QED.initEnclave()
+        val (enclave, eid) = Utils.initEnclave()
         assert(block.numRows > 0)
         val partialAgg = enclave.AggregateStep2(
           eid, 0, 0, aggStep2Opcode.value, block.bytes, block.numRows, boundaryRecord)
@@ -478,7 +517,7 @@ case class EncAggregate(
     // Filter out the non-final aggregates
     val finalAggregates = time("aggregate - filter out dummies") {
       val result = sortedAggregates.map { block =>
-        val (enclave, eid) = QED.initEnclave()
+        val (enclave, eid) = Utils.initEnclave()
         val numOutputRows = new MutableInteger
         val filtered = enclave.Filter(
           eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
@@ -495,9 +534,9 @@ case class NonObliviousAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
     child: EncOperator)
-  extends UnaryNode with EncOperator {
+  extends UnaryExecNode with EncOperator {
 
-  import QED.time
+  import Utils.time
 
   object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -509,19 +548,20 @@ case class NonObliviousAggregate(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
+    import Opcode._
     val aggOpcode =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, IntegerType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_SUM_COL2_INT
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_SUM_COL2_FLOAT
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), Complete, false), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), Complete, false), _))) =>
+          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT
       }
 
@@ -529,7 +569,7 @@ case class NonObliviousAggregate(
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val aggregates = childRDD.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val resultBytes = enclave.NonObliviousAggregate(
         eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
@@ -546,14 +586,15 @@ case class EncSortMergeJoin(
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
-  extends BinaryNode with EncOperator {
+  extends BinaryExecNode with EncOperator {
 
-  import QED.time
+  import Utils.time
 
   override def output: Seq[Attribute] =
     left.output ++ right.output
 
   override def executeBlocked() = {
+    import Opcode._
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
@@ -563,7 +604,7 @@ case class EncSortMergeJoin(
     time("Force right child of EncSortMergeJoin") { rightRDD.cache.count }
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
 
       val leftBlockArray = leftBlockIter.toArray
       assert(leftBlockArray.length == 1)
@@ -588,19 +629,19 @@ case class EncSortMergeJoin(
     }
 
     val lastPrimaryRows = sorted.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       enclave.ScanCollectLastPrimary(eid, joinOpcode.value, block.bytes, block.numRows)
     }
 
     val lastPrimaryRowsCollected = time("join - collect last primary") { lastPrimaryRows.collect }
-    val (enclave, eid) = QED.initEnclave()
+    val (enclave, eid) = Utils.initEnclave()
     val processedJoinRows = time("join - process boundary") {
       enclave.ProcessJoinBoundary(
-        eid, joinOpcode.value, QED.concatByteArrays(lastPrimaryRowsCollected),
+        eid, joinOpcode.value, Utils.concatByteArrays(lastPrimaryRowsCollected),
         lastPrimaryRowsCollected.length)
     }
 
-    val processedJoinRowsSplit = QED.readVerifiedRows(processedJoinRows).toArray
+    val processedJoinRowsSplit = Utils.readVerifiedRows(processedJoinRows).toArray
     assert(processedJoinRowsSplit.length == sorted.partitions.length)
     val processedJoinRowsRDD =
       sparkContext.parallelize(processedJoinRowsSplit, sorted.partitions.length)
@@ -610,7 +651,7 @@ case class EncSortMergeJoin(
       assert(!blockIter.hasNext)
       val joinRow = joinRowIter.next()
       assert(!joinRowIter.hasNext)
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val joined = enclave.SortMergeJoin(
         eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, joinRow)
       Iterator(Block(joined, block.numRows))
@@ -618,20 +659,20 @@ case class EncSortMergeJoin(
     time("join - sort merge join") { joined.cache.count }
 
     val joinedWithRandomIds = joined.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
     val permuted = ObliviousSort.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
 
     val nonDummy = permuted.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
         eid, 0, 0, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
@@ -647,7 +688,9 @@ object OpaqueJoinUtils {
   def getOpcodes(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute], leftKeys: Seq[Expression],
       rightKeys: Seq[Expression], condition: Option[Expression])
-      : (QEDOpcode, QEDOpcode, QEDOpcode) = {
+      : (Opcode, Opcode, Opcode) = {
+
+    import Opcode._
 
     object LeftCol extends ColumnNumberMatcher {
       override def input: Seq[Attribute] = leftOutput
@@ -769,9 +812,9 @@ case class NonObliviousSortMergeJoin(
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
-  extends BinaryNode with EncOperator {
+  extends BinaryExecNode with EncOperator {
 
-  import QED.time
+  import Utils.time
 
   override def output: Seq[Attribute] =
     left.output ++ right.output
@@ -786,7 +829,7 @@ case class NonObliviousSortMergeJoin(
     time("Force right child of NonObliviousSortMergeJoin") { rightRDD.cache.count }
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
 
       val leftBlockArray = leftBlockIter.toArray
       assert(leftBlockArray.length == 1)
@@ -811,7 +854,7 @@ case class NonObliviousSortMergeJoin(
     }
 
     val joined = sorted.map { block =>
-      val (enclave, eid) = QED.initEnclave()
+      val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val joined = enclave.NonObliviousSortMergeJoin(
         eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, numOutputRows)

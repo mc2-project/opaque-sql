@@ -15,31 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
-
-import scala.util.Random
-
-import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
-
-import org.apache.spark.sql.QEDOpcode._
-import org.apache.spark.sql.functions.avg
-import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.functions.min
-import org.apache.spark.sql.functions.substring
-import org.apache.spark.sql.functions.sum
-import org.apache.spark.sql.functions.year
-import org.apache.spark.sql.types.BinaryType
-import org.apache.spark.sql.types.DateType
-import org.apache.spark.sql.types.FloatType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
+package edu.berkeley.cs.amplab.opaque
 
 // object QEDBenchmark {
-//   import QED.time
-//   import QED.timeBenchmark
+//   import Utils.time
+//   import Utils.timeBenchmark
 
 //   def dataDir: String = System.getenv("SPARKSGX_DATA_DIR")
 
@@ -101,7 +81,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"src", $"dst", lit(1.0f).as("weight"))
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.pagerankEncryptEdges),
+//         .mapPartitions(Utils.pagerankEncryptEdges),
 //         StructType(Seq(
 //           StructField("src", IntegerType),
 //           StructField("dst", IntegerType),
@@ -112,7 +92,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"src".as("id"), lit(1.0f).as("rank"))
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.pagerankEncryptVertices),
+//         .mapPartitions(Utils.pagerankEncryptVertices),
 //         StructType(Seq(
 //           StructField("id", IntegerType),
 //           StructField("rank", FloatType))))
@@ -157,7 +137,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"pageURL", $"pageRank")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd1Encrypt2),
+//         .mapPartitions(Utils.bd1Encrypt2),
 //       StructType(Seq(
 //         StructField("pageURL", StringType),
 //         StructField("pageRank", IntegerType))))
@@ -171,7 +151,7 @@ import org.apache.spark.sql.types.StructType
 //       df.encForce()
 //       df
 //     }
-//     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
+//     result.mapPartitions(Utils.bd1Decrypt2).toDF("pageURL", "pageRank")
 //   }
 
 //   def bd1Encrypted(
@@ -182,7 +162,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"pageURL", $"pageRank")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd1Encrypt2),
+//         .mapPartitions(Utils.bd1Encrypt2),
 //       StructType(Seq(
 //         StructField("pageURL", StringType),
 //         StructField("pageRank", IntegerType))))
@@ -196,7 +176,7 @@ import org.apache.spark.sql.types.StructType
 //       df.encForce()
 //       df
 //     }
-//     result.mapPartitions(QED.bd1Decrypt2).toDF("pageURL", "pageRank")
+//     result.mapPartitions(Utils.bd1Decrypt2).toDF("pageURL", "pageRank")
 //   }
 
 //   def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
@@ -223,7 +203,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"sourceIP", $"adRevenue")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd2Encrypt2),
+//         .mapPartitions(Utils.bd2Encrypt2),
 //       StructType(Seq(
 //         StructField("sourceIP", StringType),
 //         StructField("adRevenue", FloatType))))
@@ -250,7 +230,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"sourceIP", $"adRevenue")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd2Encrypt2),
+//         .mapPartitions(Utils.bd2Encrypt2),
 //       StructType(Seq(
 //         StructField("sourceIP", StringType),
 //         StructField("adRevenue", FloatType))))
@@ -301,7 +281,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd3EncryptUV),
+//         .mapPartitions(Utils.bd3EncryptUV),
 //       StructType(Seq(
 //         StructField("visitDate", DateType),
 //         StructField("destURL", StringType),
@@ -313,7 +293,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"pageURL", $"pageRank")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd1Encrypt2),
+//         .mapPartitions(Utils.bd1Encrypt2),
 //       StructType(Seq(
 //         StructField("pageURL", StringType),
 //         StructField("pageRank", IntegerType))))
@@ -350,7 +330,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd3EncryptUV),
+//         .mapPartitions(Utils.bd3EncryptUV),
 //       StructType(Seq(
 //         StructField("visitDate", DateType),
 //         StructField("destURL", StringType),
@@ -362,7 +342,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"pageURL", $"pageRank")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.bd1Encrypt2),
+//         .mapPartitions(Utils.bd1Encrypt2),
 //       StructType(Seq(
 //         StructField("pageURL", StringType),
 //         StructField("pageRank", IntegerType))))
@@ -548,7 +528,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/disease.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptDisease),
+//         .mapPartitions(Utils.diseaseQueryEncryptDisease),
 //       diseaseSchema)
 //     time("load disease") { diseaseDF.encCache() }
 
@@ -562,7 +542,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/patient-$size.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptPatient),
+//         .mapPartitions(Utils.diseaseQueryEncryptPatient),
 //       patientSchema)
 //     time("load patient") { patientDF.encCache() }
 
@@ -581,7 +561,7 @@ import org.apache.spark.sql.types.StructType
 //         .groupBy($"t_disease_id").agg(min("t_cost").as("t_min_cost"))
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptTreatment),
+//         .mapPartitions(Utils.diseaseQueryEncryptTreatment),
 //       groupedTreatmentSchema)
 //     time("load treatment") { treatmentDF.encCache() }
 
@@ -624,7 +604,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/disease.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptDisease),
+//         .mapPartitions(Utils.diseaseQueryEncryptDisease),
 //       diseaseSchema)
 //     time("load disease") { diseaseDF.encCache() }
 
@@ -638,7 +618,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/patient-$size.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptPatient),
+//         .mapPartitions(Utils.diseaseQueryEncryptPatient),
 //       patientSchema)
 //     time("load patient") { patientDF.encCache() }
 
@@ -651,7 +631,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/gene.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.geneQueryEncryptGene),
+//         .mapPartitions(Utils.geneQueryEncryptGene),
 //       geneSchema)
 //     time("load gene") { geneDF.encCache() }
 
@@ -696,7 +676,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/disease.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptDisease),
+//         .mapPartitions(Utils.diseaseQueryEncryptDisease),
 //       diseaseSchema)
 //     time("load disease") { diseaseDF.encCache() }
 
@@ -710,7 +690,7 @@ import org.apache.spark.sql.types.StructType
 //         .load(s"$dataDir/disease/patient-$size.csv")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.diseaseQueryEncryptPatient),
+//         .mapPartitions(Utils.diseaseQueryEncryptPatient),
 //       patientSchema)
 //     time("load patient") { patientDF.encCache() }
 
@@ -858,7 +838,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"p_partkey", $"p_name")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptPart),
+//         .mapPartitions(Utils.tpch9EncryptPart),
 //       StructType(Seq(
 //         StructField("p_partkey", IntegerType),
 //         StructField("p_name", StringType))))
@@ -868,7 +848,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"s_suppkey", $"s_nationkey")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptSupplier),
+//         .mapPartitions(Utils.tpch9EncryptSupplier),
 //       StructType(Seq(
 //         StructField("s_suppkey", IntegerType),
 //         StructField("s_nationkey", IntegerType))))
@@ -880,7 +860,7 @@ import org.apache.spark.sql.types.StructType
 //           $"l_discount")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptLineitem),
+//         .mapPartitions(Utils.tpch9EncryptLineitem),
 //       StructType(Seq(
 //         StructField("l_orderkey", IntegerType),
 //         StructField("l_partkey", IntegerType),
@@ -894,7 +874,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"ps_partkey", $"ps_suppkey", $"ps_supplycost")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptPartsupp),
+//         .mapPartitions(Utils.tpch9EncryptPartsupp),
 //       StructType(Seq(
 //         StructField("ps_partkey", IntegerType),
 //         StructField("ps_suppkey", IntegerType),
@@ -905,7 +885,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"o_orderkey", $"o_orderdate")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptOrders),
+//         .mapPartitions(Utils.tpch9EncryptOrders),
 //       StructType(Seq(
 //         StructField("o_orderkey", IntegerType),
 //         StructField("o_orderdate", DateType))))
@@ -915,7 +895,7 @@ import org.apache.spark.sql.types.StructType
 //         .select($"n_nationkey", $"n_name")
 //         .repartition(numPartitions(sqlContext, distributed))
 //         .rdd
-//         .mapPartitions(QED.tpch9EncryptNation),
+//         .mapPartitions(Utils.tpch9EncryptNation),
 //       StructType(Seq(
 //         StructField("n_nationkey", IntegerType),
 //         StructField("n_name", StringType))))
