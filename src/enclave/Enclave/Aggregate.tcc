@@ -189,18 +189,16 @@ void non_oblivious_aggregate(Verify *verify_set,
     }
 
     agg.aggregate(&prev_row);
-    reader.read(&cur_row); 
+    reader.read(&cur_row);
 	
     if (!agg.grouping_attrs_equal(&cur_row)) {
       output_row.clear();
       agg.append_result(&output_row, false);
       writer.write(&output_row);
       num_output_rows_result++;
-      if (i == num_rows - 1) {
-        writer.write(&cur_row);
-        num_output_rows_result++;
-      }
-    } else if (i == num_rows - 1) {
+    }
+
+    if (i == num_rows - 1) {
       agg.aggregate(&cur_row);
 
       output_row.clear();
