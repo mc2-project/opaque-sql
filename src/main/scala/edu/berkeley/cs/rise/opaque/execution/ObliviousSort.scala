@@ -34,7 +34,7 @@ object ObliviousSort extends java.io.Serializable {
 
   def sortBlocks(data: RDD[Block], opcode: Opcode): RDD[Block] = {
     time("oblivious sort") {
-      data.cache()
+      Utils.ensureCached(data)
       val sorted =
         if (data.partitions.length <= 1) {
           data.map { block =>
@@ -47,7 +47,8 @@ object ObliviousSort extends java.io.Serializable {
           assert(result.partitions.length == data.partitions.length)
           result
         }
-      sorted.cache().count()
+      Utils.ensureCached(sorted)
+      sorted.count()
       sorted
     }
   }
@@ -180,7 +181,7 @@ object ObliviousSort extends java.io.Serializable {
     // divide N into r * s, where s is the number of machines, and r is the size of the
     // constraints: s | r; r >= 2 * (s-1)^2
 
-    data.cache()
+    Utils.ensureCached(data)
 
     val numRows = data
       .mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)

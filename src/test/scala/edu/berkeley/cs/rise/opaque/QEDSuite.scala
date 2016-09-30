@@ -367,8 +367,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(numCached(agg) === 1)
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-    // TODO
-    // assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
   }
 
   // TODO: test sensitivity propagation on operators
