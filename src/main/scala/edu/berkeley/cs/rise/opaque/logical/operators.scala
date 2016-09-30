@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque.logical
+package edu.berkeley.cs.rise.opaque.logical
 
-import edu.berkeley.cs.amplab.opaque.execution.Block
+import edu.berkeley.cs.rise.opaque.execution.Block
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation

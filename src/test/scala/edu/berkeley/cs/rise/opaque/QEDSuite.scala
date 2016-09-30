@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.rise.opaque
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -36,11 +36,11 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
-import edu.berkeley.cs.amplab.opaque.execution.Block
-import edu.berkeley.cs.amplab.opaque.execution.ObliviousSort
-import edu.berkeley.cs.amplab.opaque.execution.Opcode._
-import edu.berkeley.cs.amplab.opaque.execution.PhysicalEncryptedBlockRDD
-import edu.berkeley.cs.amplab.opaque.implicits._
+import edu.berkeley.cs.rise.opaque.execution.Block
+import edu.berkeley.cs.rise.opaque.execution.ObliviousSort
+import edu.berkeley.cs.rise.opaque.execution.Opcode._
+import edu.berkeley.cs.rise.opaque.execution.PhysicalEncryptedBlockRDD
+import edu.berkeley.cs.rise.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
   val spark = SparkSession.builder()

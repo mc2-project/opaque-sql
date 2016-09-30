@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Strategy
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys

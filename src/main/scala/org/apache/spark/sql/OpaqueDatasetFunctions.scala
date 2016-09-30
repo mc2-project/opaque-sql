@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql
 
-import edu.berkeley.cs.amplab.opaque.logical.Encrypt
-import edu.berkeley.cs.amplab.opaque.logical.MarkOblivious
+import edu.berkeley.cs.rise.opaque.logical.Encrypt
+import edu.berkeley.cs.rise.opaque.logical.MarkOblivious
 
 class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
   def encrypted(): DataFrame =

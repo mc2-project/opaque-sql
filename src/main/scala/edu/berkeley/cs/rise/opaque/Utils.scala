@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.rise.opaque
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -29,10 +29,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
-import edu.berkeley.cs.amplab.opaque.execution.ColumnType
-import edu.berkeley.cs.amplab.opaque.execution.SGXEnclave
-import edu.berkeley.cs.amplab.opaque.logical.ConvertToEncryptedOperators
-import edu.berkeley.cs.amplab.opaque.logical.EncryptLocalRelation
+import edu.berkeley.cs.rise.opaque.execution.ColumnType
+import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
+import edu.berkeley.cs.rise.opaque.logical.ConvertToEncryptedOperators
+import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
 object Utils {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"

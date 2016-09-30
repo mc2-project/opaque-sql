@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque.logical
+package edu.berkeley.cs.rise.opaque.logical
 
-import edu.berkeley.cs.amplab.opaque.execution
+import edu.berkeley.cs.rise.opaque.execution
 import org.apache.spark.sql.InMemoryRelationMatcher
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.SortOrder

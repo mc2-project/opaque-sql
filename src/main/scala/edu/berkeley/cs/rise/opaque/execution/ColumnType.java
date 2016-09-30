@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque.execution;
+package edu.berkeley.cs.rise.opaque.execution;
 
 public enum ColumnType {
     DUMMY((byte)0),

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque.execution;
+package edu.berkeley.cs.rise.opaque.execution;
 
 public enum Opcode {
     OP_BD1(11),

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque
+package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.OpaqueDatasetFunctions

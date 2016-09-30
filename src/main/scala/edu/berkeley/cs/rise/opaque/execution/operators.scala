@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.amplab.opaque.execution
+package edu.berkeley.cs.rise.opaque.execution
 
 import scala.collection.mutable.ArrayBuffer
 
-import edu.berkeley.cs.amplab.opaque.Utils
+import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
