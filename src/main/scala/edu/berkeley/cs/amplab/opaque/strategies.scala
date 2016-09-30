@@ -28,21 +28,21 @@ object EncOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case logical.EncProject(projectList, child) =>
       execution.EncProject(
-        projectList, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+        projectList, planLater(child)) :: Nil
     case logical.EncFilter(condition, child) =>
-      execution.EncFilter(condition, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+      execution.EncFilter(condition, planLater(child)) :: Nil
     case logical.Permute(child) =>
-      execution.Permute(planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+      execution.Permute(planLater(child)) :: Nil
     case logical.EncSort(order, child) =>
-      execution.EncSort(order, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+      execution.EncSort(order, planLater(child)) :: Nil
     case logical.NonObliviousSort(order, child) =>
-      execution.NonObliviousSort(order, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+      execution.NonObliviousSort(order, planLater(child)) :: Nil
     case logical.EncJoin(left, right, joinExpr) =>
       Join(left, right, Inner, Some(joinExpr)) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
           execution.EncSortMergeJoin(
-            planLater(left).asInstanceOf[execution.EncOperator],
-            planLater(right).asInstanceOf[execution.EncOperator],
+            planLater(left),
+            planLater(right),
             leftKeys, rightKeys, condition) :: Nil
         case _ => Nil
       }
@@ -50,19 +50,19 @@ object EncOperators extends Strategy {
       Join(left, right, Inner, Some(joinExpr)) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
           execution.NonObliviousSortMergeJoin(
-            planLater(left).asInstanceOf[execution.EncOperator],
-            planLater(right).asInstanceOf[execution.EncOperator],
+            planLater(left),
+            planLater(right),
             leftKeys, rightKeys, condition) :: Nil
         case _ => Nil
       }
     case a @ logical.EncAggregate(
       groupingExpressions, aggExpressions, child) =>
       execution.EncAggregate(
-        groupingExpressions, aggExpressions, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+        groupingExpressions, aggExpressions, planLater(child)) :: Nil
     case a @ logical.NonObliviousAggregate(
       groupingExpressions, aggExpressions, child) =>
       execution.NonObliviousAggregate(
-        groupingExpressions, aggExpressions, planLater(child).asInstanceOf[execution.EncOperator]) :: Nil
+        groupingExpressions, aggExpressions, planLater(child)) :: Nil
     case logical.Encrypt(child) =>
       execution.Encrypt(planLater(child)) :: Nil
     case logical.MarkOblivious(child) => planLater(child) :: Nil

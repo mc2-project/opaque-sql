@@ -46,7 +46,7 @@ case class Encrypt(child: LogicalPlan) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 
-case class MarkOblivious(child: EncOperator) extends UnaryNode with EncOperator {
+case class MarkOblivious(child: LogicalPlan) extends UnaryNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 }
 

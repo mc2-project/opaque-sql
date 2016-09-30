@@ -177,7 +177,7 @@ trait ColumnNumberMatcher extends Serializable {
     }
 }
 
-case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
+case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
@@ -223,7 +223,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
       case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
         OP_PROJECT_TPCH9_ORDER_YEAR
     }
-    child.executeBlocked().map { block =>
+    child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(eid, 0, 0, opcode.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
@@ -231,7 +231,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: EncOperator)
   }
 }
 
-case class EncFilter(condition: Expression, child: EncOperator)
+case class EncFilter(condition: Expression, child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
@@ -246,7 +246,7 @@ case class EncFilter(condition: Expression, child: EncOperator)
       case IsNotNull(_) =>
         // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
         // in the encrypted format
-        return child.executeBlocked()
+        return child.asInstanceOf[EncOperator].executeBlocked()
       case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
         OP_FILTER_COL2_GT3
       case GreaterThan(Col(2, _), Literal(1000, IntegerType)) =>
@@ -269,7 +269,7 @@ case class EncFilter(condition: Expression, child: EncOperator)
       case GreaterThan(Col(4, _), Literal(45, _)) =>
         OP_FILTER_COL4_GT_45
     }
-    child.executeBlocked().map { block =>
+    child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
@@ -279,12 +279,12 @@ case class EncFilter(condition: Expression, child: EncOperator)
   }
 }
 
-case class Permute(child: EncOperator) extends UnaryExecNode with EncOperator {
+case class Permute(child: SparkPlan) extends UnaryExecNode with EncOperator {
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
     import Opcode._
-    val rowsWithRandomIds = child.executeBlocked().map { block =>
+    val rowsWithRandomIds = child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
@@ -299,7 +299,7 @@ case class Permute(child: EncOperator) extends UnaryExecNode with EncOperator {
   }
 }
 
-case class EncSort(order: Seq[SortOrder], child: EncOperator)
+case class EncSort(order: Seq[SortOrder], child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
@@ -318,11 +318,11 @@ case class EncSort(order: Seq[SortOrder], child: EncOperator)
       case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL1_COL2
     }
-    ObliviousSort.sortBlocks(child.executeBlocked(), opcode)
+    ObliviousSort.sortBlocks(child.asInstanceOf[EncOperator].executeBlocked(), opcode)
   }
 }
 
-case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
+case class NonObliviousSort(sortExprs: Seq[Expression], child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   object Col extends ColumnNumberMatcher {
@@ -339,7 +339,7 @@ case class NonObliviousSort(sortExprs: Seq[Expression], child: EncOperator)
       case Seq(SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL2
     }
-    NonObliviousSort.sort(child.executeBlocked(), opcode)
+    NonObliviousSort.sort(child.asInstanceOf[EncOperator].executeBlocked(), opcode)
   }
 }
 
@@ -408,7 +408,7 @@ object NonObliviousSort {
 case class EncAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: EncOperator)
+    child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   import Utils.time
@@ -463,7 +463,7 @@ case class EncAggregate(
             OP_FILTER_NOT_DUMMY)
       }
 
-    val childRDD = child.executeBlocked().cache()
+    val childRDD = child.asInstanceOf[EncOperator].executeBlocked().cache()
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val boundaries = childRDD.map { block =>
@@ -533,7 +533,7 @@ case class EncAggregate(
 case class NonObliviousAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: EncOperator)
+    child: SparkPlan)
   extends UnaryExecNode with EncOperator {
 
   import Utils.time
@@ -565,7 +565,7 @@ case class NonObliviousAggregate(
           OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT
       }
 
-    val childRDD = child.executeBlocked().cache()
+    val childRDD = child.asInstanceOf[EncOperator].executeBlocked().cache()
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val aggregates = childRDD.map { block =>
@@ -581,8 +581,8 @@ case class NonObliviousAggregate(
 }
 
 case class EncSortMergeJoin(
-    left: EncOperator,
-    right: EncOperator,
+    left: SparkPlan,
+    right: SparkPlan,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
@@ -598,8 +598,8 @@ case class EncSortMergeJoin(
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
-    val leftRDD = left.executeBlocked()
-    val rightRDD = right.executeBlocked()
+    val leftRDD = left.asInstanceOf[EncOperator].executeBlocked()
+    val rightRDD = right.asInstanceOf[EncOperator].executeBlocked()
     time("Force left child of EncSortMergeJoin") { leftRDD.cache.count }
     time("Force right child of EncSortMergeJoin") { rightRDD.cache.count }
 
@@ -807,8 +807,8 @@ object OpaqueJoinUtils {
 }
 
 case class NonObliviousSortMergeJoin(
-    left: EncOperator,
-    right: EncOperator,
+    left: SparkPlan,
+    right: SparkPlan,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
     condition: Option[Expression])
@@ -823,8 +823,8 @@ case class NonObliviousSortMergeJoin(
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
-    val leftRDD = left.executeBlocked()
-    val rightRDD = right.executeBlocked()
+    val leftRDD = left.asInstanceOf[EncOperator].executeBlocked()
+    val rightRDD = right.asInstanceOf[EncOperator].executeBlocked()
     time("Force left child of NonObliviousSortMergeJoin") { leftRDD.cache.count }
     time("Force right child of NonObliviousSortMergeJoin") { rightRDD.cache.count }
 
