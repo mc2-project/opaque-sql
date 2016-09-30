@@ -17,11 +17,14 @@
 
 package edu.berkeley.cs.amplab.opaque.logical
 
+import edu.berkeley.cs.amplab.opaque.execution
+import org.apache.spark.sql.InMemoryRelationMatcher
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
@@ -42,6 +45,13 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
   def isEncrypted(plan: LogicalPlan): Boolean = {
     plan.find {
       case _: EncOperator => true
+      case _ => false
+    }.nonEmpty
+  }
+
+  def isEncrypted(plan: SparkPlan): Boolean = {
+    plan.find {
+      case _: execution.EncOperator => true
       case _ => false
     }.nonEmpty
   }
@@ -73,7 +83,10 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
         NonObliviousSort(
           groupingExprs.map(e => SortOrder(e, Ascending)),
           child.asInstanceOf[EncOperator]))
-    // case p @ InMemoryRelation(output, _, _, storageLevel, child, tableName) if isEncrypted(child) =>
-    //   LogicalEncryptedBlockRDD(output, child.asInstanceOf[EncOperator].executeBlocked())
+    case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
+      // TODO: handle oblivious plans
+      LogicalEncryptedBlockRDD(
+        output,
+        child.asInstanceOf[execution.EncOperator].executeBlocked().persist(storageLevel))
   }
 }

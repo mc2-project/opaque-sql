@@ -20,11 +20,13 @@ package edu.berkeley.cs.amplab.opaque
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.types._
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.amplab.opaque.execution.ColumnType
@@ -339,5 +341,11 @@ object Utils {
     val result = new Array[Byte](8)
     buf.get(result)
     result
+  }
+
+  def ensureCached(rdd: RDD[_]): Unit = {
+    if (rdd.getStorageLevel == StorageLevel.NONE) {
+      rdd.cache()
+    }
   }
 }

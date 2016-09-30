@@ -24,6 +24,7 @@ import scala.util.Random
 
 import org.apache.log4j.Level
 import org.apache.log4j.LogManager
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
@@ -38,6 +39,7 @@ import org.scalatest.FunSuite
 import edu.berkeley.cs.amplab.opaque.execution.Block
 import edu.berkeley.cs.amplab.opaque.execution.ObliviousSort
 import edu.berkeley.cs.amplab.opaque.execution.Opcode._
+import edu.berkeley.cs.amplab.opaque.execution.PhysicalEncryptedBlockRDD
 import edu.berkeley.cs.amplab.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
@@ -351,28 +353,26 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   test("encCache") {
-    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-    val df = spark.createDataFrame(data).toDF("a", "b").oblivious
-    df.explain(true)
-    val expected = df.collect
-    df.show()
-    val cached = df.cache()
-    cached.explain(true)
-    cached.show()
-    // assert(cached.collect === df.collect)
+    def numCached(ds: Dataset[_]): Int =
+      ds.queryExecution.executedPlan.collect {
+        case cached: PhysicalEncryptedBlockRDD => cached
+      }.size
 
-    // val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-    // val df = spark.createEncryptedDataFrame(
-    //   spark.sparkContext.makeRDD(Utils.encryptN(data), 1),
-    //   StructType(Seq(
-    //     StructField("a", IntegerType),
-    //     StructField("b", IntegerType))))
-    //   .encCache()
-    // assert(Utils.decrypt2[Int, Int](df.encCollect).sorted === data)
-    // val agg = df.groupBy($"a").encAgg(sum("b"))
-    // assert(Utils.decrypt2[Int, Int](agg.encCollect).sorted === List((1, 12), (2, 4)))
+    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+    val df = spark.createDataFrame(spark.sparkContext.makeRDD(data, 1))
+      .toDF("a", "b").encrypted.cache()
+
+    val agg = df.groupBy($"a").agg(sum("b"))
+
+    assert(numCached(agg) === 1)
+
+    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+    // TODO
+    // assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
   }
 
   // TODO: test sensitivity propagation on operators
+
+  // TODO: test nonObliviousAggregate on multiple partitions
 
 }

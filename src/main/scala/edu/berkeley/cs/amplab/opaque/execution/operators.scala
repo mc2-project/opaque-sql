@@ -347,7 +347,7 @@ object NonObliviousSort {
   import Utils.time
 
   def sort(childRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
-    childRDD.cache()
+    Utils.ensureCached(childRDD)
 
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length
@@ -399,7 +399,8 @@ object NonObliviousSort {
               Block(sortedRows, numRows)
           }
         }
-      result.cache().count()
+      Utils.ensureCached(result)
+      result.count()
       result
     }
   }
@@ -463,7 +464,8 @@ case class EncAggregate(
             OP_FILTER_NOT_DUMMY)
       }
 
-    val childRDD = child.asInstanceOf[EncOperator].executeBlocked().cache()
+    val childRDD = child.asInstanceOf[EncOperator].executeBlocked()
+    Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val boundaries = childRDD.map { block =>
@@ -505,12 +507,14 @@ case class EncAggregate(
         Iterator(Block(partialAgg, block.numRows))
     }
 
-    time("aggregate - step 2") { partialAggregates.cache.count }
+    Utils.ensureCached(partialAggregates)
+    time("aggregate - step 2") { partialAggregates.count }
 
     // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
     val sortedAggregates = time("aggregate - sort dummies") {
       val result = ObliviousSort.sortBlocks(partialAggregates, aggDummySortOpcode)
-      result.cache.count
+      Utils.ensureCached(result)
+      result.count
       result
     }
 
@@ -523,7 +527,8 @@ case class EncAggregate(
           eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
         Block(filtered, numOutputRows.value)
       }
-      result.cache.count
+      Utils.ensureCached(result)
+      result.count
       result
     }
     finalAggregates
@@ -565,7 +570,8 @@ case class NonObliviousAggregate(
           OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT
       }
 
-    val childRDD = child.asInstanceOf[EncOperator].executeBlocked().cache()
+    val childRDD = child.asInstanceOf[EncOperator].executeBlocked()
+    Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     val aggregates = childRDD.map { block =>
@@ -575,7 +581,8 @@ case class NonObliviousAggregate(
         eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
       Block(resultBytes, numOutputRows.value)
     }
-    aggregates.cache.count
+    Utils.ensureCached(aggregates)
+    aggregates.count
     aggregates
   }
 }
@@ -600,8 +607,10 @@ case class EncSortMergeJoin(
 
     val leftRDD = left.asInstanceOf[EncOperator].executeBlocked()
     val rightRDD = right.asInstanceOf[EncOperator].executeBlocked()
-    time("Force left child of EncSortMergeJoin") { leftRDD.cache.count }
-    time("Force right child of EncSortMergeJoin") { rightRDD.cache.count }
+    Utils.ensureCached(leftRDD)
+    time("Force left child of EncSortMergeJoin") { leftRDD.count }
+    Utils.ensureCached(rightRDD)
+    time("Force right child of EncSortMergeJoin") { rightRDD.count }
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = Utils.initEnclave()
@@ -620,10 +629,12 @@ case class EncSortMergeJoin(
 
       Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
     }
-    time("join - preprocess") { processed.cache.count }
+    Utils.ensureCached(processed)
+    time("join - preprocess") { processed.count }
 
     val sorted = time("join - sort") {
-      val result = ObliviousSort.sortBlocks(processed, joinOpcode).cache()
+      val result = ObliviousSort.sortBlocks(processed, joinOpcode)
+      Utils.ensureCached(result)
       result.count
       result
     }
@@ -656,7 +667,8 @@ case class EncSortMergeJoin(
         eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, joinRow)
       Iterator(Block(joined, block.numRows))
     }
-    time("join - sort merge join") { joined.cache.count }
+    Utils.ensureCached(joined)
+    time("join - sort merge join") { joined.count }
 
     val joinedWithRandomIds = joined.map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -678,7 +690,8 @@ case class EncSortMergeJoin(
         eid, 0, 0, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
-    time("join - filter dummies") { nonDummy.cache.count }
+    Utils.ensureCached(nonDummy)
+    time("join - filter dummies") { nonDummy.count }
     nonDummy
   }
 }
@@ -825,8 +838,10 @@ case class NonObliviousSortMergeJoin(
 
     val leftRDD = left.asInstanceOf[EncOperator].executeBlocked()
     val rightRDD = right.asInstanceOf[EncOperator].executeBlocked()
-    time("Force left child of NonObliviousSortMergeJoin") { leftRDD.cache.count }
-    time("Force right child of NonObliviousSortMergeJoin") { rightRDD.cache.count }
+    Utils.ensureCached(leftRDD)
+    time("Force left child of NonObliviousSortMergeJoin") { leftRDD.count }
+    Utils.ensureCached(rightRDD)
+    time("Force right child of NonObliviousSortMergeJoin") { rightRDD.count }
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = Utils.initEnclave()
@@ -845,11 +860,13 @@ case class NonObliviousSortMergeJoin(
 
       Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
     }
-    time("join - preprocess") { processed.cache.count }
+    Utils.ensureCached(processed)
+    time("join - preprocess") { processed.count }
 
     val sorted = time("join - sort") {
       val result = NonObliviousSort.sort(processed, joinOpcode)
-      result.cache.count
+      Utils.ensureCached(result)
+      result.count
       result
     }
 
@@ -860,7 +877,8 @@ case class NonObliviousSortMergeJoin(
         eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
       Block(joined, numOutputRows.value)
     }
-    time("join - sort merge join") { joined.cache.count }
+    Utils.ensureCached(joined)
+    time("join - sort merge join") { joined.count }
 
     joined
   }
