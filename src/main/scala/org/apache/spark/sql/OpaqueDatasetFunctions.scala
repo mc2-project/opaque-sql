@@ -18,12 +18,11 @@
 package org.apache.spark.sql
 
 import edu.berkeley.cs.rise.opaque.logical.Encrypt
-import edu.berkeley.cs.rise.opaque.logical.MarkOblivious
 
 class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
   def encrypted(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, Encrypt(ds.logicalPlan))
+    Dataset.ofRows(ds.sparkSession, Encrypt(false, ds.logicalPlan))
 
   def oblivious(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, MarkOblivious(Encrypt(ds.logicalPlan)))
+    Dataset.ofRows(ds.sparkSession, Encrypt(true, ds.logicalPlan))
 }

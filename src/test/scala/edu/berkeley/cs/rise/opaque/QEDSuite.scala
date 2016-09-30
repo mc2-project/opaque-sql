@@ -360,7 +360,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
 
     val data = List((1, 3), (1, 4), (1, 5), (2, 4))
     val df = spark.createDataFrame(spark.sparkContext.makeRDD(data, 1))
-      .toDF("a", "b").encrypted.cache()
+      .toDF("a", "b").oblivious.cache()
 
     val agg = df.groupBy($"a").agg(sum("b"))
 

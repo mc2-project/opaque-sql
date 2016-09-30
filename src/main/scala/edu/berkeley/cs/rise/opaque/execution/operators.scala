@@ -50,8 +50,11 @@ trait BinaryExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Seq(left, right)
 }
 
-case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[InternalRow])
-    extends LeafExecNode with EncOperator {
+case class EncryptedLocalTableScan(
+    output: Seq[Attribute],
+    plaintextData: Seq[InternalRow],
+    override val isOblivious: Boolean)
+  extends LeafExecNode with EncOperator {
 
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
@@ -67,7 +70,11 @@ case class EncryptedLocalTableScan(output: Seq[Attribute], plaintextData: Seq[In
   }
 }
 
-case class Encrypt(child: SparkPlan) extends UnaryExecNode with EncOperator {
+case class Encrypt(
+    override val isOblivious: Boolean,
+    child: SparkPlan)
+  extends UnaryExecNode with EncOperator {
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
@@ -81,19 +88,27 @@ case class Encrypt(child: SparkPlan) extends UnaryExecNode with EncOperator {
 
 case class PhysicalEncryptedBlockRDD(
     output: Seq[Attribute],
-    rdd: RDD[Block]) extends LeafExecNode with EncOperator {
+    rdd: RDD[Block],
+    override val isOblivious: Boolean)
+  extends LeafExecNode with EncOperator {
+
   override def executeBlocked(): RDD[Block] = rdd
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
 
 trait EncOperator extends SparkPlan {
+  def executeBlocked(): RDD[Block]
+
+  def isOblivious: Boolean = children.exists(_.find {
+    case p: EncOperator => p.isOblivious
+    case _ => false
+  }.nonEmpty)
+
   override def doExecute() = {
     sqlContext.sparkContext.emptyRDD
     // throw new UnsupportedOperationException("use executeBlocked")
   }
-
-  def executeBlocked(): RDD[Block]
 
   override def executeCollect(): Array[InternalRow] = {
     executeBlocked().collect().flatMap { block =>

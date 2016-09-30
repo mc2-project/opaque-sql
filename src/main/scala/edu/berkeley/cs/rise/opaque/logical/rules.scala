@@ -29,15 +29,22 @@ import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case Encrypt(LocalRelation(output, data)) =>
-      EncryptedLocalRelation(output, data)
+    case Encrypt(isOblivious, LocalRelation(output, data)) =>
+      EncryptedLocalRelation(output, data, isOblivious)
   }
 }
 
 object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
   def isOblivious(plan: LogicalPlan): Boolean = {
     isEncrypted(plan) && plan.find {
-      case MarkOblivious(_) => true
+      case p: EncOperator => p.isOblivious
+      case _ => false
+    }.nonEmpty
+  }
+
+  def isOblivious(plan: SparkPlan): Boolean = {
+    isEncrypted(plan) && plan.find {
+      case p: execution.EncOperator => p.isOblivious
       case _ => false
     }.nonEmpty
   }
@@ -84,9 +91,9 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
           groupingExprs.map(e => SortOrder(e, Ascending)),
           child.asInstanceOf[EncOperator]))
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
-      // TODO: handle oblivious plans
       LogicalEncryptedBlockRDD(
         output,
-        child.asInstanceOf[execution.EncOperator].executeBlocked().persist(storageLevel))
+        child.asInstanceOf[execution.EncOperator].executeBlocked().persist(storageLevel),
+        isOblivious(child))
   }
 }

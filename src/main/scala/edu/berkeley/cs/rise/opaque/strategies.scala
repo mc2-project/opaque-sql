@@ -63,13 +63,12 @@ object EncOperators extends Strategy {
       groupingExpressions, aggExpressions, child) =>
       execution.NonObliviousAggregate(
         groupingExpressions, aggExpressions, planLater(child)) :: Nil
-    case logical.Encrypt(child) =>
-      execution.Encrypt(planLater(child)) :: Nil
-    case logical.MarkOblivious(child) => planLater(child) :: Nil
-    case logical.EncryptedLocalRelation(output, plaintextData) =>
-      execution.EncryptedLocalTableScan(output, plaintextData) :: Nil
-    case logical.LogicalEncryptedBlockRDD(output, rdd) =>
-      execution.PhysicalEncryptedBlockRDD(output, rdd) :: Nil
+    case logical.Encrypt(isOblivious, child) =>
+      execution.Encrypt(isOblivious, planLater(child)) :: Nil
+    case logical.EncryptedLocalRelation(output, plaintextData, isOblivious) =>
+      execution.EncryptedLocalTableScan(output, plaintextData, isOblivious) :: Nil
+    case logical.LogicalEncryptedBlockRDD(output, rdd, isOblivious) =>
+      execution.PhysicalEncryptedBlockRDD(output, rdd, isOblivious) :: Nil
     case _ => Nil
   }
 }

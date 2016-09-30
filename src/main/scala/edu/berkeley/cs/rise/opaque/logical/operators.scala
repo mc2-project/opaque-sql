@@ -40,17 +40,25 @@ trait EncOperator extends LogicalPlan {
    * references to include all inputs to prevent Catalyst from dropping any input columns.
    */
   override def references: AttributeSet = inputSet
+
+  def isOblivious: Boolean = children.exists(_.find {
+    case p: EncOperator => p.isOblivious
+    case _ => false
+  }.nonEmpty)
 }
 
-case class Encrypt(child: LogicalPlan) extends UnaryNode with EncOperator {
+case class Encrypt(
+    override val isOblivious: Boolean,
+    child: LogicalPlan)
+  extends UnaryNode with EncOperator {
+
   override def output: Seq[Attribute] = child.output
 }
 
-case class MarkOblivious(child: LogicalPlan) extends UnaryNode with EncOperator {
-  override def output: Seq[Attribute] = child.output
-}
-
-case class EncryptedLocalRelation(output: Seq[Attribute], plaintextData: Seq[InternalRow] = Nil)
+case class EncryptedLocalRelation(
+    output: Seq[Attribute],
+    plaintextData: Seq[InternalRow],
+    override val isOblivious: Boolean)
   extends LeafNode with MultiInstanceRelation with EncOperator {
 
   // A local relation must have resolved output.
@@ -62,30 +70,33 @@ case class EncryptedLocalRelation(output: Seq[Attribute], plaintextData: Seq[Int
    * query.
    */
   override final def newInstance(): this.type = {
-    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData).asInstanceOf[this.type]
+    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData, isOblivious).asInstanceOf[this.type]
   }
 
   override protected def stringArgs = Iterator(output)
 
   override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case EncryptedLocalRelation(otherOutput, otherPlaintextData) =>
-      otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
+    case EncryptedLocalRelation(otherOutput, otherPlaintextData, otherIsOblivious) =>
+      (otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
+        && otherIsOblivious == isOblivious)
     case _ => false
   }
 }
 
 case class LogicalEncryptedBlockRDD(
     output: Seq[Attribute],
-    rdd: RDD[Block])
+    rdd: RDD[Block],
+    override val isOblivious: Boolean)
   extends EncOperator with MultiInstanceRelation {
 
   override def children: Seq[LogicalPlan] = Nil
 
   override def newInstance(): LogicalEncryptedBlockRDD.this.type =
-    LogicalEncryptedBlockRDD(output.map(_.newInstance()), rdd).asInstanceOf[this.type]
+    LogicalEncryptedBlockRDD(output.map(_.newInstance()), rdd, isOblivious).asInstanceOf[this.type]
 
   override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case LogicalEncryptedBlockRDD(_, otherRDD) => rdd.id == otherRDD.id
+    case LogicalEncryptedBlockRDD(_, otherRDD, otherIsOblivious) =>
+      rdd.id == otherRDD.id && isOblivious == otherIsOblivious
     case _ => false
   }
 
