@@ -914,7 +914,8 @@ private:
 class RowReader {
 public:
   RowReader(uint8_t *buf, uint8_t *buf_end, Verify *verify_set)
-    : buf(buf), buf_end(buf_end), block_num_rows(0), block_rows_read(0), verify_set(verify_set) {
+    : buf(buf), buf_end(buf_end), block_pos(NULL), block_num_rows(0), block_rows_read(0),
+      verify_set(verify_set) {
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     read_encrypted_block();
   }
