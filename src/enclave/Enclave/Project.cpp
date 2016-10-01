@@ -36,12 +36,10 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     break;
   case OP_PROJECT_PAGERANK_WEIGHT_RANK:
   {
-    // in: [id, rank, dst, weight]
-    // out: [dst, rank * weight]
     out->clear();
-    out->add_attr(in, 3);
+    out->add_attr(in, 4);
     float rank = *reinterpret_cast<const float *>(in->get_attr_value(2));
-    float weight = *reinterpret_cast<const float *>(in->get_attr_value(4));
+    float weight = *reinterpret_cast<const float *>(in->get_attr_value(5));
     float result = rank * weight;
     out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&result));
     break;

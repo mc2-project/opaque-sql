@@ -17,11 +17,16 @@
 
 package edu.berkeley.cs.rise.opaque
 
-// object QEDBenchmark {
+object Benchmark {
 //   import Utils.time
 //   import Utils.timeBenchmark
 
-//   def dataDir: String = System.getenv("SPARKSGX_DATA_DIR")
+  def dataDir: String = {
+    if (System.getenv("SPARKSGX_DATA_DIR") == null) {
+      throw new Exception("Set SPARKSGX_DATA_DIR")
+    }
+    System.getenv("SPARKSGX_DATA_DIR")
+  }
 
 //   def main(args: Array[String]) {
 //     val sparkConf = new SparkConf().setAppName("QEDBenchmark")
@@ -66,53 +71,6 @@ package edu.berkeley.cs.rise.opaque
 //     sc.stop()
 //   }
 
-//   def pagerank(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
-//     import sqlContext.implicits._
-//     val data = sqlContext.read
-//       .schema(
-//         StructType(Seq(
-//           StructField("src", IntegerType, false),
-//           StructField("dst", IntegerType, false),
-//           StructField("isVertex", IntegerType, false))))
-//       .option("delimiter", " ")
-//       .csv(s"$dataDir/pagerank-files/PageRank$size.in")
-//     val edges = sqlContext.createEncryptedDataFrame(
-//       data.filter($"isVertex" === lit(0))
-//         .select($"src", $"dst", lit(1.0f).as("weight"))
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.pagerankEncryptEdges),
-//         StructType(Seq(
-//           StructField("src", IntegerType),
-//           StructField("dst", IntegerType),
-//           StructField("weight", FloatType))))
-//     time("load edges") { edges.encCache() }
-//     val vertices = sqlContext.createEncryptedDataFrame(
-//       data.filter($"isVertex" === lit(1))
-//         .select($"src".as("id"), lit(1.0f).as("rank"))
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.pagerankEncryptVertices),
-//         StructType(Seq(
-//           StructField("id", IntegerType),
-//           StructField("rank", FloatType))))
-//     time("load vertices") { vertices.encCache() }
-//     val newV =
-//       timeBenchmark(
-//         "distributed" -> distributed,
-//         "query" -> "pagerank",
-//         "system" -> "opaque",
-//         "size" -> size) {
-//         val result =
-//           vertices.encJoin(edges, $"id" === $"src")
-//             .encSelect($"dst", ($"rank" * $"weight").as("weightedRank"))
-//             .groupBy("dst").encAgg(sum("weightedRank").as("totalIncomingRank"))
-//             .encSelect($"dst", (lit(0.15) + lit(0.85) * $"totalIncomingRank").as("rank"))
-//         result.encForce()
-//         result
-//       }
-//     newV
-//   }
 
 //   def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
 //     import sqlContext.implicits._
@@ -902,4 +860,4 @@ package edu.berkeley.cs.rise.opaque
 //       .encCache()
 //     (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
 //   }
-// }
+}

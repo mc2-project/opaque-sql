@@ -19,6 +19,8 @@ package edu.berkeley.cs.rise.opaque.logical
 
 import edu.berkeley.cs.rise.opaque.execution
 import org.apache.spark.sql.InMemoryRelationMatcher
+import org.apache.spark.sql.UndoCollapseProject
+import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.plans.Inner
@@ -79,17 +81,39 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
     case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
       NonObliviousJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
     case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
-      EncAggregate(
-        groupingExprs, aggExprs,
-        EncSort(
-          groupingExprs.map(e => SortOrder(e, Ascending)),
-          child.asInstanceOf[EncOperator]))
+      UndoCollapseProject.separateProjectAndAgg(p) match {
+        case Some((projectExprs, aggExprs)) =>
+          EncProject(
+            projectExprs,
+            EncAggregate(
+              groupingExprs, aggExprs,
+              EncSort(
+                groupingExprs.map(e => SortOrder(e, Ascending)),
+                child.asInstanceOf[EncOperator])))
+        case None =>
+          EncAggregate(
+            groupingExprs, aggExprs,
+            EncSort(
+              groupingExprs.map(e => SortOrder(e, Ascending)),
+              child.asInstanceOf[EncOperator]))
+      }
     case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
-      NonObliviousAggregate(
-        groupingExprs, aggExprs,
-        NonObliviousSort(
-          groupingExprs.map(e => SortOrder(e, Ascending)),
-          child.asInstanceOf[EncOperator]))
+      UndoCollapseProject.separateProjectAndAgg(p) match {
+        case Some((projectExprs, aggExprs)) =>
+          EncProject(
+            projectExprs,
+            NonObliviousAggregate(
+              groupingExprs, aggExprs,
+              NonObliviousSort(
+                groupingExprs.map(e => SortOrder(e, Ascending)),
+                child.asInstanceOf[EncOperator])))
+        case None =>
+          NonObliviousAggregate(
+            groupingExprs, aggExprs,
+            NonObliviousSort(
+              groupingExprs.map(e => SortOrder(e, Ascending)),
+              child.asInstanceOf[EncOperator]))
+      }
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       LogicalEncryptedBlockRDD(
         output,

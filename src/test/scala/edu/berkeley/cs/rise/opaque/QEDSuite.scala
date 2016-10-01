@@ -36,10 +36,9 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
-import edu.berkeley.cs.rise.opaque.execution.Block
-import edu.berkeley.cs.rise.opaque.execution.ObliviousSort
+import edu.berkeley.cs.rise.opaque.examples._
+import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.execution.Opcode._
-import edu.berkeley.cs.rise.opaque.execution.PhysicalEncryptedBlockRDD
 import edu.berkeley.cs.rise.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
@@ -52,19 +51,13 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
 
   import spark.implicits._
 
-  // object testImplicits extends SQLImplicits {
-  //   override def _sqlContext: SQLContext = self.spark.sqlContext
-  // }
-
-  // import testImplicits._
-
   override def afterAll(): Unit = {
     spark.stop()
   }
 
-  // test("pagerank") {
-  //   QEDBenchmark.pagerank(spark, "256")
-  // }
+  test("pagerank") {
+    PageRank.run(spark, Oblivious, "256", 1)
+  }
 
   // test("big data 1") {
   //   val answer = QEDBenchmark.bd1SparkSQL(spark, "tiny").collect
@@ -342,14 +335,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     val proj = rdd.select(substring($"str", 0, 8), $"x")
     assert(proj.collect ===
       data.map { case (str, x) => (str.substring(0, 8), x) }.map(Row.fromTuple))
-  }
-
-  test("encSelect - pagerank weight * rank") {
-    val data = List((1, 2.0f, 3, 4.0f), (2, 0.5f, 1, 2.0f))
-    val df = spark.createDataFrame(data).toDF("id", "rank", "dst", "weight").oblivious
-      .select($"dst", $"rank" * $"weight")
-    val expected = for ((id, rank, dst, weight) <- data) yield (dst, rank * weight)
-    assert(df.collect === expected.map(Row.fromTuple))
   }
 
   test("encCache") {

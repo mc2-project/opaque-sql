@@ -203,12 +203,12 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
 
   override def executeBlocked() = {
     import Opcode._
-    val opcode = (projectList: @unchecked) match {
+    val opcode = projectList match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
         Col(2, _)) =>
         OP_BD2
-      case Seq(Col(3, _), Alias(Multiply(Col(2, _), Col(4, _)), _)) =>
+      case Seq(Col(4, _), Alias(Multiply(Col(2, _), Col(5, _)), _)) =>
         OP_PROJECT_PAGERANK_WEIGHT_RANK
       case Seq(Col(1, _),
         Alias(Add(
@@ -237,6 +237,9 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
         OP_PROJECT_TPCH9OPAQUE
       case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
         OP_PROJECT_TPCH9_ORDER_YEAR
+      case _ =>
+        throw new Exception(
+          s"EncProject: unknown project list $projectList.\nInput: ${child.output}.")
     }
     child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()

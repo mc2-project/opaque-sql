@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -30,6 +31,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.rise.opaque.execution.ColumnType
+import edu.berkeley.cs.rise.opaque.execution.EncOperator
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToEncryptedOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
@@ -347,5 +349,13 @@ object Utils {
     if (rdd.getStorageLevel == StorageLevel.NONE) {
       rdd.cache()
     }
+  }
+
+  def force(ds: Dataset[_]): Unit = {
+    val rdd: RDD[_] = ds.queryExecution.executedPlan match {
+      case p: EncOperator => p.executeBlocked()
+      case p => p.execute()
+    }
+    rdd.foreach(x => {})
   }
 }

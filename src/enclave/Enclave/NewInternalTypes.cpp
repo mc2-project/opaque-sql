@@ -621,11 +621,12 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[3] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_PAGERANK:
-    num_output_cols = 4;
+    num_output_cols = 5;
     types[0] = get_dummy_type(INT);
     types[1] = get_dummy_type(FLOAT);
     types[2] = get_dummy_type(INT);
-    types[3] = get_dummy_type(FLOAT);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(FLOAT);
     break;
   case OP_JOIN_TPCH9GENERIC_NATION:
     num_output_cols = 10;

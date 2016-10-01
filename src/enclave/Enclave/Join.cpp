@@ -29,14 +29,14 @@ void join_sort_preprocess(
       r1.read(&a);
       b.set(true, &a);
       r1_upper_bound = b.row_upper_bound();
-      debug("a upper bound %d\n", b.row_upper_bound());
+      debug("primary upper bound %d\n", b.row_upper_bound());
     }
 
     RowReader r2(foreign_rows, foreign_rows + foreign_rows_len);
     if (r2.has_next()) {
       r2.read(&a);
       b.set(false, &a);
-      debug("b upper bound %d\n", b.row_upper_bound());
+      debug("foreign upper bound %d\n", b.row_upper_bound());
       r2_upper_bound = b.row_upper_bound();
     }
 
