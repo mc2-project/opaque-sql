@@ -61,6 +61,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
 
   test("big data 1") {
     val answer = BigDataBenchmark.q1(spark, Insecure, "tiny", 1).collect
+    assert(answer === BigDataBenchmark.q1(spark, Encrypted, "tiny", 1).collect)
     assert(answer === BigDataBenchmark.q1(spark, Oblivious, "tiny", 1).collect)
   }
 

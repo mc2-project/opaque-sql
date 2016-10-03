@@ -239,7 +239,9 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
         OP_PROJECT_TPCH9_ORDER_YEAR
       case _ =>
         throw new Exception(
-          s"EncProject: unknown project list $projectList.\nInput: ${child.output}.")
+          s"EncProject: unknown project list $projectList.\n" +
+            "Input: ${child.output}.\n" +
+            "Types: ${child.output.map(_.dataType)}")
     }
     child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -260,14 +262,16 @@ case class EncFilter(condition: Expression, child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     import Opcode._
-    val opcode = (condition: @unchecked) match {
+    val opcode = condition match {
       case IsNotNull(_) =>
         // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
         // in the encrypted format
         return child.asInstanceOf[EncOperator].executeBlocked()
       case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
         OP_FILTER_COL2_GT3
-      case GreaterThan(Col(2, _), Literal(1000, IntegerType)) =>
+      case And(
+        IsNotNull(Col(2, _)),
+        GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
         OP_BD1
       case And(
         IsNotNull(Cast(Col(1, _), StringType)),
@@ -286,6 +290,11 @@ case class EncFilter(condition: Expression, child: SparkPlan)
         OP_FILTER_COL4_GT_40
       case GreaterThan(Col(4, _), Literal(45, _)) =>
         OP_FILTER_COL4_GT_45
+      case _ =>
+        throw new Exception(
+          s"EncFilter: unknown condition $condition.\n" +
+            "Input: ${child.output}.\n" +
+            "Types: ${child.output.map(_.dataType)}")
     }
     child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
