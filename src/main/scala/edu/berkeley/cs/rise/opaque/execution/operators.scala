@@ -206,7 +206,7 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
     val opcode = projectList match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
-        Col(2, _)) =>
+        Col(4, _)) =>
         OP_BD2
       case Seq(Col(4, _), Alias(Multiply(Col(2, _), Col(5, _)), _)) =>
         OP_PROJECT_PAGERANK_WEIGHT_RANK
@@ -240,8 +240,8 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
       case _ =>
         throw new Exception(
           s"EncProject: unknown project list $projectList.\n" +
-            "Input: ${child.output}.\n" +
-            "Types: ${child.output.map(_.dataType)}")
+            s"Input: ${child.output}.\n" +
+            s"Types: ${child.output.map(_.dataType)}")
     }
     child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -293,8 +293,8 @@ case class EncFilter(condition: Expression, child: SparkPlan)
       case _ =>
         throw new Exception(
           s"EncFilter: unknown condition $condition.\n" +
-            "Input: ${child.output}.\n" +
-            "Types: ${child.output.map(_.dataType)}")
+            s"Input: ${child.output}.\n" +
+            s"Types: ${child.output.map(_.dataType)}")
     }
     child.asInstanceOf[EncOperator].executeBlocked().map { block =>
       val (enclave, eid) = Utils.initEnclave()

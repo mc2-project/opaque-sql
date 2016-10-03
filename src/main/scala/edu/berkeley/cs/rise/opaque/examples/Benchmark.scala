@@ -38,17 +38,17 @@ object Benchmark {
       if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
 
     // Warmup
-    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
-    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
 
     // Run
-    // BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
-    // BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
-    // BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
+    BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
+    BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
 
-    // BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
-    // BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
-    // BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
+    BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
+    BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
 
     // BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
     // BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
@@ -75,140 +75,6 @@ object Benchmark {
 
     spark.stop()
   }
-
-//   def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
-//     import sqlContext.implicits._
-//     val rankingsDF = rankings(sqlContext, size).cache()
-//     rankingsDF.count
-//     val result = timeBenchmark(
-//       "distributed" -> !sqlContext.sparkContext.isLocal,
-//       "query" -> "big data 1",
-//       "system" -> "spark sql",
-//       "size" -> size) {
-//       val df = rankingsDF.filter($"pageRank" > 1000).select($"pageURL", $"pageRank")
-//       df.count
-//       df
-//     }
-//     result
-//   }
-
-//   def bd1Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
-//     import sqlContext.implicits._
-//     val rankingsDF = sqlContext.createEncryptedDataFrame(
-//       rankings(sqlContext, size)
-//         .select($"pageURL", $"pageRank")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd1Encrypt2),
-//       StructType(Seq(
-//         StructField("pageURL", StringType),
-//         StructField("pageRank", IntegerType))))
-//     time("load rankings") { rankingsDF.encCache() }
-//     val result = timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 1",
-//       "system" -> "opaque",
-//       "size" -> size) {
-//       val df = rankingsDF.encFilter($"pageRank" > 1000)
-//       df.encForce()
-//       df
-//     }
-//     result.mapPartitions(Utils.bd1Decrypt2).toDF("pageURL", "pageRank")
-//   }
-
-//   def bd1Encrypted(
-//       sqlContext: SQLContext, size: String, distributed: Boolean = false): DataFrame = {
-//     import sqlContext.implicits._
-//     val rankingsDF = sqlContext.createEncryptedDataFrame(
-//       rankings(sqlContext, size)
-//         .select($"pageURL", $"pageRank")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd1Encrypt2),
-//       StructType(Seq(
-//         StructField("pageURL", StringType),
-//         StructField("pageRank", IntegerType))))
-//     time("load rankings") { rankingsDF.encCache() }
-//     val result = timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 1",
-//       "system" -> "encrypted",
-//       "size" -> size) {
-//       val df = rankingsDF.nonObliviousFilter($"pageRank" > 1000)
-//       df.encForce()
-//       df
-//     }
-//     result.mapPartitions(Utils.bd1Decrypt2).toDF("pageURL", "pageRank")
-//   }
-
-//   def bd2SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = uservisits(sqlContext, size).cache()
-//     uservisitsDF.count
-//     timeBenchmark(
-//       "distributed" -> !sqlContext.sparkContext.isLocal,
-//       "query" -> "big data 2",
-//       "system" -> "spark sql",
-//       "size" -> size) {
-//       val df = uservisitsDF.select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
-//         .groupBy($"sourceIPSubstr").sum("adRevenue")
-//       df.count
-//       df
-//     }
-//   }
-
-//   def bd2Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-//     : DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = sqlContext.createEncryptedDataFrame(
-//       uservisits(sqlContext, size)
-//         .select($"sourceIP", $"adRevenue")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd2Encrypt2),
-//       StructType(Seq(
-//         StructField("sourceIP", StringType),
-//         StructField("adRevenue", FloatType))))
-//     time("load uservisits") { uservisitsDF.encCache() }
-//     timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 2",
-//       "system" -> "opaque",
-//       "size" -> size) {
-//       val df = uservisitsDF
-//         .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
-//         .groupBy("sourceIP").encAgg(sum("adRevenue").as("totalAdRevenue"))
-//       df.encForce()
-//       df
-//     }
-//   }
-
-//   def bd2Encrypted(
-//       sqlContext: SQLContext, size: String, distributed: Boolean = false)
-//     : DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = sqlContext.createEncryptedDataFrame(
-//       uservisits(sqlContext, size)
-//         .select($"sourceIP", $"adRevenue")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd2Encrypt2),
-//       StructType(Seq(
-//         StructField("sourceIP", StringType),
-//         StructField("adRevenue", FloatType))))
-//     time("load uservisits") { uservisitsDF.encCache() }
-//     timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 2",
-//       "system" -> "encrypted",
-//       "size" -> size) {
-//       val df = uservisitsDF
-//         .encSelect(substring($"sourceIP", 0, 8).as("sourceIP"), $"adRevenue")
-//         .groupBy("sourceIP").nonObliviousAgg(sum("adRevenue").as("totalAdRevenue"))
-//       df.encForce()
-//       df
-//     }
-//   }
 
 //   def bd3SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
 //     import sqlContext.implicits._

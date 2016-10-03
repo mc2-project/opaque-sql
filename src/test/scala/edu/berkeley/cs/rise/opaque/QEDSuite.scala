@@ -31,14 +31,15 @@ import org.apache.spark.sql.SQLImplicits
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.examples._
-import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.execution.Opcode._
+import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
@@ -63,6 +64,19 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     val answer = BigDataBenchmark.q1(spark, Insecure, "tiny", 1).collect
     assert(answer === BigDataBenchmark.q1(spark, Encrypted, "tiny", 1).collect)
     assert(answer === BigDataBenchmark.q1(spark, Oblivious, "tiny", 1).collect)
+  }
+
+  test("big data 2") {
+    def round(df: DataFrame): Seq[(String, String)] =
+      df.collect
+        .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+        .sortBy(_._1)
+        .map {
+          case (str: String, f: Float) => (str, "%.2f".format(f))
+        }
+    val answer = round(BigDataBenchmark.q2(spark, Insecure, "tiny", 1))
+    assert(answer === round(BigDataBenchmark.q2(spark, Encrypted, "tiny", 1)))
+    assert(answer === round(BigDataBenchmark.q2(spark, Oblivious, "tiny", 1)))
   }
 
   // test("big data 2") {
@@ -332,9 +346,8 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
   test("encSelect") {
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val rdd = spark.createDataFrame(data).toDF("str", "x").oblivious
-    val proj = rdd.select(substring($"str", 0, 8), $"x")
-    assert(proj.collect ===
-      data.map { case (str, x) => (str.substring(0, 8), x) }.map(Row.fromTuple))
+    val proj = rdd.select($"str")
+    assert(proj.collect === data.map(pair => Tuple1(pair._1)).map(Row.fromTuple))
   }
 
   test("encCache") {

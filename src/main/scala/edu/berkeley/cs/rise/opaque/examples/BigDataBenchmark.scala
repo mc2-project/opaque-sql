@@ -25,7 +25,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 object BigDataBenchmark {
-  def rankings(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+  def rankings(
+      spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
     : DataFrame =
     securityLevel.applyTo(
       spark.read.schema(
@@ -34,6 +35,24 @@ object BigDataBenchmark {
           StructField("pageRank", IntegerType),
           StructField("avgDuration", IntegerType))))
         .csv(s"${Benchmark.dataDir}/big-data-benchmark-files/rankings/$size")
+        .repartition(numPartitions))
+
+  def uservisits(
+      spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+    : DataFrame =
+    securityLevel.applyTo(
+      spark.read.schema(
+        StructType(Seq(
+          StructField("sourceIP", StringType),
+          StructField("destURL", StringType),
+          StructField("visitDate", DateType),
+          StructField("adRevenue", FloatType),
+          StructField("userAgent", StringType),
+          StructField("countryCode", StringType),
+          StructField("languageCode", StringType),
+          StructField("searchWord", StringType),
+          StructField("duration", IntegerType))))
+        .csv(s"${Benchmark.dataDir}/big-data-benchmark-files/uservisits/$size")
         .repartition(numPartitions))
 
   def q1(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
@@ -47,7 +66,24 @@ object BigDataBenchmark {
       "system" -> securityLevel.name,
       "size" -> size) {
       val df = rankingsDF.filter($"pageRank" > 1000)
-      df.explain(true)
+      Utils.force(df)
+      df
+    }
+  }
+
+  def q2(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+    : DataFrame = {
+    import spark.implicits._
+    val uservisitsDF = uservisits(spark, securityLevel, size, numPartitions).cache()
+    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "big data 2",
+      "system" -> securityLevel.name,
+      "size" -> size) {
+      val df = uservisitsDF
+        .select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
+        .groupBy($"sourceIPSubstr").sum("adRevenue")
       Utils.force(df)
       df
     }

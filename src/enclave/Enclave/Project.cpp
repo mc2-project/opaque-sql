@@ -31,8 +31,10 @@ void project(int op_code,
 void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
   switch (op_code) {
   case OP_BD2:
-    out->set(in);
+    out->clear();
+    out->add_attr(in, 1);
     out->set_attr_len(1, 8);
+    out->add_attr(in, 4);
     break;
   case OP_PROJECT_PAGERANK_WEIGHT_RANK:
   {
