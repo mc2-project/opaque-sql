@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque.examples
 
-import edu.berkeley.cs.rise.opaque.Benchmark
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.implicits._
 import org.apache.spark.sql.DataFrame
@@ -26,7 +25,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 object PageRank {
-  def run(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int): DataFrame = {
+  def run(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+    : DataFrame = {
     import spark.implicits._
     val inputSchema = StructType(Seq(
       StructField("src", IntegerType, false),

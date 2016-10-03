@@ -59,11 +59,10 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     PageRank.run(spark, Oblivious, "256", 1)
   }
 
-  // test("big data 1") {
-  //   val answer = QEDBenchmark.bd1SparkSQL(spark, "tiny").collect
-  //   assert(answer === QEDBenchmark.bd1Opaque(spark, "tiny").collect)
-  //   assert(answer === QEDBenchmark.bd1Encrypted(spark, "tiny").collect)
-  // }
+  test("big data 1") {
+    val answer = BigDataBenchmark.q1(spark, Insecure, "tiny", 1).collect
+    assert(answer === BigDataBenchmark.q1(spark, Oblivious, "tiny", 1).collect)
+  }
 
   // test("big data 2") {
   //   val answer = QEDBenchmark.bd2SparkSQL(spark, "tiny")

@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque
+package edu.berkeley.cs.rise.opaque.examples
+
+import edu.berkeley.cs.rise.opaque.Utils
+import org.apache.spark.sql.SparkSession
 
 object Benchmark {
-//   import Utils.time
-//   import Utils.timeBenchmark
-
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
       throw new Exception("Set SPARKSGX_DATA_DIR")
@@ -28,49 +28,53 @@ object Benchmark {
     System.getenv("SPARKSGX_DATA_DIR")
   }
 
-//   def main(args: Array[String]) {
-//     val sparkConf = new SparkConf().setAppName("QEDBenchmark")
-//     val sc = new SparkContext(sparkConf)
-//     val sqlContext = new SQLContext(sc)
-//     val distributed = !sc.isLocal
+  def main(args: Array[String]) {
+    val spark = SparkSession.builder()
+      .appName("QEDBenchmark")
+      .getOrCreate()
+    Utils.initSQLContext(spark.sqlContext)
 
-//     // Warmup
-//     QEDBenchmark.bd2Encrypted(sqlContext, "tiny", distributed)
-//     QEDBenchmark.bd2Encrypted(sqlContext, "tiny", distributed)
+    val numPartitions =
+      if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
 
-//     // Run
-//     QEDBenchmark.bd1SparkSQL(sqlContext, "1million")
-//     QEDBenchmark.bd1Opaque(sqlContext, "1million", distributed)
-//     QEDBenchmark.bd1Encrypted(sqlContext, "1million", distributed)
+    // Warmup
+    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
 
-//     QEDBenchmark.bd2SparkSQL(sqlContext, "1million")
-//     QEDBenchmark.bd2Opaque(sqlContext, "1million", distributed)
-//     QEDBenchmark.bd2Encrypted(sqlContext, "1million", distributed)
+    // Run
+    // BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
+    // BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
+    // BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
 
-//     QEDBenchmark.bd3SparkSQL(sqlContext, "1million")
-//     QEDBenchmark.bd3Opaque(sqlContext, "1million", distributed)
-//     QEDBenchmark.bd3Encrypted(sqlContext, "1million", distributed)
+    // BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
+    // BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
+    // BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
 
-//     for (i <- 8 to 20) {
-//       QEDBenchmark.pagerank(sqlContext, math.pow(2, i).toInt.toString, distributed)
-//     }
+    // BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
+    // BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
+    // BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
 
-//     QEDBenchmark.tpch9SparkSQL(sqlContext, "sf0.2", None)
-//     QEDBenchmark.tpch9Generic(sqlContext, "sf0.2", None)
-//     QEDBenchmark.tpch9Opaque(sqlContext, "sf0.2", None)
+    if (spark.sparkContext.isLocal) {
+      for (i <- 8 to 20) {
+        PageRank.run(spark, Oblivious, math.pow(2, i).toInt.toString, numPartitions)
+      }
 
-//     for (i <- 0 to 13) {
-//       QEDBenchmark.diseaseQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
-//       QEDBenchmark.geneQuery(sqlContext, (math.pow(2, i) * 125).toInt.toString)
-//     }
+      // TPCH.q9(spark, Insecure, "sf0.2", numPartitions)
+      // TPCH.q9(spark, Encrypted, "sf0.2", numPartitions)
+      // TPCH.q9(spark, Oblivious, "sf0.2", numPartitions)
 
-//     for (i <- 0 to 13) {
-//       QEDBenchmark.joinCost(sqlContext, (math.pow(2, i) * 125).toInt.toString)
-//     }
+      // for (i <- 0 to 13) {
+      //   JoinReordering.treatmentQuery(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
+      //   JoinReordering.geneQuery(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
+      // }
 
-//     sc.stop()
-//   }
+      // for (i <- 0 to 13) {
+      //   JoinCost.run(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
+      // }
+    }
 
+    spark.stop()
+  }
 
 //   def bd1SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
 //     import sqlContext.implicits._
