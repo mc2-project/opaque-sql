@@ -44,9 +44,9 @@ bool filter_single_row(int op_code, NewRecord *cur) {
   case OP_BD2_FILTER_NOT_DUMMY:
   case OP_FILTER_NOT_DUMMY:
     return !cur->is_dummy();
-  case OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01:
+  case OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01:
   {
-    uint64_t date = *reinterpret_cast<const uint64_t *>(cur->get_attr_value(1));
+    uint64_t date = *reinterpret_cast<const uint64_t *>(cur->get_attr_value(3));
     return date >= 315561600 && date <= 323424000;
   }
   case OP_FILTER_COL2_CONTAINS_MAROON:

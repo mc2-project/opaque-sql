@@ -50,9 +50,9 @@ object Benchmark {
     BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
     BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
 
-    // BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
-    // BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
-    // BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
+    BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
+    BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
 
     if (spark.sparkContext.isLocal) {
       for (i <- 8 to 20) {
@@ -75,129 +75,6 @@ object Benchmark {
 
     spark.stop()
   }
-
-//   def bd3SparkSQL(sqlContext: SQLContext, size: String): DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = uservisits(sqlContext, size).cache()
-//     uservisitsDF.count
-//     val rankingsDF = rankings(sqlContext, size).cache()
-//     rankingsDF.count
-//     timeBenchmark(
-//       "distributed" -> !sqlContext.sparkContext.isLocal,
-//       "query" -> "big data 3",
-//       "system" -> "spark sql",
-//       "size" -> size) {
-//       val df = uservisitsDF.filter($"visitDate" >= lit("1980-01-01"))
-//         .filter($"visitDate" <= lit("1980-04-01"))
-//         .select($"destURL", $"sourceIP", $"adRevenue")
-//         .join(rankingsDF.select($"pageURL", $"pageRank"), rankingsDF("pageURL") === uservisitsDF("destURL"))
-//         .select($"sourceIP", $"pageRank", $"adRevenue")
-//         .groupBy($"sourceIP")
-//         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
-//         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
-//         .orderBy($"totalRevenue".asc)
-//       df.count
-//       df
-//     }
-//   }
-
-//   def bd3Opaque(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-//     : DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = sqlContext.createEncryptedDataFrame(
-//       uservisits(sqlContext, size)
-//         .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd3EncryptUV),
-//       StructType(Seq(
-//         StructField("visitDate", DateType),
-//         StructField("destURL", StringType),
-//         StructField("sourceIP", StringType),
-//         StructField("adRevenue", FloatType))))
-//     time("load uservisits") { uservisitsDF.encCache() }
-//     val rankingsDF = sqlContext.createEncryptedDataFrame(
-//       rankings(sqlContext, size)
-//         .select($"pageURL", $"pageRank")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd1Encrypt2),
-//       StructType(Seq(
-//         StructField("pageURL", StringType),
-//         StructField("pageRank", IntegerType))))
-//     time("load rankings") { rankingsDF.encCache() }
-
-//     timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 3",
-//       "system" -> "opaque",
-//       "size" -> size) {
-//       val df =
-//         rankingsDF
-//           .encJoin(
-//             uservisitsDF
-//               .encFilter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
-//               .encSelect($"destURL", $"sourceIP", $"adRevenue"),
-//             rankingsDF("pageURL") === uservisitsDF("destURL"))
-//           .encSelect($"pageRank", $"sourceIP", $"adRevenue")
-//           .encSelect($"sourceIP", $"pageRank", $"adRevenue")
-//           .groupBy("sourceIP")
-//           .encAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
-//           .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
-//           .encSort($"totalRevenue")
-//       df.encForce()
-//       df
-//     }
-//   }
-
-//   def bd3Encrypted(sqlContext: SQLContext, size: String, distributed: Boolean = false)
-//     : DataFrame = {
-//     import sqlContext.implicits._
-//     val uservisitsDF = sqlContext.createEncryptedDataFrame(
-//       uservisits(sqlContext, size)
-//         .select($"visitDate", $"destURL", $"sourceIP", $"adRevenue")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd3EncryptUV),
-//       StructType(Seq(
-//         StructField("visitDate", DateType),
-//         StructField("destURL", StringType),
-//         StructField("sourceIP", StringType),
-//         StructField("adRevenue", FloatType))))
-//     time("load uservisits") { uservisitsDF.encCache() }
-//     val rankingsDF = sqlContext.createEncryptedDataFrame(
-//       rankings(sqlContext, size)
-//         .select($"pageURL", $"pageRank")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.bd1Encrypt2),
-//       StructType(Seq(
-//         StructField("pageURL", StringType),
-//         StructField("pageRank", IntegerType))))
-//     time("load rankings") { rankingsDF.encCache() }
-
-//     timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "big data 3",
-//       "system" -> "encrypted",
-//       "size" -> size) {
-//       val df =
-//         rankingsDF
-//           .nonObliviousJoin(
-//             uservisitsDF
-//               .nonObliviousFilter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
-//               .encSelect($"destURL", $"sourceIP", $"adRevenue"),
-//             rankingsDF("pageURL") === uservisitsDF("destURL"))
-//           .encSelect($"pageRank", $"sourceIP", $"adRevenue")
-//           .encSelect($"sourceIP", $"pageRank", $"adRevenue")
-//           .groupBy("sourceIP")
-//           .nonObliviousAgg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
-//           .encSelect($"sourceIP", $"totalRevenue", $"avgPageRank")
-//           .nonObliviousSort($"totalRevenue")
-//       df.encForce()
-//       df
-//     }
-//   }
 
 //   /** TPC-H query 9 - Product Type Profit Measure Query - generic join order */
 //   def tpch9SparkSQL(

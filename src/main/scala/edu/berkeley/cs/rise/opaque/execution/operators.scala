@@ -221,10 +221,16 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
         OP_PROJECT_DROP_COL1
       case Seq(Col(1, _)) if child.output.size == 2 =>
         OP_PROJECT_DROP_COL2
+      case Seq(Col(1, _), Col(2, _)) if child.output.size == 3 =>
+        OP_PROJECT_DROP_COL3
       case Seq(Col(2, _), Col(1, _), Col(3, _)) if child.output.size == 3 =>
         OP_PROJECT_SWAP_COL1_COL2
       case Seq(Col(1, _), Col(3, _), Col(2, _)) if child.output.size == 3 =>
         OP_PROJECT_SWAP_COL2_COL3
+      case Seq(Col(4, _), Col(2, _), Col(5, _)) if child.output.size == 5 =>
+        OP_PROJECT_COL4_COL2_COL5
+      case Seq(Col(2, _), Col(1, _), Col(4, _)) if child.output.size == 9 =>
+        OP_PROJECT_COL2_COL1_COL4
       case Seq(Col(2, _), Col(5, _),
         Alias(Subtract(
           Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
@@ -274,13 +280,15 @@ case class EncFilter(condition: Expression, child: SparkPlan)
         GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
         OP_BD1
       case And(
-        IsNotNull(Cast(Col(1, _), StringType)),
         And(
-          GreaterThanOrEqual(Cast(Col(1, _), StringType), Literal(start, StringType)),
-          LessThanOrEqual(Cast(Col(1, _), StringType), Literal(end, StringType))))
+          And(
+            IsNotNull(Col(3, _)),
+            GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
+          LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
+        IsNotNull(Col(2, _)))
           if start == UTF8String.fromString("1980-01-01")
           && end == UTF8String.fromString("1980-04-01") =>
-        OP_FILTER_COL1_DATE_BETWEEN_1980_01_01_AND_1980_04_01
+        OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
       case Contains(Col(2, _), Literal(maroon, StringType))
           if maroon == UTF8String.fromString("maroon") =>
         OP_FILTER_COL2_CONTAINS_MAROON
@@ -476,10 +484,10 @@ case class EncAggregate(
             OP_FILTER_NOT_DUMMY)
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP1,
-            OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT_STEP2,
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
+          (OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1,
+            OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
@@ -489,6 +497,13 @@ case class EncAggregate(
             OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
+
+      case _ =>
+        throw new Exception(
+          s"EncAggregate: unknown grouping expressions $groupingExpressions, " +
+            s"aggregation expressions $aggExpressions.\n" +
+            s"Input: ${child.output}.\n" +
+            s"Types: ${child.output.map(_.dataType)}")
       }
 
     val childRDD = child.asInstanceOf[EncOperator].executeBlocked()
@@ -592,9 +607,16 @@ case class NonObliviousAggregate(
           OP_GROUPBY_COL1_SUM_COL2_FLOAT
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
-          OP_GROUPBY_COL1_AVG_COL2_INT_SUM_COL3_FLOAT
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
+          OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT
+
+      case _ =>
+        throw new Exception(
+          s"NonObliviousAggregate: unknown grouping expressions $groupingExpressions, " +
+            s"aggregation expressions $aggExpressions.\n" +
+            s"Input: ${child.output}.\n" +
+            s"Types: ${child.output.map(_.dataType)}")
       }
 
     val childRDD = child.asInstanceOf[EncOperator].executeBlocked()
@@ -741,7 +763,7 @@ object OpaqueJoinUtils {
 
     val info = (leftOutput.map(_.dataType), rightOutput.map(_.dataType),
       leftKeys, rightKeys, condition)
-    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) = (info: @unchecked) match {
+    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) = info match {
       case (Seq(StringType, IntegerType), Seq(StringType, StringType, FloatType),
         Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
         (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
@@ -841,6 +863,13 @@ object OpaqueJoinUtils {
         Seq(IntegerType, StringType, StringType),
         Seq(LeftCol(3, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_GENEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
+
+      case _ =>
+        throw new Exception(
+          s"OpaqueJoinUtils: unknown left join keys $leftKeys, " +
+            s"right join keys $rightKeys, condition $condition.\n" +
+            s"Input: left $leftOutput, right $rightOutput.\n" +
+            s"Types: left ${leftOutput.map(_.dataType)}, right ${rightOutput.map(_.dataType)}")
     }
     (joinOpcode, dummySortOpcode, dummyFilterOpcode)
   }

@@ -88,4 +88,32 @@ object BigDataBenchmark {
       df
     }
   }
+
+  def q3(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+    : DataFrame = {
+    import spark.implicits._
+    val uservisitsDF = uservisits(spark, securityLevel, size, numPartitions).cache()
+    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    val rankingsDF = rankings(spark, securityLevel, size, numPartitions).cache()
+    Utils.time("load rankings") { Utils.force(rankingsDF) }
+    Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "big data 3",
+      "system" -> securityLevel.name,
+      "size" -> size) {
+      val df = rankingsDF
+        .join(
+          uservisitsDF
+            .filter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
+            .select($"destURL", $"sourceIP", $"adRevenue"),
+          rankingsDF("pageURL") === uservisitsDF("destURL"))
+        .select($"sourceIP", $"pageRank", $"adRevenue")
+        .groupBy("sourceIP")
+        .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
+        .select($"sourceIP", $"totalRevenue", $"avgPageRank")
+        .orderBy($"totalRevenue".asc)
+      Utils.force(df)
+      df
+    }
+  }
 }

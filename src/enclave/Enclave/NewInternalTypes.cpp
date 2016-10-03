@@ -145,8 +145,15 @@ bool attr_less_than(const uint8_t *a, const uint8_t *b) {
 
   case FLOAT:
   {
-    uint32_t a_val = *reinterpret_cast<const float *>(a_ptr); a_ptr += 4;
-    uint32_t b_val = *reinterpret_cast<const float *>(b_ptr); b_ptr += 4;
+    float a_val = *reinterpret_cast<const float *>(a_ptr); a_ptr += 4;
+    float b_val = *reinterpret_cast<const float *>(b_ptr); b_ptr += 4;
+    return a_val < b_val;
+  }
+
+  case DOUBLE:
+  {
+    double a_val = *reinterpret_cast<const double *>(a_ptr); a_ptr += 8;
+    double b_val = *reinterpret_cast<const double *>(b_ptr); b_ptr += 8;
     return a_val < b_val;
   }
 
@@ -213,6 +220,15 @@ uint32_t attr_key_prefix(const uint8_t *attr) {
     // From http://stereopsis.com/radix.html
     uint32_t bits = *reinterpret_cast<const uint32_t *>(attr_ptr);
     return bits ^ (-static_cast<int32_t>(bits >> 31) | 0x80000000);
+  }
+
+  case DOUBLE:
+  {
+    // Transform any IEEE double into an unsigned long that can be sorted using integer comparison,
+    // then take the high 32 bits
+    uint64_t bits = *reinterpret_cast<const uint64_t *>(attr_ptr);
+    uint64_t full = bits ^ (-static_cast<int64_t>(bits >> 63) | 0x8000000000000000L);
+    return static_cast<uint32_t>(full >> 32);
   }
 
   case STRING:

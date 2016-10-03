@@ -120,6 +120,14 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
       }
     }
     break;
+  case OP_PROJECT_DROP_COL3:
+    out->clear();
+    for (uint32_t i = 1; i <= in->num_cols(); i++) {
+      if (i != 3) {
+        out->add_attr(in, i);
+      }
+    }
+    break;
   case OP_PROJECT_SWAP_COL1_COL2:
     out->clear();
     for (uint32_t i = 1; i <= in->num_cols(); i++) {
@@ -133,6 +141,18 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
       uint32_t src_i = (i == 2) ? 3 : (i == 3) ? 2 : i;
       out->add_attr(in, src_i);
     }
+    break;
+  case OP_PROJECT_COL4_COL2_COL5:
+    out->clear();
+    out->add_attr(in, 4);
+    out->add_attr(in, 2);
+    out->add_attr(in, 5);
+    break;
+  case OP_PROJECT_COL2_COL1_COL4:
+    out->clear();
+    out->add_attr(in, 2);
+    out->add_attr(in, 1);
+    out->add_attr(in, 4);
     break;
   default:
     printf("project_single_row: unknown opcode %d\n", op_code);

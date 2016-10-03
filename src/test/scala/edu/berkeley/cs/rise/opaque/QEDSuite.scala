@@ -79,38 +79,11 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(answer === round(BigDataBenchmark.q2(spark, Oblivious, "tiny", 1)))
   }
 
-  // test("big data 2") {
-  //   val answer = QEDBenchmark.bd2SparkSQL(spark, "tiny")
-  //     .collect
-  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-  //     .sortBy(_._1)
-  //     .map {
-  //       case (str: String, f: Float) => (str, "%.2f".format(f))
-  //     }
-
-  //   val opaque =
-  //     Utils.decrypt2[String, Float](QEDBenchmark.bd2Opaque(spark, "tiny").encCollect)
-  //       .map {
-  //         case (str: String, f: Float) => (str, "%.2f".format(f))
-  //       }
-  //   assert(answer === opaque)
-
-  //   val encrypted =
-  //     Utils.decrypt2[String, Float](QEDBenchmark.bd2Encrypted(spark, "tiny").encCollect)
-  //       .map {
-  //         case (str: String, f: Float) => (str, "%.2f".format(f))
-  //       }
-  //   assert(answer === encrypted)
-  // }
-
-  // test("big data 3") {
-  //   val answer = QEDBenchmark.bd3SparkSQL(spark, "tiny")
-  //     .collect.map { case Row(a: String, b: Double, c: Double) => (a, b.toFloat, c.toFloat) }
-  //   assert(answer === Utils.decrypt3[String, Float, Float](
-  //     QEDBenchmark.bd3Opaque(spark, "tiny").encCollect))
-  //   assert(answer === Utils.decrypt3[String, Float, Float](
-  //     QEDBenchmark.bd3Encrypted(spark, "tiny").encCollect))
-  // }
+  test("big data 3") {
+    val answer = BigDataBenchmark.q3(spark, Insecure, "tiny", 1).collect
+    assert(answer === BigDataBenchmark.q3(spark, Encrypted, "tiny", 1).collect)
+    assert(answer === BigDataBenchmark.q3(spark, Oblivious, "tiny", 1).collect)
+  }
 
   // test("TPC-H query 9") {
   //   val a = QEDBenchmark.tpch9SparkSQL(spark, "sf_small", Some(25))
@@ -161,22 +134,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
 
     val filtered = words.filter($"count" > lit(3))
     assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
-  }
-
-  test("encFilter on date") {
-    import java.sql.Date
-    val dates = List("1975-01-01", "1980-01-01", "1980-03-02", "1980-04-01", "1990-01-01")
-    val filteredDates = List("1980-01-01", "1980-03-02", "1980-04-01")
-    val javaDates = dates.map(d =>
-      DateTimeUtils.toJavaDate(DateTimeUtils.stringToDate(UTF8String.fromString(d)).get))
-    val data = spark.createDataFrame(javaDates.map(Tuple1(_))).toDF("date")
-    val filtered = data.filter($"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
-    assert(filtered.collect.map(_.get(0).toString).toSet === filteredDates.toSet)
-
-    val encFiltered = data.oblivious.filter(
-      $"date" >= lit("1980-01-01") && $"date" <= lit("1980-04-01"))
-    assert(encFiltered.collect.map(_.get(0).toString).toSet ===
-      filteredDates.toSet)
   }
 
   test("nonObliviousFilter") {
@@ -236,11 +193,11 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
     val words = spark.createDataFrame(data).toDF("str", "x", "y").oblivious
 
-    val summed = words.groupBy("str").agg(avg("x").as("avgX"), sum("y").as("totalY"))
+    val summed = words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
     assert(summed.collect.toSet ===
       data.groupBy(_._1).mapValues(group =>
-        (group.map(_._2).sum / group.map(_._2).size, group.map(_._3).sum))
-      .map { case (str, (avgX, avgY)) => (str, avgX, avgY) }.map(Row.fromTuple).toSet)
+        (group.map(_._3).sum, group.map(_._2).sum / group.map(_._2).size))
+      .map { case (str, (totalY, avgX)) => (str, totalY, avgX) }.map(Row.fromTuple).toSet)
   }
 
   test("encSort") {
