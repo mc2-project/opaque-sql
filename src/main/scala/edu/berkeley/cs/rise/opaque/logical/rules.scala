@@ -17,11 +17,13 @@
 
 package edu.berkeley.cs.rise.opaque.logical
 
+import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.execution
 import org.apache.spark.sql.InMemoryRelationMatcher
 import org.apache.spark.sql.UndoCollapseProject
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
+import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -68,6 +70,10 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case p @ Project(projectList, child) if isEncrypted(child) || isOblivious(child) =>
       EncProject(projectList, child.asInstanceOf[EncOperator])
+    case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
+      // We don't support null values yet, so there's no point in checking whether the output of an
+      // encrypted operator is null
+      child
     case p @ Filter(condition, child) if isOblivious(child) =>
       EncFilter(condition, Permute(child.asInstanceOf[EncOperator]))
     case p @ Filter(condition, child) if isEncrypted(child) =>
@@ -117,7 +123,9 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       LogicalEncryptedBlockRDD(
         output,
-        child.asInstanceOf[execution.EncOperator].executeBlocked().persist(storageLevel),
+        Utils.ensureCached(
+          child.asInstanceOf[execution.EncOperator].executeBlocked(),
+          storageLevel),
         isOblivious(child))
   }
 }

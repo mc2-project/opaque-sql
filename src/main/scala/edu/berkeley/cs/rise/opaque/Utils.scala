@@ -345,9 +345,12 @@ object Utils {
     result
   }
 
-  def ensureCached(rdd: RDD[_]): Unit = {
+  def ensureCached[T](
+      rdd: RDD[T], storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): RDD[T] = {
     if (rdd.getStorageLevel == StorageLevel.NONE) {
-      rdd.cache()
+      rdd.persist(storageLevel)
+    } else {
+      rdd
     }
   }
 

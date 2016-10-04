@@ -150,6 +150,12 @@ void ecall_aggregate_step1(int index, int num_part,
       input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
       actual_size);
     break;
+  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP1:
+    aggregate_step1<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
+      &verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size);
+    break;
   case OP_GROUPBY_COL2_SUM_COL3_INT_STEP1:
     aggregate_step1<Aggregator1<GroupBy<2>, Sum<3, uint32_t, uint64_t> > >(
       &verify_set,
@@ -197,6 +203,12 @@ void ecall_process_boundary_records(int op_code,
     break;
   case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1:
     aggregate_process_boundaries<Aggregator1<GroupBy<1>, Sum<2, float, double> > >(
+      &verify_set,
+      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
+      actual_out_agg_row_size);
+    break;
+  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP1:
+    aggregate_process_boundaries<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
       &verify_set,
       rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
       actual_out_agg_row_size);
@@ -250,6 +262,12 @@ void ecall_aggregate_step2(int index, int num_part,
     break;
   case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2:
     aggregate_step2<Aggregator1<GroupBy<1>, Sum<2, float, double> > >(
+      &verify_set,
+      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
+      output_rows, output_rows_length, actual_size);
+    break;
+  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP2:
+    aggregate_step2<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
       &verify_set,
       input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
       output_rows, output_rows_length, actual_size);
@@ -682,6 +700,11 @@ void ecall_non_oblivious_aggregate(int index, int num_part,
   case OP_GROUPBY_COL1_SUM_COL2_INT:
   case OP_TEST_AGG:
     non_oblivious_aggregate<Aggregator1<GroupBy<1>, Sum<2, uint32_t, uint64_t> > >(&verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
+    break;
+  case OP_GROUPBY_COL1_MIN_COL2_INT:
+    non_oblivious_aggregate<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(&verify_set,
       input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
       actual_size, num_output_rows);
     break;

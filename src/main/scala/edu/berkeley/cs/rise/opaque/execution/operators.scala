@@ -231,6 +231,8 @@ case class EncProject(projectList: Seq[NamedExpression], child: SparkPlan)
         OP_PROJECT_COL4_COL2_COL5
       case Seq(Col(2, _), Col(1, _), Col(4, _)) if child.output.size == 9 =>
         OP_PROJECT_COL2_COL1_COL4
+      case Seq(Col(2, _), Col(4, _)) if child.output.size == 4 =>
+        OP_PROJECT_COL2_COL4
       case Seq(Col(2, _), Col(5, _),
         Alias(Subtract(
           Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
@@ -476,6 +478,13 @@ case class EncAggregate(
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
+        case (Seq(Col(1, _)), Seq(Col(1, _),
+          Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
+          (OP_GROUPBY_COL1_MIN_COL2_INT_STEP1,
+            OP_GROUPBY_COL1_MIN_COL2_INT_STEP2,
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_NOT_DUMMY)
+
         case (Seq(Col(2, _)), Seq(Col(2, _),
           Alias(AggregateExpression(Sum(Col(3, IntegerType)), _, false, _), _))) =>
           (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
@@ -605,6 +614,10 @@ case class NonObliviousAggregate(
         case (Seq(Col(1, _)), Seq(Col(1, _),
           Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_SUM_COL2_FLOAT
+
+        case (Seq(Col(1, _)), Seq(Col(1, _),
+          Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
+          OP_GROUPBY_COL1_MIN_COL2_INT
 
         case (Seq(Col(1, _)), Seq(Col(1, _),
           Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
@@ -830,7 +843,7 @@ object OpaqueJoinUtils {
         (OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
       case (Seq(StringType, IntegerType),
-        Seq(StringType, IntegerType, StringType, IntegerType, StringType),
+        Seq(StringType, IntegerType, StringType, IntegerType, StringType, StringType),
         Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
         (OP_JOIN_DISEASEDEFAULT_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
@@ -839,7 +852,7 @@ object OpaqueJoinUtils {
         Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_DISEASEDEFAULT_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
-      case (Seq(StringType, IntegerType, StringType, IntegerType),
+      case (Seq(StringType, IntegerType, StringType, StringType, IntegerType),
         Seq(IntegerType, StringType, StringType),
         Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_DISEASEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)

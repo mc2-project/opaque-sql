@@ -85,22 +85,10 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(answer === BigDataBenchmark.q3(spark, Oblivious, "tiny", 1).collect)
   }
 
-  // test("TPC-H query 9") {
-  //   val a = QEDBenchmark.tpch9SparkSQL(spark, "sf_small", Some(25))
-  //     .collect.map { case Row(a: String, b: Int, c: Double) => (a, b, c.toFloat) }.sorted
-  //   val b = Utils.decrypt3[String, Int, Float](
-  //     QEDBenchmark.tpch9Generic(spark, "sf_small", Some(25)).encCollect).sorted
-  //   val c = Utils.decrypt3[String, Int, Float](
-  //     QEDBenchmark.tpch9Opaque(spark, "sf_small", Some(25)).encCollect).sorted
-  //   assert(a.size === b.size)
-  //   assert(a.map { case (a, b, c) => (a, b)} === b.map { case (a, b, c) => (a, b)})
-  //   assert(a.size === c.size)
-  //   assert(a.map { case (a, b, c) => (a, b)} === c.map { case (a, b, c) => (a, b)})
-  // }
-
-  // test("disease query") {
-  //   QEDBenchmark.diseaseQuery(spark, "500")
-  // }
+  test("join reordering") {
+    JoinReordering.treatmentQuery(spark, "125", 1)
+    //JoinReordering.geneQuery(spark, "125", 1)
+  }
 
   test("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)

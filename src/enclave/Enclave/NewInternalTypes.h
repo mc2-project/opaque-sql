@@ -1,6 +1,7 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include "util.h"
+#include <limits>
 #include <set>
 #include "EncryptedDAG.h"
 
@@ -903,6 +904,62 @@ public:
 private:
   OutType sum;
   uint64_t count;
+};
+
+/**
+ * Holds state for an ongoing min aggregation operation. See Sum.
+ */
+template<uint32_t Column, typename InType, typename OutType>
+class Min {
+public:
+  Min() : min() {}
+
+  void set(Min *other) {
+    this->min = other->min;
+  }
+
+  void zero() {
+    min = std::numeric_limits<OutType>::max();
+  }
+
+  void add(NewRecord *record) {
+    InType val = *reinterpret_cast<const InType *>(record->get_attr_value(Column));
+    if (val < min) {
+      min = val;
+    }
+  }
+
+  void add(Min *other) {
+    if (other->min < min) {
+      min = other->min;
+    }
+  }
+
+  /** Read a partial min and return num bytes read. */
+  uint32_t read_partial_result(uint8_t *input) {
+    uint8_t *input_ptr = input;
+    input_ptr += read_attr<OutType>(input_ptr, reinterpret_cast<uint8_t *>(&min));
+    return input_ptr - input;
+  }
+
+  /** Write the partial min and return num bytes written. */
+  uint32_t write_partial_result(uint8_t *output) {
+    uint8_t *output_ptr = output;
+    output_ptr += write_attr<OutType>(output_ptr, min, false);
+    return output_ptr - output;
+  }
+
+  /** Write the final min by appending it to the given record. */
+  void append_result(NewRecord *rec, bool dummy) const {
+    rec->add_attr_val<OutType>(min, dummy);
+  }
+
+  void print() {
+    printf("Min[min=%f]\n", min);
+  }
+
+private:
+  OutType min;
 };
 
 /**
