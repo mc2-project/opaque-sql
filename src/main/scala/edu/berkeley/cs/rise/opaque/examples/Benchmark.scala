@@ -64,62 +64,11 @@ object Benchmark {
         JoinReordering.geneQuery(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
       }
 
-      // for (i <- 0 to 13) {
-      //   JoinCost.run(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
-      // }
+      for (i <- 0 to 13) {
+        JoinCost.run(spark, Oblivious, (math.pow(2, i) * 125).toInt.toString, numPartitions)
+      }
     }
 
     spark.stop()
   }
-
-//   def joinCost(
-//       sqlContext: SQLContext, size: String, distributed: Boolean = false,
-//       onlyOblivious: Boolean = false): Unit = {
-//     import sqlContext.implicits._
-//     val diseaseSchema = StructType(Seq(
-//       StructField("d_disease_id", StringType),
-//       StructField("d_gene_id", IntegerType),
-//       StructField("d_name", StringType)))
-//     val diseaseDF = sqlContext.createEncryptedDataFrame(
-//       sqlContext.read.schema(diseaseSchema)
-//         .format("csv")
-//         .load(s"$dataDir/disease/disease.csv")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.diseaseQueryEncryptDisease),
-//       diseaseSchema)
-//     time("load disease") { diseaseDF.encCache() }
-
-//     val patientSchema = StructType(Seq(
-//       StructField("p_id", IntegerType),
-//       StructField("p_disease_id", StringType),
-//       StructField("p_name", StringType)))
-//     val patientDF = sqlContext.createEncryptedDataFrame(
-//       sqlContext.read.schema(patientSchema)
-//         .format("csv")
-//         .load(s"$dataDir/disease/patient-$size.csv")
-//         .repartition(numPartitions(sqlContext, distributed))
-//         .rdd
-//         .mapPartitions(Utils.diseaseQueryEncryptPatient),
-//       patientSchema)
-//     time("load patient") { patientDF.encCache() }
-
-//     timeBenchmark(
-//       "distributed" -> distributed,
-//       "query" -> "join cost",
-//       "system" -> "opaque",
-//       "size" -> size) {
-//       diseaseDF.encJoin(patientDF, $"d_disease_id" === $"p_disease_id").encForce()
-//     }
-
-//     if (!onlyOblivious) {
-//       timeBenchmark(
-//         "distributed" -> distributed,
-//         "query" -> "join cost",
-//         "system" -> "encrypted",
-//         "size" -> size) {
-//         diseaseDF.nonObliviousJoin(patientDF, $"d_disease_id" === $"p_disease_id").encForce()
-//       }
-//     }
-//   }
 }
