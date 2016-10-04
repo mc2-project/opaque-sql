@@ -863,7 +863,7 @@ object OpaqueJoinUtils {
         (OP_JOIN_DISEASEOPAQUE_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
       case (Seq(IntegerType, StringType),
-        Seq(StringType, IntegerType, StringType, IntegerType, StringType),
+        Seq(StringType, IntegerType, StringType, IntegerType, StringType, StringType),
         Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_GENEDEFAULT_GENE, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
@@ -872,7 +872,7 @@ object OpaqueJoinUtils {
         Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_GENEOPAQUE_GENE, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
 
-      case (Seq(IntegerType, StringType, StringType, StringType),
+      case (Seq(IntegerType, StringType, StringType, IntegerType, StringType),
         Seq(IntegerType, StringType, StringType),
         Seq(LeftCol(3, _)), Seq(RightCol(2, _)), None) =>
         (OP_JOIN_GENEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)

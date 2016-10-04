@@ -22,6 +22,7 @@ import edu.berkeley.cs.rise.opaque.execution
 import org.apache.spark.sql.InMemoryRelationMatcher
 import org.apache.spark.sql.UndoCollapseProject
 import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.SortOrder
@@ -70,22 +71,29 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case p @ Project(projectList, child) if isEncrypted(child) || isOblivious(child) =>
       EncProject(projectList, child.asInstanceOf[EncOperator])
-    case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
-      // We don't support null values yet, so there's no point in checking whether the output of an
-      // encrypted operator is null
+
+    // We don't support null values yet, so there's no point in checking whether the output of an
+    // encrypted operator is null
+    case p @ Filter(And(IsNotNull(_), IsNotNull(_)), child) if isEncrypted(child) =>
       child
+    case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
+      child
+
     case p @ Filter(condition, child) if isOblivious(child) =>
       EncFilter(condition, Permute(child.asInstanceOf[EncOperator]))
     case p @ Filter(condition, child) if isEncrypted(child) =>
       EncFilter(condition, child.asInstanceOf[EncOperator])
+
     case p @ Sort(order, true, child) if isOblivious(child) =>
       EncSort(order, child.asInstanceOf[EncOperator])
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       NonObliviousSort(order, child.asInstanceOf[EncOperator])
+
     case p @ Join(left, right, Inner, Some(joinExpr)) if isOblivious(p) =>
       EncJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
     case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
       NonObliviousJoin(left.asInstanceOf[EncOperator], right.asInstanceOf[EncOperator], joinExpr)
+
     case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
       UndoCollapseProject.separateProjectAndAgg(p) match {
         case Some((projectExprs, aggExprs)) =>
@@ -120,6 +128,7 @@ object ConvertToEncryptedOperators extends Rule[LogicalPlan] {
               groupingExprs.map(e => SortOrder(e, Ascending)),
               child.asInstanceOf[EncOperator]))
       }
+
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       LogicalEncryptedBlockRDD(
         output,

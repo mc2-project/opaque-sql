@@ -85,11 +85,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(answer === BigDataBenchmark.q3(spark, Oblivious, "tiny", 1).collect)
   }
 
-  test("join reordering") {
-    JoinReordering.treatmentQuery(spark, "125", 1)
-    //JoinReordering.geneQuery(spark, "125", 1)
-  }
-
   test("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)

@@ -757,12 +757,13 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[7] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEDEFAULT_PATIENT:
-    num_output_cols = 5;
+    num_output_cols = 6;
     types[0] = get_dummy_type(STRING);
     types[1] = get_dummy_type(INT);
     types[2] = get_dummy_type(STRING);
     types[3] = get_dummy_type(INT);
     types[4] = get_dummy_type(STRING);
+    types[5] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEOPAQUE_PATIENT:
     num_output_cols = 8;
@@ -776,20 +777,23 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[7] = get_dummy_type(STRING);
     break;
   case OP_JOIN_DISEASEOPAQUE_TREATMENT:
-    num_output_cols = 4;
+    num_output_cols = 5;
     types[0] = get_dummy_type(STRING);
     types[1] = get_dummy_type(INT);
     types[2] = get_dummy_type(STRING);
-    types[3] = get_dummy_type(INT);
+    types[3] = get_dummy_type(STRING);
+    types[4] = get_dummy_type(INT);
     break;
   case OP_JOIN_GENEDEFAULT_GENE:
-    num_output_cols = 6;
+    num_output_cols = 8;
     types[0] = get_dummy_type(INT);
     types[1] = get_dummy_type(STRING);
     types[2] = get_dummy_type(STRING);
-    types[3] = get_dummy_type(STRING);
-    types[4] = get_dummy_type(INT);
-    types[5] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(STRING);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(STRING);
+    types[7] = get_dummy_type(STRING);
     break;
   case OP_JOIN_GENEOPAQUE_GENE:
     num_output_cols = 4;
@@ -803,9 +807,11 @@ void NewJoinRecord::init_dummy(NewRecord *dummy, int op_code) {
     types[0] = get_dummy_type(INT);
     types[1] = get_dummy_type(STRING);
     types[2] = get_dummy_type(STRING);
-    types[3] = get_dummy_type(STRING);
-    types[4] = get_dummy_type(INT);
-    types[5] = get_dummy_type(STRING);
+    types[3] = get_dummy_type(INT);
+    types[4] = get_dummy_type(STRING);
+    types[5] = get_dummy_type(INT);
+    types[6] = get_dummy_type(STRING);
+    types[7] = get_dummy_type(STRING);
     break;
   default:
     printf("NewJoinRecord::init_dummy: Unknown opcode %d\n", op_code);
