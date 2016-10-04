@@ -31,9 +31,9 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.rise.opaque.execution.ColumnType
-import edu.berkeley.cs.rise.opaque.execution.EncOperator
+import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
-import edu.berkeley.cs.rise.opaque.logical.ConvertToEncryptedOperators
+import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
 object Utils {
@@ -101,10 +101,10 @@ object Utils {
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
-      (Seq(EncryptLocalRelation, ConvertToEncryptedOperators) ++
+      (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
     sqlContext.experimental.extraStrategies =
-      (Seq(EncOperators) ++
+      (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
   }
 
@@ -356,7 +356,7 @@ object Utils {
 
   def force(ds: Dataset[_]): Unit = {
     val rdd: RDD[_] = ds.queryExecution.executedPlan match {
-      case p: EncOperator => p.executeBlocked()
+      case p: OpaqueOperatorExec => p.executeBlocked()
       case p => p.execute()
     }
     rdd.foreach(x => {})

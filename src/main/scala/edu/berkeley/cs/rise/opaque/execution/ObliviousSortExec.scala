@@ -25,8 +25,35 @@ import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.expressions.Ascending
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.execution.SparkPlan
 
-object ObliviousSort extends java.io.Serializable {
+case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  private object Col extends ColumnNumberMatcher {
+    override def input: Seq[Attribute] = child.output
+  }
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
+    import Opcode._
+    val opcode = order match {
+      case Seq(SortOrder(Col(1, _), Ascending)) =>
+        OP_SORT_COL1
+      case Seq(SortOrder(Col(2, _), Ascending)) =>
+        OP_SORT_COL2
+      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
+        OP_SORT_COL1_COL2
+    }
+    ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+  }
+}
+
+object ObliviousSortExec extends java.io.Serializable {
 
   val Multiplier = 1 // TODO: fix bug when this is 1
 

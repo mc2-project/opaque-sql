@@ -110,7 +110,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
         eid, 0, 5, OP_JOIN_COL1.value, p, pArr.length, f, fArr.length)
       Iterator(Block(r, pArr.length + fArr.length))
     }
-    val sorted = ObliviousSort.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
+    val sorted = ObliviousSortExec.sortBlocks(j, OP_JOIN_COL1).flatMap { block =>
       Utils.splitBlock(block.bytes, block.numRows, true)
         .map(serRow => Row.fromSeq(Utils.parseRow(serRow)))
     }
@@ -301,7 +301,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
   test("encCache") {
     def numCached(ds: Dataset[_]): Int =
       ds.queryExecution.executedPlan.collect {
-        case cached: PhysicalEncryptedBlockRDD => cached
+        case cached: EncryptedBlockRDDScanExec => cached
       }.size
 
     val data = List((1, 3), (1, 4), (1, 5), (2, 4))
