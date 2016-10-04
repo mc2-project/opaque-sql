@@ -37,7 +37,7 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
-import edu.berkeley.cs.rise.opaque.examples._
+import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.Opcode._
 import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.implicits._
