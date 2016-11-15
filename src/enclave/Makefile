@@ -46,8 +46,8 @@ else
 Urts_Library_Name := sgx_urts
 endif	
 
-App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
-App_Include_Paths := -IInclude -IApp -ICommon -I$(SGX_SDK)/include
+App_Cpp_Files := App/App.cpp App/service_provider.cpp App/ecp.cpp App/ias_ra.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
+App_Include_Paths := -IInclude -IApp -ICommon -I$(SGX_SDK)/include -Isample_libcrypto
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -64,7 +64,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11 -Wall -Wextra -Werror
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread 
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lsgx_ukey_exchange -lpthread -Wl,-rpath=$(CUR_DIR) -Wl,-rpath=$(CUR_DIR)/sample_libcrypto -Lsample_libcrypto -lsample_libcrypto
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -75,6 +75,7 @@ endif
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 
 App_Name := app
+
 
 ######## Enclave Settings ########
 
@@ -88,18 +89,19 @@ else
 	Crypto_Library_Name := sgx_tcrypto
 endif
 
-Enclave_Cpp_Files := Enclave/sgxaes.cpp Enclave/ObliviousAccess.cpp Enclave/ColumnSort.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
+Enclave_Cpp_Files := Enclave/key.cpp Enclave/isv_enclave.cpp Enclave/sgxaes.cpp Enclave/ObliviousAccess.cpp Enclave/ColumnSort.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
 Enclave_Include_Paths := -IInclude -IEnclave -ICommon -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -lsgx_tkey_exchange -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \
-	-Wl,--version-script=Enclave/Enclave.lds
+	-Wl,--version-script=Enclave/Enclave.lds \
+	-Wl,-rpath=$(CUR_DIR)/sample_libcrypto -Lsample_libcrypto
 
 Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
 

@@ -98,6 +98,7 @@ object Utils {
   }
 
   var eid = 0L
+  var attested : Boolean = false
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
@@ -361,4 +362,5 @@ object Utils {
     }
     rdd.foreach(x => {})
   }
+
 }

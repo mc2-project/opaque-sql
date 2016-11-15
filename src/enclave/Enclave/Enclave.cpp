@@ -948,3 +948,31 @@ void ecall_column_sort_filter(int op_code,
 void ecall_oblivious_swap(uint8_t *ptr1, uint8_t *ptr2, uint32_t size) {
   swap_memory(ptr1, ptr2, size, true);
 }
+
+sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
+  return enclave_init_ra(b_pse, p_context);
+}
+
+
+void ecall_enclave_ra_close(sgx_ra_context_t context) {
+  enclave_ra_close(context);
+}
+
+sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context, uint8_t* message,
+                                         size_t message_size, uint8_t* mac,
+                                         size_t mac_size) {
+
+  return verify_att_result_mac(context, message, message_size, mac, mac_size);
+}
+
+sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
+                                   uint8_t* p_secret,
+                                   uint32_t secret_size,
+                                   uint8_t* gcm_mac) {
+
+  return put_secret_data(context, p_secret, secret_size, gcm_mac);
+}
+
+sgx_status_t ecall_test_get_key(sgx_ra_context_t context) {
+  return test_get_key(context);
+}

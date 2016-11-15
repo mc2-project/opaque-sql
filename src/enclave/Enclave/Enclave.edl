@@ -5,6 +5,8 @@ enclave {
     
   include "user_types.h" /* buffer_t */
   include "stdbool.h"
+  include "sgx_key_exchange.h"
+  include "sgx_trts.h"
   //include "jni.h"
   //include "jni_md.h"
   //include "define.h"
@@ -15,14 +17,15 @@ enclave {
    *  [*]: implies to import all functions.
    */
 
+  from "sgx_tkey_exchange.edl" import *;
   from "Edger8rSyntax/Types.edl" import *;
   from "Edger8rSyntax/Pointers.edl" import *;
   from "Edger8rSyntax/Arrays.edl" import *;
   from "Edger8rSyntax/Functions.edl" import *;
 
-  from "TrustedLibrary/Libc.edl" import *;
+  from "TrustedLibrary/Libc.edl" import ecall_malloc_free, ecall_sgx_cpuid;
   from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
-  from "TrustedLibrary/Thread.edl" import *;
+  from "TrustedLibrary/Thread.edl" import ecall_increase_counter, ecall_producer, ecall_consumer;
 
   /*
    * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
@@ -272,6 +275,21 @@ enclave {
     public void ecall_oblivious_swap([user_check] uint8_t *ptr1,
                                      [user_check] uint8_t *ptr2,
                                      uint32_t size);
+
+    public sgx_status_t ecall_enclave_init_ra(int b_pse,
+                                              [out] sgx_ra_context_t *p_context);
+    public void ecall_enclave_ra_close(sgx_ra_context_t context);
+    public sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context,
+                                                    [in,size=message_size] uint8_t* message,
+                                                    size_t message_size,
+                                                    [in,size=mac_size] uint8_t* mac,
+                                                    size_t mac_size);
+    public sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
+                                              [in,size=secret_size] uint8_t* p_secret,
+                                              uint32_t secret_size,
+                                              [in,count=16] uint8_t* gcm_mac);
+    public sgx_status_t ecall_test_get_key(sgx_ra_context_t context);
+
   };
 
   untrusted {

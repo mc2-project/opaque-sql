@@ -1,8 +1,9 @@
+// -*- mode: c++ -*-
 /* Libc.edl - EDL sample for trusted C library. */
 
 enclave {
     
-    from "sgx_tstdc.edl" import sgx_oc_cpuidex;
+  from "sgx_tstdc.edl" import sgx_oc_cpuidex;
 
     /* 
      * A subset of the C99 standard is supported as well as SGX customized functions: 

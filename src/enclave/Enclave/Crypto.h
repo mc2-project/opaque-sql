@@ -1,5 +1,6 @@
 #include "sgx_tcrypto.h"
 #include "sgx_trts.h"
+#include "sgx_tkey_exchange.h"
 #include "util.h"
 #include "sgxaes.h"
 #include <string.h>
@@ -10,6 +11,8 @@
 extern const char *key_str;
 extern const sgx_aes_gcm_128bit_key_t *key;
 extern const KeySchedule ks;
+
+extern const sgx_ec256_public_t g_sp_pub_key;
 
 // encrypt() and decrypt() should be called from enclave code only
 
