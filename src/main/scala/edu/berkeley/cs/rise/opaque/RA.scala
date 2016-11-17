@@ -33,6 +33,7 @@ import org.apache.spark.unsafe.types.UTF8String
 import edu.berkeley.cs.rise.opaque.execution.ColumnType
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
+import edu.berkeley.cs.rise.opaque.execution.SP
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
@@ -48,6 +49,14 @@ object RA {
       throw new Exception("Set LIBSGXENCLAVE_PATH")
     }
     System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+  }
+
+  def loadMasterLibrary() = {
+    if (System.getenv("LIBSGX_SP_PATH") == null) {
+      throw new Exception("Set LIBSGX_SP_PATH")
+    }
+    System.load(System.getenv("LIBSGX_SP_PATH"))
+
   }
 
   def getEPID(data: Iterator[_]): Iterator[(Array[Byte], Boolean)] = {
@@ -121,14 +130,14 @@ object RA {
     // numPartitions = number of machines
     val numPartitions = data.getNumPartitions
 
-    if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
-      throw new Exception("Set LIBSGXENCLAVE_PATH")
-    }
-    System.load(System.getenv("LIBSGXENCLAVE_PATH"))
+    loadLibrary()
+    loadMasterLibrary()
 
+    val master = new SP()
     val enclave = new SGXEnclave()
 
-    println("Loaded library")
+
+    println("Loaded libraries")
 
     // check EPIDs
     val EPIDInfo = data.mapPartitions{
@@ -142,13 +151,13 @@ object RA {
       val epid = v._1
       val attested = v._2
       if (!attested) {
-        enclave.SPProcMsg0(epid)
+        master.SPProcMsg0(epid)
       }
     }
 
     println("Checked EPIDs")
 
-    // get msg1 from enclave
+    // // get msg1 from enclave
 
     val msg1 = data.mapPartitions { block => getMsg1(block) }.collect
     println("Got msg1")
@@ -160,7 +169,7 @@ object RA {
       if (attested) {
         msg2(index) = new Array[Byte](0)
       } else {
-        val ret = enclave.SPProcMsg1(msg1(index)._1)
+        val ret = master.SPProcMsg1(msg1(index)._1)
         msg2(index) = ret
       }
     }
@@ -182,7 +191,7 @@ object RA {
       if (attested) {
         attResult(index) = new Array[Byte](0)
       } else {
-        val ret = enclave.SPProcMsg3(msg3(index)._1)
+        val ret = master.SPProcMsg3(msg3(index)._1)
         attResult(index) = ret
       }
     }

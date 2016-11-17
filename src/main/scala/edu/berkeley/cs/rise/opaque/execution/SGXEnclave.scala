@@ -205,9 +205,9 @@ class SGXEnclave extends java.io.Serializable {
   @native def RemoteAttestation2(eid: Long, msg2Input: Array[Byte]): Array[Byte]
   @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte])
 
-  // Remote attestation, master side
-  @native def SPProcMsg0(msg0Input: Array[Byte])
-  @native def SPProcMsg1(msg1Input: Array[Byte]): Array[Byte]
-  @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
+  // // Remote attestation, master side
+  // @native def SPProcMsg0(msg0Input: Array[Byte])
+  // @native def SPProcMsg1(msg1Input: Array[Byte]): Array[Byte]
+  // @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
 
 }

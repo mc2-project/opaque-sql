@@ -167,6 +167,8 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     sample_status_t sample_ret = SAMPLE_SUCCESS;
     bool derive_ret = false;
 
+    printf("Reached sp_ra_proc_msg1_req\n");
+
     if(!p_msg1 ||
        !pp_msg2 ||
        (msg1_size != sizeof(sample_ra_msg1_t)))
@@ -404,7 +406,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
         }
         p_msg2->sig_rl_size = sig_rl_size;
 
-    }while(0);
+    } while(0);
 
     if(ret)
     {
@@ -421,6 +423,8 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     {
         sample_ecc256_close_context(ecc_state);
     }
+
+    PRINT_BYTE_ARRAY(NULL, p_msg2_full->body, p_msg2_full->size);
 
     return ret;
 }

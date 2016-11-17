@@ -46,8 +46,8 @@ else
 Urts_Library_Name := sgx_urts
 endif	
 
-App_Cpp_Files := App/App.cpp App/service_provider.cpp App/ecp.cpp App/ias_ra.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
-App_Include_Paths := -IInclude -IApp -ICommon -I$(SGX_SDK)/include -Isample_libcrypto
+App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
+App_Include_Paths := -IInclude -IApp -ICommon -IServiceProvider -I$(SGX_SDK)/include -Isample_libcrypto
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -109,6 +109,7 @@ App_SO_Name := libSGXEnclave.so
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
 Enclave_Config_File := Enclave/Enclave.config.xml
+SP_SO_Name := libservice_provider.so
 
 ifeq ($(SGX_MODE), HW)
 ifneq ($(SGX_DEBUG), 1)
@@ -118,11 +119,25 @@ endif
 endif
 endif
 
+######## Service Provider/Master Setting ########
+
+ServiceProvider_Cpp_Files := ServiceProvider/Main.cpp ServiceProvider/ecp.cpp ServiceProvider/service_provider.cpp ServiceProvider/ias_ra.cpp
+ServiceProvider_Include_Paths := -I$(SGX_SDK)/include  -ICommon -IInclude -IServiceProvider -Isample_libcrypto
+
+ServiceProvider_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(ServiceProvider_Include_Paths)
+ServiceProvider_Cpp_Flags := $(ServiceProvider_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
+ServiceProvider_Link_Flags :=  -shared $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) \
+	-lsample_libcrypto -Lsample_libcrypto \
+	-Wl,--start-group -l$(Crypto_Library_Name) -Wl,--end-group
+
+ServiceProvider_Cpp_Objects := $(ServiceProvider_Cpp_Files:.cpp=.o)
+
+
 
 .PHONY: all run
 
 ifeq ($(Build_Mode), HW_RELEASE)
-all: $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name)
+all: $(SP_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_SO_Name)
 	@echo "The project has been built in release hardware mode."
 	@echo "Please sign the $(Enclave_Name) first with your signing key before you run the $(App_Name) to launch and access the enclave."
 	@echo "To sign the enclave use the command:"
@@ -130,8 +145,7 @@ all: $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name)
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: $(App_Name) $(Signed_Enclave_Name) $(App_SO_Name)
-#all: $(Signed_Enclave_Name) $(App_SO_Name)
+all: $(SP_SO_Name) $(App_Name) $(Signed_Enclave_Name) $(App_SO_Name)
 endif
 
 run: all
@@ -184,7 +198,19 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
+######## Service Provider/Maswter Objects ########
+
+ServiceProvider/%.o: ServiceProvider/%.cpp
+	@$(CXX) $(ServiceProvider_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
+
+$(SP_SO_Name): $(ServiceProvider_Cpp_Objects)
+	@$(CXX) $^ $(ServiceProvider_Link_Flags) -shared -o $@
+	@echo "LINK =>  $@"
+
+
 .PHONY: clean
 
 clean:
-	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
+	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* \
+	$(ServiceProvider_Cpp_Objects) $(SP_SO_Name)

@@ -77,26 +77,6 @@ public:
   uint64_t time_start, time_end;
 };
 
-void PRINT_BYTE_ARRAY(
-    FILE *file, void *mem, uint32_t len)
-{
-    if(!mem || !len)
-    {
-        fprintf(file, "\n( null )\n");
-        return;
-    }
-    uint8_t *array = (uint8_t *)mem;
-    fprintf(file, "%u bytes:\n{\n", len);
-    uint32_t i = 0;
-    for(i = 0; i < len - 1; i++)
-    {
-        fprintf(file, "0x%x, ", array[i]);
-        if(i % 8 == 7) fprintf(file, "\n");
-    }
-    fprintf(file, "0x%x ", array[i]);
-    fprintf(file, "\n}\n");
-}
-
 uint8_t* msg1_samples[] = { msg1_sample1, msg1_sample2 };
 uint8_t* msg2_samples[] = { msg2_sample1, msg2_sample2 };
 uint8_t* msg3_samples[] = { msg3_sample1, msg3_sample2 };
@@ -571,6 +551,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     }
   }
 
+  printf("Printing p_msg2_body\n");
+  PRINT_BYTE_ARRAY(stdout, p_msg2_body, sizeof(sgx_ra_msg2_t));
+
   uint32_t msg3_size = 0;
   sgx_ra_msg3_t *msg3 = NULL;
 
@@ -601,7 +584,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     return array_ret;
   } else {
     fprintf(stdout, "\nCall sgx_ra_proc_msg2 success.\n");
-    //fprintf(stdout, "\nMSG3 - \n");
   }
 
   // use the precomputed message 3 instead
@@ -723,69 +705,69 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   ecall_enclave_ra_close(eid, context);
 }
 
-// These SP (service provider) calls are supposed to be made in a trusted environment
-// For now we assume that the trusted master executes these calls
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg0(JNIEnv *env, jobject obj, jbyteArray msg0_input) {
-  // Master receives EPID information from the enclave
+// // These SP (service provider) calls are supposed to be made in a trusted environment
+// // For now we assume that the trusted master executes these calls
+// JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg0(JNIEnv *env, jobject obj, jbyteArray msg0_input) {
+//   // Master receives EPID information from the enclave
 
-  (void)env;
-  (void)obj;
+//   (void)env;
+//   (void)obj;
 
-  //uint32_t msg0_size = (uint32_t) env->GetArrayLength(msg0_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg0_input, &if_copy);
-  uint32_t *extended_epid_group_id = (uint32_t *) ptr;
+//   //uint32_t msg0_size = (uint32_t) env->GetArrayLength(msg0_input);
+//   jboolean if_copy = false;
+//   jbyte *ptr = env->GetByteArrayElements(msg0_input, &if_copy);
+//   uint32_t *extended_epid_group_id = (uint32_t *) ptr;
 
-  sp_ra_proc_msg0_req(*extended_epid_group_id);
-}
+//   sp_ra_proc_msg0_req(*extended_epid_group_id);
+// }
 
-// Returns msg2 to the enclave
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg1(JNIEnv *env, jobject obj, jbyteArray msg1_input) {
+// // Returns msg2 to the enclave
+// JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg1(JNIEnv *env, jobject obj, jbyteArray msg1_input) {
 
-  (void)env;
-  (void)obj;
+//   (void)env;
+//   (void)obj;
 
-  uint32_t msg1_size = (uint32_t) env->GetArrayLength(msg1_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg1_input, &if_copy);
-  sgx_ra_msg1_t *msg1 = (sgx_ra_msg1_t *) ptr;
+//   uint32_t msg1_size = (uint32_t) env->GetArrayLength(msg1_input);
+//   jboolean if_copy = false;
+//   jbyte *ptr = env->GetByteArrayElements(msg1_input, &if_copy);
+//   sgx_ra_msg1_t *msg1 = (sgx_ra_msg1_t *) ptr;
 
-  ra_samp_response_header_t *pp_msg2 = NULL;
-  sp_ra_proc_msg1_req(msg1, msg1_size, &pp_msg2);
+//   ra_samp_response_header_t *pp_msg2 = NULL;
+//   sp_ra_proc_msg1_req(msg1, msg1_size, &pp_msg2);
 
-  jbyteArray array_ret = env->NewByteArray(pp_msg2->size);
-  env->SetByteArrayRegion(array_ret, 0, pp_msg2->size, (jbyte *) pp_msg2->body);
-  assert(pp_msg2->size == sizeof(sgx_ra_msg2_t));
+//   jbyteArray array_ret = env->NewByteArray(pp_msg2->size);
+//   env->SetByteArrayRegion(array_ret, 0, pp_msg2->size, (jbyte *) pp_msg2->body);
+//   assert(pp_msg2->size == sizeof(sgx_ra_msg2_t));
 
-  free(pp_msg2);
+//   free(pp_msg2);
 
-  return array_ret;
-}
+//   return array_ret;
+// }
 
-// Returns the attestation result to the enclave
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg3(JNIEnv *env, jobject obj, jbyteArray msg3_input) {
+// // Returns the attestation result to the enclave
+// JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg3(JNIEnv *env, jobject obj, jbyteArray msg3_input) {
 
-  (void)env;
-  (void)obj;
+//   (void)env;
+//   (void)obj;
 
-  uint32_t msg3_size = (uint32_t) env->GetArrayLength(msg3_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg3_input, &if_copy);
-  sgx_ra_msg3_t *msg3 = (sgx_ra_msg3_t *) ptr;
+//   uint32_t msg3_size = (uint32_t) env->GetArrayLength(msg3_input);
+//   jboolean if_copy = false;
+//   jbyte *ptr = env->GetByteArrayElements(msg3_input, &if_copy);
+//   sgx_ra_msg3_t *msg3 = (sgx_ra_msg3_t *) ptr;
 
 
-  ra_samp_response_header_t *pp_att_full = NULL;
-  sp_ra_proc_msg3_req(msg3, msg3_size, &pp_att_full);
+//   ra_samp_response_header_t *pp_att_full = NULL;
+//   sp_ra_proc_msg3_req(msg3, msg3_size, &pp_att_full);
 
-  sample_ra_att_result_msg_t *result = (sample_ra_att_result_msg_t *) pp_att_full->body;
-  printf("[SPProcMsg3] pp_att_full->size is %u, payload's size is %u\n", pp_att_full->size, result->secret.payload_size);
+//   sample_ra_att_result_msg_t *result = (sample_ra_att_result_msg_t *) pp_att_full->body;
+//   printf("[SPProcMsg3] pp_att_full->size is %u, payload's size is %u\n", pp_att_full->size, result->secret.payload_size);
 
-  jbyteArray array_ret = env->NewByteArray(pp_att_full->size + sizeof(ra_samp_response_header_t));
-  env->SetByteArrayRegion(array_ret, 0, pp_att_full->size + sizeof(ra_samp_response_header_t), (jbyte *) pp_att_full);
-  free(pp_att_full);
+//   jbyteArray array_ret = env->NewByteArray(pp_att_full->size + sizeof(ra_samp_response_header_t));
+//   env->SetByteArrayRegion(array_ret, 0, pp_att_full->size + sizeof(ra_samp_response_header_t), (jbyte *) pp_att_full);
+//   free(pp_att_full);
 
-  return array_ret;
-}
+//   return array_ret;
+// }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
   JNIEnv *env, jobject obj, jlong eid) {

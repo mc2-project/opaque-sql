@@ -1,6 +1,8 @@
 #include <assert.h>
-
+#include <stdint.h>
 #include "define.h"
+#include <string.h>
+#include <stdio.h>
 
 int printf( const char* format, ... );
 
@@ -269,6 +271,37 @@ inline static uint32_t block_size_upper_bound(uint32_t num_rows) {
     max_num_blocks = 1;
   }
   return max_num_blocks * (BLOCK_HEADER_SIZE + 28 + MAX_BLOCK_SIZE);
+}
+
+inline int memcpy_s(void *dest,
+                    size_t numberOfElements,
+                    const void *src,
+                    size_t count) {
+
+  if (numberOfElements<count)
+    return -1;
+  memcpy(dest, src, count);
+  return 0;
+}
+
+inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len)
+{
+  (void) file;
+
+  if(!mem || !len) {
+    printf("\n( null )\n");
+    return;
+  }
+  uint8_t *array = (uint8_t *)mem;
+  printf("%u bytes:\n{\n", len);
+  uint32_t i = 0;
+  for(i = 0; i < len - 1; i++) {
+    printf("0x%x, ", array[i]);
+    if(i % 8 == 7)
+      printf("\n");
+  }
+  printf("0x%x ", array[i]);
+  printf("\n}\n");
 }
 
 #endif
