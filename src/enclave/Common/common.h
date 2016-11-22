@@ -284,6 +284,12 @@ inline int memcpy_s(void *dest,
   return 0;
 }
 
+inline void print_hex(unsigned char *mem, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    printf("%#02x, ", *(mem+i));
+  }
+}
+
 inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len)
 {
   (void) file;

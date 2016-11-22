@@ -34,10 +34,20 @@
 #ifndef _SERVICE_PROVIDER_H
 #define _SERVICE_PROVIDER_H
 
+#include <string.h>
+#include <cstdlib>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "remote_attestation_result.h"
 #include "ias_ra.h"
 #include "sgx_key_exchange.h"
 #include "common.h"
+#include "openssl/pem.h"
+#include "sample_libcrypto.h"
+
 
 #ifdef  __cplusplus
 extern "C" {
@@ -114,6 +124,9 @@ typedef struct sample_ps_sec_prop_desc_t
     uint8_t  sample_ps_sec_prop_desc[256];
 } sample_ps_sec_prop_desc_t;
 
+extern sample_ec256_public_t g_sp_pub_key;
+extern sample_ec256_private_t g_sp_priv_key;
+
 #pragma pack(pop)
 
 typedef uint32_t                sample_ra_context_t;
@@ -156,46 +169,47 @@ typedef struct sample_ra_msg2_t
 
 typedef struct sample_ra_msg3_t
 {
-    sample_mac_t                mac;           /* mac_smk(g_a||ps_sec_prop||quote)*/
-    sample_ec_pub_t             g_a;           /* the Endian-ness of Ga is*/
-                                               /*  Little-Endian*/
-    sample_ps_sec_prop_desc_t   ps_sec_prop;
-    uint8_t                     quote[];
+  sample_mac_t                mac;           /* mac_smk(g_a||ps_sec_prop||quote)*/
+  sample_ec_pub_t             g_a;           /* the Endian-ness of Ga is*/
+  /*  Little-Endian*/
+  sample_ps_sec_prop_desc_t   ps_sec_prop;
+  uint8_t                     quote[];
 } sample_ra_msg3_t;
 
 int sp_ra_proc_msg0_req(uint32_t extended_epid_group_id);
 
 int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
-						uint32_t msg1_size,
-						ra_samp_response_header_t **pp_msg2);
+                        uint32_t msg1_size,
+                        ra_samp_response_header_t **pp_msg2);
 
 int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
                         uint32_t msg3_size,
                         ra_samp_response_header_t **pp_att_result_msg);
 
-int sp_ra_free_msg2(
-    sample_ra_msg2_t *p_msg2);
+int sp_ra_free_msg2(sample_ra_msg2_t *p_msg2);
 
 
+int read_pub_key(const char *filename);
+int read_secret_key(const char *filename, const char *cpp_output = NULL);
 
-typedef int (*sample_enroll)(int sp_credentials, sample_spid_t* spid,
+  typedef int (*sample_enroll)(int sp_credentials, sample_spid_t* spid,
     int* authentication_token);
 
-typedef int(*sample_get_sigrl)(const sample_epid_group_id_t gid, uint32_t* p_sig_rl_size,
-    uint8_t** p_sig_rl);
+  typedef int(*sample_get_sigrl)(const sample_epid_group_id_t gid, uint32_t* p_sig_rl_size,
+                                 uint8_t** p_sig_rl);
 
-typedef int(*sample_verify_attestation_evidence)(sample_quote_t* p_isv_quote,
-    uint8_t* pse_manifest,
-    ias_att_report_t* attestation_verification_report);
+  typedef int(*sample_verify_attestation_evidence)(sample_quote_t* p_isv_quote,
+                                                   uint8_t* pse_manifest,
+                                                   ias_att_report_t* attestation_verification_report);
 
 
-typedef struct sample_extended_epid_group
-{
+  typedef struct sample_extended_epid_group
+  {
     uint32_t extended_epid_group_id;
     sample_enroll enroll;
     sample_get_sigrl get_sigrl;
     sample_verify_attestation_evidence verify_attestation_evidence;
-} sample_extended_epid_group;
+  } sample_extended_epid_group;
 
 #ifdef  __cplusplus
 }

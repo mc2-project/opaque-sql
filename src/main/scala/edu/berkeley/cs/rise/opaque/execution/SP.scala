@@ -23,5 +23,6 @@ class SP extends java.io.Serializable {
   @native def SPProcMsg0(msg0Input: Array[Byte])
   @native def SPProcMsg1(msg1Input: Array[Byte]): Array[Byte]
   @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
+  @native def LoadKeys()
 
 }

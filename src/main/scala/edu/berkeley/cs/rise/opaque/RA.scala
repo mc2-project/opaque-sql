@@ -127,6 +127,7 @@ object RA {
   // this should be called from master!
   def initRA(data: RDD[_]) = {
 
+
     // numPartitions = number of machines
     val numPartitions = data.getNumPartitions
 
@@ -136,8 +137,12 @@ object RA {
     val master = new SP()
     val enclave = new SGXEnclave()
 
-
     println("Loaded libraries")
+
+    // load master keys
+    master.LoadKeys()
+
+    println("Loaded public and private keys")
 
     // check EPIDs
     val EPIDInfo = data.mapPartitions{
@@ -206,6 +211,12 @@ object RA {
     println("Sent attestation results; attestation DONE")
 
     // attestation done
+  }
+
+  def getPubKey() = {
+    loadMasterLibrary()
+    val master = new SP()
+    master.LoadKeys()
   }
 
 }

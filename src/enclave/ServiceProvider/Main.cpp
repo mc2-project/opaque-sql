@@ -22,14 +22,19 @@
  *   suppliers or licensors in any way.
  */
 
-#include "Main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <stdint.h>
+
+//#include "Main.h"
 //#include "sgx_tcrypto.h"
 //#include "sgx_ukey_exchange.h"
-#include "define.h"
-#include "common.h"
+//#include "define.h"
+//#include "common.h"
 
 #include "SP.h"
-#include "sample_messages.h"    // this is for debugging remote attestation only
+//#include "sample_messages.h"    // this is for debugging remote attestation only
 #include "service_provider.h"
 
 class scoped_timer {
@@ -53,14 +58,12 @@ public:
   uint64_t time_start, time_end;
 };
 
-uint8_t* msg1_samples[] = { msg1_sample1, msg1_sample2 };
-uint8_t* msg2_samples[] = { msg2_sample1, msg2_sample2 };
-uint8_t* msg3_samples[] = { msg3_sample1, msg3_sample2 };
-uint8_t* attestation_msg_samples[] = { attestation_msg_sample1, attestation_msg_sample2};
+// uint8_t* msg1_samples[] = { msg1_sample1, msg1_sample2 };
+// uint8_t* msg2_samples[] = { msg2_sample1, msg2_sample2 };
+// uint8_t* msg3_samples[] = { msg3_sample1, msg3_sample2 };
+// uint8_t* attestation_msg_samples[] = { attestation_msg_sample1, attestation_msg_sample2};
 
 
-#define VERIFICATION_INDEX_IS_VALID() (0)
-#define GET_VERIFICATION_ARRAY_INDEX() (0)
 
 // These SP (service provider) calls are supposed to be made in a trusted environment
 // For now we assume that the trusted master executes these calls
@@ -126,12 +129,26 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPPro
   return array_ret;
 }
 
-/* application entry */
-//SGX_CDECL
-int SGX_CDECL main(int argc, char *argv[])
-{
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
+    JNIEnv *env, jobject obj) {
+  (void)env;
+  (void)obj;
+
+  const char *private_key_filename = std::getenv("PRIVATE_KEY_PATH");
+  read_secret_key(private_key_filename, NULL);
+}
+
+int main(int argc, char **argv) {
   (void)(argc);
   (void)(argv);
+
+  if (argc < 2) {
+    printf("Please input the public key's cpp file location\n");
+    return 1;
+  }
+
+  const char *private_key_filename = std::getenv("PRIVATE_KEY_PATH");
+  read_secret_key(private_key_filename, argv[1]);
 
   return 0;
 }

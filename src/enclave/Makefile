@@ -122,17 +122,19 @@ endif
 ######## Service Provider/Master Setting ########
 
 ServiceProvider_Cpp_Files := ServiceProvider/Main.cpp ServiceProvider/ecp.cpp ServiceProvider/service_provider.cpp ServiceProvider/ias_ra.cpp
-ServiceProvider_Include_Paths := -I$(SGX_SDK)/include  -ICommon -IInclude -IServiceProvider -Isample_libcrypto
+ServiceProvider_Include_Paths := -I$(SGX_SDK)/include -ICommon -IInclude -IServiceProvider -Isample_libcrypto
 
 ServiceProvider_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(ServiceProvider_Include_Paths)
-ServiceProvider_Cpp_Flags := $(ServiceProvider_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
-ServiceProvider_Link_Flags :=  -shared $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) \
+ServiceProvider_Cpp_Flags := $(ServiceProvider_C_Flags) -std=c++11 -Wall -Wextra -Werror
+ServiceProvider_Link_Flags :=  $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) \
 	-lsample_libcrypto -Lsample_libcrypto \
+	-lcrypto -lssl \
 	-Wl,--start-group -l$(Crypto_Library_Name) -Wl,--end-group
 
 ServiceProvider_Cpp_Objects := $(ServiceProvider_Cpp_Files:.cpp=.o)
+#ServiceProvider_Cpp_Objects := ServiceProvider/Main.o
 
-
+ServiceProvider_Name := main
 
 .PHONY: all run
 
@@ -145,8 +147,10 @@ all: $(SP_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_SO_N
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: $(SP_SO_Name) $(App_Name) $(Signed_Enclave_Name) $(App_SO_Name)
+all: $(SP_SO_Name)  $(App_Name) $(Signed_Enclave_Name) $(App_SO_Name)
 endif
+
+SPexec: $(ServiceProvider_Name)
 
 run: all
 ifneq ($(Build_Mode), HW_RELEASE)
@@ -198,19 +202,22 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
-######## Service Provider/Maswter Objects ########
+######## Service Provider/Master Objects ########
 
 ServiceProvider/%.o: ServiceProvider/%.cpp
 	@$(CXX) $(ServiceProvider_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
+$(ServiceProvider_Name): $(ServiceProvider_Cpp_Objects)
+	@$(CXX) $^ -o $@ $(ServiceProvider_Link_Flags)
+	@echo "LINK =>  $@"
+
 $(SP_SO_Name): $(ServiceProvider_Cpp_Objects)
 	@$(CXX) $^ $(ServiceProvider_Link_Flags) -shared -o $@
 	@echo "LINK =>  $@"
-
 
 .PHONY: clean
 
 clean:
 	@rm -f $(App_SO_Name) $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.* \
-	$(ServiceProvider_Cpp_Objects) $(SP_SO_Name)
+	$(ServiceProvider_Cpp_Objects) $(SP_SO_Name) $(ServiceProvider_Name)

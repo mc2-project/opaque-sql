@@ -327,5 +327,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
 
     val data = for (i <- 0 until 8) yield (i)
     RA.initRA(spark.sparkContext.parallelize(data, 1))
+
+    //RA.getPubKey()
   }
 }

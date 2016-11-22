@@ -32,17 +32,14 @@
 
 
 #include "service_provider.h"
-
-#include "sample_libcrypto.h"
-
 #include "ecp.h"
+#include "ias_ra.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <time.h>
-#include <string.h>
-#include "ias_ra.h"
+#include <errno.h>
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(ptr) {if (NULL != (ptr)) {free(ptr); (ptr) = NULL;}}
@@ -61,7 +58,7 @@ static const sample_extended_epid_group g_extended_epid_groups[] = {
 
 // This is the private EC key of SP, the corresponding public EC key is
 // hard coded in isv_enclave. It is based on NIST P-256 curve.
-static const sample_ec256_private_t g_sp_priv_key = {
+static const sample_ec256_private_t g_sp_priv_key_old = {
     {
         0x90, 0xe7, 0x6c, 0xbb, 0x2d, 0x52, 0xa1, 0xce,
         0x3b, 0x66, 0xde, 0x11, 0x43, 0x9c, 0x87, 0xec,
@@ -72,7 +69,7 @@ static const sample_ec256_private_t g_sp_priv_key = {
 
 // This is the public EC key of SP, this key is hard coded in isv_enclave.
 // It is based on NIST P-256 curve. Not used in the SP code.
-static const sample_ec_pub_t g_sp_pub_key = {
+static const sample_ec_pub_t g_sp_pub_key_old = {
     {
         0x72, 0x12, 0x8a, 0x7a, 0x17, 0x52, 0x6e, 0xbf,
         0x85, 0xd0, 0x3a, 0x62, 0x37, 0x30, 0xae, 0xad,
@@ -86,6 +83,9 @@ static const sample_ec_pub_t g_sp_pub_key = {
         0xa8, 0x3c, 0xc8, 0x10, 0x11, 0x14, 0x5e, 0x06
     }
 };
+
+sample_ec256_public_t g_sp_pub_key = {{0}, {0}};
+sample_ec256_private_t g_sp_priv_key = {{0}};
 
 // This is a context data structure used on SP side
 typedef struct _sp_db_item_t
@@ -109,6 +109,143 @@ static int g_authentication_token = 0;
 uint8_t g_secret[8] = {0,1,2,3,4,5,6,7};
 
 sample_spid_t g_spid;
+
+void write_pubkey(const char *filename,
+                  unsigned char *pub_key_x,
+                  unsigned char *pub_key_y,
+                  uint32_t key_len) {
+
+  int fd = open(filename, O_WRONLY);
+  uint32_t output_len = 1024 + 6 * key_len * 2;
+  char *pub_key_output = (char *) malloc(output_len);
+  for (uint32_t i = 0; i < output_len; i++) {
+    *(pub_key_output+i) = ' ';
+  }
+
+  uint32_t offset = 0;
+  snprintf(pub_key_output+offset, output_len, "#include \"key.h\"\nconst sgx_ec256_public_t g_sp_pub_key = {{");
+  offset += strlen("#include \"key.h\"\nconst sgx_ec256_public_t g_sp_pub_key = {{");
+  for (uint32_t i = 0; i < key_len; i++) {
+    if (i == key_len - 1) {
+      snprintf(pub_key_output+offset, output_len, "%#04x", *(pub_key_x+i));
+      offset += 4;
+    } else {
+      snprintf(pub_key_output+offset, output_len, "%#04x, ", *(pub_key_x+i));
+      offset += 6;
+    }
+  }
+  snprintf(pub_key_output+offset, output_len, "},\n{");
+  offset += 4;
+  for (uint32_t i = 0; i < key_len; i++) {
+    if (i == key_len - 1) {
+      snprintf(pub_key_output+offset, output_len, "%#04x", *(pub_key_y+i));
+      offset += 4;
+    } else {
+      snprintf(pub_key_output+offset, output_len, "%#04x, ", *(pub_key_y+i));
+      offset += 6;
+    }
+  }
+  snprintf(pub_key_output+offset, output_len, "}\n};\n");
+  offset += strlen("}\n};\n");
+
+  ssize_t write_bytes = write(fd, pub_key_output, offset);
+  assert(write_bytes <= output_len && write_bytes > 0);
+  close(fd);
+
+  free(pub_key_output);
+}
+
+int read_secret_key(const char *filename,
+                    const char *cpp_output) {
+
+  int ret = 0;
+  FILE *secret_key_file = fopen(filename, "r");
+  EVP_PKEY *pkey = PEM_read_PrivateKey(secret_key_file, NULL, NULL, NULL);
+  if (pkey == NULL) {
+    printf("[read_secret_key] returned private key is null\n");
+  } else {
+    assert(EVP_PKEY_type(pkey->type) == EVP_PKEY_EC);
+  }
+
+  BIO *o = BIO_new_fp(stdout, BIO_NOCLOSE);
+  EC_KEY *ec_key = (EC_KEY *) EVP_PKEY_get1_EC_KEY(pkey);
+  assert(ec_key != NULL);
+
+  EC_GROUP *group = (EC_GROUP *) EC_KEY_get0_group(ec_key);
+  EC_POINT *point = (EC_POINT *) EC_KEY_get0_public_key(ec_key);
+
+  BIGNUM *x_ec = BN_new();
+  BIGNUM *y_ec = BN_new();
+  ret = EC_POINT_get_affine_coordinates_GF2m(group, point, x_ec, y_ec, NULL);
+
+  if (ret == 0) {
+    printf("[read_pub_key] EC_POINT_set_affine_coordinates_GFp did not get the correct points\n");
+    return 1;
+  } else {
+    BN_print(o, x_ec);
+    printf("\n");
+    BN_print(o, y_ec);
+    printf("\n");
+  }
+
+  const BIGNUM *priv_bn = EC_KEY_get0_private_key(ec_key);
+
+  // Store the public and private keys in hex format
+  unsigned char *x_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *y_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *r_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+
+  unsigned char *x = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *y = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *r = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+
+  BN_bn2bin(x_ec, x_);
+  BN_bn2bin(y_ec, y_);
+  BN_bn2bin(priv_bn, r_);
+
+  // reverse x_, y_, r_
+
+  for (uint32_t i = 0; i < SAMPLE_ECP256_KEY_SIZE; i++) {
+    *(x+i) = *(x_+SAMPLE_ECP256_KEY_SIZE-i-1);
+    *(y+i) = *(y_+SAMPLE_ECP256_KEY_SIZE-i-1);
+    *(r+i) = *(r_+SAMPLE_ECP256_KEY_SIZE-i-1);
+  }
+
+  memcpy_s(g_sp_pub_key.gx, SAMPLE_ECP256_KEY_SIZE, x, SAMPLE_ECP256_KEY_SIZE);
+  memcpy_s(g_sp_pub_key.gy, SAMPLE_ECP256_KEY_SIZE, y, SAMPLE_ECP256_KEY_SIZE);
+  memcpy_s(g_sp_priv_key.r, SAMPLE_ECP256_KEY_SIZE, r, SAMPLE_ECP256_KEY_SIZE);
+
+  // printf("\n");
+  // BN_print(o, priv_bn);
+  // printf("\n");
+  // print_hex(r, SAMPLE_ECP_KEY_SIZE);
+
+  // TODO: output public key to key.cpp
+  if (cpp_output != NULL) {
+    write_pubkey(cpp_output, x, y, SAMPLE_ECP256_KEY_SIZE);
+  }
+
+  // free malloc'ed buffers
+  free(x);
+  free(y);
+  free(r);
+  free(x_);
+  free(y_);
+  free(r_);
+
+  // free BIO
+  BIO_free_all(o);
+  // free BN
+  BN_free(x_ec);
+  BN_free(y_ec);
+
+  // free EC stuff
+  EC_KEY_free(ec_key);
+
+  // free EVP
+  EVP_PKEY_free(pkey);
+  return 0;
+}
 
 
 // Verify message 0 then configure extended epid group.
@@ -168,6 +305,11 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     bool derive_ret = false;
 
     printf("Reached sp_ra_proc_msg1_req\n");
+
+    print_hex(g_sp_pub_key.gx, SAMPLE_ECP_KEY_SIZE);
+    printf("\n");
+    print_hex(g_sp_pub_key.gy, SAMPLE_ECP_KEY_SIZE);
+    printf("\n");
 
     if(!p_msg1 ||
        !pp_msg2 ||

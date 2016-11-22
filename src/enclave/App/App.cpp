@@ -2008,7 +2008,9 @@ int SGX_CDECL main(int argc, char *argv[])
   }
 
   //test_oblivious_swap();
-  test_ra();
+
+  sgx_status_t status;
+  ecall_test_get_key(global_eid, &status, context);
   
   /* Destroy the enclave */
   sgx_destroy_enclave(global_eid);
