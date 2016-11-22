@@ -30,7 +30,6 @@
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "sgx_trts.h"
-#include "math.h"
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
                    uint8_t *ciphertext, uint32_t cipher_length) {

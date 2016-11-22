@@ -1,6 +1,5 @@
 #include "Crypto.h"
 #include "NewInternalTypes.h"
-#include "math.h"
 #include "sgx_trts.h"
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */

@@ -5,7 +5,6 @@
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "sgx_trts.h"
-#include "math.h"
 #include "Crypto.h"
 #include "util.h"
 #include "EncryptedDAG.h"

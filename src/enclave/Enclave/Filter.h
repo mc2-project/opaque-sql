@@ -4,7 +4,6 @@
 #include <assert.h>
 
 #include "sgx_trts.h"
-#include "math.h"
 #include "Crypto.h"
 #include "util.h"
 #include "NewInternalTypes.h"
