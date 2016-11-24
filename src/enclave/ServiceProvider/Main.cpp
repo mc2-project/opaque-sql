@@ -142,6 +142,8 @@ int main(int argc, char **argv) {
   (void)(argc);
   (void)(argv);
 
+
+#ifndef TEST_EC
   if (argc < 2) {
     printf("Please input the public key's cpp file location\n");
     return 1;
@@ -149,6 +151,47 @@ int main(int argc, char **argv) {
 
   const char *private_key_filename = std::getenv("PRIVATE_KEY_PATH");
   read_secret_key(private_key_filename, argv[1]);
+#else
+
+  printf("TEST_EC\n");
+
+  uint8_t data[11] = "helloworld";
+
+  lc_ec256_private_t p_private;
+  lc_ec256_public_t p_public;
+  lc_ec256_dh_shared_t p_shared_key;
+  lc_ecc_state_handle_t ecc_handle = NULL;
+  lc_ecc256_create_key_pair(&p_private, &p_public, ecc_handle);
+  printf("Created key pair\n");
+
+  print_pub_key(p_public);
+  print_priv_key(p_private);
+
+  EC_POINT *pub_key = get_ec_point(&p_public);
+  EC_POINT_free(pub_key);
+
+  // test signature
+  lc_ec256_signature_t sig;
+  lc_ecdsa_sign(data, 10, &p_private, &sig, ecc_handle);
+  printf("Signed data using ECDSA\n");
+
+  // // test compute shared key
+  lc_ecc256_compute_shared_dhkey(&p_private, &p_public, &p_shared_key, ecc_handle);
+  printf("Computed shared key\n");
+
+  lc_sha_state_handle_t sha_handle;
+  lc_sha256_hash_t hash;
+
+  // test sha
+  lc_sha256_init(&sha_handle);
+  lc_sha256_update(data, 10, sha_handle);
+  lc_sha256_get_hash(sha_handle, &hash);
+  lc_sha256_close(sha_handle);
+
+  print_hex((uint8_t *) hash, sizeof(lc_sha256_hash_t));
+
+
+#endif
 
   return 0;
 }

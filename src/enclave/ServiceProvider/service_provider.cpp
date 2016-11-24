@@ -58,24 +58,24 @@ static const sample_extended_epid_group g_extended_epid_groups[] = {
 
 // This is the public EC key of SP, this key is hard coded in isv_enclave.
 // It is based on NIST P-256 curve. Not used in the SP code.
-sample_ec256_public_t g_sp_pub_key = {{0}, {0}};
+sgx_ec256_public_t g_sp_pub_key = {{0}, {0}};
 
 // This is the private EC key of SP, the corresponding public EC key is
 // hard coded in isv_enclave. It is based on NIST P-256 curve.
-sample_ec256_private_t g_sp_priv_key = {{0}};
+sgx_ec256_private_t g_sp_priv_key = {{0}};
 
 // This is a context data structure used on SP side
 typedef struct _sp_db_item_t
 {
-    sample_ec_pub_t             g_a;
-    sample_ec_pub_t             g_b;
-    sample_ec_key_128bit_t      vk_key;// Shared secret key for the REPORT_DATA
-    sample_ec_key_128bit_t      mk_key;// Shared secret key for generating MAC's
-    sample_ec_key_128bit_t      sk_key;// Shared secret key for encryption
-    sample_ec_key_128bit_t      smk_key;// Used only for SIGMA protocol
-    sample_ec_priv_t            b;
-    sample_ps_sec_prop_desc_t   ps_sec_prop;
-}sp_db_item_t;
+  sgx_ec256_public_t             g_a;
+  sgx_ec256_public_t             g_b;
+  sgx_aes_gcm_128bit_key_t    vk_key;   // Shared secret key for the REPORT_DATA
+  sgx_aes_gcm_128bit_key_t    mk_key;   // Shared secret key for generating MAC's
+  sgx_aes_gcm_128bit_key_t    sk_key;   // Shared secret key for encryption
+  sgx_aes_gcm_128bit_key_t    smk_key;  // Used only for SIGMA protocol
+  sample_ec_priv_t            b;
+  sample_ps_sec_prop_desc_t   ps_sec_prop;
+} sp_db_item_t;
 static sp_db_item_t g_sp_db;
 
 static const sample_extended_epid_group* g_sp_extended_epid_group_id= NULL;
@@ -153,7 +153,7 @@ int read_secret_key(const char *filename,
 
   BIGNUM *x_ec = BN_new();
   BIGNUM *y_ec = BN_new();
-  ret = EC_POINT_get_affine_coordinates_GF2m(group, point, x_ec, y_ec, NULL);
+  ret = EC_POINT_get_affine_coordinates_GFp(group, point, x_ec, y_ec, NULL);
 
   if (ret == 0) {
     printf("[read_pub_key] EC_POINT_set_affine_coordinates_GFp did not get the correct points\n");
@@ -167,7 +167,7 @@ int read_secret_key(const char *filename,
 
   const BIGNUM *priv_bn = EC_KEY_get0_private_key(ec_key);
 
-  // Store the public and private keys in hex format
+  // Store the public and private keys in binary format
   unsigned char *x_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
   unsigned char *y_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
   unsigned char *r_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
@@ -272,280 +272,244 @@ int sp_ra_proc_msg0_req(uint32_t extended_epid_group_id)
 // Verify message 1 then generate and return message 2 to isv.
 int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 						uint32_t msg1_size,
-						ra_samp_response_header_t **pp_msg2)
-{
-    int ret = 0;
-    ra_samp_response_header_t* p_msg2_full = NULL;
-    sample_ra_msg2_t *p_msg2 = NULL;
-    sample_ecc_state_handle_t ecc_state = NULL;
-    sample_status_t sample_ret = SAMPLE_SUCCESS;
-    bool derive_ret = false;
+                        ra_samp_response_header_t **pp_msg2) {
+  int ret = 0;
+  ra_samp_response_header_t* p_msg2_full = NULL;
+  sgx_ra_msg2_t *p_msg2 = NULL;
+  sgx_ecc_state_handle_t ecc_state = NULL;
+  //sgx_status_t ret = SGX_SUCCESS;
+  bool derive_ret = false;
 
-    printf("Reached sp_ra_proc_msg1_req\n");
+  if (!p_msg1 || !pp_msg2 || (msg1_size != sizeof(sgx_ra_msg1_t))) {
+    printf("[sp_ra_proc_msg1_req] Unexpected error 1\n");
+    assert(false);
+  }
 
-    print_hex(g_sp_pub_key.gx, SAMPLE_ECP_KEY_SIZE);
-    printf("\n");
-    print_hex(g_sp_pub_key.gy, SAMPLE_ECP_KEY_SIZE);
-    printf("\n");
+  // Check to see if we have registered?
+  if (!g_is_sp_registered) {
+    return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
+  }
 
-    if(!p_msg1 ||
-       !pp_msg2 ||
-       (msg1_size != sizeof(sample_ra_msg1_t)))
-    {
-        return -1;
-    }
+  do {
+    // Get the sig_rl from attestation server using GID.
+    // GID is Base-16 encoded of EPID GID in little-endian format.
+    // In the product, the SP and attesation server uses an established channel for
+    // communication.
+    uint8_t* sig_rl;
+    uint32_t sig_rl_size = 0;
 
-    // Check to see if we have registered?
-    if (!g_is_sp_registered)
-    {
-        return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
-    }
-
-    do
-    {
-        // Get the sig_rl from attestation server using GID.
-        // GID is Base-16 encoded of EPID GID in little-endian format.
-        // In the product, the SP and attesation server uses an established channel for
-        // communication.
-        uint8_t* sig_rl;
-        uint32_t sig_rl_size = 0;
-
-        // The product interface uses a REST based message to get the SigRL.
+    // The product interface uses a REST based message to get the SigRL.
         
-        ret = g_sp_extended_epid_group_id->get_sigrl(p_msg1->gid, &sig_rl_size, &sig_rl);
-        if(0 != ret)
-        {
-            fprintf(stderr, "\nError, ias_get_sigrl [%s].", __FUNCTION__);
-            ret = SP_IAS_FAILED;
-            break;
-        }
+    ret = g_sp_extended_epid_group_id->get_sigrl(p_msg1->gid, &sig_rl_size, &sig_rl);
+    if (ret != 0) {
+      fprintf(stderr, "[%s] Error, ias_get_sigrl\n", __FUNCTION__);
+      ret = SP_IAS_FAILED;
+      break;
+    }
 
-        // Need to save the client's public ECCDH key to local storage
-        if (memcpy_s(&g_sp_db.g_a, sizeof(g_sp_db.g_a), &p_msg1->g_a,
-                     sizeof(p_msg1->g_a)))
-        {
-            fprintf(stderr, "\nError, cannot do memcpy in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // Need to save the client's public ECCDH key to local storage
+    if (memcpy_s(&g_sp_db.g_a, sizeof(g_sp_db.g_a), &p_msg1->g_a,
+                 sizeof(p_msg1->g_a))) {
+      fprintf(stderr, "[%s] Error, could not memcpy msg1's g_a to local storage\n.", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        // Generate the Service providers ECCDH key pair.
-        sample_ret = sample_ecc256_open_context(&ecc_state);
-        if(SAMPLE_SUCCESS != sample_ret)
-        {
-            fprintf(stderr, "\nError, cannot get ECC context in [%s].",
-                             __FUNCTION__);
-            ret = -1;
-            break;
-        }
-        sample_ec256_public_t pub_key = {{0},{0}};
-        sample_ec256_private_t priv_key = {{0}};
-        sample_ret = sample_ecc256_create_key_pair(&priv_key, &pub_key,
-                                                   ecc_state);
-        if(SAMPLE_SUCCESS != sample_ret)
-        {
-            fprintf(stderr, "\nError, cannot generate key pair in [%s].",
-                    __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // Generate the Service providers ECCDH key pair.
+    ret = sample_ecc256_open_context(&ecc_state);
+    if(ret != SGX_SUCCESS) {
+      fprintf(stderr, "[%s] Error, cannot get the ECC context.\n", __FUNCTION__);
+      ret = -1;
+      break;
+    }
 
-        // Need to save the SP ECCDH key pair to local storage.
-        if(memcpy_s(&g_sp_db.b, sizeof(g_sp_db.b), &priv_key,sizeof(priv_key))
-           || memcpy_s(&g_sp_db.g_b, sizeof(g_sp_db.g_b),
-                       &pub_key,sizeof(pub_key)))
-        {
-            fprintf(stderr, "\nError, cannot do memcpy in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    sample_ec256_public_t pub_key = {{0},{0}};
+    sample_ec256_private_t priv_key = {{0}};
+    ret = sample_ecc256_create_key_pair(&priv_key, &pub_key, ecc_state);
+    if (ret != SGX_SUCCESS) {
+      fprintf(stderr, "[%s] Error, cannot generate key pair.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        // Generate the client/SP shared secret
-        sample_ec_dh_shared_t dh_key = {{0}};
-        sample_ret = sample_ecc256_compute_shared_dhkey(&priv_key,
-            (sample_ec256_public_t *)&p_msg1->g_a,
-            (sample_ec256_dh_shared_t *)&dh_key,
-            ecc_state);
-        if(SAMPLE_SUCCESS != sample_ret)
-        {
-            fprintf(stderr, "\nError, compute share key fail in [%s].",
-                    __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // Need to save the SP ECCDH key pair to local storage.
+    if (memcpy_s(&g_sp_db.b, sizeof(g_sp_db.b), &priv_key,sizeof(priv_key))
+        || memcpy_s(&g_sp_db.g_b, sizeof(g_sp_db.g_b), &pub_key,sizeof(pub_key))) {
+      fprintf(stderr, "[%s] Error, cannot memcpy priv_key or pub_key to local storage.", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
+
+    // Generate the client/SP shared secret
+    sgx_ec256_dh_shared_t dh_key = {{0}};
+    ret = sample_ecc256_compute_shared_dhkey(&priv_key,
+                                          (sample_ec256_public_t *)&p_msg1->g_a,
+                                          (sample_ec256_dh_shared_t *)&dh_key,
+                                          ecc_state);
+    if (ret != SGX_SUCCESS) {
+      fprintf(stderr, "[%s] Error, compute share key fail.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
 #ifdef SUPPLIED_KEY_DERIVATION
 
-        // smk is only needed for msg2 generation.
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK_SK,
-            &g_sp_db.smk_key, &g_sp_db.sk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // smk is only needed for msg2 generation.
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK_SK,
+                            &g_sp_db.smk_key, &g_sp_db.sk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key fail.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        // The rest of the keys are the shared secrets for future communication.
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK_VK,
-            &g_sp_db.mk_key, &g_sp_db.vk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // The rest of the keys are the shared secrets for future communication.
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK_VK,
+                            &g_sp_db.mk_key, &g_sp_db.vk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 #else
-        // smk is only needed for msg2 generation.
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK,
-                                &g_sp_db.smk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // smk is only needed for msg2 generation.
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK,
+                            &g_sp_db.smk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        // The rest of the keys are the shared secrets for future communication.
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK,
-                                &g_sp_db.mk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    // The rest of the keys are the shared secrets for future communication.
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK,
+                            &g_sp_db.mk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SK,
-                                &g_sp_db.sk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SK,
+                            &g_sp_db.sk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_VK,
-                                &g_sp_db.vk_key);
-        if(derive_ret != true)
-        {
-            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_VK,
+                            &g_sp_db.vk_key);
+    if (derive_ret != true) {
+      fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 #endif
 
-        uint32_t msg2_size = sizeof(sample_ra_msg2_t) + sig_rl_size;
-        p_msg2_full = (ra_samp_response_header_t*)malloc(msg2_size
-                      + sizeof(ra_samp_response_header_t));
-        if(!p_msg2_full)
-        {
-            fprintf(stderr, "\nError, out of memory in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-        memset(p_msg2_full, 0, msg2_size + sizeof(ra_samp_response_header_t));
-        p_msg2_full->type = TYPE_RA_MSG2;
-        p_msg2_full->size = msg2_size;
-        // The simulated message2 always passes.  This would need to be set
-        // accordingly in a real service provider implementation.
-        p_msg2_full->status[0] = 0;
-        p_msg2_full->status[1] = 0;
-        p_msg2 = (sample_ra_msg2_t *)p_msg2_full->body;
+    uint32_t msg2_size = sizeof(sgx_ra_msg2_t) + sig_rl_size;
+    p_msg2_full = (ra_samp_response_header_t*) malloc(msg2_size
+                                                      + sizeof(ra_samp_response_header_t));
+    if(!p_msg2_full) {
+      fprintf(stderr, " [%s] Error, could not allocate p_msg2_full\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-        // Assemble MSG2
-        if(memcpy_s(&p_msg2->g_b, sizeof(p_msg2->g_b), &g_sp_db.g_b,
-                    sizeof(g_sp_db.g_b)) ||
-           memcpy_s(&p_msg2->spid, sizeof(sample_spid_t),
-                    &g_spid, sizeof(g_spid)))
-        {
-            fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
+    memset(p_msg2_full, 0, msg2_size + sizeof(ra_samp_response_header_t));
+    p_msg2_full->type = TYPE_RA_MSG2;
+    p_msg2_full->size = msg2_size;
+    // The simulated message2 always passes.  This would need to be set
+    // accordingly in a real service provider implementation.
+    p_msg2_full->status[0] = 0;
+    p_msg2_full->status[1] = 0;
+    p_msg2 = (sgx_ra_msg2_t *) p_msg2_full->body;
 
-        // The service provider is responsible for selecting the proper EPID
-        // signature type and to understand the implications of the choice!
-        p_msg2->quote_type = SAMPLE_QUOTE_LINKABLE_SIGNATURE;
+    // Assemble MSG2
+    if(memcpy_s(&p_msg2->g_b, sizeof(p_msg2->g_b), &g_sp_db.g_b,
+                sizeof(g_sp_db.g_b)) ||
+       memcpy_s(&p_msg2->spid, sizeof(sample_spid_t),
+                &g_spid, sizeof(g_spid))) {
+      fprintf(stderr,"[%s] Error, memcpy failed\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
+
+    // The service provider is responsible for selecting the proper EPID
+    // signature type and to understand the implications of the choice!
+    p_msg2->quote_type = SAMPLE_QUOTE_LINKABLE_SIGNATURE;
 
 #ifdef SUPPLIED_KEY_DERIVATION
-//isv defined key derivation function id
+    //isv defined key derivation function id
 #define ISV_KDF_ID 2
-        p_msg2->kdf_id = ISV_KDF_ID;
+    p_msg2->kdf_id = ISV_KDF_ID;
 #else
-        p_msg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
+    p_msg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
 #endif
-        // Create gb_ga
-        sample_ec_pub_t gb_ga[2];
-        if(memcpy_s(&gb_ga[0], sizeof(gb_ga[0]), &g_sp_db.g_b,
-                    sizeof(g_sp_db.g_b))
-           || memcpy_s(&gb_ga[1], sizeof(gb_ga[1]), &g_sp_db.g_a,
-                       sizeof(g_sp_db.g_a)))
-        {
-            fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-
-        // Sign gb_ga
-        sample_ret = sample_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga),
-                        (sample_ec256_private_t *)&g_sp_priv_key,
-                        (sample_ec256_signature_t *)&p_msg2->sign_gb_ga,
-                        ecc_state);
-        if(SAMPLE_SUCCESS != sample_ret)
-        {
-            fprintf(stderr, "\nError, sign ga_gb fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-
-        // Generate the CMACsmk for gb||SPID||TYPE||KDF_ID||Sigsp(gb,ga)
-        uint8_t mac[SAMPLE_EC_MAC_SIZE] = {0};
-        uint32_t cmac_size = offsetof(sample_ra_msg2_t, mac);
-        sample_ret = sample_rijndael128_cmac_msg(&g_sp_db.smk_key,
-            (uint8_t *)&p_msg2->g_b, cmac_size, &mac);
-        if(SAMPLE_SUCCESS != sample_ret)
-        {
-            fprintf(stderr, "\nError, cmac fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-        if(memcpy_s(&p_msg2->mac, sizeof(p_msg2->mac), mac, sizeof(mac)))
-        {
-            fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-
-        if(memcpy_s(&p_msg2->sig_rl[0], sig_rl_size, sig_rl, sig_rl_size))
-        {
-            fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
-        }
-        p_msg2->sig_rl_size = sig_rl_size;
-
-    } while(0);
-
-    if(ret)
-    {
-        *pp_msg2 = NULL;
-        SAFE_FREE(p_msg2_full);
-    }
-    else
-    {
-        // Freed by the network simulator in ra_free_network_response_buffer
-        *pp_msg2 = p_msg2_full;
+    // Create gb_ga
+    sgx_ec256_public_t gb_ga[2];
+    if(memcpy_s(&gb_ga[0], sizeof(gb_ga[0]), &g_sp_db.g_b, sizeof(g_sp_db.g_b))
+       || memcpy_s(&gb_ga[1], sizeof(gb_ga[1]), &g_sp_db.g_a, sizeof(g_sp_db.g_a))) {
+      fprintf(stderr,"[%s] Error, memcpy failed.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
     }
 
-    if(ecc_state)
-    {
-        sample_ecc256_close_context(ecc_state);
+    // Sign gb_ga
+    ret = sample_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga),
+                            (sample_ec256_private_t *)&g_sp_priv_key,
+                            (sample_ec256_signature_t *)&p_msg2->sign_gb_ga,
+                            ecc_state);
+
+    if(ret != SGX_SUCCESS) {
+      fprintf(stderr, "[%s] Error, sign ga_gb fail.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
     }
 
-    PRINT_BYTE_ARRAY(NULL, p_msg2_full->body, p_msg2_full->size);
+    // Generate the CMACsmk for gb||SPID||TYPE||KDF_ID||Sigsp(gb,ga)
+    uint8_t mac[SGX_CMAC_MAC_SIZE] = {0};
+    uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+    ret = sample_rijndael128_cmac_msg(&g_sp_db.smk_key,
+                                      (uint8_t *)&p_msg2->g_b,
+                                      cmac_size,
+                                      &mac);
+    if (ret != SGX_SUCCESS) {
+      fprintf(stderr, "[%s] Error, cmac fail.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
 
-    return ret;
+    if(memcpy_s(&p_msg2->mac, sizeof(p_msg2->mac), mac, sizeof(mac))) {
+      fprintf(stderr,"[%s] Error, memcpy failed in.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
+
+    if (memcpy_s(&p_msg2->sig_rl[0], sig_rl_size, sig_rl, sig_rl_size)) {
+      fprintf(stderr,"[%s] Error, memcpy failed.\n", __FUNCTION__);
+      ret = SP_INTERNAL_ERROR;
+      break;
+    }
+    p_msg2->sig_rl_size = sig_rl_size;
+
+  } while(0);
+
+  if (ret) {
+    *pp_msg2 = NULL;
+    SAFE_FREE(p_msg2_full);
+  } else {
+    // Freed by the network simulator in ra_free_network_response_buffer
+    *pp_msg2 = p_msg2_full;
+  }
+
+  if (ecc_state) {
+    sample_ecc256_close_context(ecc_state);
+  }
+
+  PRINT_BYTE_ARRAY(NULL, p_msg2_full->body, p_msg2_full->size);
+
+  return ret;
 }
 
 // Process remote attestation message 3
@@ -553,127 +517,127 @@ int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
                         uint32_t msg3_size,
                         ra_samp_response_header_t **pp_att_result_msg)
 {
-    int ret = 0;
-    sample_status_t sample_ret = SAMPLE_SUCCESS;
-    const uint8_t *p_msg3_cmaced = NULL;
-    sample_quote_t *p_quote = NULL;
-    sample_sha_state_handle_t sha_handle = NULL;
-    sample_report_data_t report_data = {0};
-    sample_ra_att_result_msg_t *p_att_result_msg = NULL;
-    ra_samp_response_header_t* p_att_result_msg_full = NULL;
-    uint32_t i;
+  int ret = 0;
+  sample_status_t sample_ret = SAMPLE_SUCCESS;
+  const uint8_t *p_msg3_cmaced = NULL;
+  sample_quote_t *p_quote = NULL;
+  sample_sha_state_handle_t sha_handle = NULL;
+  sample_report_data_t report_data = {0};
+  sample_ra_att_result_msg_t *p_att_result_msg = NULL;
+  ra_samp_response_header_t* p_att_result_msg_full = NULL;
+  uint32_t i;
 
-    if((!p_msg3) ||
-       (msg3_size < sizeof(sample_ra_msg3_t)) ||
-       (!pp_att_result_msg))
+  if((!p_msg3) ||
+     (msg3_size < sizeof(sample_ra_msg3_t)) ||
+     (!pp_att_result_msg))
     {
-        return SP_INTERNAL_ERROR;
+      return SP_INTERNAL_ERROR;
     }
 
-    // Check to see if we have registered?
-    if (!g_is_sp_registered)
+  // Check to see if we have registered?
+  if (!g_is_sp_registered)
     {
-        return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
+      return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
     }
-    do
+  do
     {
-        // Compare g_a in message 3 with local g_a.
-        ret = memcmp(&g_sp_db.g_a, &p_msg3->g_a, sizeof(sample_ec_pub_t));
-        if(ret)
+      // Compare g_a in message 3 with local g_a.
+      ret = memcmp(&g_sp_db.g_a, &p_msg3->g_a, sizeof(sample_ec_pub_t));
+      if(ret)
         {
-            fprintf(stderr, "\nError, g_a is not same [%s].", __FUNCTION__);
-            ret = SP_PROTOCOL_ERROR;
-            break;
+          fprintf(stderr, "\nError, g_a is not same [%s].", __FUNCTION__);
+          ret = SP_PROTOCOL_ERROR;
+          break;
         }
-        //Make sure that msg3_size is bigger than sample_mac_t.
-        uint32_t mac_size = msg3_size - sizeof(sample_mac_t);
-        p_msg3_cmaced = reinterpret_cast<const uint8_t*>(p_msg3);
-        p_msg3_cmaced += sizeof(sample_mac_t);
+      //Make sure that msg3_size is bigger than sample_mac_t.
+      uint32_t mac_size = msg3_size - sizeof(sample_mac_t);
+      p_msg3_cmaced = reinterpret_cast<const uint8_t*>(p_msg3);
+      p_msg3_cmaced += sizeof(sample_mac_t);
 
-        // Verify the message mac using SMK
-        sample_cmac_128bit_tag_t mac = {0};
-        sample_ret = sample_rijndael128_cmac_msg(&g_sp_db.smk_key,
-                                           p_msg3_cmaced,
-                                           mac_size,
-                                           &mac);
-        if(SAMPLE_SUCCESS != sample_ret)
+      // Verify the message mac using SMK
+      sample_cmac_128bit_tag_t mac = {0};
+      sample_ret = sample_rijndael128_cmac_msg(&g_sp_db.smk_key,
+                                               p_msg3_cmaced,
+                                               mac_size,
+                                               &mac);
+      if(SAMPLE_SUCCESS != sample_ret)
         {
-            fprintf(stderr, "\nError, cmac fail in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr, "\nError, cmac fail in [%s].", __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
         }
-        // In real implementation, should use a time safe version of memcmp here,
-        // in order to avoid side channel attack.
-        ret = memcmp(&p_msg3->mac, mac, sizeof(mac));
-        if(ret)
+      // In real implementation, should use a time safe version of memcmp here,
+      // in order to avoid side channel attack.
+      ret = memcmp(&p_msg3->mac, mac, sizeof(mac));
+      if(ret)
         {
-            fprintf(stderr, "\nError, verify cmac fail [%s].", __FUNCTION__);
-            ret = SP_INTEGRITY_FAILED;
-            break;
-        }
-
-        if(memcpy_s(&g_sp_db.ps_sec_prop, sizeof(g_sp_db.ps_sec_prop),
-            &p_msg3->ps_sec_prop, sizeof(p_msg3->ps_sec_prop)))
-        {
-            fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr, "\nError, verify cmac fail [%s].", __FUNCTION__);
+          ret = SP_INTEGRITY_FAILED;
+          break;
         }
 
-        p_quote = (sample_quote_t *)p_msg3->quote;
+      if(memcpy_s(&g_sp_db.ps_sec_prop, sizeof(g_sp_db.ps_sec_prop),
+                  &p_msg3->ps_sec_prop, sizeof(p_msg3->ps_sec_prop)))
+        {
+          fprintf(stderr,"\nError, memcpy failed in [%s].", __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
+        }
 
-        // Check the quote version if needed. Only check the Quote.version field if the enclave
-        // identity fields have changed or the size of the quote has changed.  The version may
-        // change without affecting the legacy fields or size of the quote structure.
-        //if(p_quote->version < ACCEPTED_QUOTE_VERSION)
-        //{
-        //    fprintf(stderr,"\nError, quote version is too old.", __FUNCTION__);
-        //    ret = SP_QUOTE_VERSION_ERROR;
-        //    break;
-        //}
+      p_quote = (sample_quote_t *)p_msg3->quote;
 
-        // Verify the report_data in the Quote matches the expected value.
-        // The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
-        // The second 32 bytes of report_data are set to zero.
-        sample_ret = sample_sha256_init(&sha_handle);
-        if(sample_ret != SAMPLE_SUCCESS)
+      // Check the quote version if needed. Only check the Quote.version field if the enclave
+      // identity fields have changed or the size of the quote has changed.  The version may
+      // change without affecting the legacy fields or size of the quote structure.
+      //if(p_quote->version < ACCEPTED_QUOTE_VERSION)
+      //{
+      //    fprintf(stderr,"\nError, quote version is too old.", __FUNCTION__);
+      //    ret = SP_QUOTE_VERSION_ERROR;
+      //    break;
+      //}
+
+      // Verify the report_data in the Quote matches the expected value.
+      // The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
+      // The second 32 bytes of report_data are set to zero.
+      sample_ret = sample_sha256_init(&sha_handle);
+      if(sample_ret != SAMPLE_SUCCESS)
         {
-            fprintf(stderr,"\nError, init hash failed in [%s].", __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr,"\nError, init hash failed in [%s].", __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
         }
-        sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.g_a),
-                                     sizeof(g_sp_db.g_a), sha_handle);
-        if(sample_ret != SAMPLE_SUCCESS)
+      sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.g_a),
+                                        sizeof(g_sp_db.g_a), sha_handle);
+      if(sample_ret != SAMPLE_SUCCESS)
         {
-            fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                    __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr,"\nError, udpate hash failed in [%s].",
+                  __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
         }
-        sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.g_b),
-                                     sizeof(g_sp_db.g_b), sha_handle);
-        if(sample_ret != SAMPLE_SUCCESS)
+      sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.g_b),
+                                        sizeof(g_sp_db.g_b), sha_handle);
+      if(sample_ret != SAMPLE_SUCCESS)
         {
-            fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                    __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr,"\nError, udpate hash failed in [%s].",
+                  __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
         }
-        sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.vk_key),
-                                     sizeof(g_sp_db.vk_key), sha_handle);
-        if(sample_ret != SAMPLE_SUCCESS)
+      sample_ret = sample_sha256_update((uint8_t *)&(g_sp_db.vk_key),
+                                        sizeof(g_sp_db.vk_key), sha_handle);
+      if(sample_ret != SAMPLE_SUCCESS)
         {
-            fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                    __FUNCTION__);
-            ret = SP_INTERNAL_ERROR;
-            break;
+          fprintf(stderr,"\nError, udpate hash failed in [%s].",
+                  __FUNCTION__);
+          ret = SP_INTERNAL_ERROR;
+          break;
         }
-        sample_ret = sample_sha256_get_hash(sha_handle,
-                                      (sample_sha256_hash_t *)&report_data);
-        if(sample_ret != SAMPLE_SUCCESS)
+      sample_ret = sample_sha256_get_hash(sha_handle,
+                                          (sample_sha256_hash_t *)&report_data);
+      if(sample_ret != SAMPLE_SUCCESS)
         {
-            fprintf(stderr,"\nError, Get hash failed in [%s].", __FUNCTION__);
+          fprintf(stderr,"\nError, Get hash failed in [%s].", __FUNCTION__);
             ret = SP_INTERNAL_ERROR;
             break;
         }
@@ -849,7 +813,3 @@ int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
     }
     return ret;
 }
-
-
-
-

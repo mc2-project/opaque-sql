@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "common.h"
+#include "sgx_tcrypto.h"
 
 #include "remote_attestation_result.h"
 
@@ -79,12 +80,10 @@ typedef enum _sample_derive_key_type_t
     SAMPLE_DERIVE_KEY_MK_VK,
 } sample_derive_key_type_t;
 
-bool derive_key(
-    const sample_ec_dh_shared_t *p_shared_key,
-    uint8_t key_id,
-    sample_ec_key_128bit_t *first_derived_key,
-    sample_ec_key_128bit_t *second_derived_key);
-
+bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key,
+                uint8_t key_id,
+                sgx_aes_gcm_128bit_key_t *first_derived_key,
+                sgx_aes_gcm_128bit_key_t *second_derived_key);
 #else
 
 typedef enum _sample_derive_key_type_t
@@ -95,10 +94,9 @@ typedef enum _sample_derive_key_type_t
     SAMPLE_DERIVE_KEY_VK,
 } sample_derive_key_type_t;
 
-bool derive_key(
-    const sample_ec_dh_shared_t *p_shared_key,
-    uint8_t key_id,
-    sample_ec_key_128bit_t *derived_key);
+bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key,
+                uint8_t key_id,
+                sample_ec_key_128bit_t *derived_key);
 
 #endif
 

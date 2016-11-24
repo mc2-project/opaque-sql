@@ -82,7 +82,7 @@ bool verify_cmac128(
 typedef struct _hash_buffer_t
 {
     uint8_t counter[4];
-    sample_ec_dh_shared_t shared_secret;
+    sgx_ec_dh_shared_t shared_secret;
     uint8_t algorithm_id[4];
 } hash_buffer_t;
 
@@ -90,68 +90,61 @@ const char ID_U[] = "SGXRAENCLAVE";
 const char ID_V[] = "SGXRASERVER";
 
 // Derive two keys from shared key and key id.
-bool derive_key(
-    const sample_ec_dh_shared_t *p_shared_key,
-    uint8_t key_id,
-    sample_ec_key_128bit_t *first_derived_key,
-    sample_ec_key_128bit_t *second_derived_key)
-{
-    sample_status_t sample_ret = SAMPLE_SUCCESS;
-    hash_buffer_t hash_buffer;
-    sample_sha_state_handle_t sha_context;
-    sample_sha256_hash_t key_material;
+bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key,
+                uint8_t key_id,
+                sgx_aes_gcm_128bit_key_t *first_derived_key,
+                sgx_aes_gcm_128bit_key_t *second_derived_key) {
+
+  sample_status_t ret = SGX_SUCCESS;
+  hash_buffer_t hash_buffer;
+  sgx_sha_state_handle_t sha_context;
+  sgx_sha256_hash_t key_material;
     
-    memset(&hash_buffer, 0, sizeof(hash_buffer_t));
+  memset(&hash_buffer, 0, sizeof(hash_buffer_t));
 
-    /* counter in big endian  */
-    hash_buffer.counter[3] = key_id;
+  /* counter in big endian  */
+  hash_buffer.counter[3] = key_id;
 
-    /*convert from little endian to big endian */
-    for (size_t i = 0; i < sizeof(sample_ec_dh_shared_t) ; i++)
-    {
-        hash_buffer.shared_secret.s[i] = p_shared_key->s[sizeof(p_shared_key->s) - 1 - i];
-    }
+  /*convert from little endian to big endian */
+  for (size_t i = 0; i < sizeof(sgx_ec_dh_shared_t) ; i++) {
+    hash_buffer.shared_secret.s[i] = p_shared_key->s[sizeof(p_shared_key->s) - 1 - i];
+  }
 
-    sample_ret = sample_sha256_init(&sha_context);
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        return false;
-    }
-    sample_ret = sample_sha256_update((uint8_t*)&hash_buffer, sizeof(hash_buffer_t), sha_context);
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        sample_sha256_close(sha_context);
-        return false;
-    }
-    sample_ret = sample_sha256_update((uint8_t*)ID_U, sizeof(ID_U), sha_context);
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        sample_sha256_close(sha_context);
-        return false;
-    }
-    sample_ret = sample_sha256_update((uint8_t*)ID_V, sizeof(ID_V), sha_context);
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        sample_sha256_close(sha_context);
-        return false;
-    }
-    sample_ret = sample_sha256_get_hash(sha_context, &key_material);
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        sample_sha256_close(sha_context);
-        return false;
-    }
-    sample_ret = sample_sha256_close(sha_context);
+  ret = sgx_sha256_init(&sha_context);
+  if (ret != SAMPLE_SUCCESS) {
+    return false;
+  }
+  ret = sgx_sha256_update((uint8_t*)&hash_buffer, sizeof(hash_buffer_t), sha_context);
+  if (ret != SAMPLE_SUCCESS) {
+    sgx_sha256_close(sha_context);
+    return false;
+  }
+  ret = sgx_sha256_update((uint8_t*)ID_U, sizeof(ID_U), sha_context);
+  if (ret != SAMPLE_SUCCESS) {
+    sgx_sha256_close(sha_context);
+    return false;
+  }
+  ret = sgx_sha256_update((uint8_t*)ID_V, sizeof(ID_V), sha_context);
+  if (ret != SAMPLE_SUCCESS) {
+    sgx_sha256_close(sha_context);
+    return false;
+  }
+  ret = sgx_sha256_get_hash(sha_context, &key_material);
+  if (ret != SAMPLE_SUCCESS) {
+    sgx_sha256_close(sha_context);
+    return false;
+  }
+  ret = sgx_sha256_close(sha_context);
 
-    static_assert(sizeof(sample_ec_key_128bit_t)* 2 == sizeof(sample_sha256_hash_t), "structure size mismatch.");
-    memcpy(first_derived_key, &key_material, sizeof(sample_ec_key_128bit_t));
-    memcpy(second_derived_key, (uint8_t*)&key_material + sizeof(sample_ec_key_128bit_t), sizeof(sample_ec_key_128bit_t));
+  static_assert(sizeof(sgx_aes_gcm_128bit_key_t)* 2 == sizeof(sgx_sha256_hash_t), "structure size mismatch.");
+  memcpy(first_derived_key, &key_material, sizeof(sgx_aes_gcm_128bit_key_t));
+  memcpy(second_derived_key, (uint8_t*)&key_material + sizeof(sgx_aes_gcm_128bit_key_t), sizeof(sgx_aes_gcm_128bit_key_t));
 
-    // memset here can be optimized away by compiler, so please use memset_s on
-    // windows for production code and similar functions on other OSes.
-    memset(&key_material, 0, sizeof(sample_sha256_hash_t));
+  // memset here can be optimized away by compiler, so please use memset_s on
+  // windows for production code and similar functions on other OSes.
+  memset(&key_material, 0, sizeof(sgx_aes_gcm_128bit_key_t));
 
-    return true;
+  return true;
 }
 
 #else
@@ -167,23 +160,22 @@ const char str_VK[] = "VK";
 
 // Derive key from shared key and key id.
 // key id should be sample_derive_key_type_t.
-bool derive_key(
-    const sample_ec_dh_shared_t *p_shared_key,
-    uint8_t key_id,
-    sample_ec_key_128bit_t* derived_key)
+bool derive_key( const sgx_ec256_dh_shared_t *p_shared_key,
+                 uint8_t key_id,
+                 sgx_aes_gcm_128bit_key_t *derived_key)
 {
-    sample_status_t sample_ret = SAMPLE_SUCCESS;
+    sample_status_t ret = SAMPLE_SUCCESS;
     uint8_t cmac_key[MAC_KEY_SIZE];
-    sample_ec_key_128bit_t key_derive_key;
+    sgx_aes_gcm_128bit_key_t key_derive_key;
     
     memset(&cmac_key, 0, MAC_KEY_SIZE);
 
-    sample_ret = sample_rijndael128_cmac_msg(
-        (sample_cmac_128bit_key_t *)&cmac_key,
-        (uint8_t*)p_shared_key,
-        sizeof(sample_ec_dh_shared_t),
-        (sample_cmac_128bit_tag_t *)&key_derive_key);
-    if (sample_ret != SAMPLE_SUCCESS)
+    ret = sample_rijndael128_cmac_msg((sample_cmac_128bit_key_t *)&cmac_key,
+                                      (uint8_t*)p_shared_key,
+                                      sizeof(sgx_ec256_dh_shared_t),
+                                      (sample_cmac_128bit_tag_t *)&key_derive_key);
+
+    if (ret != SAMPLE_SUCCESS)
     {
         // memset here can be optimized away by compiler, so please use memset_s on
         // windows for production code and similar functions on other OSes.
@@ -239,18 +231,16 @@ bool derive_key(
     *key_len = 0x0080;
 
 
-    sample_ret = sample_rijndael128_cmac_msg(
-        (sample_cmac_128bit_key_t *)&key_derive_key,
-        p_derivation_buffer,
-        derivation_buffer_length,
-        (sample_cmac_128bit_tag_t *)derived_key);
+    ret = sample_rijndael128_cmac_msg((sample_cmac_128bit_key_t *)&key_derive_key,
+                                   p_derivation_buffer,
+                                   derivation_buffer_length,
+                                   (sample_cmac_128bit_tag_t *)derived_key);
     free(p_derivation_buffer);
     // memset here can be optimized away by compiler, so please use memset_s on
     // windows for production code and similar functions on other OSes.
     memset(&key_derive_key, 0, sizeof(key_derive_key));
-    if (sample_ret != SAMPLE_SUCCESS)
-    {
-        return false;
+    if (ret != SAMPLE_SUCCESS) {
+      return false;
     }
     return true;
 }
