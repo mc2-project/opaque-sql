@@ -185,10 +185,8 @@ sgx_status_t key_derivation(const sgx_ec256_dh_shared_t* shared_key,
 // @return Any error returned from the trusted key exchange API
 //         for creating a key context.
 
-sgx_status_t enclave_init_ra(
-    int b_pse,
-    sgx_ra_context_t *p_context)
-{
+sgx_status_t enclave_init_ra(int b_pse,
+                             sgx_ra_context_t *p_context) {
     // isv enclave call to trusted key exchange library.
     sgx_status_t ret;
     if(b_pse)

@@ -485,13 +485,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     PRINT_BYTE_ARRAY(stdout, msg1, sizeof(sgx_ra_msg1_t));
   }
 
-  if (VERIFICATION_INDEX_IS_VALID()) {
-    memcpy_s(msg1, sizeof(sgx_ra_msg1_t), msg1_samples[0], sizeof(sgx_ra_msg1_t));
-    fprintf(stdout, "\nInstead of using the recently generated MSG1, "
-            "we will use the following precomputed MSG1 -\n");
-    PRINT_BYTE_ARRAY(stdout, msg1, sizeof(sgx_ra_msg1_t));
-  }
-
   // The ISV application sends msg1 to the SP to get msg2,
   // msg2 needs to be freed when no longer needed.
   // The ISV decides whether to use linkable or unlinkable signatures.

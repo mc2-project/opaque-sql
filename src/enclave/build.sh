@@ -25,8 +25,8 @@ echo ${KEY_PATH}
 echo "key.cpp generated"
 
 #make clean; make SGX_MODE=HW SGX_DEBUG=1
-#make clean; make SGX_MODE=HW SGX_PRERELEASE=1
-make clean; make SGX_DEBUG=1
+make clean; make SGX_MODE=HW SGX_PRERELEASE=1
+#make clean; make SGX_DEBUG=1
 rm -f $BASE_DIR/libSGXEnclave.so $BASE_DIR/enclave.signed.so
 mv $ENCLAVE_DIR/libSGXEnclave.so $BASE_DIR
 mv $ENCLAVE_DIR/enclave.signed.so $BASE_DIR

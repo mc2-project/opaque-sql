@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include "common.h"
 #include "sgx_tcrypto.h"
+#include "sp_crypto.h"
 
 #include "remote_attestation_result.h"
 
@@ -52,8 +53,8 @@ typedef struct sample_ec_priv_t
 
 typedef struct sample_ec_dh_shared_t
 {
-    uint8_t s[SAMPLE_ECP_KEY_SIZE];
-}sample_ec_dh_shared_t;
+  uint8_t s[SAMPLE_ECP_KEY_SIZE];
+} lc_ec_dh_shared_t;
 
 typedef uint8_t sample_ec_key_128bit_t[16];
 
@@ -80,7 +81,7 @@ typedef enum _sample_derive_key_type_t
     SAMPLE_DERIVE_KEY_MK_VK,
 } sample_derive_key_type_t;
 
-bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key,
+bool derive_key(const lc_ec256_dh_shared_t *p_shared_key,
                 uint8_t key_id,
                 sgx_aes_gcm_128bit_key_t *first_derived_key,
                 sgx_aes_gcm_128bit_key_t *second_derived_key);
@@ -94,17 +95,16 @@ typedef enum _sample_derive_key_type_t
     SAMPLE_DERIVE_KEY_VK,
 } sample_derive_key_type_t;
 
-bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key,
+bool derive_key(const lc_ec256_dh_shared_t *p_shared_key,
                 uint8_t key_id,
                 sample_ec_key_128bit_t *derived_key);
 
 #endif
 
-bool verify_cmac128(
-    sample_ec_key_128bit_t mac_key,
-    const uint8_t *p_data_buf,
-    uint32_t buf_size,
-    const uint8_t *p_mac_buf);
+bool verify_cmac128(lc_cmac_128bit_key_t mac_key,
+                    const uint8_t *p_data_buf,
+                    uint32_t buf_size,
+                    const uint8_t *p_mac_buf);
 #ifdef  __cplusplus
 }
 #endif

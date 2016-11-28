@@ -65,6 +65,17 @@ void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len) {
   }
 }
 
+void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len) {
+  uint32_t actual_len = len / sizeof(uint32_t);
+  for (uint32_t i = 0; i < actual_len; i++) {
+    for (uint32_t j = 0; j < 4; j++) {
+      //*(output+i*4+j) = *(input+(actual_len-i-1)*4+(4-j-1));
+      *(output+i*4+j) = *(input+i*4+4-j-1);
+    }
+  }
+}
+
+
 lc_status_t lc_ssl2sgx(EC_KEY *ssl_key,
                        lc_ec256_private_t *p_private,
                        lc_ec256_public_t *p_public) {
@@ -203,8 +214,15 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
 lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
                                     const uint8_t *p_src, uint32_t src_len,
                                     lc_cmac_128bit_tag_t *p_mac) {
-  uint32_t p_mac_len = 0;
+  uint32_t p_mac_len = 16;
   int ret = 0;
+
+  // reverse p_key
+  lc_cmac_128bit_key_t p_key_;
+  uint8_t *p_key_ptr = (uint8_t *) p_key_;
+  reverse_endian((uint8_t *) p_key, p_key_ptr, sizeof(lc_cmac_128bit_key_t));
+  // print_hex(p_key_ptr, 16);
+  // printf("\n");
 
   CMAC_CTX *ctx = CMAC_CTX_new();
   if (!ctx) {
@@ -212,7 +230,7 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
 
-  ret = CMAC_Init(ctx, p_key, LC_CMAC_KEY_SIZE, EVP_aes_128_gcm(), NULL);
+  ret = CMAC_Init(ctx, p_key, LC_CMAC_KEY_SIZE, EVP_aes_128_cbc(), NULL);
   if (ret != 1) {
     fprintf(stderr, "[%s] CMAC key init failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -224,12 +242,13 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
 
-  ret = CMAC_Final(ctx, (unsigned char *) p_mac, (size_t *) &p_mac_len);
+  ret = CMAC_Final(ctx, (unsigned char *) *p_mac, (size_t *) &p_mac_len);
   if (ret != 1) {
     fprintf(stderr, "[%s] CMAC final output failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
   }
 
+  //printf("[%s] LC_CMAC_KEY_SIZE is %u, p_mac_len is %u\n", __FUNCTION__, LC_CMAC_KEY_SIZE, p_mac_len);
   CMAC_CTX_free(ctx);
 
   return LC_SUCCESS;
@@ -289,8 +308,8 @@ EC_POINT *get_ec_point(lc_ec256_public_t *p_public) {
   unsigned char *y = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
 
   // reverse for endian-ness
-  reverse_endian(x, p_public->gx, LC_ECP256_KEY_SIZE);
-  reverse_endian(y, p_public->gy, LC_ECP256_KEY_SIZE);
+  reverse_endian(p_public->gx, x, LC_ECP256_KEY_SIZE);
+  reverse_endian(p_public->gy, y, LC_ECP256_KEY_SIZE);
 
   BIGNUM *x_ec = BN_new();
   BIGNUM *y_ec = BN_new();
@@ -353,13 +372,7 @@ EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {
   BN_bin2bn(r, LC_ECP256_KEY_SIZE, r_ec);
 
   EC_KEY *key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-
   EC_GROUP *curve = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-
-  // ret = EC_KEY_set_group(key, (const EC_GROUP *) curve);
-  // if (ret != 1) {
-  //   fprintf(stderr, "[%s] set private group failure\n", __FUNCTION__);
-  // }
 
   ret = EC_KEY_set_private_key(key, r_ec);
   if (ret != 1) {
@@ -395,21 +408,44 @@ lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
   (void)p_shared_key;
   (void)ecc_handle;
 
+  lc_ec256_dh_shared_t reverse;
+
   // shared secret is an AES symmetric key
   EC_POINT *pub_key = get_ec_point(p_public_ga);
   EC_KEY *priv_key = get_priv_key(p_private_b);
+  EC_POINT *sec = EC_POINT_new(EC_KEY_get0_group(priv_key));
 
-  ECDH_compute_key(p_shared_key, LC_ECP256_KEY_SIZE,
-                   pub_key, priv_key, NULL);
+  printf("[%s] ", __FUNCTION__);
+  print_priv_key(*p_private_b);
+  print_pub_key(*p_public_ga);
+  printf("\n");
+
+  EC_POINT_mul(EC_KEY_get0_group(priv_key), sec, NULL,
+               pub_key, EC_KEY_get0_private_key(priv_key), NULL);
+
+  // ECDH_compute_key(reverse.s,
+  //                  LC_ECP256_KEY_SIZE,
+  //                  pub_key, priv_key, NULL);
+
+  // get x-coord
+  BIGNUM *x_ec_ = BN_new();
+  BIGNUM *y_ec_ = BN_new();
+  EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(priv_key),
+                                      sec,
+                                      x_ec_, y_ec_, NULL);
+  BN_bn2bin(x_ec_, reverse.s);
+
+  reverse_endian(reverse.s, p_shared_key->s, LC_ECP256_KEY_SIZE);
 
   EC_POINT_free(pub_key);
   EC_KEY_free(priv_key);
+  BN_free(x_ec_);
+  BN_free(y_ec_);
+  EC_POINT_free(sec);
 
   return LC_SUCCESS;
 
 }
-
-
 
 lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
                           uint32_t data_size,
@@ -425,22 +461,39 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   EC_KEY *key = get_priv_key(p_private);
   assert(key != NULL);
 
-  printf("\n\n");
+  printf("\n\n[%s]\t", __FUNCTION__);
   print_hex((uint8_t *) p_data, data_size);
   printf("data_size: %u\n", data_size);
   print_ec_key(key);
   printf("\n");
-  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *) p_data, (int) data_size, key);
+
+  // first, hash the data
+  lc_sha_state_handle_t p_sha_handle;
+  lc_sha256_hash_t p_hash;
+  lc_sha256_init(&p_sha_handle);
+  lc_sha256_update(p_data, data_size, p_sha_handle);
+  lc_sha256_get_hash(p_sha_handle, &p_hash);
+  lc_sha256_close(p_sha_handle);
+
+  // sign the hash
+  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *) p_hash, sizeof(lc_sha256_hash_t), key);
   assert(sig != NULL);
 
   unsigned char * x_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
   unsigned char * y_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
-  BN_bn2bin(sig->r, x_);
-  BN_bn2bin(sig->s, y_);
+  BN_bn2bin(sig->r, (uint8_t *) x_);
+  BN_bn2bin(sig->s, (uint8_t *) y_);
 
+  // reverse r and s
   reverse_endian(x_, (uint8_t *) p_signature->x, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
   reverse_endian(y_, (uint8_t *) p_signature->y, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+
+  // printf("[%s] \t", __FUNCTION__);
+  // print_hex(x_, 32);
+  // printf("\t");
+  // print_hex(y_, 32);
+  // printf("\n");
 
   free(x_);
   free(y_);

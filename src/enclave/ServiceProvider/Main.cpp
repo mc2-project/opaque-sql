@@ -138,6 +138,148 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
   read_secret_key(private_key_filename, NULL);
 }
 
+void test_sign() {
+  uint8_t data[100] = "helloworldhelloworldhelloworldhelloworld";
+  uint32_t data_len = 15;
+
+  sample_ecc_state_handle_t ecc_state = NULL;
+  sample_ec256_private_t priv_key;
+  sample_ec256_public_t pub_key;
+  sample_ecc256_open_context(&ecc_state);
+  sample_ecc256_create_key_pair((sample_ec256_private_t *) &priv_key,
+                                (sample_ec256_public_t *) &pub_key,
+                                ecc_state);
+
+  printf("priv_key: ");
+  print_hex((uint8_t *) priv_key.r, 32);
+  printf("\n");
+
+  printf("pub_key x: ");
+  print_hex((uint8_t *) pub_key.gx, 32);
+  printf("\n");
+
+  printf("pub_key y: ");
+  print_hex((uint8_t *) pub_key.gy, 32);
+  printf("\n");
+
+
+  // lc_ec256_private_t priv_key_2;
+  // lc_ec256_public_t pub_key_2;
+  // lc_ecc256_create_key_pair(&priv_key_2, &pub_key_2, NULL);
+
+  lc_ec256_signature_t sig;
+  lc_ecdsa_sign(data, data_len, (lc_ec256_private_t *) &priv_key,
+                &sig, NULL);
+  printf("lc_ecdsa sign\n");
+  print_hex((uint8_t *) sig.x, 32);
+  printf("\n");
+  print_hex((uint8_t *) sig.y, 32);
+  printf("\n");
+
+  sample_ec256_signature_t sample_sig;
+  sample_ecdsa_sign(data, data_len,
+                    (sample_ec256_private_t *) &priv_key,
+                    (sample_ec256_signature_t *) &sample_sig,
+                    ecc_state);
+
+  printf("sample_ecdsa sign\n");
+  print_hex((uint8_t *) sample_sig.x, 32);
+  printf("\n");
+  print_hex((uint8_t *) sample_sig.y, 32);
+  printf("\n");
+
+
+  ECDSA_SIG *openssl_sig = ECDSA_SIG_new();
+  uint8_t *r_ = (uint8_t *) malloc(32);
+  uint8_t *s_ = (uint8_t *) malloc(32);
+  reverse_endian((uint8_t *) sample_sig.x, r_, 32);
+  reverse_endian((uint8_t *) sample_sig.y, s_, 32);
+
+  printf("r_ is \t ");
+  print_hex(r_, 32);
+  printf("\n");
+  printf("s_ is \t ");
+  print_hex(s_, 32);
+  printf("\n");
+
+  openssl_sig->r = BN_new();
+  openssl_sig->s = BN_new();
+  BN_bin2bn((uint8_t *) r_, 32, openssl_sig->r);
+  BN_bin2bn((uint8_t *) s_, 32, openssl_sig->s);
+
+  printf("Verifying sample sig\n");
+  // first calculate the  SHA256 hash
+  lc_sha_state_handle_t p_sha_handle;
+  lc_sha256_hash_t p_hash;
+  lc_sha256_init(&p_sha_handle);
+  lc_sha256_update(data, data_len, p_sha_handle);
+  lc_sha256_get_hash(p_sha_handle, &p_hash);
+  lc_sha256_close(p_sha_handle);
+
+  // verify the digest
+  EC_KEY *ec_key = get_priv_key((lc_ec256_private_t *) &priv_key);
+  int verify = ECDSA_do_verify((uint8_t *) p_hash, sizeof(lc_sha256_hash_t), openssl_sig, ec_key);
+  printf("verify is %u\n", verify);
+
+  free(r_);
+  free(s_);
+  EC_KEY_free(ec_key);
+}
+
+void test_ecdh() {
+  sample_ecc_state_handle_t ecc_state = NULL;
+  sample_ec256_private_t priv_key;
+  sample_ec256_public_t pub_key;
+  sample_ecc256_open_context(&ecc_state);
+  sample_ecc256_create_key_pair((sample_ec256_private_t *) &priv_key,
+                                (sample_ec256_public_t *) &pub_key,
+                                ecc_state);
+
+  lc_ec256_private_t priv_key_2;
+  lc_ec256_public_t pub_key_2;
+  lc_ecc256_create_key_pair(&priv_key_2, &pub_key_2, NULL);
+
+  printf("priv_key_2: ");
+  print_hex((uint8_t *) priv_key_2.r, 32);
+  printf("\n");
+
+  printf("pub_key_2 x: ");
+  print_hex((uint8_t *) pub_key_2.gx, 32);
+  printf("\n");
+
+  printf("pub_key_2 y: ");
+  print_hex((uint8_t *) pub_key_2.gy, 32);
+  printf("\n");
+
+  sample_ec256_dh_shared_t dh_key;
+
+  sample_ecc256_compute_shared_dhkey((sample_ec256_private_t *) &priv_key,
+                                     (sample_ec256_public_t *) &pub_key,
+                                     (sample_ec256_dh_shared_t *) &dh_key,
+                                     ecc_state);
+
+  printf("\n");
+  printf("dh_key: ");
+  print_hex((uint8_t *) dh_key.s, 32);
+  printf("\n");
+
+  lc_ec256_dh_shared_t dh_key_lc;
+  lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
+                                 (lc_ec256_public_t *) &pub_key,
+                                 &dh_key_lc, NULL);
+  printf("Computed shared key\n");
+
+  printf("\n");
+  printf("dh_key_lc: ");
+  print_hex((uint8_t *) dh_key_lc.s, 32);
+  printf("\n");
+
+  if (ecc_state) {
+    sample_ecc256_close_context(&ecc_state);
+  }
+
+}
+
 int main(int argc, char **argv) {
   (void)(argc);
   (void)(argv);
@@ -167,6 +309,10 @@ int main(int argc, char **argv) {
   print_pub_key(p_public);
   print_priv_key(p_private);
 
+  // test compute shared key
+  lc_ecc256_compute_shared_dhkey(&p_private, &p_public, &p_shared_key, ecc_handle);
+  printf("Computed shared key\n");
+
   EC_POINT *pub_key = get_ec_point(&p_public);
   EC_POINT_free(pub_key);
 
@@ -174,10 +320,6 @@ int main(int argc, char **argv) {
   lc_ec256_signature_t sig;
   lc_ecdsa_sign(data, 10, &p_private, &sig, ecc_handle);
   printf("Signed data using ECDSA\n");
-
-  // // test compute shared key
-  lc_ecc256_compute_shared_dhkey(&p_private, &p_public, &p_shared_key, ecc_handle);
-  printf("Computed shared key\n");
 
   lc_sha_state_handle_t sha_handle;
   lc_sha256_hash_t hash;
@@ -189,7 +331,26 @@ int main(int argc, char **argv) {
   lc_sha256_close(sha_handle);
 
   print_hex((uint8_t *) hash, sizeof(lc_sha256_hash_t));
+  printf("\n");
 
+  uint8_t p_key_data[33] = "12345678123456781234567812345678";
+  lc_cmac_128bit_key_t *p_key = (lc_cmac_128bit_key_t *) &p_key_data;
+  lc_cmac_128bit_tag_t mac;
+  lc_rijndael128_cmac_msg(p_key, data, 10, &mac);
+  printf("LC mac: ");
+  print_hex((uint8_t *) mac, sizeof(lc_cmac_128bit_tag_t));
+  printf("\n");
+
+  sample_cmac_128bit_key_t *key = (sample_cmac_128bit_key_t *) &p_key_data;
+  sample_cmac_128bit_tag_t sample_mac;
+  sample_rijndael128_cmac_msg(key, data, 10, &sample_mac);
+
+  printf("Sample mac: ");
+  print_hex((uint8_t *) sample_mac, sizeof(sample_cmac_128bit_tag_t));
+  printf("\n");
+
+  //test_ecdh();
+  test_sign();
 
 #endif
 

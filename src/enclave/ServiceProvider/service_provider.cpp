@@ -64,19 +64,33 @@ sgx_ec256_public_t g_sp_pub_key = {{0}, {0}};
 // hard coded in isv_enclave. It is based on NIST P-256 curve.
 sgx_ec256_private_t g_sp_priv_key = {{0}};
 
-// This is a context data structure used on SP side
+// // This is a context data structure used on SP side
+// typedef struct _sp_db_item_t
+// {
+//   sample_ec256_public_t             g_a;
+//   sample_ec256_public_t             g_b;
+//   sample_ec256_private_t            b;
+//   sample_aes_gcm_128bit_key_t       vk_key;   // Shared secret key for the REPORT_DATA
+//   sample_aes_gcm_128bit_key_t       mk_key;   // Shared secret key for generating MAC's
+//   sample_aes_gcm_128bit_key_t       sk_key;   // Shared secret key for encryption
+//   sample_aes_gcm_128bit_key_t       smk_key;  // Used only for SIGMA protocol
+//   sample_ps_sec_prop_desc_t     ps_sec_prop;
+// } sp_db_item_t;
+// static sp_db_item_t g_sp_db;
+
 typedef struct _sp_db_item_t
 {
-  sgx_ec256_public_t             g_a;
-  sgx_ec256_public_t             g_b;
-  sgx_aes_gcm_128bit_key_t    vk_key;   // Shared secret key for the REPORT_DATA
-  sgx_aes_gcm_128bit_key_t    mk_key;   // Shared secret key for generating MAC's
-  sgx_aes_gcm_128bit_key_t    sk_key;   // Shared secret key for encryption
-  sgx_aes_gcm_128bit_key_t    smk_key;  // Used only for SIGMA protocol
-  sample_ec_priv_t            b;
-  sample_ps_sec_prop_desc_t   ps_sec_prop;
+  lc_ec256_public_t             g_a;
+  lc_ec256_public_t             g_b;
+  lc_ec256_private_t            b;
+  lc_aes_gcm_128bit_key_t       vk_key;   // Shared secret key for the REPORT_DATA
+  lc_aes_gcm_128bit_key_t       mk_key;   // Shared secret key for generating MAC's
+  lc_aes_gcm_128bit_key_t       sk_key;   // Shared secret key for encryption
+  lc_aes_gcm_128bit_key_t       smk_key;  // Used only for SIGMA protocol
+  sample_ps_sec_prop_desc_t     ps_sec_prop;
 } sp_db_item_t;
 static sp_db_item_t g_sp_db;
+
 
 static const sample_extended_epid_group* g_sp_extended_epid_group_id= NULL;
 static bool g_is_sp_registered = false;
@@ -226,8 +240,7 @@ int read_secret_key(const char *filename,
 
 
 // Verify message 0 then configure extended epid group.
-int sp_ra_proc_msg0_req(uint32_t extended_epid_group_id)
-{
+int sp_ra_proc_msg0_req(uint32_t extended_epid_group_id) {
   int ret = 0;
   // Check to see if we have registered with the attestation server yet?
   if (!g_is_sp_registered ||
@@ -276,12 +289,12 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
   int ret = 0;
   ra_samp_response_header_t* p_msg2_full = NULL;
   sgx_ra_msg2_t *p_msg2 = NULL;
-  sgx_ecc_state_handle_t ecc_state = NULL;
+  sample_ecc_state_handle_t ecc_state = NULL;
   //sgx_status_t ret = SGX_SUCCESS;
   bool derive_ret = false;
 
   if (!p_msg1 || !pp_msg2 || (msg1_size != sizeof(sgx_ra_msg1_t))) {
-    printf("[sp_ra_proc_msg1_req] Unexpected error 1\n");
+    printf("[%s] Unexpected error 1: %p, %p, size %u\n", __FUNCTION__, p_msg1, pp_msg2, msg1_size);
     assert(false);
   }
 
@@ -317,16 +330,18 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 
     // Generate the Service providers ECCDH key pair.
     ret = sample_ecc256_open_context(&ecc_state);
-    if(ret != SGX_SUCCESS) {
+    if(ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, cannot get the ECC context.\n", __FUNCTION__);
       ret = -1;
       break;
     }
 
-    sample_ec256_public_t pub_key = {{0},{0}};
-    sample_ec256_private_t priv_key = {{0}};
-    ret = sample_ecc256_create_key_pair(&priv_key, &pub_key, ecc_state);
-    if (ret != SGX_SUCCESS) {
+    lc_ec256_public_t pub_key = {{0},{0}};
+    lc_ec256_private_t priv_key = {{0}};
+    ret = lc_ecc256_create_key_pair((lc_ec256_private_t *) &priv_key,
+                                    (lc_ec256_public_t *) &pub_key,
+                                    ecc_state);
+    if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, cannot generate key pair.\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
       break;
@@ -341,12 +356,25 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 
     // Generate the client/SP shared secret
-    sgx_ec256_dh_shared_t dh_key = {{0}};
-    ret = sample_ecc256_compute_shared_dhkey(&priv_key,
-                                          (sample_ec256_public_t *)&p_msg1->g_a,
-                                          (sample_ec256_dh_shared_t *)&dh_key,
-                                          ecc_state);
-    if (ret != SGX_SUCCESS) {
+    lc_ec256_dh_shared_t dh_key = {{0}};
+    // ret = sample_ecc256_compute_shared_dhkey((sample_ec256_private_t *) &priv_key,
+    //                                          (sample_ec256_public_t *) &p_msg1->g_a,
+    //                                          (sample_ec256_dh_shared_t *) &dh_key,
+    //                                          ecc_state);
+    // printf("[%s] dh_key 2: ", __FUNCTION__);
+    // print_hex(dh_key.s, 32);
+    // printf("\n");
+
+    // lc_ec256_dh_shared_t dh_key_temp = {{0}};
+    lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
+                                   (lc_ec256_public_t *) &p_msg1->g_a,
+                                   (lc_ec256_dh_shared_t *) &dh_key,
+                                   NULL);
+    // printf("[%s] dh_key temp: ", __FUNCTION__);
+    // print_hex(dh_key_temp.s, 32);
+    // printf("\n");
+
+    if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, compute share key fail.\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
       break;
@@ -373,7 +401,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 #else
     // smk is only needed for msg2 generation.
-    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK,
+    derive_ret = derive_key((lc_ec256_dh_shared_t *) &dh_key, SAMPLE_DERIVE_KEY_SMK,
                             &g_sp_db.smk_key);
     if (derive_ret != true) {
       fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
@@ -382,7 +410,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 
     // The rest of the keys are the shared secrets for future communication.
-    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK,
+    derive_ret = derive_key((lc_ec256_dh_shared_t *) &dh_key, SAMPLE_DERIVE_KEY_MK,
                             &g_sp_db.mk_key);
     if (derive_ret != true) {
       fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
@@ -390,7 +418,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
       break;
     }
 
-    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SK,
+    derive_ret = derive_key((lc_ec256_dh_shared_t *) &dh_key, SAMPLE_DERIVE_KEY_SK,
                             &g_sp_db.sk_key);
     if (derive_ret != true) {
       fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
@@ -398,7 +426,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
       break;
     }
 
-    derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_VK,
+    derive_ret = derive_key((lc_ec256_dh_shared_t *) &dh_key, SAMPLE_DERIVE_KEY_VK,
                             &g_sp_db.vk_key);
     if (derive_ret != true) {
       fprintf(stderr, "[%s] Error, derive key failure.\n", __FUNCTION__);
@@ -408,8 +436,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 #endif
 
     uint32_t msg2_size = sizeof(sgx_ra_msg2_t) + sig_rl_size;
-    p_msg2_full = (ra_samp_response_header_t*) malloc(msg2_size
-                                                      + sizeof(ra_samp_response_header_t));
+    p_msg2_full = (ra_samp_response_header_t*) malloc(msg2_size + sizeof(ra_samp_response_header_t));
     if(!p_msg2_full) {
       fprintf(stderr, " [%s] Error, could not allocate p_msg2_full\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
@@ -426,10 +453,8 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     p_msg2 = (sgx_ra_msg2_t *) p_msg2_full->body;
 
     // Assemble MSG2
-    if(memcpy_s(&p_msg2->g_b, sizeof(p_msg2->g_b), &g_sp_db.g_b,
-                sizeof(g_sp_db.g_b)) ||
-       memcpy_s(&p_msg2->spid, sizeof(sample_spid_t),
-                &g_spid, sizeof(g_spid))) {
+    if(memcpy_s(&p_msg2->g_b, sizeof(p_msg2->g_b), &g_sp_db.g_b, sizeof(g_sp_db.g_b)) ||
+       memcpy_s(&p_msg2->spid, sizeof(sample_spid_t), &g_spid, sizeof(g_spid))) {
       fprintf(stderr,"[%s] Error, memcpy failed\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
       break;
@@ -447,7 +472,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     p_msg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
 #endif
     // Create gb_ga
-    sgx_ec256_public_t gb_ga[2];
+    lc_ec256_public_t gb_ga[2];
     if(memcpy_s(&gb_ga[0], sizeof(gb_ga[0]), &g_sp_db.g_b, sizeof(g_sp_db.g_b))
        || memcpy_s(&gb_ga[1], sizeof(gb_ga[1]), &g_sp_db.g_a, sizeof(g_sp_db.g_a))) {
       fprintf(stderr,"[%s] Error, memcpy failed.\n", __FUNCTION__);
@@ -456,12 +481,18 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 
     // Sign gb_ga
-    ret = sample_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga),
-                            (sample_ec256_private_t *)&g_sp_priv_key,
-                            (sample_ec256_signature_t *)&p_msg2->sign_gb_ga,
-                            ecc_state);
+    ret = lc_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga),
+                        (lc_ec256_private_t *)&g_sp_priv_key,
+                        (lc_ec256_signature_t *)&p_msg2->sign_gb_ga,
+                        NULL);
 
-    if(ret != SGX_SUCCESS) {
+    // printf("[%s] lc_ecdsa_sign   ", __FUNCTION__);
+    // print_hex((uint8_t *) p_msg2->sign_gb_ga.x, 32);
+    // printf("\n");
+    // print_hex((uint8_t *) p_msg2->sign_gb_ga.y, 32);
+    // printf("\n");
+
+    if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, sign ga_gb fail.\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
       break;
@@ -470,11 +501,11 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     // Generate the CMACsmk for gb||SPID||TYPE||KDF_ID||Sigsp(gb,ga)
     uint8_t mac[SGX_CMAC_MAC_SIZE] = {0};
     uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-    ret = sample_rijndael128_cmac_msg(&g_sp_db.smk_key,
-                                      (uint8_t *)&p_msg2->g_b,
-                                      cmac_size,
-                                      &mac);
-    if (ret != SGX_SUCCESS) {
+    ret = lc_rijndael128_cmac_msg(&g_sp_db.smk_key,
+                                  (uint8_t *)&p_msg2->g_b,
+                                  cmac_size,
+                                  &mac);
+    if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, cmac fail.\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
       break;
