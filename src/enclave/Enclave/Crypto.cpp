@@ -1,8 +1,21 @@
 #include "Crypto.h"
 
-const char *key_str = "helloworld123123";
-const sgx_aes_gcm_128bit_key_t *key = (const sgx_aes_gcm_128bit_key_t *) key_str;
-const KeySchedule ks = KeySchedule((unsigned char *) key_str, SGX_AESGCM_KEY_SIZE);
+//const char *key_str = "helloworld123123";
+//const sgx_aes_gcm_128bit_key_t *key = (const sgx_aes_gcm_128bit_key_t *) key_str;
+sgx_aes_gcm_128bit_key_t key_data = {0};
+sgx_aes_gcm_128bit_key_t *key = &key_data;
+//const KeySchedule ks = KeySchedule((unsigned char *) key_str, SGX_AESGCM_KEY_SIZE);
+KeySchedule *ks = NULL;
+
+void initKeySchedule() {
+  if (ks == NULL) {
+    ks = new KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
+  }
+}
+
+void gcKeySchedule() {
+  delete ks;
+}
 
 // encrypt() and decrypt() should be called from enclave code only
 // TODO: encrypt() and decrypt() should return status
@@ -11,6 +24,8 @@ const KeySchedule ks = KeySchedule((unsigned char *) key_str, SGX_AESGCM_KEY_SIZ
 // TODO: fix this; should use key obtained from client
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
+
+  initKeySchedule();
 
   // key size is 12 bytes/128 bits
   // IV size is 12 bytes/96 bits
@@ -24,7 +39,7 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
-  AesGcm cipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  AesGcm cipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
   
@@ -33,6 +48,8 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
              uint8_t *plaintext) {
+
+  initKeySchedule();
 
   // decrypt using a global key
   // TODO: fix this; should use key obtained from client
@@ -49,7 +66,7 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
-  AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  AesGcm decipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
   if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
     printf("Decrypt: invalid mac\n");
@@ -61,6 +78,8 @@ void encrypt_with_aad(uint8_t *plaintext, uint32_t plaintext_length,
                       uint8_t *ciphertext,
                       uint8_t *aad, uint32_t aad_len) {
 
+  initKeySchedule();
+
   // key size is 12 bytes/128 bits
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
@@ -73,7 +92,7 @@ void encrypt_with_aad(uint8_t *plaintext, uint32_t plaintext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
-  AesGcm cipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  AesGcm cipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   cipher.aad((unsigned char *) aad, (size_t) aad_len);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
@@ -83,6 +102,8 @@ void encrypt_with_aad(uint8_t *plaintext, uint32_t plaintext_length,
 void decrypt_with_aad(const uint8_t *ciphertext, uint32_t ciphertext_length,
                       uint8_t *plaintext,
                       uint8_t *aad, uint32_t aad_len) {
+
+  initKeySchedule();
 
   // decrypt using a global key
   // TODO: fix this; should use key obtained from client
@@ -99,7 +120,7 @@ void decrypt_with_aad(const uint8_t *ciphertext, uint32_t ciphertext_length,
   sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
   uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
 
-  AesGcm decipher(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  AesGcm decipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   decipher.aad((unsigned char *) aad, (size_t) aad_len);
   decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
   if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
@@ -128,6 +149,9 @@ StreamCipher::~StreamCipher() {
 
 
 void StreamCipher::reset(uint8_t *new_ciphertext_ptr) {
+
+  initKeySchedule();
+
   iv_ptr = new_ciphertext_ptr;
   mac_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE;
   cipher_ptr = new_ciphertext_ptr + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
@@ -139,11 +163,13 @@ void StreamCipher::reset(uint8_t *new_ciphertext_ptr) {
 	delete cipher;
   }
   
-  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);
+  cipher = new AesGcm(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   leftover_plaintext_size = 0; 
 }
 
 void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size) {
+
+  initKeySchedule();
 
   uint32_t merge_bytes = 0;
   uint32_t copy_bytes = 0;
@@ -208,6 +234,9 @@ StreamDecipher::~StreamDecipher() {
 }
 
 void StreamDecipher::reset(uint8_t *new_ciphertext_ptr, uint32_t enc_size) {
+
+  initKeySchedule();
+
   this->total_cipher_size = enc_size - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
 
   iv_ptr = new_ciphertext_ptr;
@@ -218,7 +247,7 @@ void StreamDecipher::reset(uint8_t *new_ciphertext_ptr, uint32_t enc_size) {
   if (cipher != NULL) {
 	delete cipher;
   }
-  cipher = new AesGcm(&ks, iv_ptr, SGX_AESGCM_IV_SIZE);  
+  cipher = new AesGcm(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   
   leftover_plaintext_size = 0;
   leftover_plaintext_ptr = leftover_plaintext;

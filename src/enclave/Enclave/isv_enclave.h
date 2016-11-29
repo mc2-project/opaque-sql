@@ -11,6 +11,7 @@
 #include "sgx_trts.h"
 #include "common.h"
 #include "key.h"
+#include "Crypto.h"
 
 sgx_status_t enclave_init_ra(int b_pse, sgx_ra_context_t *p_context);
 sgx_status_t enclave_ra_close(sgx_ra_context_t context);

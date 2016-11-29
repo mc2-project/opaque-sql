@@ -41,7 +41,6 @@
 // 0x01,0x02,0x03,0x04,0x0x5,0x0x6,0x0x7
 uint8_t g_secret[8] = {0};
 
-
 #ifdef SUPPLIED_KEY_DERIVATION
 
 #pragma message ("Supplied key derivation function is used.")
@@ -355,107 +354,40 @@ sgx_status_t put_secret_data(
     sgx_status_t ret = SGX_SUCCESS;
     sgx_ec_key_128bit_t sk_key;
 
-    do {
-        if(secret_size != 8)
-        {
-            ret = SGX_ERROR_INVALID_PARAMETER;
-            printf("[put_secret_data] SGX_ERROR_INVALID_PARAMETER, secret size is %u\n", secret_size);
-            break;
-        }
+    if (secret_size != SGX_AESGCM_KEY_SIZE) {
+      ret = SGX_ERROR_INVALID_PARAMETER;
+      printf("[%s] SGX_ERROR_INVALID_PARAMETER, secret size is %u\n", __FUNCTION__, secret_size);
+      return ret;
+    }
 
-        ret = sgx_ra_get_keys(context, SGX_RA_KEY_SK, &sk_key);
-        if(SGX_SUCCESS != ret)
-        {
-          printf("[put_secret_data] sgx_ra_get_keys not successful, ret is %u\n", ret);
-          break;
-        }
+    ret = sgx_ra_get_keys(context, SGX_RA_KEY_SK, &sk_key);
+    if(SGX_SUCCESS != ret) {
+      printf("[%s] sgx_ra_get_keys not successful, ret is %u\n", __FUNCTION__, ret);
+      return ret;
+    }
 
-        uint8_t aes_gcm_iv[12] = {0};
-        ret = sgx_rijndael128GCM_decrypt(&sk_key,
-                                         p_secret,
-                                         secret_size,
-                                         &g_secret[0],
-                                         &aes_gcm_iv[0],
-                                         12,
-                                         NULL,
-                                         0,
-                                         (const sgx_aes_gcm_128bit_tag_t *)
-                                            (p_gcm_mac));
+    uint8_t aes_gcm_iv[12] = {0};
+    ret = sgx_rijndael128GCM_decrypt(&sk_key,
+                                     p_secret,
+                                     secret_size,
+                                     (uint8_t *) key_data,
+                                     &aes_gcm_iv[0],
+                                     12,
+                                     NULL,
+                                     0,
+                                     (const sgx_aes_gcm_128bit_tag_t *) (p_gcm_mac));
 
 
-        uint32_t i;
-        bool secret_match = true;
-        for (i=0; i<secret_size; i++) {
-          if(g_secret[i] != i) {
-            secret_match = false;
-          }
-        }
+#ifdef PERF
+    printf("Received secret: size is %u \t", secret_size);
+    print_hex((uint8_t *) key_data, secret_size);
+    printf("ret is %u\n", ret);
+#endif
 
-        if(!secret_match)
-        {
-            ret = SGX_ERROR_UNEXPECTED;
-        }
-
-        // Once the server has the shared secret, it should be sealed to
-        // persistent storage for future use. This will prevents having to
-        // perform remote attestation until the secret goes stale. Once the
-        // enclave is created again, the secret can be unsealed.
-    } while(0);
+    // Once the server has the shared secret, it should be sealed to
+    // persistent storage for future use. This will prevents having to
+    // perform remote attestation until the secret goes stale. Once the
+    // enclave is created again, the secret can be unsealed.
 
     return ret;
-}
-
-sgx_status_t test_get_key(sgx_ra_context_t context) {
-
-  (void) context;
-
-  const sgx_ec256_public_t pub_key = {
-    {
-      0x79, 0x8e, 0xd3, 0xee, 0x5e, 0x24, 0x9b, 0xeb,
-      0xd8, 0xd6, 0xc1, 0xf3, 0x6, 0x82, 0xef, 0x94,
-      0xa0, 0xfe, 0xa6, 0x7e, 0x14, 0x1f, 0xe2, 0x5b,
-      0xd0, 0x32, 0x7e, 0xd0, 0xec, 0xd3, 0x11, 0x15
-    },
-    {
-      0xc3, 0xda, 0xec, 0xe9, 0x18, 0x34, 0xe0, 0x49,
-      0xf9, 0x85, 0xce, 0x9e, 0xf5, 0x38, 0xee, 0xa1,
-      0x25, 0xd5, 0x17, 0x7b, 0xc3, 0xf1, 0x4, 0x41,
-      0x87, 0xbe, 0x16, 0xbe, 0xf6, 0x7d, 0x5f, 0x20
-    }
-  };
-
-  sgx_ecc_state_handle_t ecc_state = NULL;
-  int valid = 0;
-  sgx_status_t ret;
-
-  ret = sgx_ecc256_open_context(&ecc_state);
-  if(SGX_SUCCESS != ret)
-    {
-      if(SGX_ERROR_OUT_OF_MEMORY != ret) {
-        printf("SGX out of memory\n");
-        assert(false);
-      }
-      return ret;
-    }
-
-  ret = sgx_ecc256_check_point((const sgx_ec256_public_t *)&pub_key,
-                               ecc_state, &valid);
-  if(SGX_SUCCESS != ret)
-    {
-      if(SGX_ERROR_OUT_OF_MEMORY != ret) {
-        printf("SGX out of memory 2\n");
-        assert(false);
-      }
-      sgx_ecc256_close_context(ecc_state);
-      return ret;
-    }
-  if(!valid)
-    {
-      sgx_ecc256_close_context(ecc_state);
-      printf("pub_key points invalid\n");
-      assert(false);
-    }
-  sgx_ecc256_close_context(ecc_state);
-
-  return SGX_SUCCESS;
 }

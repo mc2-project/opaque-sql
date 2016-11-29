@@ -213,10 +213,4 @@ object RA {
     // attestation done
   }
 
-  def getPubKey() = {
-    loadMasterLibrary()
-    val master = new SP()
-    master.LoadKeys()
-  }
-
 }

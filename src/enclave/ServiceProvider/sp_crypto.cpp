@@ -220,7 +220,6 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   return LC_SUCCESS;
 }
 
-void handleErrors() { }
 
 lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
                                       int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
@@ -246,30 +245,41 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_
 
   /* Set IV length. Not necessary if this is 12 bytes (96 bits) */
   if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL)) {
-    printf("evp decryption not initialized correct\n");
+    printf("evp IV size not correctly set\n");
+    return LC_ERROR_UNEXPECTED;
   }
 
   /* Initialise key and IV */
-  if(!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) handleErrors();
+  if(!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
+    fprintf(stderr, "evp decryption init incorrect\n");
+    return LC_ERROR_UNEXPECTED;
+  }
 
   /* Provide any AAD data. This can be called zero or more times as
    * required
    */
   if (aad != NULL)  {
-    if(!EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len))
-      handleErrors();
+    if (!EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
+      fprintf(stderr, "evp decryption aad update failed\n");
+      return LC_ERROR_UNEXPECTED;
+    }
   }
 
   /* Provide the message to be decrypted, and obtain the plaintext output.
    * EVP_DecryptUpdate can be called multiple times if necessary
    */
-  if(!EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
-    handleErrors();
+  if (!EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) {
+    fprintf(stderr, "decryption update failed\n");
+    return LC_ERROR_UNEXPECTED;
+  }
+
   plaintext_len = len;
 
   /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
-  if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag))
-    handleErrors();
+  if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag)) {
+    fprintf(stderr, "decryption tag setting failed\n");
+    return LC_ERROR_UNEXPECTED;
+  }
 
   /* Finalise the decryption. A positive return value indicates success,
    * anything else is a failure - the plaintext is not trustworthy.
@@ -279,17 +289,11 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_
   /* Clean up */
   EVP_CIPHER_CTX_free(ctx);
 
-  // if(ret > 0)
-  //   {
-  //     /* Success */
-  //     plaintext_len += len;
-  //     return plaintext_len;
-  //   }
-  // else
-  //   {
-  //     /* Verify failed */
-  //     return -1;
-  //   }
+  if (ret > 0) {
+    return LC_SUCCESS;
+  } else {
+    return LC_ERROR_UNEXPECTED;
+  }
 
   return LC_SUCCESS;
 }
@@ -304,8 +308,6 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
   lc_cmac_128bit_key_t p_key_;
   uint8_t *p_key_ptr = (uint8_t *) p_key_;
   reverse_endian((uint8_t *) p_key, p_key_ptr, sizeof(lc_cmac_128bit_key_t));
-  // print_hex(p_key_ptr, 16);
-  // printf("\n");
 
   CMAC_CTX *ctx = CMAC_CTX_new();
   if (!ctx) {
@@ -498,32 +500,15 @@ lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
   EC_KEY *priv_key = get_priv_key(p_private_b);
   EC_POINT *sec = EC_POINT_new(EC_KEY_get0_group(priv_key));
 
-  printf("[%s] ", __FUNCTION__);
-  print_priv_key(*p_private_b);
-  print_pub_key(*p_public_ga);
-  printf("\n");
-
-  EC_POINT_mul(EC_KEY_get0_group(priv_key), sec, NULL,
-               pub_key, EC_KEY_get0_private_key(priv_key), NULL);
-
-  // ECDH_compute_key(reverse.s,
-  //                  LC_ECP256_KEY_SIZE,
-  //                  pub_key, priv_key, NULL);
-
-  // get x-coord
-  BIGNUM *x_ec_ = BN_new();
-  BIGNUM *y_ec_ = BN_new();
-  EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(priv_key),
-                                      sec,
-                                      x_ec_, y_ec_, NULL);
-  BN_bn2bin(x_ec_, reverse.s);
+  ECDH_compute_key(reverse.s,
+                   LC_ECP256_KEY_SIZE,
+                   pub_key, priv_key, NULL);
 
   reverse_endian(reverse.s, p_shared_key->s, LC_ECP256_KEY_SIZE);
 
+
   EC_POINT_free(pub_key);
   EC_KEY_free(priv_key);
-  BN_free(x_ec_);
-  BN_free(y_ec_);
   EC_POINT_free(sec);
 
   return LC_SUCCESS;
@@ -544,11 +529,13 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   EC_KEY *key = get_priv_key(p_private);
   assert(key != NULL);
 
+#ifdef TEST_EC
   printf("\n\n[%s]\t", __FUNCTION__);
   print_hex((uint8_t *) p_data, data_size);
   printf("data_size: %u\n", data_size);
   print_ec_key(key);
   printf("\n");
+#endif
 
   // first, hash the data
   lc_sha_state_handle_t p_sha_handle;
@@ -571,12 +558,6 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   // reverse r and s
   reverse_endian(x_, (uint8_t *) p_signature->x, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
   reverse_endian(y_, (uint8_t *) p_signature->y, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
-
-  // printf("[%s] \t", __FUNCTION__);
-  // print_hex(x_, 32);
-  // printf("\t");
-  // print_hex(y_, 32);
-  // printf("\n");
 
   free(x_);
   free(y_);

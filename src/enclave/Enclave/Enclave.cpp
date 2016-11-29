@@ -972,7 +972,3 @@ sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
 
   return put_secret_data(context, p_secret, secret_size, gcm_mac);
 }
-
-sgx_status_t ecall_test_get_key(sgx_ra_context_t context) {
-  return test_get_key(context);
-}

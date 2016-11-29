@@ -8,9 +8,11 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-extern const char *key_str;
-extern const sgx_aes_gcm_128bit_key_t *key;
-extern const KeySchedule ks;
+//extern const char *key_str;
+extern sgx_aes_gcm_128bit_key_t key_data;
+extern sgx_aes_gcm_128bit_key_t *key;
+
+extern KeySchedule *ks;
 
 extern const sgx_ec256_public_t g_sp_pub_key;
 
@@ -99,7 +101,7 @@ class MAC {
  public:
   MAC() {
     uint8_t iv[SGX_AESGCM_IV_SIZE+1] = "000000000000";
-    cipher = new AesGcm(&ks, iv, SGX_AESGCM_IV_SIZE);
+    cipher = new AesGcm(ks, iv, SGX_AESGCM_IV_SIZE);
   }
 
   ~MAC() {

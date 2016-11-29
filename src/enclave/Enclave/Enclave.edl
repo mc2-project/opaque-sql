@@ -288,8 +288,6 @@ enclave {
                                               [in,size=secret_size] uint8_t* p_secret,
                                               uint32_t secret_size,
                                               [in,count=16] uint8_t* gcm_mac);
-    public sgx_status_t ecall_test_get_key(sgx_ra_context_t context);
-
   };
 
   untrusted {

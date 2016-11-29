@@ -45,6 +45,8 @@
 #define SAFE_FREE(ptr) {if (NULL != (ptr)) {free(ptr); (ptr) = NULL;}}
 #endif
 
+const char *key_str = "helloworld123123";
+
 // This is supported extended epid group of SP. SP can support more than one
 // extended epid group with different extended epid group id and credentials.
 static const sample_extended_epid_group g_extended_epid_groups[] = {
@@ -64,19 +66,6 @@ sgx_ec256_public_t g_sp_pub_key = {{0}, {0}};
 // hard coded in isv_enclave. It is based on NIST P-256 curve.
 sgx_ec256_private_t g_sp_priv_key = {{0}};
 
-// // This is a context data structure used on SP side
-// typedef struct _sp_db_item_t
-// {
-//   sample_ec256_public_t             g_a;
-//   sample_ec256_public_t             g_b;
-//   sample_ec256_private_t            b;
-//   sample_aes_gcm_128bit_key_t       vk_key;   // Shared secret key for the REPORT_DATA
-//   sample_aes_gcm_128bit_key_t       mk_key;   // Shared secret key for generating MAC's
-//   sample_aes_gcm_128bit_key_t       sk_key;   // Shared secret key for encryption
-//   sample_aes_gcm_128bit_key_t       smk_key;  // Used only for SIGMA protocol
-//   sample_ps_sec_prop_desc_t     ps_sec_prop;
-// } sp_db_item_t;
-// static sp_db_item_t g_sp_db;
 
 typedef struct _sp_db_item_t
 {
@@ -357,22 +346,10 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 
     // Generate the client/SP shared secret
     lc_ec256_dh_shared_t dh_key = {{0}};
-    // ret = sample_ecc256_compute_shared_dhkey((sample_ec256_private_t *) &priv_key,
-    //                                          (sample_ec256_public_t *) &p_msg1->g_a,
-    //                                          (sample_ec256_dh_shared_t *) &dh_key,
-    //                                          ecc_state);
-    // printf("[%s] dh_key 2: ", __FUNCTION__);
-    // print_hex(dh_key.s, 32);
-    // printf("\n");
-
-    // lc_ec256_dh_shared_t dh_key_temp = {{0}};
     lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
                                    (lc_ec256_public_t *) &p_msg1->g_a,
                                    (lc_ec256_dh_shared_t *) &dh_key,
                                    NULL);
-    // printf("[%s] dh_key temp: ", __FUNCTION__);
-    // print_hex(dh_key_temp.s, 32);
-    // printf("\n");
 
     if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, compute share key fail.\n", __FUNCTION__);
@@ -699,14 +676,14 @@ int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
       // Respond the client with the results of the attestation.
       uint32_t att_result_msg_size = sizeof(sample_ra_att_result_msg_t);
       p_att_result_msg_full = (ra_samp_response_header_t*) malloc(att_result_msg_size
-                                                                  + sizeof(ra_samp_response_header_t) + sizeof(g_secret));
+                                                                  + sizeof(ra_samp_response_header_t) + LC_AESGCM_KEY_SIZE);
       if (!p_att_result_msg_full) {
         fprintf(stderr, "\nError, out of memory in [%s].", __FUNCTION__);
         err_ret = SP_INTERNAL_ERROR;
         break;
       }
       memset(p_att_result_msg_full, 0, att_result_msg_size
-             + sizeof(ra_samp_response_header_t) + sizeof(g_secret));
+             + sizeof(ra_samp_response_header_t) + LC_AESGCM_KEY_SIZE);
       p_att_result_msg_full->type = TYPE_RA_ATT_RESULT;
       p_att_result_msg_full->size = att_result_msg_size;
       if (attestation_report.status != IAS_QUOTE_OK) {
@@ -794,22 +771,34 @@ int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
       }
 
       // Generate shared secret and encrypt it with SK, if attestation passed.
-      uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = {0};
-      p_att_result_msg->secret.payload_size = 8;
+      // TODO: question -- is a random IV needed here, if the session keys are different?
+      uint8_t aes_gcm_iv[LC_AESGCM_IV_SIZE] = {0};
+      // // read from /dev/random
+      // int fd = open("/dev/random", O_RDONLY);
+      // ssize_t bytes_read = read(fd, aes_gcm_iv, LC_AESGCM_IV_SIZE);
+      // assert(bytes_read >= LC_AESGCM_IV_SIZE);
+      // close(fd);
+
+      p_att_result_msg->secret.payload_size = LC_AESGCM_KEY_SIZE;
 
       if((IAS_QUOTE_OK == attestation_report.status) &&
          (IAS_PSE_OK == attestation_report.pse_status) &&
          (isv_policy_passed == true)) {
 
         ret = (lc_status_t ) lc_rijndael128GCM_encrypt(&g_sp_db.sk_key,
-                                                       &g_secret[0],
+                                                       (uint8_t *) key_str,
                                                        p_att_result_msg->secret.payload_size,
                                                        p_att_result_msg->secret.payload,
                                                        &aes_gcm_iv[0],
-                                                       SAMPLE_SP_IV_SIZE,
+                                                       LC_AESGCM_IV_SIZE,
                                                        NULL,
                                                        0,
                                                        &p_att_result_msg->secret.payload_tag);
+#ifdef PERF
+        printf("[%s] Sent key is \t", __FUNCTION__);
+        print_hex((uint8_t *) key_str, p_att_result_msg->secret.payload_size);
+        printf("ret is %u\n", ret);
+#endif
 
       }
     } while(0);
