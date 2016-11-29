@@ -35,7 +35,8 @@
 
 #include <stdint.h>
 #include <cstring>
-#include "common.h"
+#include <sys/errno.h>
+
 #include "openssl/evp.h"
 #include "openssl/pem.h"
 #include "openssl/cmac.h"
@@ -45,6 +46,8 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/ec.h>
+
+#include "common.h"
 
 //#define TEST_EC
 
@@ -153,6 +156,10 @@ LC_LIBCRYPTO_API lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_k
                                                        const uint8_t *p_iv, uint32_t iv_len,
                                                        const uint8_t *p_aad, uint32_t aad_len,
                                                        lc_aes_gcm_128bit_tag_t *p_out_mac);
+
+lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
+                                      int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
+                                      unsigned char *plaintext);
 
 /* Message Authentication - Rijndael 128 CMAC
 * Parameters:

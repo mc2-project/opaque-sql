@@ -138,6 +138,50 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
   read_secret_key(private_key_filename, NULL);
 }
 
+void test_encrypt() {
+  uint8_t p_key[16] = {0xff, 0xff, 0xff, 0xff,
+                      0xff, 0xff, 0xff, 0xff,
+                      0xff, 0xff, 0xff, 0xff,
+                      0xff, 0xff, 0xff, 0xff};
+
+  uint8_t p_src_[11] = "helloworld";
+  uint8_t *p_src = p_src_;
+  uint32_t src_len = 10;
+  uint8_t p_iv[SAMPLE_SP_IV_SIZE] = {
+    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff
+  };
+  lc_aes_gcm_128bit_tag_t mac;
+  uint8_t p_dst_[100];
+  uint8_t *p_dst = p_dst_;
+
+  lc_rijndael128GCM_encrypt((lc_aes_gcm_128bit_key_t *) &p_key,
+                            p_src, src_len,
+                            p_dst,
+                            p_iv, SAMPLE_SP_IV_SIZE,
+                            NULL, 0,
+                            &mac);
+
+  print_hex(p_src, src_len);
+  printf("\n");
+
+  print_hex(p_dst, src_len);
+  printf("\n");
+
+
+  uint8_t plaintext[100];
+  lc_rijndael128GCM_decrypt(p_dst, src_len,
+                            NULL, 0,
+                            (unsigned char *) mac,
+                            (unsigned char *) &p_key,
+                            (unsigned char *)  p_iv,
+                            (unsigned char *) plaintext);
+
+  print_hex(plaintext, src_len);
+  printf("\n");
+}
+
 void test_sign() {
   uint8_t data[100] = "helloworldhelloworldhelloworldhelloworld";
   uint32_t data_len = 15;
@@ -351,6 +395,8 @@ int main(int argc, char **argv) {
 
   //test_ecdh();
   test_sign();
+
+  test_encrypt();
 
 #endif
 

@@ -33,6 +33,7 @@
 #define _REMOTE_ATTESTATION_RESULT_H_
 
 #include <stdint.h>
+#include "sp_crypto.h"
 
 #ifdef  __cplusplus
 extern "C" {
@@ -88,9 +89,9 @@ typedef struct ias_platform_info_blob_t
 
 
 typedef struct sample_ra_att_result_msg_t {
-    ias_platform_info_blob_t    platform_info_blob;
-    sample_mac_t                mac;    /* mac_smk(attestation_status)*/
-    sp_aes_gcm_data_t           secret;
+  ias_platform_info_blob_t    platform_info_blob;
+  lc_cmac_128bit_tag_t        mac;    /* mac_smk(attestation_status)*/
+  sp_aes_gcm_data_t           secret;
 } sample_ra_att_result_msg_t;
 
 #pragma pack(pop)

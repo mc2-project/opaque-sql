@@ -135,10 +135,13 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
                                       const uint8_t *p_aad, uint32_t aad_len,
                                       lc_aes_gcm_128bit_tag_t *p_out_mac) {
 
-  EVP_CIPHER_CTX *ctx;
+  EVP_CIPHER_CTX *ctx = NULL;
   int ret = 0;
   int len = 0;
   uint32_t ciphertext_len;
+
+  (void) p_aad;
+  (void) aad_len;
 
   /* Create and initialise the context */
   ctx = EVP_CIPHER_CTX_new();
@@ -161,8 +164,11 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
 
+  print_hex((unsigned char *) *p_key, 16);
+  printf("\n");
+
   /* Initialise key and IV */
-  ret = EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *) p_key, p_iv);
+  ret = EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *) *p_key, p_iv);
   if (ret != 1) {
     fprintf(stderr, "[%s] encryption init failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -171,10 +177,12 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   /* Provide any AAD data. This can be called zero or more times as
    * required
    */
-  ret = EVP_EncryptUpdate(ctx, NULL, &len, p_aad, aad_len);
-  if (ret != 1) {
-    fprintf(stderr, "[%s] encryption AAD update failure\n", __FUNCTION__);
-    return LC_ERROR_UNEXPECTED;
+  if (p_aad != NULL) {
+    ret = EVP_EncryptUpdate(ctx, NULL, &len, p_aad, aad_len);
+    if (ret != 1) {
+      fprintf(stderr, "[%s] encryption AAD update failure\n", __FUNCTION__);
+      return LC_ERROR_UNEXPECTED;
+    }
   }
 
   /* Provide the message to be encrypted, and obtain the encrypted output.
@@ -182,7 +190,7 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
    */
   ret = EVP_EncryptUpdate(ctx, p_dst, &len, p_src, (int) src_len);
   if (ret != 1) {
-    fprintf(stderr, "[%s] encryption failured \n", __FUNCTION__);
+    fprintf(stderr, "[%s] encryption update failure, ret is %u, len is %u\n", __FUNCTION__, ret, len);
     return LC_ERROR_UNEXPECTED;
   }
   ciphertext_len = len;
@@ -192,13 +200,15 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
    */
   ret = EVP_EncryptFinal_ex(ctx, p_dst + len, &len);
   if (ret != 1) {
-    fprintf(stderr, "[%s] encryption \n", __FUNCTION__);
+    fprintf(stderr, "[%s] encryption final failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
   }
   ciphertext_len += len;
 
+  printf("[%s] ciphertext_len is %u\n", __FUNCTION__, ciphertext_len);
+
   /* Get the tag */
-  ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE, p_out_mac);
+  ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE, (unsigned char *) *p_out_mac);
   if (ret != 1) {
     fprintf(stderr, "[%s]  \n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -210,6 +220,79 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   return LC_SUCCESS;
 }
 
+void handleErrors() { }
+
+lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
+                                      int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
+                                      unsigned char *plaintext)
+{
+  EVP_CIPHER_CTX *ctx;
+  int len;
+  int plaintext_len;
+  int ret;
+
+  (void)plaintext_len;
+  (void)ret;
+
+  /* Create and initialise the context */
+  if(!(ctx = EVP_CIPHER_CTX_new())) {
+    printf("ctx not initialized correct\n");
+  }
+
+  /* Initialise the decryption operation. */
+  if(!EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL)) {
+    printf("evp decryption not initialized correct\n");
+  }
+
+  /* Set IV length. Not necessary if this is 12 bytes (96 bits) */
+  if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL)) {
+    printf("evp decryption not initialized correct\n");
+  }
+
+  /* Initialise key and IV */
+  if(!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) handleErrors();
+
+  /* Provide any AAD data. This can be called zero or more times as
+   * required
+   */
+  if (aad != NULL)  {
+    if(!EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len))
+      handleErrors();
+  }
+
+  /* Provide the message to be decrypted, and obtain the plaintext output.
+   * EVP_DecryptUpdate can be called multiple times if necessary
+   */
+  if(!EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
+    handleErrors();
+  plaintext_len = len;
+
+  /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
+  if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag))
+    handleErrors();
+
+  /* Finalise the decryption. A positive return value indicates success,
+   * anything else is a failure - the plaintext is not trustworthy.
+   */
+  ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+
+  /* Clean up */
+  EVP_CIPHER_CTX_free(ctx);
+
+  // if(ret > 0)
+  //   {
+  //     /* Success */
+  //     plaintext_len += len;
+  //     return plaintext_len;
+  //   }
+  // else
+  //   {
+  //     /* Verify failed */
+  //     return -1;
+  //   }
+
+  return LC_SUCCESS;
+}
 
 lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
                                     const uint8_t *p_src, uint32_t src_len,
