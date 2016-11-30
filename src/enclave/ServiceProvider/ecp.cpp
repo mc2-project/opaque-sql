@@ -35,15 +35,13 @@
 #include <string.h>
 #include "ecp.h"
 
-#include "sample_libcrypto.h"
-
 #define MAC_KEY_SIZE       16
 
 bool verify_cmac128(lc_cmac_128bit_key_t mac_key,
                     const uint8_t *p_data_buf,
                     uint32_t buf_size,
                     const uint8_t *p_mac_buf) {
-    uint8_t data_mac[SAMPLE_EC_MAC_SIZE];
+    uint8_t data_mac[LC_CMAC_MAC_SIZE];
     lc_status_t lc_ret;
 
     lc_ret = lc_rijndael128_cmac_msg((lc_cmac_128bit_key_t*)mac_key,

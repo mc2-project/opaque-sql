@@ -32,7 +32,6 @@
 
 
 #include "service_provider.h"
-#include "sample_libcrypto.h"
 #include "ecp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,7 +78,7 @@
 // production private key and the SDK untrusted KE library will have the public
 // key for verifcation.
 
-static const sample_ec256_private_t g_rk_priv_key =
+static const lc_ec256_private_t g_rk_priv_key =
 {{
     0x63,0x2c,0xd4,0x02,0x7a,0xdc,0x56,0xa5,
     0x59,0x6c,0x44,0x3e,0x43,0xca,0x4e,0x0b,
@@ -109,7 +108,7 @@ int ias_verify_attestation_evidence(
     ias_att_report_t* p_attestation_verification_report)
 {
     int ret = 0;
-    sample_ecc_state_handle_t ecc_state = NULL;
+    lc_ecc_state_handle_t ecc_state = NULL;
 
     //unused parameters
     UNUSED(pse_manifest);
@@ -149,23 +148,22 @@ int ias_verify_attestation_evidence(
     // @TODO: Product signing algorithm still TBD.  May be RSA2048 signing.
     // Generate the Service providers ECCDH key pair.
     do {
-        ret = sample_ecc256_open_context(&ecc_state);
-        if (SAMPLE_SUCCESS != ret) {
+        ret = lc_ecc256_open_context(&ecc_state);
+        if (LC_SUCCESS != ret) {
             fprintf(stderr, "\nError, cannot get ECC cotext in [%s].",
                     __FUNCTION__);
             ret = -1;
             break;
         }
         // Sign
-        ret = sample_ecdsa_sign(
-                (uint8_t *)&p_attestation_verification_report->
-                    info_blob.sample_epid_group_status,
-                sizeof(ias_platform_info_blob_t) - sizeof(sample_ec_sign256_t),
-                (sample_ec256_private_t *)&g_rk_priv_key,
-                (sample_ec256_signature_t *)&p_attestation_verification_report->
-                    info_blob.signature,
-                ecc_state);
-        if (SAMPLE_SUCCESS != ret) {
+        ret = lc_ecdsa_sign( (uint8_t *)&p_attestation_verification_report->
+                             info_blob.sample_epid_group_status,
+                             sizeof(ias_platform_info_blob_t) - sizeof(sample_ec_sign256_t),
+                             (lc_ec256_private_t *)&g_rk_priv_key,
+                             (lc_ec256_signature_t *)&p_attestation_verification_report->
+                             info_blob.signature,
+                             ecc_state);
+        if (LC_SUCCESS != ret) {
             fprintf(stderr, "\nError, sign ga_gb fail in [%s].", __FUNCTION__);
             ret = SP_INTERNAL_ERROR;
             break;
@@ -177,7 +175,7 @@ int ias_verify_attestation_evidence(
 
     }while (0);
     if (ecc_state) {
-        sample_ecc256_close_context(ecc_state);
+        lc_ecc256_close_context(ecc_state);
     }
     p_attestation_verification_report->pse_status = IAS_PSE_OK;
 

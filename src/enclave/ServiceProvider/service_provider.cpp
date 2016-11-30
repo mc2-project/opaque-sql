@@ -173,13 +173,13 @@ int read_secret_key(const char *filename,
   const BIGNUM *priv_bn = EC_KEY_get0_private_key(ec_key);
 
   // Store the public and private keys in binary format
-  unsigned char *x_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
-  unsigned char *y_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
-  unsigned char *r_ = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *x_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *y_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *r_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
 
-  unsigned char *x = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
-  unsigned char *y = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
-  unsigned char *r = (unsigned char *) malloc(SAMPLE_ECP256_KEY_SIZE);
+  unsigned char *x = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *y = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *r = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
 
   BN_bn2bin(x_ec, x_);
   BN_bn2bin(y_ec, y_);
@@ -187,18 +187,18 @@ int read_secret_key(const char *filename,
 
   // reverse x_, y_, r_
 
-  for (uint32_t i = 0; i < SAMPLE_ECP256_KEY_SIZE; i++) {
-    *(x+i) = *(x_+SAMPLE_ECP256_KEY_SIZE-i-1);
-    *(y+i) = *(y_+SAMPLE_ECP256_KEY_SIZE-i-1);
-    *(r+i) = *(r_+SAMPLE_ECP256_KEY_SIZE-i-1);
+  for (uint32_t i = 0; i < LC_ECP256_KEY_SIZE; i++) {
+    *(x+i) = *(x_+LC_ECP256_KEY_SIZE-i-1);
+    *(y+i) = *(y_+LC_ECP256_KEY_SIZE-i-1);
+    *(r+i) = *(r_+LC_ECP256_KEY_SIZE-i-1);
   }
 
-  memcpy_s(g_sp_pub_key.gx, SAMPLE_ECP256_KEY_SIZE, x, SAMPLE_ECP256_KEY_SIZE);
-  memcpy_s(g_sp_pub_key.gy, SAMPLE_ECP256_KEY_SIZE, y, SAMPLE_ECP256_KEY_SIZE);
-  memcpy_s(g_sp_priv_key.r, SAMPLE_ECP256_KEY_SIZE, r, SAMPLE_ECP256_KEY_SIZE);
+  memcpy_s(g_sp_pub_key.gx, LC_ECP256_KEY_SIZE, x, LC_ECP256_KEY_SIZE);
+  memcpy_s(g_sp_pub_key.gy, LC_ECP256_KEY_SIZE, y, LC_ECP256_KEY_SIZE);
+  memcpy_s(g_sp_priv_key.r, LC_ECP256_KEY_SIZE, r, LC_ECP256_KEY_SIZE);
 
   if (cpp_output != NULL) {
-    write_pubkey(cpp_output, x, y, SAMPLE_ECP256_KEY_SIZE);
+    write_pubkey(cpp_output, x, y, LC_ECP256_KEY_SIZE);
   }
 
   // free malloc'ed buffers
@@ -274,7 +274,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
   int ret = 0;
   ra_samp_response_header_t* p_msg2_full = NULL;
   sgx_ra_msg2_t *p_msg2 = NULL;
-  sample_ecc_state_handle_t ecc_state = NULL;
+  lc_ecc_state_handle_t ecc_state = NULL;
   //sgx_status_t ret = SGX_SUCCESS;
   bool derive_ret = false;
 
@@ -314,7 +314,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 
     // Generate the Service providers ECCDH key pair.
-    ret = sample_ecc256_open_context(&ecc_state);
+    ret = lc_ecc256_open_context(&ecc_state);
     if(ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, cannot get the ECC context.\n", __FUNCTION__);
       ret = -1;
@@ -508,7 +508,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
   }
 
   if (ecc_state) {
-    sample_ecc256_close_context(ecc_state);
+    lc_ecc256_close_context(ecc_state);
   }
 
 #ifdef DEBUG

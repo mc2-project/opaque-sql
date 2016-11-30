@@ -343,12 +343,12 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
 
 lc_status_t lc_ecc256_open_context(lc_ecc_state_handle_t* ecc_handle) {
   (void) ecc_handle;
-  ecc_handle = NULL;
+  *ecc_handle = NULL;
   return LC_SUCCESS;
 }
 
 
-lc_status_t lc_ecc256_close_context(lc_ecc_state_handle_t* ecc_handle) {
+lc_status_t lc_ecc256_close_context(lc_ecc_state_handle_t ecc_handle) {
   (void) ecc_handle;
   ecc_handle = NULL;
   return LC_SUCCESS;

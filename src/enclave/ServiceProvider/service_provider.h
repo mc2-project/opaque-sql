@@ -46,7 +46,7 @@
 #include "sgx_key_exchange.h"
 #include "common.h"
 #include "sp_crypto.h"
-#include "sample_libcrypto.h"
+//#include "sample_libcrypto.h"
 
 
 #ifdef  __cplusplus

@@ -23,9 +23,9 @@ enclave {
   from "Edger8rSyntax/Arrays.edl" import *;
   from "Edger8rSyntax/Functions.edl" import *;
 
-  from "TrustedLibrary/Libc.edl" import ecall_malloc_free, ecall_sgx_cpuid;
-  from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
-  from "TrustedLibrary/Thread.edl" import ecall_increase_counter, ecall_producer, ecall_consumer;
+  //from "TrustedLibrary/Libc.edl" import ecall_malloc_free, ecall_sgx_cpuid;
+  //from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
+  //from "TrustedLibrary/Thread.edl" import ecall_increase_counter, ecall_producer, ecall_consumer;
 
   /*
    * ocall_print_string - invokes OCALL to display string buffer inside the enclave.

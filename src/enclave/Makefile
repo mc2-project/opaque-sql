@@ -122,12 +122,11 @@ endif
 ######## Service Provider/Master Setting ########
 
 ServiceProvider_Cpp_Files := ServiceProvider/Main.cpp ServiceProvider/ecp.cpp ServiceProvider/service_provider.cpp ServiceProvider/ias_ra.cpp ServiceProvider/sp_crypto.cpp
-ServiceProvider_Include_Paths := -I$(SGX_SDK)/include -ICommon -IInclude -IServiceProvider -Isample_libcrypto
+ServiceProvider_Include_Paths := -I$(SGX_SDK)/include -ICommon -IInclude -IServiceProvider
 
 ServiceProvider_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(ServiceProvider_Include_Paths)
 ServiceProvider_Cpp_Flags := $(ServiceProvider_C_Flags) -std=c++11 -Wall -Wextra -Werror
 ServiceProvider_Link_Flags :=  $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) \
-	-lsample_libcrypto -Lsample_libcrypto \
 	-lcrypto -lssl
 
 ServiceProvider_Cpp_Objects := $(ServiceProvider_Cpp_Files:.cpp=.o)
