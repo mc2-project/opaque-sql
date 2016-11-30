@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque.execution
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.RA
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -51,6 +52,7 @@ object EncryptedSortExec {
 
   def sort(childRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
     Utils.ensureCached(childRDD)
+    RA.initRA(childRDD)
 
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length

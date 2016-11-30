@@ -399,9 +399,6 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   return eid;
 }
 
-#define VERIFICATION_INDEX_IS_VALID() (0)
-#define GET_VERIFICATION_ARRAY_INDEX() (0)
-
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
   JNIEnv *env, jobject obj) {
 
@@ -422,12 +419,16 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jbyteArray array_ret = env->NewByteArray(0);
     return array_ret;
   }
-  fprintf(stdout, "\nCall sgx_get_extended_epid_group_id success.");
 
+#ifdef DEBUG
+  fprintf(stdout, "\nCall sgx_get_extended_epid_group_id success.");
+#endif
 
   // The ISV application sends msg0 to the SP.
   // The ISV decides whether to support this extended epid group id.
+#ifdef DEBUG
   fprintf(stdout, "\nSending msg0 to remote attestation service provider.\n");
+#endif
 
   jbyteArray array_ret = env->NewByteArray(sizeof(uint32_t));
   env->SetByteArrayRegion(array_ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
@@ -463,33 +464,36 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (status != SGX_SUCCESS) {
     printf("[RemoteAttestation1] enclave_init_ra's status is %u\n", (uint32_t) status);
     assert(false);
-  } else {
-    printf("[RemoteAttestation1] enclave_init_ra success\n");
   }
 
   uint8_t *msg1 = (uint8_t *) malloc(sizeof(sgx_ra_msg1_t));
 
+#ifdef DEBUG
   printf("[RemoteAttestation1] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
+#endif
 
   ret = sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, (sgx_ra_msg1_t*) msg1);
 
   if(SGX_SUCCESS != ret) {
     ret = -1;
     fprintf(stdout, "\nError, call sgx_ra_get_msg1 fail [%s].", __FUNCTION__);
-
     jbyteArray array_ret = env->NewByteArray(0);
     return array_ret;
   } else {
+#ifdef DEBUG
     fprintf(stdout, "\nCall sgx_ra_get_msg1 success.\n");
     fprintf(stdout, "\nMSG1 body generated -\n");
     PRINT_BYTE_ARRAY(stdout, msg1, sizeof(sgx_ra_msg1_t));
+#endif
   }
 
   // The ISV application sends msg1 to the SP to get msg2,
   // msg2 needs to be freed when no longer needed.
   // The ISV decides whether to use linkable or unlinkable signatures.
+#ifdef DEBUG
   fprintf(stdout, "\nSending msg1 to remote attestation service provider."
           "Expecting msg2 back.\n");
+#endif
 
   jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
   env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), (jbyte *) msg1);
@@ -520,32 +524,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jbyte *ptr = env->GetByteArrayElements(msg2_input, &if_copy);
   sgx_ra_msg2_t* p_msg2_body = (sgx_ra_msg2_t*)(ptr);
 
-  ra_samp_response_header_t* precomputed_msg2 = NULL;
-  uint8_t *precomputed_msg2_body = NULL;
-  // will first check the msg2 content
-  if (VERIFICATION_INDEX_IS_VALID()) {
-    // The response should match the precomputed MSG2:
-    precomputed_msg2 = (ra_samp_response_header_t *) msg2_samples[0];
-    precomputed_msg2_body = (uint8_t *) precomputed_msg2;
-    precomputed_msg2_body += sizeof(ra_samp_response_header_t);
-
-    if (memcmp(precomputed_msg2_body, p_msg2_body, sizeof(sgx_ra_msg2_t)) != 0 ) {
-      fprintf(stdout, "\nVerification ERROR. Our precomputed "
-              "value for MSG2 does NOT match.\n");
-      fprintf(stdout, "\nPrecomputed value for MSG2:\n");
-      PRINT_BYTE_ARRAY(stdout, precomputed_msg2, sizeof(ra_samp_response_header_t) + precomputed_msg2->size);
-      fprintf(stdout, "\nA more descriptive representation of precomputed value for MSG2:\n");
-      // PRINT_ATTESTATION_SERVICE_RESPONSE(OUTPUT,
-      //                                    precomputed_msg2);
-    } else {
-      fprintf(stdout, "\nVerification COMPLETE. Remote "
-              "attestation service provider generated a "
-              "matching MSG2.\n");
-    }
-  }
-
+#ifdef DEBUG
   printf("Printing p_msg2_body\n");
   PRINT_BYTE_ARRAY(stdout, p_msg2_body, sizeof(sgx_ra_msg2_t));
+#endif
 
   uint32_t msg3_size = 0;
   sgx_ra_msg3_t *msg3 = NULL;
@@ -576,28 +558,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jbyteArray array_ret = env->NewByteArray(0);
     return array_ret;
   } else {
+#ifdef DEBUG
     fprintf(stdout, "\nCall sgx_ra_proc_msg2 success.\n");
-  }
-
-  // use the precomputed message 3 instead
-  if(VERIFICATION_INDEX_IS_VALID()) {
-    // We cannot generate a valid MSG3 using the precomputed messages
-    // we have been using. We will use the precomputed msg3 instead.
-
-    msg3_size = MSG3_BODY_SIZE;
-    sgx_ra_msg3_t *p_msg3 = (sgx_ra_msg3_t*)malloc(msg3_size);
-
-    memcpy_s(p_msg3, msg3_size, msg3_samples[0], msg3_size);
-    fprintf(stdout, "\nBecause MSG1 was a precomputed value, the MSG3 "
-            "we use will also be. PRECOMPUTED MSG3 - \n");
-
-    jbyteArray array_ret = env->NewByteArray(msg3_size);
-    env->SetByteArrayRegion(array_ret, 0, msg3_size, (jbyte *) p_msg3);
-
-    free(p_msg3);
-    free(msg3);
-
-    return array_ret;
+#endif
   }
 
   jbyteArray array_ret = env->NewByteArray(msg3_size);
@@ -616,7 +579,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   (void)env;
   (void)obj;
 
+#ifdef DEBUG
   printf("RemoteAttestation3 called\n");
+#endif
 
   sgx_status_t status = SGX_SUCCESS;
   //uint32_t input_len = (uint32_t) env->GetArrayLength(att_result_input);
@@ -673,7 +638,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
 
   // Get the shared secret sent by the server using SK (if attestation
   // passed)
+#ifdef DEBUG
   printf("[RemoteAttestation3] %u\n", attestation_passed);
+#endif
   if (attestation_passed) {
     ret = ecall_put_secret_data(eid,
                                 &status,
@@ -694,7 +661,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   fprintf(stdout, "\nSecret successfully received from server.");
   fprintf(stdout, "\nRemote attestation success!\n");
 
+#ifdef DEBUG
   fprintf(stdout, "Destroying the key exchange context\n");
+#endif
   ecall_enclave_ra_close(eid, context);
 }
 

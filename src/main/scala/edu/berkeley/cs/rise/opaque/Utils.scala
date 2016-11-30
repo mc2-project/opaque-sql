@@ -81,6 +81,7 @@ object Utils {
 
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
+      val enclave = new SGXEnclave()
       if (eid == 0L) {
         if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
           throw new Exception("Set LIBSGXENCLAVE_PATH")
@@ -92,13 +93,17 @@ object Utils {
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
-        (enclave, eid)
       }
+      (enclave, eid)
     }
   }
 
   var eid = 0L
   var attested : Boolean = false
+  var attesting_getepid : Boolean = false
+  var attesting_getmsg1 : Boolean = false
+  var attesting_getmsg3 : Boolean = false
+  var attesting_final_ra : Boolean = false
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =

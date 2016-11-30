@@ -187,51 +187,54 @@ sgx_status_t key_derivation(const sgx_ec256_dh_shared_t* shared_key,
 sgx_status_t enclave_init_ra(int b_pse,
                              sgx_ra_context_t *p_context) {
     // isv enclave call to trusted key exchange library.
-    sgx_status_t ret;
-    if(b_pse)
-    {
-        int busy_retry_times = 2;
-        do{
-            ret = sgx_create_pse_session();
-        }while (ret == SGX_ERROR_BUSY && busy_retry_times--);
-        if (ret != SGX_SUCCESS)
-            return ret;
+    sgx_status_t ret = SGX_SUCCESS;
+    if (b_pse) {
+      int busy_retry_times = 2;
+      do {
+        ret = sgx_create_pse_session();
+      } while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+
+      if (ret != SGX_SUCCESS) {
+        printf("SGX create pse_session failure\n");
+        return ret;
+      }
     }
 
+#ifdef PERF
     print_hex((unsigned char *) g_sp_pub_key.gx, 32);
     printf("\n");
     print_hex((unsigned char *) g_sp_pub_key.gy, 32);
     printf("\n");
+#endif
 
     sgx_ecc_state_handle_t ecc_state = NULL;
     int valid = 0;
     ret = sgx_ecc256_open_context(&ecc_state);
-    if(SGX_SUCCESS != ret)
-      {
-        if(SGX_ERROR_OUT_OF_MEMORY != ret) {
+    if (ret != SGX_SUCCESS) {
+        if (SGX_ERROR_OUT_OF_MEMORY != ret) {
           printf("SGX out of memory\n");
           assert(false);
         }
+        printf("SGX ecc256 open context failure\n");
         return ret;
       }
 
     ret = sgx_ecc256_check_point((const sgx_ec256_public_t *)&g_sp_pub_key,
                                  ecc_state, &valid);
-    if(SGX_SUCCESS != ret)
-      {
-        if(SGX_ERROR_OUT_OF_MEMORY != ret) {
-          printf("SGX out of memory 2\n");
-          assert(false);
-        }
-        sgx_ecc256_close_context(ecc_state);
-        return ret;
-      }
-    if(!valid)
-      {
-        sgx_ecc256_close_context(ecc_state);
-        printf("pub_key points invalid\n");
+    if (ret != SGX_SUCCESS) {
+      if (ret != SGX_ERROR_OUT_OF_MEMORY) {
+        printf("SGX out of memory 2\n");
         assert(false);
       }
+      sgx_ecc256_close_context(ecc_state);
+      return ret;
+    }
+
+    if (!valid) {
+      sgx_ecc256_close_context(ecc_state);
+      printf("pub_key points invalid\n");
+      assert(false);
+    }
     sgx_ecc256_close_context(ecc_state);
 
 
@@ -240,10 +243,9 @@ sgx_status_t enclave_init_ra(int b_pse,
 #else
     ret = sgx_ra_init(&g_sp_pub_key, b_pse, p_context);
 #endif
-    if(b_pse)
-    {
-        sgx_close_pse_session();
-        return ret;
+    if (b_pse) {
+      sgx_close_pse_session();
+      return ret;
     }
     return ret;
 }

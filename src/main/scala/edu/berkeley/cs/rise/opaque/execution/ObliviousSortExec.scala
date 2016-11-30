@@ -23,6 +23,7 @@ import java.nio.ByteOrder
 import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.RA
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Ascending
@@ -62,6 +63,7 @@ object ObliviousSortExec extends java.io.Serializable {
   def sortBlocks(data: RDD[Block], opcode: Opcode): RDD[Block] = {
     time("oblivious sort") {
       Utils.ensureCached(data)
+      RA.initRA(data)
       val sorted =
         if (data.partitions.length <= 1) {
           data.map { block =>
@@ -88,10 +90,10 @@ object ObliviousSortExec extends java.io.Serializable {
     Iterator((key, numRows))
   }
 
-  def EnclaveCountRows(data: Array[Byte]): Int = {
-    val (enclave, eid) = Utils.initEnclave()
-    enclave.CountNumRows(eid, data)
-  }
+  // def EnclaveCountRows(data: Array[Byte]): Int = {
+  //   val (enclave, eid) = Utils.initEnclave()
+  //   enclave.CountNumRows(eid, data)
+  // }
 
   def ParseData(input: (Int, Array[Byte]), r: Int, s: Int): Iterator[(Int, (Int, Array[Byte]))] = {
     // split a buffer into s separate buffer, one for each column
@@ -251,6 +253,8 @@ object ObliviousSortExec extends java.io.Serializable {
     }
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
+
+    RA.initRA(data)
 
     val parsed_data = data.mapPartitionsWithIndex(
       (index, x) =>

@@ -446,7 +446,6 @@ EC_POINT *get_ec_point(lc_ec256_public_t *p_public) {
 }
 
 EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {
-  printf("get priv key start\n");
   int ret = 0;
 
   unsigned char *r = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
@@ -479,7 +478,6 @@ EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {
   EC_GROUP_free(curve);
   EC_POINT_free(pub_key);
 
-  printf("get priv key done\n");
   return key;
 }
 

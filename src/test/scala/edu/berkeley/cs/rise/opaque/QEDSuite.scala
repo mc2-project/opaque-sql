@@ -56,17 +56,17 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     spark.stop()
   }
 
-  test("pagerank") {
+  ignore("pagerank") {
     PageRank.run(spark, Oblivious, "256", 1)
   }
 
-  test("big data 1") {
+  ignore("big data 1") {
     val answer = BigDataBenchmark.q1(spark, Insecure, "tiny", 1).collect
     assert(answer === BigDataBenchmark.q1(spark, Encrypted, "tiny", 1).collect)
     assert(answer === BigDataBenchmark.q1(spark, Oblivious, "tiny", 1).collect)
   }
 
-  test("big data 2") {
+  ignore("big data 2") {
     def round(df: DataFrame): Seq[(String, String)] =
       df.collect
         .map { case Row(a: String, b: Double) => (a, b.toFloat) }
@@ -79,21 +79,21 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(answer === round(BigDataBenchmark.q2(spark, Oblivious, "tiny", 1)))
   }
 
-  test("big data 3") {
+  ignore("big data 3") {
     val answer = BigDataBenchmark.q3(spark, Insecure, "tiny", 1).collect
     assert(answer === BigDataBenchmark.q3(spark, Encrypted, "tiny", 1).collect)
     assert(answer === BigDataBenchmark.q3(spark, Oblivious, "tiny", 1).collect)
   }
 
-  test("join reordering") {
+  ignore("join reordering") {
     JoinReordering.treatmentQuery(spark, "125", 1)
   }
 
-  test("join cost") {
+  ignore("join cost") {
     JoinCost.run(spark, Oblivious, "125", 1)
   }
 
-  test("columnsort on join rows") {
+  ignore("columnsort on join rows") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val pTypes = Seq(StringType, IntegerType)
@@ -117,7 +117,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(sorted.collect.length === p_data.length + f_data.length)
   }
 
-  test("encFilter") {
+  ignore("encFilter") {
     val data = for (i <- 0 until 5) yield ("foo", i)
     val words = spark.createDataFrame(data).toDF("word", "count").oblivious
 
@@ -127,7 +127,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(filtered.collect === data.filter(_._2 > 3).map(Row.fromTuple))
   }
 
-  test("nonObliviousFilter") {
+  ignore("nonObliviousFilter") {
     val data = for (i <- 0 until 256) yield ("foo", i)
     val words = spark.createDataFrame(data).toDF("word", "count").encrypted
     assert(words.collect === data.map(Row.fromTuple))
@@ -136,7 +136,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(filtered.collect.toSet === data.filter(_._2 > 3).toSet.map(Row.fromTuple))
   }
 
-  test("nonObliviousAggregate") {
+  ignore("nonObliviousAggregate") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
       case 1 => "B"
@@ -150,7 +150,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(summed.collect.toSet === expected.map(Row.fromTuple).toSet)
   }
 
-  test("encAggregate") {
+  ignore("encAggregate") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
       case 1 => "B"
@@ -164,7 +164,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(summed.collect.toSet === expected.map(Row.fromTuple).toSet)
   }
 
-  test("encAggregate - final run split across multiple partitions") {
+  ignore("encAggregate - final run split across multiple partitions") {
     val data = for (i <- 0 until 256) yield (i, "A", 1)
     val words = spark.createDataFrame(spark.sparkContext.makeRDD(data, 2))
       .toDF("id", "word", "count").oblivious
@@ -175,7 +175,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
       .map(Row.fromTuple).toSet)
   }
 
-  test("encAggregate on multiple columns") {
+  ignore("encAggregate on multiple columns") {
     def abc(i: Int): String = (i % 3) match {
       case 0 => "A"
       case 1 => "B"
@@ -191,28 +191,28 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
       .map { case (str, (totalY, avgX)) => (str, totalY, avgX) }.map(Row.fromTuple).toSet)
   }
 
-  test("encSort") {
+  ignore("encSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 1)).toDF("str", "x")
       .oblivious.sort($"x")
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("nonObliviousSort") {
+  ignore("nonObliviousSort") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 1)).toDF("str", "x")
       .encrypted.sort($"x")
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("encSort by float") {
+  ignore("encSort by float") {
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 1)).toDF("str", "x")
       .oblivious.sort($"x")
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("encSort multiple partitions") {
+  ignore("encSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
       .toDF("id", "word", "count")
@@ -220,7 +220,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("nonObliviousSort multiple partitions") {
+  ignore("nonObliviousSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
       .toDF("id", "word", "count")
@@ -228,7 +228,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("encJoin") {
+  ignore("encJoin") {
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
     val p = spark.createDataFrame(p_data).toDF("id", "pk", "x").oblivious
@@ -243,7 +243,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
   }
 
-  test("encJoin on column 1") {
+  ignore("encJoin on column 1") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = spark.createDataFrame(p_data).toDF("pk", "x").oblivious
@@ -258,7 +258,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
   }
 
-  test("nonObliviousJoin") {
+  ignore("nonObliviousJoin") {
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = spark.createDataFrame(spark.sparkContext.makeRDD(p_data, 1)).toDF("pk", "x").encrypted
@@ -273,7 +273,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
   }
 
-  // test("nonObliviousJoin multiple partitions") {
+  // ignore("nonObliviousJoin multiple partitions") {
   //   val p_data = for (i <- 0 until 4) yield (i.toString, i * 10)
   //   val f_data = for (i <- 0 until 16 - 4) yield ((i % 4).toString, (i * 10).toString, i.toFloat)
   //   val p = spark.createDataFrame(spark.sparkContext.makeRDD(p_data, 3)).toDF("pk", "x").encrypted
@@ -291,14 +291,14 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
   //   assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
   // }
 
-  test("encSelect") {
+  ignore("encSelect") {
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val rdd = spark.createDataFrame(data).toDF("str", "x").oblivious
     val proj = rdd.select($"str")
     assert(proj.collect === data.map(pair => Tuple1(pair._1)).map(Row.fromTuple))
   }
 
-  test("encCache") {
+  ignore("encCache") {
     def numCached(ds: Dataset[_]): Int =
       ds.queryExecution.executedPlan.collect {
         case cached: EncryptedBlockRDDScanExec => cached
@@ -326,6 +326,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll { self =>
     //val rdd = spark.createDataFrame(data).toDF("str", "x").oblivious
 
     val data = for (i <- 0 until 8) yield (i)
-    RA.initRA(spark.sparkContext.parallelize(data, 1))
+    RA.initRA(spark.sparkContext.parallelize(data, 2))
   }
 }

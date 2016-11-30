@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque.execution
 import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.RA
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
@@ -251,7 +252,11 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
             s"Input: ${child.output}.\n" +
             s"Types: ${child.output.map(_.dataType)}")
     }
-    child.asInstanceOf[OpaqueOperatorExec].executeBlocked().map { block =>
+    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(execRDD)
+    RA.initRA(execRDD)
+
+    execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(eid, 0, 0, opcode.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
@@ -306,7 +311,11 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
             s"Input: ${child.output}.\n" +
             s"Types: ${child.output.map(_.dataType)}")
     }
-    child.asInstanceOf[OpaqueOperatorExec].executeBlocked().map { block =>
+
+    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(execRDD)
+    RA.initRA(execRDD)
+    execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
@@ -321,12 +330,17 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
 
   override def executeBlocked() = {
     import Opcode._
-    val rowsWithRandomIds = child.asInstanceOf[OpaqueOperatorExec].executeBlocked().map { block =>
+    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(execRDD)
+    RA.initRA(execRDD)
+
+    val rowsWithRandomIds = execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
         eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
+    
     ObliviousSortExec.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
@@ -412,6 +426,7 @@ case class ObliviousAggregateExec(
     Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
+    RA.initRA(childRDD)
     val boundaries = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val boundary = enclave.AggregateStep1(
@@ -528,6 +543,7 @@ case class EncryptedAggregateExec(
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
+    RA.initRA(childRDD)
     // Process boundaries
     val aggregates = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -566,6 +582,8 @@ case class ObliviousSortMergeJoinExec(
     time("Force left child of ObliviousSortMergeJoinExec") { leftRDD.count }
     Utils.ensureCached(rightRDD)
     time("Force right child of ObliviousSortMergeJoinExec") { rightRDD.count }
+
+    RA.initRA(leftRDD)
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = Utils.initEnclave()
@@ -804,6 +822,8 @@ case class EncryptedSortMergeJoinExec(
     time("Force left child of EncryptedSortMergeJoinExec") { leftRDD.count }
     Utils.ensureCached(rightRDD)
     time("Force right child of EncryptedSortMergeJoinExec") { rightRDD.count }
+
+    RA.initRA(leftRDD)
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = Utils.initEnclave()

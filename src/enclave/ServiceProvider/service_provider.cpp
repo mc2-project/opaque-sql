@@ -515,7 +515,9 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     sample_ecc256_close_context(ecc_state);
   }
 
+#ifdef DEBUG
   PRINT_BYTE_ARRAY(NULL, p_msg2_full->body, p_msg2_full->size);
+#endif
 
   return ret;
 }
