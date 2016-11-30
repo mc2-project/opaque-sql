@@ -70,7 +70,7 @@ object RA {
     loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
-      println("synchronized getEPID")
+      //println("synchronized getEPID")
       val enclave = new SGXEnclave()
       if (!Utils.attested && !Utils.attesting_getepid) {
         val epid = enclave.RemoteAttestation0()
@@ -87,7 +87,7 @@ object RA {
     loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
-      println("getMsg1")
+      //println("getMsg1")
       // first, need to start the enclave
       val (enclave, eid) = Utils.initEnclave()
 
@@ -107,7 +107,7 @@ object RA {
     loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
-      println("synchronized getMsg3 called")
+      //println("synchronized getMsg3 called")
       val (enclave, eid) = Utils.initEnclave()
 
       if (!Utils.attested && !Utils.attesting_getmsg3) {
@@ -125,7 +125,7 @@ object RA {
     loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
-      println(s"synchronized finalAttest called ${Utils.attested}")
+      //println(s"synchronized finalAttest called ${Utils.attested}")
       val (enclave, eid) = Utils.initEnclave()
       if (!Utils.attested && !Utils.attesting_final_ra) {
         enclave.RemoteAttestation3(eid, attestResult)
@@ -135,8 +135,6 @@ object RA {
         Utils.attesting_getmsg1 = false
         Utils.attesting_getmsg3 = false
         Utils.attesting_final_ra = false
-      } else {
-        println("finalAttest: already attested")
       }
     }
     Iterator(true)
@@ -154,19 +152,19 @@ object RA {
     val master = new SP()
     val enclave = new SGXEnclave()
 
-    println("Loaded libraries")
+    //println("Loaded libraries")
 
     // load master keys
     master.LoadKeys()
 
-    println("Loaded public and private keys")
+    //println("Loaded public and private keys")
 
     // check EPIDs
     val EPIDInfo = data.mapPartitions{
       x => getEPID(x)
     }.collect
 
-    println("Got EPIDs")
+    //println("Got EPIDs")
 
     for (v <- EPIDInfo) {
       val epid = v._1
@@ -177,7 +175,7 @@ object RA {
       }
     }
 
-    println("Checked EPIDs")
+    //println("Checked EPIDs")
 
     // // get msg1 from enclave
 
@@ -185,7 +183,7 @@ object RA {
       (index, block) => getMsg1(index, block)
     }.collect
 
-    println("Got msg1")
+    //println("Got msg1")
 
     var msg2_dedup = Map[String, Array[Byte]]()
     var msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
@@ -195,7 +193,6 @@ object RA {
       val proc = msg1(index)._3
       val ipAddr = msg1(index)._4
       if (!attested && proc) {
-        println(s"iterating msg1 ${ipAddr}")
         val ret = master.SPProcMsg1(msg1(index)._1)
         msg2_dedup += (ipAddr -> ret)
       }
@@ -211,14 +208,14 @@ object RA {
       }
     }
 
-    println("Sent msg2")
+    //println("Sent msg2")
 
     val msg3 = data.mapPartitionsWithIndex {
       (index, data) =>
       getMsg3(index, data, msg2(index)._2, msg2(index)._1)
     }.collect
 
-    println("Got msg3")
+    //println("Got msg3")
 
     // get attestation result from the master
     var attResult_dedup = Map[String, Array[Byte]]()
@@ -242,14 +239,14 @@ object RA {
         attResult(index) = (ipAddr, attResult_dedup(ipAddr))
       }
     }
-    println("Got attestation result")
+    //println("Got attestation result")
 
     // send final attestation result to each enclave
     data.mapPartitionsWithIndex { (index, data) =>
       finalAttest(index, data, attResult(index)._2, attResult(index)._1)
     }.collect
 
-    println("Sent attestation results; attestation DONE")
+    //println("Sent attestation results; attestation DONE")
 
     // attestation done
   }

@@ -119,8 +119,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPPro
   ra_samp_response_header_t *pp_att_full = NULL;
   sp_ra_proc_msg3_req(msg3, msg3_size, &pp_att_full);
 
+#ifdef DEBUG
   sample_ra_att_result_msg_t *result = (sample_ra_att_result_msg_t *) pp_att_full->body;
   printf("[SPProcMsg3] pp_att_full->size is %u, payload's size is %u\n", pp_att_full->size, result->secret.payload_size);
+#endif
 
   jbyteArray array_ret = env->NewByteArray(pp_att_full->size + sizeof(ra_samp_response_header_t));
   env->SetByteArrayRegion(array_ret, 0, pp_att_full->size + sizeof(ra_samp_response_header_t), (jbyte *) pp_att_full);

@@ -205,7 +205,9 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   }
   ciphertext_len += len;
 
+#ifdef DEBUG
   printf("[%s] ciphertext_len is %u\n", __FUNCTION__, ciphertext_len);
+#endif
 
   /* Get the tag */
   ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE, (unsigned char *) *p_out_mac);
@@ -375,7 +377,7 @@ lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
     return LC_ERROR_UNEXPECTED;
   }
 
-#ifdef TEST_EC
+#ifdef DEBUG
   //print_ec_key(key);
 #endif
 
@@ -527,7 +529,7 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   EC_KEY *key = get_priv_key(p_private);
   assert(key != NULL);
 
-#ifdef TEST_EC
+#ifdef DEBUG
   printf("\n\n[%s]\t", __FUNCTION__);
   print_hex((uint8_t *) p_data, data_size);
   printf("data_size: %u\n", data_size);

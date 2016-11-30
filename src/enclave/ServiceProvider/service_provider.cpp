@@ -162,10 +162,12 @@ int read_secret_key(const char *filename,
     printf("[read_pub_key] EC_POINT_set_affine_coordinates_GFp did not get the correct points\n");
     return 1;
   } else {
+#ifdef TEST_EC
     BN_print(o, x_ec);
     printf("\n");
     BN_print(o, y_ec);
     printf("\n");
+#endif
   }
 
   const BIGNUM *priv_bn = EC_KEY_get0_private_key(ec_key);
@@ -195,12 +197,6 @@ int read_secret_key(const char *filename,
   memcpy_s(g_sp_pub_key.gy, SAMPLE_ECP256_KEY_SIZE, y, SAMPLE_ECP256_KEY_SIZE);
   memcpy_s(g_sp_priv_key.r, SAMPLE_ECP256_KEY_SIZE, r, SAMPLE_ECP256_KEY_SIZE);
 
-  // printf("\n");
-  // BN_print(o, priv_bn);
-  // printf("\n");
-  // print_hex(r, SAMPLE_ECP_KEY_SIZE);
-
-  // TODO: output public key to key.cpp
   if (cpp_output != NULL) {
     write_pubkey(cpp_output, x, y, SAMPLE_ECP256_KEY_SIZE);
   }

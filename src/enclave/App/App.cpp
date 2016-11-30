@@ -534,7 +534,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   // The ISV app now calls uKE sgx_ra_proc_msg2,
   // The ISV app is responsible for freeing the returned p_msg3!
+#ifdef DEBUG
   printf("[RemoteAttestation2] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
+#endif
   ret = sgx_ra_proc_msg2(context,
                          eid,
                          sgx_ra_proc_msg2_trusted,
@@ -591,7 +593,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   ra_samp_response_header_t *att_result_full = (ra_samp_response_header_t *)(ptr);
   sample_ra_att_result_msg_t *att_result = (sample_ra_att_result_msg_t *) att_result_full->body;
 
+#ifdef DEBUG
   printf("[RemoteAttestation3] att_result's size is %u\n", att_result_full->size);
+#endif
 
   // Check the MAC using MK on the attestation result message.
   // The format of the attestation result message is ISV specific.
