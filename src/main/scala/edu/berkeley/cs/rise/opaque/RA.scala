@@ -206,7 +206,9 @@ object RA {
       val proc = msg1(index)._3
       val ipAddr = msg1(index)._4
 
-      msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+      if (!attested) {
+        msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+      }
     }
 
     println("Sent msg2")
@@ -236,7 +238,9 @@ object RA {
       val proc = msg3(index)._3
       val ipAddr = msg3(index)._4
 
-      attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+      if (!attested) {
+        attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+      }
     }
     println("Got attestation result")
 
