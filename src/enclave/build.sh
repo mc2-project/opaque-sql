@@ -30,8 +30,6 @@ make clean; make SGX_MODE=HW SGX_PRERELEASE=1
 rm -f $BASE_DIR/libSGXEnclave.so $BASE_DIR/enclave.signed.so
 mv $ENCLAVE_DIR/libSGXEnclave.so $BASE_DIR
 mv $ENCLAVE_DIR/enclave.signed.so $BASE_DIR
-rm -f $BASE_DIR/libsample_libcrypto.so
-cp $ENCLAVE_DIR/sample_libcrypto/libsample_libcrypto.so $BASE_DIR
 rm -f $BASE_DIR/libservice_provider.so
 mv $ENCLAVE_DIR/libservice_provider.so $BASE_DIR
 

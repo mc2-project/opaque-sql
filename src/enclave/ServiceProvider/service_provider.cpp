@@ -95,7 +95,7 @@ void write_pubkey(const char *filename,
                   unsigned char *pub_key_y,
                   uint32_t key_len) {
 
-  int fd = open(filename, O_WRONLY);
+  int fd = open(filename, O_WRONLY | O_CREAT, 0600);
   uint32_t output_len = 1024 + 6 * key_len * 2;
   char *pub_key_output = (char *) malloc(output_len);
   for (uint32_t i = 0; i < output_len; i++) {
