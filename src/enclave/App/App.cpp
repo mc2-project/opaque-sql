@@ -1229,6 +1229,34 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 }
 
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EncryptBatch(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray record_batch) {
+  (void)obj;
+
+  uint32_t record_batch_len = (uint32_t) env->GetArrayLength(record_batch);
+  jboolean if_copy = false;
+  uint8_t *record_batch_ptr = (uint8_t *) env->GetByteArrayElements(record_batch, &if_copy);
+
+  size_t enc_max_len = MAX_BLOCK_SIZE; // TODO
+  uint8_t *enc = (uint8_t *) malloc(enc_max_len);
+  size_t enc_actual_len;
+
+  sgx_check(
+    "EncryptBatch",
+    ecall_encrypt_batch(eid, record_batch_ptr, record_batch_len,
+                        enc, enc_max_len, &enc_actual_len));
+
+  jbyteArray result = env->NewByteArray(enc_actual_len);
+  env->SetByteArrayRegion(result, 0, enc_actual_len, (jbyte *)enc);
+
+  env->ReleaseByteArrayElements(record_batch, (jbyte *) record_batch_ptr, 0);
+
+  free(enc);
+
+  return result;
+}
+
+
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CreateBlock(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray rows, jint num_rows,
   jboolean rows_are_join_rows) {

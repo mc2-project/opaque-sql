@@ -184,6 +184,9 @@ class SGXEnclave extends java.io.Serializable {
   @native def CreateBlock(
       eid: Long, rows: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 
+  @native def EncryptBatch(
+      eid: Long, recordBatch: Array[Byte]): Array[Byte]
+
   @native def SplitBlock(
       eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 

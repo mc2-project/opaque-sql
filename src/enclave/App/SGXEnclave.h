@@ -56,6 +56,9 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CreateBlock(
     JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
 
+  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EncryptBatch(
+    JNIEnv *, jobject, jlong, jbyteArray);
+
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SplitBlock(
     JNIEnv *, jobject, jlong, jbyteArray, jint, jboolean);
 

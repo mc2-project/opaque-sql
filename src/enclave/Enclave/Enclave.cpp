@@ -29,6 +29,7 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
+#include "EncryptedBatch_generated.h"
 #include "sgx_trts.h"
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
@@ -420,6 +421,36 @@ void ecall_create_block(
   } else {
     create_block<NewRecord>(rows, rows_len, num_rows, block, block_len, actual_size);
   }
+}
+
+class SingleUseAllocator : public flatbuffers::simple_allocator {
+public:
+  SingleUseAllocator(uint8_t *buf, size_t size) : buf(buf), size(size), is_allocated(false) {}
+  virtual ~SingleUseAllocator() {}
+  virtual uint8_t *allocate(size_t size) {
+    assert(!is_allocated);
+    assert(size <= this->size);
+    is_allocated = true;
+    return buf;
+  }
+  virtual void deallocate(uint8_t *p) {
+    assert(is_allocated);
+    assert(p == buf);
+    is_allocated = false;
+  }
+private:
+  uint8_t *const buf;
+  const uint32_t size;
+  bool is_allocated;
+};
+
+void ecall_encrypt_batch(
+  uint8_t *record_batch, size_t record_batch_len,
+  uint8_t *enc, size_t enc_max_len, size_t *enc_actual_len) {
+  std::unique_ptr<SingleUseAllocator> alloc(new SingleUseAllocator(enc, enc_max_len));
+  flatbuffers::FlatBufferBuilder builder(enc_max_len, alloc.get());
+  CreateEncryptedBatch(builder, 0, builder.CreateVector(record_batch, record_batch_len));
+  *enc_actual_len = builder.GetSize();
 }
 
 template<typename RecordType>

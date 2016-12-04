@@ -230,6 +230,15 @@ object Utils {
     }
   }
 
+  /**
+   * Encrypt a plaintext Arrow record batch constructed using ArrowUtils.serialize, forming one or
+   * more encrypted blocks.
+   */
+  def encryptBatch(recordBatch: Array[Byte]): Array[Byte] = {
+    val (enclave, eid) = Utils.initEnclave()
+    enclave.EncryptBatch(eid, recordBatch)
+  }
+
   def createBlock(rows: Array[Array[Byte]], rowsAreJoinRows: Boolean): Array[Byte] = {
     val (enclave, eid) = Utils.initEnclave()
     enclave.CreateBlock(eid, Utils.concatByteArrays(rows), rows.length, rowsAreJoinRows)
