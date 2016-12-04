@@ -36,5 +36,8 @@ baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask)
 
 watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
-  ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc") -- "Enclave_u.h" -- "Enclave_t.h")).get
+  ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "*.fbs")
+    -- "Enclave_u.h"
+    -- "Enclave_t.h"
+    -- "*_generated.h")).get
 }

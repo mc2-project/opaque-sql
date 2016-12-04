@@ -167,6 +167,39 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
 endif
 
+######## Third Party Libraries ########
+
+Flatbuffers_Version := 1.3.0
+Flatbuffers_Url := "https://github.com/google/flatbuffers/archive/v$(Flatbuffers_Version).tar.gz"
+Flatbuffers_Basedir = flatbuffers-$(Flatbuffers_Version)
+
+thirdparty/$(Flatbuffers_Basedir).tar.gz:
+	@echo "CURL =>  $<"
+	@mkdir -p thirdparty
+	@curl -#LC - $(Flatbuffers_Url) -o thirdparty/$(Flatbuffers_Basedir).tar.gz
+
+thirdparty/$(Flatbuffers_Basedir): thirdparty/$(Flatbuffers_Basedir).tar.gz
+	@echo "TAR  <=  $<"
+	@tar xzmf thirdparty/$(Flatbuffers_Basedir).tar.gz -C thirdparty
+
+thirdparty/installed/bin/flatc: thirdparty/$(Flatbuffers_Basedir)
+	@echo "MAKE <=  $<"
+	@cd $< ; \
+	CXXFLAGS=-fPIC cmake -DCMAKE_INSTALL_PREFIX:PATH=../installed -DFLATBUFFERS_BUILD_TESTS=OFF . ; \
+	make -s ; \
+	make install
+	@touch thirdparty/installed/bin/flatc
+
+######## Headers ########
+
+Generated_Headers := Include/EncryptedBatch_generated.h
+
+Include/%_generated.h: Include/%.fbs thirdparty/installed/bin/flatc
+	@echo "FLAT <=  $<"
+	@thirdparty/installed/bin/flatc -c -o Include $<
+
+.PRECIOUS: $(Generated_Headers)
+
 ######## App Objects ########
 
 App/Enclave_u.c: $(SGX_EDGER8R) Enclave/Enclave.edl
@@ -199,7 +232,11 @@ Enclave/Enclave_t.o: Enclave/Enclave_t.c
 	@echo "CC   <=  $<"
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 
-Enclave/%.o: Enclave/%.cpp
+# Need to cancel the built-in implicit rule for .cpp files, otherwise the below
+# rule doesn't execute for some reason
+%.o: %.cpp
+
+Enclave/%.o: Enclave/%.cpp $(Generated_Headers)
 	@echo "CXX  <=  $<"
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 
@@ -233,4 +270,5 @@ clean:
 		$(Enclave_Name) $(Signed_Enclave_Name) \
 		$(App_Cpp_Objects) App/Enclave_u.* \
 		$(Enclave_Cpp_Objects) Enclave/Enclave_t.* \
+		$(Generated_Headers) \
 		$(ServiceProvider_Cpp_Objects) $(SP_SO_Name) $(ServiceProvider_Name)
