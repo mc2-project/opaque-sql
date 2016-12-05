@@ -28,16 +28,18 @@ val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave cod
 enclaveBuildTask := {
   import sys.process._
   val ret = Seq("src/enclave/build.sh").!
-  if (ret != 0) error("C++ build failed.")
+  if (ret != 0) sys.error("C++ build failed.")
 }
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
-compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask)
+compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
-watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
-  ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "*.fbs")
-    -- "Enclave_u.h"
-    -- "Enclave_t.h"
-    -- "*_generated.h")).get
+watchSources ++= {
+  (baseDirectory in ThisBuild).map((base: File) =>
+    ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "*.fbs")
+      -- "Enclave_u.h"
+      -- "Enclave_t.h"
+      -- "*_generated.h")).get
+  ).value
 }
