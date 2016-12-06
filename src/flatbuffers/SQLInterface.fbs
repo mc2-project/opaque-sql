@@ -1,0 +1,153 @@
+table EncryptedBatch {
+    num_rows:uint;
+    enc_batch:[ubyte];
+}
+
+// enum ColType : ubyte {
+//     IntegerType,
+//     LongType,
+//     FloatType,
+//     DoubleType,
+//     StringType,
+// }
+
+// table IntegerField {
+//     value:int;
+// }
+
+// table LongField {
+//     value:long;
+// }
+
+// table FloatField {
+//     value:float;
+// }
+
+// table DoubleField {
+//     value:double;
+// }
+
+// table StringField {
+//     value:[ubyte];
+//     length:uint;
+// }
+
+// union Field {
+//     IntegerField, LongField, FloatField, DoubleField, StringField
+// }
+
+// table Row {
+//     field_types:[ColType];
+//     field_nulls:[bool];
+//     field_values:[Field];
+//     is_dummy:bool;
+// }
+
+// enum AggOp : ubyte {
+//     Sum, Min, Max, Avg, Count
+// }
+
+// table JoinExpr {
+//     left_types:[ColType];
+//     right_types:[ColType];
+//     left_keys:[ColType];
+//     right_keys:[ColType];
+// }
+
+// table AggExpr {
+//     group_by_cols:[uint];
+//     agg_exprs:[AggColExpr];
+// }
+
+// table AggColExpr {
+//     col_num:uint;
+//     operation:AggOp;
+//     col_type:ColType;
+// }
+
+// table SortExpr {
+//     sort_cols:[uint];
+// }
+
+// table FilterExpr {
+//     predicate:Expr;
+// }
+
+// union Expr {
+//     GreaterThan,
+//     GreaterThanOrEqual,
+//     LessThanOrEqual,
+//     Contains,
+//     Col,
+//     Literal,
+//     And,
+//     Or,
+//     IsNotNull,
+//     Substring,
+//     Multiply,
+//     Add,
+//     Subtract,
+// }
+
+// table GreaterThan {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table GreaterThanOrEqual {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table LessThanOrEqual {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table Contains {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table Col {
+//     col_num:uint;
+// }
+
+// table Literal {
+//     value:Field;
+// }
+
+// table And {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table Or {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table IsNotNull {
+//     child:Expr;
+// }
+
+// table Substring {
+//     child:Expr;
+//     pos:uint;
+//     len:uint;
+// }
+
+// table Multiply {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table Add {
+//     left:Expr;
+//     right:Expr;
+// }
+
+// table Subtract {
+//     left:Expr;
+//     right:Expr;
+// }

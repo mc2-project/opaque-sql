@@ -1,4 +1,0 @@
-table EncryptedBatch {
-    num_rows:uint;
-    enc_batch:[ubyte];
-}

@@ -56,17 +56,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     spark.stop()
   }
 
-  test("EncryptBatch") {
-    val rows = Seq(InternalRow(1, 2), InternalRow(3, 4), InternalRow(5, 6))
-    val schema = Seq(
-      AttributeReference("x", IntegerType)(),
-      AttributeReference("y", IntegerType)())
-    val recordBatch = ArrowUtils.serialize(rows, schema)
-
-    val (enclave, eid) = Utils.initEnclave()
-    enclave.EncryptBatch(eid, recordBatch)
-  }
-
   test("encAggregate - final run split across multiple partitions") {
     val data = for (i <- 0 until 256) yield (i, "A", 1)
     val words = spark.createDataFrame(spark.sparkContext.makeRDD(data, 2))

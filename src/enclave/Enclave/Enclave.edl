@@ -136,10 +136,6 @@ enclave {
       bool rows_are_join_rows, [user_check] uint8_t *block, uint32_t block_len,
       [out] uint32_t *actual_size);
 
-    public void ecall_encrypt_batch(
-      [user_check] uint8_t *record_batch, size_t record_batch_len,
-      [user_check] uint8_t *enc, size_t enc_max_len, [out] size_t *enc_actual_len);
-
     public void ecall_split_block(
       [user_check] uint8_t *block, uint32_t block_len,
       [user_check] uint8_t *rows, uint32_t rows_len, uint32_t num_rows,

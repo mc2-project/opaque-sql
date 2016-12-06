@@ -29,7 +29,7 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
-#include "EncryptedBatch_generated.h"
+#include "SQLInterface_generated.h"
 #include "sgx_trts.h"
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,

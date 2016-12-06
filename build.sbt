@@ -12,6 +12,16 @@ sparkVersion := "2.0.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
+val flatbuffersVersion = "1.3.0.1"
+
+libraryDependencies += "com.github.davidmoten" % "flatbuffers-java" % flatbuffersVersion
+
+libraryDependencies += (
+  "com.github.davidmoten" % "flatbuffers-compiler" % flatbuffersVersion
+    artifacts(Artifact("flatbuffers-compiler", "tar.gz", "tar.gz", "distribution-linux")))
+
+classpathTypes += "tar.gz"
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 
 parallelExecution := false
@@ -26,6 +36,7 @@ javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:
 val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave code")
 
 enclaveBuildTask := {
+  compileFlatbuffersTask.value // Enclave build depends on the generated C++ headers
   import sys.process._
   val ret = Seq("src/enclave/build.sh").!
   if (ret != 0) sys.error("C++ build failed.")
@@ -35,11 +46,36 @@ baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
 compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
+// Flatbuffers header file generation
+val compileFlatbuffersTask = TaskKey[Seq[File]](
+  "compileFlatbuffers", "Generates headers from Flatbuffers")
+
+compileFlatbuffersTask := {
+  import sys.process._
+  val targzName = s"flatbuffers-compiler-$flatbuffersVersion-distribution-linux.tar.gz"
+  val targz = (dependencyClasspath in Compile).value.files.find(_.getName == targzName).get
+  IO.withTemporaryDirectory { tmp =>
+    Seq("tar", "xzf", targz.getPath, "-C", tmp.getPath).!
+    val flatc = (tmp / "bin/flatc").getPath
+    val flatbuffers = ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get
+    for (file <- flatbuffers) {
+      streams.value.log.info(s"Generating flatbuffers for ${file}")
+      if (Seq(flatc, "--cpp", "-o", "src/flatbuffers/gen-cpp", file.getPath).! != 0
+        || Seq(flatc, "--java", "-o", "src/flatbuffers/gen-java", file.getPath).! != 0) {
+        sys.error("Flatbuffers build failed.")
+      }
+    }
+  }
+  ((baseDirectory.value / "src/flatbuffers/gen-java") ** "*.java").get
+}
+
+sourceGenerators in Compile += compileFlatbuffersTask.taskValue
+
+// Watch the enclave C++ files
 watchSources ++= {
   (baseDirectory in ThisBuild).map((base: File) =>
-    ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "*.fbs")
+    ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl")
       -- "Enclave_u.h"
-      -- "Enclave_t.h"
-      -- "*_generated.h")).get
+      -- "Enclave_t.h")).get
   ).value
 }

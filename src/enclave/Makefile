@@ -47,7 +47,7 @@ Urts_Library_Name := sgx_urts
 endif	
 
 App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
-App_Include_Paths := -IInclude -IApp -ICommon -IServiceProvider -I$(SGX_SDK)/include
+App_Include_Paths := -IInclude -IApp -ICommon -IServiceProvider -I../flatbuffers/gen-cpp -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -92,10 +92,10 @@ endif
 Enclave_Cpp_Files := Enclave/key.cpp Enclave/isv_enclave.cpp Enclave/sgxaes.cpp Enclave/ObliviousAccess.cpp Enclave/ColumnSort.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
 Enclave_Include_Paths := \
 	-IInclude -IEnclave -ICommon \
+	-I../flatbuffers/gen-cpp \
 	-I$(SGX_SDK)/include/stlport \
 	-I$(SGX_SDK)/include \
 	-I$(SGX_SDK)/include/tlibc \
-	-Ithirdparty/installed/include
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
@@ -167,39 +167,6 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
 endif
 
-######## Third Party Libraries ########
-
-Flatbuffers_Version := 1.3.0
-Flatbuffers_Url := "https://github.com/google/flatbuffers/archive/v$(Flatbuffers_Version).tar.gz"
-Flatbuffers_Basedir = flatbuffers-$(Flatbuffers_Version)
-
-thirdparty/$(Flatbuffers_Basedir).tar.gz:
-	@echo "CURL =>  $<"
-	@mkdir -p thirdparty
-	@curl -#LC - $(Flatbuffers_Url) -o thirdparty/$(Flatbuffers_Basedir).tar.gz
-
-thirdparty/$(Flatbuffers_Basedir): thirdparty/$(Flatbuffers_Basedir).tar.gz
-	@echo "TAR  <=  $<"
-	@tar xzmf thirdparty/$(Flatbuffers_Basedir).tar.gz -C thirdparty
-
-thirdparty/installed/bin/flatc: thirdparty/$(Flatbuffers_Basedir)
-	@echo "MAKE <=  $<"
-	@cd $< ; \
-	CXXFLAGS=-fPIC cmake -DCMAKE_INSTALL_PREFIX:PATH=../installed -DFLATBUFFERS_BUILD_TESTS=OFF . ; \
-	make -s ; \
-	make install
-	@touch thirdparty/installed/bin/flatc
-
-######## Headers ########
-
-Generated_Headers := Include/EncryptedBatch_generated.h
-
-Include/%_generated.h: Include/%.fbs thirdparty/installed/bin/flatc
-	@echo "FLAT <=  $<"
-	@thirdparty/installed/bin/flatc -c -o Include $<
-
-.PRECIOUS: $(Generated_Headers)
-
 ######## App Objects ########
 
 App/Enclave_u.c: $(SGX_EDGER8R) Enclave/Enclave.edl
@@ -236,7 +203,7 @@ Enclave/Enclave_t.o: Enclave/Enclave_t.c
 # rule doesn't execute for some reason
 %.o: %.cpp
 
-Enclave/%.o: Enclave/%.cpp $(Generated_Headers)
+Enclave/%.o: Enclave/%.cpp
 	@echo "CXX  <=  $<"
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 
@@ -270,5 +237,4 @@ clean:
 		$(Enclave_Name) $(Signed_Enclave_Name) \
 		$(App_Cpp_Objects) App/Enclave_u.* \
 		$(Enclave_Cpp_Objects) Enclave/Enclave_t.* \
-		$(Generated_Headers) \
 		$(ServiceProvider_Cpp_Objects) $(SP_SO_Name) $(ServiceProvider_Name)
