@@ -444,14 +444,14 @@ private:
   bool is_allocated;
 };
 
-void ecall_encrypt_batch(
-  uint8_t *record_batch, size_t record_batch_len,
-  uint8_t *enc, size_t enc_max_len, size_t *enc_actual_len) {
-  std::unique_ptr<SingleUseAllocator> alloc(new SingleUseAllocator(enc, enc_max_len));
-  flatbuffers::FlatBufferBuilder builder(enc_max_len, alloc.get());
-  CreateEncryptedBatch(builder, 0, builder.CreateVector(record_batch, record_batch_len));
-  *enc_actual_len = builder.GetSize();
-}
+// void ecall_encrypt_batch(
+//   uint8_t *record_batch, size_t record_batch_len,
+//   uint8_t *enc, size_t enc_max_len, size_t *enc_actual_len) {
+//   std::unique_ptr<SingleUseAllocator> alloc(new SingleUseAllocator(enc, enc_max_len));
+//   flatbuffers::FlatBufferBuilder builder(enc_max_len, alloc.get());
+//   CreateEncryptedBatch(builder, 0, builder.CreateVector(record_batch, record_batch_len));
+//   *enc_actual_len = builder.GetSize();
+// }
 
 template<typename RecordType>
 void split_block(

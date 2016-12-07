@@ -40,6 +40,15 @@ enclaveBuildTask := {
   import sys.process._
   val ret = Seq("src/enclave/build.sh").!
   if (ret != 0) sys.error("C++ build failed.")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "libSGXEnclave.so",
+    baseDirectory.value / "libSGXEnclave.so")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "enclave.signed.so",
+    baseDirectory.value / "enclave.signed.so")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "libservice_provider.so",
+    baseDirectory.value / "libservice_provider.so")
 }
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
@@ -51,6 +60,9 @@ val compileFlatbuffersTask = TaskKey[Seq[File]](
   "compileFlatbuffers", "Generates headers from Flatbuffers")
 
 compileFlatbuffersTask := {
+  val cppOutDir = sourceManaged.value / "flatbuffers" / "gen-cpp"
+  val javaOutDir = sourceManaged.value / "flatbuffers" / "gen-java"
+
   import sys.process._
   val targzName = s"flatbuffers-compiler-$flatbuffersVersion-distribution-linux.tar.gz"
   val targz = (dependencyClasspath in Compile).value.files.find(_.getName == targzName).get
@@ -60,22 +72,24 @@ compileFlatbuffersTask := {
     val flatbuffers = ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get
     for (file <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${file}")
-      if (Seq(flatc, "--cpp", "-o", "src/flatbuffers/gen-cpp", file.getPath).! != 0
-        || Seq(flatc, "--java", "-o", "src/flatbuffers/gen-java", file.getPath).! != 0) {
+      if (Seq(flatc, "--cpp", "-o", cppOutDir.getPath, file.getPath).! != 0
+        || Seq(flatc, "--java", "-o", javaOutDir.getPath, file.getPath).! != 0) {
         sys.error("Flatbuffers build failed.")
       }
     }
   }
-  ((baseDirectory.value / "src/flatbuffers/gen-java") ** "*.java").get
+  (javaOutDir ** "*.java").get
 }
 
 sourceGenerators in Compile += compileFlatbuffersTask.taskValue
 
 // Watch the enclave C++ files
-watchSources ++= {
-  (baseDirectory in ThisBuild).map((base: File) =>
-    ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl")
+watchSources ++=
+  ((baseDirectory.value / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl")
       -- "Enclave_u.h"
-      -- "Enclave_t.h")).get
-  ).value
-}
+      -- "Enclave_t.h"
+      -- "key.cpp")).get
+
+// Watch the Flatbuffer schemas
+watchSources ++=
+  ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get

@@ -1,3 +1,8 @@
+// Definition of the interface between Spark SQL and the SGX enclave -- the
+// "trusted-untrusted interface," or TUIX.
+
+namespace edu.berkeley.cs.rise.opaque.tuix;
+
 table EncryptedBatch {
     num_rows:uint;
     enc_batch:[ubyte];
