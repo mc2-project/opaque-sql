@@ -767,7 +767,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
   jbyteArray ciphertext = env->NewByteArray(clength);
 
-  uint8_t ciphertext_copy[2048];
+  uint8_t *ciphertext_copy = new uint8_t[clength];
 
   sgx_check_quiet(
     "Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
@@ -775,6 +775,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
 
   env->ReleaseByteArrayElements(plaintext, ptr, 0);
+
+  delete[] ciphertext_copy;
 
   return ciphertext;
 }
@@ -795,7 +797,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   const jsize plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
   jbyteArray plaintext = env->NewByteArray(plength);
 
-  uint8_t plaintext_copy[2048];
+  uint8_t *plaintext_copy = new uint8_t[plength];
 
   sgx_check_quiet(
     "Decrypt", ecall_decrypt(eid, ciphertext_ptr, clength, plaintext_copy, (uint32_t) plength));
@@ -803,6 +805,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
 
   env->ReleaseByteArrayElements(ciphertext, ptr, 0);
+
+  delete[] plaintext_copy;
 
   return plaintext;
 }

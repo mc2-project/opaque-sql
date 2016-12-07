@@ -4,9 +4,10 @@
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
 // Root of encrypted dataset
-table EncryptedBatch {
+table EncryptedBlock {
     num_rows:uint;
-    enc_batch:[ubyte];
+    // When decrypted, this should contain a Rows object at its root
+    enc_rows:[ubyte];
 }
 
 enum ColType : ubyte {

@@ -375,7 +375,8 @@ object Utils {
 
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
-    val builder = new FlatBufferBuilder(1024)
+    // 1. Serialize the rows as plaintext using tuix.Rows
+    val builder = new FlatBufferBuilder
 
     val fieldTypes = types.map {
       case IntegerType => tuix.ColType.IntegerType
@@ -409,15 +410,40 @@ object Utils {
 
     val rootOffset = tuix.Rows.createRows(builder, rowsOffset)
     builder.finish(rootOffset)
-    val plaintextBytes = builder.sizedByteArray()
-    Block(plaintextBytes, rows.size)
+    val plaintext = builder.sizedByteArray()
 
-    //val (enclave, eid) = initEnclave()
+    // 2. Encrypt the row data
+    val (enclave, eid) = initEnclave()
+    val ciphertext = enclave.Encrypt(eid, plaintext)
+
+    // 3. Serialize the encrypted rows into a tuix.EncryptedBlock
+    val builder2 = new FlatBufferBuilder
+    val encRowsOffset = tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext)
+    val rootOffset2 = tuix.EncryptedBlock.createEncryptedBlock(builder2, rows.size, encRowsOffset)
+    builder2.finish(rootOffset2)
+    val encryptedBlockBytes = builder2.sizedByteArray()
+
+    // 4. Wrap the serialized tuix.EncryptedBlock in a Scala Block object
+    Block(encryptedBlockBytes, rows.size)
   }
 
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
+    // 4. Extract the serialized tuix.EncryptedBlock from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
-    val rows = tuix.Rows.getRootAsRows(buf)
+
+    // 3. Deserialize the tuix.EncryptedBlock to get the encrypted rows
+    val encryptedBlock = tuix.EncryptedBlock.getRootAsEncryptedBlock(buf)
+    assert(encryptedBlock.numRows == block.numRows)
+    val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+    val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+    ciphertextBuf.get(ciphertext)
+
+    // 2. Decrypt the row data
+    val (enclave, eid) = initEnclave()
+    val plaintext = enclave.Decrypt(eid, ciphertext)
+
+    // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
+    val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
     assert(rows.rowsLength == block.numRows)
     for (i <- 0 until rows.rowsLength) yield {
       val row = rows.rows(i)
