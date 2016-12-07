@@ -63,11 +63,26 @@ case class EncryptedLocalTableScanExec(
   }
 
   override def executeBlocked(): RDD[Block] = {
-    sqlContext.sparkContext.parallelize(Utils.encryptInternalRows(unsafeRows, output.map(_.dataType)))
-      .mapPartitions { rowIter =>
-        val serRows = rowIter.map(Utils.fieldsToRow).toArray
-        Iterator(Block(Utils.createBlock(serRows, false), serRows.length))
+    // Locally partition plaintextData using the same logic as ParallelCollectionRDD.slice
+    def positions(length: Long, numSlices: Int): Iterator[(Int, Int)] = {
+      (0 until numSlices).iterator.map { i =>
+        val start = ((i * length) / numSlices).toInt
+        val end = (((i + 1) * length) / numSlices).toInt
+        (start, end)
       }
+    }
+    val slicedPlaintextData: Seq[Seq[InternalRow]] =
+      positions(unsafeRows.length, sqlContext.sparkContext.defaultParallelism).map {
+        case (start, end) => unsafeRows.slice(start, end).toSeq
+      }.toSeq
+
+    // Encrypt each local partition
+    val encryptedPartitions: Seq[Block] =
+      slicedPlaintextData.map(slice =>
+        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType)))
+
+    // Make an RDD from the encrypted partitions
+    sqlContext.sparkContext.parallelize(encryptedPartitions)
   }
 }
 
@@ -154,10 +169,7 @@ trait OpaqueOperatorExec extends SparkPlan {
 
       res.foreach {
         case Some(block) =>
-          buf ++= Utils.decryptN(
-            Utils.splitBlock(block.bytes, block.numRows, false)
-              .map(serRow => Utils.parseRow(serRow)).toSeq)
-            .map(rowSeq => InternalRow.fromSeq(rowSeq))
+          buf ++= Utils.decryptBlockFlatbuffers(block)
         case None => {}
       }
 

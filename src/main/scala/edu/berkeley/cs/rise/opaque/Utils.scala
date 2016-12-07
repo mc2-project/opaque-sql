@@ -30,11 +30,14 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
+import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.ColumnType
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+
+import com.google.flatbuffers.FlatBufferBuilder
 
 object Utils {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -368,4 +371,72 @@ object Utils {
     rdd.foreach(x => {})
   }
 
+
+
+
+  def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
+    val builder = new FlatBufferBuilder(1024)
+
+    val fieldTypes = types.map {
+      case IntegerType => tuix.ColType.IntegerType
+    }.toArray
+    val fieldTypesOffset = tuix.Row.createFieldTypesVector(builder, fieldTypes)
+
+    val rowOffsets = rows.map { row =>
+      val fieldNulls = (0 to types.length).map(i => row.isNullAt(i)).toArray
+      val fieldNullsOffset = tuix.Row.createFieldNullsVector(builder, fieldNulls)
+
+      val fieldValueOffsets = row.toSeq(types).zip(types).map {
+        case (x: Int, IntegerType) =>
+          val valueOffset = tuix.IntegerField.createIntegerField(builder, x)
+          tuix.Field.startField(builder)
+          tuix.Field.addValueType(builder, tuix.FieldUnion.IntegerField)
+          tuix.Field.addValue(builder, valueOffset)
+          val fieldValueOffset = tuix.Field.endField(builder)
+          fieldValueOffset
+      }.toArray
+      val fieldValuesOffset = tuix.Row.createFieldValuesVector(builder, fieldValueOffsets)
+
+      tuix.Row.startRow(builder)
+      tuix.Row.addFieldTypes(builder, fieldTypesOffset)
+      tuix.Row.addFieldNulls(builder, fieldNullsOffset)
+      tuix.Row.addFieldValues(builder, fieldValuesOffset)
+      tuix.Row.addIsDummy(builder, false)
+      val rowOffset = tuix.Row.endRow(builder)
+      rowOffset
+    }.toArray
+    val rowsOffset = tuix.Rows.createRowsVector(builder, rowOffsets)
+
+    val rootOffset = tuix.Rows.createRows(builder, rowsOffset)
+    builder.finish(rootOffset)
+    val plaintextBytes = builder.sizedByteArray()
+    Block(plaintextBytes, rows.size)
+
+    //val (enclave, eid) = initEnclave()
+  }
+
+  def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
+    val buf = ByteBuffer.wrap(block.bytes)
+    val rows = tuix.Rows.getRootAsRows(buf)
+    assert(rows.rowsLength == block.numRows)
+    for (i <- 0 until rows.rowsLength) yield {
+      val row = rows.rows(i)
+      assert(!row.isDummy)
+      InternalRow.fromSeq(
+        for (j <- 0 until row.fieldValuesLength) yield {
+          val field: Any =
+            if (!row.fieldNulls(j)) {
+              val fieldUnionType = row.fieldValues(j).valueType
+              fieldUnionType match {
+                case tuix.FieldUnion.IntegerField =>
+                  row.fieldValues(j).value(new tuix.IntegerField)
+                    .asInstanceOf[tuix.IntegerField].value
+              }
+            } else {
+              null
+            }
+          field
+        })
+    }
+  }
 }

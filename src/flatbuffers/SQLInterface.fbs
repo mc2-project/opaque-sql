@@ -3,156 +3,166 @@
 
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
+// Root of encrypted dataset
 table EncryptedBatch {
     num_rows:uint;
     enc_batch:[ubyte];
 }
 
-// enum ColType : ubyte {
-//     IntegerType,
-//     LongType,
-//     FloatType,
-//     DoubleType,
-//     StringType,
-// }
+enum ColType : ubyte {
+    IntegerType,
+    LongType,
+    FloatType,
+    DoubleType,
+    StringType,
+}
 
-// table IntegerField {
-//     value:int;
-// }
+table IntegerField {
+    value:int;
+}
 
-// table LongField {
-//     value:long;
-// }
+table LongField {
+    value:long;
+}
 
-// table FloatField {
-//     value:float;
-// }
+table FloatField {
+    value:float;
+}
 
-// table DoubleField {
-//     value:double;
-// }
+table DoubleField {
+    value:double;
+}
 
-// table StringField {
-//     value:[ubyte];
-//     length:uint;
-// }
+table StringField {
+    value:[ubyte];
+    length:uint;
+}
 
-// union Field {
-//     IntegerField, LongField, FloatField, DoubleField, StringField
-// }
+union FieldUnion {
+    IntegerField, LongField, FloatField, DoubleField, StringField
+}
 
-// table Row {
-//     field_types:[ColType];
-//     field_nulls:[bool];
-//     field_values:[Field];
-//     is_dummy:bool;
-// }
+table Field {
+    value:FieldUnion;
+}
 
-// enum AggOp : ubyte {
-//     Sum, Min, Max, Avg, Count
-// }
+table Row {
+    field_types:[ColType];
+    field_nulls:[bool];
+    field_values:[Field];
+    is_dummy:bool;
+}
 
-// table JoinExpr {
-//     left_types:[ColType];
-//     right_types:[ColType];
-//     left_keys:[ColType];
-//     right_keys:[ColType];
-// }
+// Root of plaintext batch
+table Rows {
+    rows:[Row];
+}
 
-// table AggExpr {
-//     group_by_cols:[uint];
-//     agg_exprs:[AggColExpr];
-// }
+union Expr {
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
+    Contains,
+    Col,
+    Literal,
+    And,
+    Or,
+    IsNotNull,
+    Substring,
+    Multiply,
+    Add,
+    Subtract,
+}
 
-// table AggColExpr {
-//     col_num:uint;
-//     operation:AggOp;
-//     col_type:ColType;
-// }
+table GreaterThan {
+    left:Expr;
+    right:Expr;
+}
 
-// table SortExpr {
-//     sort_cols:[uint];
-// }
+table GreaterThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
 
-// table FilterExpr {
-//     predicate:Expr;
-// }
+table LessThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
 
-// union Expr {
-//     GreaterThan,
-//     GreaterThanOrEqual,
-//     LessThanOrEqual,
-//     Contains,
-//     Col,
-//     Literal,
-//     And,
-//     Or,
-//     IsNotNull,
-//     Substring,
-//     Multiply,
-//     Add,
-//     Subtract,
-// }
+table Contains {
+    left:Expr;
+    right:Expr;
+}
 
-// table GreaterThan {
-//     left:Expr;
-//     right:Expr;
-// }
+table Col {
+    col_num:uint;
+}
 
-// table GreaterThanOrEqual {
-//     left:Expr;
-//     right:Expr;
-// }
+table Literal {
+    value:Field;
+}
 
-// table LessThanOrEqual {
-//     left:Expr;
-//     right:Expr;
-// }
+table And {
+    left:Expr;
+    right:Expr;
+}
 
-// table Contains {
-//     left:Expr;
-//     right:Expr;
-// }
+table Or {
+    left:Expr;
+    right:Expr;
+}
 
-// table Col {
-//     col_num:uint;
-// }
+table IsNotNull {
+    child:Expr;
+}
 
-// table Literal {
-//     value:Field;
-// }
+table Substring {
+    child:Expr;
+    pos:uint;
+    len:uint;
+}
 
-// table And {
-//     left:Expr;
-//     right:Expr;
-// }
+table Multiply {
+    left:Expr;
+    right:Expr;
+}
 
-// table Or {
-//     left:Expr;
-//     right:Expr;
-// }
+table Add {
+    left:Expr;
+    right:Expr;
+}
 
-// table IsNotNull {
-//     child:Expr;
-// }
+table Subtract {
+    left:Expr;
+    right:Expr;
+}
 
-// table Substring {
-//     child:Expr;
-//     pos:uint;
-//     len:uint;
-// }
+enum AggOp : ubyte {
+    Sum, Min, Max, Avg, Count
+}
 
-// table Multiply {
-//     left:Expr;
-//     right:Expr;
-// }
+table JoinExpr {
+    left_types:[ColType];
+    right_types:[ColType];
+    left_keys:[ColType];
+    right_keys:[ColType];
+}
 
-// table Add {
-//     left:Expr;
-//     right:Expr;
-// }
+table AggColExpr {
+    col_num:uint;
+    operation:AggOp;
+    col_type:ColType;
+}
 
-// table Subtract {
-//     left:Expr;
-//     right:Expr;
-// }
+table AggExpr {
+    group_by_cols:[uint];
+    agg_exprs:[AggColExpr];
+}
+
+table SortExpr {
+    sort_cols:[uint];
+}
+
+table FilterExpr {
+    predicate:Expr;
+}
