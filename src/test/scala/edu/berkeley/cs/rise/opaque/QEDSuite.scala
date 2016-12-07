@@ -57,7 +57,10 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("flatbuffers") {
-    val df = spark.createDataFrame(Seq((1, 2), (3, 4))).toDF("x", "y").oblivious
+    val df = spark.createDataFrame(
+      spark.sparkContext.makeRDD(
+        Seq((1, 2), (3, 4)), 2))
+      .toDF("x", "y").oblivious
     df.explain(true)
     df.show
   }

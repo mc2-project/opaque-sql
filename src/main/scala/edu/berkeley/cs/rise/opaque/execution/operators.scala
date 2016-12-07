@@ -95,9 +95,7 @@ case class EncryptExec(
 
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
-      val serRows = Utils.encryptInternalRows(rowIter.toSeq, output.map(_.dataType))
-        .map(Utils.fieldsToRow).toArray
-      Iterator(Block(Utils.createBlock(serRows, false), serRows.length))
+      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
     }
   }
 }
@@ -128,10 +126,7 @@ trait OpaqueOperatorExec extends SparkPlan {
 
   override def executeCollect(): Array[InternalRow] = {
     executeBlocked().collect().flatMap { block =>
-      Utils.decryptN(
-        Utils.splitBlock(block.bytes, block.numRows, false)
-          .map(serRow => Utils.parseRow(serRow)).toSeq)
-        .map(rowSeq => InternalRow.fromSeq(rowSeq))
+      Utils.decryptBlockFlatbuffers(block)
     }
   }
 
