@@ -723,7 +723,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jboolean if_copy;
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t output_rows_length = block_size_upper_bound(num_rows);
+  uint32_t output_rows_length = input_rows_length * 2; // TODO: use ocall for dynamic growth
   uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
 
   uint32_t actual_output_rows_length = 0;

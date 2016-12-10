@@ -59,7 +59,11 @@ case class EncryptedLocalTableScanExec(
 
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
-    plaintextData.map(r => proj(r).copy()).toArray
+    println(s"unsafeRows input: ${plaintextData.toList}")
+    println(s"unsafeRows proj: ${output}")
+    val result: Array[InternalRow] = plaintextData.map(r => proj(r).copy()).toArray
+    println(s"unsafeRows output: ${result.toList}")
+    result
   }
 
   override def executeBlocked(): RDD[Block] = {
@@ -281,52 +285,17 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
-    val opcode = condition match {
-      case IsNotNull(_) =>
-        // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
-        // in the encrypted format
-        return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-      case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
-        OP_FILTER_COL2_GT3
-      case And(
-        IsNotNull(Col(2, _)),
-        GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
-        OP_BD1
-      case And(
-        And(
-          And(
-            IsNotNull(Col(3, _)),
-            GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
-          LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
-        IsNotNull(Col(2, _)))
-          if start == UTF8String.fromString("1980-01-01")
-          && end == UTF8String.fromString("1980-04-01") =>
-        OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
-      case Contains(Col(2, _), Literal(maroon, StringType))
-          if maroon == UTF8String.fromString("maroon") =>
-        OP_FILTER_COL2_CONTAINS_MAROON
-      case GreaterThan(Col(4, _), Literal(25, _)) =>
-        OP_FILTER_COL4_GT_25
-      case GreaterThan(Col(4, _), Literal(40, _)) =>
-        OP_FILTER_COL4_GT_40
-      case GreaterThan(Col(4, _), Literal(45, _)) =>
-        OP_FILTER_COL4_GT_45
-      case _ =>
-        throw new Exception(
-          s"ObliviousFilterExec: unknown condition $condition.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
-    }
-
+    // 1. Serialize projectList
+    // 2. [enclave] Iterate through rows, deserialize, reserialize, and return them
+    // 3. [enclave] Apply projectList using NewRecord replacement API
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
-    execRDD.map { block =>
+    return execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
-        eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
+        eid, 0, 0, 0, block.bytes, block.numRows, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
   }

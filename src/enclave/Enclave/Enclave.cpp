@@ -29,7 +29,6 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
-#include "SQLInterface_generated.h"
 #include "sgx_trts.h"
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
@@ -423,26 +422,26 @@ void ecall_create_block(
   }
 }
 
-class SingleUseAllocator : public flatbuffers::simple_allocator {
-public:
-  SingleUseAllocator(uint8_t *buf, size_t size) : buf(buf), size(size), is_allocated(false) {}
-  virtual ~SingleUseAllocator() {}
-  virtual uint8_t *allocate(size_t size) {
-    assert(!is_allocated);
-    assert(size <= this->size);
-    is_allocated = true;
-    return buf;
-  }
-  virtual void deallocate(uint8_t *p) {
-    assert(is_allocated);
-    assert(p == buf);
-    is_allocated = false;
-  }
-private:
-  uint8_t *const buf;
-  const uint32_t size;
-  bool is_allocated;
-};
+// class SingleUseAllocator : public flatbuffers::simple_allocator {
+// public:
+//   SingleUseAllocator(uint8_t *buf, size_t size) : buf(buf), size(size), is_allocated(false) {}
+//   virtual ~SingleUseAllocator() {}
+//   virtual uint8_t *allocate(size_t size) {
+//     assert(!is_allocated);
+//     assert(size <= this->size);
+//     is_allocated = true;
+//     return buf;
+//   }
+//   virtual void deallocate(uint8_t *p) {
+//     assert(is_allocated);
+//     assert(p == buf);
+//     is_allocated = false;
+//   }
+// private:
+//   uint8_t *const buf;
+//   const uint32_t size;
+//   bool is_allocated;
+// };
 
 // void ecall_encrypt_batch(
 //   uint8_t *record_batch, size_t record_batch_len,

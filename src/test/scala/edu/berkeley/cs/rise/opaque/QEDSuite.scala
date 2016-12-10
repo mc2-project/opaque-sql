@@ -44,7 +44,7 @@ import edu.berkeley.cs.rise.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll {
   val spark = SparkSession.builder()
-    .master("local[2]")
+    .master("local[1]")
     .appName("QEDSuite")
     .getOrCreate()
 

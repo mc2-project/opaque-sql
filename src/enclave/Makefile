@@ -49,6 +49,7 @@ endif
 App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
 App_Include_Paths := \
 	-IInclude -IApp -ICommon -IServiceProvider \
+	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
 	-I../../target/scala-2.11/src_managed/flatbuffers/gen-cpp \
 	-I$(SGX_SDK)/include
 
@@ -95,6 +96,7 @@ endif
 Enclave_Cpp_Files := Enclave/key.cpp Enclave/isv_enclave.cpp Enclave/sgxaes.cpp Enclave/ObliviousAccess.cpp Enclave/ColumnSort.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
 Enclave_Include_Paths := \
 	-IInclude -IEnclave -ICommon \
+	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
 	-I../../target/scala-2.11/src_managed/flatbuffers/gen-cpp \
 	-I$(SGX_SDK)/include/stlport \
 	-I$(SGX_SDK)/include \

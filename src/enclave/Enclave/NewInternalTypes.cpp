@@ -2,6 +2,18 @@
 
 #include "NewInternalTypes.h"
 
+void print(const tuix::Row *in) {
+  uint32_t j = 0;
+  for (auto field_it = in->field_values()->begin();
+       field_it != in->field_values()->end();
+       ++field_it, ++j) {
+    check(field_it->value_type() == tuix::FieldUnion_IntegerField,
+          "unexpected field type\n");
+    printf("Field %d: value %d\n",
+           j, static_cast<const tuix::IntegerField *>(field_it->value())->value());
+  }
+}
+
 bool attrs_equal(const uint8_t *a, const uint8_t *b) {
   const uint8_t *a_ptr = a;
   const uint8_t *b_ptr = b;

@@ -1,63 +1,9 @@
-// Definition of the interface between Spark SQL and the SGX enclave -- the
-// "trusted-untrusted interface," or TUIX.
+include "Rows.fbs";
+
+// This file is part of the interface between Spark SQL and the SGX enclave --
+// the "trusted-untrusted interface," or TUIX.
 
 namespace edu.berkeley.cs.rise.opaque.tuix;
-
-// Root of encrypted dataset
-table EncryptedBlock {
-    num_rows:uint;
-    // When decrypted, this should contain a Rows object at its root
-    enc_rows:[ubyte];
-}
-
-enum ColType : ubyte {
-    IntegerType,
-    LongType,
-    FloatType,
-    DoubleType,
-    StringType,
-}
-
-table IntegerField {
-    value:int;
-}
-
-table LongField {
-    value:long;
-}
-
-table FloatField {
-    value:float;
-}
-
-table DoubleField {
-    value:double;
-}
-
-table StringField {
-    value:[ubyte];
-    length:uint;
-}
-
-union FieldUnion {
-    IntegerField, LongField, FloatField, DoubleField, StringField
-}
-
-table Field {
-    value:FieldUnion;
-}
-
-table Row {
-    field_types:[ColType];
-    field_nulls:[bool];
-    field_values:[Field];
-    is_dummy:bool;
-}
-
-// Root of plaintext batch
-table Rows {
-    rows:[Row];
-}
 
 union Expr {
     GreaterThan,

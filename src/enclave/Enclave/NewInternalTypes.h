@@ -4,6 +4,10 @@
 #include <limits>
 #include <set>
 #include "EncryptedDAG.h"
+#include "EncryptedBlock_generated.h"
+#include "Rows_generated.h"
+
+using namespace edu::berkeley::cs::rise::opaque;
 
 class NewJoinRecord;
 class StreamRowReader;
@@ -1066,6 +1070,50 @@ private:
 
   Verify *verify_set;
 };
+
+/**
+ * Manages reading multiple encrypted rows from a buffer.
+ *
+ * To read rows, initialize an empty row object and repeatedly call the appropriate read function
+ * with it, which will populate the row object with the next row.
+ */
+class FlatbuffersRowReader {
+public:
+  FlatbuffersRowReader(uint8_t *buf, size_t len)
+    : rows_read(0) {
+    flatbuffers::Verifier v1(buf, len);
+    check(tuix::VerifyEncryptedBlockBuffer(v1),
+          "Corrupt EncryptedBlock %p of length %d\n", buf, len);
+    auto encrypted_block = tuix::GetEncryptedBlock(buf);
+    num_rows = encrypted_block->num_rows();
+
+    const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
+    rows_buf.reset(new uint8_t[rows_len]);
+    decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
+            rows_buf.get());
+    printf("Decrypted %d rows, plaintext is %d bytes\n", num_rows, rows_len);
+    flatbuffers::Verifier v2(rows_buf.get(), rows_len);
+    check(tuix::VerifyRowsBuffer(v2),
+          "Corrupt Rows %p of length %d\n", rows_buf.get(), rows_len);
+
+    rows = tuix::GetRows(rows_buf.get());
+    check(rows->rows()->size() == num_rows,
+          "EncryptedBlock claimed to contain %d rows but actually contains %d rows\n",
+          num_rows == rows->rows()->size());
+  }
+
+  const tuix::Row *next() {
+    return rows->rows()->Get(rows_read++);
+  }
+
+private:
+  std::unique_ptr<uint8_t> rows_buf;
+  const tuix::Rows *rows;
+  uint32_t rows_read;
+  uint32_t num_rows;
+};
+
+void print(const tuix::Row *in);
 
 class IndividualRowReaderV {
  public:

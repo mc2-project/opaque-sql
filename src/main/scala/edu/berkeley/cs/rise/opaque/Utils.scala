@@ -84,7 +84,6 @@ object Utils {
 
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
-      val enclave = new SGXEnclave()
       if (eid == 0L) {
         if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
           throw new Exception("Set LIBSGXENCLAVE_PATH")
@@ -96,8 +95,8 @@ object Utils {
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
+        (enclave, eid)
       }
-      (enclave, eid)
     }
   }
 
@@ -384,7 +383,7 @@ object Utils {
     val fieldTypesOffset = tuix.Row.createFieldTypesVector(builder, fieldTypes)
 
     val rowOffsets = rows.map { row =>
-      val fieldNulls = (0 to types.length).map(i => row.isNullAt(i)).toArray
+      val fieldNulls = (0 until types.length).map(i => row.isNullAt(i)).toArray
       val fieldNullsOffset = tuix.Row.createFieldNullsVector(builder, fieldNulls)
 
       val fieldValueOffsets = row.toSeq(types).zip(types).map {

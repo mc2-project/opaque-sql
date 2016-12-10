@@ -8,24 +8,28 @@ void filter(int op_code,
             uint32_t num_rows,
             uint8_t *output_rows, uint32_t output_rows_length,
             uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+  (void)op_code;
   (void)output_rows_length;
+  (void)verify_set;
+  (void)output_rows;
 
-  RowReader r(input_rows, input_rows + input_rows_length, verify_set);
-  RowWriter w(output_rows);
-  w.set_self_task_id(verify_set->get_self_task_id());
-  NewRecord cur;
+  FlatbuffersRowReader r(input_rows, input_rows_length);
+//  FlatbuffersRowWriter w(output_rows, output_rows_length);
+//  FlatbuffersRecord cur;
+  const tuix::Row *in;
 
   uint32_t num_output_rows_result = 0;
   for (uint32_t i = 0; i < num_rows; i++) {
-    r.read(&cur);
-    if (filter_single_row(op_code, &cur)) {
-      w.write(&cur);
-      num_output_rows_result++;
-    }
+    in = r.next();
+    print(in);
+//    if (filter_single_row(op_code, &cur)) {
+//      w.write(&cur);
+//      num_output_rows_result++;
+//    }
   }
 
-  w.close();
-  *actual_output_rows_length = w.bytes_written();
+  //w.close();
+  *actual_output_rows_length = 0;//w.bytes_written();
   *num_output_rows = num_output_rows_result;
 }
 
