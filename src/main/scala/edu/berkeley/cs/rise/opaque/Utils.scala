@@ -377,15 +377,7 @@ object Utils {
     // 1. Serialize the rows as plaintext using tuix.Rows
     val builder = new FlatBufferBuilder
 
-    val fieldTypes = types.map {
-      case IntegerType => tuix.ColType.IntegerType
-    }.toArray
-    val fieldTypesOffset = tuix.Row.createFieldTypesVector(builder, fieldTypes)
-
     val rowOffsets = rows.map { row =>
-      val fieldNulls = (0 until types.length).map(i => row.isNullAt(i)).toArray
-      val fieldNullsOffset = tuix.Row.createFieldNullsVector(builder, fieldNulls)
-
       val fieldValueOffsets = row.toSeq(types).zip(types).map {
         case (x: Int, IntegerType) =>
           val valueOffset = tuix.IntegerField.createIntegerField(builder, x)
@@ -397,10 +389,12 @@ object Utils {
       }.toArray
       val fieldValuesOffset = tuix.Row.createFieldValuesVector(builder, fieldValueOffsets)
 
+      val fieldNulls = (0 until types.length).map(i => row.isNullAt(i)).toArray
+      val fieldNullsOffset = tuix.Row.createFieldNullsVector(builder, fieldNulls)
+
       tuix.Row.startRow(builder)
-      tuix.Row.addFieldTypes(builder, fieldTypesOffset)
-      tuix.Row.addFieldNulls(builder, fieldNullsOffset)
       tuix.Row.addFieldValues(builder, fieldValuesOffset)
+      tuix.Row.addFieldNulls(builder, fieldNullsOffset)
       tuix.Row.addIsDummy(builder, false)
       val rowOffset = tuix.Row.endRow(builder)
       rowOffset

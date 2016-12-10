@@ -41,9 +41,8 @@ table Field {
 }
 
 table Row {
-    field_types:[ColType];
-    field_nulls:[bool];
     field_values:[Field];
+    field_nulls:[bool];
     is_dummy:bool;
 }
 
