@@ -4,33 +4,30 @@
 
 void filter(int op_code,
             Verify *verify_set,
-            uint8_t *input_rows, uint32_t input_rows_length,
-            uint32_t num_rows,
-            uint8_t *output_rows, uint32_t output_rows_length,
-            uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+            uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+            uint8_t **output_rows, uint32_t *output_rows_length, uint32_t *num_output_rows) {
   (void)op_code;
-  (void)output_rows_length;
   (void)verify_set;
-  (void)output_rows;
 
   FlatbuffersRowReader r(input_rows, input_rows_length);
-//  FlatbuffersRowWriter w(output_rows, output_rows_length);
-//  FlatbuffersRecord cur;
+  FlatbuffersRowWriter w;
   const tuix::Row *in;
 
-  uint32_t num_output_rows_result = 0;
   for (uint32_t i = 0; i < num_rows; i++) {
     in = r.next();
     print(in);
+
+    w.write(in);
 //    if (filter_single_row(op_code, &cur)) {
 //      w.write(&cur);
 //      num_output_rows_result++;
 //    }
   }
 
-  //w.close();
-  *actual_output_rows_length = 0;//w.bytes_written();
-  *num_output_rows = num_output_rows_result;
+  w.close();
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+  *num_output_rows = w.output_num_rows();
 }
 
 bool filter_single_row(int op_code, NewRecord *cur) {

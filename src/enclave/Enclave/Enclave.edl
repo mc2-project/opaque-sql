@@ -50,9 +50,8 @@ enclave {
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
       uint32_t num_rows,
-      [user_check] uint8_t *output_rows,
-      uint32_t output_rows_length,
-      [out] uint32_t *actual_output_rows_length,
+      [out] uint8_t **output_rows,
+      [out] uint32_t *output_rows_length,
       [out] uint32_t *num_output_rows);
     public void ecall_encrypt(
       [user_check] uint8_t *plaintext,
@@ -292,6 +291,8 @@ enclave {
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
+    void ocall_malloc(size_t size, [out] uint8_t **ret);
+    void ocall_free([user_check] uint8_t *buf);
   };
 
 };

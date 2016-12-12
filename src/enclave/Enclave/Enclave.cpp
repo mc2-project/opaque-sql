@@ -110,16 +110,16 @@ void ecall_filter(int index, int num_part,
                   int op_code,
                   uint8_t *input_rows, uint32_t input_rows_length,
                   uint32_t num_rows,
-                  uint8_t *output_rows, uint32_t output_rows_length,
-                  uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+                  uint8_t **output_rows, uint32_t *output_rows_length,
+                  uint32_t *num_output_rows) {
   (void)index;
   (void)num_part;
 
   Verify verify_set(op_code, 1, 0);
 
   filter(op_code, &verify_set,
-         input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-         actual_output_rows_length, num_output_rows);
+         input_rows, input_rows_length, num_rows,
+         output_rows, output_rows_length, num_output_rows);
 
   verify_set.verify();
 }

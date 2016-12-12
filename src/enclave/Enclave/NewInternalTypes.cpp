@@ -6,32 +6,36 @@ void print(const tuix::Row *in) {
   flatbuffers::uoffset_t num_fields = in->field_values()->size();
   printf("[");
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
-    const tuix::Field *field = in->field_values()->Get(i);
-    switch (field->value_type()) {
-    case tuix::FieldUnion_IntegerField:
-      printf("%d", static_cast<const tuix::IntegerField *>(field->value())->value());
-      break;
-    case tuix::FieldUnion_LongField:
-      printf("%ld", static_cast<const tuix::LongField *>(field->value())->value());
-      break;
-    case tuix::FieldUnion_FloatField:
-      printf("%f", static_cast<const tuix::FloatField *>(field->value())->value());
-      break;
-    case tuix::FieldUnion_DoubleField:
-      printf("%lf", static_cast<const tuix::DoubleField *>(field->value())->value());
-      break;
-    case tuix::FieldUnion_StringField:
-    {
-      auto string_field = static_cast<const tuix::StringField *>(field->value());
-      printf("%s",
-             std::string(reinterpret_cast<const char *>(string_field->value()->data()),
-                         string_field->length()).c_str());
-      break;
-    }
-    default:
-      printf("print(tuix::Row): Unknown field type %d\n",
-             field->value_type());
-      assert(false);
+    if (in->field_nulls()->Get(i)) {
+      printf("null");
+    } else {
+      const tuix::Field *field = in->field_values()->Get(i);
+      switch (field->value_type()) {
+      case tuix::FieldUnion_IntegerField:
+        printf("%d", static_cast<const tuix::IntegerField *>(field->value())->value());
+        break;
+      case tuix::FieldUnion_LongField:
+        printf("%ld", static_cast<const tuix::LongField *>(field->value())->value());
+        break;
+      case tuix::FieldUnion_FloatField:
+        printf("%f", static_cast<const tuix::FloatField *>(field->value())->value());
+        break;
+      case tuix::FieldUnion_DoubleField:
+        printf("%lf", static_cast<const tuix::DoubleField *>(field->value())->value());
+        break;
+      case tuix::FieldUnion_StringField:
+      {
+        auto string_field = static_cast<const tuix::StringField *>(field->value());
+        printf("%s",
+               std::string(reinterpret_cast<const char *>(string_field->value()->data()),
+                           string_field->length()).c_str());
+        break;
+      }
+      default:
+        printf("print(tuix::Row *): Unknown field type %d\n",
+               field->value_type());
+        assert(false);
+      }
     }
     if (i + 1 < num_fields) {
       printf(",");

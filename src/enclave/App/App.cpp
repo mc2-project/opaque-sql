@@ -351,6 +351,16 @@ void ocall_print_string(const char *str)
   printf("%s", str);
 }
 
+void ocall_malloc(size_t size, uint8_t **ret) {
+  *ret = static_cast<uint8_t *>(malloc(size));
+  printf("ocall_malloc %lu bytes = %p\n", size, *ret);
+}
+
+void ocall_free(uint8_t *buf) {
+  printf("ocall_free %p\n", buf);
+  free(buf);
+}
+
 #if defined(_MSC_VER)
 /* query and enable SGX device*/
 int query_sgx_status()
@@ -723,21 +733,21 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jboolean if_copy;
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t output_rows_length = input_rows_length * 2; // TODO: use ocall for dynamic growth
-  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
-
-  uint32_t actual_output_rows_length = 0;
+  uint8_t *output_rows = nullptr;
+  uint32_t output_rows_length = 0;
   uint32_t num_output_rows = 0;
 
   sgx_check("Filter",
             ecall_filter(
               eid,
               index, num_part,
-              op_code, input_rows_ptr, input_rows_length, num_rows, output_rows,
-              output_rows_length, &actual_output_rows_length, &num_output_rows));
+              op_code, input_rows_ptr, input_rows_length, num_rows,
+              &output_rows, &output_rows_length, &num_output_rows));
 
-  jbyteArray ret = env->NewByteArray(actual_output_rows_length);
-  env->SetByteArrayRegion(ret, 0, actual_output_rows_length, (jbyte *) output_rows);
+  printf("Got %d output rows taking %d bytes\n", num_output_rows, output_rows_length);
+
+  jbyteArray ret = env->NewByteArray(output_rows_length);
+  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
 
   jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
   jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
@@ -745,6 +755,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
+  printf("Wanted to free %p\n", output_rows);
   free(output_rows);
 
   return ret;

@@ -1113,6 +1113,134 @@ private:
   uint32_t num_rows;
 };
 
+class UntrustedMemoryAllocator : public flatbuffers::simple_allocator {
+public:
+  virtual uint8_t *allocate(size_t size) const {
+    uint8_t *result = nullptr;
+    ocall_malloc(size, &result);
+    return result;
+  }
+  virtual void deallocate(uint8_t *p) const {
+    ocall_free(p);
+  }
+};
+
+class FlatbuffersRowWriter {
+public:
+  FlatbuffersRowWriter()
+    : builder(), rows_vector(), untrusted_alloc() {
+  }
+
+  void write(const tuix::Row *row) {
+    flatbuffers::uoffset_t num_fields = row->field_values()->size();
+    std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
+    std::vector<uint8_t> field_nulls(num_fields);
+    for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+      const tuix::Field *field = row->field_values()->Get(i);
+      switch (field->value_type()) {
+      case tuix::FieldUnion_IntegerField:
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_IntegerField,
+            tuix::CreateIntegerField(
+              builder,
+              static_cast<const tuix::IntegerField *>(field->value())->value()).Union());
+        break;
+      case tuix::FieldUnion_LongField:
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_LongField,
+            tuix::CreateLongField(
+              builder,
+              static_cast<const tuix::LongField *>(field->value())->value()).Union());
+        break;
+      case tuix::FieldUnion_FloatField:
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_FloatField,
+            tuix::CreateFloatField(
+              builder,
+              static_cast<const tuix::FloatField *>(field->value())->value()).Union());
+        break;
+      case tuix::FieldUnion_DoubleField:
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(
+              builder,
+              static_cast<const tuix::DoubleField *>(field->value())->value()).Union());
+        break;
+      case tuix::FieldUnion_StringField:
+      {
+        auto string_field = static_cast<const tuix::StringField *>(field->value());
+        std::vector<uint8_t> string_data(string_field->value()->begin(),
+                                         string_field->value()->end());
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_StringField,
+            tuix::CreateStringFieldDirect(
+              builder, &string_data, string_field->length()).Union());
+        break;
+      }
+      default:
+        printf("FlatbuffersRowWriter::write(tuix::Row *): Unknown field type %d\n",
+               field->value_type());
+        assert(false);
+      }
+      field_nulls[i] = row->field_nulls()->Get(i);
+    }
+    rows_vector.push_back(
+      tuix::CreateRowDirect(builder, &field_values, &field_nulls));
+  }
+
+  void close() {
+    tuix::FinishRowsBuffer(builder, tuix::CreateRowsDirect(builder, &rows_vector));
+    size_t enc_rows_len = enc_size(builder.GetSize());
+    uint8_t *enc_rows = nullptr;
+    ocall_malloc(enc_rows_len, &enc_rows);
+    encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows);
+
+    enc_block_builder.reset(
+      new flatbuffers::FlatBufferBuilder(enc_rows_len * 2, &untrusted_alloc));
+    tuix::FinishEncryptedBlockBuffer(
+      *enc_block_builder,
+      tuix::CreateEncryptedBlock(
+        *enc_block_builder,
+        rows_vector.size(),
+        enc_block_builder->CreateVector(enc_rows, enc_rows_len)));
+
+    ocall_free(enc_rows);
+  }
+
+  uint8_t *output_buffer() {
+    uint8_t *buf = nullptr;
+    ocall_malloc(output_size(), &buf);
+    memcpy(buf, enc_block_builder->GetBufferPointer(), output_size());
+    return buf;
+  }
+
+  size_t output_size() {
+    return enc_block_builder->GetSize();
+  }
+
+  uint32_t output_num_rows() {
+    return rows_vector.size();
+  }
+
+private:
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
+
+  // For writing the resulting EncryptedBlock
+  UntrustedMemoryAllocator untrusted_alloc;
+  std::unique_ptr<flatbuffers::FlatBufferBuilder> enc_block_builder;
+};
+
 void print(const tuix::Row *in);
 
 class IndividualRowReaderV {
