@@ -107,7 +107,7 @@ void ecall_project(int index, int num_part,
 }
 
 void ecall_filter(int index, int num_part,
-                  int op_code,
+                  uint8_t *condition, size_t condition_length,
                   uint8_t *input_rows, uint32_t input_rows_length,
                   uint32_t num_rows,
                   uint8_t **output_rows, uint32_t *output_rows_length,
@@ -115,9 +115,9 @@ void ecall_filter(int index, int num_part,
   (void)index;
   (void)num_part;
 
-  Verify verify_set(op_code, 1, 0);
+  Verify verify_set(0, 1, 0);
 
-  filter(op_code, &verify_set,
+  filter(condition, condition_length, &verify_set,
          input_rows, input_rows_length, num_rows,
          output_rows, output_rows_length, num_output_rows);
 

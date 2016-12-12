@@ -285,17 +285,16 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    // 1. Serialize projectList
-    // 2. [enclave] Iterate through rows, deserialize, reserialize, and return them
-    // 3. [enclave] Apply projectList using NewRecord replacement API
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
+    val conditionSer = Utils.serializeFilterExpression(condition, child.output)
+    println(s"conditionSer = ${conditionSer.size} bytes")
     return execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
-        eid, 0, 0, 0, block.bytes, block.numRows, numOutputRows)
+        eid, 0, 0, conditionSer, block.bytes, block.numRows, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
   }
@@ -459,7 +458,7 @@ case class ObliviousAggregateExec(
         val (enclave, eid) = Utils.initEnclave()
         val numOutputRows = new MutableInteger
         val filtered = enclave.Filter(
-          eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+          eid, 0, 0, ???, block.bytes, block.numRows, numOutputRows)
         Block(filtered, numOutputRows.value)
       }
       Utils.ensureCached(result)
@@ -636,7 +635,7 @@ case class ObliviousSortMergeJoinExec(
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
-        eid, 0, 0, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
+        eid, 0, 0, ???, block.bytes, block.numRows, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
     Utils.ensureCached(nonDummy)

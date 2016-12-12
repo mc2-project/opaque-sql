@@ -46,7 +46,7 @@ enclave {
     public void ecall_filter(
       int index,
       int num_part,
-      int op_code,
+      [in, count=condition_length] uint8_t *condition, size_t condition_length,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
       uint32_t num_rows,

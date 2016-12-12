@@ -2,11 +2,12 @@
 
 #include <string>
 
-void filter(int op_code,
+void filter(uint8_t *condition, size_t condition_length,
             Verify *verify_set,
             uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
             uint8_t **output_rows, uint32_t *output_rows_length, uint32_t *num_output_rows) {
-  (void)op_code;
+  (void)condition;
+  (void)condition_length;
   (void)verify_set;
 
   FlatbuffersRowReader r(input_rows, input_rows_length);

@@ -20,10 +20,17 @@ package edu.berkeley.cs.rise.opaque
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.GreaterThan
+import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.types._
@@ -36,8 +43,6 @@ import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
-
-import com.google.flatbuffers.FlatBufferBuilder
 
 object Utils {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -372,6 +377,25 @@ object Utils {
 
 
 
+  def flatbuffersCreateField(builder: FlatBufferBuilder, value: Any, dataType: DataType): Int = {
+    (value, dataType) match {
+      case (x: Int, IntegerType) =>
+        val valueOffset = tuix.IntegerField.createIntegerField(builder, x)
+        tuix.Field.startField(builder)
+        tuix.Field.addValueType(builder, tuix.FieldUnion.IntegerField)
+        tuix.Field.addValue(builder, valueOffset)
+        val fieldValueOffset = tuix.Field.endField(builder)
+        fieldValueOffset
+    }
+  }
+
+  def flatbuffersExtractFieldValue(f: tuix.Field): Any = {
+    val fieldUnionType = f.valueType
+    fieldUnionType match {
+      case tuix.FieldUnion.IntegerField =>
+        f.value(new tuix.IntegerField).asInstanceOf[tuix.IntegerField].value
+    }
+  }
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
     // 1. Serialize the rows as plaintext using tuix.Rows
@@ -379,13 +403,7 @@ object Utils {
 
     val rowOffsets = rows.map { row =>
       val fieldValueOffsets = row.toSeq(types).zip(types).map {
-        case (x: Int, IntegerType) =>
-          val valueOffset = tuix.IntegerField.createIntegerField(builder, x)
-          tuix.Field.startField(builder)
-          tuix.Field.addValueType(builder, tuix.FieldUnion.IntegerField)
-          tuix.Field.addValue(builder, valueOffset)
-          val fieldValueOffset = tuix.Field.endField(builder)
-          fieldValueOffset
+        case (value, dataType) => flatbuffersCreateField(builder, value, dataType)
       }.toArray
       val fieldValuesOffset = tuix.Row.createFieldValuesVector(builder, fieldValueOffsets)
 
@@ -445,17 +463,45 @@ object Utils {
         for (j <- 0 until row.fieldValuesLength) yield {
           val field: Any =
             if (!row.fieldNulls(j)) {
-              val fieldUnionType = row.fieldValues(j).valueType
-              fieldUnionType match {
-                case tuix.FieldUnion.IntegerField =>
-                  row.fieldValues(j).value(new tuix.IntegerField)
-                    .asInstanceOf[tuix.IntegerField].value
-              }
+              flatbuffersExtractFieldValue(row.fieldValues(j))
             } else {
               null
             }
           field
         })
     }
+  }
+
+  def treeFold[BaseType <: TreeNode[BaseType], B](
+    tree: BaseType)(op: (Seq[B], BaseType) => B): B = {
+    val fromChildren: Seq[B] = tree.children.map(c => treeFold(c)(op))
+    op(fromChildren, tree)
+  }
+
+  /** Serialize an Expression into a tuix.Expr. Returns (exprType, exprOffset). */
+  def flatbuffersSerializeExpression(
+    builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): (Byte, Int) = {
+    treeFold[Expression, (Byte, Int)](expr) {
+      (childrenOffsets, expr) => (expr, childrenOffsets) match {
+        case (ar: AttributeReference, Nil) if input.exists(_.semanticEquals(ar)) =>
+          val colNum = input.indexWhere(_.semanticEquals(ar))
+          (tuix.Expr.Col, tuix.Col.createCol(builder, colNum))
+        case (Literal(value, dataType), Nil) =>
+          val valueOffset = flatbuffersCreateField(builder, value, dataType)
+          (tuix.Expr.Literal, tuix.Literal.createLiteral(builder, valueOffset))
+        case (GreaterThan(left, right), Seq((leftType, leftOffset), (rightType, rightOffset))) =>
+          (tuix.Expr.GreaterThan, tuix.GreaterThan.createGreaterThan(
+            builder, leftType, leftOffset, rightType, rightOffset))
+      }
+    }
+  }
+
+  def serializeFilterExpression(condition: Expression, input: Seq[Attribute]): Array[Byte] = {
+    treeFold[Expression, Unit](condition) { (fromChildren, expr) => println(expr.getClass) }
+    val builder = new FlatBufferBuilder
+    val (conditionType, conditionOffset) = flatbuffersSerializeExpression(builder, condition, input)
+    val rootOffset = tuix.FilterExpr.createFilterExpr(builder, conditionType, conditionOffset)
+    builder.finish(rootOffset)
+    builder.sizedByteArray()
   }
 }

@@ -34,7 +34,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def Filter(
     enclave_id: Long, index: Int, numPart: Int,
-    op_code: Int, rows: Array[Byte], num_rows: Int,
+    condition: Array[Byte],
+    rows: Array[Byte], num_rows: Int,
     num_output_rows: MutableInteger): Array[Byte]
 
   @native def Encrypt(

@@ -725,12 +725,16 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
   JNIEnv *env, jobject obj, jlong eid,
   jint index, jint num_part,
-  jint op_code, jbyteArray input_rows, jint num_rows,
+  jbyteArray condition,
+  jbyteArray input_rows, jint num_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
-  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  size_t condition_length = (size_t) env->GetArrayLength(condition);
   jboolean if_copy;
+  uint8_t *condition_ptr = (uint8_t *) env->GetByteArrayElements(condition, &if_copy);
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
@@ -741,7 +745,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
             ecall_filter(
               eid,
               index, num_part,
-              op_code, input_rows_ptr, input_rows_length, num_rows,
+              condition_ptr, condition_length,
+              input_rows_ptr, input_rows_length, num_rows,
               &output_rows, &output_rows_length, &num_output_rows));
 
   printf("Got %d output rows taking %d bytes\n", num_output_rows, output_rows_length);
@@ -753,6 +758,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
   env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
 
+  env->ReleaseByteArrayElements(condition, (jbyte *) condition_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
   printf("Wanted to free %p\n", output_rows);

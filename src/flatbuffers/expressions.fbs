@@ -111,5 +111,5 @@ table SortExpr {
 }
 
 table FilterExpr {
-    predicate:Expr;
+    condition:Expr;
 }

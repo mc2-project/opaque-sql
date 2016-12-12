@@ -15,7 +15,7 @@ extern "C" {
     JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
-    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     JNIEnv *, jobject, jlong, jbyteArray);
