@@ -478,20 +478,29 @@ object Utils {
     op(fromChildren, tree)
   }
 
-  /** Serialize an Expression into a tuix.Expr. Returns (exprType, exprOffset). */
+  /** Serialize an Expression into a tuix.Expr. Returns the offset of the written tuix.Expr. */
   def flatbuffersSerializeExpression(
-    builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): (Byte, Int) = {
-    treeFold[Expression, (Byte, Int)](expr) {
+    builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): Int = {
+    treeFold[Expression, Int](expr) {
       (childrenOffsets, expr) => (expr, childrenOffsets) match {
         case (ar: AttributeReference, Nil) if input.exists(_.semanticEquals(ar)) =>
           val colNum = input.indexWhere(_.semanticEquals(ar))
-          (tuix.Expr.Col, tuix.Col.createCol(builder, colNum))
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Col,
+            tuix.Col.createCol(builder, colNum))
         case (Literal(value, dataType), Nil) =>
           val valueOffset = flatbuffersCreateField(builder, value, dataType)
-          (tuix.Expr.Literal, tuix.Literal.createLiteral(builder, valueOffset))
-        case (GreaterThan(left, right), Seq((leftType, leftOffset), (rightType, rightOffset))) =>
-          (tuix.Expr.GreaterThan, tuix.GreaterThan.createGreaterThan(
-            builder, leftType, leftOffset, rightType, rightOffset))
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Literal,
+            tuix.Literal.createLiteral(builder, valueOffset))
+        case (GreaterThan(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.GreaterThan,
+            tuix.GreaterThan.createGreaterThan(
+              builder, leftOffset, rightOffset))
       }
     }
   }
@@ -499,8 +508,9 @@ object Utils {
   def serializeFilterExpression(condition: Expression, input: Seq[Attribute]): Array[Byte] = {
     treeFold[Expression, Unit](condition) { (fromChildren, expr) => println(expr.getClass) }
     val builder = new FlatBufferBuilder
-    val (conditionType, conditionOffset) = flatbuffersSerializeExpression(builder, condition, input)
-    val rootOffset = tuix.FilterExpr.createFilterExpr(builder, conditionType, conditionOffset)
+    val rootOffset = tuix.FilterExpr.createFilterExpr(
+      builder,
+      flatbuffersSerializeExpression(builder, condition, input))
     builder.finish(rootOffset)
     builder.sizedByteArray()
   }

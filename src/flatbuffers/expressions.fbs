@@ -5,7 +5,7 @@ include "Rows.fbs";
 
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
-union Expr {
+union ExprUnion {
     GreaterThan,
     GreaterThanOrEqual,
     LessThanOrEqual,
@@ -19,6 +19,10 @@ union Expr {
     Multiply,
     Add,
     Subtract,
+}
+
+table Expr {
+    expr:ExprUnion;
 }
 
 table GreaterThan {
@@ -83,3 +87,5 @@ table Subtract {
     left:Expr;
     right:Expr;
 }
+
+root_type Expr;
