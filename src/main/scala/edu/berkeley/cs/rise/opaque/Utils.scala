@@ -377,50 +377,50 @@ object Utils {
 
 
 
-  def flatbuffersCreateField(builder: FlatBufferBuilder, value: Any, dataType: DataType): Int = {
+  def flatbuffersCreateField(
+      builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
       case (x: Int, IntegerType) =>
-        val valueOffset = tuix.IntegerField.createIntegerField(builder, x)
-        tuix.Field.startField(builder)
-        tuix.Field.addValueType(builder, tuix.FieldUnion.IntegerField)
-        tuix.Field.addValue(builder, valueOffset)
-        val fieldValueOffset = tuix.Field.endField(builder)
-        fieldValueOffset
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.IntegerField,
+          tuix.IntegerField.createIntegerField(builder, x),
+          isNull)
     }
   }
 
   def flatbuffersExtractFieldValue(f: tuix.Field): Any = {
-    val fieldUnionType = f.valueType
-    fieldUnionType match {
-      case tuix.FieldUnion.IntegerField =>
-        f.value(new tuix.IntegerField).asInstanceOf[tuix.IntegerField].value
+    if (f.isNull()) {
+      null
+    } else {
+      val fieldUnionType = f.valueType
+      fieldUnionType match {
+        case tuix.FieldUnion.IntegerField =>
+          f.value(new tuix.IntegerField).asInstanceOf[tuix.IntegerField].value
+      }
     }
   }
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
     // 1. Serialize the rows as plaintext using tuix.Rows
     val builder = new FlatBufferBuilder
-
-    val rowOffsets = rows.map { row =>
-      val fieldValueOffsets = row.toSeq(types).zip(types).map {
-        case (value, dataType) => flatbuffersCreateField(builder, value, dataType)
-      }.toArray
-      val fieldValuesOffset = tuix.Row.createFieldValuesVector(builder, fieldValueOffsets)
-
-      val fieldNulls = (0 until types.length).map(i => row.isNullAt(i)).toArray
-      val fieldNullsOffset = tuix.Row.createFieldNullsVector(builder, fieldNulls)
-
-      tuix.Row.startRow(builder)
-      tuix.Row.addFieldValues(builder, fieldValuesOffset)
-      tuix.Row.addFieldNulls(builder, fieldNullsOffset)
-      tuix.Row.addIsDummy(builder, false)
-      val rowOffset = tuix.Row.endRow(builder)
-      rowOffset
-    }.toArray
-    val rowsOffset = tuix.Rows.createRowsVector(builder, rowOffsets)
-
-    val rootOffset = tuix.Rows.createRows(builder, rowsOffset)
-    builder.finish(rootOffset)
+    tuix.Rows.finishRowsBuffer(
+      builder,
+      tuix.Rows.createRows(
+        builder,
+        tuix.Rows.createRowsVector(
+          builder,
+          rows.map { row =>
+            tuix.Row.createRow(
+              builder,
+              tuix.Row.createFieldValuesVector(
+                builder,
+                row.toSeq(types).zip(types).zipWithIndex.map {
+                  case ((value, dataType), i) =>
+                    flatbuffersCreateField(builder, value, dataType, row.isNullAt(i))
+                }.toArray),
+              false)
+          }.toArray)))
     val plaintext = builder.sizedByteArray()
 
     // 2. Encrypt the row data
@@ -429,9 +429,13 @@ object Utils {
 
     // 3. Serialize the encrypted rows into a tuix.EncryptedBlock
     val builder2 = new FlatBufferBuilder
-    val encRowsOffset = tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext)
-    val rootOffset2 = tuix.EncryptedBlock.createEncryptedBlock(builder2, rows.size, encRowsOffset)
-    builder2.finish(rootOffset2)
+    tuix.EncryptedBlock.finishEncryptedBlockBuffer(
+      builder2,
+      tuix.EncryptedBlock.createEncryptedBlock(
+        builder2,
+        rows.size,
+        tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext))
+    )
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlock in a Scala Block object
@@ -462,7 +466,7 @@ object Utils {
       InternalRow.fromSeq(
         for (j <- 0 until row.fieldValuesLength) yield {
           val field: Any =
-            if (!row.fieldNulls(j)) {
+            if (!row.fieldValues(j).isNull()) {
               flatbuffersExtractFieldValue(row.fieldValues(j))
             } else {
               null
@@ -490,7 +494,7 @@ object Utils {
             tuix.ExprUnion.Col,
             tuix.Col.createCol(builder, colNum))
         case (Literal(value, dataType), Nil) =>
-          val valueOffset = flatbuffersCreateField(builder, value, dataType)
+          val valueOffset = flatbuffersCreateField(builder, value, dataType, (value == null))
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Literal,

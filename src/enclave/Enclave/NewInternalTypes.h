@@ -1135,7 +1135,6 @@ public:
   void write(const tuix::Row *row) {
     flatbuffers::uoffset_t num_fields = row->field_values()->size();
     std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
-    std::vector<uint8_t> field_nulls(num_fields);
     for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
       const tuix::Field *field = row->field_values()->Get(i);
       switch (field->value_type()) {
@@ -1146,7 +1145,8 @@ public:
             tuix::FieldUnion_IntegerField,
             tuix::CreateIntegerField(
               builder,
-              static_cast<const tuix::IntegerField *>(field->value())->value()).Union());
+              static_cast<const tuix::IntegerField *>(field->value())->value()).Union(),
+            field->is_null());
         break;
       case tuix::FieldUnion_LongField:
         field_values[i] =
@@ -1155,7 +1155,8 @@ public:
             tuix::FieldUnion_LongField,
             tuix::CreateLongField(
               builder,
-              static_cast<const tuix::LongField *>(field->value())->value()).Union());
+              static_cast<const tuix::LongField *>(field->value())->value()).Union(),
+            field->is_null());
         break;
       case tuix::FieldUnion_FloatField:
         field_values[i] =
@@ -1164,7 +1165,8 @@ public:
             tuix::FieldUnion_FloatField,
             tuix::CreateFloatField(
               builder,
-              static_cast<const tuix::FloatField *>(field->value())->value()).Union());
+              static_cast<const tuix::FloatField *>(field->value())->value()).Union(),
+            field->is_null());
         break;
       case tuix::FieldUnion_DoubleField:
         field_values[i] =
@@ -1173,7 +1175,8 @@ public:
             tuix::FieldUnion_DoubleField,
             tuix::CreateDoubleField(
               builder,
-              static_cast<const tuix::DoubleField *>(field->value())->value()).Union());
+              static_cast<const tuix::DoubleField *>(field->value())->value()).Union(),
+            field->is_null());
         break;
       case tuix::FieldUnion_StringField:
       {
@@ -1185,7 +1188,8 @@ public:
             builder,
             tuix::FieldUnion_StringField,
             tuix::CreateStringFieldDirect(
-              builder, &string_data, string_field->length()).Union());
+              builder, &string_data, string_field->length()).Union(),
+            field->is_null());
         break;
       }
       default:
@@ -1193,10 +1197,9 @@ public:
                field->value_type());
         assert(false);
       }
-      field_nulls[i] = row->field_nulls()->Get(i);
     }
     rows_vector.push_back(
-      tuix::CreateRowDirect(builder, &field_values, &field_nulls));
+      tuix::CreateRowDirect(builder, &field_values));
   }
 
   void close() {
@@ -1248,9 +1251,19 @@ class FlatbuffersExpressionEvaluator {
 public:
   FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}
 
-  // tuix::Field *eval(const tuix::Row *row) {}
+  // tuix::Field *eval(const tuix::Row *row) {
+  //   return eval_helper(row, expr);
+  // }
 
 private:
+  // tuix::Field *eval_helper(const tuix::Row *row, const tuix::Expr expr) {
+  //   switch (expr->expr_type() {
+  //       case ExprUnion_Col:
+  //         uint32_t col_num = static_cast<const tuix::Col *>(expr->expr())->col_num();
+  //         return row->field_values()->Get(col_num);
+  //     }
+  // }
+
   flatbuffers::FlatBufferBuilder builder;
   const tuix::Expr *expr;
 };

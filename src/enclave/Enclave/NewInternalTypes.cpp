@@ -6,10 +6,10 @@ void print(const tuix::Row *in) {
   flatbuffers::uoffset_t num_fields = in->field_values()->size();
   printf("[");
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
-    if (in->field_nulls()->Get(i)) {
+    const tuix::Field *field = in->field_values()->Get(i);
+    if (field->is_null()) {
       printf("null");
     } else {
-      const tuix::Field *field = in->field_values()->Get(i);
       switch (field->value_type()) {
       case tuix::FieldUnion_IntegerField:
         printf("%d", static_cast<const tuix::IntegerField *>(field->value())->value());

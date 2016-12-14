@@ -38,11 +38,11 @@ union FieldUnion {
 
 table Field {
     value:FieldUnion;
+    is_null:bool;
 }
 
 table Row {
     field_values:[Field];
-    field_nulls:[bool];
     is_dummy:bool;
 }
 
