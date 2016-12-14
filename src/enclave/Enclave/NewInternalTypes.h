@@ -1266,12 +1266,58 @@ public:
   // }
 
 private:
-  // tuix::Field *eval_helper(const tuix::Row *row, const tuix::Expr expr) {
-  //   switch (expr->expr_type() {
-  //       case ExprUnion_Col:
-  //         uint32_t col_num = static_cast<const tuix::Col *>(expr->expr())->col_num();
-  //         return row->field_values()->Get(col_num);
+  // const tuix::Field *eval_helper(const tuix::Row *row, const tuix::Expr expr) {
+  //   switch (expr->expr_type()) {
+  //   case tuix::ExprUnion_Col:
+  //   {
+  //     uint32_t col_num = static_cast<const tuix::Col *>(expr->expr())->col_num();
+  //     return row->field_values()->Get(col_num);
+  //   }
+  //   case tuix::ExprUnion_Literal:
+  //     return static_cast<const tuix::Literal *>(expr->expr())->value();
+  //   case tuix::ExprUnion_GreaterThan:
+  //   {
+  //     auto tuix::GreaterThan *gt = static_cast<const tuix::GreaterThan *>(expr->expr());
+  //     const tuix::Field *left = eval_helper(gt->left());
+  //     const tuix::Field *right = eval_helper(gt->right());
+  //     check(left->value_type() == right->value_type(),
+  //           "tuix::GreaterThan can't compare values of different types (%s and %s)\n",
+  //           tuix::EnumNameFieldUnion(left->value_type()),
+  //           tuix::EnumNameFieldUnion(right->value_type()));
+  //     bool result_is_null = left->is_null() || right->is_null();
+  //     bool result = false;
+  //     if (!result_is_null) {
+  //       switch (left->value_type()) {
+  //       case tuix::FieldUnion_IntegerField:
+  //         result = static_cast<const tuix::IntegerField *>(left->value())->value()
+  //           > static_cast<const tuix::IntegerField *>(right->value())->value();
+  //         break;
+  //       case tuix::FieldUnion_LongField:
+  //         result = static_cast<const tuix::LongField *>(left->value())->value()
+  //           > static_cast<const tuix::LongField *>(right->value())->value();
+  //         break;
+  //       case tuix::FieldUnion_FloatField:
+  //         result = static_cast<const tuix::FloatField *>(left->value())->value()
+  //           > static_cast<const tuix::FloatField *>(right->value())->value();
+  //         break;
+  //       case tuix::FieldUnion_DoubleField:
+  //         result = static_cast<const tuix::DoubleField *>(left->value())->value()
+  //           > static_cast<const tuix::DoubleField *>(right->value())->value();
+  //         break;
+  //       default:
+  //         printf("Can't evaluate tuix::GreaterThan on %s\n",
+  //                tuix::EnumNameFieldUnion(left->value_type()));
+  //         assert(false);
+  //       }
   //     }
+  //     tuix::CreateField(
+  //       builder,
+  //       tuix::FieldUnion_BooleanField,
+  //       tuix::CreateBooleanField(builder, result),
+  //       result_is_null);
+  //   }
+
+  //   }
   // }
 
   flatbuffers::FlatBufferBuilder builder;
