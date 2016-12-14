@@ -6,6 +6,7 @@
 #include "EncryptedDAG.h"
 #include "EncryptedBlock_generated.h"
 #include "Rows_generated.h"
+#include "expressions_generated.h"
 
 using namespace edu::berkeley::cs::rise::opaque;
 
@@ -1242,6 +1243,17 @@ private:
 };
 
 void print(const tuix::Row *in);
+
+class FlatbuffersExpressionEvaluator {
+public:
+  FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}
+
+  // tuix::Field *eval(const tuix::Row *row) {}
+
+private:
+  flatbuffers::FlatBufferBuilder builder;
+  const tuix::Expr *expr;
+};
 
 class IndividualRowReaderV {
  public:
