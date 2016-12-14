@@ -1138,6 +1138,16 @@ public:
     for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
       const tuix::Field *field = row->field_values()->Get(i);
       switch (field->value_type()) {
+      case tuix::FieldUnion_BooleanField:
+        field_values[i] =
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_BooleanField,
+            tuix::CreateBooleanField(
+              builder,
+              static_cast<const tuix::BooleanField *>(field->value())->value()).Union(),
+            field->is_null());
+        break;
       case tuix::FieldUnion_IntegerField:
         field_values[i] =
           tuix::CreateField(

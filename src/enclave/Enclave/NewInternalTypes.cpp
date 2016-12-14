@@ -11,6 +11,10 @@ void print(const tuix::Row *in) {
       printf("null");
     } else {
       switch (field->value_type()) {
+      case tuix::FieldUnion_BooleanField:
+        printf("%s",
+               static_cast<const tuix::BooleanField *>(field->value())->value() ? "true" : "false");
+        break;
       case tuix::FieldUnion_IntegerField:
         printf("%d", static_cast<const tuix::IntegerField *>(field->value())->value());
         break;

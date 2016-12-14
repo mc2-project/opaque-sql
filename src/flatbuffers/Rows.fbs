@@ -4,11 +4,16 @@ namespace edu.berkeley.cs.rise.opaque.tuix;
 // the "trusted-untrusted interface," or TUIX.
 
 enum ColType : ubyte {
+    BooleanType,
     IntegerType,
     LongType,
     FloatType,
     DoubleType,
     StringType,
+}
+
+table BooleanField {
+    value:bool;
 }
 
 table IntegerField {
@@ -33,7 +38,7 @@ table StringField {
 }
 
 union FieldUnion {
-    IntegerField, LongField, FloatField, DoubleField, StringField
+    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField
 }
 
 table Field {
