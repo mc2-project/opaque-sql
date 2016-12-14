@@ -83,33 +83,3 @@ table Subtract {
     left:Expr;
     right:Expr;
 }
-
-enum AggOp : ubyte {
-    Sum, Min, Max, Avg, Count
-}
-
-table JoinExpr {
-    left_types:[ColType];
-    right_types:[ColType];
-    left_keys:[ColType];
-    right_keys:[ColType];
-}
-
-table AggColExpr {
-    col_num:uint;
-    operation:AggOp;
-    col_type:ColType;
-}
-
-table AggExpr {
-    group_by_cols:[uint];
-    agg_exprs:[AggColExpr];
-}
-
-table SortExpr {
-    sort_cols:[uint];
-}
-
-table FilterExpr {
-    condition:Expr;
-}
