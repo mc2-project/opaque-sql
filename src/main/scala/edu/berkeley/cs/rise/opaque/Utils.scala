@@ -380,11 +380,46 @@ object Utils {
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
+      case (b: Boolean, BooleanType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.BooleanField,
+          tuix.BooleanField.createBooleanField(builder, b),
+          isNull)
       case (x: Int, IntegerType) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.IntegerField,
           tuix.IntegerField.createIntegerField(builder, x),
+          isNull)
+      case (x: Long, LongType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.LongField,
+          tuix.LongField.createLongField(builder, x),
+          isNull)
+      case (x: Float, FloatType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, x),
+          isNull)
+      case (x: Double, DoubleType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.DoubleField,
+          tuix.DoubleField.createDoubleField(builder, x),
+          isNull)
+      case (s: UTF8String, StringType) =>
+        val utf8 = s.getBytes()
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.StringField,
+          tuix.StringField.createStringField(
+            builder,
+            // TODO: pad strings to upper bound for obliviousness
+            tuix.StringField.createValueVector(builder, utf8),
+            utf8.length),
           isNull)
     }
   }
@@ -395,8 +430,21 @@ object Utils {
     } else {
       val fieldUnionType = f.valueType
       fieldUnionType match {
+        case tuix.FieldUnion.BooleanField =>
+          f.value(new tuix.BooleanField).asInstanceOf[tuix.BooleanField].value
         case tuix.FieldUnion.IntegerField =>
           f.value(new tuix.IntegerField).asInstanceOf[tuix.IntegerField].value
+        case tuix.FieldUnion.LongField =>
+          f.value(new tuix.LongField).asInstanceOf[tuix.LongField].value
+        case tuix.FieldUnion.FloatField =>
+          f.value(new tuix.FloatField).asInstanceOf[tuix.FloatField].value
+        case tuix.FieldUnion.DoubleField =>
+          f.value(new tuix.DoubleField).asInstanceOf[tuix.DoubleField].value
+        case tuix.FieldUnion.StringField =>
+          val stringField = f.value(new tuix.StringField).asInstanceOf[tuix.StringField]
+          val sBytes = new Array[Byte](stringField.length.toInt)
+          stringField.valueAsByteBuffer.get(sBytes)
+          UTF8String.fromBytes(sBytes)
       }
     }
   }
