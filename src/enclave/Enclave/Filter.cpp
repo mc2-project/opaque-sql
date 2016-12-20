@@ -26,6 +26,14 @@ void filter(uint8_t *condition, size_t condition_length,
   for (uint32_t i = 0; i < num_rows; i++) {
     in = r.next();
     print(in);
+    const tuix::Field *condition_result = condition_eval.eval(in);
+    printf("Condition result type: %s\n",
+           tuix::EnumNameFieldUnion(condition_result->value_type()));
+    printf("Condition result nullity: %s\n",
+           condition_result->is_null() ? "null" : "not null");
+    printf("Condition result value: %s\n",
+           static_cast<const tuix::BooleanField *>(condition_result->value())->value() ?
+           "true" : "false");
 
     w.write(in);
 //    if (filter_single_row(op_code, &cur)) {

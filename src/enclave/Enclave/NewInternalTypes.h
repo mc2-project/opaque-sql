@@ -14,6 +14,16 @@ class NewJoinRecord;
 class StreamRowReader;
 class StreamRowWriter;
 
+template<typename T>
+flatbuffers::Offset<T> flatbuffers_copy(
+  const T *flatbuffers_obj, flatbuffers::FlatBufferBuilder& builder);
+template<>
+flatbuffers::Offset<tuix::Row> flatbuffers_copy(
+  const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder);
+template<>
+flatbuffers::Offset<tuix::Field> flatbuffers_copy(
+  const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder);
+
 int printf(const char *fmt, ...);
 
 #define check(test, ...) do {                   \
@@ -1133,83 +1143,7 @@ public:
   }
 
   void write(const tuix::Row *row) {
-    flatbuffers::uoffset_t num_fields = row->field_values()->size();
-    std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
-    for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
-      const tuix::Field *field = row->field_values()->Get(i);
-      switch (field->value_type()) {
-      case tuix::FieldUnion_BooleanField:
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_BooleanField,
-            tuix::CreateBooleanField(
-              builder,
-              static_cast<const tuix::BooleanField *>(field->value())->value()).Union(),
-            field->is_null());
-        break;
-      case tuix::FieldUnion_IntegerField:
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_IntegerField,
-            tuix::CreateIntegerField(
-              builder,
-              static_cast<const tuix::IntegerField *>(field->value())->value()).Union(),
-            field->is_null());
-        break;
-      case tuix::FieldUnion_LongField:
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_LongField,
-            tuix::CreateLongField(
-              builder,
-              static_cast<const tuix::LongField *>(field->value())->value()).Union(),
-            field->is_null());
-        break;
-      case tuix::FieldUnion_FloatField:
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_FloatField,
-            tuix::CreateFloatField(
-              builder,
-              static_cast<const tuix::FloatField *>(field->value())->value()).Union(),
-            field->is_null());
-        break;
-      case tuix::FieldUnion_DoubleField:
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_DoubleField,
-            tuix::CreateDoubleField(
-              builder,
-              static_cast<const tuix::DoubleField *>(field->value())->value()).Union(),
-            field->is_null());
-        break;
-      case tuix::FieldUnion_StringField:
-      {
-        auto string_field = static_cast<const tuix::StringField *>(field->value());
-        std::vector<uint8_t> string_data(string_field->value()->begin(),
-                                         string_field->value()->end());
-        field_values[i] =
-          tuix::CreateField(
-            builder,
-            tuix::FieldUnion_StringField,
-            tuix::CreateStringFieldDirect(
-              builder, &string_data, string_field->length()).Union(),
-            field->is_null());
-        break;
-      }
-      default:
-        printf("FlatbuffersRowWriter::write(tuix::Row *): Unknown field type %d\n",
-               field->value_type());
-        assert(false);
-      }
-    }
-    rows_vector.push_back(
-      tuix::CreateRowDirect(builder, &field_values));
+    rows_vector.push_back(flatbuffers_copy(row, builder));
   }
 
   void close() {
@@ -1261,64 +1195,85 @@ class FlatbuffersExpressionEvaluator {
 public:
   FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}
 
-  // tuix::Field *eval(const tuix::Row *row) {
-  //   return eval_helper(row, expr);
-  // }
+  /**
+   * Evaluate the stored expression on the given row. Return a Field containing the result.
+   * Warning: The Field points to internally-managed memory that may be overwritten the next time
+   * eval is called. Therefore it is only valid until the next call to eval.
+   */
+  const tuix::Field *eval(const tuix::Row *row) {
+    builder.Clear();
+    flatbuffers::Offset<tuix::Field> result_offset = eval_helper(row, expr);
+    return flatbuffers::GetTemporaryPointer<tuix::Field>(builder, result_offset);
+  }
 
 private:
-  // const tuix::Field *eval_helper(const tuix::Row *row, const tuix::Expr expr) {
-  //   switch (expr->expr_type()) {
-  //   case tuix::ExprUnion_Col:
-  //   {
-  //     uint32_t col_num = static_cast<const tuix::Col *>(expr->expr())->col_num();
-  //     return row->field_values()->Get(col_num);
-  //   }
-  //   case tuix::ExprUnion_Literal:
-  //     return static_cast<const tuix::Literal *>(expr->expr())->value();
-  //   case tuix::ExprUnion_GreaterThan:
-  //   {
-  //     auto tuix::GreaterThan *gt = static_cast<const tuix::GreaterThan *>(expr->expr());
-  //     const tuix::Field *left = eval_helper(gt->left());
-  //     const tuix::Field *right = eval_helper(gt->right());
-  //     check(left->value_type() == right->value_type(),
-  //           "tuix::GreaterThan can't compare values of different types (%s and %s)\n",
-  //           tuix::EnumNameFieldUnion(left->value_type()),
-  //           tuix::EnumNameFieldUnion(right->value_type()));
-  //     bool result_is_null = left->is_null() || right->is_null();
-  //     bool result = false;
-  //     if (!result_is_null) {
-  //       switch (left->value_type()) {
-  //       case tuix::FieldUnion_IntegerField:
-  //         result = static_cast<const tuix::IntegerField *>(left->value())->value()
-  //           > static_cast<const tuix::IntegerField *>(right->value())->value();
-  //         break;
-  //       case tuix::FieldUnion_LongField:
-  //         result = static_cast<const tuix::LongField *>(left->value())->value()
-  //           > static_cast<const tuix::LongField *>(right->value())->value();
-  //         break;
-  //       case tuix::FieldUnion_FloatField:
-  //         result = static_cast<const tuix::FloatField *>(left->value())->value()
-  //           > static_cast<const tuix::FloatField *>(right->value())->value();
-  //         break;
-  //       case tuix::FieldUnion_DoubleField:
-  //         result = static_cast<const tuix::DoubleField *>(left->value())->value()
-  //           > static_cast<const tuix::DoubleField *>(right->value())->value();
-  //         break;
-  //       default:
-  //         printf("Can't evaluate tuix::GreaterThan on %s\n",
-  //                tuix::EnumNameFieldUnion(left->value_type()));
-  //         assert(false);
-  //       }
-  //     }
-  //     tuix::CreateField(
-  //       builder,
-  //       tuix::FieldUnion_BooleanField,
-  //       tuix::CreateBooleanField(builder, result),
-  //       result_is_null);
-  //   }
-
-  //   }
-  // }
+  /**
+   * Evaluate the given expression on the given row. Return the offset (within builder) of the Field
+   * containing the result. This offset is only valid until the next call to eval.
+   */
+  flatbuffers::Offset<tuix::Field> eval_helper(const tuix::Row *row, const tuix::Expr *expr) {
+    switch (expr->expr_type()) {
+    case tuix::ExprUnion_Col:
+    {
+      uint32_t col_num = static_cast<const tuix::Col *>(expr->expr())->col_num();
+      return flatbuffers_copy<tuix::Field>(
+        row->field_values()->Get(col_num), builder);
+    }
+    case tuix::ExprUnion_Literal:
+      return flatbuffers_copy<tuix::Field>(
+        static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
+    case tuix::ExprUnion_GreaterThan:
+    {
+      auto gt = static_cast<const tuix::GreaterThan *>(expr->expr());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->left()));
+      const tuix::Field *right =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->right()));
+      check(left->value_type() == right->value_type(),
+            "tuix::GreaterThan can't compare values of different types (%s and %s)\n",
+            tuix::EnumNameFieldUnion(left->value_type()),
+            tuix::EnumNameFieldUnion(right->value_type()));
+      bool result_is_null = left->is_null() || right->is_null();
+      bool result = false;
+      if (!result_is_null) {
+        switch (left->value_type()) {
+        case tuix::FieldUnion_IntegerField:
+          result = static_cast<const tuix::IntegerField *>(left->value())->value()
+            > static_cast<const tuix::IntegerField *>(right->value())->value();
+          break;
+        case tuix::FieldUnion_LongField:
+          result = static_cast<const tuix::LongField *>(left->value())->value()
+            > static_cast<const tuix::LongField *>(right->value())->value();
+          break;
+        case tuix::FieldUnion_FloatField:
+          result = static_cast<const tuix::FloatField *>(left->value())->value()
+            > static_cast<const tuix::FloatField *>(right->value())->value();
+          break;
+        case tuix::FieldUnion_DoubleField:
+          result = static_cast<const tuix::DoubleField *>(left->value())->value()
+            > static_cast<const tuix::DoubleField *>(right->value())->value();
+          break;
+        default:
+          printf("Can't evaluate tuix::GreaterThan on %s\n",
+                 tuix::EnumNameFieldUnion(left->value_type()));
+          assert(false);
+        }
+      }
+      // Writing the result invalidates the left and right temporary pointers
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        result_is_null);
+    }
+    default:
+      printf("Can't evaluate expression of type %s\n",
+             tuix::EnumNameExprUnion(expr->expr_type()));
+      assert(false);
+      return flatbuffers::Offset<tuix::Field>();
+    }
+  }
 
   flatbuffers::FlatBufferBuilder builder;
   const tuix::Expr *expr;

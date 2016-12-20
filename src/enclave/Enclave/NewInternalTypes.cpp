@@ -48,6 +48,83 @@ void print(const tuix::Row *in) {
   printf("]\n");
 }
 
+template<>
+flatbuffers::Offset<tuix::Row> flatbuffers_copy(
+  const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder) {
+
+  flatbuffers::uoffset_t num_fields = row->field_values()->size();
+  std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
+  for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+    field_values[i] = flatbuffers_copy<tuix::Field>(row->field_values()->Get(i), builder);
+  }
+  return tuix::CreateRowDirect(builder, &field_values);
+}
+
+template<>
+flatbuffers::Offset<tuix::Field> flatbuffers_copy(
+  const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder) {
+
+  switch (field->value_type()) {
+  case tuix::FieldUnion_BooleanField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_BooleanField,
+      tuix::CreateBooleanField(
+        builder,
+        static_cast<const tuix::BooleanField *>(field->value())->value()).Union(),
+      field->is_null());
+  case tuix::FieldUnion_IntegerField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_IntegerField,
+      tuix::CreateIntegerField(
+        builder,
+        static_cast<const tuix::IntegerField *>(field->value())->value()).Union(),
+      field->is_null());
+  case tuix::FieldUnion_LongField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_LongField,
+      tuix::CreateLongField(
+        builder,
+        static_cast<const tuix::LongField *>(field->value())->value()).Union(),
+      field->is_null());
+  case tuix::FieldUnion_FloatField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_FloatField,
+      tuix::CreateFloatField(
+        builder,
+        static_cast<const tuix::FloatField *>(field->value())->value()).Union(),
+      field->is_null());
+  case tuix::FieldUnion_DoubleField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_DoubleField,
+      tuix::CreateDoubleField(
+        builder,
+        static_cast<const tuix::DoubleField *>(field->value())->value()).Union(),
+      field->is_null());
+  case tuix::FieldUnion_StringField:
+  {
+    auto string_field = static_cast<const tuix::StringField *>(field->value());
+    std::vector<uint8_t> string_data(string_field->value()->begin(),
+                                     string_field->value()->end());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_StringField,
+      tuix::CreateStringFieldDirect(
+        builder, &string_data, string_field->length()).Union(),
+      field->is_null());
+  }
+  default:
+    printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
+           field->value_type());
+    assert(false);
+    return flatbuffers::Offset<tuix::Field>();
+  }
+}
+
 bool attrs_equal(const uint8_t *a, const uint8_t *b) {
   const uint8_t *a_ptr = a;
   const uint8_t *b_ptr = b;
