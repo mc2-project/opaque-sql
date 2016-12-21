@@ -56,11 +56,20 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     spark.stop()
   }
 
-  test("flatbuffers") {
+  test("flatbuffers filter") {
     val df = spark.createDataFrame(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)))
       .toDF("a", "b", "c", "d", "x").encrypted
       .filter($"x" > lit(10))
+    df.explain(true)
+    df.show
+  }
+
+  test("flatbuffers project") {
+    val df = spark.createDataFrame(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)))
+      .toDF("a", "b", "c", "d", "x").encrypted
+      .select($"x", $"a")
     df.explain(true)
     df.show
   }

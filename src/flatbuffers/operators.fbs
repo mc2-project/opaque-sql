@@ -9,6 +9,10 @@ table FilterExpr {
     condition:Expr;
 }
 
+table ProjectExpr {
+    project_list:[Expr];
+}
+
 table SortExpr {
     sort_cols:[uint];
 }

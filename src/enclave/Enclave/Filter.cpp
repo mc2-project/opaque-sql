@@ -8,8 +8,6 @@ void filter(uint8_t *condition, size_t condition_length,
             Verify *verify_set,
             uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
             uint8_t **output_rows, uint32_t *output_rows_length, uint32_t *num_output_rows) {
-  (void)condition;
-  (void)condition_length;
   (void)verify_set;
 
   flatbuffers::Verifier v(condition, condition_length);

@@ -89,27 +89,24 @@ void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **
 }
 
 void ecall_project(int index, int num_part,
-                   int op_code,
-                   uint8_t *input_rows, uint32_t input_rows_length,
-                   uint32_t num_rows,
-                   uint8_t *output_rows, uint32_t output_rows_length,
-                   uint32_t *actual_output_rows_length) {
+                   uint8_t *condition, size_t condition_length,
+                   uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+                   uint8_t **output_rows, uint32_t *output_rows_length) {
   (void)index;
   (void)num_part;
 
-  Verify verify_set(op_code, 1, 0);
+  Verify verify_set(0, 1, 0);
 
-  project(op_code, &verify_set,
-          input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-          actual_output_rows_length);
+  project(condition, condition_length, &verify_set,
+          input_rows, input_rows_length, num_rows,
+          output_rows, output_rows_length);
 
   verify_set.verify();
 }
 
 void ecall_filter(int index, int num_part,
                   uint8_t *condition, size_t condition_length,
-                  uint8_t *input_rows, uint32_t input_rows_length,
-                  uint32_t num_rows,
+                  uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
                   uint8_t **output_rows, uint32_t *output_rows_length,
                   uint32_t *num_output_rows) {
   (void)index;

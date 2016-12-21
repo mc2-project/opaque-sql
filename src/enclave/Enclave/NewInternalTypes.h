@@ -1142,8 +1142,19 @@ public:
     : builder(), rows_vector(), untrusted_alloc() {
   }
 
+  /** Copy the given Row to the output. */
   void write(const tuix::Row *row) {
     rows_vector.push_back(flatbuffers_copy(row, builder));
+  }
+
+  /** Copy the given Fields to the output. */
+  void write(const std::vector<const tuix::Field *> &row_fields) {
+    flatbuffers::uoffset_t num_fields = row_fields.size();
+    std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
+    for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+      field_values[i] = flatbuffers_copy<tuix::Field>(row_fields[i], builder);
+    }
+    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
   }
 
   void close() {

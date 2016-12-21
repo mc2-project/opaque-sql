@@ -13,13 +13,9 @@
 #ifndef PROJECT_H
 #define PROJECT_H
 
-void project(int op_code,
+void project(uint8_t *project_list, size_t project_list_length,
              Verify *verify_set,
-             uint8_t *input_rows, uint32_t input_rows_length,
-             uint32_t num_rows,
-             uint8_t *output_rows, uint32_t output_rows_length,
-             uint32_t *actual_output_rows_length);
-
-void project_single_row(int op_code, NewRecord *in, NewRecord *out);
+             uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+             uint8_t **output_rows, uint32_t *output_rows_length);
 
 #endif // PROJECT_H

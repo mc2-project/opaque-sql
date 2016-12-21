@@ -27,7 +27,7 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long,
     index: Int,
     numPart: Int,
-    op_code: Int,
+    project_list: Array[Byte],
     input_rows: Array[Byte],
     num_rows: Int
   ): Array[Byte]

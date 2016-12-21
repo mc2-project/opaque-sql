@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
@@ -562,6 +563,20 @@ object Utils {
       tuix.FilterExpr.createFilterExpr(
         builder,
         flatbuffersSerializeExpression(builder, condition, input)))
+    builder.sizedByteArray()
+  }
+
+  def serializeProjectList(
+    projectList: Seq[NamedExpression], input: Seq[Attribute]): Array[Byte] = {
+    projectList.map(expr =>
+      treeFold[Expression, Unit](expr) { (fromChildren, expr) => println(expr.getClass) })
+    val builder = new FlatBufferBuilder
+    builder.finish(
+      tuix.ProjectExpr.createProjectExpr(
+        builder,
+        tuix.ProjectExpr.createProjectListVector(
+          builder,
+          projectList.map(expr => flatbuffersSerializeExpression(builder, expr, input)).toArray)))
     builder.sizedByteArray()
   }
 }

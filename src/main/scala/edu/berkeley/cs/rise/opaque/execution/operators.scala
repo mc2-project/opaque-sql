@@ -214,62 +214,14 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
-    import Opcode._
-    val opcode = projectList match {
-      case Seq(
-        Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
-        Col(4, _)) =>
-        OP_BD2
-      case Seq(Col(4, _), Alias(Multiply(Col(2, _), Col(5, _)), _)) =>
-        OP_PROJECT_PAGERANK_WEIGHT_RANK
-      case Seq(Col(1, _),
-        Alias(Add(
-          Literal(0.15, DoubleType),
-          Multiply(Literal(0.85, DoubleType), Col(2, _))), _)) =>
-        OP_PROJECT_PAGERANK_APPLY_INCOMING_RANK
-      case Seq(Col(2, _), Col(3, _), Col(4, _)) if child.output.size == 4 =>
-        OP_PROJECT_DROP_COL1
-      case Seq(Col(2, _), Col(3, _)) if child.output.size == 3 =>
-        OP_PROJECT_DROP_COL1
-      case Seq(Col(1, _)) if child.output.size == 2 =>
-        OP_PROJECT_DROP_COL2
-      case Seq(Col(1, _), Col(2, _)) if child.output.size == 3 =>
-        OP_PROJECT_DROP_COL3
-      case Seq(Col(2, _), Col(1, _), Col(3, _)) if child.output.size == 3 =>
-        OP_PROJECT_SWAP_COL1_COL2
-      case Seq(Col(1, _), Col(3, _), Col(2, _)) if child.output.size == 3 =>
-        OP_PROJECT_SWAP_COL2_COL3
-      case Seq(Col(4, _), Col(2, _), Col(5, _)) if child.output.size == 5 =>
-        OP_PROJECT_COL4_COL2_COL5
-      case Seq(Col(2, _), Col(1, _), Col(4, _)) if child.output.size == 9 =>
-        OP_PROJECT_COL2_COL1_COL4
-      case Seq(Col(2, _), Col(4, _)) if child.output.size == 4 =>
-        OP_PROJECT_COL2_COL4
-      case Seq(Col(2, _), Col(5, _),
-        Alias(Subtract(
-          Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
-          Multiply(Col(7, _), Col(8, _))), _)) =>
-        OP_PROJECT_TPCH9GENERIC
-      case Seq(Col(4, _), Col(2, _),
-        Alias(Subtract(
-          Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
-          Multiply(Col(7, _), Col(8, _))), _)) =>
-        OP_PROJECT_TPCH9OPAQUE
-      case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
-        OP_PROJECT_TPCH9_ORDER_YEAR
-      case _ =>
-        throw new Exception(
-          s"ObliviousProjectExec: unknown project list $projectList.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
-    }
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
+    val projectListSer = Utils.serializeProjectList(projectList, child.output)
 
     execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(eid, 0, 0, opcode.value, block.bytes, block.numRows)
+      val serResult = enclave.Project(eid, 0, 0, projectListSer, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
   }
@@ -312,14 +264,14 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
     val rowsWithRandomIds = execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+        eid, 0, 0, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
     
     ObliviousSortExec.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+        eid, 0, 0, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
   }
@@ -621,13 +573,13 @@ case class ObliviousSortMergeJoinExec(
     val joinedWithRandomIds = joined.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
+        eid, 0, 0, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
     val permuted = ObliviousSortExec.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+        eid, 0, 0, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes, block.numRows)
       Block(serResult, block.numRows)
     }
 
