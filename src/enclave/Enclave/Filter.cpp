@@ -1,8 +1,9 @@
 #include "Filter.h"
 
-#include <string>
+#include "Flatbuffers.h"
+#include "common.h"
 
-#include "operators_generated.h"
+using namespace edu::berkeley::cs::rise::opaque;
 
 void filter(uint8_t *condition, size_t condition_length,
             Verify *verify_set,

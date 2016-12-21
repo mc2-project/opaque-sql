@@ -1,13 +1,5 @@
-#include <stdarg.h>
-#include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
 
-#include "Enclave.h"
-#include "Enclave_t.h"  /* print_string */
-#include "sgx_trts.h"
-#include "Crypto.h"
-#include "util.h"
-#include "NewInternalTypes.h"
 #include "EncryptedDAG.h"
 
 #ifndef PROJECT_H

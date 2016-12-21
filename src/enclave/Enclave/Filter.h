@@ -1,12 +1,5 @@
-#include <stdarg.h>
-#include <stdio.h>      /* vsnprintf */
 #include <stdint.h>
-#include <assert.h>
 
-#include "sgx_trts.h"
-#include "Crypto.h"
-#include "util.h"
-#include "NewInternalTypes.h"
 #include "EncryptedDAG.h"
 
 #ifndef FILTER_H

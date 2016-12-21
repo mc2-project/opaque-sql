@@ -1,6 +1,7 @@
 #include "Project.h"
 
-#include "operators_generated.h"
+#include "Flatbuffers.h"
+#include "common.h"
 
 void project(uint8_t *project_list, size_t project_list_length,
              Verify *verify_set,
