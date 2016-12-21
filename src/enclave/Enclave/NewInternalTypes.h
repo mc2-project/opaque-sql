@@ -1,6 +1,7 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include "util.h"
+#include <algorithm>
 #include <limits>
 #include <set>
 #include "EncryptedDAG.h"
@@ -1276,6 +1277,53 @@ private:
         tuix::FieldUnion_BooleanField,
         tuix::CreateBooleanField(builder, result).Union(),
         result_is_null);
+    }
+    case tuix::ExprUnion_Substring:
+    {
+      auto ss = static_cast<const tuix::Substring *>(expr->expr());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *str =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->str()));
+      const tuix::Field *pos =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->pos()));
+      const tuix::Field *len =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->len()));
+      check(str->value_type() == tuix::FieldUnion_StringField &&
+            pos->value_type() == tuix::FieldUnion_IntegerField &&
+            len->value_type() == tuix::FieldUnion_IntegerField,
+            "tuix::Substring requires str String, pos Integer, len Integer, not "
+            "str %s, pos %s, len %s)\n",
+            tuix::EnumNameFieldUnion(str->value_type()),
+            tuix::EnumNameFieldUnion(pos->value_type()),
+            tuix::EnumNameFieldUnion(len->value_type()));
+      bool result_is_null = str->is_null() || pos->is_null() || len->is_null();
+      if (!result_is_null) {
+        auto str_field = static_cast<const tuix::StringField *>(str->value());
+        auto pos_val = static_cast<const tuix::IntegerField *>(pos->value())->value();
+        auto len_val = static_cast<const tuix::IntegerField *>(len->value())->value();
+        auto start_idx = std::min(static_cast<uint32_t>(pos_val), str_field->length());
+        auto end_idx = std::min(start_idx + len_val, str_field->length());
+        // TODO: oblivious string lengths
+        std::vector<uint8_t> substring(
+          flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                        start_idx),
+          flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                        end_idx));
+        // Writing the result invalidates the str, pos, len temporary pointers
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &substring, end_idx - start_idx).Union(),
+          result_is_null);
+      } else {
+        // Writing the result invalidates the str, pos, len temporary pointers
+        // TODO: oblivious string lengths
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, nullptr, 0).Union(),
+          result_is_null);
+      }
     }
     default:
       printf("Can't evaluate expression of type %s\n",

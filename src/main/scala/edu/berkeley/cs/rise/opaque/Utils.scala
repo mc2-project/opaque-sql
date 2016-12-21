@@ -25,12 +25,14 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
@@ -552,6 +554,16 @@ object Utils {
             tuix.ExprUnion.GreaterThan,
             tuix.GreaterThan.createGreaterThan(
               builder, leftOffset, rightOffset))
+        case (Substring(str, pos, len), Seq(strOffset, posOffset, lenOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Substring,
+            tuix.Substring.createSubstring(
+              builder, strOffset, posOffset, lenOffset))
+        case (Alias(child, _), Seq(childOffset)) =>
+          // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
+          // tree. For now we just ignore them when evaluating expressions.
+          childOffset
       }
     }
   }
