@@ -1,9 +1,17 @@
-include "expressions.fbs";
+include "Expr.fbs";
 
 // This file is part of the interface between Spark SQL and the SGX enclave --
 // the "trusted-untrusted interface," or TUIX.
 
 namespace edu.berkeley.cs.rise.opaque.tuix;
+
+table FilterExpr {
+    condition:Expr;
+}
+
+table SortExpr {
+    sort_cols:[uint];
+}
 
 enum AggOp : ubyte {
     Sum, Min, Max, Avg, Count
@@ -20,4 +28,9 @@ table AggExpr {
     agg_exprs:[AggColExpr];
 }
 
-root_type AggExpr;
+table JoinExpr {
+    left_types:[ColType];
+    right_types:[ColType];
+    left_keys:[ColType];
+    right_keys:[ColType];
+}

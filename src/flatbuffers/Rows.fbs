@@ -55,5 +55,3 @@ table Row {
 table Rows {
     rows:[Row];
 }
-
-root_type Rows;

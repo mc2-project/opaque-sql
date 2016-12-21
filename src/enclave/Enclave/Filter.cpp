@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "FilterExpr_generated.h"
+#include "operators_generated.h"
 
 void filter(uint8_t *condition, size_t condition_length,
             Verify *verify_set,
@@ -13,10 +13,10 @@ void filter(uint8_t *condition, size_t condition_length,
   (void)verify_set;
 
   flatbuffers::Verifier v(condition, condition_length);
-  check(tuix::VerifyFilterExprBuffer(v),
+  check(v.VerifyBuffer<tuix::FilterExpr>(nullptr),
         "Corrupt FilterExpr %p of length %d\n", condition, condition_length);
 
-  const tuix::FilterExpr* condition_expr = tuix::GetFilterExpr(condition);
+  const tuix::FilterExpr* condition_expr = flatbuffers::GetRoot<tuix::FilterExpr>(condition);
   FlatbuffersExpressionEvaluator condition_eval(condition_expr->condition());
 
   FlatbuffersRowReader r(input_rows, input_rows_length);

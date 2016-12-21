@@ -6,7 +6,7 @@
 #include "EncryptedDAG.h"
 #include "EncryptedBlock_generated.h"
 #include "Rows_generated.h"
-#include "expressions_generated.h"
+#include "Expr_generated.h"
 
 using namespace edu::berkeley::cs::rise::opaque;
 
@@ -1093,9 +1093,9 @@ public:
   FlatbuffersRowReader(uint8_t *buf, size_t len)
     : rows_read(0) {
     flatbuffers::Verifier v1(buf, len);
-    check(tuix::VerifyEncryptedBlockBuffer(v1),
+    check(v1.VerifyBuffer<tuix::EncryptedBlock>(nullptr),
           "Corrupt EncryptedBlock %p of length %d\n", buf, len);
-    auto encrypted_block = tuix::GetEncryptedBlock(buf);
+    auto encrypted_block = flatbuffers::GetRoot<tuix::EncryptedBlock>(buf);
     num_rows = encrypted_block->num_rows();
 
     const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
@@ -1104,10 +1104,10 @@ public:
             rows_buf.get());
     printf("Decrypted %d rows, plaintext is %d bytes\n", num_rows, rows_len);
     flatbuffers::Verifier v2(rows_buf.get(), rows_len);
-    check(tuix::VerifyRowsBuffer(v2),
+    check(v2.VerifyBuffer<tuix::Rows>(nullptr),
           "Corrupt Rows %p of length %d\n", rows_buf.get(), rows_len);
 
-    rows = tuix::GetRows(rows_buf.get());
+    rows = flatbuffers::GetRoot<tuix::Rows>(rows_buf.get());
     check(rows->rows()->size() == num_rows,
           "EncryptedBlock claimed to contain %d rows but actually contains %d rows\n",
           num_rows == rows->rows()->size());
@@ -1147,7 +1147,7 @@ public:
   }
 
   void close() {
-    tuix::FinishRowsBuffer(builder, tuix::CreateRowsDirect(builder, &rows_vector));
+    builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
     size_t enc_rows_len = enc_size(builder.GetSize());
     uint8_t *enc_rows = nullptr;
     ocall_malloc(enc_rows_len, &enc_rows);
@@ -1155,8 +1155,7 @@ public:
 
     enc_block_builder.reset(
       new flatbuffers::FlatBufferBuilder(enc_rows_len * 2, &untrusted_alloc));
-    tuix::FinishEncryptedBlockBuffer(
-      *enc_block_builder,
+    enc_block_builder->Finish(
       tuix::CreateEncryptedBlock(
         *enc_block_builder,
         rows_vector.size(),

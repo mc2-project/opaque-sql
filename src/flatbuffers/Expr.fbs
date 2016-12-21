@@ -87,5 +87,3 @@ table Subtract {
     left:Expr;
     right:Expr;
 }
-
-root_type Expr;

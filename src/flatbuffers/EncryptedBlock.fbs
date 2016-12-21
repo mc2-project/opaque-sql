@@ -8,5 +8,3 @@ table EncryptedBlock {
     // When decrypted, this should contain a Rows object at its root
     enc_rows:[ubyte];
 }
-
-root_type EncryptedBlock;

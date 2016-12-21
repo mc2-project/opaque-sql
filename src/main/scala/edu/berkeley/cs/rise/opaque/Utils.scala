@@ -452,8 +452,7 @@ object Utils {
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
     // 1. Serialize the rows as plaintext using tuix.Rows
     val builder = new FlatBufferBuilder
-    tuix.Rows.finishRowsBuffer(
-      builder,
+    builder.finish(
       tuix.Rows.createRows(
         builder,
         tuix.Rows.createRowsVector(
@@ -477,8 +476,7 @@ object Utils {
 
     // 3. Serialize the encrypted rows into a tuix.EncryptedBlock
     val builder2 = new FlatBufferBuilder
-    tuix.EncryptedBlock.finishEncryptedBlockBuffer(
-      builder2,
+    builder2.finish(
       tuix.EncryptedBlock.createEncryptedBlock(
         builder2,
         rows.size,
@@ -560,10 +558,10 @@ object Utils {
   def serializeFilterExpression(condition: Expression, input: Seq[Attribute]): Array[Byte] = {
     treeFold[Expression, Unit](condition) { (fromChildren, expr) => println(expr.getClass) }
     val builder = new FlatBufferBuilder
-    val rootOffset = tuix.FilterExpr.createFilterExpr(
-      builder,
-      flatbuffersSerializeExpression(builder, condition, input))
-    builder.finish(rootOffset)
+    builder.finish(
+      tuix.FilterExpr.createFilterExpr(
+        builder,
+        flatbuffersSerializeExpression(builder, condition, input)))
     builder.sizedByteArray()
   }
 }
