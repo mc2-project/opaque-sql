@@ -25,26 +25,6 @@ table Expr {
     expr:ExprUnion;
 }
 
-table GreaterThan {
-    left:Expr;
-    right:Expr;
-}
-
-table GreaterThanOrEqual {
-    left:Expr;
-    right:Expr;
-}
-
-table LessThanOrEqual {
-    left:Expr;
-    right:Expr;
-}
-
-table Contains {
-    left:Expr;
-    right:Expr;
-}
-
 table Col {
     col_num:uint;
 }
@@ -53,6 +33,23 @@ table Literal {
     value:Field;
 }
 
+// Arithmetic
+table Add {
+    left:Expr;
+    right:Expr;
+}
+
+table Subtract {
+    left:Expr;
+    right:Expr;
+}
+
+table Multiply {
+    left:Expr;
+    right:Expr;
+}
+
+// Predicates
 table And {
     left:Expr;
     right:Expr;
@@ -63,27 +60,34 @@ table Or {
     right:Expr;
 }
 
-table IsNotNull {
-    child:Expr;
+table LessThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
+
+table GreaterThan {
+    left:Expr;
+    right:Expr;
+}
+
+table GreaterThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
+
+// String expressions
+table Contains {
+    left:Expr;
+    right:Expr;
 }
 
 table Substring {
+    str:Expr;
+    pos:Expr;
+    len:Expr;
+}
+
+// Null expressions
+table IsNotNull {
     child:Expr;
-    pos:uint;
-    len:uint;
-}
-
-table Multiply {
-    left:Expr;
-    right:Expr;
-}
-
-table Add {
-    left:Expr;
-    right:Expr;
-}
-
-table Subtract {
-    left:Expr;
-    right:Expr;
 }
