@@ -69,7 +69,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     val df = spark.createDataFrame(
       (1 to 20).map(x => (true, "hello world!", 1.0, 2.0f, x)))
       .toDF("a", "b", "c", "d", "x").encrypted
-      .select($"x", substring($"b", 5, 20))
+      .select($"x" + $"x", substring($"b", 5, 20))
     df.explain(true)
     df.show
   }

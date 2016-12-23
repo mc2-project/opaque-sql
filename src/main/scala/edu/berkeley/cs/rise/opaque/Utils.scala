@@ -25,14 +25,17 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.Substring
+import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
@@ -542,28 +545,56 @@ object Utils {
             builder,
             tuix.ExprUnion.Col,
             tuix.Col.createCol(builder, colNum))
+
         case (Literal(value, dataType), Nil) =>
           val valueOffset = flatbuffersCreateField(builder, value, dataType, (value == null))
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
+
+        case (Alias(child, _), Seq(childOffset)) =>
+          // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
+          // tree. For now we just ignore them when evaluating expressions.
+          childOffset
+
+        // Arithmetic
+        case (Add(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Add,
+            tuix.Add.createAdd(
+              builder, leftOffset, rightOffset))
+
+        case (Subtract(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Subtract,
+            tuix.Subtract.createSubtract(
+              builder, leftOffset, rightOffset))
+
+        case (Multiply(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Multiply,
+            tuix.Multiply.createMultiply(
+              builder, leftOffset, rightOffset))
+
+        // Predicates
         case (GreaterThan(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.GreaterThan,
             tuix.GreaterThan.createGreaterThan(
               builder, leftOffset, rightOffset))
+
+        // String expressions
         case (Substring(str, pos, len), Seq(strOffset, posOffset, lenOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Substring,
             tuix.Substring.createSubstring(
               builder, strOffset, posOffset, lenOffset))
-        case (Alias(child, _), Seq(childOffset)) =>
-          // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
-          // tree. For now we just ignore them when evaluating expressions.
-          childOffset
       }
     }
   }
