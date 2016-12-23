@@ -208,7 +208,34 @@ private:
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, add->right())));
     }
 
+    case tuix::ExprUnion_Subtract:
+    {
+      auto subtract = static_cast<const tuix::Subtract *>(expr->expr());
+      return eval_binary_arithmetic_op<tuix::Subtract, std::minus>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, subtract->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, subtract->right())));
+    }
+
+    case tuix::ExprUnion_Multiply:
+    {
+      auto multiply = static_cast<const tuix::Multiply *>(expr->expr());
+      return eval_binary_arithmetic_op<tuix::Multiply, std::multiplies>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->right())));
+    }
+
     // Predicates
+    case tuix::ExprUnion_LessThanOrEqual:
+    {
+      auto le = static_cast<const tuix::LessThanOrEqual *>(expr->expr());
+      return eval_binary_comparison<tuix::LessThanOrEqual, std::less_equal>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, le->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, le->right())));
+    }
+
     case tuix::ExprUnion_GreaterThan:
     {
       auto gt = static_cast<const tuix::GreaterThan *>(expr->expr());
@@ -216,6 +243,15 @@ private:
         builder,
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->left())),
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->right())));
+    }
+
+    case tuix::ExprUnion_GreaterThanOrEqual:
+    {
+      auto ge = static_cast<const tuix::GreaterThanOrEqual *>(expr->expr());
+      return eval_binary_comparison<tuix::GreaterThanOrEqual, std::greater_equal>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ge->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ge->right())));
     }
 
     // String expressions

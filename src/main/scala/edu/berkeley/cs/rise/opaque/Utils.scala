@@ -31,6 +31,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
+import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
+import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
@@ -581,11 +583,25 @@ object Utils {
               builder, leftOffset, rightOffset))
 
         // Predicates
+        case (LessThanOrEqual(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.LessThanOrEqual,
+            tuix.LessThanOrEqual.createLessThanOrEqual(
+              builder, leftOffset, rightOffset))
+
         case (GreaterThan(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.GreaterThan,
             tuix.GreaterThan.createGreaterThan(
+              builder, leftOffset, rightOffset))
+
+        case (GreaterThanOrEqual(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.GreaterThanOrEqual,
+            tuix.GreaterThanOrEqual.createGreaterThanOrEqual(
               builder, leftOffset, rightOffset))
 
         // String expressions
