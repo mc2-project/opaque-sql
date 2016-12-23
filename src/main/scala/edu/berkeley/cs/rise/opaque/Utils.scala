@@ -27,8 +27,10 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
@@ -36,6 +38,7 @@ import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.trees.TreeNode
@@ -636,6 +639,25 @@ object Utils {
         tuix.ProjectExpr.createProjectListVector(
           builder,
           projectList.map(expr => flatbuffersSerializeExpression(builder, expr, input)).toArray)))
+    builder.sizedByteArray()
+  }
+
+  def serializeSortOrder(
+    sortOrder: Seq[SortOrder], input: Seq[Attribute]): Array[Byte] = {
+    val builder = new FlatBufferBuilder
+    builder.finish(
+      tuix.SortExpr.createSortExpr(
+        builder,
+        tuix.SortExpr.createSortOrderVector(
+          builder,
+          sortOrder.map(o =>
+            tuix.SortOrder.createSortOrder(
+              builder,
+              flatbuffersSerializeExpression(builder, o.child, input),
+              o.direction match {
+                case Ascending => tuix.SortDirection.Ascending
+                case Descending => tuix.SortDirection.Descending
+              })).toArray)))
     builder.sizedByteArray()
   }
 }

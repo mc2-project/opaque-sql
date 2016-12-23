@@ -5,18 +5,31 @@ include "Expr.fbs";
 
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
+// Filter
 table FilterExpr {
     condition:Expr;
 }
 
+// Project
 table ProjectExpr {
     project_list:[Expr];
 }
 
-table SortExpr {
-    sort_cols:[uint];
+// Sort
+enum SortDirection : ubyte {
+    Ascending, Descending
 }
 
+table SortOrder {
+    child:Expr;
+    direction:SortDirection;
+}
+
+table SortExpr {
+    sort_order:[SortOrder];
+}
+
+// Aggregate
 enum AggOp : ubyte {
     Sum, Min, Max, Avg, Count
 }
@@ -32,6 +45,7 @@ table AggExpr {
     agg_exprs:[AggColExpr];
 }
 
+// Join
 table JoinExpr {
     left_types:[ColType];
     right_types:[ColType];
