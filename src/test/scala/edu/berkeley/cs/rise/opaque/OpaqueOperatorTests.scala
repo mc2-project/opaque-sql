@@ -77,6 +77,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  def testOpaqueObliviousOnly(name: String)(f: SecurityLevel => Unit): Unit = {
+    test(name + " - oblivious") {
+      f(Oblivious)
+    }
+  }
+
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
   }
@@ -189,6 +195,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+  }
+
+  testOpaqueOnly("global aggregate") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val result = words.agg(sum("count").as("totalCount"))
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](

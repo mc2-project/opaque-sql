@@ -234,6 +234,8 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
         OP_PROJECT_COL2_COL1_COL4
       case Seq(Col(2, _), Col(4, _)) if child.output.size == 4 =>
         OP_PROJECT_COL2_COL4
+      case Seq(Col(3, _)) if child.output.size == 3 =>
+        OP_PROJECT_COL3
       case Seq(Col(2, _), Col(5, _),
         Alias(Subtract(
           Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
@@ -350,6 +352,7 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
   }
 }
 
+
 case class ObliviousAggregateExec(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
@@ -414,6 +417,13 @@ case class ObliviousAggregateExec(
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
+          (OP_SUM_COL1_INTEGER,
+            OP_SUM_COL1_INTEGER,
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_NOT_DUMMY)
+
       case _ =>
         throw new Exception(
           s"ObliviousAggregateExec: unknown grouping expressions $groupingExpressions, " +
@@ -424,6 +434,33 @@ case class ObliviousAggregateExec(
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
+
+    if (aggStep1Opcode == OP_SUM_COL1_INTEGER) {
+      RA.initRA(childRDD)
+      // Do local global aggregates
+      val aggregates = childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        val numOutputRows = new MutableInteger
+        val resultBytes = enclave.GlobalAggregate(
+          eid, 0, 0, aggStep1Opcode.value, block.bytes, block.numRows, numOutputRows)
+        resultBytes
+      }
+
+      Utils.ensureCached(aggregates)
+      val (enclave, eid) = Utils.initEnclave()
+      val aggregatesCollected = aggregates.collect
+      // Collect and run GlobalAggregate again
+      val finalOutputRows = new MutableInteger
+      val result = enclave.GlobalAggregate(eid, 0, 0, aggStep2Opcode.value,
+        Utils.concatByteArrays(aggregatesCollected), aggregatesCollected.length, finalOutputRows)
+      assert(finalOutputRows.value == 1)
+
+      var a = new Array[Block](1)
+      a(0) = Block(result, finalOutputRows.value)
+
+      return sparkContext.parallelize(a, 1)
+    }
+
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
     RA.initRA(childRDD)
@@ -532,6 +569,10 @@ case class EncryptedAggregateExec(
           Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT
 
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
+          OP_SUM_COL1_INTEGER
+
       case _ =>
         throw new Exception(
           s"EncryptedAggregateExec: unknown grouping expressions $groupingExpressions, " +
@@ -542,6 +583,33 @@ case class EncryptedAggregateExec(
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
+
+    if (aggOpcode == OP_SUM_COL1_INTEGER) {
+      RA.initRA(childRDD)
+      // Do local global aggregates
+      val aggregates = childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        val numOutputRows = new MutableInteger
+        val resultBytes = enclave.GlobalAggregate(
+          eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
+        resultBytes
+      }
+
+      Utils.ensureCached(aggregates)
+      val (enclave, eid) = Utils.initEnclave()
+      val aggregatesCollected = aggregates.collect
+      // Collect and run GlobalAggregate again
+      val finalOutputRows = new MutableInteger
+      val result = enclave.GlobalAggregate(eid, 0, 0, aggOpcode.value,
+        Utils.concatByteArrays(aggregatesCollected), aggregatesCollected.length, finalOutputRows)
+      assert(finalOutputRows.value == 1)
+
+      var a = new Array[Block](1)
+      a(0) = Block(result, finalOutputRows.value)
+
+      return sparkContext.parallelize(a, 1)
+    }
+
     time("aggregate - force child") { childRDD.count }
     RA.initRA(childRDD)
     // Process boundaries

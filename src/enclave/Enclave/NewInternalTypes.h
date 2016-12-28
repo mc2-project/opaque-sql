@@ -647,7 +647,7 @@ public:
 
   GroupBy(NewRecord *record) : row() {
     row.set(record);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -657,7 +657,7 @@ public:
   /** Update this GroupBy object to track a different group. */
   void set(GroupBy *other) {
     row.set(&other->row);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -671,7 +671,7 @@ public:
    */
   uint32_t read(uint8_t *input) {
     uint32_t result = row.read(input);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -681,6 +681,9 @@ public:
 
   /** Return true if both GroupBy objects are tracking the same group. */
   bool equals(GroupBy *other) {
+    if (Column == 0) {
+      return true;
+    }
     if (this->attr != NULL && other->attr != NULL) {
       return attrs_equal(this->attr, other->attr);
     } else {
@@ -690,7 +693,9 @@ public:
 
   /** Write the grouping attribute by appending it to the given record. */
   void append_result(NewRecord *rec) const {
-    rec->add_attr(attr);
+    if (Column > 0) {
+      rec->add_attr(attr);
+    }
   }
 
   /** Write an entire row containing the grouping column to output and return num bytes written. */

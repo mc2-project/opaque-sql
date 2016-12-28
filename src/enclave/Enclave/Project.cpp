@@ -159,6 +159,10 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->add_attr(in, 2);
     out->add_attr(in, 4);
     break;
+  case OP_PROJECT_COL3:
+    out->clear();
+    out->add_attr(in, 3);
+    break;
   default:
     printf("project_single_row: unknown opcode %d\n", op_code);
     assert(false);

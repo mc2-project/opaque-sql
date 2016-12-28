@@ -210,6 +210,14 @@ void non_oblivious_aggregate(Verify *verify_set,
     prev_row.set(&cur_row);
   }
 
+  if (num_rows == 1) {
+    agg.aggregate(&prev_row);
+    output_row.clear();
+    agg.append_result(&output_row, false);
+    writer.write(&output_row);
+    num_output_rows_result++;
+  }
+
   writer.close();
   *actual_output_rows_length = writer.bytes_written();
   *num_output_rows = num_output_rows_result;

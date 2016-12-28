@@ -1058,6 +1058,49 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   return ret;
 }
 
+// this can be run twice, one locally and one after collect is called
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GlobalAggregate(
+  JNIEnv *env, jobject obj, jlong eid,
+  jint index, jint num_part,
+  jint op_code, jbyteArray input_rows, jint num_rows,
+  jobject num_output_rows_obj) {
+  (void)obj;
+
+  jboolean if_copy;
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+  uint32_t actual_size = 0;
+
+  uint32_t output_rows_length = block_size_upper_bound(num_rows);
+  uint8_t *output_rows = (uint8_t *) malloc(output_rows_length);
+  uint32_t num_output_rows = 0;
+
+  sgx_check("Global aggregation",
+            ecall_global_aggregate(eid,
+                                   index, num_part,
+                                   op_code,
+                                   input_rows_ptr, input_rows_length,
+                                   num_rows,
+                                   output_rows, output_rows_length,
+                                   &actual_size, &num_output_rows));
+
+  jbyteArray ret = env->NewByteArray(actual_size);
+  env->SetByteArrayRegion(ret, 0, actual_size, (jbyte *) output_rows);
+
+  jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
+  jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
+  env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
+
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  free(output_rows);
+
+  return ret;
+
+}
+
+
 void print_bytes_(uint8_t *ptr, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     printf("%u", *(ptr + i));

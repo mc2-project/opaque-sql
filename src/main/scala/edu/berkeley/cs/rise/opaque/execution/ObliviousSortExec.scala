@@ -43,6 +43,8 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
   override def executeBlocked() = {
     import Opcode._
     val opcode = order match {
+      case Seq() =>
+        OP_NOSORT
       case Seq(SortOrder(Col(1, _), Ascending)) =>
         OP_SORT_COL1
       case Seq(SortOrder(Col(2, _), Ascending)) =>
@@ -50,7 +52,11 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
       case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL1_COL2
     }
-    ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    if (opcode != OP_NOSORT) {
+      ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    } else {
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    }
   }
 }
 

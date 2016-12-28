@@ -789,10 +789,13 @@ void ecall_column_sort(int index,
   int sort_op = get_sort_operation(op_code);
   switch (sort_op) {
   case SORT_SORT:
-	{
-      //printf("Num buffers is %u, num_rows is %u, total_num_rows is %u, column is %u\n", num_buffers, num_rows[0], total_num_rows, column);
-      //printf("input_rows is %p, buffer_list[0] is %p\n", input_rows, buffer_list[0]);
-      //printf("output_buffers: %p\n", output_buffers[0]);
+    {
+
+#ifdef DEBUG
+      printf("Num buffers is %u, num_rows is %u, total_num_rows is %u, column is %u\n", num_buffers, num_rows[0], total_num_rows, column);
+      printf("input_rows is %p, buffer_list[0] is %p\n", input_rows, buffer_list[0]);
+      printf("output_buffers: %p\n", output_buffers[0]);
+#endif
 
 	  if (round == 1) {
         external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
@@ -944,9 +947,47 @@ void ecall_column_sort_filter(int op_code,
 }
 
 
+void ecall_global_aggregate(int index, int num_part,
+                            int op_code,
+                            uint8_t *input_rows, uint32_t input_rows_length,
+                            uint32_t num_rows,
+                            uint8_t *output_rows, uint32_t output_rows_length,
+                            uint32_t *actual_size, uint32_t *num_output_rows) {
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, index, num_part);
+
+  switch (op_code) {
+  case OP_SUM_COL1_INTEGER:
+    non_oblivious_aggregate<Aggregator1<GroupBy<0>, Sum<1, uint32_t, uint64_t> > >(&verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
+    break;
+
+  case OP_SUM_COL3_INTEGER:
+    non_oblivious_aggregate<Aggregator1<GroupBy<0>, Sum<3, uint32_t, uint64_t> > >(&verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
+    break;
+
+  default:
+    printf("ecall_global_aggregate: Unknown opcode %d\n", op_code);
+    assert(false);
+  }
+
+  verify_set.verify();
+}
+
+
+
 void ecall_oblivious_swap(uint8_t *ptr1, uint8_t *ptr2, uint32_t size) {
   swap_memory(ptr1, ptr2, size, true);
 }
+
+
+
+
+/*** BEGIN ATTESTATION ***/
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
   return enclave_init_ra(b_pse, p_context);
@@ -971,3 +1012,5 @@ sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
 
   return put_secret_data(context, p_secret, secret_size, gcm_mac);
 }
+
+/*** END ATTESTATION ***/
