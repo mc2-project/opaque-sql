@@ -20,7 +20,7 @@ void project(uint8_t *project_list, size_t project_list_length,
     project_eval_list.emplace_back(new FlatbuffersExpressionEvaluator(*it));
   }
 
-  FlatbuffersRowReader r(input_rows, input_rows_length);
+  EncryptedBlockToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
   std::vector<const tuix::Field *> out_fields(project_eval_list.size());
