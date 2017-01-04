@@ -461,6 +461,8 @@ object Utils {
   }
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
+    // TODO: Max encrypted block size
+
     // 1. Serialize the rows as plaintext using tuix.Rows
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -485,52 +487,56 @@ object Utils {
     val (enclave, eid) = initEnclave()
     val ciphertext = enclave.Encrypt(eid, plaintext)
 
-    // 3. Serialize the encrypted rows into a tuix.EncryptedBlock
+    // 3. Serialize the encrypted rows into a tuix.EncryptedBlocks
     val builder2 = new FlatBufferBuilder
     builder2.finish(
-      tuix.EncryptedBlock.createEncryptedBlock(
+      tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
-        rows.size,
-        tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext))
-    )
+        tuix.EncryptedBlocks.createBlocksVector(
+          builder2,
+          Array(tuix.EncryptedBlock.createEncryptedBlock(
+            builder2,
+            rows.size,
+            tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext))))))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
-    // 4. Wrap the serialized tuix.EncryptedBlock in a Scala Block object
+    // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
     Block(encryptedBlockBytes, rows.size)
   }
 
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
-    // 4. Extract the serialized tuix.EncryptedBlock from the Scala Block object
+    // 4. Extract the serialized tuix.EncryptedBlocks from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
 
-    // 3. Deserialize the tuix.EncryptedBlock to get the encrypted rows
-    val encryptedBlock = tuix.EncryptedBlock.getRootAsEncryptedBlock(buf)
-    assert(encryptedBlock.numRows == block.numRows)
-    val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
-    val ciphertext = new Array[Byte](ciphertextBuf.remaining)
-    ciphertextBuf.get(ciphertext)
+    // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    (for (i <- 0 until encryptedBlocks.blocksLength) yield {
+      val encryptedBlock = encryptedBlocks.blocks(i)
+      val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+      val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+      ciphertextBuf.get(ciphertext)
 
-    // 2. Decrypt the row data
-    val (enclave, eid) = initEnclave()
-    val plaintext = enclave.Decrypt(eid, ciphertext)
+      // 2. Decrypt the row data
+      val (enclave, eid) = initEnclave()
+      val plaintext = enclave.Decrypt(eid, ciphertext)
 
-    // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
-    val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
-    assert(rows.rowsLength == block.numRows)
-    for (i <- 0 until rows.rowsLength) yield {
-      val row = rows.rows(i)
-      assert(!row.isDummy)
-      InternalRow.fromSeq(
-        for (j <- 0 until row.fieldValuesLength) yield {
-          val field: Any =
-            if (!row.fieldValues(j).isNull()) {
-              flatbuffersExtractFieldValue(row.fieldValues(j))
-            } else {
-              null
-            }
-          field
-        })
-    }
+      // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
+      val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
+      for (j <- 0 until rows.rowsLength) yield {
+        val row = rows.rows(j)
+        assert(!row.isDummy)
+        InternalRow.fromSeq(
+          for (k <- 0 until row.fieldValuesLength) yield {
+            val field: Any =
+              if (!row.fieldValues(k).isNull()) {
+                flatbuffersExtractFieldValue(row.fieldValues(k))
+              } else {
+                null
+              }
+            field
+          })
+      }
+    }).flatten
   }
 
   def treeFold[BaseType <: TreeNode[BaseType], B](

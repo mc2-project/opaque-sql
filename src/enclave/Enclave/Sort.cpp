@@ -106,35 +106,20 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // 1. Sort each EncryptedBlock individually by decrypting it, sorting within the enclave, and
   // re-encrypting to a different buffer.
 
-  // flatbuffers::Verifier v2(input_rows, input_rows_length);
-  // check(v2.VerifyBuffer<tuix::EncryptedBlocks>(nullptr),
-  //       "Corrupt EncryptedBlocks %p of length %d", input_rows, input_rows_length);
-  // auto encrypted_blocks = flatbuffers::GetRoot<tuix::EncryptedBlocks>(input_rows);
-
+  EncryptedBlocksToEncryptedBlockReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
-  // uint32_t i = 0;
-  // std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> runs;
-  // for (auto it = encrypted_blocks->blocks()->start();
-  //      it != encrypted_blocks->blocks()->end(); ++it, ++i) {
-  //   debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
+  uint32_t i = 0;
+  std::vector<uint32_t> runs;
+  for (auto it = r.begin(); it != r.end(); ++it, ++i) {
+    debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
 
-    // TODO: remove this
-    flatbuffers::Verifier v3(input_rows, input_rows_length);
-    check(v3.VerifyBuffer<tuix::EncryptedBlock>(nullptr),
-          "Corrupt EncryptedBlock %p of length %d", input_rows, input_rows_length);
-    auto encrypted_block = flatbuffers::GetRoot<tuix::EncryptedBlock>(input_rows);
-    sort_single_encrypted_block(w, encrypted_block, sort_eval);
-    w.close();
-    *output_rows = w.output_buffer();
-    *output_rows_length = w.output_size();
+    sort_single_encrypted_block(w, *it, sort_eval);
+    runs.push_back(i);
+  }
 
-  //   runs.push_back(sort_single_encrypted_block(b1, &(*it), sort_eval));
-  // }
-
-
-  // b1.Finish(tuix::CreateEncryptedBlocksDirect(b1, runs));
-  // *output_rows = b1.GetBufferPointer();
-  // *output_rows_length = b1.GetSize();
+  w.close();
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
 
   // TODO
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by

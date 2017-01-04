@@ -108,27 +108,27 @@ public:
       flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator block_begin,
       flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator block_end)
       : block_it(block_begin), block_end(block_end), row_it(nullptr, 0), row_end(nullptr, 0) {
-      if (block_it != block_end) {
-        init_row_iterator();
-      }
+      init_row_iterator();
     }
 
     iterator &operator++() {
+      assert(row_it != row_end);
+      ++row_it;
       if (row_it == row_end) {
         assert(block_it != block_end);
         ++block_it;
         init_row_iterator();
-      } else {
-        ++row_it;
       }
       return *this;
     }
 
     bool operator==(const iterator &other) const {
       bool iterators_on_same_block = block_it == other.block_it;
-      bool iterators_exhausted = block_it == block_end && other.block_it == other.block_end;
       bool iterators_on_same_row = row_it == other.row_it;
-      return iterators_on_same_block && (iterators_on_same_row || iterators_exhausted);
+      bool row_iterators_both_exhausted = row_it == row_end && other.row_it == other.row_end;
+      printf("same block %d, same row %d, both ex %d\n",
+             iterators_on_same_block, iterators_on_same_row, row_iterators_both_exhausted);
+      return iterators_on_same_block && (iterators_on_same_row || row_iterators_both_exhausted);
     }
 
     bool operator!=(const iterator &other) const {
@@ -136,19 +136,23 @@ public:
     }
 
     const tuix::Row *operator *() const {
+      assert(row_it != row_end);
       return *row_it;
     }
 
   private:
     void init_row_iterator() {
-      EncryptedBlockToRowReader r(*block_it);
-      row_it = r.begin();
-      row_end = r.end();
+      if (block_it != block_end) {
+        r.reset(new EncryptedBlockToRowReader(*block_it));
+        row_it = r->begin();
+        row_end = r->end();
+      }
     }
 
     flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator block_it;
     flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator block_end;
 
+    std::unique_ptr<EncryptedBlockToRowReader> r;
     flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator row_it;
     flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator row_end;
   };
@@ -188,12 +192,14 @@ public:
 class FlatbuffersRowWriter {
 public:
   FlatbuffersRowWriter()
-    : builder(), rows_vector(), untrusted_alloc() {
-  }
+    : builder(), rows_vector(), total_num_rows(0), untrusted_alloc(),
+      enc_block_builder(1024, &untrusted_alloc) {}
 
   /** Copy the given Row to the output. */
   void write(const tuix::Row *row) {
     rows_vector.push_back(flatbuffers_copy(row, builder));
+    total_num_rows++;
+    maybe_finish_block();
   }
 
   /** Copy the given Fields to the output. */
@@ -204,48 +210,66 @@ public:
       field_values[i] = flatbuffers_copy<tuix::Field>(row_fields[i], builder);
     }
     rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
+    total_num_rows++;
+    maybe_finish_block();
   }
 
   void close() {
+    if (rows_vector.size() > 0) {
+      finish_block();
+    }
+    enc_block_builder.Finish(
+      tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector));
+  }
+
+  uint8_t *output_buffer() {
+    uint8_t *buf = nullptr;
+    ocall_malloc(output_size(), &buf);
+    memcpy(buf, enc_block_builder.GetBufferPointer(), output_size());
+    return buf;
+  }
+
+  size_t output_size() {
+    return enc_block_builder.GetSize();
+  }
+
+  uint32_t output_num_rows() {
+    return total_num_rows;
+  }
+
+private:
+  void maybe_finish_block() {
+    if (builder.GetSize() >= MAX_BLOCK_SIZE) {
+      finish_block();
+    }
+  }
+
+  void finish_block() {
     builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
     size_t enc_rows_len = enc_size(builder.GetSize());
     uint8_t *enc_rows = nullptr;
     ocall_malloc(enc_rows_len, &enc_rows);
     encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows);
 
-    enc_block_builder.reset(
-      new flatbuffers::FlatBufferBuilder(enc_rows_len * 2, &untrusted_alloc));
-    enc_block_builder->Finish(
+    enc_block_vector.push_back(
       tuix::CreateEncryptedBlock(
-        *enc_block_builder,
+        enc_block_builder,
         rows_vector.size(),
-        enc_block_builder->CreateVector(enc_rows, enc_rows_len)));
+        enc_block_builder.CreateVector(enc_rows, enc_rows_len)));
 
     ocall_free(enc_rows);
+
+    rows_vector.clear();
   }
 
-  uint8_t *output_buffer() {
-    uint8_t *buf = nullptr;
-    ocall_malloc(output_size(), &buf);
-    memcpy(buf, enc_block_builder->GetBufferPointer(), output_size());
-    return buf;
-  }
-
-  size_t output_size() {
-    return enc_block_builder->GetSize();
-  }
-
-  uint32_t output_num_rows() {
-    return rows_vector.size();
-  }
-
-private:
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
+  uint32_t total_num_rows;
 
-  // For writing the resulting EncryptedBlock
+  // For writing the resulting EncryptedBlocks
   UntrustedMemoryAllocator untrusted_alloc;
-  std::unique_ptr<flatbuffers::FlatBufferBuilder> enc_block_builder;
+  flatbuffers::FlatBufferBuilder enc_block_builder;
+  std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;
 };
 
 void print(const tuix::Row *in);

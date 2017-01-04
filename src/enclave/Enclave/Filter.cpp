@@ -16,7 +16,7 @@ void filter(uint8_t *condition, size_t condition_length,
   const tuix::FilterExpr* condition_expr = flatbuffers::GetRoot<tuix::FilterExpr>(condition);
   FlatbuffersExpressionEvaluator condition_eval(condition_expr->condition());
 
-  EncryptedBlockToRowReader r(input_rows, input_rows_length);
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
   for (auto it = r.begin(); it != r.end(); ++it) {
