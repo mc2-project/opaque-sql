@@ -20,6 +20,8 @@ package edu.berkeley.cs.rise.opaque
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import scala.collection.mutable.ArrayBuilder
+
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
@@ -460,44 +462,68 @@ object Utils {
     }
   }
 
+  val MaxBlockSize = 1000
+
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
-    // TODO: Max encrypted block size
+    // For the encrypted blocks
+    val builder2 = new FlatBufferBuilder
+    var encryptedBlockOffsets = ArrayBuilder.make[Int]
 
     // 1. Serialize the rows as plaintext using tuix.Rows
-    val builder = new FlatBufferBuilder
-    builder.finish(
-      tuix.Rows.createRows(
-        builder,
-        tuix.Rows.createRowsVector(
+    var builder = new FlatBufferBuilder
+    println(s"Init builder, offset ${builder.offset()}")
+    var rowsOffsets = ArrayBuilder.make[Int]
+
+    def finishBlock(): Unit = {
+      val rowsOffsetsArray = rowsOffsets.result
+      builder.finish(
+        tuix.Rows.createRows(
           builder,
-          rows.map { row =>
-            tuix.Row.createRow(
-              builder,
-              tuix.Row.createFieldValuesVector(
-                builder,
-                row.toSeq(types).zip(types).zipWithIndex.map {
-                  case ((value, dataType), i) =>
-                    flatbuffersCreateField(builder, value, dataType, row.isNullAt(i))
-                }.toArray),
-              false)
-          }.toArray)))
-    val plaintext = builder.sizedByteArray()
+          tuix.Rows.createRowsVector(
+            builder,
+            rowsOffsetsArray)))
+      val plaintext = builder.sizedByteArray()
 
-    // 2. Encrypt the row data
-    val (enclave, eid) = initEnclave()
-    val ciphertext = enclave.Encrypt(eid, plaintext)
+      // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
+      val (enclave, eid) = initEnclave()
+      val ciphertext = enclave.Encrypt(eid, plaintext)
 
-    // 3. Serialize the encrypted rows into a tuix.EncryptedBlocks
-    val builder2 = new FlatBufferBuilder
+      encryptedBlockOffsets += tuix.EncryptedBlock.createEncryptedBlock(
+        builder2,
+        rowsOffsetsArray.size,
+        tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext))
+
+      builder = new FlatBufferBuilder
+      rowsOffsets = ArrayBuilder.make[Int]
+    }
+
+    for (row <- rows) {
+      rowsOffsets += tuix.Row.createRow(
+        builder,
+        tuix.Row.createFieldValuesVector(
+          builder,
+          row.toSeq(types).zip(types).zipWithIndex.map {
+            case ((value, dataType), i) =>
+              flatbuffersCreateField(builder, value, dataType, row.isNullAt(i))
+          }.toArray),
+        false)
+
+      println(s"Wrote a row, current builder offset ${builder.offset()} after ${row}")
+      if (builder.offset() > MaxBlockSize) {
+        finishBlock()
+      }
+    }
+    if (builder.offset() > 0) {
+      finishBlock()
+    }
+
+    // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
     builder2.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
         tuix.EncryptedBlocks.createBlocksVector(
           builder2,
-          Array(tuix.EncryptedBlock.createEncryptedBlock(
-            builder2,
-            rows.size,
-            tuix.EncryptedBlock.createEncRowsVector(builder2, ciphertext))))))
+          encryptedBlockOffsets.result)))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
