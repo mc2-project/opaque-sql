@@ -12,10 +12,10 @@ extern "C" {
     JNIEnv *, jobject, jlong);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
-    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
-    JNIEnv *, jobject, jlong, jint, jint, jbyteArray, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     JNIEnv *, jobject, jlong, jbyteArray);

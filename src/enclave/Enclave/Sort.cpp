@@ -79,10 +79,7 @@ void sort_single_encrypted_block(
   FlatbuffersSortOrderEvaluator &sort_eval) {
 
   FlatbuffersRowReader r(block);
-  std::vector<const tuix::Row *> sort_ptrs;
-  while (r.has_next()) {
-    sort_ptrs.push_back(r.next());
-  }
+  std::vector<const tuix::Row *> sort_ptrs(r.begin(), r.end());
 
   std::sort(
     sort_ptrs.begin(), sort_ptrs.end(),

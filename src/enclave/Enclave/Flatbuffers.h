@@ -35,6 +35,25 @@ template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder);
 
+class FlatbuffersEncryptedBlockReader {
+public:
+  FlatbuffersEncryptedBlockReader(uint8_t *buf, size_t len) {
+    flatbuffers::Verifier v1(buf, len);
+    check(v1.VerifyBuffer<tuix::EncryptedBlocks>(nullptr),
+          "Corrupt EncryptedBlocks %p of length %d\n", buf, len);
+    encrypted_blocks = flatbuffers::GetRoot<tuix::EncryptedBlocks>(buf);
+  }
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {
+    return encrypted_blocks->blocks()->begin();
+  }
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator end() {
+    return encrypted_blocks->blocks()->end();
+  }
+
+private:
+  const tuix::EncryptedBlocks *encrypted_blocks;
+};
+
 class FlatbuffersRowReader {
 public:
   FlatbuffersRowReader(uint8_t *buf, size_t len) {
@@ -49,19 +68,17 @@ public:
     init(encrypted_block);
   }
 
-  bool has_next() {
-    return rows_read < num_rows;
+  flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator begin() {
+    return rows->rows()->begin();
   }
 
-  const tuix::Row *next() {
-    return rows->rows()->Get(rows_read++);
+  flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator end() {
+    return rows->rows()->end();
   }
 
 private:
   void init(const tuix::EncryptedBlock *encrypted_block) {
-    rows_read = 0;
-
-    num_rows = encrypted_block->num_rows();
+    uint32_t num_rows = encrypted_block->num_rows();
 
     const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
     rows_buf.reset(new uint8_t[rows_len]);
@@ -80,8 +97,6 @@ private:
 
   std::unique_ptr<uint8_t> rows_buf;
   const tuix::Rows *rows;
-  uint32_t rows_read;
-  uint32_t num_rows;
 };
 
 class UntrustedMemoryAllocator : public flatbuffers::simple_allocator {

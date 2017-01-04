@@ -34,21 +34,15 @@ enclave {
    */
   trusted {
     public void ecall_project(
-      int index,
-      int num_part,
       [in, count=project_list_length] uint8_t *project_list, size_t project_list_length,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
-      uint32_t num_rows,
       [out] uint8_t **output_rows,
       [out] uint32_t *output_rows_length);
     public void ecall_filter(
-      int index,
-      int num_part,
       [in, count=condition_length] uint8_t *condition, size_t condition_length,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
-      uint32_t num_rows,
       [out] uint8_t **output_rows,
       [out] uint32_t *output_rows_length,
       [out] uint32_t *num_output_rows);

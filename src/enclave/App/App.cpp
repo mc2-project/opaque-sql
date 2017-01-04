@@ -689,11 +689,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sto
   sgx_check("StopEnclave", sgx_destroy_enclave(eid));
 }
 
-// read a chunk of buffer from the scala program
-
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
-  JNIEnv *env, jobject obj, jlong eid, jint index, jint num_part,
-  jbyteArray project_list, jbyteArray input_rows, jint num_rows) {
+  JNIEnv *env, jobject obj, jlong eid,
+  jbyteArray project_list, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -709,9 +707,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   sgx_check("Project",
             ecall_project(
-              eid, index, num_part,
+              eid,
               project_list_ptr, project_list_length,
-              input_rows_ptr, input_rows_length, num_rows,
+              input_rows_ptr, input_rows_length,
               &output_rows, &output_rows_length));
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -727,9 +725,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
   JNIEnv *env, jobject obj, jlong eid,
-  jint index, jint num_part,
   jbyteArray condition,
-  jbyteArray input_rows, jint num_rows,
+  jbyteArray input_rows,
   jobject num_output_rows_obj) {
   (void)obj;
 
@@ -747,12 +744,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   sgx_check("Filter",
             ecall_filter(
               eid,
-              index, num_part,
               condition_ptr, condition_length,
-              input_rows_ptr, input_rows_length, num_rows,
+              input_rows_ptr, input_rows_length,
               &output_rows, &output_rows_length, &num_output_rows));
-
-  printf("Got %d output rows taking %d bytes\n", num_output_rows, output_rows_length);
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
@@ -764,7 +758,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->ReleaseByteArrayElements(condition, (jbyte *) condition_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
-  printf("Wanted to free %p\n", output_rows);
   free(output_rows);
 
   return ret;

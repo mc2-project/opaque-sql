@@ -217,7 +217,7 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
     execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(eid, 0, 0, projectListSer, block.bytes, block.numRows)
+      val serResult = enclave.Project(eid, projectListSer, block.bytes)
       Block(serResult, block.numRows)
     }
   }
@@ -238,7 +238,7 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
-        eid, 0, 0, conditionSer, block.bytes, block.numRows, numOutputRows)
+        eid, conditionSer, block.bytes, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
   }
@@ -256,14 +256,14 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
     val rowsWithRandomIds = execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes, block.numRows)
+        eid, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes)
       Block(serResult, block.numRows)
     }
     
     ObliviousSortExec.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes, block.numRows)
+        eid, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes)
       Block(serResult, block.numRows)
     }
   }
@@ -402,7 +402,7 @@ case class ObliviousAggregateExec(
         val (enclave, eid) = Utils.initEnclave()
         val numOutputRows = new MutableInteger
         val filtered = enclave.Filter(
-          eid, 0, 0, ???, block.bytes, block.numRows, numOutputRows)
+          eid, ???, block.bytes, numOutputRows)
         Block(filtered, numOutputRows.value)
       }
       Utils.ensureCached(result)
@@ -565,13 +565,13 @@ case class ObliviousSortMergeJoinExec(
     val joinedWithRandomIds = joined.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes, block.numRows)
+        eid, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes)
       Block(serResult, block.numRows)
     }
     val permuted = ObliviousSortExec.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val serResult = enclave.Project(
-        eid, 0, 0, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes, block.numRows)
+        eid, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes)
       Block(serResult, block.numRows)
     }
 
@@ -579,7 +579,7 @@ case class ObliviousSortMergeJoinExec(
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
-        eid, 0, 0, ???, block.bytes, block.numRows, numOutputRows)
+        eid, ???, block.bytes, numOutputRows)
       Block(filtered, numOutputRows.value)
     }
     Utils.ensureCached(nonDummy)

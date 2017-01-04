@@ -88,37 +88,21 @@ void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **
   verify_set.verify();
 }
 
-void ecall_project(int index, int num_part,
-                   uint8_t *condition, size_t condition_length,
-                   uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+void ecall_project(uint8_t *condition, size_t condition_length,
+                   uint8_t *input_rows, uint32_t input_rows_length,
                    uint8_t **output_rows, uint32_t *output_rows_length) {
-  (void)index;
-  (void)num_part;
-
-  Verify verify_set(0, 1, 0);
-
-  project(condition, condition_length, &verify_set,
-          input_rows, input_rows_length, num_rows,
+  project(condition, condition_length,
+          input_rows, input_rows_length,
           output_rows, output_rows_length);
-
-  verify_set.verify();
 }
 
-void ecall_filter(int index, int num_part,
-                  uint8_t *condition, size_t condition_length,
-                  uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
+void ecall_filter(uint8_t *condition, size_t condition_length,
+                  uint8_t *input_rows, uint32_t input_rows_length,
                   uint8_t **output_rows, uint32_t *output_rows_length,
                   uint32_t *num_output_rows) {
-  (void)index;
-  (void)num_part;
-
-  Verify verify_set(0, 1, 0);
-
-  filter(condition, condition_length, &verify_set,
-         input_rows, input_rows_length, num_rows,
+  filter(condition, condition_length,
+         input_rows, input_rows_length,
          output_rows, output_rows_length, num_output_rows);
-
-  verify_set.verify();
 }
 
 /**** BEGIN Aggregation ****/
