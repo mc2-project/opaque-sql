@@ -163,6 +163,21 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
 
 }
 
+class FlatbuffersSortOrderEvaluator {
+public:
+  FlatbuffersSortOrderEvaluator(const tuix::SortExpr *sort_expr) : sort_expr(sort_expr) {}
+
+  bool less_than(const tuix::Row *row1, const tuix::Row *row2) const {
+    // TODO
+    (void)row1;
+    (void)row2;
+    return true;
+  }
+
+private:
+  const tuix::SortExpr *sort_expr;
+};
+
 class FlatbuffersExpressionEvaluator {
 public:
   FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}

@@ -1464,54 +1464,38 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
-    JNIEnv *env,
-    jobject obj,
-    jlong eid,
-    jint index,
-    jint num_part,
-    jint op_code,
-    jbyteArray input,
-    jint num_items) {
+  JNIEnv *env,
+  jobject obj,
+  jlong eid,
+  jint index,
+  jint num_part,
+  jbyteArray sort_order,
+  jbyteArray input_rows) {
+
   (void)obj;
 
-  if (num_items == 0) {
-    jbyteArray ret = env->NewByteArray(0);
-    return ret;
-  }
+  jboolean if_copy;
 
-  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
+  size_t sort_order_length = static_cast<size_t>(env->GetArrayLength(sort_order));
+  uint8_t *sort_order_ptr = reinterpret_cast<uint8_t *>(env->GetByteArrayElements(sort_order, &if_copy));
 
-  uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  size_t input_rows_length = static_cast<size_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(env->GetByteArrayElements(input_rows, &if_copy));
 
-  for (uint32_t i = 0; i < input_len; i++) {
-    input_copy[i] = *(ptr + i);
-  }
-
-  std::vector<uint8_t *> buffer_list;
-  std::vector<uint32_t> num_rows;
-  uint32_t row_upper_bound = 0;
-  split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
   sgx_check("External non-oblivious sort",
             ecall_external_sort(eid,
                                 index, num_part,
-								op_code,
-                                buffer_list.size() - 1,
-								buffer_list.data(),
-                                num_rows.data(),
-								row_upper_bound,
-                                scratch));
+                                sort_order_ptr, sort_order_length,
+                                input_rows_ptr, input_rows_length,
+                                &output_rows, &output_rows_length));
 
-  jbyteArray ret = env->NewByteArray(input_len);
-  env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
+  jbyteArray ret = env->NewByteArray(output_rows_length);
+  env->SetByteArrayRegion(ret, 0, output_rows_length, reinterpret_cast<jbyte *>(output_rows));
 
-  env->ReleaseByteArrayElements(input, ptr, 0);
-
-  free(input_copy);
-  free(scratch);
+  env->ReleaseByteArrayElements(input_rows, reinterpret_cast<jbyte *>(input_rows_ptr), 0);
 
   return ret;
 }

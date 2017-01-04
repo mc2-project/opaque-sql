@@ -207,16 +207,12 @@ trait ColumnNumberMatcher extends Serializable {
 case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
-  private object Col extends ColumnNumberMatcher {
-    override def input: Seq[Attribute] = child.output
-  }
-
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
-    RA.initRA(execRDD)
+    // RA.initRA(execRDD)
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
 
     execRDD.map { block =>
@@ -230,16 +226,12 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
 case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
-  private object Col extends ColumnNumberMatcher {
-    override def input: Seq[Attribute] = child.output
-  }
-
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
-    RA.initRA(execRDD)
+    // RA.initRA(execRDD)
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     println(s"conditionSer = ${conditionSer.size} bytes")
     return execRDD.map { block =>
@@ -773,7 +765,7 @@ case class EncryptedSortMergeJoinExec(
     time("join - preprocess") { processed.count }
 
     val sorted = time("join - sort") {
-      val result = EncryptedSortExec.sort(processed, joinOpcode)
+      val result = EncryptedSortExec.sort(processed, ???)
       Utils.ensureCached(result)
       result.count
       result

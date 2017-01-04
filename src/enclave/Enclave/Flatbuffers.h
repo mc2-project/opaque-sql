@@ -37,12 +37,30 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
 
 class FlatbuffersRowReader {
 public:
-  FlatbuffersRowReader(uint8_t *buf, size_t len)
-    : rows_read(0) {
+  FlatbuffersRowReader(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v1(buf, len);
     check(v1.VerifyBuffer<tuix::EncryptedBlock>(nullptr),
           "Corrupt EncryptedBlock %p of length %d\n", buf, len);
     auto encrypted_block = flatbuffers::GetRoot<tuix::EncryptedBlock>(buf);
+    init(encrypted_block);
+  }
+
+  FlatbuffersRowReader(const tuix::EncryptedBlock *encrypted_block) {
+    init(encrypted_block);
+  }
+
+  bool has_next() {
+    return rows_read < num_rows;
+  }
+
+  const tuix::Row *next() {
+    return rows->rows()->Get(rows_read++);
+  }
+
+private:
+  void init(const tuix::EncryptedBlock *encrypted_block) {
+    rows_read = 0;
+
     num_rows = encrypted_block->num_rows();
 
     const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
@@ -60,11 +78,6 @@ public:
           num_rows == rows->rows()->size());
   }
 
-  const tuix::Row *next() {
-    return rows->rows()->Get(rows_read++);
-  }
-
-private:
   std::unique_ptr<uint8_t> rows_buf;
   const tuix::Rows *rows;
   uint32_t rows_read;

@@ -88,9 +88,8 @@ class SGXEnclave extends java.io.Serializable {
     enclave_id: Long,
     index: Int,
     numPart: Int,
-    op_code: Int,
-    input: Array[Byte],
-    num_items: Int
+    sort_order: Array[Byte],
+    input: Array[Byte]
   ): Array[Byte]
 
   @native def AggregateStep1(

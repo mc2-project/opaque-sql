@@ -553,34 +553,16 @@ void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
 }
 
 
-void ecall_external_sort(int index,
-                         int num_part,
-                         int op_code,
-                         uint32_t num_buffers,
-                         uint8_t **buffer_list,
-                         uint32_t *num_rows,
-                         uint32_t row_upper_bound,
-                         uint8_t *scratch) {
+void ecall_external_sort(int index, int num_part,
+                         uint8_t *sort_order, size_t sort_order_length,
+                         uint8_t *input_rows, size_t input_rows_length,
+                         uint8_t **output_rows, size_t *output_rows_length) {
   (void)index;
   (void)num_part;
-  Verify verify_set(op_code, 1, 0);
-  
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-    external_sort<NewRecord>(op_code, &verify_set,
-                             num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
-    break;
-  case SORT_JOIN:
-    external_sort<NewJoinRecord>(op_code, &verify_set,
-                                 num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
-    break;
-  default:
-    printf("ecall_external_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);
-    assert(false);
-  }
 
-  verify_set.verify();
+  external_sort(sort_order, sort_order_length,
+                input_rows, input_rows_length,
+                output_rows, output_rows_length);
 }
 
 void ecall_sample(int index, int num_part,

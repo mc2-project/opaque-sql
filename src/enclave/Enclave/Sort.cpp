@@ -4,6 +4,8 @@
 #include <memory>
 #include <queue>
 
+#include "ExpressionEvaluation.h"
+
 template<typename RecordType>
 class MergeItem {
  public:
@@ -71,50 +73,97 @@ void external_merge(int op_code,
   }
 }
 
-template<typename RecordType>
-void external_sort(int op_code,
-                   Verify *verify_set,
-                   uint32_t num_buffers,
-                   uint8_t **buffer_list,
-                   uint32_t *num_rows,
-                   uint32_t row_upper_bound,
-                   uint8_t *scratch) {
+void sort_single_encrypted_block(
+  FlatbuffersRowWriter &w,
+  const tuix::EncryptedBlock *block,
+  FlatbuffersSortOrderEvaluator &sort_eval) {
+
+  FlatbuffersRowReader r(block);
+  std::vector<const tuix::Row *> sort_ptrs;
+  while (r.has_next()) {
+    sort_ptrs.push_back(r.next());
+  }
+
+  std::sort(
+    sort_ptrs.begin(), sort_ptrs.end(),
+    [sort_eval](const tuix::Row *a,
+                const tuix::Row *b) {
+      return sort_eval.less_than(a, b);
+    });
+
+  for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
+    w.write(*it);
+  }
+}
+
+void external_sort(uint8_t *sort_order, size_t sort_order_length,
+                   uint8_t *input_rows, size_t input_rows_length,
+                   uint8_t **output_rows, size_t *output_rows_length) {
+
+  flatbuffers::Verifier v(sort_order, sort_order_length);
+  check(v.VerifyBuffer<tuix::SortExpr>(nullptr),
+        "Corrupt SortExpr %p of length %d\n", sort_order, sort_order_length);
+
+  FlatbuffersSortOrderEvaluator sort_eval(flatbuffers::GetRoot<tuix::SortExpr>(sort_order));
+
+  // 1. Sort each EncryptedBlock individually by decrypting it, sorting within the enclave, and
+  // re-encrypting to a different buffer.
+
+  // flatbuffers::Verifier v2(input_rows, input_rows_length);
+  // check(v2.VerifyBuffer<tuix::EncryptedBlocks>(nullptr),
+  //       "Corrupt EncryptedBlocks %p of length %d", input_rows, input_rows_length);
+  // auto encrypted_blocks = flatbuffers::GetRoot<tuix::EncryptedBlocks>(input_rows);
+
+  FlatbuffersRowWriter w;
+  // uint32_t i = 0;
+  // std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> runs;
+  // for (auto it = encrypted_blocks->blocks()->start();
+  //      it != encrypted_blocks->blocks()->end(); ++it, ++i) {
+  //   debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
+
+    // TODO: remove this
+    flatbuffers::Verifier v3(input_rows, input_rows_length);
+    check(v3.VerifyBuffer<tuix::EncryptedBlock>(nullptr),
+          "Corrupt EncryptedBlock %p of length %d", input_rows, input_rows_length);
+    auto encrypted_block = flatbuffers::GetRoot<tuix::EncryptedBlock>(input_rows);
+    sort_single_encrypted_block(w, encrypted_block, sort_eval);
+    w.close();
+    *output_rows = w.output_buffer();
+    *output_rows_length = w.output_size();
+
+  //   runs.push_back(sort_single_encrypted_block(b1, &(*it), sort_eval));
+  // }
+
+
+  // b1.Finish(tuix::CreateEncryptedBlocksDirect(b1, runs));
+  // *output_rows = b1.GetBufferPointer();
+  // *output_rows_length = b1.GetSize();
+
+  // TODO
+  // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
+  // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
+  // queue, and re-encrypting to a different buffer.
+
+  // const uint32_t B = 2;
 
   // Maximum number of rows we will need to store in memory at a time: the contents of the largest
   // buffer
-  
-  uint32_t max_num_rows = 0;
-  for (uint32_t i = 0; i < num_buffers; i++) {
-    if (max_num_rows < num_rows[i]) {
-      max_num_rows = num_rows[i];
-    }
-  }
-  uint32_t max_list_length = std::max(max_num_rows, MAX_NUM_STREAMS);
 
-  // Actual record data, in arbitrary and unchanging order
-  RecordType *data = (RecordType *) malloc(max_list_length * sizeof(RecordType));
-  for (uint32_t i = 0; i < max_list_length; i++) {
-    new(&data[i]) RecordType(row_upper_bound);
-  }
+  // uint32_t max_rows_per_block = 0;
+  // for (uint32_t i = 0; i < num_buffers; i++) {
+  //   if (max_num_rows < num_rows[i]) {
+  //     max_num_rows = num_rows[i];
+  //   }
+  // }
+  // uint32_t max_list_length = std::max(max_num_rows, B);
 
   // Pointers to the record data. Only the pointers will be sorted, not the records themselves
-  SortPointer<RecordType> *sort_ptrs = new SortPointer<RecordType>[max_list_length];
-  for (uint32_t i = 0; i < max_list_length; i++) {
-    sort_ptrs[i].init(&data[i]);
-  }
+  // std::vector<FlatbuffersSortPointer> sort_ptrs(MAX_ROWS_PER_ENCRYPTEDBLOCK);
 
-  uint32_t num_comparisons = 0, num_deep_comparisons = 0;
-
-  // Sort each buffer individually
-  for (uint32_t i = 0; i < num_buffers; i++) {
-    debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
-    sort_single_buffer(op_code, verify_set,
-                       buffer_list[i], buffer_list[i + 1], num_rows[i], sort_ptrs, max_list_length,
-                       row_upper_bound, &num_comparisons, &num_deep_comparisons);
-  }
 
   // Each buffer now forms a sorted run. Keep a pointer to the beginning of each run, plus a
   // sentinel pointer to the end of the last run
+  /*
   std::vector<uint8_t *> runs(buffer_list, buffer_list + num_buffers + 1);
 
   // Merge sorted runs, merging up to MAX_NUM_STREAMS runs at a time
@@ -147,6 +196,7 @@ void external_sort(int op_code,
     data[i].~RecordType();
   }
   free(data);
+  */
 }
 
 template<typename RecordType>
@@ -215,7 +265,10 @@ void find_range_bounds(int op_code,
                        uint8_t *scratch) {
 
   // Sort the input rows
-  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  check(false, "not implemented\n");
+  (void)op_code;
+  (void)scratch;
+  //external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
 
   // Split them into one range per partition
   uint32_t total_num_rows = 0;
@@ -259,7 +312,9 @@ void partition_for_sort(int op_code,
                         uint8_t *scratch) {
 
   // Sort the input rows
-  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  check(false, "not implemented\n");
+  (void)scratch;
+  // external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
 
   uint32_t total_num_rows = 0;
   for (uint32_t i = 0; i < num_buffers; i++) {
@@ -312,24 +367,6 @@ void partition_for_sort(int op_code,
   // Write the sentinel pointer to the end of the last range
   output_partition_ptrs[num_partitions] = output + w.bytes_written();
 }
-
-template void external_sort<NewRecord>(
-  int op_code,
-  Verify *verify_set,
-  uint32_t num_buffers,
-  uint8_t **buffer_list,
-  uint32_t *num_rows,
-  uint32_t row_upper_bound,
-  uint8_t *scratch);
-
-template void external_sort<NewJoinRecord>(
-  int op_code,
-  Verify *verify_set,
-  uint32_t num_buffers,
-  uint8_t **buffer_list,
-  uint32_t *num_rows,
-  uint32_t row_upper_bound,
-  uint8_t *scratch);
 
 template void sample<NewRecord>(
   Verify *verify_set,

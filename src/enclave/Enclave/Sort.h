@@ -33,15 +33,9 @@
  * The scratch memory must be at least as big as all the buffers combined, and it is intended to be
  * allocated outside of enclave memory.
  */
-template<typename RecordType>
-void external_sort(int op_code,
-                   Verify *verify_set,
-                   uint32_t num_buffers,
-                   uint8_t **buffer_list,
-                   uint32_t *num_rows,
-                   uint32_t row_upper_bound,
-                   uint8_t *scratch);
-
+void external_sort(uint8_t *sort_order, size_t sort_order_length,
+                   uint8_t *input_rows, size_t input_rows_length,
+                   uint8_t **output_rows, size_t *output_rows_length);
 /**
  * For distributed sorting, sample rows from a partition of data so they can be collected to a
  * single machine.

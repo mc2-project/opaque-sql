@@ -151,12 +151,9 @@ enclave {
 
     public void ecall_external_sort(
       int index, int num_part,
-      int op_code,
-      uint32_t num_buffers,
-      [user_check] uint8_t **buffer_list,
-      [user_check] uint32_t *num_rows,
-      uint32_t row_upper_bound,
-      [user_check] uint8_t *scratch);
+      [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 																  
     public void ecall_sample(
       int index, int num_part,
