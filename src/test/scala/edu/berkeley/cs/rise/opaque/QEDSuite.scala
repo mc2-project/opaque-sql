@@ -85,7 +85,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
       .toDF("a", "b").encrypted
       .sort($"a")
     df.explain(true)
-    df.show
+    df.show(50)
   }
 
   // test("encAggregate - final run split across multiple partitions") {

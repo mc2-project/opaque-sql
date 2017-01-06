@@ -6,91 +6,69 @@
 
 #include "ExpressionEvaluation.h"
 
-template<typename RecordType>
 class MergeItem {
  public:
-  SortPointer<RecordType> v;
-  uint32_t reader_idx;
+  const tuix::Row *v;
+  uint32_t run_idx;
 };
 
-template<typename RecordType>
-void external_merge(int op_code,
-                    Verify *verify_set,
-                    std::vector<uint8_t *> &runs,
-                    uint32_t run_start,
-                    uint32_t num_runs,
-                    SortPointer<RecordType> *sort_ptrs,
-                    uint32_t sort_ptrs_len,
-                    uint32_t row_upper_bound,
-                    uint8_t *scratch,
-                    uint32_t *num_comparisons,
-                    uint32_t *num_deep_comparisons) {
+flatbuffers::Offset<tuix::EncryptedBlocks> external_merge(
+  SortedRunsReader &r,
+  uint32_t run_start,
+  uint32_t num_runs,
+  FlatbuffersRowWriter &w,
+  FlatbuffersSortOrderEvaluator &sort_eval) {
 
-  check(sort_ptrs_len >= num_runs,
-        "external_merge: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_runs);
-
-  std::vector<StreamRowReader *> readers;
-  for (uint32_t i = 0; i < num_runs; i++) {
-    readers.push_back(new StreamRowReader(runs[run_start + i], runs[run_start + i + 1]));
-  }
-
-  auto compare = [op_code, num_comparisons, num_deep_comparisons](const MergeItem<RecordType> &a,
-                                                                  const MergeItem<RecordType> &b) {
-    (*num_comparisons)++;
-    return b.v.less_than(&a.v, op_code, num_deep_comparisons);
+  // Maintain a priority queue with one row per run
+  auto compare = [sort_eval](const MergeItem &a, const MergeItem &b) {
+    return sort_eval.less_than(a.v, b.v);
   };
-  std::priority_queue<MergeItem<RecordType>, std::vector<MergeItem<RecordType>>, decltype(compare)>
+  std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)>
     queue(compare);
-  for (uint32_t i = 0; i < num_runs; i++) {
-    MergeItem<RecordType> item;
-    item.v = sort_ptrs[i];
-    readers[i]->read(&item.v, op_code);
-    item.reader_idx = i;
+
+  // Initialize the priority queue with the first row from each run
+  for (uint32_t i = run_start; i < run_start + num_runs; i++) {
+    debug("external_merge: Read first row from run %d\n", i);
+    MergeItem item;
+    item.v = r.next_from_run(i);
+    item.run_idx = i;
     queue.push(item);
   }
 
-  // Sort the runs into scratch
-  RowWriter w(scratch, row_upper_bound);
-  w.set_self_task_id(verify_set->get_self_task_id());
+  // Merge the runs using the priority queue
   while (!queue.empty()) {
-    MergeItem<RecordType> item = queue.top();
+    MergeItem item = queue.top();
     queue.pop();
-    w.write(&item.v);
+    w.write(item.v);
 
     // Read another row from the same run that this one came from
-    if (readers[item.reader_idx]->has_next()) {
-      readers[item.reader_idx]->read(&item.v, op_code);
+    if (r.run_has_next(item.run_idx)) {
+      item.v = r.next_from_run(item.run_idx);
       queue.push(item);
     }
   }
-  w.close();
-
-  // Overwrite the runs with scratch, merging them into one big run
-  memcpy(runs[run_start], scratch, w.bytes_written());
-
-  for (uint32_t i = 0; i < num_runs; i++) {
-    delete readers[i];
-  }
+  return w.write_encrypted_blocks();
 }
 
-void sort_single_encrypted_block(
+flatbuffers::Offset<tuix::EncryptedBlocks> sort_single_encrypted_block(
   FlatbuffersRowWriter &w,
   const tuix::EncryptedBlock *block,
   FlatbuffersSortOrderEvaluator &sort_eval) {
 
-  EncryptedBlockToRowReader r(block);
+  EncryptedBlockToRowReader r;
+  r.reset(block);
   std::vector<const tuix::Row *> sort_ptrs(r.begin(), r.end());
 
   std::sort(
     sort_ptrs.begin(), sort_ptrs.end(),
-    [sort_eval](const tuix::Row *a,
-                const tuix::Row *b) {
+    [sort_eval](const tuix::Row *a, const tuix::Row *b) {
       return sort_eval.less_than(a, b);
     });
 
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.write(*it);
   }
+  return w.write_encrypted_blocks();
 }
 
 void external_sort(uint8_t *sort_order, size_t sort_order_length,
@@ -105,80 +83,47 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
 
   // 1. Sort each EncryptedBlock individually by decrypting it, sorting within the enclave, and
   // re-encrypting to a different buffer.
-
-  EncryptedBlocksToEncryptedBlockReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
-  uint32_t i = 0;
-  std::vector<uint32_t> runs;
-  for (auto it = r.begin(); it != r.end(); ++it, ++i) {
-    debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
-
-    sort_single_encrypted_block(w, *it, sort_eval);
-    runs.push_back(i);
+  {
+    EncryptedBlocksToEncryptedBlockReader r(input_rows, input_rows_length);
+    std::vector<flatbuffers::Offset<tuix::EncryptedBlocks>> runs;
+    uint32_t i = 0;
+    for (auto it = r.begin(); it != r.end(); ++it, ++i) {
+      debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
+      runs.push_back(sort_single_encrypted_block(w, *it, sort_eval));
+    }
+    w.finish(w.write_sorted_runs(runs));
   }
 
-  w.close();
-  *output_rows = w.output_buffer();
-  *output_rows_length = w.output_size();
-
-  // TODO
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
   // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
   // queue, and re-encrypting to a different buffer.
+  SortedRunsReader r(w.output_buffer(), w.output_size());
+  while (r.num_runs() > 1) {
+    debug("external_sort: Merging %d runs, up to %d at a time\n",
+         r.num_runs(), MAX_NUM_STREAMS);
 
-  // const uint32_t B = 2;
-
-  // Maximum number of rows we will need to store in memory at a time: the contents of the largest
-  // buffer
-
-  // uint32_t max_rows_per_block = 0;
-  // for (uint32_t i = 0; i < num_buffers; i++) {
-  //   if (max_num_rows < num_rows[i]) {
-  //     max_num_rows = num_rows[i];
-  //   }
-  // }
-  // uint32_t max_list_length = std::max(max_num_rows, B);
-
-  // Pointers to the record data. Only the pointers will be sorted, not the records themselves
-  // std::vector<FlatbuffersSortPointer> sort_ptrs(MAX_ROWS_PER_ENCRYPTEDBLOCK);
-
-
-  // Each buffer now forms a sorted run. Keep a pointer to the beginning of each run, plus a
-  // sentinel pointer to the end of the last run
-  /*
-  std::vector<uint8_t *> runs(buffer_list, buffer_list + num_buffers + 1);
-
-  // Merge sorted runs, merging up to MAX_NUM_STREAMS runs at a time
-  while (runs.size() - 1 > 1) {
-    perf("external_sort: Merging %d runs, up to %d at a time\n",
-         runs.size() - 1, MAX_NUM_STREAMS);
-
-    std::vector<uint8_t *> new_runs;
-    for (uint32_t run_start = 0; run_start < runs.size() - 1; run_start += MAX_NUM_STREAMS) {
+    w.clear();
+    std::vector<flatbuffers::Offset<tuix::EncryptedBlocks>> runs;
+    for (uint32_t run_start = 0; run_start < r.num_runs(); run_start += MAX_NUM_STREAMS) {
       uint32_t num_runs =
-        std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(runs.size() - 1) - run_start);
+        std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
       debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
-      external_merge<RecordType>(op_code, verify_set,
-                                 runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
-                                 &num_comparisons, &num_deep_comparisons);
-
-      new_runs.push_back(runs[run_start]);
+      runs.push_back(external_merge(r, run_start, num_runs, w, sort_eval));
     }
-    new_runs.push_back(runs[runs.size() - 1]); // copy over the sentinel pointer
 
-    runs = new_runs;
+    if (runs.size() > 1) {
+      w.finish(w.write_sorted_runs(runs));
+      r.reset(w.output_buffer(), w.output_size());
+    } else {
+      // Done merging. Return the single remaining sorted run.
+      w.finish(runs[0]);
+      *output_rows = w.output_buffer();
+      *output_rows_length = w.output_size();
+      return;
+    }
   }
-
-  perf("external_sort: %d comparisons, %d deep comparisons\n",
-       num_comparisons, num_deep_comparisons);
-
-  delete[] sort_ptrs;
-  for (uint32_t i = 0; i < max_list_length; i++) {
-    data[i].~RecordType();
-  }
-  free(data);
-  */
 }
 
 template<typename RecordType>

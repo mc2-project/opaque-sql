@@ -12,3 +12,7 @@ table EncryptedBlock {
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
 }
+
+table SortedRuns {
+    runs:[EncryptedBlocks];
+}

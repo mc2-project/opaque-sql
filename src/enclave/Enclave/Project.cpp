@@ -25,15 +25,15 @@ void project(uint8_t *project_list, size_t project_list_length,
 
   std::vector<const tuix::Field *> out_fields(project_eval_list.size());
 
-  for (auto it = r.begin(); it != r.end(); ++it) {
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
     for (uint32_t j = 0; j < project_eval_list.size(); j++) {
-      out_fields[j] = project_eval_list[j]->eval(*it);
+      out_fields[j] = project_eval_list[j]->eval(row);
     }
-
     w.write(out_fields);
   }
 
-  w.close();
+  w.finish(w.write_encrypted_blocks());
   *output_rows = w.output_buffer();
   *output_rows_length = w.output_size();
 }

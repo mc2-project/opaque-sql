@@ -19,8 +19,10 @@ void filter(uint8_t *condition, size_t condition_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  for (auto it = r.begin(); it != r.end(); ++it) {
-    const tuix::Field *condition_result = condition_eval.eval(*it);
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+    print(row);
+    const tuix::Field *condition_result = condition_eval.eval(row);
     check(condition_result->value_type() == tuix::FieldUnion_BooleanField,
           "Filter expression returned %s instead of BooleanField\n",
           tuix::EnumNameFieldUnion(condition_result->value_type()));
@@ -29,11 +31,11 @@ void filter(uint8_t *condition, size_t condition_length,
 
     bool keep_row = static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     if (keep_row) {
-      w.write(*it);
+      w.write(row);
     }
   }
 
-  w.close();
+  w.finish(w.write_encrypted_blocks());
   *output_rows = w.output_buffer();
   *output_rows_length = w.output_size();
   *num_output_rows = w.output_num_rows();
