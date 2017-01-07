@@ -324,5 +324,6 @@ private:
 };
 
 void print(const tuix::Row *in);
+void print(const tuix::Field *field);
 
 #endif

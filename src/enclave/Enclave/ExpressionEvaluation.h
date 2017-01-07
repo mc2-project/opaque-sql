@@ -163,21 +163,6 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
 
 }
 
-class FlatbuffersSortOrderEvaluator {
-public:
-  FlatbuffersSortOrderEvaluator(const tuix::SortExpr *sort_expr) : sort_expr(sort_expr) {}
-
-  bool less_than(const tuix::Row *row1, const tuix::Row *row2) const {
-    // TODO
-    (void)row1;
-    (void)row2;
-    return true;
-  }
-
-private:
-  const tuix::SortExpr *sort_expr;
-};
-
 class FlatbuffersExpressionEvaluator {
 public:
   FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}
@@ -242,6 +227,15 @@ private:
     }
 
     // Predicates
+    case tuix::ExprUnion_LessThan:
+    {
+      auto lt = static_cast<const tuix::LessThan *>(expr->expr());
+      return eval_binary_comparison<tuix::LessThan, std::less>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, lt->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, lt->right())));
+    }
+
     case tuix::ExprUnion_LessThanOrEqual:
     {
       auto le = static_cast<const tuix::LessThanOrEqual *>(expr->expr());
@@ -327,6 +321,82 @@ private:
 
   flatbuffers::FlatBufferBuilder builder;
   const tuix::Expr *expr;
+};
+
+class FlatbuffersSortOrderEvaluator {
+public:
+  FlatbuffersSortOrderEvaluator(const tuix::SortExpr *sort_expr)
+    : sort_expr(sort_expr), builder() {
+    for (auto sort_order_it = sort_expr->sort_order()->begin();
+         sort_order_it != sort_expr->sort_order()->end(); ++sort_order_it) {
+      sort_order_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(sort_order_it->child())));
+    }
+  }
+
+  bool less_than(const tuix::Row *row1, const tuix::Row *row2) {
+    builder.Clear();
+    const tuix::Row *a, *b;
+    printf("Comparing:\n");
+    print(row1);
+    print(row2);
+    for (uint32_t i = 0; i < sort_order_evaluators.size(); i++) {
+      printf("Comparing on sort order %d\n", i);
+      switch (sort_expr->sort_order()->Get(i)->direction()) {
+      case tuix::SortDirection_Ascending:
+        a = row1;
+        b = row2;
+        break;
+      case tuix::SortDirection_Descending:
+        a = row2;
+        b = row1;
+        break;
+      }
+
+      const tuix::Field *a_eval_tmp = sort_order_evaluators[i]->eval(a);
+      const tuix::Field *a_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(a_eval_tmp, builder));
+      const tuix::Field *b_eval_tmp = sort_order_evaluators[i]->eval(b);
+      const tuix::Field *b_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(b_eval_tmp, builder));
+      printf("Field from a=");
+      print(a_eval);
+      printf(", field from b=");
+      print(b_eval);
+      printf("\n");
+
+      bool a_less_than_b =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::LessThan, std::less>(
+              builder, a_eval, b_eval))
+          ->value())->value();
+      bool b_less_than_a =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::LessThan, std::less>(
+              builder, b_eval, a_eval))
+          ->value())->value();
+
+      if (a_less_than_b) {
+        printf("a less than b\n");
+        return true;
+      } else if (b_less_than_a) {
+        printf("a greater than b\n");
+        return false;
+      }
+    }
+    printf("a equal to b\n");
+    return false;
+  }
+
+private:
+  const tuix::SortExpr *sort_expr;
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> sort_order_evaluators;
 };
 
 #endif

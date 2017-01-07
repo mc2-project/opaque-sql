@@ -20,8 +20,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> external_merge(
   FlatbuffersSortOrderEvaluator &sort_eval) {
 
   // Maintain a priority queue with one row per run
-  auto compare = [sort_eval](const MergeItem &a, const MergeItem &b) {
-    return sort_eval.less_than(a.v, b.v);
+  auto compare = [&sort_eval](const MergeItem &a, const MergeItem &b) {
+    return sort_eval.less_than(b.v, a.v);
   };
   std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)>
     queue(compare);
@@ -39,6 +39,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> external_merge(
   while (!queue.empty()) {
     MergeItem item = queue.top();
     queue.pop();
+    printf("merge: write row ");
+    print(item.v);
     w.write(item.v);
 
     // Read another row from the same run that this one came from
@@ -61,7 +63,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> sort_single_encrypted_block(
 
   std::sort(
     sort_ptrs.begin(), sort_ptrs.end(),
-    [sort_eval](const tuix::Row *a, const tuix::Row *b) {
+    [&sort_eval](const tuix::Row *a, const tuix::Row *b) {
       return sort_eval.less_than(a, b);
     });
 

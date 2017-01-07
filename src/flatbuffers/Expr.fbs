@@ -6,9 +6,10 @@ include "Rows.fbs";
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
 union ExprUnion {
+    LessThan,
+    LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
-    LessThanOrEqual,
     Contains,
     Col,
     Literal,
@@ -56,6 +57,11 @@ table And {
 }
 
 table Or {
+    left:Expr;
+    right:Expr;
+}
+
+table LessThan {
     left:Expr;
     right:Expr;
 }
