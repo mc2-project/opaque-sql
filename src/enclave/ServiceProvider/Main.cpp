@@ -37,6 +37,8 @@
 //#include "sample_messages.h"    // this is for debugging remote attestation only
 #include "service_provider.h"
 
+lc_aes_gcm_128bit_key_t key = "helloworld12312";
+
 class scoped_timer {
 
 public:
@@ -183,6 +185,95 @@ void test_encrypt() {
   print_hex(plaintext, src_len);
   printf("\n");
 }
+
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Encrypt(
+  JNIEnv *env,
+  jobject obj,
+  jbyteArray plaintext) {
+  (void)obj;
+
+  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
+
+  uint8_t *plaintext_ptr = (uint8_t *) ptr;
+
+  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  jbyteArray ciphertext = env->NewByteArray(clength);
+
+  uint8_t ciphertext_copy[2048];
+
+  encrypt(&key, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength);
+
+  env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
+
+  env->ReleaseByteArrayElements(plaintext, ptr, 0);
+
+  return ciphertext;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Decrypt(
+  JNIEnv *env,
+  jobject obj,
+  jbyteArray ciphertext) {
+  (void)obj;
+
+  uint32_t clength = (uint32_t) env->GetArrayLength(ciphertext);
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(ciphertext, &if_copy);
+
+  uint8_t *ciphertext_ptr = (uint8_t *) ptr;
+
+  const jsize plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+  jbyteArray plaintext = env->NewByteArray(plength);
+
+  uint8_t plaintext_copy[2048];
+
+  decrypt(&key, ciphertext_ptr, (uint32_t) clength,
+          plaintext_copy, (uint32_t) plength);
+
+  env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
+
+  env->ReleaseByteArrayElements(ciphertext, ptr, 0);
+
+  return plaintext;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_EncryptAttribute(
+  JNIEnv *env,
+  jobject obj,
+  jbyteArray plaintext) {
+  (void)obj;
+
+  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
+  (void) plength;
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
+
+  uint8_t *plaintext_ptr = (uint8_t *) ptr;
+
+  uint32_t ciphertext_length = 4 + ENC_HEADER_SIZE + HEADER_SIZE + ATTRIBUTE_UPPER_BOUND;
+  uint8_t *ciphertext_copy = (uint8_t *) malloc(ciphertext_length);
+
+  uint8_t *input_ptr = plaintext_ptr;
+  uint8_t *output_ptr = ciphertext_copy;
+  uint32_t actual_size = 0;
+
+  encrypt_attribute(&key,
+                    &input_ptr, &output_ptr,
+                    &actual_size);
+
+  jbyteArray ciphertext = env->NewByteArray(actual_size - 4);
+  env->SetByteArrayRegion(ciphertext, 0, actual_size - 4, (jbyte *) (ciphertext_copy + 4));
+
+  env->ReleaseByteArrayElements(plaintext, ptr, 0);
+
+  free(ciphertext_copy);
+
+  return ciphertext;
+}
+
 
 int main(int argc, char **argv) {
   (void)(argc);

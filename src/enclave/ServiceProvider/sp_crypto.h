@@ -46,6 +46,7 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/ec.h>
+#include <openssl/rand.h>
 
 #include "common.h"
 
@@ -278,3 +279,16 @@ lc_status_t print_priv_key(lc_ec256_private_t p_private);
 lc_status_t print_pub_key(lc_ec256_public_t p_public);
 lc_status_t print_ec_key(EC_KEY *ec_key);
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public);
+
+
+void encrypt(lc_aes_gcm_128bit_key_t *key,
+             uint8_t *plaintext_ptr, uint32_t plaintext_length,
+             uint8_t *ciphertext_ptr, uint32_t ciphertext_length);
+
+void decrypt(lc_aes_gcm_128bit_key_t *key,
+             uint8_t *ciphertext_ptr, uint32_t ciphertext_length,
+             uint8_t *plaintext_ptr, uint32_t plaintext_length);
+
+void encrypt_attribute(lc_aes_gcm_128bit_key_t *key,
+                       uint8_t **input, uint8_t **output,
+                       uint32_t *actual_size);

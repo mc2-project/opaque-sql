@@ -83,6 +83,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
+    test(name + " - Spark") {
+      f(Insecure)
+    }
+  }
+
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
   }
@@ -121,7 +127,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     val words = makeDF(data, securityLevel, "word", "count")
 
-    words.filter($"count" > lit(3)).collect
+    words.select($"word", $"count" + 1).collect
   }
 
   def abc(i: Int): String = (i % 3) match {

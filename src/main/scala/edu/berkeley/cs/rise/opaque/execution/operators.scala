@@ -236,6 +236,8 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
         OP_PROJECT_COL2_COL4
       case Seq(Col(3, _)) if child.output.size == 3 =>
         OP_PROJECT_COL3
+      case Seq(Col(1, _), Alias(Add(Col(2, _), Literal(1, IntegerType)), _)) =>
+        OP_PROJECT_COL2_ADD_1
       case Seq(Col(2, _), Col(5, _),
         Alias(Subtract(
           Multiply(Col(9, _), Subtract(Literal(1.0, FloatType), Col(10, _))),
@@ -322,7 +324,9 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
       val numOutputRows = new MutableInteger
       val filtered = enclave.Filter(
         eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
-      Block(filtered, numOutputRows.value)
+      val returned_block = Block(filtered, numOutputRows.value)
+      val x = 1
+      returned_block
     }
   }
 }

@@ -21,20 +21,20 @@
 
 #define AGG_UPPER_BOUND (ROW_UPPER_BOUND + 128)
 
-#define INT_UPPER_BOUND (4)
-#define FLOAT_UPPER_BOUND (4)
-#define STRING_UPPER_BOUND (256)
-#define URL_UPPER_BOUND (100)
-#define C_CODE_UPPER_BOUND (3)
-#define L_CODE_UPPER_BOUND (6)
-#define IP_UPPER_BOUND (15)
-#define USER_AGENT_UPPER_BOUND (256)
-#define SEARCH_WORD_UPPER_BOUND (32)
-#define TPCH_NATION_NAME_UPPER_BOUND (25)
-#define LONG_UPPER_BOUND (8)
-#define DOUBLE_UPPER_BOUND (8)
+/* /\* #define INT_UPPER_BOUND (4) *\/ */
+/* #define FLOAT_UPPER_BOUND (4) */
+/* #define STRING_UPPER_BOUND (256) */
+/* #define URL_UPPER_BOUND (100) */
+/* #define C_CODE_UPPER_BOUND (3) */
+/* #define L_CODE_UPPER_BOUND (6) */
+/* #define IP_UPPER_BOUND (15) */
+/* #define USER_AGENT_UPPER_BOUND (256) */
+/* #define SEARCH_WORD_UPPER_BOUND (32) */
+/* #define TPCH_NATION_NAME_UPPER_BOUND (25) */
+/* #define LONG_UPPER_BOUND (8) */
+/* #define DOUBLE_UPPER_BOUND (8) */
 
-#define ATTRIBUTE_UPPER_BOUND (512)
+/* #define ATTRIBUTE_UPPER_BOUND (512) */
 
 enum SORT_OP {
   SORT_SORT = 1,

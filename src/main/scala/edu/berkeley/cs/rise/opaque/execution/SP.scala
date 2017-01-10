@@ -25,4 +25,7 @@ class SP extends java.io.Serializable {
   @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
   @native def LoadKeys()
 
+  @native def Encrypt(plaintext: Array[Byte]): Array[Byte]
+  @native def Decrypt(ciphertext: Array[Byte]): Array[Byte]
+  @native def EncryptAttribute(ciphertext: Array[Byte]): Array[Byte]
 }

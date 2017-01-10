@@ -9,6 +9,7 @@ KeySchedule *ks = NULL;
 
 void initKeySchedule() {
   if (ks == NULL) {
+    print_hex(key_data, 16);
     ks = new KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
   }
 }

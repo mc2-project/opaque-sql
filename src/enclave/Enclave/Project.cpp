@@ -163,6 +163,17 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
     out->clear();
     out->add_attr(in, 3);
     break;
+  case OP_PROJECT_COL2_ADD_1:
+    out->clear();
+    for (uint32_t i = 1; i <= in->num_cols(); i++) {
+      if (i == 2) {
+        uint32_t v = *reinterpret_cast<const uint32_t *>(in->get_attr_value(2)) + 1;
+        out->add_attr(INT, 4, reinterpret_cast<const uint8_t *>(&v));
+      } else {
+        out->add_attr(in, i);
+      }
+    }
+    break;
   default:
     printf("project_single_row: unknown opcode %d\n", op_code);
     assert(false);

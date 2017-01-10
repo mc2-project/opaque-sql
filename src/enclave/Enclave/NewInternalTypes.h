@@ -4,6 +4,7 @@
 #include <limits>
 #include <set>
 #include "EncryptedDAG.h"
+#include "ObliviousAccess.h"
 
 class NewJoinRecord;
 class StreamRowReader;
@@ -36,6 +37,9 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
 
 uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols);
 
+uint8_t *get_attr_internal_o(uint8_t *row, uint32_t attr_idx, uint32_t num_cols,
+                             uint32_t total_row_size);
+
 bool attr_less_than(const uint8_t *a, const uint8_t *b);
 
 uint32_t attr_key_prefix(const uint8_t *attr);
@@ -51,9 +55,12 @@ uint32_t attr_key_prefix(const uint8_t *attr);
  */
 class NewRecord {
 public:
-  NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
+  NewRecord() : NewRecord(ROW_UPPER_BOUND) {
+    total_row_size = ROW_UPPER_BOUND;
+  }
 
   NewRecord(uint32_t upper_bound) : row_length(4) {
+    total_row_size = upper_bound;
     row = (uint8_t *) calloc(upper_bound, sizeof(uint8_t));
   }
 
@@ -123,6 +130,10 @@ public:
    */
   const uint8_t *get_attr_value(uint32_t attr_idx) const;
 
+  void get_attr_value_copy_o(uint32_t attr_idx,
+                             uint8_t *out,
+                             uint32_t out_size) const;
+
   uint8_t *translate_attr_ptr(const NewRecord *other, const uint8_t *other_attr_ptr) const {
     return row + (other_attr_ptr - other->row);
   }
@@ -133,6 +144,9 @@ public:
    * occupies.
    */
   void set_attr_value(uint32_t attr_idx, const uint8_t *new_attr_value);
+  void set_attr_value_o(uint32_t attr_idx,
+                        const uint8_t *new_attr_value,
+                        uint32_t new_attr_value_len);
 
   /**
    * Append an attribute to the record by copying the attribute at the specified index (1-indexed)
@@ -175,6 +189,7 @@ private:
 
   uint8_t *row;
   uint32_t row_length;
+  uint32_t total_row_size;
 };
 
 /**

@@ -593,3 +593,137 @@ lc_status_t lc_sha256_close(lc_sha_state_handle_t sha_handle) {
   free(ctx);
   return LC_SUCCESS;
 }
+
+
+void encrypt(lc_aes_gcm_128bit_key_t *key,
+             uint8_t *plaintext, uint32_t plaintext_length,
+             uint8_t *ciphertext, uint32_t ciphertext_length) {
+
+  // key size is 12 bytes/128 bits
+  // IV size is 12 bytes/96 bits
+  // MAC size is 16 bytes/128 bits
+
+  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+  (void)ciphertext_length;
+
+  uint8_t *iv_ptr = ciphertext;
+  // generate random IV
+  RAND_bytes(iv_ptr, LC_AESGCM_IV_SIZE);
+  lc_aes_gcm_128bit_tag_t *mac_ptr = (lc_aes_gcm_128bit_tag_t *) (ciphertext + LC_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = ciphertext + LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE;
+
+  lc_rijndael128GCM_encrypt(key,
+                            plaintext, plaintext_length,
+                            ciphertext_ptr,
+                            iv_ptr, LC_AESGCM_IV_SIZE,
+                            NULL, 0,
+                            mac_ptr);
+}
+
+
+void decrypt(lc_aes_gcm_128bit_key_t *key,
+             uint8_t *ciphertext, uint32_t ciphertext_length,
+             uint8_t *plaintext, uint32_t plaintext_length) {
+
+  // key size is 12 bytes/128 bits
+  // IV size is 12 bytes/96 bits
+  // MAC size is 16 bytes/128 bits
+
+  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
+
+  uint32_t plength = ciphertext_length - LC_AESGCM_IV_SIZE - LC_AESGCM_MAC_SIZE;
+  (void)plaintext_length;
+  (void)plength;
+
+  uint8_t *iv_ptr = (uint8_t *) ciphertext;
+  lc_aes_gcm_128bit_tag_t *mac_ptr = (lc_aes_gcm_128bit_tag_t *) (ciphertext + LC_AESGCM_IV_SIZE);
+  uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE);
+
+  uint8_t tag[LC_AESGCM_MAC_SIZE];
+
+  lc_rijndael128GCM_decrypt(ciphertext_ptr, ciphertext_length,
+                            NULL, 0,
+                            tag, *key, iv_ptr, plaintext);
+
+  if (memcmp(mac_ptr, tag, LC_AESGCM_MAC_SIZE) != 0) {
+    printf("Decrypt: invalid mac\n");
+  }
+}
+
+uint32_t attr_upper_bound(uint8_t attr_type) {
+  switch (attr_type & ~0x80) {
+  case INT:
+    return INT_UPPER_BOUND;
+
+  case FLOAT:
+    return FLOAT_UPPER_BOUND;
+
+  case STRING:
+    return STRING_UPPER_BOUND;
+
+  case DATE:
+  case LONG:
+    return LONG_UPPER_BOUND;
+
+  case DOUBLE:
+    return DOUBLE_UPPER_BOUND;
+
+  case URL_TYPE:
+    return URL_UPPER_BOUND;
+
+  case C_CODE:
+    return C_CODE_UPPER_BOUND;
+
+  case L_CODE:
+    return L_CODE_UPPER_BOUND;
+
+  case IP_TYPE:
+    return IP_UPPER_BOUND;
+
+  case USER_AGENT_TYPE:
+    return USER_AGENT_UPPER_BOUND;
+
+  case SEARCH_WORD_TYPE:
+    return SEARCH_WORD_UPPER_BOUND;
+
+  case TPCH_NATION_NAME_TYPE:
+    return TPCH_NATION_NAME_UPPER_BOUND;
+
+  default:
+    printf("attr_upper_bound: Unknown type %d\n", attr_type);
+    assert(false);
+    return 0;
+  }
+}
+
+uint32_t enc_size(uint32_t plaintext_size) {
+  return plaintext_size + LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE;
+}
+
+void encrypt_attribute(lc_aes_gcm_128bit_key_t *key,
+                       uint8_t **input, uint8_t **output,
+                       uint32_t *actual_size) {
+  uint8_t *input_ptr = *input;
+  uint8_t *output_ptr = *output;
+
+  uint8_t attr_type = *input_ptr;
+  uint32_t attr_len = 0;
+
+  uint8_t temp[HEADER_SIZE + ATTRIBUTE_UPPER_BOUND];
+
+  uint32_t upper_bound = attr_upper_bound(attr_type);
+
+  *( (uint32_t *) output_ptr) = enc_size(HEADER_SIZE + upper_bound);
+  output_ptr += 4;
+  attr_len = *( (uint32_t *) (input_ptr + TYPE_SIZE));
+  memcpy(temp, input_ptr, HEADER_SIZE + attr_len);
+  encrypt(key,
+          temp, HEADER_SIZE + upper_bound, output_ptr, HEADER_SIZE + upper_bound);
+
+  input_ptr += HEADER_SIZE + attr_len;
+  output_ptr += enc_size(HEADER_SIZE + upper_bound);
+
+  *input = input_ptr;
+  *output = output_ptr;
+  *actual_size = output_ptr - input_ptr;
+}

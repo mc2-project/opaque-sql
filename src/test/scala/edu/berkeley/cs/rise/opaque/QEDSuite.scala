@@ -56,7 +56,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     spark.stop()
   }
 
-  test("encAggregate - final run split across multiple partitions") {
+  ignore("encAggregate - final run split across multiple partitions") {
     val data = for (i <- 0 until 256) yield (i, "A", 1)
     val words = spark.createDataFrame(spark.sparkContext.makeRDD(data, 2))
       .toDF("id", "word", "count").oblivious
@@ -68,7 +68,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   }
 
 
-  test("encSort multiple partitions") {
+  ignore("encSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
       .toDF("id", "word", "count")
@@ -76,7 +76,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  test("nonObliviousSort multiple partitions") {
+  ignore("nonObliviousSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
       .toDF("id", "word", "count")
@@ -84,7 +84,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
   }
 
-  // test("nonObliviousJoin multiple partitions") {
+  // ignore("nonObliviousJoin multiple partitions") {
   //   val p_data = for (i <- 0 until 4) yield (i.toString, i * 10)
   //   val f_data = for (i <- 0 until 16 - 4) yield ((i % 4).toString, (i * 10).toString, i.toFloat)
   //   val p = spark.createDataFrame(spark.sparkContext.makeRDD(p_data, 3)).toDF("pk", "x").encrypted
@@ -107,7 +107,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   // TODO: test nonObliviousAggregate on multiple partitions
 
   // test remote attestation
-  test("Remote attestation") {
+  ignore("Remote attestation") {
     //val data = for (i <- 0 until 8) yield ("%03d".format(i), i.toFloat)
     //val rdd = spark.createDataFrame(data).toDF("str", "x").oblivious
 

@@ -83,3 +83,55 @@ void swap_memory(uint8_t *ptr1, uint8_t *ptr2, uint32_t size,
   }
 
 }
+
+// obliviously copies in[in_offset_start:in_offset_end] to out
+void oblivious_get(uint8_t *in,
+                   uint32_t in_size,
+                   uint32_t in_offset_start,
+                   uint32_t in_offset_end,
+                   uint8_t *out,
+                   uint32_t out_size) {
+  for (uint32_t i = 0; i < in_size; i++) {
+    if (i >= in_offset_start && i < in_offset_end) {
+      for (uint32_t j = 0; j < out_size; j++) {
+        if (j == i - in_offset_start) {
+          *(out + j) = *(in + 1);
+        } else {
+          dummy_access(in + i, 1);
+          dummy_access(out + j, 1);
+        }
+      }
+    } else {
+      for (uint32_t j = 0; j < out_size; j++) {
+        dummy_access(in + i, 1);
+        dummy_access(out + j, i);
+      }
+    }
+  }
+}
+
+// obliviously copies out to in[in_offset_start:in_offset_end]
+void oblivious_set(uint8_t *out,
+                   uint32_t out_size,
+                   uint8_t *in,
+                   uint32_t in_size,
+                   uint32_t in_offset_start,
+                   uint32_t in_offset_end) {
+  for (uint32_t i = 0; i < in_size; i++) {
+    if (i >= in_offset_start && i < in_offset_end) {
+      for (uint32_t j = 0; j < out_size; j++) {
+        if (j == i - in_offset_start) {
+          *(in + 1) = *(out + j);
+        } else {
+          dummy_access(in + i, 1);
+          dummy_access(out + j, 1);
+        }
+      }
+    } else {
+      for (uint32_t j = 0; j < out_size; j++) {
+        dummy_access(in + i, 1);
+        dummy_access(out + j, i);
+      }
+    }
+  }
+}
