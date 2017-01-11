@@ -45,14 +45,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
     If running with real SGX hardware, also set `export SGX_MODE=HW`.
 
-4. Synthesize test data:
-
-    ```sh
-    cd ${OPAQUE_HOME}
-    data/disease/synth-disease-data
-    ```
-
-5. Run the Opaque tests:
+4. Run the Opaque tests:
 
     ```sh
     cd ${OPAQUE_HOME}

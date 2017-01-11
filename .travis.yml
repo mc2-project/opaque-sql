@@ -17,4 +17,3 @@ before_install:
   - export LIBENCLAVESIGNED_PATH=$PWD/enclave.signed.so
   - export LIBSGX_SP_PATH=$PWD/libservice_provider.so
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
-  - data/disease/synth-disease-data

@@ -50,3 +50,21 @@ watchSources ++=
       -- "Enclave_u.h"
       -- "Enclave_t.h"
       -- "key.cpp")).get
+
+// Synthesize test data
+val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data")
+
+synthTestDataTask := {
+  val diseaseDataFiles =
+    for {
+      diseaseDir <- (baseDirectory.value / "data" / "disease").get
+      name <- Seq("disease.csv", "gene.csv", "treatment.csv", "patient-125.csv")
+    } yield new File(diseaseDir, name)
+  if (!diseaseDataFiles.forall(_.exists)) {
+    import sys.process._
+    val ret = Seq("data/disease/synth-disease-data").!
+    if (ret != 0) sys.error("Failed to synthesize test data.")
+  }
+}
+
+test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
