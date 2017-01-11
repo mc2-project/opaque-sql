@@ -8,7 +8,7 @@ scalaVersion := "2.11.8"
 
 spName := "amplab/opaque"
 
-sparkVersion := "2.0.0"
+sparkVersion := "2.0.2"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
@@ -28,16 +28,25 @@ val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave cod
 enclaveBuildTask := {
   import sys.process._
   val ret = Seq("src/enclave/build.sh").!
-  if (ret != 0) error("C++ build failed.")
+  if (ret != 0) sys.error("C++ build failed.")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "libSGXEnclave.so",
+    baseDirectory.value / "libSGXEnclave.so")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "enclave.signed.so",
+    baseDirectory.value / "enclave.signed.so")
+  IO.copyFile(
+    baseDirectory.value / "src" / "enclave" / "libservice_provider.so",
+    baseDirectory.value / "libservice_provider.so")
 }
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
-compile in Compile <<= (compile in Compile).dependsOn(enclaveBuildTask)
+compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
-watchSources <++= (baseDirectory in ThisBuild) map { (base: File) =>
-  ((base / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "*.fbs")
-    -- "Enclave_u.h"
-    -- "Enclave_t.h"
-    -- "*_generated.h")).get
-}
+// Watch the enclave C++ files
+watchSources ++=
+  ((baseDirectory.value / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl")
+      -- "Enclave_u.h"
+      -- "Enclave_t.h"
+      -- "key.cpp")).get

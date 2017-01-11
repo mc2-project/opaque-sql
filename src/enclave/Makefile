@@ -47,7 +47,11 @@ Urts_Library_Name := sgx_urts
 endif	
 
 App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
-App_Include_Paths := -IInclude -IApp -ICommon -IServiceProvider -I$(SGX_SDK)/include
+App_Include_Paths := \
+	-IInclude -IApp -ICommon -IServiceProvider \
+	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
+	-I../../target/scala-2.11/src_managed/flatbuffers/gen-cpp \
+	-I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -95,7 +99,6 @@ Enclave_Include_Paths := \
 	-I$(SGX_SDK)/include/stlport \
 	-I$(SGX_SDK)/include \
 	-I$(SGX_SDK)/include/tlibc \
-	-Ithirdparty/installed/include
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++ -Wall -Wextra -Werror
@@ -199,21 +202,24 @@ Enclave/Enclave_t.o: Enclave/Enclave_t.c
 	@echo "CC   <=  $<"
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 
-# Need to cancel the built-in implicit rule for .cpp files, otherwise the below
-# rule doesn't execute for some reason
-%.o: %.cpp
-
 Enclave/%.o: Enclave/%.cpp
 	@echo "CXX  <=  $<"
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
+
+Enclave/key.cpp: $(ServiceProvider_Name)
+	@echo "SP   =>  $@"
+	./$(ServiceProvider_Name) $@
 
 $(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects)
 	@echo "LINK =>  $@"
 	@$(CXX) $^ -o $@  $(Enclave_Link_Flags)
 
-$(Signed_Enclave_Name): $(Enclave_Name)
+Enclave/Enclave_private.pem:
+	@cp $(SGX_SDK)/SampleCode/SampleEnclave/Enclave/Enclave_private.pem Enclave/Enclave_private.pem
+
+$(Signed_Enclave_Name): Enclave/Enclave_private.pem $(Enclave_Name)
 	@echo "SIGN =>  $@"
-	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@$(SGX_ENCLAVE_SIGNER) sign -key $< -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 
 ######## Service Provider/Master Objects ########
 
