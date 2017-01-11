@@ -88,3 +88,10 @@ Enclave_t.h
 thirdparty/
 *_generated.h
 /src/enclave/Enclave/key.cpp
+
+# Opaque generated data
+/data/bdb
+!/data/bdb/tiny
+/data/pagerank
+!/data/pagerank/PageRank256.in
+/data/disease/*.csv

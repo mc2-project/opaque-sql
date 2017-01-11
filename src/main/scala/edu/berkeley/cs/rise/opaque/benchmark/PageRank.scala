@@ -35,7 +35,7 @@ object PageRank {
     val data = spark.read
       .schema(inputSchema)
       .option("delimiter", " ")
-      .csv(s"${Benchmark.dataDir}/pagerank-files/PageRank$size.in")
+      .csv(s"${Benchmark.dataDir}/pagerank/PageRank$size.in")
     val edges =
       securityLevel.applyTo(
         data

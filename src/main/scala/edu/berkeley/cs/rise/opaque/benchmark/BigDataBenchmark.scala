@@ -34,7 +34,7 @@ object BigDataBenchmark {
           StructField("pageURL", StringType),
           StructField("pageRank", IntegerType),
           StructField("avgDuration", IntegerType))))
-        .csv(s"${Benchmark.dataDir}/big-data-benchmark-files/rankings/$size")
+        .csv(s"${Benchmark.dataDir}/bdb/rankings/$size")
         .repartition(numPartitions))
 
   def uservisits(
@@ -52,7 +52,7 @@ object BigDataBenchmark {
           StructField("languageCode", StringType),
           StructField("searchWord", StringType),
           StructField("duration", IntegerType))))
-        .csv(s"${Benchmark.dataDir}/big-data-benchmark-files/uservisits/$size")
+        .csv(s"${Benchmark.dataDir}/bdb/uservisits/$size")
         .repartition(numPartitions))
 
   def q1(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
