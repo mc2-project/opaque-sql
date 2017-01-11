@@ -4,7 +4,7 @@ Opaque is a package for Apache Spark SQL that enables very strong security for D
 
 Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (encrypted with access pattern protection). The contents of these DataFrames will be encrypted, and subsequent operations on them will run within SGX enclaves.
 
-Warning: This is an alpha preview of Opaque, which means the software is still early stage! It is currently not production-ready. Opaque supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted. 
+Warning: This is an alpha preview of Opaque, which means the software is still early stage! It is currently not production-ready. Opaque supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica. Opaque: A Data Analytics Platform with Strong Security. NSDI 2017 (to appear), March 2017.
 
@@ -43,7 +43,7 @@ After downloading the Opaque codebase, build and test it as follows:
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 
-    If running with real SGX hardware, also set `export SGX_MODE=HW`.
+    If running with real SGX hardware, also set `export SGX_MODE=HW` and `export SGX_PRERELEASE=1`.
 
 4. Run the Opaque tests:
 
@@ -91,7 +91,25 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
 
     ```scala
     dfEncrypted.filter($"count" > lit(3)).explain(true)
+    // [...]
+    // == Optimized Logical Plan ==
+    // EncryptedFilter (count#6 > 3)
+    // +- EncryptedLocalRelation [word#5, count#6]
+    // [...]
+
     dfOblivious.filter($"count" > lit(3)).explain(true)
+    // [...]
+    // == Optimized Logical Plan ==
+    // ObliviousFilter (count#6 > 3)
+    // +- ObliviousPermute
+    //    +- EncryptedLocalRelation [word#5, count#6]
+    // [...]
 
     dfEncrypted.filter($"count" > lit(3)).show
+    // +----+-----+
+    // |word|count|
+    // +----+-----+
+    // | foo|    4|
+    // | baz|    5|
+    // +----+-----+
     ```
