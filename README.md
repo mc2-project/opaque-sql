@@ -1,10 +1,10 @@
-# Opaque for Apache Spark SQL
+# Opaque: Secure Apache SparkSQL
 
 Opaque is a package for Apache Spark SQL that enables very strong security for DataFrames -- data encryption and access pattern hiding -- using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. See our upcoming NSDI 2017 paper [1] for more details.
 
 Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (encrypted with access pattern protection). The contents of these DataFrames will be encrypted, and subsequent operations on them will run within SGX enclaves.
 
-Warning: This is an alpha preview of Opaque. It is currently not production-ready. It only supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted.
+Warning: This is an alpha preview of Opaque, which means the software is still early stage! It is currently not production-ready. Opaque supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted. 
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica. Opaque: A Data Analytics Platform with Strong Security. NSDI 2017 (to appear), March 2017.
 
@@ -31,7 +31,7 @@ After downloading the Opaque codebase, build and test it as follows:
     openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
     ```
 
-4. Set the following environment variables:
+3. Set the following environment variables:
 
     ```sh
     source sgxsdk/environment # from SGX SDK install directory in step 1
@@ -45,7 +45,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
     If running with real SGX hardware, also set `export SGX_MODE=HW`.
 
-3. Synthesize test data:
+4. Synthesize test data:
 
     ```sh
     cd ${OPAQUE_HOME}
