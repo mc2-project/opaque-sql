@@ -12,15 +12,17 @@ Warning: This is an alpha preview of Opaque, which means the software is still e
 
 After downloading the Opaque codebase, build and test it as follows:
 
-1. Install GCC 4.8+ and the Intel SGX SDK:
+1. Install GCC 4.8+ and the Intel SGX SDK with C++11 support:
 
     ```sh
     sudo yum -y install gcc48.x86_64 gcc48-c++.x86_64
     sudo yum -y update binutils
-    wget https://download.01.org/intel-sgx/linux-1.7/sgx_linux_x64_sdk_1.7.100.36470.bin -O sgx_sdk.bin
-    chmod +x sgx_sdk.bin
+    git clone https://github.com/ankurdave/linux-sgx -b c++11
+    cd linux-sgx
+    ./download_prebuilt.sh
+    make sdk_install_pkg
     # Installer will prompt for install path, which can be user-local
-    ./sgx_sdk.bin
+    ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
     ```
 
 2. On the master, generate a keypair using OpenSSL for remote attestation. Only
