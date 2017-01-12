@@ -46,7 +46,8 @@ def main():
       t_cost = random.randint(1, 50000)
       w.writerow([t_id, t_disease_id, t_name, t_cost])
 
-  for num_patient_exponent in range(18):
+  max_patient_exponent = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+  for num_patient_exponent in range(max_patient_exponent):
     num_patients = 125 * 2**num_patient_exponent
     print 'Generating patient-%d.csv...' % (num_patients, )
     with open('patient-%d.csv' % (num_patients, ), 'w') as f:

@@ -217,7 +217,7 @@ $(Enclave_Name): Enclave/Enclave_t.o Enclave/sgxaes_asm.o $(Enclave_Cpp_Objects)
 	@$(CXX) $^ -o $@  $(Enclave_Link_Flags)
 
 Enclave/Enclave_private.pem:
-	@cp $(SGX_SDK) SampleCode/SampleEnclave/Enclave/Enclave_private.pem Enclave/Enclave_private.pem
+	@cp $(SGX_SDK)/SampleCode/SampleEnclave/Enclave/Enclave_private.pem Enclave/Enclave_private.pem
 
 $(Signed_Enclave_Name): Enclave/Enclave_private.pem $(Enclave_Name)
 	@echo "SIGN =>  $@"
