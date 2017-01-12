@@ -337,7 +337,7 @@ public:
 
   bool less_than(const tuix::Row *row1, const tuix::Row *row2) {
     builder.Clear();
-    const tuix::Row *a, *b;
+    const tuix::Row *a = nullptr, *b = nullptr;
     printf("Comparing:\n");
     print(row1);
     print(row2);
