@@ -23,8 +23,8 @@ After downloading the Opaque codebase, build and test it as follows:
     ./sgx_sdk.bin
     ```
 
-2. On the master, generate a keypair using OpenSSL for remote attestation. Only
-   the NIST p-256 curve is supported.
+2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
+   Note that only the NIST p-256 curve is supported.
 
     ```sh
     cd ${OPAQUE_HOME}
@@ -113,3 +113,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // | baz|    5|
     // +----+-----+
     ```
+
+## Contact
+
+If you want to know more about our project or have questions, please contact Ankur (ankurdave@gmail.com) and/or Wenting (wzheng@eecs.berkeley.edu).
