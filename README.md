@@ -116,4 +116,4 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
 
 ## Contact
 
-If you want to know more about our project or have questions, please contact Ankur (ankurdave@gmail.com) and/or Wenting (wzheng@eecs.berkeley.edu).
+If you want to know more about our project or have questions, please contact Wenting (wzheng@eecs.berkeley.edu) and/or Ankur (ankurdave@gmail.com).
