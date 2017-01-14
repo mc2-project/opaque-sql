@@ -35,7 +35,8 @@ words_o.filter($"count" > lit(3)).collect
 
 ### Attack Spark SQL
 
-`stop at org.apache.spark.sql.execution.FilterExec$$anonfun$12$$anonfun$apply$2:126
+```
+stop at org.apache.spark.sql.execution.FilterExec$$anonfun$12$$anonfun$apply$2:126
 list
 print row
 cont
@@ -45,12 +46,13 @@ cont
 print row
 set r = false
 clear org.apache.spark.sql.execution.FilterExec$$anonfun$12$$anonfun$apply$2:126
-`
+```
 
 ### Attack Opaque (works for both encryption and oblivious modes)
-`stop at edu.berkeley.cs.rise.opaque.execution.ObliviousFilterExec$$anonfun$executeBlocked$14:323
+```
+stop at edu.berkeley.cs.rise.opaque.execution.ObliviousFilterExec$$anonfun$executeBlocked$14:323
 list
 dump filtered
 set filtered[0] = 123
 cont
-`
+```
