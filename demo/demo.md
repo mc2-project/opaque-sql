@@ -35,6 +35,8 @@ words_o.filter($"count" > lit(3)).collect
 
 ### Attack Spark SQL
 
+The attack here is an attempt to incorrectly filter out `(foo, 4)`.
+
 ```
 stop at org.apache.spark.sql.execution.FilterExec$$anonfun$12$$anonfun$apply$2:126
 list
@@ -49,6 +51,9 @@ clear org.apache.spark.sql.execution.FilterExec$$anonfun$12$$anonfun$apply$2:126
 ```
 
 ### Attack Opaque (works for both encryption and oblivious modes)
+
+This attack will attempt to alter an Opaque encrypted block. The command `dump filtered` will show the block content.
+
 ```
 stop at edu.berkeley.cs.rise.opaque.execution.ObliviousFilterExec$$anonfun$executeBlocked$14:323
 list
