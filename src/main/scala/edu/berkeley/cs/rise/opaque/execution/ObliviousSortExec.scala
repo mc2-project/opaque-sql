@@ -31,6 +31,28 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
+case class SortOpcodeExec(order: Seq[SortOrder], child: SparkPlan) {
+  import Opcode._
+
+  private object Col extends ColumnNumberMatcher {
+    override def input: Seq[Attribute] = child.output
+  }
+
+  def getOpcode(): Opcode = {
+    val opcode = order match {
+      case Seq() =>
+        OP_NOSORT
+      case Seq(SortOrder(Col(1, _), Ascending)) =>
+        OP_SORT_COL1
+      case Seq(SortOrder(Col(2, _), Ascending)) =>
+        OP_SORT_COL2
+      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
+        OP_SORT_COL1_COL2
+    }
+    opcode
+  }
+}
+
 case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
@@ -42,16 +64,36 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked() = {
     import Opcode._
-    val opcode = order match {
-      case Seq() =>
-        OP_NOSORT
-      case Seq(SortOrder(Col(1, _), Ascending)) =>
-        OP_SORT_COL1
-      case Seq(SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL2
-      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL1_COL2
+    val opcode = SortOpcodeExec(order, child).getOpcode()
+    if (opcode != OP_NOSORT) {
+      ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    } else {
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     }
+  }
+}
+
+import Opcode._
+case class ObliviousSortOpcodeExec(opcodes: Seq[Opcode], child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
+    val opcode = opcodes match {
+      case Seq(x:Opcode) =>
+        x
+
+      case Seq(OP_SORT_COL3_IS_DUMMY_COL1, OP_SORT_COL3) =>
+        OP_SORT_COL3_IS_DUMMY_COL1_SORT_COL3
+
+      case Seq(OP_SORT_COL2_IS_DUMMY_COL1, OP_SORT_COL3) =>
+        OP_SORT_COL2_IS_DUMMY_COL1_SORT_COL3
+
+      case _ => throw new Exception(
+          s"OblivoiusSortOpcodeExec: unknown Opcode seq")
+    }
+
     if (opcode != OP_NOSORT) {
       ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
     } else {

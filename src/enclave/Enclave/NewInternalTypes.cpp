@@ -421,6 +421,11 @@ bool NewRecord::less_than(const NewRecord *other, int op_code) const {
     return attr_less_than(get_attr(1), other->get_attr(1));
   case OP_SORT_COL2:
     return attr_less_than(get_attr(2), other->get_attr(2));
+  case OP_SORT_COL3:
+    return attr_less_than(get_attr(3), other->get_attr(3));
+  case OP_SORT_COL4:
+    return attr_less_than(get_attr(4), other->get_attr(4));
+
   case OP_SORT_COL1_COL2:
     return attr_less_than(get_attr(1), other->get_attr(1))
       || (!attr_less_than(other->get_attr(1), get_attr(1))
@@ -455,6 +460,29 @@ bool NewRecord::less_than(const NewRecord *other, int op_code) const {
       return attr_less_than(get_attr(2), other->get_attr(2));
     }
   }
+
+  case OP_SORT_COL3_IS_DUMMY_COL1_SORT_COL3:
+  {
+    bool this_is_dummy = is_dummy_type(get_attr_type(3));
+    bool other_is_dummy = is_dummy_type(other->get_attr_type(3));
+    if (this_is_dummy != other_is_dummy) {
+      return other_is_dummy;
+    } else {
+      return attr_less_than(get_attr(4), other->get_attr(4));
+    }
+  }
+
+  case OP_SORT_COL2_IS_DUMMY_COL1_SORT_COL3:
+  {
+    bool this_is_dummy = is_dummy_type(get_attr_type(2));
+    bool other_is_dummy = is_dummy_type(other->get_attr_type(2));
+    if (this_is_dummy != other_is_dummy) {
+      return other_is_dummy;
+    } else {
+      return attr_less_than(get_attr(4), other->get_attr(4));
+    }
+  }
+
   default:
     printf("NewRecord::less_than: Unknown opcode %d\n", op_code);
     assert(false);
@@ -472,12 +500,14 @@ uint32_t NewRecord::get_key_prefix(int op_code) const {
   case OP_SORT_COL1_COL2:
     return attr_key_prefix(get_attr(1));
   case OP_SORT_COL2_IS_DUMMY_COL1:
+  case OP_SORT_COL2_IS_DUMMY_COL1_SORT_COL3:
   {
     uint32_t dummy_bit = is_dummy_type(get_attr_type(2)) ? 1 : 0;
     uint32_t attr_prefix = attr_key_prefix(get_attr(1));
     return (dummy_bit << 31) | (attr_prefix >> 1);
   }
   case OP_SORT_COL3_IS_DUMMY_COL1:
+  case OP_SORT_COL3_IS_DUMMY_COL1_SORT_COL3:
   {
     uint32_t dummy_bit = is_dummy_type(get_attr_type(3)) ? 1 : 0;
     uint32_t attr_prefix = attr_key_prefix(get_attr(1));

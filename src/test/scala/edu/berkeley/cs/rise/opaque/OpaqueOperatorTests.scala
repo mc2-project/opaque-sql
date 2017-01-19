@@ -119,6 +119,31 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       }
   }
 
+  testOpaqueOnly("pagerank") { securityLevel =>
+    PageRank.run(spark, securityLevel, "256", numPartitions)
+  }
+
+  testOpaqueOnly("join reordering") { securityLevel =>
+    JoinReordering.treatmentQuery(spark, "125", numPartitions)
+  }
+
+  testOpaqueOnly("join cost") { securityLevel =>
+    JoinCost.run(spark, Oblivious, "125", numPartitions)
+  }
+
+  testAgainstSpark("big data 1") { securityLevel =>
+    BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
+  }
+
+  testAgainstSpark("big data 2") { securityLevel =>
+    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+      .sortBy(_._1)
+      .map {
+        case (str: String, f: Float) => (str, "%.2f".format(f))
+      }
+  }
+
   testAgainstSpark("big data 3") { securityLevel =>
     BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
   }

@@ -197,17 +197,14 @@ trait ColumnNumberMatcher extends Serializable {
     }
 }
 
-case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
+case class ProjectOpcodeExec(projectList: Seq[NamedExpression], child: SparkPlan) {
+  import Opcode._
 
   private object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
   }
 
-  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
-
-  override def executeBlocked() = {
-    import Opcode._
+  def getOpcode(): Opcode = {
     val opcode = projectList match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
@@ -268,6 +265,25 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
             s"Input: ${child.output}.\n" +
             s"Types: ${child.output.map(_.dataType)}")
     }
+
+    opcode
+  }
+}
+
+case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  private object Col extends ColumnNumberMatcher {
+    override def input: Seq[Attribute] = child.output
+  }
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+
+  override def executeBlocked() = {
+    import Opcode._
+
+    val opcode = ProjectOpcodeExec(projectList, child).getOpcode()
+
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
     Utils.time("force child of project") { execRDD.count }
@@ -322,6 +338,8 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
         OP_FILTER_COL4_GT_40
       case GreaterThan(Col(4, _), Literal(45, _)) =>
         OP_FILTER_COL4_GT_45
+      case Literal(-1, IntegerType) =>
+        OP_FILTER_NOT_DUMMY
       case _ =>
         throw new Exception(
           s"ObliviousFilterExec: unknown condition $condition.\n" +
@@ -673,23 +691,33 @@ case class EncryptedAggregateExec(
   }
 }
 
-case class ObliviousSortMergeJoinExec(
+case class JoinOpcodeExec(
     left: SparkPlan,
     right: SparkPlan,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
-    condition: Option[Expression])
+    condition: Option[Expression]) {
+
+  import Opcode._
+
+  def getOpcodes(): (Opcode, Opcode, Opcode) = {
+    OpaqueJoinUtils.getOpcodes(left.output, right.output,
+      leftKeys, rightKeys, condition)
+  }
+
+}
+
+case class ObliviousUnionExec(
+    left: SparkPlan,
+    right: SparkPlan,
+    joinOpcode: Opcode)
   extends BinaryExecNode with OpaqueOperatorExec {
 
   import Utils.time
 
-  override def output: Seq[Attribute] =
-    left.output ++ right.output
+  override def output: Seq[Attribute] = left.output ++ right.output
 
   override def executeBlocked() = {
-    import Opcode._
-    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
-      OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
     val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
@@ -717,17 +745,36 @@ case class ObliviousSortMergeJoinExec(
 
       Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
     }
+
     Utils.ensureCached(processed)
-    time("join - preprocess") { processed.count }
+    time("join - union + preprocess") { processed.count }
 
-    val sorted = time("join - sort") {
-      val result = ObliviousSortExec.sortBlocks(processed, joinOpcode)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
+    processed
+  }
 
-    val lastPrimaryRows = sorted.map { block =>
+}
+
+case class ObliviousSortMergeJoinExec(
+    child: SparkPlan,
+    joinOpcode: Opcode,
+    dummySortOpcode: Opcode,
+    dummyFilterOpcode: Opcode)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  import Utils.time
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked() = {
+    import Opcode._
+    // val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
+    //   OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
+
+    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(execRDD)
+    RA.initRA(execRDD)
+
+    val lastPrimaryRows = execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       enclave.ScanCollectLastPrimary(eid, joinOpcode.value, block.bytes, block.numRows)
     }
@@ -741,11 +788,11 @@ case class ObliviousSortMergeJoinExec(
     }
 
     val processedJoinRowsSplit = Utils.readVerifiedRows(processedJoinRows).toArray
-    assert(processedJoinRowsSplit.length == sorted.partitions.length)
+    assert(processedJoinRowsSplit.length == execRDD.partitions.length)
     val processedJoinRowsRDD =
-      sparkContext.parallelize(processedJoinRowsSplit, sorted.partitions.length)
+      sparkContext.parallelize(processedJoinRowsSplit, execRDD.partitions.length)
 
-    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
+    val joined = execRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
       val block = blockIter.next()
       assert(!blockIter.hasNext)
       val joinRow = joinRowIter.next()
@@ -758,29 +805,15 @@ case class ObliviousSortMergeJoinExec(
     Utils.ensureCached(joined)
     time("join - sort merge join") { joined.count }
 
-    val joinedWithRandomIds = joined.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_ADD_RANDOM_ID.value, block.bytes, block.numRows)
-      Block(serResult, block.numRows)
-    }
-    val permuted = ObliviousSortExec.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
-      Block(serResult, block.numRows)
-    }
+    //val permuted = ObliviousSortExec.sortBlocks(joined, dummySortOpcode)
+    //   .map { block =>
+    //   val (enclave, eid) = Utils.initEnclave()
+    //   val serResult = enclave.Project(
+    //     eid, 0, 0, OP_PROJECT_DROP_COL1.value, block.bytes, block.numRows)
+    //   Block(serResult, block.numRows)
+    // }
 
-    val nonDummy = permuted.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val numOutputRows = new MutableInteger
-      val filtered = enclave.Filter(
-        eid, 0, 0, dummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-      Block(filtered, numOutputRows.value)
-    }
-    Utils.ensureCached(nonDummy)
-    time("join - filter dummies") { nonDummy.count }
-    nonDummy
+    joined
   }
 }
 

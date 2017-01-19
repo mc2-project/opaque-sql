@@ -159,99 +159,99 @@ object RA {
 
     if (false) {
 
-    //println("Loaded public and private keys")
+      //println("Loaded public and private keys")
 
-    // check EPIDs
-    val EPIDInfo = data.mapPartitions{
-      x => getEPID(x)
-    }.collect
+      // check EPIDs
+      val EPIDInfo = data.mapPartitions{
+        x => getEPID(x)
+      }.collect
 
-    //println("Got EPIDs")
+      //println("Got EPIDs")
 
-    for (v <- EPIDInfo) {
-      val epid = v._1
-      val attested = v._2
-      val proc = v._3
-      if (!attested && proc) {
-        master.SPProcMsg0(epid)
+      for (v <- EPIDInfo) {
+        val epid = v._1
+        val attested = v._2
+        val proc = v._3
+        if (!attested && proc) {
+          master.SPProcMsg0(epid)
+        }
       }
-    }
 
-    //println("Checked EPIDs")
+      //println("Checked EPIDs")
 
-    // // get msg1 from enclave
+      // // get msg1 from enclave
 
-    val msg1 = data.mapPartitionsWithIndex{
-      (index, block) => getMsg1(index, block)
-    }.collect
+      val msg1 = data.mapPartitionsWithIndex{
+        (index, block) => getMsg1(index, block)
+      }.collect
 
-    //println("Got msg1")
+      //println("Got msg1")
 
-    var msg2_dedup = Map[String, Array[Byte]]()
-    var msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+      var msg2_dedup = Map[String, Array[Byte]]()
+      var msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
 
-    for (index <- 0 until msg1.length) {
-      val attested = msg1(index)._2
-      val proc = msg1(index)._3
-      val ipAddr = msg1(index)._4
-      if (!attested && proc) {
-        val ret = master.SPProcMsg1(msg1(index)._1)
-        msg2_dedup += (ipAddr -> ret)
+      for (index <- 0 until msg1.length) {
+        val attested = msg1(index)._2
+        val proc = msg1(index)._3
+        val ipAddr = msg1(index)._4
+        if (!attested && proc) {
+          val ret = master.SPProcMsg1(msg1(index)._1)
+          msg2_dedup += (ipAddr -> ret)
+        }
       }
-    }
 
-    for (index <- 0 until msg1.length) {
-      val attested = msg1(index)._2
-      val proc = msg1(index)._3
-      val ipAddr = msg1(index)._4
+      for (index <- 0 until msg1.length) {
+        val attested = msg1(index)._2
+        val proc = msg1(index)._3
+        val ipAddr = msg1(index)._4
 
-      if (!attested) {
-        msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+        if (!attested) {
+          msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+        }
       }
-    }
 
-    //println("Sent msg2")
+      //println("Sent msg2")
 
-    val msg3 = data.mapPartitionsWithIndex {
-      (index, data) =>
-      getMsg3(index, data, msg2(index)._2, msg2(index)._1)
-    }.collect
+      val msg3 = data.mapPartitionsWithIndex {
+        (index, data) =>
+        getMsg3(index, data, msg2(index)._2, msg2(index)._1)
+      }.collect
 
-    //println("Got msg3")
+      //println("Got msg3")
 
-    // get attestation result from the master
-    var attResult_dedup = Map[String, Array[Byte]]()
-    var attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
-    for (index <- 0 until msg3.length) {
-      val attested = msg3(index)._2
-      val proc = msg3(index)._3
-      val ipAddr = msg3(index)._4
-      if (!attested && proc) {
-        val ret = master.SPProcMsg3(msg3(index)._1)
-        attResult_dedup += (ipAddr -> ret)
+      // get attestation result from the master
+      var attResult_dedup = Map[String, Array[Byte]]()
+      var attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+      for (index <- 0 until msg3.length) {
+        val attested = msg3(index)._2
+        val proc = msg3(index)._3
+        val ipAddr = msg3(index)._4
+        if (!attested && proc) {
+          val ret = master.SPProcMsg3(msg3(index)._1)
+          attResult_dedup += (ipAddr -> ret)
+        }
       }
-    }
 
-    for (index <- 0 until msg3.length) {
-      val attested = msg3(index)._2
-      val proc = msg3(index)._3
-      val ipAddr = msg3(index)._4
+      for (index <- 0 until msg3.length) {
+        val attested = msg3(index)._2
+        val proc = msg3(index)._3
+        val ipAddr = msg3(index)._4
 
-      if (!attested) {
-        attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+        if (!attested) {
+          attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+        }
       }
+      //println("Got attestation result")
+
+      // send final attestation result to each enclave
+      data.mapPartitionsWithIndex { (index, data) =>
+        finalAttest(index, data, attResult(index)._2, attResult(index)._1)
+      }.collect
+
+      //println("Sent attestation results; attestation DONE")
     }
-    //println("Got attestation result")
-
-    // send final attestation result to each enclave
-    data.mapPartitionsWithIndex { (index, data) =>
-      finalAttest(index, data, attResult(index)._2, attResult(index)._1)
-    }.collect
-
-    //println("Sent attestation results; attestation DONE")
 
     // attestation done
-    }
   }
 
 }

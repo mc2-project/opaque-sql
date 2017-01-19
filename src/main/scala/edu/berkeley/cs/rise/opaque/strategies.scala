@@ -23,12 +23,83 @@ import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.types._
 
 import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+    case ObliviousSort(order, ObliviousProject(projectList, ObliviousJoin(left, right, joinExpr))) =>
+      println("=====Matched!!=====")
+
+      Join(left, right, Inner, Some(joinExpr)) match {
+        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
+          val (joinOpcode, dummySortOpcode, dummyFilterOpcode) = JoinOpcodeExec(
+            planLater(left), planLater(right), leftKeys, rightKeys, condition).getOpcodes()
+
+          val joinPlan = ObliviousFilterExec(
+            Literal(-1, IntegerType),
+            ObliviousSortOpcodeExec(
+              List(dummySortOpcode),
+              ObliviousSortMergeJoinExec(
+                ObliviousSortOpcodeExec(
+                  List(joinOpcode),
+                  ObliviousUnionExec(
+                    planLater(left),
+                    planLater(right),
+                    joinOpcode
+                  )
+                ), joinOpcode, dummySortOpcode, dummyFilterOpcode
+              )
+            )
+          )
+
+
+          val projectOpcode = ProjectOpcodeExec(projectList, joinPlan).getOpcode()
+          val projectPlan = ObliviousProjectExec(projectList, joinPlan)
+
+          val sortOpcode = SortOpcodeExec(order, projectPlan).getOpcode()
+          val sortPlan = ObliviousSortExec(order, projectPlan)
+
+          import Opcode._
+          val newSortOpcode = (projectOpcode, sortOpcode) match {
+            case (OP_PROJECT_COL4_COL2_COL5, OP_SORT_COL1) =>
+              OP_SORT_COL3
+
+            case _ =>
+              sortOpcode
+          }
+
+          if (sortOpcode == newSortOpcode) {
+            return sortPlan :: Nil
+          }
+
+          // else, construct an optimized plan
+          ObliviousProjectExec(projectList,
+            ObliviousFilterExec(
+              Literal(-1, IntegerType),
+              ObliviousSortOpcodeExec(
+                List(dummySortOpcode, newSortOpcode),
+                ObliviousSortMergeJoinExec(
+                  ObliviousSortOpcodeExec(
+                    List(joinOpcode),
+                    ObliviousUnionExec(
+                      planLater(left),
+                      planLater(right),
+                      joinOpcode
+                    )
+                  ), joinOpcode, dummySortOpcode, dummyFilterOpcode
+                )
+              )
+            )
+          ) :: Nil
+
+        case _ => Nil
+      }
+
+
     case ObliviousProject(projectList, child) =>
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
     case EncryptedProject(projectList, child) =>
@@ -50,10 +121,27 @@ object OpaqueOperators extends Strategy {
     case ObliviousJoin(left, right, joinExpr) =>
       Join(left, right, Inner, Some(joinExpr)) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-          ObliviousSortMergeJoinExec(
-            planLater(left),
-            planLater(right),
-            leftKeys, rightKeys, condition) :: Nil
+
+          val (joinOpcode, dummySortOpcode, dummyFilterOpcode) = JoinOpcodeExec(
+            planLater(left), planLater(right), leftKeys, rightKeys, condition).getOpcodes()
+
+          ObliviousFilterExec(
+            Literal(-1, IntegerType),
+            ObliviousSortOpcodeExec(
+              List(dummySortOpcode),
+              ObliviousSortMergeJoinExec(
+                ObliviousSortOpcodeExec(
+                  List(joinOpcode),
+                  ObliviousUnionExec(
+                    planLater(left),
+                    planLater(right),
+                    joinOpcode
+                  )
+                ), joinOpcode, dummySortOpcode, dummyFilterOpcode
+              )
+            )
+          ) :: Nil
+
         case _ => Nil
       }
     case EncryptedJoin(left, right, joinExpr) =>
@@ -79,6 +167,12 @@ object OpaqueOperators extends Strategy {
 
     case EncryptedBlockRDD(output, rdd, isOblivious) =>
       EncryptedBlockRDDScanExec(output, rdd, isOblivious) :: Nil
+
+    // for rule-based optimization, we want to match sort(filter(sort()))
+    // +- ObliviousSort [sourceIP#2676 ASC]
+    //    +- ObliviousProject [sourceIP#2676, pageRank#2752, adRevenue#2679]
+    //       +- ObliviousFilter -1
+    //          +- ObliviousSortOpcode OP_SORT_COL3_IS_DUMMY_COL1
 
     case _ => Nil
   }
