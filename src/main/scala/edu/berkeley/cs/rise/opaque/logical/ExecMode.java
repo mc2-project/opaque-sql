@@ -15,19 +15,37 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package edu.berkeley.cs.rise.opaque.logical;
 
-import edu.berkeley.cs.rise.opaque.logical.ExecMode._
-import edu.berkeley.cs.rise.opaque.logical.Encrypt
+import java.util.Map;
+import java.util.HashMap;
 
-class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
-  def encrypted(): DataFrame = {
-    Dataset.ofRows(ds.sparkSession, Encrypt(ENCRYPTION, ds.logicalPlan))
-  }
+public enum ExecMode {
+    INSECURE(0),
+    ENCRYPTION(1),
+    OBLIVIOUS(2),
+    FULL_OBLIVIOUS(3);
 
-  def oblivious(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, Encrypt(OBLIVIOUS, ds.logicalPlan))
+    private int _value;
 
-  def fullOblivious(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, Encrypt(FULL_OBLIVIOUS, ds.logicalPlan))
+    private ExecMode(int _value) {
+        this._value = _value;
+    }
+
+    public int value() {
+        return _value;
+    }
+
+    private static Map<Integer, ExecMode> map = new HashMap<Integer, ExecMode>();
+
+    static {
+        for (ExecMode m : ExecMode.values()) {
+            map.put(m.value(), m);
+        }
+    }
+
+    public static ExecMode getMode(int value) {
+        return map.get(value);
+    }
+
 }

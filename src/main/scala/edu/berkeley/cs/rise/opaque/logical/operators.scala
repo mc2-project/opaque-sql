@@ -30,10 +30,12 @@ import org.apache.spark.sql.catalyst.plans.logical.BinaryNode
 import org.apache.spark.sql.catalyst.plans.logical.LeafNode
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.UnaryNode
+import ExecMode._
 
 /**
  * An operator that computes on encrypted data.
  */
+
 trait OpaqueOperator extends LogicalPlan {
   /**
    * Every encrypted operator relies on its input having a specific set of columns, so we override
@@ -41,14 +43,24 @@ trait OpaqueOperator extends LogicalPlan {
    */
   override def references: AttributeSet = inputSet
 
-  def isOblivious: Boolean = children.exists(_.find {
-    case p: OpaqueOperator => p.isOblivious
-    case _ => false
-  }.nonEmpty)
+  def mode: ExecMode = {
+    ExecMode.getMode(children.map {
+      c => c.map {
+        x => x match {
+          case o: OpaqueOperator => o.mode.value
+          case _ => INSECURE.value
+        }
+      }.foldLeft(0)((m: Int, n: Int) => math.max(m, n))
+    }.foldLeft(0)((m: Int, n: Int) => math.max(m, n)))
+  }
+
+  def isOblivious: Boolean = {
+    (mode == OBLIVIOUS)
+  }
 }
 
 case class Encrypt(
-    override val isOblivious: Boolean,
+    override val mode: ExecMode,
     child: LogicalPlan)
   extends UnaryNode with OpaqueOperator {
 
@@ -58,7 +70,7 @@ case class Encrypt(
 case class EncryptedLocalRelation(
     output: Seq[Attribute],
     plaintextData: Seq[InternalRow],
-    override val isOblivious: Boolean)
+    override val mode: ExecMode)
   extends LeafNode with MultiInstanceRelation with OpaqueOperator {
 
   // A local relation must have resolved output.
@@ -70,15 +82,15 @@ case class EncryptedLocalRelation(
    * query.
    */
   override final def newInstance(): this.type = {
-    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData, isOblivious).asInstanceOf[this.type]
+    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData, mode).asInstanceOf[this.type]
   }
 
   override protected def stringArgs = Iterator(output)
 
   override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case EncryptedLocalRelation(otherOutput, otherPlaintextData, otherIsOblivious) =>
+    case EncryptedLocalRelation(otherOutput, otherPlaintextData, otherMode) =>
       (otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
-        && otherIsOblivious == isOblivious)
+        && otherMode == mode)
     case _ => false
   }
 }
@@ -86,17 +98,17 @@ case class EncryptedLocalRelation(
 case class EncryptedBlockRDD(
     output: Seq[Attribute],
     rdd: RDD[Block],
-    override val isOblivious: Boolean)
+    override val mode: ExecMode)
   extends OpaqueOperator with MultiInstanceRelation {
 
   override def children: Seq[LogicalPlan] = Nil
 
   override def newInstance(): EncryptedBlockRDD.this.type =
-    EncryptedBlockRDD(output.map(_.newInstance()), rdd, isOblivious).asInstanceOf[this.type]
+    EncryptedBlockRDD(output.map(_.newInstance()), rdd, mode).asInstanceOf[this.type]
 
   override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case EncryptedBlockRDD(_, otherRDD, otherIsOblivious) =>
-      rdd.id == otherRDD.id && isOblivious == otherIsOblivious
+    case EncryptedBlockRDD(_, otherRDD, otherMode) =>
+      rdd.id == otherRDD.id && mode == otherMode
     case _ => false
   }
 

@@ -31,6 +31,8 @@ import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+
+    // sort(project(join())) -- only when projection can be pushed up
     case ObliviousSort(order, ObliviousProject(projectList, ObliviousJoin(left, right, joinExpr))) =>
       println("=====Matched!!=====")
 
@@ -144,6 +146,7 @@ object OpaqueOperators extends Strategy {
 
         case _ => Nil
       }
+
     case EncryptedJoin(left, right, joinExpr) =>
       Join(left, right, Inner, Some(joinExpr)) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
@@ -155,7 +158,22 @@ object OpaqueOperators extends Strategy {
       }
 
     case a @ ObliviousAggregate(groupingExpressions, aggExpressions, child) =>
-      ObliviousAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
+
+      val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = ObliviousAggregateOpcodeExec(
+        groupingExpressions, aggExpressions, planLater(child)).getOpcodes()
+
+      ObliviousFilterExec(
+        Literal(-1, IntegerType),
+        ObliviousSortOpcodeExec(
+          List(aggDummySortOpcode),
+          ObliviousAggregateExec(
+            groupingExpressions,
+            aggExpressions,
+            planLater(child)
+          )
+        )
+      ) :: Nil
+
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
 

@@ -19,6 +19,7 @@ package edu.berkeley.cs.rise.opaque.logical
 
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
+import edu.berkeley.cs.rise.opaque.logical.ExecMode._
 import org.apache.spark.sql.InMemoryRelationMatcher
 import org.apache.spark.sql.UndoCollapseProject
 import org.apache.spark.sql.catalyst.expressions.Alias
@@ -34,12 +35,30 @@ import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case Encrypt(isOblivious, LocalRelation(output, data)) =>
-      EncryptedLocalRelation(output, data, isOblivious)
+    case Encrypt(mode: ExecMode, LocalRelation(output, data)) =>
+      EncryptedLocalRelation(output, data, mode)
   }
 }
 
 object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
+  def mode(plan: LogicalPlan): ExecMode = {
+    ExecMode.getMode(plan.map {
+      x => x match {
+        case o: OpaqueOperator => o.mode.value
+        case _ => INSECURE.value
+      }
+    }.foldLeft(0)((m: Int, n: Int) => math.max(m, n)))
+  }
+
+  def mode(plan: SparkPlan): ExecMode = {
+    ExecMode.getMode(plan.map {
+      x => x match {
+        case o: OpaqueOperatorExec => o.mode.value
+        case _ => INSECURE.value
+      }
+    }.foldLeft(0)((m: Int, n: Int) => math.max(m, n)))
+  }
+
   def isOblivious(plan: LogicalPlan): Boolean = {
     isEncrypted(plan) && plan.find {
       case p: OpaqueOperator => p.isOblivious
@@ -76,14 +95,14 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
 
     // We don't support null values yet, so there's no point in checking whether the output of an
     // encrypted operator is null
-    case p @ Filter(And(IsNotNull(_), IsNotNull(_)), child) if isEncrypted(child) =>
+    case p @ Filter(And(IsNotNull(_), IsNotNull(_)), child) if isEncrypted(child)=>
       child
     case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
       child
 
     case p @ Filter(condition, child) if isOblivious(child) =>
       ObliviousFilter(condition, ObliviousPermute(child.asInstanceOf[OpaqueOperator]))
-    case p @ Filter(condition, child) if isEncrypted(child) =>
+    case p @ Filter(condition, child) if isEncrypted(child)=>
       EncryptedFilter(condition, child.asInstanceOf[OpaqueOperator])
 
     case p @ Sort(order, true, child) if isOblivious(child) =>
@@ -137,6 +156,6 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
         Utils.ensureCached(
           child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
           storageLevel),
-        isOblivious(child))
+        mode(child))
   }
 }

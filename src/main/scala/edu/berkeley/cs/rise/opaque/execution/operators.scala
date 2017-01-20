@@ -21,6 +21,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.RA
+import edu.berkeley.cs.rise.opaque.logical.ExecMode
+import ExecMode._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
@@ -54,7 +56,7 @@ trait BinaryExecNode extends SparkPlan {
 case class EncryptedLocalTableScanExec(
     output: Seq[Attribute],
     plaintextData: Seq[InternalRow],
-    override val isOblivious: Boolean)
+    override val mode: ExecMode)
   extends LeafExecNode with OpaqueOperatorExec {
 
   private val unsafeRows: Array[InternalRow] = {
@@ -72,7 +74,7 @@ case class EncryptedLocalTableScanExec(
 }
 
 case class EncryptExec(
-    override val isOblivious: Boolean,
+    override val mode: ExecMode,
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
@@ -90,7 +92,7 @@ case class EncryptExec(
 case class EncryptedBlockRDDScanExec(
     output: Seq[Attribute],
     rdd: RDD[Block],
-    override val isOblivious: Boolean)
+    override val mode: ExecMode)
   extends LeafExecNode with OpaqueOperatorExec {
 
   override def executeBlocked(): RDD[Block] = {
@@ -105,10 +107,20 @@ case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
 
-  def isOblivious: Boolean = children.exists(_.find {
-    case p: OpaqueOperatorExec => p.isOblivious
-    case _ => false
-  }.nonEmpty)
+  def mode: ExecMode = {
+    ExecMode.getMode(children.map {
+      c => c.map {
+        x => x match {
+          case o: OpaqueOperatorExec => o.mode.value
+          case _ => INSECURE.value
+        }
+      }.foldLeft(0)((m: Int, n: Int) => math.max(m, n))
+    }.foldLeft(0)((m: Int, n: Int) => math.max(m, n)))
+  }
+
+  def isOblivious: Boolean = {
+    (mode == OBLIVIOUS)
+  }
 
   override def doExecute() = {
     sqlContext.sparkContext.emptyRDD
@@ -387,26 +399,15 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
   }
 }
 
+case class ObliviousAggregateOpcodeExec(groupingExpressions: Seq[Expression], aggExpressions: Seq[NamedExpression], child: SparkPlan) {
 
-case class ObliviousAggregateExec(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
-    child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
-
-  import Utils.time
+  import Opcode._
 
   private object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
   }
 
-  override def producedAttributes: AttributeSet =
-    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
-
-  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
-
-  override def executeBlocked(): RDD[Block] = {
-    import Opcode._
+  def getOpcodes(): (Opcode, Opcode, Opcode, Opcode) = {
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
@@ -478,6 +479,33 @@ case class ObliviousAggregateExec(
             s"Input: ${child.output}.\n" +
             s"Types: ${child.output.map(_.dataType)}")
       }
+
+    (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode)
+  }
+}
+
+
+case class ObliviousAggregateExec(
+    groupingExpressions: Seq[Expression],
+    aggExpressions: Seq[NamedExpression],
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  import Utils.time
+
+  private object Col extends ColumnNumberMatcher {
+    override def input: Seq[Attribute] = child.output
+  }
+
+  override def producedAttributes: AttributeSet =
+    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+
+  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+
+  override def executeBlocked(): RDD[Block] = {
+    import Opcode._
+    val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = ObliviousAggregateOpcodeExec(
+      groupingExpressions, aggExpressions, child).getOpcodes()
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
@@ -557,28 +585,7 @@ case class ObliviousAggregateExec(
     Utils.ensureCached(partialAggregates)
     time("aggregate - step 2") { partialAggregates.count }
 
-    // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
-    val sortedAggregates = time("aggregate - sort dummies") {
-      val result = ObliviousSortExec.sortBlocks(partialAggregates, aggDummySortOpcode)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-
-    // Filter out the non-final aggregates
-    val finalAggregates = time("aggregate - filter out dummies") {
-      val result = sortedAggregates.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
-        val numOutputRows = new MutableInteger
-        val filtered = enclave.Filter(
-          eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(filtered, numOutputRows.value)
-      }
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-    finalAggregates
+    partialAggregates
   }
 }
 
