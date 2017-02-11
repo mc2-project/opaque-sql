@@ -42,8 +42,14 @@ case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
         OP_SORT_COL1
       case Seq(SortOrder(Col(2, _), Ascending)) =>
         OP_SORT_COL2
+      case Seq() =>
+        OP_NOSORT
     }
-    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    if (opcode == OP_NOSORT) {
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    } else {
+      EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    }
   }
 }
 

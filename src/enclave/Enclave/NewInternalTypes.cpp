@@ -375,6 +375,8 @@ void NewRecord::print() const {
 
     case FLOAT: printf("%f]", *reinterpret_cast<const float *>(row_ptr)); break;
 
+    case DOUBLE: printf("%lf]", *reinterpret_cast<const double *>(row_ptr)); break;
+
     case STRING:
     case URL_TYPE:
     case C_CODE:

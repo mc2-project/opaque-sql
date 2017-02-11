@@ -90,7 +90,14 @@ public enum Opcode {
     OP_GROUPBY_COL1_SUM_COL2_INT(300),
     OP_GROUPBY_COL1_SUM_COL2_FLOAT(301),
     OP_GROUPBY_COL1_MIN_COL2_INT(303),
-    OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT(302);
+    OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT(302),
+
+    // Least squares
+    OP_PROJECT_LS(100000),
+    OP_PROJECT_LS_B(100001),
+    OP_SUM_LS(100002),
+    OP_SUM_LS_2(100003);
+
     private int _value;
 
     private Opcode(int _value) {

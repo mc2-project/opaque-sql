@@ -250,6 +250,14 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
         OP_PROJECT_TPCH9OPAQUE
       case Seq(Col(1, _), Alias(Year(Col(2, DateType)), _)) =>
         OP_PROJECT_TPCH9_ORDER_YEAR
+      case Seq(
+        Alias(Multiply(Col(1, FloatType), Col(1, FloatType)), _),
+        Alias(Multiply(Col(1, FloatType), Col(2, FloatType)), _),
+        Alias(Multiply(Col(2, FloatType), Col(2, FloatType)), _),
+        Alias(Multiply(Col(1, FloatType), Col(3, FloatType)), _),
+        Alias(Multiply(Col(2, FloatType), Col(3, FloatType)), _)
+      ) =>
+          OP_PROJECT_LS
       case _ =>
         throw new Exception(
           s"ObliviousProjectExec: unknown project list $projectList.\n" +
@@ -428,6 +436,18 @@ case class ObliviousAggregateExec(
             OP_SORT_COL2_IS_DUMMY_COL1,
             OP_FILTER_NOT_DUMMY)
 
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
+        )) =>
+          (OP_SUM_LS,
+            OP_SUM_LS_2,
+            OP_SORT_COL2_IS_DUMMY_COL1,
+            OP_FILTER_NOT_DUMMY)
+
       case _ =>
         throw new Exception(
           s"ObliviousAggregateExec: unknown grouping expressions $groupingExpressions, " +
@@ -439,7 +459,7 @@ case class ObliviousAggregateExec(
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
 
-    if (aggStep1Opcode == OP_SUM_COL1_INTEGER) {
+    if (aggStep1Opcode == OP_SUM_COL1_INTEGER || aggStep1Opcode == OP_SUM_LS) {
       RA.initRA(childRDD)
       // Do local global aggregates
       val aggregates = childRDD.map { block =>
@@ -577,6 +597,15 @@ case class EncryptedAggregateExec(
           Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
           OP_SUM_COL1_INTEGER
 
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
+        )) =>
+          OP_SUM_LS
+
       case _ =>
         throw new Exception(
           s"EncryptedAggregateExec: unknown grouping expressions $groupingExpressions, " +
@@ -588,7 +617,7 @@ case class EncryptedAggregateExec(
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
 
-    if (aggOpcode == OP_SUM_COL1_INTEGER) {
+    if (aggOpcode == OP_SUM_COL1_INTEGER || aggOpcode == OP_SUM_LS) {
       RA.initRA(childRDD)
       // Do local global aggregates
       val aggregates = childRDD.map { block =>
@@ -599,12 +628,17 @@ case class EncryptedAggregateExec(
         resultBytes
       }
 
+      var aggOpcode2 = aggOpcode
+      if (aggOpcode == OP_SUM_LS) {
+        aggOpcode2 = OP_SUM_LS_2
+      }
+
       Utils.ensureCached(aggregates)
       val (enclave, eid) = Utils.initEnclave()
       val aggregatesCollected = aggregates.collect
       // Collect and run GlobalAggregate again
       val finalOutputRows = new MutableInteger
-      val result = enclave.GlobalAggregate(eid, 0, 0, aggOpcode.value,
+      val result = enclave.GlobalAggregate(eid, 0, 0, aggOpcode2.value,
         Utils.concatByteArrays(aggregatesCollected), aggregatesCollected.length, finalOutputRows)
       assert(finalOutputRows.value == 1)
 

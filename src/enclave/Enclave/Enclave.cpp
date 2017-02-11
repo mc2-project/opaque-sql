@@ -970,6 +970,30 @@ void ecall_global_aggregate(int index, int num_part,
       actual_size, num_output_rows);
     break;
 
+  case OP_SUM_LS:
+    non_oblivious_aggregate<Aggregator5<GroupBy<0>,
+                                        Sum<1, float, double>,
+                                        Sum<2, float, double>,
+                                        Sum<3, float, double>,
+                                        Sum<4, float, double>,
+                                        Sum<5, float, double> > >(
+        &verify_set,
+        input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+        actual_size, num_output_rows);
+    break;
+
+  case OP_SUM_LS_2:
+    non_oblivious_aggregate<Aggregator5<GroupBy<0>,
+                                        Sum<1, double, double>,
+                                        Sum<2, double, double>,
+                                        Sum<3, double, double>,
+                                        Sum<4, double, double>,
+                                        Sum<5, double, double> > >(
+        &verify_set,
+        input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+        actual_size, num_output_rows);
+    break;
+
   default:
     printf("ecall_global_aggregate: Unknown opcode %d\n", op_code);
     assert(false);

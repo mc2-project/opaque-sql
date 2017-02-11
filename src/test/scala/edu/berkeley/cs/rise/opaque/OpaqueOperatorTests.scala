@@ -89,6 +89,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  testAgainstSpark("least squares") { securityLevel =>
+    val answer = LeastSquaresBenchmark.query(spark, securityLevel, "tiny", numPartitions).collect
+    answer
+  }
+
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
   }

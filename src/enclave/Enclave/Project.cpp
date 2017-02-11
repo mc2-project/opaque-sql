@@ -174,6 +174,29 @@ void project_single_row(int op_code, NewRecord *in, NewRecord *out) {
       }
     }
     break;
+
+  case OP_PROJECT_LS:
+    {
+      // we want to project the three products: x1 * x1, x1 * x2, x2 * x2
+      out->clear();
+      float x1 = *reinterpret_cast<const float *>(in->get_attr_value(1));
+      float x2 = *reinterpret_cast<const float *>(in->get_attr_value(2));
+      float y = *reinterpret_cast<const float *>(in->get_attr_value(3));
+
+      float c11 = x1 * x1;
+      float c12 = x1 * x2;
+      float c22 = x2 * x2;
+      float b1 = x1 * y;
+      float b2 = x2 * y;
+
+      out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&c11));
+      out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&c12));
+      out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&c22));
+      out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&b1));
+      out->add_attr(FLOAT, 4, reinterpret_cast<const uint8_t *>(&b2));
+    }
+    break;
+
   default:
     printf("project_single_row: unknown opcode %d\n", op_code);
     assert(false);
