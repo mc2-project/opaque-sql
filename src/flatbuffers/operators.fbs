@@ -46,9 +46,15 @@ table AggExpr {
 }
 
 // Join
+enum JoinType : ubyte {
+    Inner, FullOuter, LeftOuter, RightOuter, LeftSemi, LeftAnti, Cross
+}
 table JoinExpr {
-    left_types:[ColType];
-    right_types:[ColType];
-    left_keys:[ColType];
-    right_keys:[ColType];
+    join_type:JoinType;
+    // Currently only cross joins and equijoins are supported, so we store
+    // parallel arrays of key expressions and the join outputs pairs of rows
+    // where each expression from the left is equal to the matching expression
+    // from the right.
+    left_keys:[Expr];
+    right_keys:[Expr];
 }

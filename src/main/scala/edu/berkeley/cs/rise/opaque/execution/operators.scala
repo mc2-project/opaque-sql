@@ -19,13 +19,14 @@ package edu.berkeley.cs.rise.opaque.execution
 
 import scala.collection.mutable.ArrayBuffer
 
-import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.RA
+import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.types._
@@ -719,11 +720,11 @@ private object OpaqueJoinUtils {
 }
 
 case class EncryptedSortMergeJoinExec(
-    left: SparkPlan,
-    right: SparkPlan,
+    joinType: JoinType,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
-    condition: Option[Expression])
+    condition: Option[Expression],
+    child: SparkPlan)
   extends BinaryExecNode with OpaqueOperatorExec {
 
   import Utils.time
@@ -732,9 +733,6 @@ case class EncryptedSortMergeJoinExec(
     left.output ++ right.output
 
   override def executeBlocked() = {
-    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
-      OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
-
     val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)
@@ -742,40 +740,13 @@ case class EncryptedSortMergeJoinExec(
     Utils.ensureCached(rightRDD)
     time("Force right child of EncryptedSortMergeJoinExec") { rightRDD.count }
 
-    RA.initRA(leftRDD)
+    // RA.initRA(leftRDD)
 
-    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      val (enclave, eid) = Utils.initEnclave()
-
-      val leftBlockArray = leftBlockIter.toArray
-      assert(leftBlockArray.length == 1)
-      val leftBlock = leftBlockArray.head
-
-      val rightBlockArray = rightBlockIter.toArray
-      assert(rightBlockArray.length == 1)
-      val rightBlock = rightBlockArray.head
-
-      val processed = enclave.JoinSortPreprocess(
-        eid, 0, 0, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
-        rightBlock.bytes, rightBlock.numRows)
-
-      Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
-    }
-    Utils.ensureCached(processed)
-    time("join - preprocess") { processed.count }
-
-    val sorted = time("join - sort") {
-      val result = EncryptedSortExec.sort(processed, ???)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-
-    val joined = sorted.map { block =>
+    val joined = child.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
-      val joined = enclave.NonObliviousSortMergeJoin(
-        eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
+      val joined = enclave.EncryptedSortMergeJoin(
+        eid, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
       Block(joined, numOutputRows.value)
     }
     Utils.ensureCached(joined)

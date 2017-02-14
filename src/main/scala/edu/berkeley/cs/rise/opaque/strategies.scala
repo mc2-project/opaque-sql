@@ -47,22 +47,29 @@ object OpaqueOperators extends Strategy {
     case EncryptedSort(order, child) =>
       EncryptedSortExec(order, planLater(child)) :: Nil
 
-    case ObliviousJoin(left, right, joinExpr) =>
-      Join(left, right, Inner, Some(joinExpr)) match {
+    case ObliviousJoin(left, right, joinType, condition) =>
+      Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-          ObliviousSortMergeJoinExec(
-            planLater(left),
-            planLater(right),
-            leftKeys, rightKeys, condition) :: Nil
+          ???
+          // ObliviousSortMergeJoinExec(
+          //   joinType, leftKeys, rightKeys, condition,
+          //   ObliviousSortExec(
+          //     sortByTag,
+          //     ObliviousUnionExec(
+          //       ObliviousProjectExec(tagRight(left.output), planLater(left)),
+          //       ObliviousProjectExec(tagRight(right.output), planLater(right))))) :: Nil
         case _ => Nil
       }
-    case EncryptedJoin(left, right, joinExpr) =>
-      Join(left, right, Inner, Some(joinExpr)) match {
+    case EncryptedJoin(left, right, joinType, condition) =>
+      Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
           EncryptedSortMergeJoinExec(
-            planLater(left),
-            planLater(right),
-            leftKeys, rightKeys, condition) :: Nil
+            joinType, leftKeys, rightKeys, condition,
+            EncryptedSortExec(
+              sortByTag,
+              ObliviousUnionExec(
+                ObliviousProjectExec(tagRight(left.output), planLater(left)),
+                ObliviousProjectExec(tagRight(right.output), planLater(right))))) :: Nil
         case _ => Nil
       }
 
@@ -82,4 +89,8 @@ object OpaqueOperators extends Strategy {
 
     case _ => Nil
   }
+
+  private def tagLeft(input: Seq[Attribute]): Seq[NamedExpression] = ???
+  private def tagRight(input: Seq[Attribute]): Seq[NamedExpression] = ???
+  private val sortByTag: Seq[SortOrder] = ???
 }

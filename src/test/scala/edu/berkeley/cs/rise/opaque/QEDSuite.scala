@@ -88,6 +88,18 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     df.show(50)
   }
 
+  test("flatbuffers join") {
+    val df1 = spark.createDataFrame(
+      (1 to 20).map(x => (x, x.toString)).reverse)
+      .toDF("a", "b").encrypted
+    val df2 = spark.createDataFrame(
+      (1 to 20).map(x => (x, (x + 1).toString)))
+      .toDF("c", "d").encrypted
+    val df = df1.join(df2, $"a" === $"c")
+    df.explain(true)
+    df.show(50)
+  }
+
   // test("encAggregate - final run split across multiple partitions") {
   //   val data = for (i <- 0 until 256) yield (i, "A", 1)
   //   val words = spark.createDataFrame(spark.sparkContext.makeRDD(data, 2))
