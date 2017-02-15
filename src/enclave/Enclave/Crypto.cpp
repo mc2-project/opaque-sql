@@ -4,8 +4,8 @@
 //const sgx_aes_gcm_128bit_key_t *key = (const sgx_aes_gcm_128bit_key_t *) key_str;
 sgx_aes_gcm_128bit_key_t key_data = {0};
 sgx_aes_gcm_128bit_key_t *key = &key_data;
-//const KeySchedule ks = KeySchedule((unsigned char *) key_str, SGX_AESGCM_KEY_SIZE);
-KeySchedule *ks = NULL;
+const KeySchedule ks_backup = KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
+KeySchedule *ks = (KeySchedule *) &ks_backup;
 
 void initKeySchedule() {
   if (ks == NULL) {
