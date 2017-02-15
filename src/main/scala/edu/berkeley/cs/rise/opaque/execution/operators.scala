@@ -459,6 +459,10 @@ case class ObliviousAggregateExec(
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
 
+    if (childRDD.map(_.numRows).sum == 0) {
+       return childRDD
+    }
+
     if (aggStep1Opcode == OP_SUM_COL1_INTEGER || aggStep1Opcode == OP_SUM_LS) {
       RA.initRA(childRDD)
       // Do local global aggregates
