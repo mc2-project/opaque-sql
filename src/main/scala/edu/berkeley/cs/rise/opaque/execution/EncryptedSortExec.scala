@@ -58,6 +58,7 @@ object EncryptedSortExec {
 
   def sort(childRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
     Utils.ensureCached(childRDD)
+    time("force child of EncryptedSort") { childRDD.count }
     RA.initRA(childRDD)
 
     time("non-oblivious sort") {

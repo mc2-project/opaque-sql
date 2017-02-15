@@ -93,7 +93,11 @@ case class EncryptedBlockRDDScanExec(
     override val isOblivious: Boolean)
   extends LeafExecNode with OpaqueOperatorExec {
 
-  override def executeBlocked(): RDD[Block] = rdd
+  override def executeBlocked(): RDD[Block] = {
+    Utils.ensureCached(rdd)
+    Utils.time("force child of BlockRDDScan") { rdd.count }
+    rdd
+  }
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
@@ -266,6 +270,7 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
     }
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
+    Utils.time("force child of project") { execRDD.count }
     RA.initRA(execRDD)
 
     execRDD.map { block =>
