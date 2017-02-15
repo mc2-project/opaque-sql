@@ -157,6 +157,8 @@ object RA {
     // load master keys
     master.LoadKeys()
 
+    if (false) {
+
     //println("Loaded public and private keys")
 
     // check EPIDs
@@ -249,6 +251,7 @@ object RA {
     //println("Sent attestation results; attestation DONE")
 
     // attestation done
+    }
   }
 
 }
