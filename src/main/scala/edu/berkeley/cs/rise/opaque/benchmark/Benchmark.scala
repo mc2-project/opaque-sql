@@ -42,17 +42,17 @@ object Benchmark {
     BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
 
     // Run
-    BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q1(spark, Insecure, "1000000", numPartitions)
+    BigDataBenchmark.q1(spark, Encrypted, "1000000", numPartitions)
+    BigDataBenchmark.q1(spark, Oblivious, "1000000", numPartitions)
 
-    BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q2(spark, Insecure, "1000000", numPartitions)
+    BigDataBenchmark.q2(spark, Encrypted, "1000000", numPartitions)
+    BigDataBenchmark.q2(spark, Oblivious, "1000000", numPartitions)
 
-    BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q3(spark, Insecure, "1000000", numPartitions)
+    BigDataBenchmark.q3(spark, Encrypted, "1000000", numPartitions)
+    BigDataBenchmark.q3(spark, Oblivious, "1000000", numPartitions)
 
     if (spark.sparkContext.isLocal) {
       for (i <- 8 to 20) {
