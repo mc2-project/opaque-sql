@@ -1671,7 +1671,6 @@ class StreamRowReader {
   template<typename RecordType>
   void read(SortPointer<RecordType> *ptr, int op_code) {
     maybe_advance_block();
-	printf("[%s] block_rows_read is %u, block_num_rows is %d\n", __FUNCTION__, block_rows_read, block_num_rows);
     block_pos += ptr->read(this, op_code);
     block_rows_read++;
   }
@@ -1683,7 +1682,6 @@ class StreamRowReader {
   bool has_next() const {
     bool rows_remain_in_block = block_rows_read < block_num_rows;
     bool blocks_remain_in_buf = buf < buf_end;
-	printf("[%s] buf is %p, buf_end is %p\n", __FUNCTION__, buf, buf_end);
     return rows_remain_in_block || blocks_remain_in_buf;
   }
 

@@ -27,14 +27,10 @@ void external_merge(int op_code,
   check(sort_ptrs_len >= num_runs,
         "external_merge: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_runs);
 
-  printf("[%s] Begin external merge\n", __FUNCTION__);
-
   std::vector<StreamRowReader *> readers;
   for (uint32_t i = 0; i < num_runs; i++) {
     readers.push_back(new StreamRowReader(runs[run_start + i], runs[run_start + i + 1]));
   }
-
-  printf("[%s] created new readers\n", __FUNCTION__);
 
   auto compare = [op_code, num_comparisons, num_deep_comparisons](const MergeItem<RecordType> &a,
                                                                   const MergeItem<RecordType> &b) {
@@ -45,7 +41,6 @@ void external_merge(int op_code,
     queue(compare);
   for (uint32_t i = 0; i < num_runs; i++) {
     MergeItem<RecordType> item;
-	printf("[%s] merge op %u, num_runs is %u\n", __FUNCTION__, i, num_runs);
     item.v = sort_ptrs[i];
     readers[i]->read(&item.v, op_code);
     item.reader_idx = i;
@@ -59,24 +54,17 @@ void external_merge(int op_code,
     MergeItem<RecordType> item = queue.top();
     queue.pop();
     w.write(&item.v);
-	printf("[%s] item's reader index is %u\n", __FUNCTION__, item.reader_idx);
-	printf("[%s] reading another row from the same run\n", __FUNCTION__);
 
     // Read another row from the same run that this one came from
     if (readers[item.reader_idx]->has_next()) {
       readers[item.reader_idx]->read(&item.v, op_code);
-	  printf("[%s] finished reading another row from the same run\n", __FUNCTION__);
       queue.push(item);
     }
   }
   w.close();
 
-  printf("[%s] runs sorted into scratch\n", __FUNCTION__);
-
   // Overwrite the runs with scratch, merging them into one big run
   memcpy(runs[run_start], scratch, w.bytes_written());
-
-  printf("[%s] memcpy is done\n", __FUNCTION__);
 
   for (uint32_t i = 0; i < num_runs; i++) {
     delete readers[i];
@@ -94,7 +82,7 @@ void external_sort(int op_code,
 
   // Maximum number of rows we will need to store in memory at a time: the contents of the largest
   // buffer
-
+  
   uint32_t max_num_rows = 0;
   for (uint32_t i = 0; i < num_buffers; i++) {
     if (max_num_rows < num_rows[i]) {
@@ -143,8 +131,6 @@ void external_sort(int op_code,
       external_merge<RecordType>(op_code, verify_set,
                                  runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
                                  &num_comparisons, &num_deep_comparisons);
-
-      debug("external_sort: Merge complete\n", run_start, run_start + num_runs - 1);
 
       new_runs.push_back(runs[run_start]);
     }
@@ -228,8 +214,6 @@ void find_range_bounds(int op_code,
                        uint32_t *output_rows_len,
                        uint8_t *scratch) {
 
-  printf("[%s] entered\n", __FUNCTION__);
-
   // Sort the input rows
   external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
 
@@ -245,7 +229,6 @@ void find_range_bounds(int op_code,
   w.set_self_task_id(verify_set->get_self_task_id());
   RecordType row;
   uint32_t current_rows_in_part = 0;
-  printf("[%s] Total number of rows is %u\n", __FUNCTION__, total_num_rows);
   for (uint32_t i = 0; i < total_num_rows; i++) {
     r.read(&row);
     if (current_rows_in_part == num_rows_per_part) {
