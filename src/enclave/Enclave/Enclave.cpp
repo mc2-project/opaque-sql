@@ -533,7 +533,8 @@ void ecall_external_sort(int index,
                          uint8_t **buffer_list,
                          uint32_t *num_rows,
                          uint32_t row_upper_bound,
-                         uint8_t *scratch) {
+                         uint8_t *scratch,
+						 uint32_t *final_len) {
   (void)index;
   (void)num_part;
   Verify verify_set(op_code, 1, 0);
@@ -542,11 +543,11 @@ void ecall_external_sort(int index,
   switch (sort_op) {
   case SORT_SORT:
     external_sort<NewRecord>(op_code, &verify_set,
-                             num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+                             num_buffers, buffer_list, num_rows, row_upper_bound, scratch, final_len);
     break;
   case SORT_JOIN:
     external_sort<NewJoinRecord>(op_code, &verify_set,
-                                 num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+                                 num_buffers, buffer_list, num_rows, row_upper_bound, scratch, final_len);
     break;
   default:
     printf("ecall_external_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);

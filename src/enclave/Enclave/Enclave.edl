@@ -158,7 +158,8 @@ enclave {
       [user_check] uint8_t **buffer_list,
       [user_check] uint32_t *num_rows,
       uint32_t row_upper_bound,
-      [user_check] uint8_t *scratch);
+      [user_check] uint8_t *scratch,
+	  [user_check] uint32_t *final_len);
 																  
     public void ecall_sample(
       int index, int num_part,

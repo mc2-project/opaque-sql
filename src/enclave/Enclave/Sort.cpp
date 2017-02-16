@@ -12,24 +12,28 @@ class MergeItem {
 };
 
 template<typename RecordType>
-void external_merge(int op_code,
-                    Verify *verify_set,
-                    std::vector<uint8_t *> &runs,
-                    uint32_t run_start,
-                    uint32_t num_runs,
-                    SortPointer<RecordType> *sort_ptrs,
-                    uint32_t sort_ptrs_len,
-                    uint32_t row_upper_bound,
-                    uint8_t *scratch,
-                    uint32_t *num_comparisons,
-                    uint32_t *num_deep_comparisons) {
+uint32_t external_merge(int op_code,
+						Verify *verify_set,
+						std::vector<uint8_t *> &runs,
+						std::vector<uint8_t *> &run_ends,
+						uint32_t run_start,
+						uint32_t num_runs,
+						SortPointer<RecordType> *sort_ptrs,
+						uint32_t sort_ptrs_len,
+						uint32_t row_upper_bound,
+						uint8_t *scratch,
+						uint32_t *num_comparisons,
+						uint32_t *num_deep_comparisons) {
 
   check(sort_ptrs_len >= num_runs,
         "external_merge: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_runs);
 
+  debug("[%s] row_upper_bound is %u\n", __FUNCTION__, row_upper_bound);
+
   std::vector<StreamRowReader *> readers;
   for (uint32_t i = 0; i < num_runs; i++) {
-    readers.push_back(new StreamRowReader(runs[run_start + i], runs[run_start + i + 1]));
+	debug("[%s] constructing reader on %p to %p\n", __FUNCTION__, runs[run_start + i], run_ends[run_start + i]);
+    readers.push_back(new StreamRowReader(runs[run_start + i], run_ends[run_start + i]));
   }
 
   auto compare = [op_code, num_comparisons, num_deep_comparisons](const MergeItem<RecordType> &a,
@@ -39,13 +43,17 @@ void external_merge(int op_code,
   };
   std::priority_queue<MergeItem<RecordType>, std::vector<MergeItem<RecordType>>, decltype(compare)>
     queue(compare);
+  debug("[%s] created priority queue\n", __FUNCTION__);
   for (uint32_t i = 0; i < num_runs; i++) {
+	printf("[%s] run %u\n", __FUNCTION__, i);
     MergeItem<RecordType> item;
     item.v = sort_ptrs[i];
     readers[i]->read(&item.v, op_code);
     item.reader_idx = i;
     queue.push(item);
   }
+
+  debug("[%s] merge start\n", __FUNCTION__);
 
   // Sort the runs into scratch
   RowWriter w(scratch, row_upper_bound);
@@ -54,6 +62,7 @@ void external_merge(int op_code,
     MergeItem<RecordType> item = queue.top();
     queue.pop();
     w.write(&item.v);
+	//item.v.print()n;
 
     // Read another row from the same run that this one came from
     if (readers[item.reader_idx]->has_next()) {
@@ -63,12 +72,17 @@ void external_merge(int op_code,
   }
   w.close();
 
+  debug("[%s] merge is done\n", __FUNCTION__);
+
   // Overwrite the runs with scratch, merging them into one big run
-  memcpy(runs[run_start], scratch, w.bytes_written());
+  //memcpy(runs[run_start], scratch, w.bytes_written());
 
   for (uint32_t i = 0; i < num_runs; i++) {
     delete readers[i];
   }
+
+  debug("[%s] readers are deleted, bytes written is %u\n", __FUNCTION__, w.bytes_written());
+  return w.bytes_written();
 }
 
 template<typename RecordType>
@@ -78,11 +92,12 @@ void external_sort(int op_code,
                    uint8_t **buffer_list,
                    uint32_t *num_rows,
                    uint32_t row_upper_bound,
-                   uint8_t *scratch) {
+                   uint8_t *scratch,
+				   uint32_t *final_len) {
 
   // Maximum number of rows we will need to store in memory at a time: the contents of the largest
   // buffer
-  
+
   uint32_t max_num_rows = 0;
   for (uint32_t i = 0; i < num_buffers; i++) {
     if (max_num_rows < num_rows[i]) {
@@ -105,38 +120,64 @@ void external_sort(int op_code,
 
   uint32_t num_comparisons = 0, num_deep_comparisons = 0;
 
-  // Sort each buffer individually
-  for (uint32_t i = 0; i < num_buffers; i++) {
-    debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
-    sort_single_buffer(op_code, verify_set,
-                       buffer_list[i], buffer_list[i + 1], num_rows[i], sort_ptrs, max_list_length,
-                       row_upper_bound, &num_comparisons, &num_deep_comparisons);
-  }
-
   // Each buffer now forms a sorted run. Keep a pointer to the beginning of each run, plus a
   // sentinel pointer to the end of the last run
-  std::vector<uint8_t *> runs(buffer_list, buffer_list + num_buffers + 1);
+  std::vector<uint8_t *> runs;
+  std::vector<uint8_t *> run_ends;
+
+  // Sort each buffer individually
+  uint32_t ss_offset = 0;
+  runs.push_back(buffer_list[0]);
+  for (uint32_t i = 0; i < num_buffers; i++) {
+    debug("[%s] Sorting buffer %d with %d rows, out of %d buffers, opcode %d, buffer_list[i]: %p\n", 
+		  __FUNCTION__, i, num_rows[i], num_buffers, op_code, buffer_list[i]);
+
+    ss_offset += sort_single_buffer(op_code, verify_set,
+									buffer_list[i], buffer_list[i+1], 
+									scratch + ss_offset, num_rows[i], sort_ptrs, max_list_length,
+									row_upper_bound, &num_comparisons, &num_deep_comparisons);
+
+	if (i > 0) {
+	  runs.push_back(run_ends.back());
+	}
+	run_ends.push_back(buffer_list[0] + ss_offset);
+	printf("[%s] run %p, run_end %p\n", __FUNCTION__, runs[i], run_ends[i]);
+  }
+  memcpy(buffer_list[0], scratch, ss_offset);
 
   // Merge sorted runs, merging up to MAX_NUM_STREAMS runs at a time
-  while (runs.size() - 1 > 1) {
+  while (runs.size() > 1) {
     perf("external_sort: Merging %d runs, up to %d at a time\n",
-         runs.size() - 1, MAX_NUM_STREAMS);
+         runs.size(), MAX_NUM_STREAMS);
 
     std::vector<uint8_t *> new_runs;
-    for (uint32_t run_start = 0; run_start < runs.size() - 1; run_start += MAX_NUM_STREAMS) {
+    std::vector<uint8_t *> new_run_ends;
+	uint32_t offset_count = 0;
+	new_runs.push_back(buffer_list[0]);
+    for (uint32_t run_start = 0; run_start < runs.size(); run_start += MAX_NUM_STREAMS) {
       uint32_t num_runs =
-        std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(runs.size() - 1) - run_start);
+        std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(runs.size()) - run_start);
+
       debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
-      external_merge<RecordType>(op_code, verify_set,
-                                 runs, run_start, num_runs, sort_ptrs, max_list_length, row_upper_bound, scratch,
-                                 &num_comparisons, &num_deep_comparisons);
+      offset_count += external_merge<RecordType>(op_code, verify_set,
+												 runs, run_ends, 
+												 run_start, num_runs, sort_ptrs, 
+												 max_list_length, row_upper_bound, scratch+offset_count,
+												 &num_comparisons, &num_deep_comparisons);
 
-      new_runs.push_back(runs[run_start]);
+	  printf("[%s] offset_count is %u\n", __FUNCTION__, offset_count);
+	  if (run_start > 0) {
+		new_runs.push_back(new_run_ends.back());
+	  }
+      new_run_ends.push_back(buffer_list[0] + offset_count);
     }
-    new_runs.push_back(runs[runs.size() - 1]); // copy over the sentinel pointer
+    //new_runs.push_back(runs[runs.size() - 1]); // copy over the sentinel pointer
 
+	memcpy(buffer_list[0], scratch, offset_count);
     runs = new_runs;
+    run_ends = new_run_ends;
+	*final_len = offset_count;
   }
 
   perf("external_sort: %d comparisons, %d deep comparisons\n",
@@ -214,8 +255,9 @@ void find_range_bounds(int op_code,
                        uint32_t *output_rows_len,
                        uint8_t *scratch) {
 
+  uint32_t final_len = 0;
   // Sort the input rows
-  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch, &final_len);
 
   // Split them into one range per partition
   uint32_t total_num_rows = 0;
@@ -258,8 +300,10 @@ void partition_for_sort(int op_code,
                         uint32_t *output_partition_num_rows,
                         uint8_t *scratch) {
 
+  uint32_t final_len = 0;
   // Sort the input rows
-  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch, &final_len);
+  printf("[%s] final_len is %u\n", __FUNCTION__, final_len);
 
   uint32_t total_num_rows = 0;
   for (uint32_t i = 0; i < num_buffers; i++) {
@@ -288,13 +332,17 @@ void partition_for_sort(int op_code,
     // The new row falls outside the current range, so we start a new range
     if (!row.less_than(&boundary_row, op_code) && out_idx < num_partitions - 1) {
       // Record num_rows for the old range
-      output_partition_num_rows[out_idx] = cur_num_rows; cur_num_rows = 0;
+      output_partition_num_rows[out_idx] = cur_num_rows; 
+	  boundary_row.print();
+	  printf("[%s] out_idx is %u, cur_num_rows is %u\n", __FUNCTION__, out_idx, cur_num_rows);
+	  cur_num_rows = 0;
 
       out_idx++;
 
       // Record the beginning of the new range
       w.finish_block();
       output_partition_ptrs[out_idx] = output + w.bytes_written();
+	  printf("[%s] w.bytes_written() is %u\n", __FUNCTION__, w.bytes_written());
 
       if (out_idx < num_partitions - 1) {
         b.read(&boundary_row);
@@ -307,6 +355,7 @@ void partition_for_sort(int op_code,
 
   // Record num_rows for the last range
   output_partition_num_rows[num_partitions - 1] = cur_num_rows;
+  printf("[%s] out_idx is %u, cur_num_rows is %u\n", __FUNCTION__, out_idx, cur_num_rows);
 
   w.close();
   // Write the sentinel pointer to the end of the last range
@@ -320,7 +369,8 @@ template void external_sort<NewRecord>(
   uint8_t **buffer_list,
   uint32_t *num_rows,
   uint32_t row_upper_bound,
-  uint8_t *scratch);
+  uint8_t *scratch,
+  uint32_t *final_len);
 
 template void external_sort<NewJoinRecord>(
   int op_code,
@@ -329,7 +379,8 @@ template void external_sort<NewJoinRecord>(
   uint8_t **buffer_list,
   uint32_t *num_rows,
   uint32_t row_upper_bound,
-  uint8_t *scratch);
+  uint8_t *scratch,
+  uint32_t *final_len);
 
 template void sample<NewRecord>(
   Verify *verify_set,

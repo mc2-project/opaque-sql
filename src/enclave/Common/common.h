@@ -16,7 +16,7 @@ int printf( const char* format, ... );
 #define C_CODE_UPPER_BOUND (3)
 #define L_CODE_UPPER_BOUND (6)
 #define IP_UPPER_BOUND (15)
-#define USER_AGENT_UPPER_BOUND (150)
+#define USER_AGENT_UPPER_BOUND (256)
 #define SEARCH_WORD_UPPER_BOUND (32)
 #define TPCH_NATION_NAME_UPPER_BOUND (25)
 #define LONG_UPPER_BOUND (8)

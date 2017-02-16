@@ -1431,8 +1431,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t *boundary_rows_ptr = (uint8_t *) env->GetByteArrayElements(boundary_rows, &if_copy);
   uint32_t boundary_rows_len = (uint32_t) env->GetArrayLength(boundary_rows);
 
-  uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  uint8_t *input_copy = (uint8_t *) malloc(input_len * 2);
+  uint8_t *scratch = (uint8_t *) malloc(input_len * 2);
 
   for (uint32_t i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -1443,7 +1443,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t row_upper_bound = 0;
   split_rows(input_copy, input_len, num_rows, buffer_list, buffer_num_rows, &row_upper_bound);
 
-  uint32_t output_len = 2 * input_len; // need extra space for the increased number of block
+  uint32_t output_len = num_partitions * input_len; // need extra space for the increased number of block
                                        // headers. TODO: use block_size_upper_bound
   uint8_t *output = (uint8_t *) malloc(output_len);
   uint8_t **output_partition_ptrs =
@@ -1503,8 +1503,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jboolean if_copy = false;
   jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
 
-  uint8_t *input_copy = (uint8_t *) malloc(input_len);
-  uint8_t *scratch = (uint8_t *) malloc(input_len);
+  uint8_t *input_copy = (uint8_t *) malloc(input_len * 2);
+  uint8_t *scratch = (uint8_t *) malloc(input_len * 2);
 
   for (uint32_t i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -1515,6 +1515,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t row_upper_bound = 0;
   split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
 
+  uint32_t final_len = input_len;
   sgx_check("External non-oblivious sort",
             ecall_external_sort(eid,
                                 index, num_part,
@@ -1523,10 +1524,11 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 								buffer_list.data(),
                                 num_rows.data(),
 								row_upper_bound,
-                                scratch));
+                                scratch,
+								&final_len));
 
   jbyteArray ret = env->NewByteArray(input_len);
-  env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
+  env->SetByteArrayRegion(ret, 0, final_len, (jbyte *) input_copy);
 
   env->ReleaseByteArrayElements(input, ptr, 0);
 

@@ -1646,6 +1646,7 @@ class StreamRowReader {
   StreamRowReader(uint8_t *buf, uint8_t *buf_end)
     : cipher(NULL), buf(buf), buf_end(buf_end), cur_block_num(0) {
     verify_set = new std::set<uint32_t>();
+	printf("[%s] reading encrypted block\n", __FUNCTION__);
     this->read_encrypted_block();
   }
 
@@ -1700,13 +1701,15 @@ class StreamRowReader {
   }
   
   void read_encrypted_block() {
+	printf("[%s] buf is %p\n", __FUNCTION__, buf); 
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     buf += 4; // row_upper_bound
 
+	printf("[%s] block_num_rows is %u\n", __FUNCTION__, block_num_rows); 
+
     uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     add_parent(task_id);
-   
 
     if (cipher == NULL) {
       cipher = new StreamDecipher(buf, block_enc_size);

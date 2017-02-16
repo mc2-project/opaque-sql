@@ -40,7 +40,8 @@ void external_sort(int op_code,
                    uint8_t **buffer_list,
                    uint32_t *num_rows,
                    uint32_t row_upper_bound,
-                   uint8_t *scratch);
+                   uint8_t *scratch,
+				   uint32_t *final_len);
 
 /**
  * For distributed sorting, sample rows from a partition of data so they can be collected to a

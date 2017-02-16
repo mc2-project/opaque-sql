@@ -11,9 +11,11 @@ int log_2(int value);
 int pow_2(int value);
 
 template<typename RecordType>
-void sort_single_buffer(
+uint32_t sort_single_buffer(
   int op_code, Verify *verify_set,
-  uint8_t *buffer, uint8_t *buffer_end, uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  uint8_t *buffer, uint8_t *buffer_end, 
+  uint8_t *write_buffer,
+  uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
   uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
   uint32_t *num_deep_comparisons) {
 
@@ -33,12 +35,14 @@ void sort_single_buffer(
       return a.less_than(&b, op_code, num_deep_comparisons);
     });
 
-  RowWriter w(buffer, row_upper_bound);
+  RowWriter w(write_buffer, row_upper_bound);
   w.set_self_task_id(verify_set->get_self_task_id());
   for (uint32_t i = 0; i < num_rows; i++) {
     w.write(&sort_ptrs[i]);
   }
   w.close();
+  printf("[%s] bytes read: %u, bytes_written is %u, buffer + byteswritten: %p\n", __FUNCTION__, (uint32_t)(buffer_end - buffer), w.bytes_written(), buffer+w.bytes_written());
+  return w.bytes_written();
 }
 
 template<typename RecordType>
@@ -166,15 +170,17 @@ void external_oblivious_sort(int op_code,
   if (num_buffers == 1) {
     debug("Sorting single buffer with %d rows, opcode %d\n", num_rows[0], op_code);
     sort_single_buffer(op_code, verify_set,
-                       buffer_list[0], buffer_list[1], num_rows[0],
+                       buffer_list[0], buffer_list[1], buffer_list[0],
+					   num_rows[0],
                        sort_ptrs, max_list_length, row_upper_bound,
                        &num_comparisons, &num_deep_comparisons);
   } else {
     // Sort each buffer individually
     for (uint32_t i = 0; i < num_buffers; i++) {
-      debug("Sorting buffer %d with %d rows, opcode %d\n", i, num_rows[i], op_code);
+      debug("[%s] Sorting buffer %d with %d rows, opcode %d\n", __FUNCTION__, i, num_rows[i], op_code);
       sort_single_buffer(op_code, verify_set,
-                         buffer_list[i], buffer_list[i + 1], num_rows[i],
+                         buffer_list[i], buffer_list[i + 1], buffer_list[i],
+						 num_rows[i],
                          sort_ptrs, max_list_length, row_upper_bound,
                          &num_comparisons, &num_deep_comparisons);
     }
