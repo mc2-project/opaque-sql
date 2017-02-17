@@ -324,5 +324,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
 
 
 void MAC::mac(uint8_t *mac_ptr, uint32_t len) {
-  cipher->aad((unsigned char *) mac_ptr, len);
+  (void)mac_ptr;
+  (void)len;
+  // cipher->aad((unsigned char *) mac_ptr, len);
 }

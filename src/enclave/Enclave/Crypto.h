@@ -100,17 +100,17 @@ class StreamDecipher {
 class MAC {
  public:
   MAC() {
-    uint8_t iv[SGX_AESGCM_IV_SIZE+1] = "000000000000";
-    cipher = new AesGcm(ks, iv, SGX_AESGCM_IV_SIZE);
+    //uint8_t iv[SGX_AESGCM_IV_SIZE+1] = "000000000000";
+    //cipher = new AesGcm(ks, iv, SGX_AESGCM_IV_SIZE);
   }
 
   ~MAC() {
-    delete cipher;
+    //delete cipher;
   }
 
   void mac(uint8_t *ptr, uint32_t len);
 
-  AesGcm *cipher;
+  //AesGcm *cipher;
 };
 
 #endif

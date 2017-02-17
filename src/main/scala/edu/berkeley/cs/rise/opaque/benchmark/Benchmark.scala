@@ -37,24 +37,26 @@ object Benchmark {
     // val numPartitions =
     //   if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
 
-    val numPartitions = spark.sparkContext.defaultParallelism
+    val numPartitions = 5
 
     // Warmup
-    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
-    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    // BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
 
     // Run
     // BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
     // BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
+    // BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
 
     // BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
-    // BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
-    //BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
+    BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
+    // BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
 
     // BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
     // BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
-    //BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
+    // BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
+
+    // Thread.sleep(10000000)
 
     // if (spark.sparkContext.isLocal) {
     //   for (i <- 8 to 20) {
