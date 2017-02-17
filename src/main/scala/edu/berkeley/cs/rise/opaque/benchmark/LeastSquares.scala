@@ -46,7 +46,7 @@ object LeastSquaresBenchmark {
     Utils.time("Load least squares data") { Utils.force(dataDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
-      "query" -> "big data 1",
+      "query" -> "least squares",
       "system" -> securityLevel.name,
       "size" -> size) {
 
