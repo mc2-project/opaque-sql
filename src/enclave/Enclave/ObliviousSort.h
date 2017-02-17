@@ -42,7 +42,7 @@ void merge(int op_code, Verify *verify,
 template<typename RecordType>
 void external_oblivious_sort(
   int op_code, Verify *verify_set,
-  uint32_t num_buffers, uint8_t **buffer_list, uint32_t row_upper_bound);
+  uint32_t num_buffers, uint8_t **buffer_list, uint32_t row_upper_bound, uint8_t *single_buffer_scratch);
 
 #include "ObliviousSort.tcc"
 

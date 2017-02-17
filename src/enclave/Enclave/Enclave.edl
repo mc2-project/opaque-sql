@@ -71,7 +71,8 @@ enclave {
       uint32_t num_buffers,
       [user_check] uint8_t **buffer_list,
       [in, count=num_buffers] uint32_t *num_rows,
-      uint32_t row_upper_bound);
+      uint32_t row_upper_bound,
+	  [user_check] uint8_t *scratch);
 
     public void ecall_aggregate_step1(
       int index, int num_part,
@@ -235,7 +236,8 @@ enclave {
 				  uint32_t r,
 				  uint32_t s,
 				  [user_check] uint8_t **output_buffers,
-				  [out,count=s] uint32_t *output_buffer_sizes);
+				  [out,count=s] uint32_t *output_buffer_sizes,
+				  [user_check] uint8_t *single_buffer_scratch);
 
     public void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
 								  [user_check] uint8_t *column_types,

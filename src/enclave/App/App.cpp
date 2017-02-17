@@ -923,10 +923,12 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t row_upper_bound = 0;
   split_rows(input_copy, input_len, num_items, buffer_list, num_rows, &row_upper_bound);
 
+  uint8_t* single_buffer_scratch = (uint8_t *) malloc(MAX_SORT_BUFFER * 2);
+
   sgx_check("External Oblivious Sort",
             ecall_external_oblivious_sort(
               eid, op_code, buffer_list.size() - 1, buffer_list.data(), num_rows.data(),
-              row_upper_bound));
+              row_upper_bound, single_buffer_scratch));
 
   jbyteArray ret = env->NewByteArray(input_len);
   env->SetByteArrayRegion(ret, 0, input_len, (jbyte *) input_copy);
@@ -934,6 +936,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->ReleaseByteArrayElements(input, ptr, 0);
 
   free(input_copy);
+  free(single_buffer_scratch);
 
   return ret;
 }
@@ -1760,12 +1763,14 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
     return ret;
   } else {
+	uint8_t *single_buffer_scratch = (uint8_t *) malloc(MAX_SORT_BUFFER * 2);
     ecall_column_sort(eid,
                       index, number_part,
                       op_code, round-1, input_copy, input_len, num_rows.data(),
                       buffer_list.data(), buffer_list.size() - 1, row_upper_bound,
                       column, r, s,
-                      output_buffers, output_buffer_sizes);
+                      output_buffers, output_buffer_sizes, single_buffer_scratch);
+	free(single_buffer_scratch);
   }
 
   // serialize the buffers onto one big buffer

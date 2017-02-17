@@ -132,7 +132,8 @@ void external_oblivious_sort(int op_code,
                              uint32_t num_buffers,
                              uint8_t **buffer_list,
                              uint32_t *num_rows,
-                             uint32_t row_upper_bound) {
+                             uint32_t row_upper_bound,
+							 uint8_t *single_buffer_scratch) {
   int len = num_buffers;
   int log_len = log_2(len) + 1;
   int offset = 0;
@@ -166,6 +167,7 @@ void external_oblivious_sort(int op_code,
        max_list_length * sizeof(SortPointer<RecordType>));
 
   uint32_t num_comparisons = 0, num_deep_comparisons = 0;
+  std::vector<uint8_t *> new_buffer_list;
 
   if (num_buffers == 1) {
     debug("Sorting single buffer with %d rows, opcode %d\n", num_rows[0], op_code);
@@ -176,14 +178,26 @@ void external_oblivious_sort(int op_code,
                        &num_comparisons, &num_deep_comparisons);
   } else {
     // Sort each buffer individually
+	uint32_t ss_offset = 0;
     for (uint32_t i = 0; i < num_buffers; i++) {
       debug("[%s] Sorting buffer %d with %d rows, opcode %d\n", __FUNCTION__, i, num_rows[i], op_code);
-      sort_single_buffer(op_code, verify_set,
-                         buffer_list[i], buffer_list[i + 1], buffer_list[i],
+	  uint32_t ss_offset_tmp = ss_offset;
+	  ss_offset += sort_single_buffer(op_code, verify_set,
+                         buffer_list[i], buffer_list[i + 1], single_buffer_scratch,
 						 num_rows[i],
                          sort_ptrs, max_list_length, row_upper_bound,
                          &num_comparisons, &num_deep_comparisons);
+
+      debug("[%s] Writing %u bytes to %p\n", __FUNCTION__, ss_offset - ss_offset_tmp, buffer_list[0] + ss_offset_tmp);
+	  memcpy(buffer_list[0] + ss_offset_tmp, single_buffer_scratch, ss_offset - ss_offset_tmp);
+	  new_buffer_list.push_back(buffer_list[0] + ss_offset_tmp);
     }
+    // Add sentinel pointer for end of last buffer
+    new_buffer_list.push_back(buffer_list[0] + ss_offset);
+
+	for (uint32_t i = 0; i < num_buffers; i++) {
+	  debug("[%s] new_buffer_list[%u] is %p\n", __FUNCTION__, i, new_buffer_list[i]);
+	}
 
     // Merge sorted buffers pairwise
     for (int stage = 1; stage <= log_len; stage++) {
@@ -198,8 +212,8 @@ void external_oblivious_sort(int op_code,
               debug("Merging buffers %d and %d with %d, %d rows\n",
                     idx, pair_idx, num_rows[idx], num_rows[pair_idx]);
               merge(op_code, verify_set,
-                    buffer_list[idx], buffer_list[idx + 1], num_rows[idx],
-                    buffer_list[pair_idx], buffer_list[pair_idx + 1], num_rows[pair_idx],
+                    new_buffer_list[idx], new_buffer_list[idx + 1], num_rows[idx],
+                    new_buffer_list[pair_idx], new_buffer_list[pair_idx + 1], num_rows[pair_idx],
                     sort_ptrs, max_list_length, row_upper_bound,
                     &num_comparisons, &num_deep_comparisons);
             }
