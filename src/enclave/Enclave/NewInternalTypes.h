@@ -1450,7 +1450,7 @@ class RowWriter {
 public:
   RowWriter(uint8_t *buf, uint32_t row_upper_bound)
     : buf_start(buf), buf_pos(buf), row_upper_bound(row_upper_bound), block_num_rows(0),
-      block_padded_len(0) {
+      block_padded_len(0), total_num_rows(0) {
     self_task_id = 0;
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
