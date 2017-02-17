@@ -297,69 +297,85 @@ void partition_for_sort(int op_code,
                         uint32_t boundary_rows_len,
                         uint8_t *output,
                         uint8_t **output_partition_ptrs,
-                        uint32_t *output_partition_num_rows,
-                        uint8_t *scratch) {
+                        uint32_t *output_partition_num_rows) {
 
-  uint32_t final_len = 0;
-  // Sort the input rows
-  external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch, &final_len);
-  printf("[%s] final_len is %u\n", __FUNCTION__, final_len);
+  uint32_t input_length = buffer_list[num_buffers] - buffer_list[0];
 
   uint32_t total_num_rows = 0;
-  for (uint32_t i = 0; i < num_buffers; i++) {
+  for (uint32_t i = 0; i < num_buffers; ++i) {
     total_num_rows += num_rows[i];
   }
 
-  // Scan through the sorted input rows and copy them to the output, marking the beginning of each
-  // range with a pointer. A range contains all rows greater than or equal to one boundary row and
-  // less than the next boundary row. The first range contains all rows less than the first boundary
-  // row, and the last range contains all rows greater than or equal to the last boundary row.
-  RowReader r(buffer_list[0], buffer_list[num_buffers]);
-  RowReader b(boundary_rows, boundary_rows + boundary_rows_len, verify_set);
-  RowWriter w(output, row_upper_bound);
-  w.set_self_task_id(verify_set->get_self_task_id());
-  RecordType row;
-  RecordType boundary_row;
-  uint32_t out_idx = 0;
-  uint32_t cur_num_rows = 0;
-
-  output_partition_ptrs[out_idx] = output;
-  b.read(&boundary_row);
-
-  for (uint32_t i = 0; i < total_num_rows; i++) {
-    r.read(&row);
-
-    // The new row falls outside the current range, so we start a new range
-    if (!row.less_than(&boundary_row, op_code) && out_idx < num_partitions - 1) {
-      // Record num_rows for the old range
-      output_partition_num_rows[out_idx] = cur_num_rows; 
-	  boundary_row.print();
-	  printf("[%s] out_idx is %u, cur_num_rows is %u\n", __FUNCTION__, out_idx, cur_num_rows);
-	  cur_num_rows = 0;
-
-      out_idx++;
-
-      // Record the beginning of the new range
-      w.finish_block();
-      output_partition_ptrs[out_idx] = output + w.bytes_written();
-	  printf("[%s] w.bytes_written() is %u\n", __FUNCTION__, w.bytes_written());
-
-      if (out_idx < num_partitions - 1) {
-        b.read(&boundary_row);
-      }
-	}
-	
-    w.write(&row);
-    ++cur_num_rows;
+  std::vector<uint8_t *> tmp_output(num_partitions);
+  std::vector<RowWriter *> writers(num_partitions);
+  for (uint32_t i = 0; i < num_partitions; ++i) {
+    // Worst case size for one output partition: the entire input length
+    tmp_output[i] = new uint8_t[input_length];
+    writers[i] = new RowWriter(tmp_output[i], row_upper_bound);
+    writers[i]->set_self_task_id(verify_set->get_self_task_id());
   }
 
-  // Record num_rows for the last range
-  output_partition_num_rows[num_partitions - 1] = cur_num_rows;
-  printf("[%s] out_idx is %u, cur_num_rows is %u\n", __FUNCTION__, out_idx, cur_num_rows);
+  // Read the (num_partitions - 1) boundary rows into memory for efficient repeated scans
+  std::vector<RecordType *> boundary_row_records;
+  RowReader b(boundary_rows, boundary_rows + boundary_rows_len, verify_set);
+  for (uint32_t i = 0; i < num_partitions - 1; ++i) {
+    boundary_row_records.push_back(new RecordType);
+    b.read(boundary_row_records[i]);
+    boundary_row_records[i]->print();
+  }
 
-  w.close();
-  // Write the sentinel pointer to the end of the last range
-  output_partition_ptrs[num_partitions] = output + w.bytes_written();
+  // Scan through the input rows and copy each to the appropriate output partition specified by the
+  // ranges encoded in the given boundary_rows. A range contains all rows greater than or equal to
+  // one boundary row and less than the next boundary row. The first range contains all rows less
+  // than the first boundary row, and the last range contains all rows greater than or equal to the
+  // last boundary row.
+  //
+  // We currently scan through all boundary rows sequentially for each row. TODO: consider using
+  // binary search.
+  RowReader r(buffer_list[0], buffer_list[num_buffers]);
+  RecordType row;
+
+  for (uint32_t i = 0; i < total_num_rows; ++i) {
+    r.read(&row);
+
+    // Scan to the matching boundary row for this row
+    uint32_t j;
+    for (j = 0; j < num_partitions - 1; ++j) {
+      if (row.less_than(boundary_row_records[j], op_code)) {
+        // Found an upper-bounding boundary row
+        break;
+      }
+    }
+    // If the row is greater than all boundary rows, the above loop will never break and j will end
+    // up at num_partitions - 1.
+    writers[j]->write(&row);
+  }
+
+  for (uint32_t i = 0; i < num_partitions - 1; ++i) {
+    delete boundary_row_records[i];
+  }
+
+  // Copy the partitions to the output
+  uint8_t *output_ptr = output;
+  for (uint32_t i = 0; i < num_partitions; ++i) {
+    writers[i]->close();
+
+    memcpy(output_ptr, tmp_output[i], writers[i]->bytes_written());
+    output_partition_ptrs[i] = output_ptr;
+    output_partition_ptrs[i + 1] = output_ptr + writers[i]->bytes_written();
+    output_partition_num_rows[i] = writers[i]->rows_written();
+
+    debug("Writing %d bytes to output %p based on input of length %d. Total bytes written %d. Upper bound %d.\n",
+          writers[i]->bytes_written(), output_ptr, input_length,
+          output_ptr + writers[i]->bytes_written() - output, num_partitions * input_length);
+    output_ptr += writers[i]->bytes_written();
+    check(writers[i]->bytes_written() <= input_length,
+          "output partition size %d was bigger than input size %d\n",
+          writers[i]->bytes_written(), input_length);
+
+    delete writers[i];
+    delete[] tmp_output[i];
+  }
 }
 
 template void external_sort<NewRecord>(
@@ -436,8 +452,7 @@ template void partition_for_sort<NewRecord>(
   uint32_t boundary_rows_len,
   uint8_t *output,
   uint8_t **output_partition_ptrs,
-  uint32_t *output_partition_num_rows,
-  uint8_t *scratch);
+  uint32_t *output_partition_num_rows);
 
 template void partition_for_sort<NewJoinRecord>(
   int op_code,
@@ -451,5 +466,4 @@ template void partition_for_sort<NewJoinRecord>(
   uint32_t boundary_rows_len,
   uint8_t *output,
   uint8_t **output_partition_ptrs,
-  uint32_t *output_partition_num_rows,
-  uint8_t *scratch);
+  uint32_t *output_partition_num_rows);

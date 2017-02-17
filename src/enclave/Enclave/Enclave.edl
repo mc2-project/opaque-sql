@@ -195,8 +195,7 @@ enclave {
       uint32_t boundary_rows_len,
       [user_check] uint8_t *output,
       [user_check] uint8_t **output_partition_ptrs,
-      [user_check] uint32_t *output_partition_num_rows,
-      [user_check] uint8_t *scratch);
+      [user_check] uint32_t *output_partition_num_rows);
 
     public void ecall_non_oblivious_aggregate(
       int index, int num_part,
@@ -302,6 +301,8 @@ enclave {
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
+    void ocall_malloc(size_t size, [out] uint8_t **ret);
+    void ocall_free([user_check] uint8_t *buf);
   };
 
 };

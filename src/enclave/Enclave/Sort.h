@@ -100,7 +100,6 @@ void partition_for_sort(int op_code,
                         uint32_t boundary_rows_len,
                         uint8_t *output,
                         uint8_t **output_partition_ptrs,
-                        uint32_t *output_partition_num_rows,
-                        uint8_t *scratch);
+                        uint32_t *output_partition_num_rows);
 
 #endif /* _SORT_H_ */

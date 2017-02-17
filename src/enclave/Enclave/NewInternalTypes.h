@@ -1482,6 +1482,7 @@ public:
       row_upper_bound = row->row_upper_bound();
     }
     block_padded_len += row_upper_bound;
+    total_num_rows++;
   }
 
   void write(NewJoinRecord *row) {
@@ -1496,11 +1497,13 @@ public:
       row_upper_bound = row->row_upper_bound();
     }
     block_padded_len += row_upper_bound;
+    total_num_rows++;
   }
 
   template<typename RecordType>
   void write(SortPointer<RecordType> *ptr) {
     write(ptr->rec);
+    total_num_rows++;
   }
 
   void finish_block() {
@@ -1527,6 +1530,10 @@ public:
     return buf_pos - buf_start;
   }
 
+  uint32_t rows_written() {
+    return total_num_rows;
+  }
+
 private:
   void maybe_finish_block(uint32_t next_row_size) {
     if (block_padded_len + next_row_size > MAX_BLOCK_SIZE) {
@@ -1542,6 +1549,8 @@ private:
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_padded_len;
+
+  uint32_t total_num_rows;
 
   uint32_t self_task_id;
 

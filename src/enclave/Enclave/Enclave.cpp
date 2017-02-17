@@ -637,8 +637,7 @@ void ecall_partition_for_sort(int index, int num_part,
                               uint32_t boundary_rows_len,
                               uint8_t *output,
                               uint8_t **output_partition_ptrs,
-                              uint32_t *output_partition_num_rows,
-                              uint8_t *scratch) {
+                              uint32_t *output_partition_num_rows) {
   (void)index;
   (void)num_part;
   Verify verify_set(op_code, 1, 0);
@@ -650,14 +649,14 @@ void ecall_partition_for_sort(int index, int num_part,
     partition_for_sort<NewRecord>(
       op_code, &verify_set,
       num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
-      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows, scratch);
+      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows);
 	break;
 
   case SORT_JOIN:
     partition_for_sort<NewJoinRecord>(
       op_code, &verify_set,
       num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
-      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows, scratch);
+      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows);
     break;
 
   default:

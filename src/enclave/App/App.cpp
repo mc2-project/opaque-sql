@@ -352,6 +352,16 @@ void ocall_print_string(const char *str)
   fflush(stdout);
 }
 
+void ocall_malloc(size_t size, uint8_t **ret) {
+  *ret = static_cast<uint8_t *>(malloc(size));
+  printf("ocall_malloc %lu bytes = %p\n", size, *ret);
+}
+
+void ocall_free(uint8_t *buf) {
+  printf("ocall_free %p\n", buf);
+  free(buf);
+}
+
 #if defined(_MSC_VER)
 /* query and enable SGX device*/
 int query_sgx_status()
@@ -1435,7 +1445,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t boundary_rows_len = (uint32_t) env->GetArrayLength(boundary_rows);
 
   uint8_t *input_copy = (uint8_t *) malloc(input_len * 2);
-  uint8_t *scratch = (uint8_t *) malloc(input_len * 2);
 
   for (uint32_t i = 0; i < input_len; i++) {
     input_copy[i] = *(ptr + i);
@@ -1460,7 +1469,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
               buffer_num_rows.data(), row_upper_bound,
               boundary_rows_ptr, boundary_rows_len,
               output, output_partition_ptrs,
-              output_partition_num_rows, scratch));
+              output_partition_num_rows));
 
   jint *offsets_ptr = env->GetIntArrayElements(offsets, &if_copy);
   jint *rows_per_partition_ptr = env->GetIntArrayElements(rows_per_partition, &if_copy);
@@ -1478,7 +1487,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->ReleaseIntArrayElements(rows_per_partition, rows_per_partition_ptr, 0);
 
   free(input_copy);
-  free(scratch);
   free(output);
   free(output_partition_ptrs);
   free(output_partition_num_rows);
