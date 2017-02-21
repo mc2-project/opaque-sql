@@ -1,5 +1,7 @@
 # Opaque: Secure Apache Spark SQL
 
+[![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
+
 Opaque is a package for Apache Spark SQL that enables very strong security for DataFrames -- data encryption and access pattern hiding -- using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. See our upcoming NSDI 2017 paper [1] for more details.
 
 Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (encrypted with access pattern protection). The contents of these DataFrames will be encrypted, and subsequent operations on them will run within SGX enclaves.
