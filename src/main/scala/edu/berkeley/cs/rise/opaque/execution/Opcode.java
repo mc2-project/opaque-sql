@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque.execution;
 
 public enum Opcode {
+    OP_NULL(-1),
     OP_BD1(11),
     OP_BD2(10),
     OP_SORT_INTEGERS_TEST(90),
