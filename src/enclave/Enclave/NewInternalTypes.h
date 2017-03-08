@@ -1710,12 +1710,9 @@ class StreamRowReader {
   }
   
   void read_encrypted_block() {
-	printf("[%s] buf is %p\n", __FUNCTION__, buf); 
     uint32_t block_enc_size = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     block_num_rows = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     buf += 4; // row_upper_bound
-
-	printf("[%s] block_num_rows is %u\n", __FUNCTION__, block_num_rows); 
 
     uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     add_parent(task_id);

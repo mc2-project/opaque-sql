@@ -9,7 +9,8 @@ Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (en
 Warning: This is an alpha preview of Opaque, which means the software is still early stage! It is currently not production-ready. Opaque supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted. The current version also does not support computation integrity verification.
 If you find bugs in the code, please let us know!
 
-[1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica. Opaque: A Data Analytics Platform with Strong Security. NSDI 2017 (to appear), March 2017.
+[1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
+[Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017 (to appear), March 2017.
 
 ## Installation
 
