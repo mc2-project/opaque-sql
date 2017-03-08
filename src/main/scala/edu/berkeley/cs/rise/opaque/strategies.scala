@@ -29,6 +29,11 @@ import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+
+    // Push-up filtering rule
+    case ObliviousSort(sortOrder1, ObliviousSort(sortOrder2, ObliviousFilter(condition, child))) =>
+        ObliviousFilterExec(condition, ObliviousSortExec(sortOrder2 ++ sortOrder1, planLater(child))) :: Nil
+
     case ObliviousProject(projectList, child) =>
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
     case EncryptedProject(projectList, child) =>
