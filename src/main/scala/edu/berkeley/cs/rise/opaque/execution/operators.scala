@@ -336,7 +336,8 @@ case class ObliviousFilterExec(instruction: Any, child: SparkPlan)
       }
         ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), op)
       }
-      case _ => throw new IllegalArgumentException("Must have an opcode or expression passed in as the first argument.")
+      case _ => throw new IllegalArgumentException(
+        "Must have an opcode or expression passed in as the first argument.")
     }
   }
 }

@@ -56,6 +56,8 @@ case class ObliviousSortExec(instruction: Any, child: SparkPlan)
             OP_SORT_COL1_COL2
         }
       }
+      case _ => throw new IllegalArgumentException(
+        "Must have an opcode or sortorder sequence passed in as the first argument.")
     }
     if (opcode != OP_NOSORT) {
       ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
