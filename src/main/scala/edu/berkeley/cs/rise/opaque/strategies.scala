@@ -40,9 +40,9 @@ object OpaqueOperators extends Strategy {
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
 
     case ObliviousFilter(condition, child) =>
-      new ObliviousFilterExec(condition, planLater(child)) :: Nil
+      ObliviousFilterExec(condition, planLater(child)) :: Nil
     case EncryptedFilter(condition, child) =>
-      new ObliviousFilterExec(condition, planLater(child)) :: Nil
+      ObliviousFilterExec(condition, planLater(child)) :: Nil
 
     case ObliviousPermute(child) =>
       ObliviousPermuteExec(planLater(child)) :: Nil
@@ -74,8 +74,7 @@ object OpaqueOperators extends Strategy {
     case a @ ObliviousAggregate(groupingExpressions, aggExpressions, child) => {
       val partialAggregates = ObliviousAggregateExec(groupingExpressions, aggExpressions, planLater(child))
       val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = partialAggregates.getOpcodes()
-      //condition is null because we're passing in an opcode directly
-      new ObliviousFilterExec(null, partialAggregates, aggDummyFilterOpcode) :: Nil
+      ObliviousFilterExec(aggDummyFilterOpcode, partialAggregates) :: Nil
     }
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil

@@ -283,12 +283,8 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   }
 }
 
-case class ObliviousFilterExec(condition: Expression, child: SparkPlan, opcode: Opcode)
+case class ObliviousFilterExec(instruction: Any, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
-
-  def this(condition: Expression, child: SparkPlan) {
-    this(condition, child, OP_NULL)
-  }
 
   private object Col extends ColumnNumberMatcher {
     override def input: Seq[Attribute] = child.output
@@ -298,50 +294,50 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan, opcode: 
 
   override def executeBlocked(): RDD[Block] = {
     import Opcode._
-
-    if (opcode != OP_NULL) {
-      ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
-    } else {
-      val op = condition match {
-        case IsNotNull(_) =>
-          // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
-          // in the encrypted format. EDIT BY ERIC: No longer a safe assumption. Sometimes condition will be null,
-          // as in the case of a an ObliviousFilterExec within ObliviousAggregateExec
-          return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-        case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
-          OP_FILTER_COL2_GT3
-        case And(
-          IsNotNull(Col(2, _)),
-          GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
-          OP_BD1
-        case And(
-          And(
+    instruction match {
+      case opcode: Opcode => ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+      case condition: Expression => {
+        val op = condition match {
+          case IsNotNull(_) =>
+            // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
+            // in the encrypted format. EDIT BY ERIC: No longer a safe assumption. Sometimes condition will be null,
+            // as in the case of a an ObliviousFilterExec within ObliviousAggregateExec
+            return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+          case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
+            OP_FILTER_COL2_GT3
+          case And(
+            IsNotNull(Col(2, _)),
+            GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
+            OP_BD1
+          case And(
             And(
-              IsNotNull(Col(3, _)),
-              GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
-            LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
-          IsNotNull(Col(2, _)))
-            if start == UTF8String.fromString("1980-01-01")
-            && end == UTF8String.fromString("1980-04-01") =>
-          OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
-        case Contains(Col(2, _), Literal(maroon, StringType))
-            if maroon == UTF8String.fromString("maroon") =>
-          OP_FILTER_COL2_CONTAINS_MAROON
-        case GreaterThan(Col(4, _), Literal(25, _)) =>
-          OP_FILTER_COL4_GT_25
-        case GreaterThan(Col(4, _), Literal(40, _)) =>
-          OP_FILTER_COL4_GT_40
-        case GreaterThan(Col(4, _), Literal(45, _)) =>
-          OP_FILTER_COL4_GT_45
-        case _ =>
-          throw new Exception(
-            s"ObliviousFilterExec: unknown condition $condition.\n" +
-              s"Input: ${child.output}.\n" +
-              s"Types: ${child.output.map(_.dataType)}")
+              And(
+                IsNotNull(Col(3, _)),
+                GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
+              LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
+            IsNotNull(Col(2, _)))
+              if start == UTF8String.fromString("1980-01-01")
+              && end == UTF8String.fromString("1980-04-01") =>
+            OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
+          case Contains(Col(2, _), Literal(maroon, StringType))
+              if maroon == UTF8String.fromString("maroon") =>
+            OP_FILTER_COL2_CONTAINS_MAROON
+          case GreaterThan(Col(4, _), Literal(25, _)) =>
+            OP_FILTER_COL4_GT_25
+          case GreaterThan(Col(4, _), Literal(40, _)) =>
+            OP_FILTER_COL4_GT_40
+          case GreaterThan(Col(4, _), Literal(45, _)) =>
+            OP_FILTER_COL4_GT_45
+          case _ =>
+            throw new Exception(
+              s"ObliviousFilterExec: unknown condition $condition.\n" +
+                s"Input: ${child.output}.\n" +
+                s"Types: ${child.output.map(_.dataType)}")
       }
-      ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), op)
+        ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), op)
+      }
+      case _ => throw new IllegalArgumentException("Must have an opcode or expression passed in as the first argument.")
     }
-    
   }
 }
 
