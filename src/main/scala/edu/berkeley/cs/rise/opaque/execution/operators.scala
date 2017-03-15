@@ -557,28 +557,6 @@ case class ObliviousAggregateExec(
     Utils.ensureCached(partialAggregates)
     time("aggregate - step 2") { partialAggregates.count }
     partialAggregates
-
-    // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
-    val sortedAggregates = time("aggregate - sort dummies") {
-      val result = ObliviousSortExec.sortBlocks(partialAggregates, aggDummySortOpcode)
-      result.count
-      result
-    }
-
-    sortedAggregates
-    // // Filter out the non-final aggregates
-    // val finalAggregates = time("aggregate - filter out dummies") {
-    //   val result = sortedAggregates.map { block =>
-    //     val (enclave, eid) = Utils.initEnclave()
-    //     val numOutputRows = new MutableInteger
-    //     val filtered = enclave.Filter(
-    //       eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-    //     Block(filtered, numOutputRows.value)
-    //   }
-    //   result.count
-    //   result
-    // }
-    // finalAggregates
   }
 }
 

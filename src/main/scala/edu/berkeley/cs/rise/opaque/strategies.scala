@@ -74,7 +74,7 @@ object OpaqueOperators extends Strategy {
     case a @ ObliviousAggregate(groupingExpressions, aggExpressions, child) => {
       val partialAggregates = ObliviousAggregateExec(groupingExpressions, aggExpressions, planLater(child))
       val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = partialAggregates.getOpcodes()
-      ObliviousFilterExec(aggDummyFilterOpcode, partialAggregates) :: Nil
+      ObliviousFilterExec(aggDummyFilterOpcode, ObliviousSortExec(aggDummySortOpcode, partialAggregates)) :: Nil
     }
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil

@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
-case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
+case class ObliviousSortExec(instruction: Any, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   private object Col extends ColumnNumberMatcher {
@@ -42,15 +42,20 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked() = {
     import Opcode._
-    val opcode = order match {
-      case Seq() =>
-        OP_NOSORT
-      case Seq(SortOrder(Col(1, _), Ascending)) =>
-        OP_SORT_COL1
-      case Seq(SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL2
-      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL1_COL2
+    val opcode = instruction match {
+      case op: Opcode => op
+      case order: Seq[SortOrder] => {
+        order match {
+          case Seq() =>
+            OP_NOSORT
+          case Seq(SortOrder(Col(1, _), Ascending)) =>
+            OP_SORT_COL1
+          case Seq(SortOrder(Col(2, _), Ascending)) =>
+            OP_SORT_COL2
+          case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
+            OP_SORT_COL1_COL2
+        }
+      }
     }
     if (opcode != OP_NOSORT) {
       ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
