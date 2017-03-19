@@ -291,12 +291,11 @@ case class ObliviousFilterExec(instruction: Either[Expression, Opcode], child: S
 
   override def output: Seq[Attribute] = child.output
   
-  //TODO: Make this executeBlocked look like the one in ObliviousSortExec
   override def executeBlocked(): RDD[Block] = {
-    instruction match {
-      case Right(opcode) => ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+    val opcode = instruction match {
+      case Right(op) => op
       case Left(condition) => {
-        val op = condition match {
+        condition match {
           case IsNotNull(_) =>
             // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
             // in the encrypted format. 
@@ -331,12 +330,12 @@ case class ObliviousFilterExec(instruction: Either[Expression, Opcode], child: S
               s"ObliviousFilterExec: unknown condition $condition.\n" +
                 s"Input: ${child.output}.\n" +
                 s"Types: ${child.output.map(_.dataType)}")
-      }
-        ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), op)
+        }
       }
       case _ => throw new IllegalArgumentException(
         "Must have an opcode or expression passed in as the first argument.")
     }
+    ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
   }
 }
 
