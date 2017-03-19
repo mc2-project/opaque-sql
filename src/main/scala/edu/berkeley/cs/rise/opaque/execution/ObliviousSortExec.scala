@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
-case class ObliviousSortExec(instruction: Any, child: SparkPlan)
+case class ObliviousSortExec(instruction: Either[Seq[SortOrder], Opcode], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   private object Col extends ColumnNumberMatcher {
@@ -43,8 +43,8 @@ case class ObliviousSortExec(instruction: Any, child: SparkPlan)
   override def executeBlocked() = {
     import Opcode._
     val opcode = instruction match {
-      case op: Opcode => op
-      case order: Seq[SortOrder] => {
+      case Right(op) => op
+      case Left(order) => {
         order match {
           case Seq() =>
             OP_NOSORT
@@ -72,6 +72,10 @@ object ObliviousSortExec extends java.io.Serializable {
   val Multiplier = 1 // TODO: fix bug when this is 1
 
   import Utils.{time, logPerf}
+
+  def apply(instruction: Seq[SortOrder], child: SparkPlan) = new ObliviousSortExec(Left(instruction), child)
+
+  def apply(instruction: Opcode, child: SparkPlan) = new ObliviousSortExec(Right(instruction), child)
 
   def sortBlocks(data: RDD[Block], opcode: Opcode): RDD[Block] = {
     time("oblivious sort") {

@@ -30,7 +30,6 @@ import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
-
 import Opcode._
 
 trait LeafExecNode extends SparkPlan {
@@ -209,7 +208,6 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
-    import Opcode._
     val opcode = projectList match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
@@ -283,7 +281,8 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   }
 }
 
-case class ObliviousFilterExec(instruction: Any, child: SparkPlan)
+
+case class ObliviousFilterExec(instruction: Either[Expression, Opcode], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   private object Col extends ColumnNumberMatcher {
@@ -291,17 +290,16 @@ case class ObliviousFilterExec(instruction: Any, child: SparkPlan)
   }
 
   override def output: Seq[Attribute] = child.output
-
+  
+  //TODO: Make this executeBlocked look like the one in ObliviousSortExec
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
     instruction match {
-      case opcode: Opcode => ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
-      case condition: Expression => {
+      case Right(opcode) => ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+      case Left(condition) => {
         val op = condition match {
           case IsNotNull(_) =>
             // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
-            // in the encrypted format. EDIT BY ERIC: No longer a safe assumption. Sometimes condition will be null,
-            // as in the case of a an ObliviousFilterExec within ObliviousAggregateExec
+            // in the encrypted format. 
             return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
           case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
             OP_FILTER_COL2_GT3
@@ -343,6 +341,11 @@ case class ObliviousFilterExec(instruction: Any, child: SparkPlan)
 }
 
 object ObliviousFilterExec extends java.io.Serializable {
+
+  def apply(instruction: Expression, child: SparkPlan) = new ObliviousFilterExec(Left(instruction), child)
+
+  def apply(instruction: Opcode, child: SparkPlan) = new ObliviousFilterExec(Right(instruction), child)
+
   def filterBlocks(execRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
@@ -401,8 +404,6 @@ case class ObliviousAggregateExec(
 
   def getOpcodes(): 
     (Opcode, Opcode, Opcode, Opcode) = {
-      import Opcode._
-
       val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
         (groupingExpressions, aggExpressions) match {
           case (Seq(Col(1, _)), Seq(Col(1, _),
@@ -478,7 +479,6 @@ case class ObliviousAggregateExec(
     }
 
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
     val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = getOpcodes()
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
@@ -579,7 +579,6 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
     val aggOpcode =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
@@ -684,7 +683,6 @@ case class ObliviousSortMergeJoinExec(
     left.output ++ right.output
 
   override def executeBlocked() = {
-    import Opcode._
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
@@ -787,8 +785,6 @@ private object OpaqueJoinUtils {
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute], leftKeys: Seq[Expression],
       rightKeys: Seq[Expression], condition: Option[Expression])
       : (Opcode, Opcode, Opcode) = {
-
-    import Opcode._
 
     object LeftCol extends ColumnNumberMatcher {
       override def input: Seq[Attribute] = leftOutput
