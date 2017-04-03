@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
+import Opcode._
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -207,7 +208,6 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
-    import Opcode._
     val opcode = projectList match {
       case Seq(
         Alias(Substring(Col(1, _), Literal(0, IntegerType), Literal(8, IntegerType)), _),
@@ -281,7 +281,8 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   }
 }
 
-case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
+
+case class ObliviousFilterExec(instruction: Either[Expression, Opcode], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   private object Col extends ColumnNumberMatcher {
@@ -289,47 +290,62 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   }
 
   override def output: Seq[Attribute] = child.output
-
+  
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
-    val opcode = condition match {
-      case IsNotNull(_) =>
-        // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
-        // in the encrypted format
-        return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-      case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
-        OP_FILTER_COL2_GT3
-      case And(
-        IsNotNull(Col(2, _)),
-        GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
-        OP_BD1
-      case And(
-        And(
-          And(
-            IsNotNull(Col(3, _)),
-            GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
-          LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
-        IsNotNull(Col(2, _)))
-          if start == UTF8String.fromString("1980-01-01")
-          && end == UTF8String.fromString("1980-04-01") =>
-        OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
-      case Contains(Col(2, _), Literal(maroon, StringType))
-          if maroon == UTF8String.fromString("maroon") =>
-        OP_FILTER_COL2_CONTAINS_MAROON
-      case GreaterThan(Col(4, _), Literal(25, _)) =>
-        OP_FILTER_COL4_GT_25
-      case GreaterThan(Col(4, _), Literal(40, _)) =>
-        OP_FILTER_COL4_GT_40
-      case GreaterThan(Col(4, _), Literal(45, _)) =>
-        OP_FILTER_COL4_GT_45
-      case _ =>
-        throw new Exception(
-          s"ObliviousFilterExec: unknown condition $condition.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
+    val opcode = instruction match {
+      case Right(op) => op
+      case Left(condition) => {
+        condition match {
+          case IsNotNull(_) =>
+            // TODO: null handling. For now we assume nothing is null, because we can't represent nulls
+            // in the encrypted format. 
+            return child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+          case GreaterThan(Col(2, _), Literal(3, IntegerType)) =>
+            OP_FILTER_COL2_GT3
+          case And(
+            IsNotNull(Col(2, _)),
+            GreaterThan(Col(2, _), Literal(1000, IntegerType))) =>
+            OP_BD1
+          case And(
+            And(
+              And(
+                IsNotNull(Col(3, _)),
+                GreaterThanOrEqual(Cast(Col(3, _), StringType), Literal(start, StringType))),
+              LessThanOrEqual(Cast(Col(3, _), StringType), Literal(end, StringType))),
+            IsNotNull(Col(2, _)))
+              if start == UTF8String.fromString("1980-01-01")
+              && end == UTF8String.fromString("1980-04-01") =>
+            OP_FILTER_COL3_DATE_BETWEEN_1980_01_01_AND_1980_04_01
+          case Contains(Col(2, _), Literal(maroon, StringType))
+              if maroon == UTF8String.fromString("maroon") =>
+            OP_FILTER_COL2_CONTAINS_MAROON
+          case GreaterThan(Col(4, _), Literal(25, _)) =>
+            OP_FILTER_COL4_GT_25
+          case GreaterThan(Col(4, _), Literal(40, _)) =>
+            OP_FILTER_COL4_GT_40
+          case GreaterThan(Col(4, _), Literal(45, _)) =>
+            OP_FILTER_COL4_GT_45
+          case _ =>
+            throw new Exception(
+              s"ObliviousFilterExec: unknown condition $condition.\n" +
+                s"Input: ${child.output}.\n" +
+                s"Types: ${child.output.map(_.dataType)}")
+        }
+      }
+      case _ => throw new IllegalArgumentException(
+        "Must have an opcode or expression passed in as the first argument.")
     }
+    ObliviousFilterExec.filterBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
+  }
+}
 
-    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+object ObliviousFilterExec extends java.io.Serializable {
+
+  def apply(instruction: Expression, child: SparkPlan) = new ObliviousFilterExec(Left(instruction), child)
+
+  def apply(instruction: Opcode, child: SparkPlan) = new ObliviousFilterExec(Right(instruction), child)
+
+  def filterBlocks(execRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
     execRDD.map { block =>
@@ -338,7 +354,6 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
       val filtered = enclave.Filter(
         eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
       val returned_block = Block(filtered, numOutputRows.value)
-      val x = 1
       returned_block
     }
   }
@@ -348,7 +363,6 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
-    import Opcode._
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
     RA.initRA(execRDD)
@@ -387,80 +401,84 @@ case class ObliviousAggregateExec(
 
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
+  def getOpcodes(): 
+    (Opcode, Opcode, Opcode, Opcode) = {
+      val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
+        (groupingExpressions, aggExpressions) match {
+          case (Seq(Col(1, _)), Seq(Col(1, _),
+            Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
+              OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(Col(1, _)), Seq(Col(1, _),
+            Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
+              OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(Col(1, _)), Seq(Col(1, _),
+            Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL1_MIN_COL2_INT_STEP1,
+              OP_GROUPBY_COL1_MIN_COL2_INT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(Col(2, _)), Seq(Col(2, _),
+            Alias(AggregateExpression(Sum(Col(3, IntegerType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
+              OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(Col(1, _)), Seq(Col(1, _),
+            Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+            Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1,
+              OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(Col(1, _), Col(2, _)), Seq(Col(1, _), Col(2, _),
+            Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
+            (OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1,
+              OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(), Seq(
+            Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
+            (OP_SUM_COL1_INTEGER,
+              OP_SUM_COL1_INTEGER,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+          case (Seq(), Seq(
+            Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
+            Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
+            Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+            Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
+            Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
+          )) =>
+            (OP_SUM_LS,
+              OP_SUM_LS_2,
+              OP_SORT_COL2_IS_DUMMY_COL1,
+              OP_FILTER_NOT_DUMMY)
+
+        case _ =>
+          throw new Exception(
+            s"ObliviousAggregateExec: unknown grouping expressions $groupingExpressions, " +
+              s"aggregation expressions $aggExpressions.\n" +
+              s"Input: ${child.output}.\n" +
+              s"Types: ${child.output.map(_.dataType)}")
+        }
+      (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode)
+    }
+
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
-    val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
-      (groupingExpressions, aggExpressions) match {
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_MIN_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_MIN_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(2, _)), Seq(Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
-            OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _), Col(2, _)), Seq(Col(1, _), Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1,
-            OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(), Seq(
-          Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
-          (OP_SUM_COL1_INTEGER,
-            OP_SUM_COL1_INTEGER,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(), Seq(
-          Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
-        )) =>
-          (OP_SUM_LS,
-            OP_SUM_LS_2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-      case _ =>
-        throw new Exception(
-          s"ObliviousAggregateExec: unknown grouping expressions $groupingExpressions, " +
-            s"aggregation expressions $aggExpressions.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
-      }
-
+    val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = getOpcodes()
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
 
@@ -538,29 +556,7 @@ case class ObliviousAggregateExec(
 
     Utils.ensureCached(partialAggregates)
     time("aggregate - step 2") { partialAggregates.count }
-
-    // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
-    val sortedAggregates = time("aggregate - sort dummies") {
-      val result = ObliviousSortExec.sortBlocks(partialAggregates, aggDummySortOpcode)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-
-    // Filter out the non-final aggregates
-    val finalAggregates = time("aggregate - filter out dummies") {
-      val result = sortedAggregates.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
-        val numOutputRows = new MutableInteger
-        val filtered = enclave.Filter(
-          eid, 0, 0, aggDummyFilterOpcode.value, block.bytes, block.numRows, numOutputRows)
-        Block(filtered, numOutputRows.value)
-      }
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-    finalAggregates
+    partialAggregates
   }
 }
 
@@ -582,7 +578,6 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
     val aggOpcode =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
@@ -687,7 +682,6 @@ case class ObliviousSortMergeJoinExec(
     left.output ++ right.output
 
   override def executeBlocked() = {
-    import Opcode._
     val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
       OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
 
@@ -790,8 +784,6 @@ private object OpaqueJoinUtils {
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute], leftKeys: Seq[Expression],
       rightKeys: Seq[Expression], condition: Option[Expression])
       : (Opcode, Opcode, Opcode) = {
-
-    import Opcode._
 
     object LeftCol extends ColumnNumberMatcher {
       override def input: Seq[Attribute] = leftOutput

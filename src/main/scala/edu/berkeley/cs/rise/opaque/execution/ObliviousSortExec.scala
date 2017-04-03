@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
-case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
+case class ObliviousSortExec(instruction: Either[Seq[SortOrder], Opcode], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   private object Col extends ColumnNumberMatcher {
@@ -42,15 +42,22 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked() = {
     import Opcode._
-    val opcode = order match {
-      case Seq() =>
-        OP_NOSORT
-      case Seq(SortOrder(Col(1, _), Ascending)) =>
-        OP_SORT_COL1
-      case Seq(SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL2
-      case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL1_COL2
+    val opcode = instruction match {
+      case Right(op) => op
+      case Left(order) => {
+        order match {
+          case Seq() =>
+            OP_NOSORT
+          case Seq(SortOrder(Col(1, _), Ascending)) =>
+            OP_SORT_COL1
+          case Seq(SortOrder(Col(2, _), Ascending)) =>
+            OP_SORT_COL2
+          case Seq(SortOrder(Col(1, _), Ascending), SortOrder(Col(2, _), Ascending)) =>
+            OP_SORT_COL1_COL2
+        }
+      }
+      case _ => throw new IllegalArgumentException(
+        "Must have an opcode or sortorder sequence passed in as the first argument.")
     }
     if (opcode != OP_NOSORT) {
       ObliviousSortExec.sortBlocks(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
@@ -65,6 +72,10 @@ object ObliviousSortExec extends java.io.Serializable {
   val Multiplier = 1 // TODO: fix bug when this is 1
 
   import Utils.{time, logPerf}
+
+  def apply(instruction: Seq[SortOrder], child: SparkPlan) = new ObliviousSortExec(Left(instruction), child)
+
+  def apply(instruction: Opcode, child: SparkPlan) = new ObliviousSortExec(Right(instruction), child)
 
   def sortBlocks(data: RDD[Block], opcode: Opcode): RDD[Block] = {
     time("oblivious sort") {
