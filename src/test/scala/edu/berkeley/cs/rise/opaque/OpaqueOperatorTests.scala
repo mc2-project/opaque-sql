@@ -19,6 +19,9 @@ package edu.berkeley.cs.rise.opaque
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+
 
 import scala.util.Random
 
@@ -212,6 +215,34 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     val result = words.agg(sum("count").as("totalCount"))
+  }
+
+  testOpaqueObliviousOnly("pushup filtering") { securityLevel =>
+    // redirects stdout to an output stream
+    val baos = new ByteArrayOutputStream();
+    val ps = new PrintStream(baos);
+    val old = Console.out;
+    Console.setOut(ps);
+
+    val data = Seq(("number2", 4), ("number3", 1), ("number1", 5), ("number4", 123), ("number5", -1))
+    val df = makeDF(data, securityLevel, "a", "b")
+
+    // baos will contain the output of the explain statement
+    df.sort($"b").filter($"b" > lit(3)).sort($"a").explain(true)
+
+    // changes stdout back to normal
+    Console.out.flush();
+    Console.setOut(old);
+
+    val output = baos.toString()
+    val start = output.indexOf("== Physical Plan ==")
+    val plan = output.substring(start)
+
+    // checks that the ObliviousFilter got pushed up
+    assert(plan.indexOf("ObliviousFilter") < plan.indexOf("ObliviousSort"))
+
+    // checks that the 2 sorts got merged
+    assert(plan.indexOf("ObliviousSort") == plan.lastIndexOf("ObliviousSort"))
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
