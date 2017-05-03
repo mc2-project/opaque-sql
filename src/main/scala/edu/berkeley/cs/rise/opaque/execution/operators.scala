@@ -252,7 +252,7 @@ case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with Opa
     import Opcode._
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
-    RA.initRA(execRDD)
+    // RA.initRA(execRDD)
 
     val rowsWithRandomIds = execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -346,7 +346,7 @@ case class ObliviousAggregateExec(
     Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
     // Process boundaries
-    RA.initRA(childRDD)
+    // RA.initRA(childRDD)
     val boundaries = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val boundary = enclave.AggregateStep1(
@@ -463,7 +463,7 @@ case class EncryptedAggregateExec(
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
     time("aggregate - force child") { childRDD.count }
-    RA.initRA(childRDD)
+    // RA.initRA(childRDD)
     // Process boundaries
     val aggregates = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
@@ -503,7 +503,7 @@ case class ObliviousSortMergeJoinExec(
     Utils.ensureCached(rightRDD)
     time("Force right child of ObliviousSortMergeJoinExec") { rightRDD.count }
 
-    RA.initRA(leftRDD)
+    // RA.initRA(leftRDD)
 
     val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       val (enclave, eid) = Utils.initEnclave()

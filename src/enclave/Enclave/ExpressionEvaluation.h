@@ -428,11 +428,11 @@ public:
 
   /**
    * Return true if the given row is from the primary table, indicated by its first field, which
-   * must be a BooleanField.
+   * must be an IntegerField.
    */
   bool is_primary(const tuix::Row *row) {
-    return static_cast<const tuix::BooleanField *>(
-      row->field_values()->Get(0)->value())->value();
+    return static_cast<const tuix::IntegerField *>(
+      row->field_values()->Get(0)->value())->value() == 0;
   }
 
   /** Return true if the two rows are from the same join group. */

@@ -18,7 +18,10 @@
 package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Strategy
+import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
@@ -26,8 +29,10 @@ import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.exchange.Exchange
 
 import edu.berkeley.cs.rise.opaque.execution._
+import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
@@ -64,8 +69,11 @@ object OpaqueOperators extends Strategy {
         case _ => Nil
       }
     case EncryptedJoin(left, right, joinType, condition) =>
-      Join(left, right, joinType, None) match {
+      Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
+          val unioned = ObliviousUnionExec(
+            ObliviousProjectExec(tagLeft(left.output), planLater(left)),
+            ObliviousProjectExec(tagRight(right.output), planLater(right)))
           ObliviousProjectExec(
             dropTags(left.output, right.output),
             EncryptedSortMergeJoinExec(
@@ -76,10 +84,8 @@ object OpaqueOperators extends Strategy {
               tagRight(right.output).map(_.toAttribute),
               tagLeft(left.output).map(_.toAttribute) ++ tagRight(right.output).map(_.toAttribute),
               EncryptedSortExec(
-                sortByTag,
-                ObliviousUnionExec(
-                  ObliviousProjectExec(tagLeft(left.output), planLater(left)),
-                  ObliviousProjectExec(tagRight(right.output), planLater(right)))))) :: Nil
+                sortByTag(unioned.output),
+                unioned))) :: Nil
         case _ => Nil
       }
 
@@ -103,9 +109,14 @@ object OpaqueOperators extends Strategy {
     case _ => Nil
   }
 
-  private def tagLeft(input: Seq[Attribute]): Seq[NamedExpression] = ???
-  private def tagRight(input: Seq[Attribute]): Seq[NamedExpression] = ???
-  private val sortByTag: Seq[SortOrder] = ???
+  private def tagLeft(input: Seq[Attribute]): Seq[NamedExpression] =
+    Alias(Literal(0), "tag")() +: input
+  private def tagRight(input: Seq[Attribute]): Seq[NamedExpression] =
+    Alias(Literal(1), "tag")() +: input
+  // TODO: need to sort by join attributes first
+  private def sortByTag(input: Seq[Attribute]): Seq[SortOrder] =
+    Seq(SortOrder(input(0).toAttribute, Ascending))
   private def dropTags(
-    leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] = ???
+    leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
+    leftOutput ++ rightOutput
 }
