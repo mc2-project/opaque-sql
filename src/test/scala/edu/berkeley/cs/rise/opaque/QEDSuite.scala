@@ -88,6 +88,18 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     df.show(50)
   }
 
+  test("flatbuffers union") {
+    val df1 = spark.createDataFrame(
+      (1 to 20).map(x => (x, x.toString)).reverse)
+      .toDF("a", "b").encrypted
+    val df2 = spark.createDataFrame(
+      (1 to 20).map(x => (x, (x + 1).toString)))
+      .toDF("a", "b").encrypted
+    val df = df1.union(df2)
+    df.explain(true)
+    df.show(50)
+  }
+
   test("flatbuffers join") {
     val df1 = spark.createDataFrame(
       (1 to 20).map(x => (x, x.toString)).reverse)

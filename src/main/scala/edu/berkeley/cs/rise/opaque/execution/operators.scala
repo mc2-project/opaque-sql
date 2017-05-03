@@ -752,3 +752,39 @@ case class EncryptedSortMergeJoinExec(
     joined
   }
 }
+
+case class ObliviousUnionExec(
+    left: SparkPlan,
+    right: SparkPlan)
+  extends BinaryExecNode with OpaqueOperatorExec {
+  import Utils.time
+
+  override def output: Seq[Attribute] =
+    left.output
+
+  override def executeBlocked() = {
+    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(leftRDD)
+    time("Force left child of ObliviousUnionExec") { leftRDD.count }
+    Utils.ensureCached(rightRDD)
+    time("Force right child of ObliviousUnionExec") { rightRDD.count }
+
+    // RA.initRA(leftRDD)
+
+    val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+      val leftBlockArray = leftBlockIter.toArray
+      assert(leftBlockArray.length == 1)
+      val leftBlock = leftBlockArray.head
+
+      val rightBlockArray = rightBlockIter.toArray
+      assert(rightBlockArray.length == 1)
+      val rightBlock = rightBlockArray.head
+
+      Iterator(Utils.concatEncryptedBlocks(leftBlock, rightBlock))
+    }
+    Utils.ensureCached(unioned)
+    time("union") { unioned.count }
+    unioned
+  }
+}
