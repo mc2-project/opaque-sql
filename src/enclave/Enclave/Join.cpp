@@ -5,6 +5,8 @@
 #include "Enclave_t.h"  /* print_string */
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
+#include "ExpressionEvaluation.h"
+#include "common.h"
 
 #include "Join.h"
 
@@ -174,40 +176,42 @@ void sort_merge_join(int op_code,
 }
 
 
-void non_oblivious_sort_merge_join(int op_code, Verify *verify_set,
-								   uint8_t *input_rows, uint32_t input_rows_length,
-								   uint32_t num_rows,
-								   uint8_t *output_rows, uint32_t output_rows_length,
-                                   uint32_t *actual_output_length, uint32_t *num_output_rows) {
-  (void) output_rows_length;
-  
-  RowReader reader(input_rows, input_rows + input_rows_length, verify_set);
-  RowWriter writer(output_rows);
-  writer.set_self_task_id(verify_set->get_self_task_id());
+void non_oblivious_sort_merge_join(
+  uint8_t *join_expr, size_t join_expr_length,
+  uint8_t *input_rows, uint32_t input_rows_length,
+  uint8_t **output_rows, uint32_t *output_rows_length,
+  uint32_t *num_output_rows) {
 
-  NewJoinRecord primary, current;
-  NewRecord merge;
+  flatbuffers::Verifier v(join_expr, join_expr_length);
+  check(v.VerifyBuffer<tuix::FilterExpr>(nullptr),
+        "Corrupt JoinExpr %p of length %d\n", join_expr, join_expr_length);
 
-  uint32_t num_output_rows_result = 0;
-  for (uint32_t i = 0; i < num_rows; i++) {
-    reader.read(&current);
-    current.init_join_attribute(op_code);
+  const tuix::JoinExpr* join_expr_deser = flatbuffers::GetRoot<tuix::JoinExpr>(join_expr);
+  FlatbuffersJoinExprEvaluator join_expr_eval(join_expr_deser);
+  check(join_expr_deser->join_type() == tuix::JoinType_Inner,
+    "Only inner join is currently supported\n");
 
-    if (current.is_primary()) {
-      check(!primary.join_attr_equals(&current, op_code),
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  FlatbuffersRowWriter w;
+
+  const tuix::Row *primary = nullptr;
+  while (r.has_next()) {
+    const tuix::Row *current = r.next();
+
+    if (join_expr_eval.is_primary(current)) {
+      check(!primary || !join_expr_eval.is_same_group(primary, current),
             "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
             "the primary table had the same join attribute\n");
-      primary.set(&current); // advance to a new join attribute
+      primary = current; // advance to a new join attribute
     } else {
-      if (primary.join_attr_equals(&current, op_code)) {
-        primary.merge(&current, &merge);
-        writer.write(&merge);
-        num_output_rows_result++;
+      if (join_expr_eval.is_same_group(primary, current)) {
+        w.write(primary, current);
       }
     }
   }
 
-  writer.close();
-  *actual_output_length = writer.bytes_written();
-  *num_output_rows = num_output_rows_result;
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+  *num_output_rows = w.output_num_rows();
 }

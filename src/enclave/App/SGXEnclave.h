@@ -75,7 +75,7 @@ extern "C" {
     JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
-    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jobject);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jobject);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *, jobject, jlong, jint, jint, jint, jint, jbyteArray, jint, jint, jint, jint, jint, jint);

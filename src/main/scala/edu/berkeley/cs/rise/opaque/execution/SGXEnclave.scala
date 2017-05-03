@@ -165,11 +165,8 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def NonObliviousSortMergeJoin(
     eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
+    join_expr: Array[Byte],
     rows: Array[Byte],
-    num_rows: Int,
     num_output_rows: MutableInteger
   ): Array[Byte]
 

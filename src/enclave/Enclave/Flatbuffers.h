@@ -254,6 +254,24 @@ public:
     maybe_finish_block();
   }
 
+  /**
+   * Concatenate the fields of the two given Rows and write the resulting single Row to the output.
+   */
+  void write(const tuix::Row *row1, const tuix::Row *row2) {
+    flatbuffers::uoffset_t num_fields = row1->field_values()->size() + row2->field_values()->size();
+    std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
+    flatbuffers::uoffset_t i = 0;
+    for (auto it = row1->field_values()->begin(); it != row1->field_values()->end(); ++it, ++i) {
+      field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder);
+    }
+    for (auto it = row2->field_values()->begin(); it != row2->field_values()->end(); ++it, ++i) {
+      field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder);
+    }
+    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
+    total_num_rows++;
+    maybe_finish_block();
+  }
+
   void write_encrypted_block() {
     builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
     size_t enc_rows_len = enc_size(builder.GetSize());

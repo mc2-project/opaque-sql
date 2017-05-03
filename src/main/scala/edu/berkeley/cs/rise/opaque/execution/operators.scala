@@ -723,34 +723,31 @@ case class EncryptedSortMergeJoinExec(
     joinType: JoinType,
     leftKeys: Seq[Expression],
     rightKeys: Seq[Expression],
-    condition: Option[Expression],
+    leftSchema: Seq[Attribute],
+    rightSchema: Seq[Attribute],
+    output: Seq[Attribute],
     child: SparkPlan)
-  extends BinaryExecNode with OpaqueOperatorExec {
+  extends UnaryExecNode with OpaqueOperatorExec {
 
   import Utils.time
 
-  override def output: Seq[Attribute] =
-    left.output ++ right.output
-
   override def executeBlocked() = {
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(leftRDD)
-    time("Force left child of EncryptedSortMergeJoinExec") { leftRDD.count }
-    Utils.ensureCached(rightRDD)
-    time("Force right child of EncryptedSortMergeJoinExec") { rightRDD.count }
+    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    Utils.ensureCached(childRDD)
+    time("Force child of EncryptedSortMergeJoinExec") { childRDD.count }
 
-    // RA.initRA(leftRDD)
+    val joinExprSer = Utils.serializeJoinExpression(
+      joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 
-    val joined = child.map { block =>
+    val joined = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val numOutputRows = new MutableInteger
-      val joined = enclave.EncryptedSortMergeJoin(
-        eid, joinOpcode.value, block.bytes, block.numRows, numOutputRows)
+      val joined = enclave.NonObliviousSortMergeJoin(
+        eid, joinExprSer, block.bytes, numOutputRows)
       Block(joined, numOutputRows.value)
     }
     Utils.ensureCached(joined)
-    time("join - sort merge join") { joined.count }
+    time("join") { joined.count }
 
     joined
   }

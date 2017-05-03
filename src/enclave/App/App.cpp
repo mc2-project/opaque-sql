@@ -1822,41 +1822,39 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   JNIEnv *env, jobject obj, jlong eid,
-  jint index, jint num_part,
-  jint op_code, jbyteArray input_rows, jint num_rows,
-  jobject num_output_rows_obj) {
+  jbyteArray join_expr, jbyteArray input_rows, jobject num_output_rows_obj) {
   (void)obj;
 
   jboolean if_copy;
 
+  uint32_t join_expr_length = (uint32_t) env->GetArrayLength(join_expr);
+  uint8_t *join_expr_ptr = (uint8_t *) env->GetByteArrayElements(join_expr, &if_copy);
+
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint32_t output_length = block_size_upper_bound(num_rows);
-  uint8_t *output = (uint8_t *) malloc(output_length);
-
-  uint32_t actual_output_length = 0;
+  uint8_t *output_rows = nullptr;
+  uint32_t output_rows_length = 0;
   uint32_t num_output_rows = 0;
 
   sgx_check("Non-oblivious SortMergeJoin",
-            ecall_non_oblivious_sort_merge_join(eid,
-                                                index, num_part,
-												op_code,
-												input_rows_ptr, input_rows_length,
-												num_rows,
-												output, output_length,
-                                                &actual_output_length, &num_output_rows));
+            ecall_non_oblivious_sort_merge_join(
+              eid,
+              join_expr_ptr, join_expr_length,
+              input_rows_ptr, input_rows_length,
+              &output_rows, &output_rows_length, &num_output_rows));
   
-  jbyteArray ret = env->NewByteArray(actual_output_length);
-  env->SetByteArrayRegion(ret, 0, actual_output_length, (jbyte *) output);
+  jbyteArray ret = env->NewByteArray(output_rows_length);
+  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
 
   jclass num_output_rows_class = env->GetObjectClass(num_output_rows_obj);
   jfieldID field_id = env->GetFieldID(num_output_rows_class, "value", "I");
   env->SetIntField(num_output_rows_obj, field_id, num_output_rows);
 
+  env->ReleaseByteArrayElements(join_expr, (jbyte *) join_expr_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
-  free(output);
+  free(output_rows);
 
   return ret;
 

@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Descending
+import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
@@ -43,6 +44,13 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.plans.FullOuter
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.JoinType
+import org.apache.spark.sql.catalyst.plans.LeftAnti
+import org.apache.spark.sql.catalyst.plans.LeftOuter
+import org.apache.spark.sql.catalyst.plans.LeftSemi
+import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
@@ -639,6 +647,13 @@ object Utils {
             tuix.GreaterThanOrEqual.createGreaterThanOrEqual(
               builder, leftOffset, rightOffset))
 
+        case (EqualTo(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.EqualTo,
+            tuix.EqualTo.createEqualTo(
+              builder, leftOffset, rightOffset))
+
         // String expressions
         case (Substring(str, pos, len), Seq(strOffset, posOffset, lenOffset)) =>
           tuix.Expr.createExpr(
@@ -690,6 +705,30 @@ object Utils {
                 case Ascending => tuix.SortDirection.Ascending
                 case Descending => tuix.SortDirection.Descending
               })).toArray)))
+    builder.sizedByteArray()
+  }
+
+  def serializeJoinExpression(
+    joinType: JoinType, leftKeys: Seq[Expression], rightKeys: Seq[Expression],
+    leftSchema: Seq[Attribute], rightSchema: Seq[Attribute]): Array[Byte] = {
+    val builder = new FlatBufferBuilder
+    builder.finish(
+      tuix.JoinExpr.createJoinExpr(
+        builder,
+        joinType match {
+          case Inner => tuix.JoinType.Inner
+          case FullOuter => tuix.JoinType.FullOuter
+          case LeftOuter => tuix.JoinType.LeftOuter
+          case RightOuter => tuix.JoinType.RightOuter
+          case LeftSemi => tuix.JoinType.LeftSemi
+          case LeftAnti => tuix.JoinType.LeftAnti
+        },
+        tuix.JoinExpr.createLeftKeysVector(
+          builder,
+          leftKeys.map(e => flatbuffersSerializeExpression(builder, e, leftSchema)).toArray),
+        tuix.JoinExpr.createRightKeysVector(
+          builder,
+          rightKeys.map(e => flatbuffersSerializeExpression(builder, e, rightSchema)).toArray)))
     builder.sizedByteArray()
   }
 }

@@ -263,6 +263,15 @@ private:
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ge->right())));
     }
 
+    case tuix::ExprUnion_EqualTo:
+    {
+      auto eq = static_cast<const tuix::EqualTo *>(expr->expr());
+      return eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, eq->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, eq->right())));
+    }
+
     // String expressions
     case tuix::ExprUnion_Substring:
     {
@@ -397,6 +406,67 @@ private:
   const tuix::SortExpr *sort_expr;
   flatbuffers::FlatBufferBuilder builder;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> sort_order_evaluators;
+};
+
+class FlatbuffersJoinExprEvaluator {
+public:
+  FlatbuffersJoinExprEvaluator(const tuix::JoinExpr *join_expr)
+    : builder() {
+    for (auto key_it = join_expr->left_keys()->begin();
+         key_it != join_expr->left_keys()->end(); ++key_it) {
+      left_key_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(*key_it)));
+    }
+    for (auto key_it = join_expr->right_keys()->begin();
+         key_it != join_expr->right_keys()->end(); ++key_it) {
+      right_key_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(*key_it)));
+    }
+  }
+
+  /**
+   * Return true if the given row is from the primary table, indicated by its first field, which
+   * must be a BooleanField.
+   */
+  bool is_primary(const tuix::Row *row) {
+    return static_cast<const tuix::BooleanField *>(
+      row->field_values()->Get(0)->value())->value();
+  }
+
+  /** Return true if the two rows are from the same join group. */
+  bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {
+    builder.Clear();
+    check(left_key_evaluators.size() == right_key_evaluators.size(),
+          "Mismatched join key lengths\n");
+    for (uint32_t i = 0; i < left_key_evaluators.size(); i++) {
+      const tuix::Field *row1_eval_tmp = left_key_evaluators[i]->eval(row1);
+      const tuix::Field *row1_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(row1_eval_tmp, builder));
+      const tuix::Field *row2_eval_tmp = right_key_evaluators[i]->eval(row2);
+      const tuix::Field *row2_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(row2_eval_tmp, builder));
+
+      bool row1_equals_row2 =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+              builder, row1_eval, row2_eval))
+          ->value())->value();
+
+      if (!row1_equals_row2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+private:
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> left_key_evaluators;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;
 };
 
 #endif

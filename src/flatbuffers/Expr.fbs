@@ -10,6 +10,7 @@ union ExprUnion {
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
+    EqualTo,
     Contains,
     Col,
     Literal,
@@ -77,6 +78,11 @@ table GreaterThan {
 }
 
 table GreaterThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
+
+table EqualTo {
     left:Expr;
     right:Expr;
 }
