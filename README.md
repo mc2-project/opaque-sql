@@ -14,6 +14,8 @@ Work-in-progress:
 
 - The current version also does not yet support computation integrity verification, though we are actively working on it.
 
+- The remote attestation code is not complete as it contains sample code from the Intel SDK.
+
 - If you find bugs in the code, please file an issue.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
