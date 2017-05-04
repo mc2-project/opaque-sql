@@ -21,6 +21,9 @@ import org.apache.spark.sql.Strategy
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.EqualTo
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.If
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
@@ -84,7 +87,7 @@ object OpaqueOperators extends Strategy {
               tagRight(right.output).map(_.toAttribute),
               tagLeft(left.output).map(_.toAttribute) ++ tagRight(right.output).map(_.toAttribute),
               EncryptedSortExec(
-                sortByTag(unioned.output),
+                sortForJoin(leftKeys, rightKeys, unioned.output),
                 unioned))) :: Nil
         case _ => Nil
       }
@@ -111,12 +114,27 @@ object OpaqueOperators extends Strategy {
 
   private def tagLeft(input: Seq[Attribute]): Seq[NamedExpression] =
     Alias(Literal(0), "tag")() +: input
+
   private def tagRight(input: Seq[Attribute]): Seq[NamedExpression] =
     Alias(Literal(1), "tag")() +: input
-  // TODO: need to sort by join attributes first
-  private def sortByTag(input: Seq[Attribute]): Seq[SortOrder] =
-    Seq(SortOrder(input(0).toAttribute, Ascending))
+
+  // projection
+  private def sortForJoin(
+      leftKeys: Seq[Expression], rightKeys: Seq[Expression],
+      input: Seq[Attribute]): Seq[SortOrder] = {
+    val tag = input(0)
+    leftKeys.zip(rightKeys).map {
+      case (leftKey, rightKey) =>
+        SortOrder(
+          If(
+            EqualTo(tag, Literal(0)),
+            leftKey,
+            rightKey),
+          Ascending)
+    } :+ SortOrder(tag, Ascending)
+  }
+
   private def dropTags(
-    leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
+      leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
     leftOutput ++ rightOutput
 }

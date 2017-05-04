@@ -320,6 +320,38 @@ private:
           result_is_null);
       }
     }
+
+    // Conditional expressions
+    case tuix::ExprUnion_If:
+    {
+      auto e = static_cast<const tuix::If *>(expr->expr());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *predicate =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->predicate()));
+      const tuix::Field *true_value =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->true_value()));
+      const tuix::Field *false_value =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->false_value()));
+      check(predicate->value_type() == tuix::FieldUnion_BooleanField,
+            "tuix::If requires predicate to return Boolean, not %s\n",
+            tuix::EnumNameFieldUnion(predicate->value_type()));
+      check(true_value->value_type() == false_value->value_type(),
+            "tuix::If requires true and false types to be the same, but %s != %s\n",
+            tuix::EnumNameFieldUnion(true_value->value_type()),
+            tuix::EnumNameFieldUnion(false_value->value_type()));
+      if (!predicate->is_null()) {
+        bool pred_val = static_cast<const tuix::BooleanField *>(predicate->value())->value();
+        if (pred_val) {
+          return GetOffset<tuix::Field>(builder, true_value);
+        } else {
+          return GetOffset<tuix::Field>(builder, false_value);
+        }
+      } else {
+        // Writing the result invalidates the predicate, true_value, false_value temporary pointers
+        // TODO: this is therefore unsafe
+        return flatbuffers_copy<tuix::Field>(true_value, builder, true);
+      }
+    }
     default:
       printf("Can't evaluate expression of type %s\n",
              tuix::EnumNameExprUnion(expr->expr_type()));

@@ -27,13 +27,19 @@ using namespace edu::berkeley::cs::rise::opaque;
 
 template<typename T>
 flatbuffers::Offset<T> flatbuffers_copy(
-  const T *flatbuffers_obj, flatbuffers::FlatBufferBuilder& builder);
+  const T *flatbuffers_obj, flatbuffers::FlatBufferBuilder& builder, bool force_null = false);
 template<>
 flatbuffers::Offset<tuix::Row> flatbuffers_copy(
-  const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder);
+  const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null);
 template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
-  const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder);
+  const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder, bool force_null);
+
+template<typename T> flatbuffers::Offset<T> GetOffset(
+  flatbuffers::FlatBufferBuilder &builder, const T *pointer) {
+  return flatbuffers::Offset<T>(builder.GetCurrentBufferPointer() + builder.GetSize()
+                                - reinterpret_cast<const uint8_t *>(pointer));
+}
 
 class EncryptedBlocksToEncryptedBlockReader {
 public:

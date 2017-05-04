@@ -37,6 +37,7 @@ import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
+import org.apache.spark.sql.catalyst.expressions.If
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
@@ -583,6 +584,8 @@ object Utils {
   def flatbuffersSerializeExpression(
     builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): Int = {
     treeFold[Expression, Int](expr) {
+      println("flatbuffersserializeexpression")
+      println(input)
       (childrenOffsets, expr) => (expr, childrenOffsets) match {
         case (ar: AttributeReference, Nil) if input.exists(_.semanticEquals(ar)) =>
           val colNum = input.indexWhere(_.semanticEquals(ar))
@@ -661,6 +664,14 @@ object Utils {
             tuix.ExprUnion.Substring,
             tuix.Substring.createSubstring(
               builder, strOffset, posOffset, lenOffset))
+
+        // Conditional expressions
+        case (If(predicate, trueValue, falseValue), Seq(predOffset, trueOffset, falseOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.If,
+            tuix.If.createIf(
+              builder, predOffset, trueOffset, falseOffset))
       }
     }
   }

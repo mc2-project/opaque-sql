@@ -21,6 +21,7 @@ union ExprUnion {
     Multiply,
     Add,
     Subtract,
+    If,
 }
 
 table Expr {
@@ -102,4 +103,11 @@ table Substring {
 // Null expressions
 table IsNotNull {
     child:Expr;
+}
+
+// Conditional expressions
+table If {
+    predicate:Expr;
+    true_value:Expr;
+    false_value:Expr;
 }
