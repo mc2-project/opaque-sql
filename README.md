@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
 
-Opaque is a package for Apache Spark SQL that enables very strong security for DataFrames -- data encryption and access pattern hiding -- using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. See our upcoming NSDI 2017 paper [1] for more details.
+Opaque is a package for Apache Spark SQL that enables strong security for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Opaque allows encrypting the contents of a DataFrame. Subsequent operations on them will run within SGX enclaves.
 
-Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (encrypted with access pattern protection). The contents of these DataFrames will be encrypted, and subsequent operations on them will run within SGX enclaves.
+This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
 Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
@@ -12,17 +12,12 @@ Work-in-progress:
 
 - Currently, Opaque supports a subset of Spark SQL operations and not yet UDFs. We are working on adding support for UDFs.
 
-- The current version also does not support yet computation integrity verification, though we are actively working on it.
+- The current version also does not yet support computation integrity verification, though we are actively working on it.
 
-- Currently, Opaque does not support source code obliviousness. There is prior work on dealing with this issue, and we are working on this aspect.
-Opaque also requires that the minimum amount of oblivious memory to be the size of the last level cache.
-We are working on both of these issues.
-
-- If you find bugs in the code, please let us know!
-
+- If you find bugs in the code, please file an issue.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
-[Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017 (to appear), March 2017.
+[Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
 
 ## Installation
 
@@ -93,13 +88,12 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
     ```
 
-4. Create encrypted and oblivious DataFrames:
+4. Create an encrypted DataFrame:
 
     ```scala
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5))
     val df = spark.createDataFrame(data).toDF("word", "count")
     val dfEncrypted = df.encrypted
-    val dfOblivious = df.oblivious
     ```
 
 5. Query the DataFrames and explain the query plan to see the secure operators:
@@ -111,14 +105,6 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // == Optimized Logical Plan ==
     // EncryptedFilter (count#6 > 3)
     // +- EncryptedLocalRelation [word#5, count#6]
-    // [...]
-
-    dfOblivious.filter($"count" > lit(3)).explain(true)
-    // [...]
-    // == Optimized Logical Plan ==
-    // ObliviousFilter (count#6 > 3)
-    // +- ObliviousPermute
-    //    +- EncryptedLocalRelation [word#5, count#6]
     // [...]
 
     dfEncrypted.filter($"count" > lit(3)).show

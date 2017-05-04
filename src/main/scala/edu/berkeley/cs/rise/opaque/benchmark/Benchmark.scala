@@ -46,36 +46,17 @@ object Benchmark {
     // Run
     BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
     BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q1(spark, Oblivious, "1million", numPartitions)
 
     BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
     BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q2(spark, Oblivious, "1million", numPartitions)
 
     BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
     BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
-    BigDataBenchmark.q3(spark, Oblivious, "1million", numPartitions)
 
     LeastSquaresBenchmark.query(spark, Insecure, "1000000", numPartitions)
     LeastSquaresBenchmark.query(spark, Encrypted, "1000000", numPartitions)
-    LeastSquaresBenchmark.query(spark, Oblivious, "1000000", numPartitions)
 
     Thread.sleep(10000000)
-
-    // if (spark.sparkContext.isLocal) {
-    //   for (i <- 8 to 20) {
-    //     PageRank.run(spark, Oblivious, math.pow(2, i).toInt.toString, numPartitions)
-    //   }
-
-    //   for (i <- 0 to 13) {
-    //     JoinReordering.treatmentQuery(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
-    //     JoinReordering.geneQuery(spark, (math.pow(2, i) * 125).toInt.toString, numPartitions)
-    //   }
-
-    //   for (i <- 0 to 13) {
-    //     JoinCost.run(spark, Oblivious, (math.pow(2, i) * 125).toInt.toString, numPartitions)
-    //   }
-    // }
 
     spark.stop()
   }

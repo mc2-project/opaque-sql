@@ -26,7 +26,4 @@ class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
     val y = 2
     enc_dataset
   }
-
-  def oblivious(): DataFrame =
-    Dataset.ofRows(ds.sparkSession, Encrypt(true, ds.logicalPlan))
 }

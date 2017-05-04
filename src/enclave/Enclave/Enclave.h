@@ -37,12 +37,10 @@
 #include "Join.h"
 #include "Filter.h"
 #include "Project.h"
-#include "ObliviousSort.h"
 #include "DataGen.h"
 #include "Sort.h"
 #include "ColumnSort.h"
 #include "EncryptedDAG.h"
-#include "ObliviousAccess.h"
 #include "isv_enclave.h"
 
 #include "Enclave_t.h"

@@ -526,57 +526,6 @@ uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols) {
   return row_ptr;
 }
 
-uint8_t *get_attr_internal_o(uint8_t *row, uint32_t attr_idx, uint32_t num_cols,
-                             uint32_t total_row_size) {
-  check(attr_idx > 0 && attr_idx <= num_cols,
-        "attr_idx %d out of bounds (%d cols)\n", attr_idx, num_cols);
-  uint8_t *row_ptr = row;
-  row_ptr += 4;
-
-  uint32_t attr_len = 0;
-
-  // While we're padding the entire row, we're not actually padding each attribute
-  // Therefore, it is necessary to hide the actual size of each attribute
-  for (uint32_t i = 0; i < num_cols; i++) {
-    // get the current attribute's size
-    for (uint32_t j = 0; j < total_row_size; j++) {
-      if (row + j == row_ptr) {
-        attr_len = *reinterpret_cast<uint32_t *>(row + j);
-      } else {
-        dummy_access(row + j, 4);
-        dummy_access((uint8_t *) &attr_len, 4);
-      }
-    }
-
-    for (uint32_t j = 0; j < 4; j++) {
-      if (i < attr_idx) {
-        row_ptr++;
-      } else {
-        dummy_access(row_ptr, sizeof(row_ptr));
-      }
-    }
-    if (i < attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        row_ptr++;
-      }
-    } else if (i == attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        if (j == 0) {
-          row_ptr++;
-        } else {
-          dummy_access(row_ptr, sizeof(row_ptr));
-        }
-      }
-    } else {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        dummy_access(row_ptr, sizeof(row_ptr));
-      }
-    }
-  }
-
-  return row_ptr;
-}
-
 const uint8_t *NewRecord::get_attr(uint32_t attr_idx) const {
   return get_attr_internal(row, attr_idx, num_cols());
 }
@@ -614,122 +563,12 @@ const uint8_t *NewRecord::get_attr_value(uint32_t attr_idx) const {
   return result;
 }
 
-void NewRecord::get_attr_value_copy_o(uint32_t attr_idx,
-                                      uint8_t *out,
-                                      uint32_t out_size) const {
-  uint8_t *row_ptr = row;
-  row_ptr += 4;
-  uint32_t attr_len = 0;
-
-  for (uint32_t i = 0; i < num_cols(); i++) {
-    // get the current attribute's size
-    for (uint32_t j = 0; j < total_row_size; j++) {
-      if (row + j == row_ptr) {
-        attr_len = *reinterpret_cast<uint32_t *>(row + j);
-      } else {
-        dummy_access(row + j, 4);
-        dummy_access((uint8_t *) &attr_len, 4);
-      }
-    }
-
-    for (uint32_t j = 0; j < 4; j++) {
-      if (i < attr_idx) {
-        row_ptr++;
-        dummy_access(out, out_size);
-      } else {
-        dummy_access(row_ptr, sizeof(row_ptr));
-        dummy_access(out, out_size);
-      }
-    }
-
-    if (i < attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        row_ptr++;
-        dummy_access(out, out_size);
-      }
-    } else if (i == attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        if (j == 0) {
-          dummy_access(row_ptr, sizeof(row_ptr));
-          oblivious_get(row, total_row_size,
-                        row_ptr - row, row_ptr + attr_len - row,
-                        out, attr_len);
-        } else {
-          dummy_access(row_ptr, sizeof(row_ptr));
-          dummy_access(out, out_size);
-        }
-      }
-    } else {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        dummy_access(row_ptr, sizeof(row_ptr));
-        dummy_access(out, out_size);
-      }
-    }
-  }
-
-}
-
 void NewRecord::set_attr_value(uint32_t attr_idx, const uint8_t *new_attr_value) {
   uint32_t attr_len = get_attr_len(attr_idx);
   uint8_t *attr_ptr = get_attr_internal(row, attr_idx, num_cols());
   attr_ptr++;
   attr_ptr += 4;
   memcpy(attr_ptr, new_attr_value, attr_len);
-}
-
-void NewRecord::set_attr_value_o(uint32_t attr_idx,
-                                 const uint8_t *new_attr_value,
-                                 uint32_t new_attr_value_len) {
-  uint8_t *row_ptr = row;
-  row_ptr += 4;
-  uint32_t attr_len = 0;
-
-  for (uint32_t i = 0; i < num_cols(); i++) {
-    // get the current attribute's size
-    for (uint32_t j = 0; j < total_row_size; j++) {
-      if (row + j == row_ptr) {
-        attr_len = *reinterpret_cast<uint32_t *>(row + j);
-      } else {
-        dummy_access(row + j, 4);
-        dummy_access((uint8_t *) &attr_len, 4);
-      }
-    }
-
-    for (uint32_t j = 0; j < 4; j++) {
-      if (i < attr_idx) {
-        row_ptr++;
-        dummy_access((uint8_t *) new_attr_value, new_attr_value_len);
-      } else {
-        dummy_access(row_ptr, sizeof(row_ptr));
-        dummy_access((uint8_t *) new_attr_value, new_attr_value_len);
-      }
-    }
-
-    if (i < attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        row_ptr++;
-        dummy_access((uint8_t *) new_attr_value, new_attr_value_len);
-      }
-    } else if (i == attr_idx) {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        if (j == 0) {
-          dummy_access(row_ptr, sizeof(row_ptr));
-          oblivious_set((uint8_t *) new_attr_value, attr_len,
-                        row, total_row_size,
-                        row_ptr - row, row_ptr + attr_len - row);
-        } else {
-          dummy_access(row_ptr, sizeof(row_ptr));
-          dummy_access((uint8_t *) new_attr_value, new_attr_value_len);
-        }
-      }
-    } else {
-      for (uint32_t j = 0; j < attr_len; j++) {
-        dummy_access(row_ptr, sizeof(row_ptr));
-        dummy_access((uint8_t *) new_attr_value, new_attr_value_len);
-      }
-    }
-  }
-
 }
 
 void NewRecord::add_attr(const NewRecord *other, uint32_t attr_idx) {

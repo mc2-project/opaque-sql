@@ -56,26 +56,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     spark.stop()
   }
 
-  ignore("encAggregate - final run split across multiple partitions") {
-    val data = for (i <- 0 until 256) yield (i, "A", 1)
-    val words = spark.createDataFrame(spark.sparkContext.makeRDD(data, 2))
-      .toDF("id", "word", "count").oblivious
-
-    val summed = words.groupBy("word").agg(sum("count").as("totalCount"))
-    assert(summed.collect.toSet ===
-      data.map(p => (p._2, p._3)).groupBy(_._1).mapValues(_.map(_._2).sum)
-      .map(Row.fromTuple).toSet)
-  }
-
-
-  ignore("encSort multiple partitions") {
-    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
-    val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
-      .toDF("id", "word", "count")
-      .oblivious.sort($"word")
-    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
-  }
-
   ignore("nonObliviousSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
@@ -108,9 +88,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
 
   // test remote attestation
   ignore("Remote attestation") {
-    //val data = for (i <- 0 until 8) yield ("%03d".format(i), i.toFloat)
-    //val rdd = spark.createDataFrame(data).toDF("str", "x").oblivious
-
     val data = for (i <- 0 until 8) yield (i)
     RA.initRA(spark.sparkContext.parallelize(data, 2))
   }

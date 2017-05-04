@@ -30,37 +30,15 @@ import edu.berkeley.cs.rise.opaque.logical._
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
 
-    // Push-up filtering rule
-    case ObliviousSort(sortOrder1, ObliviousSort(sortOrder2, ObliviousFilter(condition, child))) =>
-        ObliviousFilterExec(condition, ObliviousSortExec(sortOrder2 ++ sortOrder1, planLater(child))) :: Nil
-
-    case ObliviousProject(projectList, child) =>
-      ObliviousProjectExec(projectList, planLater(child)) :: Nil
     case EncryptedProject(projectList, child) =>
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
 
-    case ObliviousFilter(condition, child) =>
-      ObliviousFilterExec(condition, planLater(child)) :: Nil
     case EncryptedFilter(condition, child) =>
       ObliviousFilterExec(condition, planLater(child)) :: Nil
 
-    case ObliviousPermute(child) =>
-      ObliviousPermuteExec(planLater(child)) :: Nil
-
-    case ObliviousSort(order, child) =>
-      ObliviousSortExec(order, planLater(child)) :: Nil
     case EncryptedSort(order, child) =>
       EncryptedSortExec(order, planLater(child)) :: Nil
 
-    case ObliviousJoin(left, right, joinExpr) =>
-      Join(left, right, Inner, Some(joinExpr)) match {
-        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-          ObliviousSortMergeJoinExec(
-            planLater(left),
-            planLater(right),
-            leftKeys, rightKeys, condition) :: Nil
-        case _ => Nil
-      }
     case EncryptedJoin(left, right, joinExpr) =>
       Join(left, right, Inner, Some(joinExpr)) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
@@ -71,11 +49,6 @@ object OpaqueOperators extends Strategy {
         case _ => Nil
       }
 
-    case a @ ObliviousAggregate(groupingExpressions, aggExpressions, child) => {
-      val partialAggregates = ObliviousAggregateExec(groupingExpressions, aggExpressions, planLater(child))
-      val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) = partialAggregates.getOpcodes()
-      ObliviousFilterExec(aggDummyFilterOpcode, ObliviousSortExec(aggDummySortOpcode, partialAggregates)) :: Nil
-    }
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
 
