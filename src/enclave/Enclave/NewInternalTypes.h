@@ -4,7 +4,6 @@
 #include <limits>
 #include <set>
 #include "EncryptedDAG.h"
-#include "ObliviousAccess.h"
 
 class NewJoinRecord;
 class StreamRowReader;

@@ -5,6 +5,41 @@
 #include <queue>
 
 template<typename RecordType>
+uint32_t sort_single_buffer(
+  int op_code, Verify *verify_set,
+  uint8_t *buffer, uint8_t *buffer_end,
+  uint8_t *write_buffer,
+  uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
+  uint32_t *num_deep_comparisons) {
+
+  check(sort_ptrs_len >= num_rows,
+        "sort_single_buffer: sort_ptrs is not large enough (%d vs %d)\n", sort_ptrs_len, num_rows);
+
+  RowReader r(buffer, buffer_end, verify_set);
+  for (uint32_t i = 0; i < num_rows; i++) {
+    r.read(&sort_ptrs[i], op_code);
+  }
+
+  std::sort(
+    sort_ptrs, sort_ptrs + num_rows,
+    [op_code, num_comparisons, num_deep_comparisons](const SortPointer<RecordType> &a,
+                                                     const SortPointer<RecordType> &b) {
+      (*num_comparisons)++;
+      return a.less_than(&b, op_code, num_deep_comparisons);
+    });
+
+  RowWriter w(write_buffer, row_upper_bound);
+  w.set_self_task_id(verify_set->get_self_task_id());
+  for (uint32_t i = 0; i < num_rows; i++) {
+    w.write(&sort_ptrs[i]);
+  }
+  w.close();
+  printf("[%s] bytes read: %u, bytes_written is %u, buffer + byteswritten: %p\n", __FUNCTION__, (uint32_t)(buffer_end - buffer), w.bytes_written(), buffer+w.bytes_written());
+  return w.bytes_written();
+}
+
+template<typename RecordType>
 class MergeItem {
  public:
   SortPointer<RecordType> v;

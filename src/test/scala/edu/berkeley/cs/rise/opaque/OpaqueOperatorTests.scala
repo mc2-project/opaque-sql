@@ -63,23 +63,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     test(name + " - encrypted") {
       assert(f(Encrypted) === f(Insecure))
     }
-    test(name + " - oblivious") {
-      assert(f(Oblivious) === f(Insecure))
-    }
   }
 
   def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
     test(name + " - encrypted") {
       f(Encrypted)
-    }
-    test(name + " - oblivious") {
-      f(Oblivious)
-    }
-  }
-
-  def testOpaqueObliviousOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - oblivious") {
-      f(Oblivious)
     }
   }
 
@@ -96,14 +84,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
-  }
-
-  testOpaqueOnly("join reordering") { securityLevel =>
-    JoinReordering.treatmentQuery(spark, "125", numPartitions)
-  }
-
-  testOpaqueOnly("join cost") { securityLevel =>
-    JoinCost.run(spark, Oblivious, "125", numPartitions)
   }
 
   testAgainstSpark("big data 1") { securityLevel =>
