@@ -7,7 +7,7 @@ sudo: required
 before_install:
   - export CC=gcc-4.8
   - export CXX=g++-4.8
-  - wget https://download.01.org/intel-sgx/linux-1.7/sgx_linux_x64_sdk_1.7.100.36470.bin -O sgx_sdk.bin
+  - wget https://download.01.org/intel-sgx/linux-1.8/sgx_linux_ubuntu16.04.1_x64_sdk_1.8.100.37689.bin -O sgx_sdk.bin
   - chmod +x sgx_sdk.bin
   - echo yes | ./sgx_sdk.bin
   - source sgxsdk/environment

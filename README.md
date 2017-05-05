@@ -30,12 +30,10 @@ After downloading the Opaque codebase, build and test it as follows:
     ```sh
     sudo yum -y install gcc48.x86_64 gcc48-c++.x86_64
     sudo yum -y update binutils
-    git clone https://github.com/ankurdave/linux-sgx -b c++11
-    cd linux-sgx
-    ./download_prebuilt.sh
-    make sdk_install_pkg
+    wget https://download.01.org/intel-sgx/linux-1.8/sgx_linux_ubuntu16.04.1_x64_sdk_1.8.100.37689.bin -O sgx_sdk.bin
+    chmod +x sgx_sdk.bin 
     # Installer will prompt for install path, which can be user-local
-    ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
+    ./sgx_sdk.bin
     ```
 
 2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
