@@ -444,6 +444,8 @@ class FlatbuffersJoinExprEvaluator {
 public:
   FlatbuffersJoinExprEvaluator(const tuix::JoinExpr *join_expr)
     : builder() {
+    check(join_expr->left_keys()->size() == join_expr->right_keys()->size(),
+          "Mismatched join key lengths\n");
     for (auto key_it = join_expr->left_keys()->begin();
          key_it != join_expr->left_keys()->end(); ++key_it) {
       left_key_evaluators.emplace_back(
@@ -469,14 +471,15 @@ public:
 
   /** Return true if the two rows are from the same join group. */
   bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {
+    auto &row1_evaluators = is_primary(row1) ? left_key_evaluators : right_key_evaluators;
+    auto &row2_evaluators = is_primary(row2) ? left_key_evaluators : right_key_evaluators;
+
     builder.Clear();
-    check(left_key_evaluators.size() == right_key_evaluators.size(),
-          "Mismatched join key lengths\n");
-    for (uint32_t i = 0; i < left_key_evaluators.size(); i++) {
-      const tuix::Field *row1_eval_tmp = left_key_evaluators[i]->eval(row1);
+    for (uint32_t i = 0; i < row1_evaluators.size(); i++) {
+      const tuix::Field *row1_eval_tmp = row1_evaluators[i]->eval(row1);
       const tuix::Field *row1_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
         builder, flatbuffers_copy(row1_eval_tmp, builder));
-      const tuix::Field *row2_eval_tmp = right_key_evaluators[i]->eval(row2);
+      const tuix::Field *row2_eval_tmp = row2_evaluators[i]->eval(row2);
       const tuix::Field *row2_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
         builder, flatbuffers_copy(row2_eval_tmp, builder));
 
