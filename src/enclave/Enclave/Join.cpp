@@ -201,11 +201,11 @@ void non_oblivious_sort_merge_join(
 
     if (join_expr_eval.is_primary(current)) {
       check(!primary || !join_expr_eval.is_same_group(primary, current),
-            "sort_merge_join - primary table uniqueness constraint violation: multiple rows from "
-            "the primary table had the same join attribute\n");
+            "non_oblivious_sort_merge_join - primary table uniqueness constraint violation: "
+            "multiple rows from the primary table had the same join attribute\n");
       primary = current; // advance to a new join attribute
     } else {
-      if (join_expr_eval.is_same_group(primary, current)) {
+      if (primary != nullptr && join_expr_eval.is_same_group(primary, current)) {
         w.write(primary, current);
       }
     }
