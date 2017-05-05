@@ -63,30 +63,27 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     test(name + " - encrypted") {
       assert(f(Encrypted) === f(Insecure))
     }
-    test(name + " - oblivious") {
-      assert(f(Oblivious) === f(Insecure))
-    }
   }
 
   def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
     test(name + " - encrypted") {
       f(Encrypted)
     }
-    test(name + " - oblivious") {
-      f(Oblivious)
+  }
+
+  def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
+    test(name + " - Spark") {
+      f(Insecure)
     }
+  }
+
+  testAgainstSpark("least squares") { securityLevel =>
+    val answer = LeastSquaresBenchmark.query(spark, securityLevel, "tiny", numPartitions).collect
+    answer
   }
 
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
-  }
-
-  testOpaqueOnly("join reordering") { securityLevel =>
-    JoinReordering.treatmentQuery(spark, "125", numPartitions)
-  }
-
-  testOpaqueOnly("join cost") { securityLevel =>
-    JoinCost.run(spark, Oblivious, "125", numPartitions)
   }
 
   testAgainstSpark("big data 1") { securityLevel =>
@@ -115,7 +112,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     val words = makeDF(data, securityLevel, "word", "count")
 
-    words.filter($"count" > lit(3)).collect
+    words.select($"word", $"count" + 1).collect
   }
 
   def abc(i: Int): String = (i % 3) match {
@@ -189,6 +186,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+  }
+
+  testOpaqueOnly("global aggregate") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val result = words.agg(sum("count").as("totalCount"))
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](

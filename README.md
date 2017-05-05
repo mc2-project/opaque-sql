@@ -1,12 +1,25 @@
 # Opaque: Secure Apache Spark SQL
 
-Opaque is a package for Apache Spark SQL that enables very strong security for DataFrames -- data encryption and access pattern hiding -- using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. See our upcoming NSDI 2017 paper [1] for more details.
+[![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
 
-Opaque allows marking DataFrames as <em>encrypted</em> or <em>oblivious</em> (encrypted with access pattern protection). The contents of these DataFrames will be encrypted, and subsequent operations on them will run within SGX enclaves.
+Opaque is a package for Apache Spark SQL that enables strong security for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Opaque allows encrypting the contents of a DataFrame. Subsequent operations on them will run within SGX enclaves.
 
-Warning: This is an alpha preview of Opaque, which means the software is still early stage! It is currently not production-ready. Opaque supports a subset of Spark SQL operations, and does not support UDFs. Unlike the Spark cluster, the master must be trusted.
+This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
-[1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica. Opaque: A Data Analytics Platform with Strong Security. NSDI 2017 (to appear), March 2017.
+Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
+
+Work-in-progress:
+
+- Currently, Opaque supports a subset of Spark SQL operations and not yet UDFs. We are working on adding support for UDFs.
+
+- The current version also does not yet support computation integrity verification, though we are actively working on it.
+
+- The remote attestation code is not complete as it contains sample code from the Intel SDK.
+
+- If you find bugs in the code, please file an issue.
+
+[1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
+[Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
 
 ## Installation
 
@@ -25,8 +38,8 @@ After downloading the Opaque codebase, build and test it as follows:
     ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
     ```
 
-2. On the master, generate a keypair using OpenSSL for remote attestation. Only
-   the NIST p-256 curve is supported.
+2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
+   Note that only the NIST p-256 curve is supported.
 
     ```sh
     cd ${OPAQUE_HOME}
@@ -79,13 +92,12 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
     ```
 
-4. Create encrypted and oblivious DataFrames:
+4. Create an encrypted DataFrame:
 
     ```scala
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5))
     val df = spark.createDataFrame(data).toDF("word", "count")
     val dfEncrypted = df.encrypted
-    val dfOblivious = df.oblivious
     ```
 
 5. Query the DataFrames and explain the query plan to see the secure operators:
@@ -99,14 +111,6 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // +- EncryptedLocalRelation [word#5, count#6]
     // [...]
 
-    dfOblivious.filter($"count" > lit(3)).explain(true)
-    // [...]
-    // == Optimized Logical Plan ==
-    // ObliviousFilter (count#6 > 3)
-    // +- ObliviousPermute
-    //    +- EncryptedLocalRelation [word#5, count#6]
-    // [...]
-
     dfEncrypted.filter($"count" > lit(3)).show
     // +----+-----+
     // |word|count|
@@ -115,3 +119,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // | baz|    5|
     // +----+-----+
     ```
+
+## Contact
+
+If you want to know more about our project or have questions, please contact Wenting (wzheng@eecs.berkeley.edu) and/or Ankur (ankurdave@gmail.com).

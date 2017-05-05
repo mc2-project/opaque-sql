@@ -278,8 +278,11 @@ object Utils {
       case Array() => Array.empty
       case Array(bytes) => bytes
       case _ =>
-        val totalBytes = arrays.map(_.length).sum
-        val buf = ByteBuffer.allocate(totalBytes)
+        //println("concatByteArrays concatenating %d arrays, sizes: %s".format(arrays.length, arrays.map(_.length.toLong).toString))
+        val totalBytes = arrays.map(_.length.toLong).sum
+        //println("concatByteArrays allocating " + totalBytes)
+        assert(totalBytes < Int.MaxValue)
+        val buf = ByteBuffer.allocate(totalBytes.toInt)
         buf.order(ByteOrder.LITTLE_ENDIAN)
         for (a <- arrays) {
           buf.put(a)

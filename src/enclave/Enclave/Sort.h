@@ -19,6 +19,19 @@
 #include "EncryptedDAG.h"
 
 /**
+ * Decrypt num_rows rows from buffer, sort them using sort_ptrs as scratch space, and re-encrypt
+ * and write the result back into buffer. The length of sort_ptrs must be at least num_rows.
+ */
+template<typename RecordType>
+uint32_t sort_single_buffer(
+  int op_code, Verify *verify_set,
+  uint8_t *buffer, uint8_t *buffer_end,
+  uint8_t *write_buffer,
+  uint32_t num_rows, SortPointer<RecordType> *sort_ptrs,
+  uint32_t sort_ptrs_len, uint32_t row_upper_bound, uint32_t *num_comparisons,
+  uint32_t *num_deep_comparisons);
+
+/**
  * Sort an arbitrary number of encrypted buffers and write the results back to the same buffers. The
  * number of rows in each buffer is specified in num_rows, which is a parallel array to buffer_list,
  * except that buffer_list must contain one extra sentinel element at the end pointing to the end of
@@ -93,7 +106,6 @@ void partition_for_sort(int op_code,
                         uint32_t boundary_rows_len,
                         uint8_t *output,
                         uint8_t **output_partition_ptrs,
-                        uint32_t *output_partition_num_rows,
-                        uint8_t *scratch);
+                        uint32_t *output_partition_num_rows);
 
 #endif /* _SORT_H_ */

@@ -2,7 +2,7 @@
 /* Enclave.edl - Top EDL file. */
 
 enclave {
-    
+
   include "user_types.h" /* buffer_t */
   include "stdbool.h"
   include "sgx_key_exchange.h"
@@ -58,57 +58,7 @@ enclave {
       uint32_t plaintext_length);
     public void ecall_test_int([in, size=1] int *ptr);
 
-    public void ecall_external_oblivious_sort(
-      int op_code,
-      uint32_t num_buffers,
-      [user_check] uint8_t **buffer_list,
-      [in, count=num_buffers] uint32_t *num_rows,
-      uint32_t row_upper_bound);
-
-    public void ecall_aggregate_step1(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out] uint32_t *actual_size);
-    public void ecall_process_boundary_records(
-      int op_code,
-      [in, size=rows_size] uint8_t *rows, uint32_t rows_size,
-      uint32_t num_rows,
-      [out, size=out_agg_row_size] uint8_t *out_agg_rows, uint32_t out_agg_row_size,
-      [out, size=4] uint32_t *actual_out_agg_row_size);
-    public void ecall_aggregate_step2(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length, uint32_t num_rows,
-      [in, size=boundary_info_row_length] uint8_t *boundary_info_row_ptr,
-      uint32_t boundary_info_row_length,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out] uint32_t *actual_size);
     public void ecall_stream_encryption_test();
-
-    public void ecall_scan_collect_last_primary(
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [out, size=output_length] uint8_t *output, uint32_t output_length,
-      [out] uint32_t *actual_output_len);
-
-    public void ecall_process_join_boundary(
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_size,
-      [out, size=4] uint32_t *actual_output_length);
-
-    public void ecall_sort_merge_join(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *join_row, uint32_t join_row_length,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out, size=4] uint32_t *actual_output_length);
 
     public void ecall_join_sort_preprocess(
       int index, int num_part,
@@ -117,7 +67,6 @@ enclave {
       [user_check] uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
       [user_check] uint8_t *output_rows, uint32_t output_rows_len,
       [out] uint32_t *actual_output_len);
-
     public void ecall_encrypt_attribute(
       [in, size=input_size] uint8_t *input, uint32_t input_size,
       [out, size=output_size] uint8_t *output, uint32_t output_size,
@@ -139,7 +88,7 @@ enclave {
 													  [user_check] uint8_t *output_buffer,
 													  [out] uint32_t *encrypted_buffer_size,
 													  uint8_t type);
-																							
+
     public void ecall_row_parser([user_check] uint8_t *enc_block,
 								 uint32_t input_num_rows);
 
@@ -148,7 +97,7 @@ enclave {
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
-																  
+
     public void ecall_sample(
       int index, int num_part,
       int op_code,
@@ -182,8 +131,7 @@ enclave {
       uint32_t boundary_rows_len,
       [user_check] uint8_t *output,
       [user_check] uint8_t **output_partition_ptrs,
-      [user_check] uint32_t *output_partition_num_rows,
-      [user_check] uint8_t *scratch);
+      [user_check] uint32_t *output_partition_num_rows);
 
     public void ecall_non_oblivious_aggregate(
       int index, int num_part,
@@ -193,6 +141,13 @@ enclave {
       [user_check] uint8_t *output_rows, uint32_t output_rows_length,
       [out] uint32_t *actual_size, [out] uint32_t *num_output_rows);
 
+    public void ecall_global_aggregate(
+      int index, int num_part,
+      int op_code,
+      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
+      uint32_t num_rows,
+      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
+      [out] uint32_t *actual_size, [out] uint32_t *num_output_rows);
 
     public void ecall_non_oblivious_sort_merge_join(
       [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
@@ -201,22 +156,6 @@ enclave {
       [out] uint8_t **output_rows,
       [out] uint32_t *output_rows_length,
       [out] uint32_t *num_output_rows);
-
-    public void ecall_column_sort(
-                  int index, int num_part,
-                  int op_code,
-				  int round, 
-                  [user_check] uint8_t *input_rows,
-                  uint32_t input_rows_len,
-				  [user_check] uint32_t *num_rows,
-				  [user_check] uint8_t **buffer_list,
-				  uint32_t num_buffers,
-				  uint32_t row_upper_bound,
-				  uint32_t column,
-				  uint32_t r,
-				  uint32_t s,
-				  [user_check] uint8_t **output_buffers,
-				  [out,count=s] uint32_t *output_buffer_sizes);
 
     public void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
 								  [user_check] uint8_t *column_types,
@@ -229,41 +168,6 @@ enclave {
     public void ecall_count_rows([user_check] uint8_t *input_rows,
 								 uint32_t buffer_size,
 								 [out] uint32_t *output_rows);
-
-	public void ecall_column_sort_preprocess(int op_code,
-                                             [user_check] uint8_t *input_rows,
-                                             uint32_t input_rows_len,
-											 uint32_t num_rows,
-											 uint32_t row_upper_bound,
-                                             uint32_t offset,
-											 uint32_t r,
-											 uint32_t s,
-                                             [user_check] uint8_t **output_buffers,
-                                             [user_check] uint32_t *output_buffer_sizes);
-
-    public void ecall_column_sort_padding(int op_code,
-                                          [user_check] uint8_t *input_rows,
-                                          uint32_t input_rows_len,
-                                          uint32_t num_rows,
-                                          uint32_t row_upper_bound,
-                                          uint32_t r,
-                                          uint32_t s,
-                                          [user_check] uint8_t *output_rows,
-                                          [out] uint32_t *output_rows_size);
-
-    public void ecall_column_sort_filter(int op_code,
-                                         [user_check] uint8_t *input_rows,
-                                         uint32_t input_rows_len,
-                                         uint32_t offset,
-                                         uint32_t column,
-                                         uint32_t num_rows,
-                                         uint32_t row_upper_bound,
-                                         [user_check] uint8_t *output_rows,
-                                         [out] uint32_t *output_rows_size,
-                                         [out] uint32_t *num_output_rows);
-    public void ecall_oblivious_swap([user_check] uint8_t *ptr1,
-                                     [user_check] uint8_t *ptr2,
-                                     uint32_t size);
 
     public sgx_status_t ecall_enclave_init_ra(int b_pse,
                                               [out] sgx_ra_context_t *p_context);

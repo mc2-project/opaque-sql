@@ -63,31 +63,6 @@ void ecall_test_int(int *ptr) {
   *ptr = *ptr + 1;
 }
 
-void ecall_external_oblivious_sort(int op_code, uint32_t num_buffers, uint8_t **buffer_list,
-                                   uint32_t *num_rows, uint32_t row_upper_bound) {
-
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-    external_oblivious_sort<NewRecord>(
-      op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-    break;
-  case SORT_JOIN:
-    external_oblivious_sort<NewJoinRecord>(
-      op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-    break;
-  default:
-    printf("ecall_external_oblivious_sort: Unknown sort type %d for opcode %d\n", sort_op, op_code);
-    assert(false);
-  }
-
-  verify_set.verify();
-}
-
 void ecall_project(uint8_t *condition, size_t condition_length,
                    uint8_t *input_rows, uint32_t input_rows_length,
                    uint8_t **output_rows, uint32_t *output_rows_length) {
@@ -104,186 +79,6 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
          input_rows, input_rows_length,
          output_rows, output_rows_length, num_output_rows);
 }
-
-/**** BEGIN Aggregation ****/
-void ecall_aggregate_step1(int index, int num_part,
-                           int op_code,
-                           uint8_t *input_rows, uint32_t input_rows_length,
-                           uint32_t num_rows,
-                           uint8_t *output_rows, uint32_t output_rows_length,
-                           uint32_t *actual_size) {
-  (void)index;
-  (void)num_part;
-
-  Verify verify_set(op_code, 1, 0);
-
-  switch (op_code) {
-  case OP_GROUPBY_COL1_SUM_COL2_INT_STEP1:
-    aggregate_step1<Aggregator1<GroupBy<1>, Sum<2, uint32_t, uint64_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-      actual_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1:
-    aggregate_step1<Aggregator1<GroupBy<1>, Sum<2, float, double> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-      actual_size);
-    break;
-  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP1:
-    aggregate_step1<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-      actual_size);
-    break;
-  case OP_GROUPBY_COL2_SUM_COL3_INT_STEP1:
-    aggregate_step1<Aggregator1<GroupBy<2>, Sum<3, uint32_t, uint64_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-      actual_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1:
-    aggregate_step1<
-      Aggregator2<GroupBy<1>,
-                  Sum<3, float, double>,
-                  Avg<2, uint32_t, double> > >(
-                    &verify_set,
-                    input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-                    actual_size);
-    break;
-  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1:
-    aggregate_step1<Aggregator1<GroupBy2<1, 2>, Sum<3, float, double> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
-      actual_size);
-    break;
-  default:
-    printf("ecall_aggregate_step1: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  verify_set.verify();
-}
-
-void ecall_process_boundary_records(int op_code,
-                                    uint8_t *rows, uint32_t rows_size,
-                                    uint32_t num_rows,
-                                    uint8_t *out_agg_rows, uint32_t out_agg_row_size,
-                                    uint32_t *actual_out_agg_row_size) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  switch (op_code) {
-  case OP_GROUPBY_COL1_SUM_COL2_INT_STEP1:
-    aggregate_process_boundaries<Aggregator1<GroupBy<1>, Sum<2, uint32_t, uint64_t> > >(
-      &verify_set,
-      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-      actual_out_agg_row_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1:
-    aggregate_process_boundaries<Aggregator1<GroupBy<1>, Sum<2, float, double> > >(
-      &verify_set,
-      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-      actual_out_agg_row_size);
-    break;
-  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP1:
-    aggregate_process_boundaries<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
-      &verify_set,
-      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-      actual_out_agg_row_size);
-    break;
-  case OP_GROUPBY_COL2_SUM_COL3_INT_STEP1:
-    aggregate_process_boundaries<Aggregator1<GroupBy<2>, Sum<3, uint32_t, uint64_t> > >(
-      &verify_set,
-      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-      actual_out_agg_row_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1:
-    aggregate_process_boundaries<
-      Aggregator2<GroupBy<1>,
-                  Sum<3, float, double>,
-                  Avg<2, uint32_t, double> > >(
-                    &verify_set,
-                    rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-                    actual_out_agg_row_size);
-    break;
-  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1:
-    aggregate_process_boundaries<Aggregator1<GroupBy2<1, 2>, Sum<3, float, double> > >(
-      &verify_set,
-      rows, rows_size, num_rows, out_agg_rows, out_agg_row_size,
-      actual_out_agg_row_size);
-    break;
-  default:
-    printf("ecall_process_boundary_records: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  verify_set.verify();
-}
-
-void ecall_aggregate_step2(int index, int num_part,
-                           int op_code,
-                           uint8_t *input_rows, uint32_t input_rows_length,
-                           uint32_t num_rows,
-                           uint8_t *boundary_info_row_ptr, uint32_t boundary_info_row_length,
-                           uint8_t *output_rows, uint32_t output_rows_length,
-                           uint32_t *actual_size) {
-  (void) index;
-  (void) num_part;
-  Verify verify_set(op_code, 1, 0);
-
-  switch (op_code) {
-  case OP_GROUPBY_COL1_SUM_COL2_INT_STEP2:
-    aggregate_step2<Aggregator1<GroupBy<1>, Sum<2, uint32_t, uint64_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
-      output_rows, output_rows_length, actual_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2:
-    aggregate_step2<Aggregator1<GroupBy<1>, Sum<2, float, double> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
-      output_rows, output_rows_length, actual_size);
-    break;
-  case OP_GROUPBY_COL1_MIN_COL2_INT_STEP2:
-    aggregate_step2<Aggregator1<GroupBy<1>, Min<2, uint32_t, uint32_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
-      output_rows, output_rows_length, actual_size);
-    break;
-  case OP_GROUPBY_COL2_SUM_COL3_INT_STEP2:
-    aggregate_step2<Aggregator1<GroupBy<2>, Sum<3, uint32_t, uint64_t> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
-      output_rows, output_rows_length, actual_size);
-    break;
-  case OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP2:
-    aggregate_step2<
-      Aggregator2<GroupBy<1>,
-                  Sum<3, float, double>,
-                  Avg<2, uint32_t, double> > >(
-                    &verify_set,
-                    input_rows, input_rows_length, num_rows, boundary_info_row_ptr,
-                    boundary_info_row_length, output_rows, output_rows_length, actual_size);
-    break;
-  case OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2:
-    aggregate_step2<Aggregator1<GroupBy2<1, 2>, Sum<3, float, double> > >(
-      &verify_set,
-      input_rows, input_rows_length, num_rows, boundary_info_row_ptr, boundary_info_row_length,
-      output_rows, output_rows_length, actual_size);
-    break;
-  default:
-    printf("ecall_aggregate_step2: Unknown opcode %d\n", op_code);
-    assert(false);
-  }
-
-  verify_set.verify();
-}
-
-/**** END Aggregation ****/
-
-/**** BEGIN Join ****/
 
 void ecall_join_sort_preprocess(int index, int num_part,
                                 int op_code,
@@ -306,60 +101,6 @@ void ecall_join_sort_preprocess(int index, int num_part,
 
   verify_set.verify();
 }
-
-void ecall_scan_collect_last_primary(int op_code,
-                                     uint8_t *input_rows, uint32_t input_rows_length,
-                                     uint32_t num_rows,
-                                     uint8_t *output, uint32_t output_length,
-                                     uint32_t *actual_output_len) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  scan_collect_last_primary(op_code,
-                            &verify_set,
-                            input_rows, input_rows_length,
-                            num_rows,
-                            output, output_length, actual_output_len);
-  verify_set.verify();
-}
-
-void ecall_process_join_boundary(int op_code,
-                                 uint8_t *input_rows, uint32_t input_rows_length,
-                                 uint32_t num_rows,
-                                 uint8_t *output_rows, uint32_t output_rows_size,
-                                 uint32_t *actual_output_length) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  process_join_boundary(op_code, &verify_set,
-                        input_rows, input_rows_length, num_rows,
-                        output_rows, output_rows_size, actual_output_length);
-  verify_set.verify();
-}
-
-
-void ecall_sort_merge_join(int index, int num_part,
-                           int op_code,
-                           uint8_t *input_rows, uint32_t input_rows_length,
-                           uint32_t num_rows,
-                           uint8_t *join_row, uint32_t join_row_length,
-                           uint8_t *output_rows, uint32_t output_rows_length,
-                           uint32_t *actual_output_length) {
-  (void)index;
-  (void)num_part;
-  Verify verify_set(op_code, 1, 0);
-  sort_merge_join(op_code, &verify_set,
-                  input_rows, input_rows_length, num_rows,
-                  join_row, join_row_length,
-                  output_rows, output_rows_length,
-                  actual_output_length);
-
-  verify_set.verify();
-}
-
-/**** END Join ****/
 
 void ecall_encrypt_attribute(uint8_t *input, uint32_t input_size,
                              uint8_t *output, uint32_t output_size,
@@ -473,14 +214,14 @@ void ecall_stream_encryption_test() {
   uint8_t decrypt_text[100];
 
   uint8_t *plaintext_ptr = NULL;
-  
+
   StreamCipher enc(ciphertext);
   StreamDecipher dec(ciphertext, enc_size(22 * 2 + 23));
 
   plaintext_ptr =  (uint8_t *) plaintext1;
   enc.encrypt(plaintext_ptr, 22);
   enc.encrypt(plaintext_ptr, 22);
-  
+
   plaintext_ptr = (uint8_t *) plaintext2;
   enc.encrypt(plaintext_ptr, 23);
   enc.finish();
@@ -493,7 +234,7 @@ void ecall_stream_encryption_test() {
   dec.decrypt(decrypt_text, 22);
   int ret = memcmp(plaintext1, decrypt_text, 22);
   check(ret == 0, "Decryption wrong\n");
-  
+
   dec.decrypt(decrypt_text, 22);
   ret = memcmp(plaintext1, decrypt_text, 22);
   check(ret == 0, "Decryption wrong\n");
@@ -510,7 +251,7 @@ void ecall_generate_random_encrypted_block(uint32_t num_cols,
                                            uint8_t *output_buffer,
                                            uint32_t *encrypted_buffer_size,
                                            uint8_t type) {
-  
+
   uint32_t ret = generate_encrypted_block(num_cols,
                                           column_types,
                                           num_rows,
@@ -526,7 +267,7 @@ void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
                                                        uint32_t *encrypted_buffer_size,
                                                        uint8_t type,
                                                        uint32_t opcode) {
-  
+
   uint32_t ret = generate_encrypted_block_with_opcode(num_cols,
                                                       column_types,
                                                       num_rows,
@@ -573,7 +314,7 @@ void ecall_sample(int index, int num_part,
     sample<NewJoinRecord>(&verify_set,
       input_rows, input_rows_len, num_rows, output_rows, output_rows_len, num_output_rows);
 	break;
-	
+
   default:
     printf("ecall_sample: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
@@ -608,7 +349,7 @@ void ecall_find_range_bounds(int op_code,
       op_code, &verify_set, num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, output_rows,
       output_rows_len, scratch);
 	break;
-	
+
   default:
     printf("ecall_find_range_bounds: Unknown sort type %d for opcode %d\n", sort_op, op_code);
     assert(false);
@@ -628,8 +369,7 @@ void ecall_partition_for_sort(int index, int num_part,
                               uint32_t boundary_rows_len,
                               uint8_t *output,
                               uint8_t **output_partition_ptrs,
-                              uint32_t *output_partition_num_rows,
-                              uint8_t *scratch) {
+                              uint32_t *output_partition_num_rows) {
   (void)index;
   (void)num_part;
   Verify verify_set(op_code, 1, 0);
@@ -641,14 +381,14 @@ void ecall_partition_for_sort(int index, int num_part,
     partition_for_sort<NewRecord>(
       op_code, &verify_set,
       num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
-      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows, scratch);
+      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows);
 	break;
 
   case SORT_JOIN:
     partition_for_sort<NewJoinRecord>(
       op_code, &verify_set,
       num_partitions, num_buffers, buffer_list, num_rows, row_upper_bound, boundary_rows,
-      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows, scratch);
+      boundary_rows_len, output, output_partition_ptrs, output_partition_num_rows);
     break;
 
   default:
@@ -669,7 +409,7 @@ void ecall_row_parser(uint8_t *enc_block, uint32_t input_num_rows) {
     num_rows = *((uint32_t *) (enc_block + 4));
   }
   printf("[ecall_row_parser] num_rows is %u\n", num_rows);
-  
+
   for (uint32_t i = 0; i < num_rows; i++) {
 	reader.read(&row);
 	printf("Row %u\t\t", i);
@@ -687,7 +427,7 @@ void ecall_non_oblivious_aggregate(int index, int num_part,
   (void)index;
   (void)num_part;
   Verify verify_set(op_code, index, num_part);
-  
+
   switch (op_code) {
   case OP_GROUPBY_COL1_SUM_COL2_INT:
   case OP_TEST_AGG:
@@ -734,204 +474,70 @@ void ecall_non_oblivious_sort_merge_join(
     output_rows, output_rows_length, num_output_rows);
 }
 
-// Column sort
-//
-// Step 1: Sort locally
-// Step 2: Shuffle to transpose
-// Step 3: Sort locally
-// Step 4: Shuffle to un-transpose
-// Step 5: Sort locally
-// Step 6: Shift down
-// Step 7: Sort locally
-// Step 8: Shift up
-
-void ecall_column_sort(int index,
-                       int num_part,
-                       int op_code,
-					   int round, 
-                       uint8_t *input_rows,
-                       uint32_t input_rows_len,
-					   uint32_t *num_rows,
-					   uint8_t **buffer_list,
-					   uint32_t num_buffers, 
-					   uint32_t row_upper_bound,
-					   uint32_t column,
-					   uint32_t r,
-					   uint32_t s,
-					   uint8_t **output_buffers,
-                       uint32_t *output_buffer_sizes) {
-
-  uint32_t total_num_rows = 0;
-
-  for (uint32_t i = 0; i < num_buffers; i++) {
-	total_num_rows += num_rows[i];
-  }
-
-  (void)index;
-  (void)num_part;
-  Verify verify_set(op_code, 1, 0);
-
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-	{
-      //printf("Num buffers is %u, num_rows is %u, total_num_rows is %u, column is %u\n", num_buffers, num_rows[0], total_num_rows, column);
-      //printf("input_rows is %p, buffer_list[0] is %p\n", input_rows, buffer_list[0]);
-      //printf("output_buffers: %p\n", output_buffers[0]);
-
-	  if (round == 1) {
-        external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        transpose<NewRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else if (round == 2) {
-        external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        untranspose<NewRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else if (round == 3) {
-        external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        shiftdown<NewRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else {
-        external_oblivious_sort<NewRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        shiftup<NewRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  }
-	}
-	
-	break;
-
-  case SORT_JOIN:
-	{
-	  if (round == 1) {
-        external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        transpose<NewJoinRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else if (round == 2) {
-        external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        untranspose<NewJoinRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else if (round == 3) {
-        external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        shiftdown<NewJoinRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  } else {
-        external_oblivious_sort<NewJoinRecord>(op_code, &verify_set, num_buffers, buffer_list, num_rows, row_upper_bound);
-        shiftup<NewJoinRecord>(&verify_set, input_rows, input_rows_len, total_num_rows, row_upper_bound, column, r, s, output_buffers, output_buffer_sizes);
-	  }
-
-	}
-	
-	break;
-	
-  default:
-    printf("ecall_sample: Unknown sort type %d for opcode %d\n", sort_op, op_code);
-    assert(false);
-  }
-
-  verify_set.verify();
-}
-
 void ecall_count_rows(uint8_t *input_rows,
 					  uint32_t buffer_size,
                       uint32_t *output_rows) {
   count_rows(input_rows, buffer_size, output_rows);
 }
 
+void ecall_global_aggregate(int index, int num_part,
+                            int op_code,
+                            uint8_t *input_rows, uint32_t input_rows_length,
+                            uint32_t num_rows,
+                            uint8_t *output_rows, uint32_t output_rows_length,
+                            uint32_t *actual_size, uint32_t *num_output_rows) {
+  (void)index;
+  (void)num_part;
+  Verify verify_set(op_code, index, num_part);
 
-void ecall_column_sort_preprocess(int op_code,
-                                  uint8_t *input_rows,
-                                  uint32_t input_rows_len,
-								  uint32_t num_rows,
-                                  uint32_t row_upper_bound,
-                                  uint32_t offset,
-								  uint32_t r,
-                                  uint32_t s,
-								  uint8_t **output_buffers,
-                                  uint32_t *output_buffer_sizes) {
-
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-    column_sort_preprocess<NewRecord>(
-      op_code, &verify_set, input_rows, input_rows_len, num_rows, row_upper_bound, offset, r, s,
-      output_buffers, output_buffer_sizes);
+  switch (op_code) {
+  case OP_SUM_COL1_INTEGER:
+    non_oblivious_aggregate<Aggregator1<GroupBy<0>, Sum<1, uint32_t, uint64_t> > >(&verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
     break;
-  case SORT_JOIN:
-    column_sort_preprocess<NewJoinRecord>(
-      op_code, &verify_set, input_rows, input_rows_len, num_rows, row_upper_bound, offset, r, s,
-      output_buffers, output_buffer_sizes);
+
+  case OP_SUM_COL3_INTEGER:
+    non_oblivious_aggregate<Aggregator1<GroupBy<0>, Sum<3, uint32_t, uint64_t> > >(&verify_set,
+      input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+      actual_size, num_output_rows);
     break;
+
+  case OP_SUM_LS:
+    non_oblivious_aggregate<Aggregator5<GroupBy<0>,
+                                        Sum<1, float, double>,
+                                        Sum<2, float, double>,
+                                        Sum<3, float, double>,
+                                        Sum<4, float, double>,
+                                        Sum<5, float, double> > >(
+        &verify_set,
+        input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+        actual_size, num_output_rows);
+    break;
+
+  case OP_SUM_LS_2:
+    non_oblivious_aggregate<Aggregator5<GroupBy<0>,
+                                        Sum<1, double, double>,
+                                        Sum<2, double, double>,
+                                        Sum<3, double, double>,
+                                        Sum<4, double, double>,
+                                        Sum<5, double, double> > >(
+        &verify_set,
+        input_rows, input_rows_length, num_rows, output_rows, output_rows_length,
+        actual_size, num_output_rows);
+    break;
+
+  default:
+    printf("ecall_global_aggregate: Unknown opcode %d\n", op_code);
+    assert(false);
   }
 
   verify_set.verify();
 }
 
 
-void ecall_column_sort_padding(int op_code,
-                               uint8_t *input_rows,
-                               uint32_t input_rows_len,
-                               uint32_t num_rows,
-                               uint32_t row_upper_bound,
-                               uint32_t r,
-                               uint32_t s,
-                               uint8_t *output_rows, uint32_t *output_rows_size) {
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
 
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-    column_sort_padding<NewRecord>(
-      op_code, &verify_set, input_rows, input_rows_len, num_rows, row_upper_bound, r, s,
-      output_rows, output_rows_size);
-    break;
-  case SORT_JOIN:
-    column_sort_padding<NewJoinRecord>(
-      op_code, &verify_set, input_rows, input_rows_len, num_rows, row_upper_bound, r, s,
-      output_rows, output_rows_size);
-    break;
-  }
-
-  verify_set.verify();
-}
-
-
-void ecall_column_sort_filter(int op_code,
-                              uint8_t *input_rows,
-                              uint32_t input_rows_len,
-                              uint32_t column,
-                              uint32_t offset,
-                              uint32_t num_rows,
-                              uint32_t row_upper_bound,
-                              uint8_t *output_rows,
-                              uint32_t *output_rows_size,
-                              uint32_t *num_output_rows) {
-
-  uint32_t num_part = 1;
-  uint32_t index = 0;
-  Verify verify_set(op_code, num_part, index);
-
-  int sort_op = get_sort_operation(op_code);
-  switch (sort_op) {
-  case SORT_SORT:
-    column_sort_filter<NewRecord>(op_code, &verify_set,
-                                  input_rows, input_rows_len, column, offset,
-                                  num_rows, row_upper_bound,
-                                  output_rows, output_rows_size, num_output_rows);
-    break;
-  case SORT_JOIN:
-    column_sort_filter<NewJoinRecord>(op_code, &verify_set,
-                                      input_rows, input_rows_len, column, offset,
-                                      num_rows, row_upper_bound,
-                                      output_rows, output_rows_size, num_output_rows);
-    break;
-  }
-
-  verify_set.verify();
-}
-
-
-void ecall_oblivious_swap(uint8_t *ptr1, uint8_t *ptr2, uint32_t size) {
-  swap_memory(ptr1, ptr2, size, true);
-}
+/*** BEGIN ATTESTATION ***/
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
   return enclave_init_ra(b_pse, p_context);
@@ -956,3 +562,5 @@ sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
 
   return put_secret_data(context, p_secret, secret_size, gcm_mac);
 }
+
+/*** END ATTESTATION ***/

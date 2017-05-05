@@ -40,37 +40,16 @@ import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-    case ObliviousProject(projectList, child) =>
-      ObliviousProjectExec(projectList, planLater(child)) :: Nil
+
     case EncryptedProject(projectList, child) =>
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
 
-    case ObliviousFilter(condition, child) =>
-      ObliviousFilterExec(condition, planLater(child)) :: Nil
     case EncryptedFilter(condition, child) =>
       ObliviousFilterExec(condition, planLater(child)) :: Nil
 
-    case ObliviousPermute(child) =>
-      ObliviousPermuteExec(planLater(child)) :: Nil
-
-    case ObliviousSort(order, child) =>
-      ObliviousSortExec(order, planLater(child)) :: Nil
     case EncryptedSort(order, child) =>
       EncryptedSortExec(order, planLater(child)) :: Nil
 
-    case ObliviousJoin(left, right, joinType, condition) =>
-      Join(left, right, joinType, condition) match {
-        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-          ???
-          // ObliviousSortMergeJoinExec(
-          //   joinType, leftKeys, rightKeys, condition,
-          //   ObliviousSortExec(
-          //     sortByTag,
-          //     ObliviousUnionExec(
-          //       ObliviousProjectExec(tagLeft(left.output), planLater(left)),
-          //       ObliviousProjectExec(tagRight(right.output), planLater(right))))) :: Nil
-        case _ => Nil
-      }
     case EncryptedJoin(left, right, joinType, condition) =>
       Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
@@ -92,8 +71,6 @@ object OpaqueOperators extends Strategy {
         case _ => Nil
       }
 
-    case a @ ObliviousAggregate(groupingExpressions, aggExpressions, child) =>
-      ObliviousAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
 

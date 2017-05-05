@@ -36,6 +36,9 @@ uint32_t read_attr_internal(uint8_t *input, uint8_t *value, uint8_t expected_typ
 
 uint8_t *get_attr_internal(uint8_t *row, uint32_t attr_idx, uint32_t num_cols);
 
+uint8_t *get_attr_internal_o(uint8_t *row, uint32_t attr_idx, uint32_t num_cols,
+                             uint32_t total_row_size);
+
 bool attr_less_than(const uint8_t *a, const uint8_t *b);
 
 uint32_t attr_key_prefix(const uint8_t *attr);
@@ -51,9 +54,12 @@ uint32_t attr_key_prefix(const uint8_t *attr);
  */
 class NewRecord {
 public:
-  NewRecord() : NewRecord(ROW_UPPER_BOUND) {}
+  NewRecord() : NewRecord(ROW_UPPER_BOUND) {
+    total_row_size = ROW_UPPER_BOUND;
+  }
 
   NewRecord(uint32_t upper_bound) : row_length(4) {
+    total_row_size = upper_bound;
     row = (uint8_t *) calloc(upper_bound, sizeof(uint8_t));
   }
 
@@ -123,6 +129,10 @@ public:
    */
   const uint8_t *get_attr_value(uint32_t attr_idx) const;
 
+  void get_attr_value_copy_o(uint32_t attr_idx,
+                             uint8_t *out,
+                             uint32_t out_size) const;
+
   uint8_t *translate_attr_ptr(const NewRecord *other, const uint8_t *other_attr_ptr) const {
     return row + (other_attr_ptr - other->row);
   }
@@ -133,6 +143,9 @@ public:
    * occupies.
    */
   void set_attr_value(uint32_t attr_idx, const uint8_t *new_attr_value);
+  void set_attr_value_o(uint32_t attr_idx,
+                        const uint8_t *new_attr_value,
+                        uint32_t new_attr_value_len);
 
   /**
    * Append an attribute to the record by copying the attribute at the specified index (1-indexed)
@@ -175,6 +188,7 @@ private:
 
   uint8_t *row;
   uint32_t row_length;
+  uint32_t total_row_size;
 };
 
 /**
@@ -389,7 +403,7 @@ private:
 template<typename GroupByType, typename Agg1Type>
 class Aggregator1 {
 public:
-  Aggregator1() : num_distinct(0), offset(0), g(), a1() {}
+ Aggregator1() : num_distinct(0), offset(0), g(), a1() {}
 
   void set(Aggregator1 *other) {
     this->num_distinct = other->num_distinct;
@@ -636,6 +650,299 @@ private:
   Agg2Type a2;
 };
 
+
+/** Holds state for an ongoing group-by and aggregation operation. See Aggregator1. */
+template<typename GroupByType, typename Agg1Type, typename Agg2Type, typename Agg3Type>
+class Aggregator3 {
+public:
+ Aggregator3() : num_distinct(0), offset(0), g(), a1(), a2(), a3() {}
+
+  void set(Aggregator3 *other) {
+    this->num_distinct = other->num_distinct;
+    this->offset = other->offset;
+    this->g.set(&other->g);
+    this->a1.set(&other->a1);
+    this->a2.set(&other->a2);
+    this->a3.set(&other->a3);
+  }
+
+  void aggregate(NewRecord *record) {
+    GroupByType g2(record);
+    if (g.equals(&g2)) {
+      a1.add(record);
+      a2.add(record);
+      a3.add(record);
+    } else {
+      num_distinct++;
+      g.set(&g2);
+      a1.zero();
+      a1.add(record);
+      a2.zero();
+      a2.add(record);
+      a3.zero();
+      a3.add(record);
+    }
+  }
+
+  void aggregate(Aggregator3 *other) {
+    check(this->grouping_attrs_equal(other),
+          "Attempted to combine partial aggregates with different grouping attributes\n");
+    a1.add(&other->a1);
+    a2.add(&other->a2);
+    a3.add(&other->a3);
+  }
+
+  /**
+   * Write the final aggregation result to the record by appending the grouping attribute and both
+   * aggregation attributes. If dummy is true, mark the aggregation attributes as dummies.
+   */
+  void append_result(NewRecord *record, bool dummy) {
+    g.append_result(record);
+    a1.append_result(record, dummy);
+    a2.append_result(record, dummy);
+    a3.append_result(record, dummy);
+  }
+
+  uint32_t read_encrypted(uint8_t *input) {
+    uint8_t *input_ptr = input;
+    uint32_t agg_size = *reinterpret_cast<uint32_t *>(input_ptr); input_ptr += 4;
+    check(agg_size == enc_size(AGG_UPPER_BOUND),
+          "Aggregator length %d did not equal enc_size(AGG_UPPER_BOUND) = %d\n",
+          agg_size, enc_size(AGG_UPPER_BOUND));
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    decrypt(input_ptr, enc_size(AGG_UPPER_BOUND), tmp); input_ptr += enc_size(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    num_distinct = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
+    offset = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
+    g.read(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.read_partial_result(tmp_ptr);
+    tmp_ptr += a2.read_partial_result(tmp_ptr);
+    tmp_ptr += a3.read_partial_result(tmp_ptr);
+    free(tmp);
+    return input_ptr - input;
+  }
+
+  uint32_t write_encrypted(uint8_t *output) {
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = offset; tmp_ptr += 4;
+    g.write_whole_row(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.write_partial_result(tmp_ptr);
+    tmp_ptr += a2.write_partial_result(tmp_ptr);
+    tmp_ptr += a3.write_partial_result(tmp_ptr);
+
+    uint8_t *output_ptr = output;
+    *reinterpret_cast<uint32_t *>(output_ptr) = enc_size(AGG_UPPER_BOUND); output_ptr += 4;
+    encrypt(tmp, AGG_UPPER_BOUND, output_ptr); output_ptr += enc_size(AGG_UPPER_BOUND);
+    free(tmp);
+    return output_ptr - output;
+  }
+
+  uint32_t get_num_distinct() {
+    return num_distinct;
+  }
+
+  void set_num_distinct(uint32_t num_distinct) {
+    this->num_distinct = num_distinct;
+  }
+
+  void set_offset(uint32_t offset) {
+    this->offset = offset;
+  }
+
+  bool grouping_attrs_equal(Aggregator3 *other) {
+    return g.equals(&other->g);
+  }
+
+  bool grouping_attrs_equal(NewRecord *record) {
+    if (record->is_dummy()) {
+      return false;
+    } else {
+      GroupByType g2(record);
+      return g.equals(&g2);
+    }
+  }
+
+  void print() {
+    printf("Aggregator2[num_distinct=%d, offset=%d, g=");
+    g.print();
+    printf(", a1=");
+    a1.print();
+    printf(", a2=");
+    a2.print();
+    printf(", a3=");
+    a3.print();
+    printf("]\n");
+  }
+
+private:
+  uint32_t num_distinct;
+  uint32_t offset;
+  GroupByType g;
+  Agg1Type a1;
+  Agg2Type a2;
+  Agg3Type a3;
+};
+
+
+/** Holds state for an ongoing group-by and aggregation operation. See Aggregator1. */
+template<typename GroupByType, typename Agg1Type, typename Agg2Type, typename Agg3Type, typename Agg4Type, typename Agg5Type>
+class Aggregator5 {
+public:
+ Aggregator5() : num_distinct(0), offset(0), g(), a1(), a2(), a3(), a4(), a5() {}
+
+  void set(Aggregator5 *other) {
+    this->num_distinct = other->num_distinct;
+    this->offset = other->offset;
+    this->g.set(&other->g);
+    this->a1.set(&other->a1);
+    this->a2.set(&other->a2);
+    this->a3.set(&other->a3);
+    this->a4.set(&other->a4);
+    this->a5.set(&other->a5);
+  }
+
+  void aggregate(NewRecord *record) {
+    GroupByType g2(record);
+    if (g.equals(&g2)) {
+      a1.add(record);
+      a2.add(record);
+      a3.add(record);
+      a4.add(record);
+      a5.add(record);
+    } else {
+      num_distinct++;
+      g.set(&g2);
+      a1.zero();
+      a1.add(record);
+      a2.zero();
+      a2.add(record);
+      a3.zero();
+      a3.add(record);
+      a4.zero();
+      a4.add(record);
+      a5.zero();
+      a5.add(record);
+
+    }
+  }
+
+  void aggregate(Aggregator5 *other) {
+    check(this->grouping_attrs_equal(other),
+          "Attempted to combine partial aggregates with different grouping attributes\n");
+    a1.add(&other->a1);
+    a2.add(&other->a2);
+    a3.add(&other->a3);
+    a4.add(&other->a4);
+    a5.add(&other->a5);
+  }
+
+  /**
+   * Write the final aggregation result to the record by appending the grouping attribute and both
+   * aggregation attributes. If dummy is true, mark the aggregation attributes as dummies.
+   */
+  void append_result(NewRecord *record, bool dummy) {
+    g.append_result(record);
+    a1.append_result(record, dummy);
+    a2.append_result(record, dummy);
+    a3.append_result(record, dummy);
+    a4.append_result(record, dummy);
+    a5.append_result(record, dummy);
+  }
+
+  uint32_t read_encrypted(uint8_t *input) {
+    uint8_t *input_ptr = input;
+    uint32_t agg_size = *reinterpret_cast<uint32_t *>(input_ptr); input_ptr += 4;
+    check(agg_size == enc_size(AGG_UPPER_BOUND),
+          "Aggregator length %d did not equal enc_size(AGG_UPPER_BOUND) = %d\n",
+          agg_size, enc_size(AGG_UPPER_BOUND));
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    decrypt(input_ptr, enc_size(AGG_UPPER_BOUND), tmp); input_ptr += enc_size(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    num_distinct = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
+    offset = *reinterpret_cast<uint32_t *>(tmp_ptr); tmp_ptr += 4;
+    g.read(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.read_partial_result(tmp_ptr);
+    tmp_ptr += a2.read_partial_result(tmp_ptr);
+    tmp_ptr += a3.read_partial_result(tmp_ptr);
+    tmp_ptr += a4.read_partial_result(tmp_ptr);
+    tmp_ptr += a5.read_partial_result(tmp_ptr);
+    free(tmp);
+    return input_ptr - input;
+  }
+
+  uint32_t write_encrypted(uint8_t *output) {
+    uint8_t *tmp = (uint8_t *) malloc(AGG_UPPER_BOUND);
+    uint8_t *tmp_ptr = tmp;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = num_distinct; tmp_ptr += 4;
+    *reinterpret_cast<uint32_t *>(tmp_ptr) = offset; tmp_ptr += 4;
+    g.write_whole_row(tmp_ptr); tmp_ptr += ROW_UPPER_BOUND;
+    tmp_ptr += a1.write_partial_result(tmp_ptr);
+    tmp_ptr += a2.write_partial_result(tmp_ptr);
+    tmp_ptr += a3.write_partial_result(tmp_ptr);
+    tmp_ptr += a4.write_partial_result(tmp_ptr);
+    tmp_ptr += a5.write_partial_result(tmp_ptr);
+
+    uint8_t *output_ptr = output;
+    *reinterpret_cast<uint32_t *>(output_ptr) = enc_size(AGG_UPPER_BOUND); output_ptr += 4;
+    encrypt(tmp, AGG_UPPER_BOUND, output_ptr); output_ptr += enc_size(AGG_UPPER_BOUND);
+    free(tmp);
+    return output_ptr - output;
+  }
+
+  uint32_t get_num_distinct() {
+    return num_distinct;
+  }
+
+  void set_num_distinct(uint32_t num_distinct) {
+    this->num_distinct = num_distinct;
+  }
+
+  void set_offset(uint32_t offset) {
+    this->offset = offset;
+  }
+
+  bool grouping_attrs_equal(Aggregator5 *other) {
+    return g.equals(&other->g);
+  }
+
+  bool grouping_attrs_equal(NewRecord *record) {
+    if (record->is_dummy()) {
+      return false;
+    } else {
+      GroupByType g2(record);
+      return g.equals(&g2);
+    }
+  }
+
+  void print() {
+    printf("Aggregator5[num_distinct=%d, offset=%d, g=");
+    g.print();
+    printf(", a1=");
+    a1.print();
+    printf(", a2=");
+    a2.print();
+    printf(", a3=");
+    a3.print();
+    printf(", a4=");
+    a4.print();
+    printf(", a5=");
+    a5.print();
+    printf("]\n");
+  }
+
+private:
+  uint32_t num_distinct;
+  uint32_t offset;
+  GroupByType g;
+  Agg1Type a1;
+  Agg2Type a2;
+  Agg3Type a3;
+  Agg4Type a4;
+  Agg5Type a5;
+};
+
 /**
  * Holds state for an ongoing group-by operation. The column to group by is selected by specifying
  * Column (1-indexed). Supports reading the grouping column from a record (constructor),
@@ -647,7 +954,7 @@ public:
 
   GroupBy(NewRecord *record) : row() {
     row.set(record);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -657,7 +964,7 @@ public:
   /** Update this GroupBy object to track a different group. */
   void set(GroupBy *other) {
     row.set(&other->row);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -671,7 +978,7 @@ public:
    */
   uint32_t read(uint8_t *input) {
     uint32_t result = row.read(input);
-    if (row.num_cols() != 0) {
+    if (row.num_cols() != 0 && Column > 0) {
       this->attr = row.get_attr(Column);
     } else {
       this->attr = NULL;
@@ -681,6 +988,9 @@ public:
 
   /** Return true if both GroupBy objects are tracking the same group. */
   bool equals(GroupBy *other) {
+    if (Column == 0) {
+      return true;
+    }
     if (this->attr != NULL && other->attr != NULL) {
       return attrs_equal(this->attr, other->attr);
     } else {
@@ -690,7 +1000,9 @@ public:
 
   /** Write the grouping attribute by appending it to the given record. */
   void append_result(NewRecord *rec) const {
-    rec->add_attr(attr);
+    if (Column > 0) {
+      rec->add_attr(attr);
+    }
   }
 
   /** Write an entire row containing the grouping column to output and return num bytes written. */
@@ -1137,7 +1449,7 @@ class RowWriter {
 public:
   RowWriter(uint8_t *buf, uint32_t row_upper_bound)
     : buf_start(buf), buf_pos(buf), row_upper_bound(row_upper_bound), block_num_rows(0),
-      block_padded_len(0) {
+      block_padded_len(0), total_num_rows(0) {
     self_task_id = 0;
     block_start = (uint8_t *) malloc(MAX_BLOCK_SIZE);
     block_pos = block_start;
@@ -1169,6 +1481,7 @@ public:
       row_upper_bound = row->row_upper_bound();
     }
     block_padded_len += row_upper_bound;
+    total_num_rows++;
   }
 
   void write(NewJoinRecord *row) {
@@ -1183,11 +1496,13 @@ public:
       row_upper_bound = row->row_upper_bound();
     }
     block_padded_len += row_upper_bound;
+    total_num_rows++;
   }
 
   template<typename RecordType>
   void write(SortPointer<RecordType> *ptr) {
     write(ptr->rec);
+    total_num_rows++;
   }
 
   void finish_block() {
@@ -1214,6 +1529,10 @@ public:
     return buf_pos - buf_start;
   }
 
+  uint32_t rows_written() {
+    return total_num_rows;
+  }
+
 private:
   void maybe_finish_block(uint32_t next_row_size) {
     if (block_padded_len + next_row_size > MAX_BLOCK_SIZE) {
@@ -1229,6 +1548,8 @@ private:
   uint8_t *block_pos;
   uint32_t block_num_rows;
   uint32_t block_padded_len;
+
+  uint32_t total_num_rows;
 
   uint32_t self_task_id;
 
@@ -1333,6 +1654,7 @@ class StreamRowReader {
   StreamRowReader(uint8_t *buf, uint8_t *buf_end)
     : cipher(NULL), buf(buf), buf_end(buf_end), cur_block_num(0) {
     verify_set = new std::set<uint32_t>();
+	printf("[%s] reading encrypted block\n", __FUNCTION__);
     this->read_encrypted_block();
   }
 
@@ -1393,7 +1715,6 @@ class StreamRowReader {
 
     uint32_t task_id = *reinterpret_cast<uint32_t *>(buf); buf += 4;
     add_parent(task_id);
-   
 
     if (cipher == NULL) {
       cipher = new StreamDecipher(buf, block_enc_size);

@@ -4,11 +4,12 @@
 //const sgx_aes_gcm_128bit_key_t *key = (const sgx_aes_gcm_128bit_key_t *) key_str;
 sgx_aes_gcm_128bit_key_t key_data = {0};
 sgx_aes_gcm_128bit_key_t *key = &key_data;
-//const KeySchedule ks = KeySchedule((unsigned char *) key_str, SGX_AESGCM_KEY_SIZE);
-KeySchedule *ks = NULL;
+const KeySchedule ks_backup = KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
+KeySchedule *ks = (KeySchedule *) &ks_backup;
 
 void initKeySchedule() {
   if (ks == NULL) {
+    print_hex(key_data, 16);
     ks = new KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
   }
 }
@@ -323,5 +324,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
 
 
 void MAC::mac(uint8_t *mac_ptr, uint32_t len) {
-  cipher->aad((unsigned char *) mac_ptr, len);
+  (void)mac_ptr;
+  (void)len;
+  // cipher->aad((unsigned char *) mac_ptr, len);
 }

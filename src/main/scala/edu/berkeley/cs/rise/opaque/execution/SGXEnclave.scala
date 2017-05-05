@@ -42,14 +42,6 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def Test(eid: Long)
 
-  @native def ObliviousSort(
-    enclave_id: Long,
-    op_code: Int,
-    input: Array[Byte],
-    offset: Int,
-    num_items: Int
-  ): Array[Byte]
-
   @native def Sample(
     enclave_id: Long,
     index: Int,
@@ -89,28 +81,6 @@ class SGXEnclave extends java.io.Serializable {
     input: Array[Byte]
   ): Array[Byte]
 
-  @native def AggregateStep1(
-    eid: Long,
-    index: Int, numPart: Int,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int): Array[Byte]
-
-  @native def ProcessBoundary(
-    eid: Long,
-    op_code: Int,
-    agg_rows: Array[Byte],
-    num_agg_rows: Int
-  ): Array[Byte]
-
-  @native def AggregateStep2(
-    eid: Long,
-    index: Int, numPart: Int,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int,
-    boundary_info_row: Array[Byte]): Array[Byte]
-
   @native def FinalAggregation(
     eid: Long,
     op_code: Int,
@@ -139,30 +109,6 @@ class SGXEnclave extends java.io.Serializable {
     num_foreign_rows: Int
   ): Array[Byte]
 
-  @native def ScanCollectLastPrimary(
-    eid: Long,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int
-  ): Array[Byte]
-
-  @native def ProcessJoinBoundary(
-    eid: Long,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int
-  ): Array[Byte]
-
-  @native def SortMergeJoin(
-    eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int,
-    join_row: Array[Byte]
-  ): Array[Byte]
-
   @native def NonObliviousSortMergeJoin(
     eid: Long,
     join_expr: Array[Byte],
@@ -181,16 +127,12 @@ class SGXEnclave extends java.io.Serializable {
   @native def SplitBlock(
       eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
 
-  @native def EnclaveColumnSort(
-    eid: Long,
-    index: Int, numPart: Int,
-    op_code: Int, round: Int, input: Array[Byte], r: Int, s: Int, column: Int, current_part: Int, num_part: Int, offset: Int) : Array[Byte]
-
   @native def CountNumRows(
     eid: Long, input_rows: Array[Byte]) : Int
 
-  @native def ColumnSortFilter(
-    eid: Long, op_code: Int, input_rows: Array[Byte], column: Int, offset: Int, num_rows: Int, ret_num_rows: MutableInteger): Array[Byte]
+  @native def GlobalAggregate(
+    eid: Long, index: Int, numPart: Int,
+    op_code: Int, input_rows: Array[Byte], num_rows: Int, ret_num_rows: MutableInteger): Array[Byte]
 
 
   // Remote attestation, enclave side
@@ -198,10 +140,5 @@ class SGXEnclave extends java.io.Serializable {
   @native def RemoteAttestation1(eid: Long): Array[Byte]
   @native def RemoteAttestation2(eid: Long, msg2Input: Array[Byte]): Array[Byte]
   @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte])
-
-  // // Remote attestation, master side
-  // @native def SPProcMsg0(msg0Input: Array[Byte])
-  // @native def SPProcMsg1(msg1Input: Array[Byte]): Array[Byte]
-  // @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
 
 }

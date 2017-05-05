@@ -31,6 +31,7 @@ import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
+import Opcode._
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -111,7 +112,11 @@ case class EncryptedBlockRDDScanExec(
     override val isOblivious: Boolean)
   extends LeafExecNode with OpaqueOperatorExec {
 
-  override def executeBlocked(): RDD[Block] = rdd
+  override def executeBlocked(): RDD[Block] = {
+    Utils.ensureCached(rdd)
+    Utils.time("force child of BlockRDDScan") { rdd.count }
+    rdd
+  }
 }
 
 case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
@@ -213,7 +218,9 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def executeBlocked() = {
     val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(execRDD)
+    Utils.time("force child of project") { execRDD.count }
     // RA.initRA(execRDD)
+
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
 
     execRDD.map { block =>
@@ -223,6 +230,7 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
     }
   }
 }
+
 
 case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
@@ -245,175 +253,6 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   }
 }
 
-case class ObliviousPermuteExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperatorExec {
-  override def output: Seq[Attribute] = child.output
-
-  override def executeBlocked() = {
-    import Opcode._
-    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(execRDD)
-    // RA.initRA(execRDD)
-
-    val rowsWithRandomIds = execRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes)
-      Block(serResult, block.numRows)
-    }
-    
-    ObliviousSortExec.sortBlocks(rowsWithRandomIds, OP_SORT_COL1).map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes)
-      Block(serResult, block.numRows)
-    }
-  }
-}
-
-case class ObliviousAggregateExec(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
-    child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
-
-  import Utils.time
-
-  private object Col extends ColumnNumberMatcher {
-    override def input: Seq[Attribute] = child.output
-  }
-
-  override def producedAttributes: AttributeSet =
-    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
-
-  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
-
-  override def executeBlocked(): RDD[Block] = {
-    import Opcode._
-    val (aggStep1Opcode, aggStep2Opcode, aggDummySortOpcode, aggDummyFilterOpcode) =
-      (groupingExpressions, aggExpressions) match {
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL2_FLOAT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_MIN_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_MIN_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(2, _)), Seq(Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL2_SUM_COL3_INT_STEP1,
-            OP_GROUPBY_COL2_SUM_COL3_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP1,
-            OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-        case (Seq(Col(1, _), Col(2, _)), Seq(Col(1, _), Col(2, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _))) =>
-          (OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP1,
-            OP_GROUPBY_COL1_COL2_SUM_COL3_FLOAT_STEP2,
-            OP_SORT_COL2_IS_DUMMY_COL1,
-            OP_FILTER_NOT_DUMMY)
-
-      case _ =>
-        throw new Exception(
-          s"ObliviousAggregateExec: unknown grouping expressions $groupingExpressions, " +
-            s"aggregation expressions $aggExpressions.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
-      }
-
-    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(childRDD)
-    time("aggregate - force child") { childRDD.count }
-    // Process boundaries
-    // RA.initRA(childRDD)
-    val boundaries = childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val boundary = enclave.AggregateStep1(
-        eid, 0, 0, aggStep1Opcode.value, block.bytes, block.numRows)
-      // enclave.StopEnclave(eid)
-      boundary
-    }
-
-    val boundariesCollected = time("aggregate - step 1") { boundaries.collect }
-    if (boundariesCollected.forall(_.isEmpty)) {
-      return sqlContext.sparkContext.emptyRDD[Block]
-    }
-    val (enclave, eid) = Utils.initEnclave()
-    val processedBoundariesConcat = time("aggregate - ProcessBoundary") {
-      enclave.ProcessBoundary(
-        eid, aggStep1Opcode.value,
-        Utils.concatByteArrays(boundariesCollected), boundariesCollected.length)
-    }
-
-    // Send processed boundaries to partitions and generate a mix of partial and final aggregates
-    val processedBoundaries = Utils.splitBytes(processedBoundariesConcat, boundariesCollected.length)
-    val processedBoundariesRDD = sparkContext.parallelize(processedBoundaries, childRDD.partitions.length)
-    val partialAggregates = childRDD.zipPartitions(processedBoundariesRDD) {
-      (blockIter, boundaryIter) =>
-        val blockArray = blockIter.toArray
-        assert(blockArray.length == 1)
-        val block = blockArray.head
-        val boundaryArray = boundaryIter.toArray
-        assert(boundaryArray.length == 1)
-        val boundaryRecord = boundaryArray.head
-        val (enclave, eid) = Utils.initEnclave()
-        assert(block.numRows > 0)
-        val partialAgg = enclave.AggregateStep2(
-          eid, 0, 0, aggStep2Opcode.value, block.bytes, block.numRows, boundaryRecord)
-        assert(partialAgg.nonEmpty,
-          s"enclave.AggregateStep2($eid, 0, 0, $aggStep2Opcode, ${block.bytes.length}, ${block.numRows}, ${boundaryRecord.length}) returned empty result")
-        Iterator(Block(partialAgg, block.numRows))
-    }
-
-    Utils.ensureCached(partialAggregates)
-    time("aggregate - step 2") { partialAggregates.count }
-
-    // Sort the partial and final aggregates using a comparator that causes final aggregates to come first
-    val sortedAggregates = time("aggregate - sort dummies") {
-      val result = ObliviousSortExec.sortBlocks(partialAggregates, aggDummySortOpcode)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-
-    // Filter out the non-final aggregates
-    val finalAggregates = time("aggregate - filter out dummies") {
-      val result = sortedAggregates.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
-        val numOutputRows = new MutableInteger
-        val filtered = enclave.Filter(
-          eid, ???, block.bytes, numOutputRows)
-        Block(filtered, numOutputRows.value)
-      }
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-    finalAggregates
-  }
-}
-
 case class EncryptedAggregateExec(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
@@ -432,7 +271,6 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    import Opcode._
     val aggOpcode =
       (groupingExpressions, aggExpressions) match {
         case (Seq(Col(1, _)), Seq(Col(1, _),
@@ -452,6 +290,19 @@ case class EncryptedAggregateExec(
           Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
           OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT
 
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
+          OP_SUM_COL1_INTEGER
+
+        case (Seq(), Seq(
+          Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
+          Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
+        )) =>
+          OP_SUM_LS
+
       case _ =>
         throw new Exception(
           s"EncryptedAggregateExec: unknown grouping expressions $groupingExpressions, " +
@@ -462,6 +313,38 @@ case class EncryptedAggregateExec(
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(childRDD)
+
+    if (aggOpcode == OP_SUM_COL1_INTEGER || aggOpcode == OP_SUM_LS) {
+      RA.initRA(childRDD)
+      // Do local global aggregates
+      val aggregates = childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        val numOutputRows = new MutableInteger
+        val resultBytes = enclave.GlobalAggregate(
+          eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
+        resultBytes
+      }
+
+      var aggOpcode2 = aggOpcode
+      if (aggOpcode == OP_SUM_LS) {
+        aggOpcode2 = OP_SUM_LS_2
+      }
+
+      Utils.ensureCached(aggregates)
+      val (enclave, eid) = Utils.initEnclave()
+      val aggregatesCollected = aggregates.collect
+      // Collect and run GlobalAggregate again
+      val finalOutputRows = new MutableInteger
+      val result = enclave.GlobalAggregate(eid, 0, 0, aggOpcode2.value,
+        Utils.concatByteArrays(aggregatesCollected), aggregatesCollected.length, finalOutputRows)
+      assert(finalOutputRows.value == 1)
+
+      var a = new Array[Block](1)
+      a(0) = Block(result, finalOutputRows.value)
+
+      return sparkContext.parallelize(a, 1)
+    }
+
     time("aggregate - force child") { childRDD.count }
     // RA.initRA(childRDD)
     // Process boundaries
@@ -478,125 +361,12 @@ case class EncryptedAggregateExec(
   }
 }
 
-case class ObliviousSortMergeJoinExec(
-    left: SparkPlan,
-    right: SparkPlan,
-    leftKeys: Seq[Expression],
-    rightKeys: Seq[Expression],
-    condition: Option[Expression])
-  extends BinaryExecNode with OpaqueOperatorExec {
-
-  import Utils.time
-
-  override def output: Seq[Attribute] =
-    left.output ++ right.output
-
-  override def executeBlocked() = {
-    import Opcode._
-    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) =
-      OpaqueJoinUtils.getOpcodes(left.output, right.output, leftKeys, rightKeys, condition)
-
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(leftRDD)
-    time("Force left child of ObliviousSortMergeJoinExec") { leftRDD.count }
-    Utils.ensureCached(rightRDD)
-    time("Force right child of ObliviousSortMergeJoinExec") { rightRDD.count }
-
-    // RA.initRA(leftRDD)
-
-    val processed = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      val (enclave, eid) = Utils.initEnclave()
-
-      val leftBlockArray = leftBlockIter.toArray
-      assert(leftBlockArray.length == 1)
-      val leftBlock = leftBlockArray.head
-
-      val rightBlockArray = rightBlockIter.toArray
-      assert(rightBlockArray.length == 1)
-      val rightBlock = rightBlockArray.head
-
-      val processed = enclave.JoinSortPreprocess(
-        eid, 0, 0, joinOpcode.value, leftBlock.bytes, leftBlock.numRows,
-        rightBlock.bytes, rightBlock.numRows)
-
-      Iterator(Block(processed, leftBlock.numRows + rightBlock.numRows))
-    }
-    Utils.ensureCached(processed)
-    time("join - preprocess") { processed.count }
-
-    val sorted = time("join - sort") {
-      val result = ObliviousSortExec.sortBlocks(processed, joinOpcode)
-      Utils.ensureCached(result)
-      result.count
-      result
-    }
-
-    val lastPrimaryRows = sorted.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      enclave.ScanCollectLastPrimary(eid, joinOpcode.value, block.bytes, block.numRows)
-    }
-
-    val lastPrimaryRowsCollected = time("join - collect last primary") { lastPrimaryRows.collect }
-    val (enclave, eid) = Utils.initEnclave()
-    val processedJoinRows = time("join - process boundary") {
-      enclave.ProcessJoinBoundary(
-        eid, joinOpcode.value, Utils.concatByteArrays(lastPrimaryRowsCollected),
-        lastPrimaryRowsCollected.length)
-    }
-
-    val processedJoinRowsSplit = Utils.readVerifiedRows(processedJoinRows).toArray
-    assert(processedJoinRowsSplit.length == sorted.partitions.length)
-    val processedJoinRowsRDD =
-      sparkContext.parallelize(processedJoinRowsSplit, sorted.partitions.length)
-
-    val joined = sorted.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
-      val block = blockIter.next()
-      assert(!blockIter.hasNext)
-      val joinRow = joinRowIter.next()
-      assert(!joinRowIter.hasNext)
-      val (enclave, eid) = Utils.initEnclave()
-      val joined = enclave.SortMergeJoin(
-        eid, 0, 0, joinOpcode.value, block.bytes, block.numRows, joinRow)
-      Iterator(Block(joined, block.numRows))
-    }
-    Utils.ensureCached(joined)
-    time("join - sort merge join") { joined.count }
-
-    val joinedWithRandomIds = joined.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, ??? /*OP_PROJECT_ADD_RANDOM_ID.value*/, block.bytes)
-      Block(serResult, block.numRows)
-    }
-    val permuted = ObliviousSortExec.sortBlocks(joinedWithRandomIds, OP_SORT_COL1).map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(
-        eid, ??? /*OP_PROJECT_DROP_COL1.value*/, block.bytes)
-      Block(serResult, block.numRows)
-    }
-
-    val nonDummy = permuted.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      val numOutputRows = new MutableInteger
-      val filtered = enclave.Filter(
-        eid, ???, block.bytes, numOutputRows)
-      Block(filtered, numOutputRows.value)
-    }
-    Utils.ensureCached(nonDummy)
-    time("join - filter dummies") { nonDummy.count }
-    nonDummy
-  }
-}
-
 private object OpaqueJoinUtils {
   /** Given the join information, return (joinOpcode, dummySortOpcode, dummyFilterOpcode). */
   def getOpcodes(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute], leftKeys: Seq[Expression],
       rightKeys: Seq[Expression], condition: Option[Expression])
       : (Opcode, Opcode, Opcode) = {
-
-    import Opcode._
 
     object LeftCol extends ColumnNumberMatcher {
       override def input: Seq[Attribute] = leftOutput

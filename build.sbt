@@ -19,6 +19,8 @@ parallelExecution := false
 // This fixes a class loader problem with scala.Tuple2 class, scala-2.11, Spark 2.x
 fork in Test := true
 
+scalacOptions ++= Seq("-g:vars")
+javaOptions ++= Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
 // This and the next line fix a problem with forked run: https://github.com/scalatest/scalatest/issues/770
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:MaxPermSize=384m")
 
