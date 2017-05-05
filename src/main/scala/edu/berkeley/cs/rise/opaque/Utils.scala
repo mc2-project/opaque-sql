@@ -45,13 +45,16 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.LeftAnti
 import org.apache.spark.sql.catalyst.plans.LeftOuter
 import org.apache.spark.sql.catalyst.plans.LeftSemi
+import org.apache.spark.sql.catalyst.plans.NaturalJoin
 import org.apache.spark.sql.catalyst.plans.RightOuter
+import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
@@ -589,6 +592,7 @@ object Utils {
       (childrenOffsets, expr) => (expr, childrenOffsets) match {
         case (ar: AttributeReference, Nil) if input.exists(_.semanticEquals(ar)) =>
           val colNum = input.indexWhere(_.semanticEquals(ar))
+          assert(colNum != -1)
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Col,
@@ -733,6 +737,9 @@ object Utils {
           case RightOuter => tuix.JoinType.RightOuter
           case LeftSemi => tuix.JoinType.LeftSemi
           case LeftAnti => tuix.JoinType.LeftAnti
+          case ExistenceJoin(_) => ???
+          case NaturalJoin(_) => ???
+          case UsingJoin(_, _) => ???
         },
         tuix.JoinExpr.createLeftKeysVector(
           builder,

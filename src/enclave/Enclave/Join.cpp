@@ -197,6 +197,7 @@ void non_oblivious_sort_merge_join(
   const tuix::Row *primary = nullptr;
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+    print(current);
 
     if (join_expr_eval.is_primary(current)) {
       check(!primary || !join_expr_eval.is_same_group(primary, current),

@@ -83,9 +83,9 @@ object OpaqueOperators extends Strategy {
           val joined = EncryptedSortMergeJoinExec(
             joinType,
             leftKeysProj,
-            rightKeysProj,
+            leftKeysProj,
             leftProjSchema.map(_.toAttribute),
-            rightProjSchema.map(_.toAttribute),
+            leftProjSchema.map(_.toAttribute),
             (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
             sorted)
           ObliviousProjectExec(dropTags(left.output, right.output), joined) :: Nil
