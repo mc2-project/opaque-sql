@@ -74,21 +74,21 @@ object OpaqueOperators extends Strategy {
     case EncryptedJoin(left, right, joinType, condition) =>
       Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
-          val unioned = ObliviousUnionExec(
-            ObliviousProjectExec(tagLeft(left.output), planLater(left)),
-            ObliviousProjectExec(tagRight(right.output), planLater(right)))
-          ObliviousProjectExec(
-            dropTags(left.output, right.output),
-            EncryptedSortMergeJoinExec(
-              joinType,
-              leftKeys,
-              rightKeys,
-              tagLeft(left.output).map(_.toAttribute),
-              tagRight(right.output).map(_.toAttribute),
-              tagLeft(left.output).map(_.toAttribute) ++ tagRight(right.output).map(_.toAttribute),
-              EncryptedSortExec(
-                sortForJoin(leftKeys, rightKeys, unioned.output),
-                unioned))) :: Nil
+          val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
+          val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
+          val leftProj = ObliviousProjectExec(leftProjSchema, planLater(left))
+          val rightProj = ObliviousProjectExec(rightProjSchema, planLater(right))
+          val unioned = ObliviousUnionExec(leftProj, rightProj)
+          val sorted = EncryptedSortExec(sortForJoin(leftKeys, tag, unioned.output), unioned)
+          val joined = EncryptedSortMergeJoinExec(
+            joinType,
+            leftKeysProj,
+            rightKeysProj,
+            leftProjSchema.map(_.toAttribute),
+            rightProjSchema.map(_.toAttribute),
+            (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
+            sorted)
+          ObliviousProjectExec(dropTags(left.output, right.output), joined) :: Nil
         case _ => Nil
       }
 
@@ -112,27 +112,17 @@ object OpaqueOperators extends Strategy {
     case _ => Nil
   }
 
-  private def tagLeft(input: Seq[Attribute]): Seq[NamedExpression] =
-    Alias(Literal(0), "tag")() +: input
-
-  private def tagRight(input: Seq[Attribute]): Seq[NamedExpression] =
-    Alias(Literal(1), "tag")() +: input
-
-  // projection
-  private def sortForJoin(
-      leftKeys: Seq[Expression], rightKeys: Seq[Expression],
-      input: Seq[Attribute]): Seq[SortOrder] = {
-    val tag = input(0)
-    leftKeys.zip(rightKeys).map {
-      case (leftKey, rightKey) =>
-        SortOrder(
-          If(
-            EqualTo(tag, Literal(0)),
-            leftKey,
-            rightKey),
-          Ascending)
-    } :+ SortOrder(tag, Ascending)
+  private def tagForJoin(
+      keys: Seq[Expression], input: Seq[Attribute], isLeft: Boolean)
+    : (Seq[NamedExpression], Seq[NamedExpression], NamedExpression) = {
+    val keysProj = keys.zipWithIndex.map { case (k, i) => Alias(k, "_" + i)() }
+    val tag = Alias(Literal(if (isLeft) 0 else 1), "_tag")()
+    (keysProj ++ Seq(tag) ++ input, keysProj, tag)
   }
+
+  private def sortForJoin(
+      leftKeys: Seq[Expression], tag: Expression, input: Seq[Attribute]): Seq[SortOrder] =
+    leftKeys.map(k => SortOrder(k, Ascending)) :+ SortOrder(tag, Ascending)
 
   private def dropTags(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
