@@ -376,6 +376,20 @@ public:
     }
   }
 
+  FlatbuffersSortOrderEvaluator(uint8_t *buf, size_t len) {
+    flatbuffers::Verifier v(buf, len);
+    check(v.VerifyBuffer<tuix::SortExpr>(nullptr),
+          "Corrupt SortExpr %p of length %d\n", buf, len);
+    sort_expr = flatbuffers::GetRoot<tuix::SortExpr>(buf);
+
+    for (auto sort_order_it = sort_expr->sort_order()->begin();
+         sort_order_it != sort_expr->sort_order()->end(); ++sort_order_it) {
+      sort_order_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(sort_order_it->child())));
+    }
+  }
+
   bool less_than(const tuix::Row *row1, const tuix::Row *row2) {
     builder.Clear();
     const tuix::Row *a = nullptr, *b = nullptr;

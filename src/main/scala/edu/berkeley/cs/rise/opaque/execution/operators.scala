@@ -551,7 +551,7 @@ case class ObliviousUnionExec(
       assert(rightBlockArray.length == 1)
       val rightBlock = rightBlockArray.head
 
-      Iterator(Utils.concatEncryptedBlocks(leftBlock, rightBlock))
+      Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
     }
     Utils.ensureCached(unioned)
     time("union") { unioned.count }

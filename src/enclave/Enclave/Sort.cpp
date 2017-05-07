@@ -128,198 +128,112 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   }
 }
 
-template<typename RecordType>
-void sample(Verify *verify_set,
-            uint8_t *input_rows,
-            uint32_t input_rows_len,
-            uint32_t num_rows,
-			uint8_t *output_rows,
-            uint32_t *output_rows_size,
-            uint32_t *num_output_rows) {
-
-  uint32_t row_upper_bound = 0;
-  {
-    BlockReader b(input_rows, input_rows_len);
-    uint8_t *block;
-    uint32_t len, num_rows, result;
-    b.read(&block, &len, &num_rows, &result);
-    if (block == NULL) {
-      *output_rows_size = 0;
-      return;
-    } else {
-      row_upper_bound = result;
-    }
-  }
+void sample(uint8_t *input_rows, size_t input_rows_length,
+			uint8_t **output_rows, size_t *output_rows_length, uint32_t *num_output_rows) {
+  uint32_t num_input_rows; // TODO: calculate this
 
   // Sample ~5% of the rows or 1000 rows, whichever is greater
-  unsigned char buf[2];
-  uint16_t *buf_ptr = (uint16_t *) buf;
-
   uint16_t sampling_ratio;
-  if (num_rows > 1000 * 20) {
+  if (num_input_rows > 1000 * 20) {
     sampling_ratio = 3276; // 5% of 2^16
   } else {
     sampling_ratio = 16383;
   }
 
-  RowReader r(input_rows, input_rows + input_rows_len, verify_set);
-  RowWriter w(output_rows, row_upper_bound);
-  w.set_self_task_id(verify_set->get_self_task_id());
-  RecordType row;
-  uint32_t num_output_rows_result = 0;
-  for (uint32_t i = 0; i < num_rows; i++) {
-    r.read(&row);
-    sgx_read_rand(buf, 2);
-    if (*buf_ptr <= sampling_ratio) {
-      w.write(&row);
-      num_output_rows_result++;
+  EncryptedBlocksToRowReader r(input_rows, input_rows_len);
+  FlatbuffersRowWriter w;
+  uint8_t rand[2];
+
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+
+    sgx_read_rand(rand, 2);
+    if (*reinterpret_cast<uint16_t *>(rand) <= sampling_ratio) {
+      w.write(row);
     }
   }
 
-  w.close();
-  *output_rows_size = w.bytes_written();
-  *num_output_rows = num_output_rows_result;
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+  *num_output_rows = w.output_num_rows();
 }
 
-template<typename RecordType>
-void find_range_bounds(int op_code,
-                       Verify *verify_set,
+void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                        uint32_t num_partitions,
-					   uint32_t num_buffers,
-                       uint8_t **buffer_list,
-                       uint32_t *num_rows,
-                       uint32_t row_upper_bound,
-                       uint8_t *output_rows,
-                       uint32_t *output_rows_len,
-                       uint8_t *scratch) {
-
+                       uint8_t *input_rows, size_t input_rows_length,
+                       uint8_t **output_rows, size_t *output_rows_length) {
   // Sort the input rows
-  check(false, "not implemented\n");
-  (void)op_code;
-  (void)scratch;
-  //external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
+  external_sort(sort_order, sort_order_length,
+                input_rows, input_rows_length,
+                output_rows, output_rows_length);
 
   // Split them into one range per partition
-  uint32_t total_num_rows = 0;
-  for (uint32_t i = 0; i < num_buffers; i++) {
-    total_num_rows += num_rows[i];
-  }
-  uint32_t num_rows_per_part = total_num_rows / num_partitions;
+  uint32_t num_input_rows; // TODO: calculate this
+  uint32_t num_rows_per_part = num_input_rows / num_partitions;
 
-  RowReader r(buffer_list[0], buffer_list[num_buffers]);
-  RowWriter w(output_rows, row_upper_bound);
-  w.set_self_task_id(verify_set->get_self_task_id());
-  RecordType row;
+  EncryptedBlocksToRowReader r(input_rows, input_rows_len);
+  FlatbuffersRowWriter w;
   uint32_t current_rows_in_part = 0;
-  for (uint32_t i = 0; i < total_num_rows; i++) {
-    r.read(&row);
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
     if (current_rows_in_part == num_rows_per_part) {
-      w.write(&row);
+      w.write(row);
       current_rows_in_part = 0;
 	} else {
 	  ++current_rows_in_part;
 	}
   }
 
-  w.close();
-  *output_rows_len = w.bytes_written();
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+  *num_output_rows = w.output_num_rows();
 }
 
 template<typename RecordType>
-void partition_for_sort(int op_code,
-                        Verify *verify_set,
-                        uint8_t num_partitions,
-                        uint32_t num_buffers,
-                        uint8_t **buffer_list,
-                        uint32_t *num_rows,
-                        uint32_t row_upper_bound,
-                        uint8_t *boundary_rows,
-                        uint32_t boundary_rows_len,
-                        uint8_t *output,
-                        uint8_t **output_partition_ptrs,
-                        uint32_t *output_partition_num_rows) {
+void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
+                        uint8_t *input_rows, size_t input_rows_length,
+                        uint8_t *boundary_rows, uint32_t boundary_rows_length,
+                        uint8_t **output_rows, size_t *output_rows_length) {
 
   // Sort the input rows
-  check(false, "not implemented\n");
-  // external_sort<RecordType>(op_code, verify_set, num_buffers, buffer_list, num_rows, row_upper_bound, scratch);
-
-  uint32_t input_length = buffer_list[num_buffers] - buffer_list[0];
-
-  uint32_t total_num_rows = 0;
-  for (uint32_t i = 0; i < num_buffers; ++i) {
-    total_num_rows += num_rows[i];
-  }
-
-  std::vector<uint8_t *> tmp_output(num_partitions);
-  std::vector<RowWriter *> writers(num_partitions);
-  for (uint32_t i = 0; i < num_partitions; ++i) {
-    // Worst case size for one output partition: the entire input length
-    tmp_output[i] = new uint8_t[input_length];
-    writers[i] = new RowWriter(tmp_output[i], row_upper_bound);
-    writers[i]->set_self_task_id(verify_set->get_self_task_id());
-  }
-
-  // Read the (num_partitions - 1) boundary rows into memory for efficient repeated scans
-  std::vector<RecordType *> boundary_row_records;
-  RowReader b(boundary_rows, boundary_rows + boundary_rows_len, verify_set);
-  for (uint32_t i = 0; i < num_partitions - 1; ++i) {
-    boundary_row_records.push_back(new RecordType);
-    b.read(boundary_row_records[i]);
-    boundary_row_records[i]->print();
-  }
+  external_sort(sort_order, sort_order_length,
+                input_rows, input_rows_length,
+                output_rows, output_rows_length);
 
   // Scan through the input rows and copy each to the appropriate output partition specified by the
   // ranges encoded in the given boundary_rows. A range contains all rows greater than or equal to
   // one boundary row and less than the next boundary row. The first range contains all rows less
   // than the first boundary row, and the last range contains all rows greater than or equal to the
   // last boundary row.
-  //
-  // We currently scan through all boundary rows sequentially for each row. TODO: consider using
-  // binary search.
-  RowReader r(buffer_list[0], buffer_list[num_buffers]);
-  RecordType row;
+  EncryptedBlocksToRowReader r(input_rows, input_rows_len);
+  FlatbuffersRowWriter w;
+  std::vector<flatbuffers::Offset<tuix::EncryptedBlocks>> output_runs;
 
-  for (uint32_t i = 0; i < total_num_rows; ++i) {
-    r.read(&row);
+  EncryptedBlocksToRowReader b(boundary_rows, boundary_rows_len);
+  const tuix::Row *b_start = nullptr;
+  const tuix::Row *b_end = r.next();
 
-    // Scan to the matching boundary row for this row
-    uint32_t j;
-    for (j = 0; j < num_partitions - 1; ++j) {
-      if (row.less_than(boundary_row_records[j], op_code)) {
-        // Found an upper-bounding boundary row
-        break;
-      }
+  FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
+
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+
+    // Advance boundary rows
+    while (b_end != nullptr && !sort_eval.less_than(row, b_end)) {
+      b_start = b_end;
+      b_end = b.has_next() ? b.next() : nullptr;
+      output_runs.push_back(w.write_encrypted_blocks());
     }
-    // If the row is greater than all boundary rows, the above loop will never break and j will end
-    // up at num_partitions - 1.
-    writers[j]->write(&row);
+
+    w.write(row);
   }
+  output_runs.push_back(w.write_encrypted_blocks());
 
-  for (uint32_t i = 0; i < num_partitions - 1; ++i) {
-    delete boundary_row_records[i];
-  }
-
-  // Copy the partitions to the output
-  uint8_t *output_ptr = output;
-  for (uint32_t i = 0; i < num_partitions; ++i) {
-    writers[i]->close();
-
-    memcpy(output_ptr, tmp_output[i], writers[i]->bytes_written());
-    output_partition_ptrs[i] = output_ptr;
-    output_partition_ptrs[i + 1] = output_ptr + writers[i]->bytes_written();
-    output_partition_num_rows[i] = writers[i]->rows_written();
-
-    debug("Writing %d bytes to output %p based on input of length %d. Total bytes written %d. Upper bound %d.\n",
-          writers[i]->bytes_written(), output_ptr, input_length,
-          output_ptr + writers[i]->bytes_written() - output, num_partitions * input_length);
-    output_ptr += writers[i]->bytes_written();
-    check(writers[i]->bytes_written() <= input_length,
-          "output partition size %d was bigger than input size %d\n",
-          writers[i]->bytes_written(), input_length);
-
-    delete writers[i];
-    delete[] tmp_output[i];
-  }
+  w.finish(w.write_sorted_runs(output_runs));
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
 }
 
 template void sample<NewRecord>(
