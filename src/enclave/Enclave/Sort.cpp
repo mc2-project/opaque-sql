@@ -88,7 +88,14 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
       runs.push_back(sort_single_encrypted_block(w, *it, sort_eval));
     }
-    w.finish(w.write_sorted_runs(runs));
+    if (runs.size() > 1) {
+      w.finish(w.write_sorted_runs(runs));
+    } else {
+      w.finish(runs[0]);
+      *output_rows = w.output_buffer();
+      *output_rows_length = w.output_size();
+      return;
+    }
   }
 
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by

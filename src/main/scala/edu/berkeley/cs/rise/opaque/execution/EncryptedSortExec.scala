@@ -72,7 +72,7 @@ object EncryptedSortExec {
           childRDD.flatMap { block =>
             val (enclave, eid) = Utils.initEnclave()
             val partitions = enclave.PartitionForSort(
-              eid, orderSer, numPartitions, boundaries, block.bytes)
+              eid, orderSer, numPartitions, block.bytes, boundaries)
             partitions.zipWithIndex.map {
               case (partition, i) => (i, Block(partition))
             }
