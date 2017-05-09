@@ -212,7 +212,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   EncryptedBlocksToRowReader b(boundary_rows, boundary_rows_length);
   // Invariant: b_upper is the first boundary row strictly greater than the current range, or
   // nullptr if we are in the last range
-  const tuix::Row *b_upper = r.next();
+  const tuix::Row *b_upper = b.next();
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
