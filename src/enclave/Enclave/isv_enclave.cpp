@@ -30,11 +30,17 @@
  */
 
 
-#include <assert.h>
 #include "isv_enclave.h"
-#include "sgx_tkey_exchange.h"
-#include "sgx_tcrypto.h"
-#include "string.h"
+
+#include <cassert>
+#include <cstring>
+
+#include <sgx_tcrypto.h>
+#include <sgx_tkey_exchange.h>
+
+#include "Crypto.h"
+#include "common.h"
+#include "key.h"
 
 // Used to store the secret passed by the SP in the sample code. The
 // size is forced to be 8 bytes. Expected value is

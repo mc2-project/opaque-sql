@@ -9,6 +9,7 @@
 
 #include "Crypto.h"
 #include "common.h"
+#include "Enclave_t.h"
 
 int printf(const char *fmt, ...);
 
@@ -139,6 +140,15 @@ public:
   EncryptedBlocksToRowReader(const tuix::EncryptedBlocks *encrypted_blocks)
     : encrypted_blocks(encrypted_blocks), block_idx(0) {
     init_row_reader();
+  }
+
+  uint32_t num_rows() {
+    uint32_t result = 0;
+    for (auto it = encrypted_blocks->blocks()->begin();
+         it != encrypted_blocks->blocks()->end(); ++it) {
+      result += it->num_rows();
+    }
+    return result;
   }
 
   bool has_next() {

@@ -147,6 +147,15 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
         static_cast<const tuix::DoubleField *>(right->value())->value());
       break;
     }
+    case tuix::FieldUnion_StringField:
+    {
+      auto field1 = static_cast<const tuix::StringField *>(left->value());
+      auto field2 = static_cast<const tuix::StringField *>(right->value());
+      std::string str1(reinterpret_cast<const char *>(field1->value()->data()), field1->length());
+      std::string str2(reinterpret_cast<const char *>(field2->value()->data()), field2->length());
+      result = Operation<std::string>()(str1, str2);
+      break;
+    }
     default:
       printf("Can't evaluate %s on %s\n",
              typeid(TuixExpr).name(),

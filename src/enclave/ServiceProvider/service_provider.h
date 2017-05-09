@@ -41,9 +41,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <sgx_key_exchange.h>
+
 #include "remote_attestation_result.h"
 #include "ias_ra.h"
-#include "sgx_key_exchange.h"
 #include "common.h"
 #include "sp_crypto.h"
 //#include "sample_libcrypto.h"

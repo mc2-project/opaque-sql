@@ -1,9 +1,5 @@
-#include "sgx_tcrypto.h"
-#include "sgx_trts.h"
-#include "sgx_tkey_exchange.h"
-#include "util.h"
-#include "sgxaes.h"
-#include <string.h>
+#include <sgx_tcrypto.h>
+#include <sgxaes.h>
 
 #ifndef CRYPTO_H
 #define CRYPTO_H

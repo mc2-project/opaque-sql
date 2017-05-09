@@ -31,7 +31,6 @@ import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
-import Opcode._
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -119,7 +118,7 @@ case class EncryptedBlockRDDScanExec(
   }
 }
 
-case class Block(bytes: Array[Byte], numRows: Int) extends Serializable
+case class Block(bytes: Array[Byte]) extends Serializable
 
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
@@ -189,27 +188,6 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 }
 
-/**
- * An extractor that matches expressions that represent a column of the input attributes (i.e., if
- * the expression is a direct reference to the column, or it is derived solely from the column). To
- * use this extractor, create an object deriving from this trait and provide a value for `input`.
- */
-trait ColumnNumberMatcher extends Serializable {
-  def input: Seq[Attribute]
-  def unapply(expr: Expression): Option[(Int, DataType)] =
-    if (expr.references.size == 1) {
-      val attr = expr.references.head
-      val colNum = input.indexWhere(attr.semanticEquals(_))
-      if (colNum != -1) {
-        Some(Tuple2(colNum + 1, attr.dataType))
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-}
-
 case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
@@ -225,8 +203,7 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
     execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val serResult = enclave.Project(eid, projectListSer, block.bytes)
-      Block(serResult, block.numRows)
+      Block(enclave.Project(eid, projectListSer, block.bytes))
     }
   }
 }
@@ -245,10 +222,7 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
     println(s"conditionSer = ${conditionSer.size} bytes")
     return execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val numOutputRows = new MutableInteger
-      val filtered = enclave.Filter(
-        eid, conditionSer, block.bytes, numOutputRows)
-      Block(filtered, numOutputRows.value)
+      Block(enclave.Filter(eid, conditionSer, block.bytes))
     }
   }
 }
@@ -261,231 +235,18 @@ case class EncryptedAggregateExec(
 
   import Utils.time
 
-  private object Col extends ColumnNumberMatcher {
-    override def input: Seq[Attribute] = child.output
-  }
-
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    val aggOpcode =
-      (groupingExpressions, aggExpressions) match {
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, IntegerType)), _, false, _), _))) =>
-          OP_GROUPBY_COL1_SUM_COL2_INT
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _))) =>
-          OP_GROUPBY_COL1_SUM_COL2_FLOAT
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Min(Col(2, IntegerType)), _, false, _), _))) =>
-          OP_GROUPBY_COL1_MIN_COL2_INT
-
-        case (Seq(Col(1, _)), Seq(Col(1, _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Average(Col(2, IntegerType)), _, false, _), _))) =>
-          OP_GROUPBY_COL1_SUM_COL3_FLOAT_AVG_COL2_INT
-
-        case (Seq(), Seq(
-          Alias(AggregateExpression(Sum(Col(1, IntegerType)), _, false, _), _))) =>
-          OP_SUM_COL1_INTEGER
-
-        case (Seq(), Seq(
-          Alias(AggregateExpression(Sum(Col(1, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(2, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(3, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(4, FloatType)), _, false, _), _),
-          Alias(AggregateExpression(Sum(Col(5, FloatType)), _, false, _), _)
-        )) =>
-          OP_SUM_LS
-
-      case _ =>
-        throw new Exception(
-          s"EncryptedAggregateExec: unknown grouping expressions $groupingExpressions, " +
-            s"aggregation expressions $aggExpressions.\n" +
-            s"Input: ${child.output}.\n" +
-            s"Types: ${child.output.map(_.dataType)}")
-      }
-
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(childRDD)
-
-    if (aggOpcode == OP_SUM_COL1_INTEGER || aggOpcode == OP_SUM_LS) {
-      RA.initRA(childRDD)
-      // Do local global aggregates
-      val aggregates = childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
-        val numOutputRows = new MutableInteger
-        val resultBytes = enclave.GlobalAggregate(
-          eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
-        resultBytes
-      }
-
-      var aggOpcode2 = aggOpcode
-      if (aggOpcode == OP_SUM_LS) {
-        aggOpcode2 = OP_SUM_LS_2
-      }
-
-      Utils.ensureCached(aggregates)
-      val (enclave, eid) = Utils.initEnclave()
-      val aggregatesCollected = aggregates.collect
-      // Collect and run GlobalAggregate again
-      val finalOutputRows = new MutableInteger
-      val result = enclave.GlobalAggregate(eid, 0, 0, aggOpcode2.value,
-        Utils.concatByteArrays(aggregatesCollected), aggregatesCollected.length, finalOutputRows)
-      assert(finalOutputRows.value == 1)
-
-      var a = new Array[Block](1)
-      a(0) = Block(result, finalOutputRows.value)
-
-      return sparkContext.parallelize(a, 1)
-    }
-
-    time("aggregate - force child") { childRDD.count }
     // RA.initRA(childRDD)
-    // Process boundaries
-    val aggregates = childRDD.map { block =>
+    childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val numOutputRows = new MutableInteger
-      val resultBytes = enclave.NonObliviousAggregate(
-        eid, 0, 0, aggOpcode.value, block.bytes, block.numRows, numOutputRows)
-      Block(resultBytes, numOutputRows.value)
+      ???
     }
-    Utils.ensureCached(aggregates)
-    aggregates.count
-    aggregates
-  }
-}
-
-private object OpaqueJoinUtils {
-  /** Given the join information, return (joinOpcode, dummySortOpcode, dummyFilterOpcode). */
-  def getOpcodes(
-      leftOutput: Seq[Attribute], rightOutput: Seq[Attribute], leftKeys: Seq[Expression],
-      rightKeys: Seq[Expression], condition: Option[Expression])
-      : (Opcode, Opcode, Opcode) = {
-
-    object LeftCol extends ColumnNumberMatcher {
-      override def input: Seq[Attribute] = leftOutput
-    }
-    object RightCol extends ColumnNumberMatcher {
-      override def input: Seq[Attribute] = rightOutput
-    }
-
-    val info = (leftOutput.map(_.dataType), rightOutput.map(_.dataType),
-      leftKeys, rightKeys, condition)
-    val (joinOpcode, dummySortOpcode, dummyFilterOpcode) = info match {
-      case (Seq(StringType, IntegerType), Seq(StringType, StringType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
-        (OP_JOIN_COL1, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType, IntegerType), Seq(IntegerType, StringType, IntegerType),
-        Seq(LeftCol(2, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_COL2, OP_SORT_COL4_IS_DUMMY_COL2, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, FloatType), Seq(IntegerType, IntegerType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
-        (OP_JOIN_PAGERANK, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType),
-        Seq(IntegerType, IntegerType, IntegerType, IntegerType, IntegerType, FloatType,
-          IntegerType, FloatType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_TPCH9GENERIC_NATION, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, IntegerType),
-        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, IntegerType,
-          FloatType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(4, _)), None) =>
-        (OP_JOIN_TPCH9GENERIC_SUPPLIER, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, IntegerType),
-        Seq(IntegerType, IntegerType, FloatType, IntegerType, IntegerType, FloatType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(4, _)), None) =>
-        (OP_JOIN_TPCH9GENERIC_ORDERS, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, IntegerType, FloatType),
-        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
-        Seq(LeftCol(2, _), LeftCol(1, _)), Seq(RightCol(3, _), RightCol(1, _)), None) =>
-        (OP_JOIN_TPCH9GENERIC_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType),
-        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_TPCH9GENERIC_PART_LINEITEM, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, IntegerType),
-        Seq(IntegerType, StringType, IntegerType, IntegerType, FloatType, IntegerType,
-          IntegerType, FloatType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(6, _)), None) =>
-        (OP_JOIN_TPCH9OPAQUE_ORDERS, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType, IntegerType, IntegerType, FloatType),
-        Seq(IntegerType, IntegerType, IntegerType, IntegerType, FloatType, FloatType),
-        Seq(LeftCol(3, _), LeftCol(4, _)), Seq(RightCol(3, _), RightCol(2, _)), None) =>
-        (OP_JOIN_TPCH9OPAQUE_LINEITEM, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType),
-        Seq(IntegerType, IntegerType, IntegerType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_TPCH9OPAQUE_NATION, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, IntegerType),
-        Seq(IntegerType, IntegerType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_TPCH9OPAQUE_SUPPLIER, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType),
-        Seq(IntegerType, IntegerType, FloatType),
-        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
-        (OP_JOIN_TPCH9OPAQUE_PART_PARTSUPP, OP_SORT_COL3_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(StringType, IntegerType),
-        Seq(StringType, IntegerType, StringType, IntegerType, StringType, StringType),
-        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
-        (OP_JOIN_DISEASEDEFAULT_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(StringType, IntegerType, StringType),
-        Seq(IntegerType, StringType, StringType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_DISEASEDEFAULT_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(StringType, IntegerType, StringType, StringType, IntegerType),
-        Seq(IntegerType, StringType, StringType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_DISEASEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(StringType, IntegerType, StringType),
-        Seq(StringType, IntegerType),
-        Seq(LeftCol(1, _)), Seq(RightCol(1, _)), None) =>
-        (OP_JOIN_DISEASEOPAQUE_TREATMENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType),
-        Seq(StringType, IntegerType, StringType, IntegerType, StringType, StringType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_GENEDEFAULT_GENE, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType),
-        Seq(StringType, IntegerType, StringType),
-        Seq(LeftCol(1, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_GENEOPAQUE_GENE, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case (Seq(IntegerType, StringType, StringType, IntegerType, StringType),
-        Seq(IntegerType, StringType, StringType),
-        Seq(LeftCol(3, _)), Seq(RightCol(2, _)), None) =>
-        (OP_JOIN_GENEOPAQUE_PATIENT, OP_SORT_COL2_IS_DUMMY_COL1, OP_FILTER_NOT_DUMMY)
-
-      case _ =>
-        throw new Exception(
-          s"OpaqueJoinUtils: unknown left join keys $leftKeys, " +
-            s"right join keys $rightKeys, condition $condition.\n" +
-            s"Input: left $leftOutput, right $rightOutput.\n" +
-            s"Types: left ${leftOutput.map(_.dataType)}, right ${rightOutput.map(_.dataType)}")
-    }
-    (joinOpcode, dummySortOpcode, dummyFilterOpcode)
   }
 }
 
@@ -511,10 +272,7 @@ case class EncryptedSortMergeJoinExec(
 
     val joined = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      val numOutputRows = new MutableInteger
-      val joined = enclave.NonObliviousSortMergeJoin(
-        eid, joinExprSer, block.bytes, numOutputRows)
-      Block(joined, numOutputRows.value)
+      Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
     }
     Utils.ensureCached(joined)
     time("join") { joined.count }

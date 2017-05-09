@@ -1,8 +1,7 @@
 #ifndef RA_KEY_H
 #define RA_KEY_H
 
-#include "sgx_tcrypto.h"
-#include "string.h"
+#include <sgx_tcrypto.h>
 
 // This is the public EC key of the SP. The corresponding private EC key is
 // used by the SP to sign data used in the remote attestation SIGMA protocol

@@ -34,8 +34,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <sgx_tcrypto.h>
 #include "common.h"
-#include "sgx_tcrypto.h"
 #include "sp_crypto.h"
 
 #include "remote_attestation_result.h"

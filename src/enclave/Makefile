@@ -46,7 +46,7 @@ else
 Urts_Library_Name := sgx_urts
 endif	
 
-App_Cpp_Files := App/App.cpp $(wildcard App/Edger8rSyntax/*.cpp) $(wildcard App/TrustedLibrary/*.cpp)
+App_Cpp_Files := App/App.cpp $(wildcard App/TrustedLibrary/*.cpp)
 App_Include_Paths := \
 	-IInclude -IApp -ICommon -IServiceProvider \
 	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
@@ -93,7 +93,19 @@ else
 	Crypto_Library_Name := sgx_tcrypto
 endif
 
-Enclave_Cpp_Files := Enclave/key.cpp Enclave/isv_enclave.cpp Enclave/sgxaes.cpp Enclave/ColumnSort.cpp Enclave/EncryptedDAG.cpp Enclave/Sort.cpp Enclave/DataGen.cpp Enclave/util.cpp Enclave/Crypto.cpp Enclave/Filter.cpp Enclave/Join.cpp Enclave/Enclave.cpp Enclave/Project.cpp Enclave/NewInternalTypes.cpp Enclave/Flatbuffers.cpp $(wildcard Enclave/Edger8rSyntax/*.cpp) $(wildcard Enclave/TrustedLibrary/*.cpp)
+Enclave_Cpp_Files := \
+	Enclave/Aggregate.cpp \
+	Enclave/Crypto.cpp \
+	Enclave/Enclave.cpp \
+	Enclave/Filter.cpp \
+	Enclave/Flatbuffers.cpp \
+	Enclave/Join.cpp \
+	Enclave/Project.cpp \
+	Enclave/Sort.cpp \
+	Enclave/isv_enclave.cpp \
+	Enclave/key.cpp \
+	Enclave/sgxaes.cpp \
+	Enclave/util.cpp
 Enclave_Include_Paths := \
 	-IInclude -IEnclave -ICommon \
 	-I../../target/flatbuffers/flatbuffers-1.4.0/include \

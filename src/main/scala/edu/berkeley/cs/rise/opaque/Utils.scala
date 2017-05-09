@@ -63,7 +63,6 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.rise.opaque.execution.Block
-import edu.berkeley.cs.rise.opaque.execution.ColumnType
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
@@ -146,133 +145,6 @@ object Utils {
         sqlContext.experimental.extraStrategies)
   }
 
-  def encrypt[T](enclave: SGXEnclave, eid: Long, field: T, tpe: DataType)
-    : Array[Byte] = {
-    val buf = ByteBuffer.allocate(2048) // TODO: adaptive size
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    import ColumnType._
-    ((field, tpe): @unchecked) match {
-      case (x: Int, IntegerType) =>
-        buf.put(INT.value)
-        buf.putInt(4)
-        buf.putInt(x)
-      case (s: UTF8String, StringType) =>
-        buf.put(STRING.value)
-        val utf8 = s.getBytes()
-        buf.putInt(utf8.length)
-        buf.put(utf8)
-      case (s: String, StringType) =>
-        buf.put(STRING.value)
-        val utf8 = s.getBytes("UTF-8")
-        buf.putInt(utf8.length)
-        buf.put(utf8)
-      case (f: Float, FloatType) =>
-        buf.put(FLOAT.value)
-        buf.putInt(4)
-        buf.putFloat(f)
-      case (f: Double, DoubleType) =>
-        buf.put(DOUBLE.value)
-        buf.putInt(8)
-        buf.putDouble(f)
-      case (d: SQLDate, DateType) =>
-        buf.put(DATE.value)
-        buf.putInt(8)
-        buf.putLong(DateTimeUtils.daysToMillis(d) / 1000)
-      case (f: Long, LongType) =>
-        buf.put(LONG.value)
-        buf.putInt(8)
-        buf.putLong(f)
-    }
-    buf.flip()
-    val bytes = new Array[Byte](buf.limit)
-    buf.get(bytes)
-    val encrypted_value = enclave.EncryptAttribute(eid, bytes)
-    encrypted_value
-  }
-
-  def decrypt[T](enclave: SGXEnclave, eid: Long, bytes: Array[Byte]): T = {
-    val buf = ByteBuffer.wrap(enclave.Decrypt(eid, bytes))
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    val tpe = buf.get()
-    val size = buf.getInt()
-    import ColumnType._
-    val result = tpe match {
-      case t if t == INT.value =>
-        assert(size == 4)
-        buf.getInt()
-      case t if t == STRING.value || t == URL_TYPE.value || t == C_CODE.value ||
-          t == L_CODE.value || t == IP_TYPE.value || t == USER_AGENT_TYPE.value ||
-          t == SEARCH_WORD_TYPE.value || t == TPCH_NATION_NAME_TYPE.value =>
-        val sBytes = new Array[Byte](size)
-        buf.get(sBytes)
-        UTF8String.fromBytes(sBytes)
-      case t if t == FLOAT.value =>
-        assert(size == 4)
-        buf.getFloat()
-      case t if t == DOUBLE.value =>
-        assert(size == 8)
-        buf.getDouble()
-      case t if t == DATE.value =>
-        assert(size == 8)
-        DateTimeUtils.millisToDays(buf.getLong() * 1000)
-      case t if t == LONG.value =>
-        assert(size == 8)
-        buf.getLong()
-    }
-    result.asInstanceOf[T]
-  }
-
-  def fieldsToRow(fields: Array[Array[Byte]]): Array[Byte] = {
-    val numFields = fields.length
-
-    val rowSize = 4 + 4 * numFields + fields.map(_.length).sum
-    val buf = ByteBuffer.allocate(rowSize)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    buf.putInt(numFields)
-    for (field <- fields) {
-      buf.putInt(field.length)
-      buf.put(field)
-    }
-    buf.flip()
-    val serialized = new Array[Byte](buf.limit())
-    buf.get(serialized)
-    serialized
-  }
-
-  def encryptTuples(rows: Seq[Product], types: Seq[DataType]): Seq[Array[Array[Byte]]] = {
-    val (enclave, eid) = initEnclave()
-    rows.map(row => row.productIterator.zip(types.iterator).map {
-      case (field, tpe) => Utils.encrypt(enclave, eid, field, tpe)
-    }.toArray)
-  }
-
-  def encryptInternalRows(rows: Seq[InternalRow], types: Seq[DataType]): Seq[Array[Array[Byte]]] = {
-    val (enclave, eid) = initEnclave()
-    rows.map(row => row.toSeq(types).zip(types).map {
-      case (field, tpe) => Utils.encrypt(enclave, eid, field, tpe)
-    }.toArray)
-  }
-
-  def decryptN(rows: Seq[Array[Array[Byte]]]): Seq[Seq[Any]] = {
-    val (enclave, eid) = initEnclave()
-    rows.toSeq.map { fields =>
-      fields.toSeq.map { field =>
-        Utils.decrypt[Any](enclave, eid, field)
-      }
-    }
-  }
-
-  def createBlock(rows: Array[Array[Byte]], rowsAreJoinRows: Boolean): Array[Byte] = {
-    val (enclave, eid) = Utils.initEnclave()
-    enclave.CreateBlock(eid, Utils.concatByteArrays(rows), rows.length, rowsAreJoinRows)
-  }
-
-  def splitBlock(
-      block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Iterator[Array[Byte]] = {
-    val (enclave, eid) = Utils.initEnclave()
-    Utils.readRows(enclave.SplitBlock(eid, block, numRows, rowsAreJoinRows))
-  }
-
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
     arrays match {
       case Array() => Array.empty
@@ -294,96 +166,10 @@ object Utils {
     }
   }
 
-  def readRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
-    val buf = ByteBuffer.wrap(concatRows)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    new Iterator[Array[Byte]] {
-      override def hasNext = buf.hasRemaining
-      override def next() = readRow(buf)
-    }
-  }
-
-  def readVerifiedRows(concatRows: Array[Byte]): Iterator[Array[Byte]] = {
-    val buf = ByteBuffer.wrap(concatRows)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    new Iterator[Array[Byte]] {
-      override def hasNext = buf.hasRemaining
-      override def next() = readVerifiedRow(buf)
-    }
-  }
-
-  def parseRows(concatRows: Array[Byte]): Iterator[Array[Array[Byte]]] = {
-    val buf = ByteBuffer.wrap(concatRows)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    new Iterator[Array[Array[Byte]]] {
-      override def hasNext = buf.hasRemaining
-      override def next() = parseRow(buf)
-    }
-  }
-
-  def readRow(buf: ByteBuffer): Array[Byte] = {
-    val buf2 = buf.duplicate()
-    buf2.order(ByteOrder.LITTLE_ENDIAN)
-    val numFields = buf2.getInt()
-    for (i <- 0 until numFields) {
-      val fieldLength = buf2.getInt()
-      val field = new Array[Byte](fieldLength)
-      buf2.get(field)
-    }
-    val rowBytes = new Array[Byte](buf2.position - buf.position)
-    buf.get(rowBytes)
-    rowBytes
-  }
-
-  def readVerifiedRow(buf: ByteBuffer): Array[Byte] = {
-    val buf2 = buf.duplicate()
-    buf2.order(ByteOrder.LITTLE_ENDIAN)
-    val taskID = buf2.getInt()
-    val numFields = buf2.getInt()
-    for (i <- 0 until numFields) {
-      val fieldLength = buf2.getInt()
-      val field = new Array[Byte](fieldLength)
-      buf2.get(field)
-    }
-    val rowBytes = new Array[Byte](buf2.position - buf.position)
-    buf.get(rowBytes)
-    rowBytes
-  }
-
-  def parseRow(bytes: Array[Byte]): Array[Array[Byte]] = {
-    val buf = ByteBuffer.wrap(bytes)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    parseRow(buf)
-  }
-
-  def parseRow(buf: ByteBuffer): Array[Array[Byte]] = {
-    val numFields = buf.getInt()
-    val fields = new Array[Array[Byte]](numFields)
-    for (i <- 0 until numFields) {
-      val fieldLength = buf.getInt()
-      val field = new Array[Byte](fieldLength)
-      buf.get(field)
-      fields(i) = field
-    }
-    fields
-  }
-
   def splitBytes(bytes: Array[Byte], numSplits: Int): Array[Array[Byte]] = {
     val splitSize = bytes.length / numSplits
     assert(numSplits * splitSize == bytes.length)
     bytes.grouped(splitSize).toArray
-  }
-
-  private def tableId(b: Byte): Array[Byte] = {
-    val buf = ByteBuffer.allocate(8)
-    buf.order(ByteOrder.LITTLE_ENDIAN)
-    for (i <- 1 to 8) {
-      buf.put(b)
-    }
-    buf.flip()
-    val result = new Array[Byte](8)
-    buf.get(result)
-    result
   }
 
   def ensureCached[T](
@@ -542,7 +328,7 @@ object Utils {
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
-    Block(encryptedBlockBytes, rows.size)
+    Block(encryptedBlockBytes)
   }
 
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
@@ -771,6 +557,6 @@ object Utils {
             encryptedBlock.numRows,
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
         }.toArray)))
-    Block(builder.sizedByteArray(), blocks.map(_.numRows).sum)
+    Block(builder.sizedByteArray())
   }
 }
