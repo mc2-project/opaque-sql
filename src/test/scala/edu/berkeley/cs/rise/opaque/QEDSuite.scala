@@ -123,7 +123,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     df.show(50)
   }
 
-  ignore("nonObliviousSort multiple partitions") {
+  test("nonObliviousSort multiple partitions") {
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
     val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
       .toDF("id", "word", "count")
