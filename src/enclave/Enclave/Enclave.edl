@@ -42,8 +42,8 @@ enclave {
       uint32_t num_partitions,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [user_check] uint8_t *boundary_rows, size_t boundary_rows_length,
-      [out, size=num_partitions] uint8_t **output_partitions,
-      [out, size=num_partitions] size_t *output_partition_lengths);
+      [out, count=num_partitions] uint8_t **output_partitions,
+      [out, count=num_partitions] size_t *output_partition_lengths);
 
     public void ecall_external_sort(
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
