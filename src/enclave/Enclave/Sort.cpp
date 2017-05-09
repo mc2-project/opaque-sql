@@ -186,6 +186,8 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   w.finish(w.write_encrypted_blocks());
   *output_rows = w.output_buffer();
   *output_rows_length = w.output_size();
+
+  ocall_free(sorted_rows);
 }
 
 void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
@@ -235,4 +237,6 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   w.finish(w.write_encrypted_blocks());
   output_partition_ptrs[output_partition_idx] = w.output_buffer();
   output_partition_lengths[output_partition_idx] = w.output_size();
+
+  ocall_free(sorted_rows);
 }
