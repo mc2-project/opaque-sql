@@ -88,8 +88,13 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
     }
     if (runs.size() > 1) {
       w.finish(w.write_sorted_runs(runs));
-    } else {
+    } else if (runs.size() == 1) {
       w.finish(runs[0]);
+      *output_rows = w.output_buffer();
+      *output_rows_length = w.output_size();
+      return;
+    } else {
+      w.finish(w.write_encrypted_blocks());
       *output_rows = w.output_buffer();
       *output_rows_length = w.output_size();
       return;
