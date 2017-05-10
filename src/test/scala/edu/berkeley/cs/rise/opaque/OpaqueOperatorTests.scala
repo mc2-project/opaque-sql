@@ -58,7 +58,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     spark.stop()
   }
 
-  def testAgainstSpark(name: String)(f: SecurityLevel => Seq[Any]): Unit = {
+  def testAgainstSpark(name: String)(f: SecurityLevel => Any): Unit = {
     test(name + " - encrypted") {
       assert(f(Encrypted) === f(Insecure))
     }
@@ -153,7 +153,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id", "pk", "x")
     val f = makeDF(f_data, securityLevel, "id", "fk", "x")
-    p.join(f, $"pk" === $"fk").collect.toSet.toSeq
+    p.join(f, $"pk" === $"fk").collect.toSet
   }
 
   testAgainstSpark("join on column 1") { securityLevel =>
@@ -161,7 +161,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    p.join(f, $"pk" === $"fk").collect.toSet.toSeq
+    p.join(f, $"pk" === $"fk").collect.toSet
   }
 
   testAgainstSpark("select") { securityLevel =>
