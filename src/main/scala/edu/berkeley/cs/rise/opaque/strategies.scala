@@ -94,7 +94,7 @@ object OpaqueOperators extends Strategy {
     : (Seq[NamedExpression], Seq[NamedExpression], NamedExpression) = {
     val keysProj = keys.zipWithIndex.map { case (k, i) => Alias(k, "_" + i)() }
     val tag = Alias(Literal(if (isLeft) 0 else 1), "_tag")()
-    (Seq(tag) ++ keysProj ++ input, keysProj, tag)
+    (Seq(tag) ++ keysProj ++ input, keysProj, tag.toAttribute)
   }
 
   private def sortForJoin(
