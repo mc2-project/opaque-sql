@@ -402,11 +402,7 @@ public:
   bool less_than(const tuix::Row *row1, const tuix::Row *row2) {
     builder.Clear();
     const tuix::Row *a = nullptr, *b = nullptr;
-    printf("Comparing:\n");
-    print(row1);
-    print(row2);
     for (uint32_t i = 0; i < sort_order_evaluators.size(); i++) {
-      printf("Comparing on sort order %d\n", i);
       switch (sort_expr->sort_order()->Get(i)->direction()) {
       case tuix::SortDirection_Ascending:
         a = row1;
@@ -424,11 +420,6 @@ public:
       const tuix::Field *b_eval_tmp = sort_order_evaluators[i]->eval(b);
       const tuix::Field *b_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
         builder, flatbuffers_copy(b_eval_tmp, builder));
-      printf("Field from a=");
-      print(a_eval);
-      printf(", field from b=");
-      print(b_eval);
-      printf("\n");
 
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
@@ -446,14 +437,11 @@ public:
           ->value())->value();
 
       if (a_less_than_b) {
-        printf("a less than b\n");
         return true;
       } else if (b_less_than_a) {
-        printf("a greater than b\n");
         return false;
       }
     }
-    printf("a equal to b\n");
     return false;
   }
 

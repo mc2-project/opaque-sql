@@ -38,8 +38,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> external_merge(
   while (!queue.empty()) {
     MergeItem item = queue.top();
     queue.pop();
-    printf("merge: write row ");
-    print(item.v);
     w.write(item.v);
 
     // Read another row from the same run that this one came from

@@ -79,8 +79,6 @@ public:
   }
 
   bool has_next() {
-    printf("EncryptedBlockToRowReader::has_next: row_idx=%d, num rows=%d\n",
-           row_idx, rows->rows()->size());
     return row_idx < rows->rows()->size();
   }
 
@@ -104,7 +102,6 @@ private:
     rows_buf.reset(new uint8_t[rows_len]);
     decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
             rows_buf.get());
-    printf("Decrypted %d rows, plaintext is %d bytes\n", num_rows, rows_len);
     flatbuffers::Verifier v(rows_buf.get(), rows_len);
     check(v.VerifyBuffer<tuix::Rows>(nullptr),
           "Corrupt Rows %p of length %d\n", rows_buf.get(), rows_len);
@@ -156,10 +153,7 @@ public:
   }
 
   const tuix::Row *next() {
-    printf("Next from EncryptedBlocksToRowReader. On block %d of %d\n",
-           block_idx, encrypted_blocks->blocks()->size());
     if (!r.has_next()) {
-      printf("Calling init_row_reader from next()\n");
       assert(block_idx + 1 < encrypted_blocks->blocks()->size());
       block_idx++;
       init_row_reader();
@@ -170,8 +164,6 @@ public:
 
 private:
   void init_row_reader() {
-    printf("init_row_reader: block_idx=%d, num blocks=%d\n",
-           block_idx, encrypted_blocks->blocks()->size());
     if (block_idx < encrypted_blocks->blocks()->size()) {
       r.reset(encrypted_blocks->blocks()->Get(block_idx));
     }

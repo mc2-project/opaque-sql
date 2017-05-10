@@ -60,10 +60,7 @@ case class EncryptedLocalTableScanExec(
 
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
-    println(s"unsafeRows input: ${plaintextData.toList}")
-    println(s"unsafeRows proj: ${output}")
     val result: Array[InternalRow] = plaintextData.map(r => proj(r).copy()).toArray
-    println(s"unsafeRows output: ${result.toList}")
     result
   }
 
@@ -219,7 +216,6 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
     Utils.ensureCached(execRDD)
     // RA.initRA(execRDD)
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
-    println(s"conditionSer = ${conditionSer.size} bytes")
     return execRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       Block(enclave.Filter(eid, conditionSer, block.bytes))

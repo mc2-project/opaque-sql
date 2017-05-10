@@ -150,9 +150,7 @@ object Utils {
       case Array() => Array.empty
       case Array(bytes) => bytes
       case _ =>
-        //println("concatByteArrays concatenating %d arrays, sizes: %s".format(arrays.length, arrays.map(_.length.toLong).toString))
         val totalBytes = arrays.map(_.length.toLong).sum
-        //println("concatByteArrays allocating " + totalBytes)
         assert(totalBytes < Int.MaxValue)
         val buf = ByteBuffer.allocate(totalBytes.toInt)
         buf.order(ByteOrder.LITTLE_ENDIAN)
@@ -272,7 +270,6 @@ object Utils {
 
     // 1. Serialize the rows as plaintext using tuix.Rows
     var builder = new FlatBufferBuilder
-    println(s"Init builder, offset ${builder.offset()}")
     var rowsOffsets = ArrayBuilder.make[Int]
 
     def finishBlock(): Unit = {
@@ -309,7 +306,6 @@ object Utils {
           }.toArray),
         false)
 
-      println(s"Wrote a row, current builder offset ${builder.offset()} after ${row}")
       if (builder.offset() > MaxBlockSize) {
         finishBlock()
       }
@@ -376,8 +372,6 @@ object Utils {
   def flatbuffersSerializeExpression(
     builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): Int = {
     treeFold[Expression, Int](expr) {
-      println("flatbuffersserializeexpression")
-      println(input)
       (childrenOffsets, expr) => (expr, childrenOffsets) match {
         case (ar: AttributeReference, Nil) if input.exists(_.semanticEquals(ar)) =>
           val colNum = input.indexWhere(_.semanticEquals(ar))
@@ -470,7 +464,6 @@ object Utils {
   }
 
   def serializeFilterExpression(condition: Expression, input: Seq[Attribute]): Array[Byte] = {
-    treeFold[Expression, Unit](condition) { (fromChildren, expr) => println(expr.getClass) }
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.FilterExpr.createFilterExpr(
@@ -481,8 +474,6 @@ object Utils {
 
   def serializeProjectList(
     projectList: Seq[NamedExpression], input: Seq[Attribute]): Array[Byte] = {
-    projectList.map(expr =>
-      treeFold[Expression, Unit](expr) { (fromChildren, expr) => println(expr.getClass) })
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.ProjectExpr.createProjectExpr(

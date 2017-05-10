@@ -359,11 +359,9 @@ void ocall_print_string(const char *str)
 
 void ocall_malloc(size_t size, uint8_t **ret) {
   *ret = static_cast<uint8_t *>(malloc(size));
-  printf("ocall_malloc %lu bytes = %p\n", size, *ret);
 }
 
 void ocall_free(uint8_t *buf) {
-  printf("ocall_free %p\n", buf);
   free(buf);
 }
 
