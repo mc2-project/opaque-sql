@@ -22,21 +22,24 @@ else()
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdinc++")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -nostdlib -nodefaultlibs -nostartfiles")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--whole-archive -l${Trts_Library_Name} -Wl,--no-whole-archive")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${Service_Library_Name} -Wl,--end-group")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-pie,-eenclave_entry -Wl,--export-dynamic")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--defsym,__ImageBase=0")
-set(CMAKE_SHARED_LINKER_FLAGS
-  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/Enclave.lds")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
+set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0 -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/Enclave.lds")
+
+find_library(TRTS_LIB ${Trts_Library_Name} "$ENV{SGX_SDK}/lib64")
+find_library(TSTDC_LIB sgx_tstdc "$ENV{SGX_SDK}/lib64")
+find_library(TSTDCXX_LIB sgx_tstdcxx "$ENV{SGX_SDK}/lib64")
+find_library(TKEY_EXCHANGE_LIB sgx_tkey_exchange "$ENV{SGX_SDK}/lib64")
+find_library(TCRYPTO_LIB sgx_tcrypto "$ENV{SGX_SDK}/lib64")
+find_library(SERVICE_LIB ${Service_Library_Name} "$ENV{SGX_SDK}/lib64")
+
+set(CMAKE_CXX_LINK_EXECUTABLE
+  "${CMAKE_CXX_LINK_EXECUTABLE} -Wl,--whole-archive -ltrts -Wl,--no-whole-archive")
+set(CMAKE_CXX_LINK_EXECUTABLE
+  "${CMAKE_CXX_LINK_EXECUTABLE} -Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -lsgx_tkey_exchange -lsgx_tcrypto -l${Service_Library_Name} -Wl,--end-group")
 
 add_library(enclave.so SHARED ${SOURCES})
 set_property(TARGET enclave.so PROPERTY POSITION_INDEPENDENT_CODE OFF)
+set_target_properties(enclave.so PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
+
+target_link_libraries(enclave.so -Wl,--whole-archive "${TRTS_LIB}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
+  "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${SERVICE_LIB}" -Wl,--end-group)
