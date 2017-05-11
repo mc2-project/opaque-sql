@@ -3,12 +3,20 @@ cmake_minimum_required(VERSION 2.8)
 project(OpaqueEnclaveTrusted)
 
 file(GLOB SOURCES "*.cpp")
-set(SOURCES ${SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_SOURCE_DIR}/sgxaes_asm.o)
+set(SOURCES ${SOURCES}
+  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/sgxaes_asm.o
+  ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
 add_custom_command(
   COMMAND ${SGX_EDGER8R} --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include"
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
+
+add_custom_command(
+  COMMAND ../ServiceProvider/main ${CMAKE_CURRENT_BINARY_DIR}/key.cpp
+  DEPENDS ../ServiceProvider/main
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
 include_directories(SYSTEM "$ENV{SGX_SDK}/include/stlport")
 include_directories(SYSTEM "$ENV{SGX_SDK}/include/tlibc")

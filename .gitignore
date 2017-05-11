@@ -77,16 +77,6 @@ sql/hive-thriftserver/test_warehouses
 .RData
 
 # for C++ 
-*.so
-*.pem
-*.o
-app
-Enclave_u.c
-Enclave_u.h
-Enclave_t.c
-Enclave_t.h
-/src/enclave/Enclave/key.cpp
-/src/enclave/main
 hs_err_pid*.log
 
 # Opaque generated data
