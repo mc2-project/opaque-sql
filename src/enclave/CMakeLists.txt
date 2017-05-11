@@ -13,12 +13,12 @@ include_directories("$ENV{SGX_SDK}/include")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-  link_directories("$ENV{SGX_SDK}/lib")
+  set(CMAKE_LIBRARY_PATH "${CMAKE_LIBRARY_PATH} $ENV{SGX_SDK}/lib")
   set(SGX_ENCLAVE_SIGNER "$ENV{SGX_SDK}/bin/x86/sgx_sign")
   set(SGX_EDGER8R "$ENV{SGX_SDK}/bin/x86/sgx_edger8r")
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
-  link_directories("$ENV{SGX_SDK}/lib64")
+  set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "$ENV{SGX_SDK}/lib64")
   set(SGX_ENCLAVE_SIGNER "$ENV{SGX_SDK}/bin/x64/sgx_sign")
   set(SGX_EDGER8R "$ENV{SGX_SDK}/bin/x64/sgx_edger8r")
 endif()
@@ -30,7 +30,5 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} -O2 -DPERF")
 
 add_subdirectory(App)
-
 add_subdirectory(Enclave)
-
 add_subdirectory(ServiceProvider)
