@@ -1,0 +1,34 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(OpaqueEnclave)
+
+include_directories(App)
+include_directories(Include)
+include_directories(Common)
+include_directories(Enclave)
+include_directories(ServiceProvider)
+include_directories(../../target/flatbuffers/flatbuffers-1.6.0/include)
+include_directories(../../target/scala-2.11/src_managed/flatbuffers/gen-cpp)
+include_directories("$ENV{SGX_SDK}/include")
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  link_directories("$ENV{SGX_SDK}/lib")
+  set(SGX_ENCLAVE_SIGNER "$ENV{SGX_SDK}/bin/x86/sgx_sign")
+  set(SGX_EDGER8R "$ENV{SGX_SDK}/bin/x86/sgx_edger8r")
+else()
+  link_directories("$ENV{SGX_SDK}/lib64")
+  set(SGX_ENCLAVE_SIGNER "$ENV{SGX_SDK}/bin/x64/sgx_sign")
+  set(SGX_EDGER8R "$ENV{SGX_SDK}/bin/x64/sgx_edger8r")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} -O2 -DPERF")
+
+add_subdirectory(App)
+
+add_subdirectory(Enclave)
+
+add_subdirectory(ServiceProvider)
