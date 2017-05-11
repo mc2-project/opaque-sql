@@ -38,8 +38,10 @@ class SGXEnclave extends java.io.Serializable {
     boundaries: Array[Byte]): Array[Array[Byte]]
   @native def ExternalSort(eid: Long, order: Array[Byte], input: Array[Byte]): Array[Byte]
 
+  @native def ScanCollectLastPrimary(
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte]): Array[Byte]
   @native def NonObliviousSortMergeJoin(
-    eid: Long, joinExpr: Array[Byte], rows: Array[Byte]): Array[Byte]
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
   // Remote attestation, enclave side
   @native def RemoteAttestation0(): Array[Byte]

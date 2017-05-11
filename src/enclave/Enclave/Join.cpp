@@ -3,24 +3,45 @@
 #include "ExpressionEvaluation.h"
 #include "common.h"
 
-void non_oblivious_sort_merge_join(
+void scan_collect_last_primary(
   uint8_t *join_expr, size_t join_expr_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **output_rows, size_t *output_rows_length) {
 
-  flatbuffers::Verifier v(join_expr, join_expr_length);
-  check(v.VerifyBuffer<tuix::FilterExpr>(nullptr),
-        "Corrupt JoinExpr %p of length %d\n", join_expr, join_expr_length);
-
-  const tuix::JoinExpr* join_expr_deser = flatbuffers::GetRoot<tuix::JoinExpr>(join_expr);
-  FlatbuffersJoinExprEvaluator join_expr_eval(join_expr_deser);
-  check(join_expr_deser->join_type() == tuix::JoinType_Inner,
-    "Only inner join is currently supported\n");
-
+  FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  const tuix::Row *last_primary = nullptr;
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+    if (join_expr_eval.is_primary(row)) {
+      last_primary = row;
+    }
+  }
+
+  FlatbuffersRowWriter w;
+  if (last_primary != nullptr) {
+    w.write(last_primary);
+  }
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+}
+
+void non_oblivious_sort_merge_join(
+  uint8_t *join_expr, size_t join_expr_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t *join_row, size_t join_row_length,
+  uint8_t **output_rows, size_t *output_rows_length) {
+
+  FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  EncryptedBlocksToRowReader j(join_row, join_row_length);
   FlatbuffersRowWriter w;
 
-  const tuix::Row *primary = nullptr;
+  check(j.num_rows() <= 1,
+        "Incorrect number of join rows passed: expected 0 or 1, got %d\n", j.num_rows());
+  const tuix::Row *primary = j.has_next() ? j.next() : nullptr;
+
   while (r.has_next()) {
     const tuix::Row *current = r.next();
 

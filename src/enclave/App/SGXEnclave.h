@@ -38,8 +38,12 @@ extern "C" {
     JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
-  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
     JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
     JNIEnv *, jobject);

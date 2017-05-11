@@ -453,8 +453,14 @@ private:
 
 class FlatbuffersJoinExprEvaluator {
 public:
-  FlatbuffersJoinExprEvaluator(const tuix::JoinExpr *join_expr)
+  FlatbuffersJoinExprEvaluator(uint8_t *buf, size_t len)
     : builder() {
+    flatbuffers::Verifier v(buf, len);
+    check(v.VerifyBuffer<tuix::JoinExpr>(nullptr),
+          "Corrupt JoinExpr %p of length %d\n", buf, len);
+
+    const tuix::JoinExpr* join_expr = flatbuffers::GetRoot<tuix::JoinExpr>(buf);
+
     check(join_expr->left_keys()->size() == join_expr->right_keys()->size(),
           "Mismatched join key lengths\n");
     for (auto key_it = join_expr->left_keys()->begin();

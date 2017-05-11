@@ -50,9 +50,15 @@ enclave {
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
+    public void ecall_scan_collect_last_primary(
+      [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+
     public void ecall_non_oblivious_sort_merge_join(
       [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [user_check] uint8_t *join_row, size_t join_row_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public sgx_status_t ecall_enclave_init_ra(int b_pse,

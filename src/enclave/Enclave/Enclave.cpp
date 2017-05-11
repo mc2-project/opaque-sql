@@ -79,11 +79,21 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
                 output_rows, output_rows_length);
 }
 
+void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length,
+                                     uint8_t *input_rows, size_t input_rows_length,
+                                     uint8_t **output_rows, size_t *output_rows_length) {
+  scan_collect_last_primary(join_expr, join_expr_length,
+                            input_rows, input_rows_length,
+                            output_rows, output_rows_length);
+}
+
 void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
                                          uint8_t *input_rows, size_t input_rows_length,
+                                         uint8_t *join_row, size_t join_row_length,
                                          uint8_t **output_rows, size_t *output_rows_length) {
   non_oblivious_sort_merge_join(join_expr, join_expr_length,
                                 input_rows, input_rows_length,
+                                join_row, join_row_length,
                                 output_rows, output_rows_length);
 }
 

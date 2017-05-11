@@ -550,4 +550,12 @@ object Utils {
         }.toArray)))
     Block(builder.sizedByteArray())
   }
+
+  def emptyBlock: Block = {
+    val builder = new FlatBufferBuilder
+    builder.finish(
+      tuix.EncryptedBlocks.createEncryptedBlocks(
+        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty)))
+    Block(builder.sizedByteArray())
+  }
 }

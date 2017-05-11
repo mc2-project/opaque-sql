@@ -266,9 +266,24 @@ case class EncryptedSortMergeJoinExec(
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 
-    val joined = childRDD.map { block =>
+    val lastPrimaryRows = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
+      Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
+    }.collect
+    val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+    assert(shifted.size == childRDD.partitions.length)
+    val processedJoinRowsRDD =
+      sparkContext.parallelize(shifted, childRDD.partitions.length)
+
+    val joined = childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
+      val block = blockIter.next()
+      assert(!blockIter.hasNext)
+      val joinRow = joinRowIter.next()
+      assert(!joinRowIter.hasNext)
+
+      val (enclave, eid) = Utils.initEnclave()
+      Iterator(Block(enclave.NonObliviousSortMergeJoin(
+        eid, joinExprSer, block.bytes, joinRow.bytes)))
     }
     Utils.ensureCached(joined)
     time("join") { joined.count }
