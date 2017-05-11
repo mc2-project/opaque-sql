@@ -2,10 +2,20 @@ cmake_minimum_required(VERSION 2.8)
 
 project(OpaqueEnclaveTrusted)
 
-file(GLOB SOURCES "*.cpp")
-set(SOURCES ${SOURCES}
+set(SOURCES
+  Aggregate.cpp
+  Crypto.cpp
+  Enclave.cpp
+  Filter.cpp
+  Flatbuffers.cpp
+  Join.cpp
+  Project.cpp
+  Sort.cpp
+  isv_enclave.cpp
+  sgxaes.cpp
+  sgxaes_asm.o
+  util.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/sgxaes_asm.o
   ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
 add_custom_command(

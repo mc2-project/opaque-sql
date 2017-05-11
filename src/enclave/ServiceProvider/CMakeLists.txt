@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 
 project(OpaqueKeyGen)
 
-file(GLOB SOURCES "*.cpp")
+set(SOURCES
+  Main.cpp
+  ecp.cpp
+  ias_ra.cpp
+  service_provider.cpp
+  sp_crypto.cpp)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")

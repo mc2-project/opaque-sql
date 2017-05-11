@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(OpaqueEnclaveJNI)
 
-file(GLOB SOURCES "*.cpp")
-set(SOURCES ${SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
+set(SOURCES
+  App.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
 add_custom_command(
   COMMAND ${SGX_EDGER8R} --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include"

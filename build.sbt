@@ -102,7 +102,8 @@ compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((baseDirectory.value / "src/enclave") ** "*").get
+  ((baseDirectory.value / "src/enclave") ** (
+    ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
