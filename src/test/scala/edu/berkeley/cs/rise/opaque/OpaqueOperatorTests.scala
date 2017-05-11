@@ -211,11 +211,11 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   override def numPartitions = 1
 }
 
-// class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
-//   override val spark = SparkSession.builder()
-//     .master("local[3]")
-//     .appName("QEDSuite")
-//     .getOrCreate()
+class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
+  override val spark = SparkSession.builder()
+    .master("local[3]")
+    .appName("QEDSuite")
+    .getOrCreate()
 
-//   override def numPartitions = 3
-// }
+  override def numPartitions = 3
+}
