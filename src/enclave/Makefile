@@ -49,7 +49,7 @@ endif
 App_Cpp_Files := App/App.cpp $(wildcard App/TrustedLibrary/*.cpp)
 App_Include_Paths := \
 	-IInclude -IApp -ICommon -IServiceProvider \
-	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
+	-I../../target/flatbuffers/flatbuffers-1.6.0/include \
 	-I../../target/scala-2.11/src_managed/flatbuffers/gen-cpp \
 	-I$(SGX_SDK)/include
 
@@ -108,7 +108,7 @@ Enclave_Cpp_Files := \
 	Enclave/util.cpp
 Enclave_Include_Paths := \
 	-IInclude -IEnclave -ICommon \
-	-I../../target/flatbuffers/flatbuffers-1.4.0/include \
+	-I../../target/flatbuffers/flatbuffers-1.6.0/include \
 	-I../../target/scala-2.11/src_managed/flatbuffers/gen-cpp \
 	-I$(SGX_SDK)/include/stlport \
 	-I$(SGX_SDK)/include \

@@ -28,7 +28,7 @@ javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:
 val fetchFlatbuffersLibTask = TaskKey[File](
   "fetchFlatbuffersLib", "Fetches and builds the Flatbuffers library, returning its location.")
 
-val flatbuffersVersion = "1.4.0"
+val flatbuffersVersion = "1.6.0"
 
 fetchFlatbuffersLibTask := {
   val flatbuffersSource = target.value / "flatbuffers" / s"flatbuffers-$flatbuffersVersion"
