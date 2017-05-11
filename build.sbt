@@ -67,11 +67,22 @@ buildFlatbuffersTask := {
   val javaOutDir = sourceManaged.value / "flatbuffers" / "gen-java"
 
   val flatbuffers = ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get
-  for (file <- flatbuffers) {
-    streams.value.log.info(s"Generating flatbuffers for ${file}")
-    if (Seq(flatc.getPath, "--cpp", "-o", cppOutDir.getPath, file.getPath).! != 0
-      || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, file.getPath).! != 0) {
-      sys.error("Flatbuffers build failed.")
+  // Only regenerate Flatbuffers headers if any .fbs file changed, indicated by its last
+  // modification time being newer than some generated header. We do this because regenerating
+  // Flatbuffers headers causes a full enclave rebuild, which is slow.
+  val fbsChanges = for {
+    gen <- ((cppOutDir ** "*.h") +++ (javaOutDir ** "*.java")).get
+    fbs <- flatbuffers
+    if fbs.lastModified > gen.lastModified
+  } yield (fbs, gen)
+
+  if (fbsChanges.nonEmpty) {
+    for (fbs <- flatbuffers) {
+      streams.value.log.info(s"Generating flatbuffers for ${fbs}")
+      if (Seq(flatc.getPath, "--cpp", "-o", cppOutDir.getPath, fbs.getPath).! != 0
+        || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0) {
+        sys.error("Flatbuffers build failed.")
+      }
     }
   }
 
