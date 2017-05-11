@@ -48,3 +48,10 @@ endif()
 
 target_link_libraries(enclave.so -Wl,--whole-archive "${Trts_Library_Path}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
   "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${Service_Library_Path}" -Wl,--end-group)
+
+add_custom_command(
+  COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave.so> -out libenclave.signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
+  DEPENDS enclave.so ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
+  OUTPUT libenclave.signed.so)
+
+add_custom_target(signed_enclave ALL DEPENDS libenclave.signed.so)
