@@ -44,7 +44,12 @@ fetchFlatbuffersLibTask := {
     // Build flatbuffers with cmake
     import sys.process._
     streams.value.log.info(s"Building Flatbuffers")
-    if (Process(Seq("cmake", "-G", "Unix Makefiles"), flatbuffersSource).! != 0
+    if (Process(Seq(
+      "cmake", "-G", "Unix Makefiles",
+      "-DFLATBUFFERS_BUILD_TESTS=OFF",
+      "-DFLATBUFFERS_BUILD_FLATLIB=OFF",
+      "-DFLATBUFFERS_BUILD_FLATHASH=OFF",
+      "-DFLATBUFFERS_BUILD_FLATC=ON"), flatbuffersSource).! != 0
       || Process(Seq("make"), flatbuffersSource).! != 0) {
       sys.error("Flatbuffers library build failed.")
     }
