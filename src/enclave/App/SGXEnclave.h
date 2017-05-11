@@ -6,7 +6,7 @@
 extern "C" {
 #endif
   JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave(
-    JNIEnv *, jobject);
+    JNIEnv *, jobject, jstring);
 
   JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
     JNIEnv *, jobject, jlong);

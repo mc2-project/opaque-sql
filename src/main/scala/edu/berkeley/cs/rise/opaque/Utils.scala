@@ -111,11 +111,24 @@ object Utils {
     result
   }
 
+  def enclaveLibraryPath(): String = {
+    Option(System.getProperty("opaque.enclave.trusted.signed.path")) match {
+      case Some(s) =>
+        if (!new java.io.File(s).exists) {
+          throw new UnsatisfiedLinkError(
+            "Enclave trusted signed library not found. Check opaque.enclave.trusted.signed.path.")
+        }
+        s
+      case None => throw new UnsatisfiedLinkError(
+        "Enclave trusted signed library not specified. Set opaque.enclave.trusted.signed.path.")
+    }
+  }
+
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
-        eid = enclave.StartEnclave()
+        eid = enclave.StartEnclave(enclaveLibraryPath())
         println("Starting an enclave")
         (enclave, eid)
       } else {

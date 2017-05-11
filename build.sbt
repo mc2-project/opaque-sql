@@ -14,21 +14,55 @@ sparkComponents ++= Seq("core", "sql", "catalyst")
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 
+val flatbuffersVersion = "1.6.0"
+
 parallelExecution := false
 
-// This fixes a class loader problem with scala.Tuple2 class, scala-2.11, Spark 2.x
 fork in Test := true
 
 scalacOptions ++= Seq("-g:vars")
 javaOptions ++= Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
-// This and the next line fix a problem with forked run: https://github.com/scalatest/scalatest/issues/770
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:MaxPermSize=384m")
 
-// Flatbuffers library dependency
-val fetchFlatbuffersLibTask = TaskKey[File](
-  "fetchFlatbuffersLib", "Fetches and builds the Flatbuffers library, returning its location.")
+val cppBuildType = SettingKey[BuildType]("cppBuildType", "...description...")
 
-val flatbuffersVersion = "1.6.0"
+cppBuildType := Release
+
+val fetchFlatbuffersLibTask = TaskKey[File]("fetchFlatbuffersLib",
+  "Fetches and builds the Flatbuffers library, returning its location.")
+
+unmanagedSources in Compile ++= ((fetchFlatbuffersLibTask.value / "java") ** "*.java").get
+
+val buildFlatbuffersTask = TaskKey[Seq[File]]("buildFlatbuffers",
+  "Generates Java and C++ sources from Flatbuffers interface files, returning the Java sources.")
+
+sourceGenerators in Compile += buildFlatbuffersTask.taskValue
+
+val enclaveBuildTask = TaskKey[File]("enclaveBuild",
+  "Builds the C++ enclave code, returning the shared library directory.")
+
+baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
+
+compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
+
+javaOptions += "-Djava.library.path=" + enclaveBuildTask.value
+
+javaOptions += "-Dopaque.enclave.trusted.signed.path=" + (
+  enclaveBuildTask.value / "libenclave_trusted_signed.so")
+
+// Watch the enclave C++ files
+watchSources ++=
+  ((sourceDirectory.value / "enclave") ** (
+    ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+
+// Watch the Flatbuffer schemas
+watchSources ++=
+  ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
+
+val synthTestDataTask = TaskKey[Seq[File]]("synthTestData",
+  "Synthesizes test data, returning the generated files.")
+
+resourceGenerators in Test += synthTestDataTask.taskValue
 
 fetchFlatbuffersLibTask := {
   val flatbuffersSource = target.value / "flatbuffers" / s"flatbuffers-$flatbuffersVersion"
@@ -57,11 +91,7 @@ fetchFlatbuffersLibTask := {
   flatbuffersSource
 }
 
-unmanagedSources in Compile ++= ((fetchFlatbuffersLibTask.value / "java") ** "*.java").get
-
 // Flatbuffers header file generation
-val buildFlatbuffersTask = TaskKey[Seq[File]](
-  "buildFlatbuffers", "Generates headers from Flatbuffers interface files.")
 
 buildFlatbuffersTask := {
   import sys.process._
@@ -91,11 +121,6 @@ buildFlatbuffersTask := {
   (javaOutDir ** "*.java").get
 }
 
-sourceGenerators in Compile += buildFlatbuffersTask.taskValue
-
-// Enclave C++ build
-val enclaveBuildTask = TaskKey[Seq[File]]("enclaveBuild", "Builds the C++ enclave code")
-
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
   import sys.process._
@@ -103,35 +128,23 @@ enclaveBuildTask := {
   val enclaveBuildDir = target.value / "enclave"
   enclaveBuildDir.mkdir()
   val cmakeResult =
-    Process(Seq("cmake", "-G", "Unix Makefiles", enclaveSourceDir.getPath), enclaveBuildDir).!
+    Process(Seq(
+      "cmake",
+      s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
+      s"-DCMAKE_BUILD_TYPE=${cppBuildType.value}",
+      enclaveSourceDir.getPath), enclaveBuildDir).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val buildResult = Process(Seq("make"), enclaveBuildDir).!
   if (buildResult != 0) sys.error("C++ build failed.")
-  Seq(enclaveBuildDir / "App", enclaveBuildDir / "ServiceProvider")
+  val installResult = Process(Seq("make", "install"), enclaveBuildDir).!
+  if (installResult != 0) sys.error("C++ build failed.")
+  enclaveBuildDir
 }
-
-baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
-
-compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
-
-javaOptions += "-Djava.library.path=" + enclaveBuildTask.value.mkString(":")
-
-// Watch the enclave C++ files
-watchSources ++=
-  ((baseDirectory.value / "src/enclave") ** (
-    ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
-
-// Watch the Flatbuffer schemas
-watchSources ++=
-  ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get
-
-// Synthesize test data
-val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data")
 
 synthTestDataTask := {
   val diseaseDataFiles =
     for {
-      diseaseDir <- (baseDirectory.value / "data" / "disease").get
+      diseaseDir <- ((resourceManaged in Test).value / "data" / "disease").get
       name <- Seq("disease.csv", "gene.csv", "treatment.csv", "patient-125.csv")
     } yield new File(diseaseDir, name)
   if (!diseaseDataFiles.forall(_.exists)) {
@@ -139,6 +152,5 @@ synthTestDataTask := {
     val ret = Seq("data/disease/synth-disease-data").!
     if (ret != 0) sys.error("Failed to synthesize test data.")
   }
+  diseaseDataFiles
 }
-
-test in Test := { (test in Test).dependsOn(synthTestDataTask).value }

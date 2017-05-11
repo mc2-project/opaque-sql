@@ -21,8 +21,8 @@ import ch.jodersky.jni.nativeLoader
 
 @nativeLoader("enclave_jni")
 class SGXEnclave extends java.io.Serializable {
-  @native def StartEnclave(): Long
-  @native def StopEnclave(enclave_id: Long)
+  @native def StartEnclave(libraryPath: String): Long
+  @native def StopEnclave(enclaveId: Long)
 
   @native def Project(eid: Long, projectList: Array[Byte], input: Array[Byte]): Array[Byte]
 

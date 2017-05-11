@@ -130,6 +130,7 @@ void write_pubkey(const char *filename,
 
   ssize_t write_bytes = write(fd, pub_key_output, offset);
   assert(write_bytes <= output_len && write_bytes > 0);
+  (void)write_bytes;
   close(fd);
 
   free(pub_key_output);

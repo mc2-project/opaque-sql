@@ -28,3 +28,5 @@ if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
 else()
   target_link_libraries(enclave_jni ${URTS_LIB} ${UAE_SERVICE_LIB})
 endif()
+
+install(TARGETS enclave_jni DESTINATION .)

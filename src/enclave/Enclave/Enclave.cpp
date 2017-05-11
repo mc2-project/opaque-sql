@@ -15,6 +15,8 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
                    uint8_t *ciphertext, uint32_t cipher_length) {
   // IV (12 bytes) + ciphertext + mac (16 bytes)
   assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  (void)cipher_length;
+  (void)plaintext_length;
   encrypt(plaintext, plaintext_length, ciphertext);
 }
 
@@ -24,6 +26,8 @@ void ecall_decrypt(uint8_t *ciphertext,
                    uint32_t plaintext_length) {
   // IV (12 bytes) + ciphertext + mac (16 bytes)
   assert(ciphertext_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  (void)ciphertext_length;
+  (void)plaintext_length;
   decrypt(ciphertext, ciphertext_length, plaintext);
 }
 

@@ -10,7 +10,7 @@ include_directories(Enclave)
 include_directories(${CMAKE_BINARY_DIR}/Enclave)
 include_directories(ServiceProvider)
 include_directories(${CMAKE_SOURCE_DIR}/../../target/flatbuffers/flatbuffers-1.6.0/include)
-include_directories(${CMAKE_SOURCE_DIR}/../../target/scala-2.11/src_managed/flatbuffers/gen-cpp)
+include_directories(${CMAKE_SOURCE_DIR}/../../target/src_managed/flatbuffers/gen-cpp)
 include_directories("$ENV{SGX_SDK}/include")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)

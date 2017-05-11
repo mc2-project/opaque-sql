@@ -60,8 +60,9 @@ target_link_libraries(enclave_trusted -Wl,--whole-archive "${Trts_Library_Path}"
   "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${Service_Library_Path}" -Wl,--end-group)
 
 add_custom_command(
-  COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave_trusted> -out libenclave_trusted.signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
+  COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave_trusted> -out libenclave_trusted_signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
-  OUTPUT libenclave_trusted.signed.so)
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so)
+add_custom_target(enclave_trusted_signed_target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so)
 
-add_custom_target(signed_enclave ALL DEPENDS libenclave_trusted.signed.so)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so DESTINATION .)
