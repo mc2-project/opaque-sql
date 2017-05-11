@@ -111,24 +111,48 @@ object Utils {
     result
   }
 
-  def enclaveLibraryPath(): String = {
-    Option(System.getProperty("opaque.enclave.trusted.signed.path")) match {
-      case Some(s) =>
-        if (!new java.io.File(s).exists) {
-          throw new UnsatisfiedLinkError(
-            "Enclave trusted signed library not found. Check opaque.enclave.trusted.signed.path.")
-        }
-        s
-      case None => throw new UnsatisfiedLinkError(
-        "Enclave trusted signed library not specified. Set opaque.enclave.trusted.signed.path.")
+  def findLibraryAsResource(libraryName: String): String = {
+    // Derived from sbt-jni: macros/src/main/scala/ch/jodersky/jni/annotations.scala
+    import java.io.File
+    import java.nio.file.{Files, Path}
+    val lib = System.mapLibraryName(libraryName)
+    val tmp: Path = Files.createTempDirectory("jni-")
+    val plat: String = {
+      val line = try {
+        scala.sys.process.Process("uname -sm").lines.head
+      } catch {
+        case ex: Exception => sys.error("Error running `uname` command")
+      }
+      val parts = line.split(" ")
+      if (parts.length != 2) {
+        sys.error("Could not determine platform: 'uname -sm' returned unexpected string: " + line)
+      } else {
+        val arch = parts(1).toLowerCase.replaceAll("\\s", "")
+        val kernel = parts(0).toLowerCase.replaceAll("\\s", "")
+        arch + "-" + kernel
+      }
     }
+    val resourcePath: String = s"/native/$plat/$lib"
+    val resourceStream = Option(getClass.getResourceAsStream(resourcePath)) match {
+      case Some(s) => s
+      case None => throw new UnsatisfiedLinkError(
+        "Native library " + lib + " (" + resourcePath + ") cannot be found on the classpath.")
+    }
+    val extractedPath = tmp.resolve(lib)
+    try {
+      Files.copy(resourceStream, extractedPath)
+    } catch {
+      case ex: Exception => throw new UnsatisfiedLinkError(
+        "Error while extracting native library: " + ex)
+    }
+    extractedPath.toAbsolutePath.toString
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
-        eid = enclave.StartEnclave(enclaveLibraryPath())
+        eid = enclave.StartEnclave(findLibraryAsResource("enclave_trusted_signed"))
         println("Starting an enclave")
         (enclave, eid)
       } else {

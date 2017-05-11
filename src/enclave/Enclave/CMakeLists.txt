@@ -65,4 +65,4 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so)
 add_custom_target(enclave_trusted_signed_target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so DESTINATION .)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so DESTINATION lib)

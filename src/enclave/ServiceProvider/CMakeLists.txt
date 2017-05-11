@@ -21,4 +21,4 @@ target_link_libraries(ra_jni "${CRYPTO_LIB}" "${SSL_LIB}")
 add_executable(keygen ${SOURCES})
 target_link_libraries(keygen "${CRYPTO_LIB}" "${SSL_LIB}")
 
-install(TARGETS ra_jni DESTINATION .)
+install(TARGETS ra_jni DESTINATION lib)

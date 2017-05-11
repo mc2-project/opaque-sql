@@ -39,16 +39,19 @@ val buildFlatbuffersTask = TaskKey[Seq[File]]("buildFlatbuffers",
 sourceGenerators in Compile += buildFlatbuffersTask.taskValue
 
 val enclaveBuildTask = TaskKey[File]("enclaveBuild",
-  "Builds the C++ enclave code, returning the shared library directory.")
+  "Builds the C++ enclave code, returning the directory containing the resulting shared libraries.")
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
 compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
-javaOptions += "-Djava.library.path=" + enclaveBuildTask.value
+val copyEnclaveLibrariesToResourcesTask = TaskKey[Seq[File]]("copyEnclaveLibrariesToResources",
+  "Copies the enclave libraries to the managed resources directory, returning the copied files.")
 
-javaOptions += "-Dopaque.enclave.trusted.signed.path=" + (
-  enclaveBuildTask.value / "libenclave_trusted_signed.so")
+resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
+
+// Add the managed resource directory to the resource classpath so we can find libraries at runtime
+managedResourceDirectories in Compile += resourceManaged.value
 
 // Watch the enclave C++ files
 watchSources ++=
@@ -121,12 +124,35 @@ buildFlatbuffersTask := {
   (javaOutDir ** "*.java").get
 }
 
+nativePlatform := {
+  try {
+    val lines = Process("uname -sm").lines
+    if (lines.length == 0) {
+      sys.error("Error occured trying to run `uname`")
+    }
+    // uname -sm returns "<kernel> <hardware name>"
+    val parts = lines.head.split(" ")
+    if (parts.length != 2) {
+      sys.error("'uname -sm' returned unexpected string: " + lines.head)
+    } else {
+      val arch = parts(1).toLowerCase.replaceAll("\\s", "")
+      val kernel = parts(0).toLowerCase.replaceAll("\\s", "")
+      arch + "-" + kernel
+    }
+  } catch {
+    case ex: Exception =>
+      sLog.value.error("Error trying to determine platform.")
+      sLog.value.warn("Cannot determine platform! It will be set to 'unknown'.")
+      "unknown-unknown"
+  }
+}
+
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
   import sys.process._
   val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
   val enclaveBuildDir = target.value / "enclave"
-  enclaveBuildDir.mkdir()
+  enclaveBuildDir.mkdirs()
   val cmakeResult =
     Process(Seq(
       "cmake",
@@ -138,7 +164,20 @@ enclaveBuildTask := {
   if (buildResult != 0) sys.error("C++ build failed.")
   val installResult = Process(Seq("make", "install"), enclaveBuildDir).!
   if (installResult != 0) sys.error("C++ build failed.")
-  enclaveBuildDir
+  enclaveBuildDir / "lib"
+}
+
+copyEnclaveLibrariesToResourcesTask := {
+  val libraries = (enclaveBuildTask.value ** "*.so").get
+  val mappings: Seq[(File, String)] =
+    libraries pair rebase(enclaveBuildTask.value, s"/native/${nativePlatform.value}")
+  val resources: Seq[File] = for ((file, path) <- mappings) yield {
+    val resource = resourceManaged.value / path
+    streams.value.log.info(s"Copy $file to $resource")
+    IO.copyFile(file, resource)
+    resource
+  }
+  resources
 }
 
 synthTestDataTask := {

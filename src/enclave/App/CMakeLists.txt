@@ -29,4 +29,4 @@ else()
   target_link_libraries(enclave_jni ${URTS_LIB} ${UAE_SERVICE_LIB})
 endif()
 
-install(TARGETS enclave_jni DESTINATION .)
+install(TARGETS enclave_jni DESTINATION lib)
