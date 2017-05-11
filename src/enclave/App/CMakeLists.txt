@@ -13,7 +13,7 @@ add_custom_command(
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
 
-add_library(libSGXEnclave.so SHARED ${SOURCES})
+add_library(enclave_jni SHARED ${SOURCES})
 
 find_library(UKEY_EXCHANGE_LIB sgx_ukey_exchange)
 find_library(URTS_LIB sgx_urts)
@@ -21,9 +21,9 @@ find_library(URTS_SIM_LIB sgx_urts_sim)
 find_library(UAE_SERVICE_LIB sgx_uae_service)
 find_library(UAE_SERVICE_SIM_LIB sgx_uae_service_sim)
 
-target_link_libraries(libSGXEnclave.so ${UKEY_EXCHANGE_LIB} pthread)
+target_link_libraries(enclave_jni ${UKEY_EXCHANGE_LIB} pthread)
 if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
-  target_link_libraries(libSGXEnclave.so ${URTS_SIM_LIB} ${UAE_SERVICE_SIM_LIB})
+  target_link_libraries(enclave_jni ${URTS_SIM_LIB} ${UAE_SERVICE_SIM_LIB})
 else()
-  target_link_libraries(libSGXEnclave.so ${URTS_LIB} ${UAE_SERVICE_LIB})
+  target_link_libraries(enclave_jni ${URTS_LIB} ${UAE_SERVICE_LIB})
 endif()

@@ -86,17 +86,14 @@ val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave cod
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
   import sys.process._
-  val ret = Seq("src/enclave/build.sh").!
-  if (ret != 0) sys.error("C++ build failed.")
-  IO.copyFile(
-    baseDirectory.value / "src" / "enclave" / "libSGXEnclave.so",
-    baseDirectory.value / "libSGXEnclave.so")
-  IO.copyFile(
-    baseDirectory.value / "src" / "enclave" / "enclave.signed.so",
-    baseDirectory.value / "enclave.signed.so")
-  IO.copyFile(
-    baseDirectory.value / "src" / "enclave" / "libservice_provider.so",
-    baseDirectory.value / "libservice_provider.so")
+  val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
+  val enclaveBuildDir = target.value / "enclave"
+  enclaveBuildDir.mkdir()
+  val cmakeResult =
+    Process(Seq("cmake", "-G", "Unix Makefiles", enclaveSourceDir.getPath), enclaveBuildDir).!
+  if (cmakeResult != 0) sys.error("C++ build failed.")
+  val buildResult = Process(Seq("make"), enclaveBuildDir).!
+  if (buildResult != 0) sys.error("C++ build failed.")
 }
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
@@ -105,10 +102,7 @@ compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((baseDirectory.value / "src/enclave") ** (("*.cpp" || "*.h" || "*.tcc" || "*.edl")
-      -- "Enclave_u.h"
-      -- "Enclave_t.h"
-      -- "key.cpp")).get
+  ((baseDirectory.value / "src/enclave") ** "*").get
 
 // Watch the Flatbuffer schemas
 watchSources ++=

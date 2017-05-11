@@ -14,8 +14,8 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
 
 add_custom_command(
-  COMMAND ../ServiceProvider/main ${CMAKE_CURRENT_BINARY_DIR}/key.cpp
-  DEPENDS ../ServiceProvider/main
+  COMMAND ../ServiceProvider/keygen ${CMAKE_CURRENT_BINARY_DIR}/key.cpp
+  DEPENDS ../ServiceProvider/keygen
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
 include_directories(SYSTEM "$ENV{SGX_SDK}/include/stlport")
@@ -25,9 +25,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0 -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/Enclave.lds")
 
-add_library(enclave.so SHARED ${SOURCES})
-set_property(TARGET enclave.so PROPERTY POSITION_INDEPENDENT_CODE OFF)
-set_target_properties(enclave.so PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
+add_library(enclave_trusted SHARED ${SOURCES})
+set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
+set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
 
 find_library(TRTS_LIB sgx_trts)
 find_library(TRTS_SIM_LIB sgx_trts_sim)
@@ -46,12 +46,12 @@ else()
   set(Service_Library_Path "${SERVICE_LIB}")
 endif()
 
-target_link_libraries(enclave.so -Wl,--whole-archive "${Trts_Library_Path}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
+target_link_libraries(enclave_trusted -Wl,--whole-archive "${Trts_Library_Path}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
   "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${Service_Library_Path}" -Wl,--end-group)
 
 add_custom_command(
-  COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave.so> -out libenclave.signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
-  DEPENDS enclave.so ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
-  OUTPUT libenclave.signed.so)
+  COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave_trusted> -out libenclave_trusted.signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
+  DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml
+  OUTPUT libenclave_trusted.signed.so)
 
-add_custom_target(signed_enclave ALL DEPENDS libenclave.signed.so)
+add_custom_target(signed_enclave ALL DEPENDS libenclave_trusted.signed.so)
