@@ -64,7 +64,7 @@ private:
 
 class EncryptedBlockToRowReader {
 public:
-  EncryptedBlockToRowReader() {}
+  EncryptedBlockToRowReader() : initialized(false) {}
 
   void reset(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v(buf, len);
@@ -79,7 +79,7 @@ public:
   }
 
   bool has_next() {
-    return row_idx < rows->rows()->size();
+    return initialized && row_idx < rows->rows()->size();
   }
 
   const tuix::Row *next() {
@@ -112,11 +112,13 @@ private:
           num_rows == rows->rows()->size());
 
     row_idx = 0;
+    initialized = true;
   }
 
   std::unique_ptr<uint8_t> rows_buf;
   const tuix::Rows *rows;
   uint32_t row_idx;
+  bool initialized;
 };
 
 class EncryptedBlocksToRowReader {
