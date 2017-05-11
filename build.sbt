@@ -94,7 +94,7 @@ buildFlatbuffersTask := {
 sourceGenerators in Compile += buildFlatbuffersTask.taskValue
 
 // Enclave C++ build
-val enclaveBuildTask = TaskKey[Unit]("enclaveBuild", "Builds the C++ enclave code")
+val enclaveBuildTask = TaskKey[Seq[File]]("enclaveBuild", "Builds the C++ enclave code")
 
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
@@ -107,11 +107,14 @@ enclaveBuildTask := {
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val buildResult = Process(Seq("make"), enclaveBuildDir).!
   if (buildResult != 0) sys.error("C++ build failed.")
+  Seq(enclaveBuildDir / "App", enclaveBuildDir / "ServiceProvider")
 }
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
 compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
+
+javaOptions += "-Djava.library.path=" + enclaveBuildTask.value.mkString(":")
 
 // Watch the enclave C++ files
 watchSources ++=

@@ -114,10 +114,6 @@ object Utils {
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
-        if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
-          throw new Exception("Set LIBSGXENCLAVE_PATH")
-        }
-        System.load(System.getenv("LIBSGXENCLAVE_PATH"))
         val enclave = new SGXEnclave()
         eid = enclave.StartEnclave()
         println("Starting an enclave")

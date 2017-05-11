@@ -50,11 +50,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
     ```sh
     source sgxsdk/environment # from SGX SDK install directory in step 1
-    export CXX=/usr/bin/g++-4.8
     export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
-    export LIBSGXENCLAVE_PATH=${OPAQUE_HOME}/target/enclave/App/libenclave_jni.so
-    export LIBENCLAVESIGNED_PATH=${OPAQUE_HOME}/target/enclave/Enclave/libenclave_trusted.signed.so
-    export LIBSGX_SP_PATH=${OPAQUE_HOME}/target/enclave/ServiceProvider/libservice_provider.so
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 

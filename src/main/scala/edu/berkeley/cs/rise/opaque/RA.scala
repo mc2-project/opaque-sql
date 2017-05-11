@@ -44,21 +44,6 @@ import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
 object RA {
 
-  def loadLibrary() = {
-    if (System.getenv("LIBSGXENCLAVE_PATH") == null) {
-      throw new Exception("Set LIBSGXENCLAVE_PATH")
-    }
-    System.load(System.getenv("LIBSGXENCLAVE_PATH"))
-  }
-
-  def loadMasterLibrary() = {
-    if (System.getenv("LIBSGX_SP_PATH") == null) {
-      throw new Exception("Set LIBSGX_SP_PATH")
-    }
-    System.load(System.getenv("LIBSGX_SP_PATH"))
-
-  }
-
   def getIP(): String = {
     val localhost = InetAddress.getLocalHost
     val ipAddr = localhost.getHostAddress
@@ -66,7 +51,6 @@ object RA {
   }
 
   def getEPID(data: Iterator[_]): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
-    loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
       //println("synchronized getEPID")
@@ -83,7 +67,6 @@ object RA {
   }
 
   def getMsg1(index: Int, data: Iterator[_]): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
-    loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
       //println("getMsg1")
@@ -103,7 +86,6 @@ object RA {
   }
 
   def getMsg3(index: Int, data: Iterator[_], msg2: Array[Byte], inputIPAddr: String): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
-    loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
       //println("synchronized getMsg3 called")
@@ -121,7 +103,6 @@ object RA {
   }
 
   def finalAttest(index: Int, data: Iterator[_], attestResult:Array[Byte], inputIPAddr: String): Iterator[Boolean]= {
-    loadLibrary()
     val ipAddr = getIP()
     this.synchronized {
       //println(s"synchronized finalAttest called ${Utils.attested}")
@@ -144,9 +125,6 @@ object RA {
 
     // numPartitions = number of machines
     val numPartitions = data.getNumPartitions
-
-    loadLibrary()
-    loadMasterLibrary()
 
     val master = new SP()
     val enclave = new SGXEnclave()

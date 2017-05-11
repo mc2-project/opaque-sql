@@ -17,8 +17,9 @@
 
 package edu.berkeley.cs.rise.opaque.execution
 
-class MutableInteger(var value: Int = 0)
+import ch.jodersky.jni.nativeLoader
 
+@nativeLoader("enclave_jni")
 class SGXEnclave extends java.io.Serializable {
   @native def StartEnclave(): Long
   @native def StopEnclave(enclave_id: Long)

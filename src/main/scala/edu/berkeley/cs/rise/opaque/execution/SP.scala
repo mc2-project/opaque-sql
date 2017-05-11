@@ -17,6 +17,9 @@
 
 package edu.berkeley.cs.rise.opaque.execution
 
+import ch.jodersky.jni.nativeLoader
+
+@nativeLoader("ra_jni")
 class SP extends java.io.Serializable {
   // Remote attestation, master side
   @native def SPProcMsg0(msg0Input: Array[Byte])
