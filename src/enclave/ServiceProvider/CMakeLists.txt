@@ -5,6 +5,7 @@ project(OpaqueKeyGen)
 file(GLOB SOURCES "*.cpp")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 add_library(libservice_provider.so SHARED ${SOURCES})
 
