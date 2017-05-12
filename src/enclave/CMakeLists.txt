@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(OpaqueEnclave)
 
+option(FLATBUFFERS_LIB_DIR "Location of Flatbuffers library headers.")
+option(FLATBUFFERS_GEN_CPP_DIR "Location of Flatbuffers generated C++ files.")
+
 include_directories(App)
 include_directories(${CMAKE_BINARY_DIR}/App)
 include_directories(Include)
@@ -9,8 +12,8 @@ include_directories(Common)
 include_directories(Enclave)
 include_directories(${CMAKE_BINARY_DIR}/Enclave)
 include_directories(ServiceProvider)
-include_directories(${CMAKE_SOURCE_DIR}/../../target/flatbuffers/flatbuffers-1.6.0/include)
-include_directories(${CMAKE_SOURCE_DIR}/../../target/src_managed/flatbuffers/gen-cpp)
+include_directories(${FLATBUFFERS_LIB_DIR})
+include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories("$ENV{SGX_SDK}/include")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)

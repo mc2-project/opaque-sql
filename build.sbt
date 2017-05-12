@@ -24,6 +24,11 @@ scalacOptions ++= Seq("-g:vars")
 javaOptions ++= Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:MaxPermSize=384m")
 
+val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
+  "Location of Flatbuffers generated C++ files.")
+
+flatbuffersGenCppDir := sourceManaged.value / "flatbuffers" / "gen-cpp"
+
 val cppBuildType = SettingKey[BuildType]("cppBuildType", "...description...")
 
 cppBuildType := Release
@@ -101,20 +106,19 @@ buildFlatbuffersTask := {
 
   val flatc = fetchFlatbuffersLibTask.value / "flatc"
 
-  val cppOutDir = sourceManaged.value / "flatbuffers" / "gen-cpp"
   val javaOutDir = sourceManaged.value / "flatbuffers" / "gen-java"
 
-  val flatbuffers = ((baseDirectory.value / "src/flatbuffers") ** "*.fbs").get
+  val flatbuffers = ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
   // Only regenerate Flatbuffers headers if any .fbs file changed, indicated by their latest
   // modification time being newer than all generated headers. We do this because regenerating
   // Flatbuffers headers causes a full enclave rebuild, which is slow.
   val fbsLastMod = flatbuffers.map(_.lastModified).max
-  val gen = (cppOutDir +++ javaOutDir).get
+  val gen = (flatbuffersGenCppDir.value +++ javaOutDir).get
 
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
-      if (Seq(flatc.getPath, "--cpp", "-o", cppOutDir.getPath, fbs.getPath).! != 0
+      if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
         || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0) {
         sys.error("Flatbuffers build failed.")
       }
@@ -158,6 +162,8 @@ enclaveBuildTask := {
       "cmake",
       s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
       s"-DCMAKE_BUILD_TYPE=${cppBuildType.value}",
+      s"-DFLATBUFFERS_LIB_DIR=${(fetchFlatbuffersLibTask.value / "include").getPath}",
+      s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
       enclaveSourceDir.getPath), enclaveBuildDir).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val buildResult = Process(Seq("make"), enclaveBuildDir).!
@@ -173,7 +179,6 @@ copyEnclaveLibrariesToResourcesTask := {
     libraries pair rebase(enclaveBuildTask.value, s"/native/${nativePlatform.value}")
   val resources: Seq[File] = for ((file, path) <- mappings) yield {
     val resource = resourceManaged.value / path
-    streams.value.log.info(s"Copy $file to $resource")
     IO.copyFile(file, resource)
     resource
   }

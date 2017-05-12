@@ -19,7 +19,4 @@ before_install:
   - source sgxsdk/environment
   - openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
   - export SPARKSGX_DATA_DIR=$PWD/data
-  - export LIBSGXENCLAVE_PATH=$PWD/target/enclave/App/libenclave_jni.so
-  - export LIBENCLAVESIGNED_PATH=$PWD/target/enclave/Enclave/libenclave_trusted.signed.so
-  - export LIBSGX_SP_PATH=$PWD/target/enclave/ServiceProvider/libservice_provider.so
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
