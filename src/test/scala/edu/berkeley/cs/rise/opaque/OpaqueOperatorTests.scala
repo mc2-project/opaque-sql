@@ -108,10 +108,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("filter") { securityLevel =>
-    val data = for (i <- 0 until 5) yield ("foo", i)
-    val words = makeDF(data, securityLevel, "word", "count")
-
-    words.select($"word", $"count" + 1).collect
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.filter($"x" > lit(10)).collect
   }
 
   def abc(i: Int): String = (i % 3) match {
@@ -148,6 +149,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.sort($"x").collect
   }
 
+  testAgainstSpark("sort by string") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"str").collect
+  }
+
+  testAgainstSpark("sort by 2 columns") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x / 16, x)).toSeq)
+    val df = makeDF(data, securityLevel, "x", "y")
+    df.sort($"x", $"y").collect
+  }
+
+  testAgainstSpark("union") { securityLevel =>
+    val df1 = makeDF(
+      (1 to 20).map(x => (x, x.toString)).reverse,
+      securityLevel,
+      "a", "b")
+    val df2 = makeDF(
+      (1 to 20).map(x => (x, (x + 1).toString)),
+      securityLevel,
+      "a", "b")
+    df1.union(df2).collect.toSet
+  }
+
   testAgainstSpark("join") { securityLevel =>
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
@@ -168,6 +193,19 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val df = makeDF(data, securityLevel, "str", "x")
     df.select($"str").collect
+  }
+
+  testAgainstSpark("select with expressions") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello world!", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.select(
+      $"x" + $"x" * $"x" - $"x",
+      substring($"b", 5, 20),
+      $"x" > $"x",
+      $"x" >= $"x",
+      $"x" <= $"x").collect.toSet
   }
 
   // testOpaqueOnly("cache") { securityLevel =>

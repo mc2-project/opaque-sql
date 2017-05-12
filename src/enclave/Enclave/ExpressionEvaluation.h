@@ -305,19 +305,37 @@ private:
         auto str_field = static_cast<const tuix::StringField *>(str->value());
         auto pos_val = static_cast<const tuix::IntegerField *>(pos->value())->value();
         auto len_val = static_cast<const tuix::IntegerField *>(len->value())->value();
-        auto start_idx = std::min(static_cast<uint32_t>(pos_val), str_field->length());
-        auto end_idx = std::min(start_idx + len_val, str_field->length());
+
+        // Note that the pos argument of SQL substring is 1-indexed. This logic mirrors that of
+        // Spark's common/unsafe/src/main/java/org/apache/spark/unsafe/types/ByteArray.java.
         // TODO: oblivious string lengths
+        int32_t start = 0;
+        int32_t end;
+        if (pos_val > 0) {
+          start = pos_val - 1;
+        } else if (pos_val < 0) {
+          start = str_field->length() + pos_val;
+        }
+        if ((static_cast<int32_t>(str_field->length()) - start) < len_val) {
+          end = str_field->length();
+        } else {
+          end = start + len_val;
+        }
+        start = std::max(start, 0);
+        if (start > end) {
+          start = end;
+        }
         std::vector<uint8_t> substring(
           flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
-                                                        start_idx),
+                                                        static_cast<uint32_t>(start)),
           flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
-                                                        end_idx));
+                                                        static_cast<uint32_t>(end)));
         // Writing the result invalidates the str, pos, len temporary pointers
         return tuix::CreateField(
           builder,
           tuix::FieldUnion_StringField,
-          tuix::CreateStringFieldDirect(builder, &substring, end_idx - start_idx).Union(),
+          tuix::CreateStringFieldDirect(
+            builder, &substring, static_cast<uint32_t>(end - start)).Union(),
           result_is_null);
       } else {
         // Writing the result invalidates the str, pos, len temporary pointers

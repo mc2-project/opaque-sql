@@ -5,6 +5,10 @@ project(OpaqueEnclave)
 option(FLATBUFFERS_LIB_DIR "Location of Flatbuffers library headers.")
 option(FLATBUFFERS_GEN_CPP_DIR "Location of Flatbuffers generated C++ files.")
 
+if(NOT DEFINED ENV{SGX_SDK})
+  message(FATAL_ERROR "$SGX_SDK environment variable must be set.")
+endif()
+
 include_directories(App)
 include_directories(${CMAKE_BINARY_DIR}/App)
 include_directories(Include)

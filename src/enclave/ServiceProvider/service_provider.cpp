@@ -143,7 +143,8 @@ int read_secret_key(const char *filename,
   int ret = 0;
   FILE *secret_key_file = fopen(filename, "r");
   check(secret_key_file != nullptr,
-        "Private key file '%s' does not exist. Check $PRIVATE_KEY_PATH.\n", filename);
+        "Error: Private key file '%s' does not exist. Set environment variable "
+        "$PRIVATE_KEY_PATH.\n", filename);
   EVP_PKEY *pkey = PEM_read_PrivateKey(secret_key_file, NULL, NULL, NULL);
   if (pkey == NULL) {
     printf("[read_secret_key] returned private key is null\n");
