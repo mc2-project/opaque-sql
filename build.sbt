@@ -22,7 +22,7 @@ fork in Test := true
 
 scalacOptions ++= Seq("-g:vars")
 javaOptions ++= Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
-javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-XX:MaxPermSize=384m")
+javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 
 val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
   "Location of Flatbuffers generated C++ files.")

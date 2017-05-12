@@ -1,6 +1,4 @@
 language: scala
-scala:
-- 2.11.8
 
 os: linux
 dist: trusty
@@ -20,3 +18,5 @@ before_install:
   - openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
   - export SPARKSGX_DATA_DIR=$PWD/data
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
+
+script: sbt 'set ivyLoggingLevel := UpdateLogging.Quiet' test
