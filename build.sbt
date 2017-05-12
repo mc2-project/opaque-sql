@@ -67,10 +67,10 @@ watchSources ++=
 watchSources ++=
   ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
 
-val synthTestDataTask = TaskKey[Seq[File]]("synthTestData",
-  "Synthesizes test data, returning the generated files.")
+val synthTestDataTask = TaskKey[Unit]("synthTestData",
+  "Synthesizes test data.")
 
-resourceGenerators in Test += synthTestDataTask.taskValue
+test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
 
 fetchFlatbuffersLibTask := {
   val flatbuffersSource = target.value / "flatbuffers" / s"flatbuffers-$flatbuffersVersion"
@@ -188,7 +188,7 @@ copyEnclaveLibrariesToResourcesTask := {
 synthTestDataTask := {
   val diseaseDataFiles =
     for {
-      diseaseDir <- ((resourceManaged in Test).value / "data" / "disease").get
+      diseaseDir <- (baseDirectory.value / "data" / "disease").get
       name <- Seq("disease.csv", "gene.csv", "treatment.csv", "patient-125.csv")
     } yield new File(diseaseDir, name)
   if (!diseaseDataFiles.forall(_.exists)) {
@@ -196,5 +196,4 @@ synthTestDataTask := {
     val ret = Seq("data/disease/synth-disease-data").!
     if (ret != 0) sys.error("Failed to synthesize test data.")
   }
-  diseaseDataFiles
 }
