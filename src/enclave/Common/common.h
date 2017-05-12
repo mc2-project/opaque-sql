@@ -1,11 +1,18 @@
-#include <cassert>
 #include <cstdint>
-#include <cstring>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "define.h"
 
+// Declarations for C/C++ standard library functions that are not present in the trusted standard
+// libraries, but are reimplemented in Enclave/util.cpp. This allows us to use these functions
+// uniformly across trusted and untrusted code.
 int printf(const char* format, ...);
+void exit(int exit_code);
+namespace std {
+    using ::exit;
+}
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -26,7 +33,7 @@ int printf(const char* format, ...);
     bool result = test;                         \
     if (!result) {                              \
       printf(__VA_ARGS__);                      \
-      assert(result);                           \
+      std::exit(1);                                  \
     }                                           \
   } while (0)
 

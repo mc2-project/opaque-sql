@@ -11,6 +11,12 @@
  */
 int printf(const char *fmt, ...);
 
+/** Invoke OCALL to exit the program. */
+void exit(int exit_code);
+namespace std {
+    using ::exit;
+}
+
 void print_bytes(uint8_t *ptr, uint32_t len);
 
 /** Return 0 if equal, and -1 if not equal. */

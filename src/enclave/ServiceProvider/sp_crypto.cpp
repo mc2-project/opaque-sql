@@ -1,4 +1,7 @@
 #include "sp_crypto.h"
+
+#include <cassert>
+
 // print functions for debugging
 lc_status_t print_priv_key(lc_ec256_private_t p_private) {
   uint8_t *ptr = (uint8_t *) p_private.r;

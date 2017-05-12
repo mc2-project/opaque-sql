@@ -46,7 +46,7 @@ void print(const tuix::Field *field) {
     default:
       printf("print(tuix::Row *): Unknown field type %d\n",
              field->value_type());
-      assert(false);
+      std::exit(1);
     }
   }
 
@@ -126,7 +126,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   default:
     printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
            field->value_type());
-    assert(false);
+    std::exit(1);
     return flatbuffers::Offset<tuix::Field>();
   }
 }

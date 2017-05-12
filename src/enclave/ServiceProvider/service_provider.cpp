@@ -35,11 +35,12 @@
 #include "ecp.h"
 #include "ias_ra.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
+#include <cassert>
+#include <cerrno>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <time.h>
-#include <errno.h>
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(ptr) {if (NULL != (ptr)) {free(ptr); (ptr) = NULL;}}
@@ -141,6 +142,8 @@ int read_secret_key(const char *filename,
 
   int ret = 0;
   FILE *secret_key_file = fopen(filename, "r");
+  check(secret_key_file != nullptr,
+        "Private key file '%s' does not exist. Check $PRIVATE_KEY_PATH.\n", filename);
   EVP_PKEY *pkey = PEM_read_PrivateKey(secret_key_file, NULL, NULL, NULL);
   if (pkey == NULL) {
     printf("[read_secret_key] returned private key is null\n");
@@ -281,7 +284,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 
   if (!p_msg1 || !pp_msg2 || (msg1_size != sizeof(sgx_ra_msg1_t))) {
     printf("[%s] Unexpected error 1: %p, %p, size %u\n", __FUNCTION__, p_msg1, pp_msg2, msg1_size);
-    assert(false);
+    std::exit(1);
   }
 
   // Check to see if we have registered?

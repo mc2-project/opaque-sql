@@ -11,7 +11,7 @@ int printf(const char *fmt, ...);
     bool result = test;                         \
     if (!result) {                              \
       printf(__VA_ARGS__);                      \
-      assert(result);                           \
+      std::exit(1);                                  \
     }                                           \
   } while (0)
 
@@ -92,7 +92,7 @@ flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op(
     printf("Can't evaluate %s on %s\n",
            typeid(TuixExpr).name(),
            tuix::EnumNameFieldUnion(left->value_type()));
-    assert(false);
+    std::exit(1);
     return flatbuffers::Offset<tuix::Field>();
   }
 }
@@ -160,7 +160,7 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
       printf("Can't evaluate %s on %s\n",
              typeid(TuixExpr).name(),
              tuix::EnumNameFieldUnion(left->value_type()));
-      assert(false);
+      std::exit(1);
     }
   }
   // Writing the result invalidates the left and right temporary pointers
@@ -364,7 +364,7 @@ private:
     default:
       printf("Can't evaluate expression of type %s\n",
              tuix::EnumNameExprUnion(expr->expr_type()));
-      assert(false);
+      std::exit(1);
       return flatbuffers::Offset<tuix::Field>();
     }
   }

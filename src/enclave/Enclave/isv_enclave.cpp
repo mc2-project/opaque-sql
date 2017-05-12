@@ -219,7 +219,7 @@ sgx_status_t enclave_init_ra(int b_pse,
     if (ret != SGX_SUCCESS) {
         if (SGX_ERROR_OUT_OF_MEMORY != ret) {
           printf("SGX out of memory\n");
-          assert(false);
+          std::exit(1);
         }
         printf("SGX ecc256 open context failure\n");
         return ret;
@@ -230,7 +230,7 @@ sgx_status_t enclave_init_ra(int b_pse,
     if (ret != SGX_SUCCESS) {
       if (ret != SGX_ERROR_OUT_OF_MEMORY) {
         printf("SGX out of memory 2\n");
-        assert(false);
+        std::exit(1);
       }
       sgx_ecc256_close_context(ecc_state);
       return ret;
@@ -239,7 +239,7 @@ sgx_status_t enclave_init_ra(int b_pse,
     if (!valid) {
       sgx_ecc256_close_context(ecc_state);
       printf("pub_key points invalid\n");
-      assert(false);
+      std::exit(1);
     }
     sgx_ecc256_close_context(ecc_state);
 

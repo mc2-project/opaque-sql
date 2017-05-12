@@ -15,6 +15,10 @@ int printf(const char *fmt, ...) {
   return ret;
 }
 
+void exit(int exit_code) {
+  ocall_exit(exit_code);
+}
+
 void print_bytes(uint8_t *ptr, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     printf("%u", *(ptr + i));

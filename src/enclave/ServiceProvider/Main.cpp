@@ -22,6 +22,7 @@
  *   suppliers or licensors in any way.
  */
 
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 

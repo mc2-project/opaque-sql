@@ -1,5 +1,5 @@
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include "sgxaes.h"
 
 KeySchedule::KeySchedule(const unsigned char* k, size_t k_len) {

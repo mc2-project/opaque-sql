@@ -34,7 +34,6 @@
 # define MAX_PATH FILENAME_MAX
 #endif
 
-#include <cassert>
 #include <climits>
 #include <cstdarg>
 #include <cstdio>
@@ -365,6 +364,10 @@ void ocall_free(uint8_t *buf) {
   free(buf);
 }
 
+void ocall_exit(int exit_code) {
+  std::exit(exit_code);
+}
+
 #if defined(_MSC_VER)
 /* query and enable SGX device*/
 int query_sgx_status()
@@ -479,7 +482,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   if (status != SGX_SUCCESS) {
     printf("[RemoteAttestation1] enclave_init_ra's status is %u\n", (uint32_t) status);
-    assert(false);
+    std::exit(1);
   }
 
   uint8_t *msg1 = (uint8_t *) malloc(sizeof(sgx_ra_msg1_t));

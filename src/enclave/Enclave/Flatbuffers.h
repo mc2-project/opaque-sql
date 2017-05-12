@@ -11,16 +11,6 @@
 #include "common.h"
 #include "Enclave_t.h"
 
-int printf(const char *fmt, ...);
-
-#define check(test, ...) do {                   \
-    bool result = test;                         \
-    if (!result) {                              \
-      printf(__VA_ARGS__);                      \
-      assert(result);                           \
-    }                                           \
-  } while (0)
-
 #ifndef FLATBUFFERS_H
 #define FLATBUFFERS_H
 

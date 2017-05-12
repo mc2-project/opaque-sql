@@ -79,6 +79,7 @@ enclave {
     void ocall_print_string([in, string] const char *str);
     void ocall_malloc(size_t size, [out] uint8_t **ret);
     void ocall_free([user_check] uint8_t *buf);
+    void ocall_exit(int exit_code);
   };
 
 };
