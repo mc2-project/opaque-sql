@@ -20,8 +20,6 @@ parallelExecution := false
 
 fork in Test := true
 
-scalacOptions ++= Seq("-g:vars")
-javaOptions ++= Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 
 val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
@@ -29,9 +27,13 @@ val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
 
 flatbuffersGenCppDir := sourceManaged.value / "flatbuffers" / "gen-cpp"
 
-val cppBuildType = SettingKey[BuildType]("cppBuildType", "...description...")
+val buildType = SettingKey[BuildType]("buildType",
+  "Release, Debug, or Profile.")
 
-cppBuildType := Release
+buildType := Release
+
+scalacOptions ++= { if (buildType.value == Debug) Seq("-g:vars") else Nil }
+javaOptions ++= { if (buildType.value == Debug) Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000") else Nil }
 
 val fetchFlatbuffersLibTask = TaskKey[File]("fetchFlatbuffersLib",
   "Fetches and builds the Flatbuffers library, returning its location.")
@@ -161,7 +163,7 @@ enclaveBuildTask := {
     Process(Seq(
       "cmake",
       s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
-      s"-DCMAKE_BUILD_TYPE=${cppBuildType.value}",
+      s"-DCMAKE_BUILD_TYPE=${buildType.value}",
       s"-DFLATBUFFERS_LIB_DIR=${(fetchFlatbuffersLibTask.value / "include").getPath}",
       s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
       enclaveSourceDir.getPath), enclaveBuildDir).!
