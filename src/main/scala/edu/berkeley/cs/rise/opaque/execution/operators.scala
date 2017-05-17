@@ -96,8 +96,10 @@ case class EncryptExec(
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    child.execute().mapPartitions { rowIter =>
-      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
+    timeOperator(child.execute(), "EncryptExec") { childRDD =>
+      childRDD.mapPartitions { rowIter =>
+        Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
+      }
     }
   }
 }
@@ -108,11 +110,7 @@ case class EncryptedBlockRDDScanExec(
     override val isOblivious: Boolean)
   extends LeafExecNode with OpaqueOperatorExec {
 
-  override def executeBlocked(): RDD[Block] = {
-    Utils.ensureCached(rdd)
-    Utils.time("force child of BlockRDDScan") { rdd.count }
-    rdd
-  }
+  override def executeBlocked(): RDD[Block] = rdd
 }
 
 case class Block(bytes: Array[Byte]) extends Serializable
@@ -124,6 +122,17 @@ trait OpaqueOperatorExec extends SparkPlan {
     case p: OpaqueOperatorExec => p.isOblivious
     case _ => false
   }.nonEmpty)
+
+  def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
+    Utils.ensureCached(childRDD)
+    time(s"Force child of $desc") { childRDD.count }
+    time(desc) {
+      val result = f(childRDD)
+      Utils.ensureCached(result)
+      result.count
+      result
+    }
+  }
 
   override def doExecute() = {
     sqlContext.sparkContext.emptyRDD
@@ -191,16 +200,12 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
-    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(execRDD)
-    Utils.time("force child of project") { execRDD.count }
-    // RA.initRA(execRDD)
-
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
-
-    execRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.Project(eid, projectListSer, block.bytes))
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "ObliviousProjectExec") {
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.Project(eid, projectListSer, block.bytes))
+      }
     }
   }
 }
@@ -212,13 +217,12 @@ case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    val execRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(execRDD)
-    // RA.initRA(execRDD)
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
-    return execRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.Filter(eid, conditionSer, block.bytes))
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "ObliviousFilterExec") {
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.Filter(eid, conditionSer, block.bytes))
+      }
     }
   }
 }
@@ -237,11 +241,34 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    // RA.initRA(childRDD)
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      ???
+    val aggExprSer = Utils.serializeAggExpression(groupingExpressions, aggExpressions, child.schema)
+
+    timeOperator(
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
+      "EncryptedAggregateExec") { childRDD =>
+
+      val (firstRows, lastGroups) = childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        val (firstRow, lastGroup) = enclave.NonObliviousAggregateStep1(eid, aggExprSer, block.bytes)
+        (Block(firstRow), Block(lastGroup))
+      }.collect.unzip
+
+      // Send first row to previous partition and last group to next partition
+      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
+      val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
+      val shifted = shiftedFirstRows.zip(shiftedLastGroups)
+      assert(shifted.size == childRDD.partitions.length)
+      val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
+
+      childRDD.zipPartitions(shiftedRDD) { (blockIter, aggBlockPairIter) =>
+        (blockIter.toSeq, aggBlockPairIter.toSeq) match {
+          case Seq(block), Seq(Tuple2(nextPartitionFirstRow, prevPartitionLastGroup)) =>
+            val (enclave, eid) = Utils.initEnclave()
+            Iterator(Block(enclave.NonObliviousAggregateStep2(
+              eid, aggExprSer, block.bytes,
+              nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes)))
+        }
+      }
     }
   }
 }
@@ -259,36 +286,31 @@ case class EncryptedSortMergeJoinExec(
   import Utils.time
 
   override def executeBlocked() = {
-    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(childRDD)
-    time("Force child of EncryptedSortMergeJoinExec") { childRDD.count }
-
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 
-    val lastPrimaryRows = childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
-    }.collect
-    val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
-    assert(shifted.size == childRDD.partitions.length)
-    val processedJoinRowsRDD =
-      sparkContext.parallelize(shifted, childRDD.partitions.length)
+    timeOperator(
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
+      "EncryptedSortMergeJoinExec") { childRDD =>
 
-    val joined = childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
-      val block = blockIter.next()
-      assert(!blockIter.hasNext)
-      val joinRow = joinRowIter.next()
-      assert(!joinRowIter.hasNext)
+      val lastPrimaryRows = childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
+      }.collect
+      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+      assert(shifted.size == childRDD.partitions.length)
+      val processedJoinRowsRDD =
+        sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      val (enclave, eid) = Utils.initEnclave()
-      Iterator(Block(enclave.NonObliviousSortMergeJoin(
-        eid, joinExprSer, block.bytes, joinRow.bytes)))
+      childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
+        (blockIter.toSeq, joinRowIter.toSeq) match {
+          case Seq(block), Seq(joinRow) =>
+            val (enclave, eid) = Utils.initEnclave()
+            Iterator(Block(enclave.NonObliviousSortMergeJoin(
+              eid, joinExprSer, block.bytes, joinRow.bytes)))
+        }
+      }
     }
-    Utils.ensureCached(joined)
-    time("join") { joined.count }
-
-    joined
   }
 }
 
@@ -312,18 +334,13 @@ case class ObliviousUnionExec(
     // RA.initRA(leftRDD)
 
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      val leftBlockArray = leftBlockIter.toArray
-      assert(leftBlockArray.length == 1)
-      val leftBlock = leftBlockArray.head
-
-      val rightBlockArray = rightBlockIter.toArray
-      assert(rightBlockArray.length == 1)
-      val rightBlock = rightBlockArray.head
-
-      Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
+      (leftBlockIter.toSeq, rightBlockIter.toSeq) match {
+        case (Seq(leftBlock, rightBlock)) =>
+          Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
+      }
     }
     Utils.ensureCached(unioned)
-    time("union") { unioned.count }
+    time("ObliviousUnionExec") { unioned.count }
     unioned
   }
 }

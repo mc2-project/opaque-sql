@@ -22,6 +22,7 @@ union ExprUnion {
     Add,
     Subtract,
     If,
+    // TODO: Greatest, Least
 }
 
 table Expr {

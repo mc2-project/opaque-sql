@@ -1,61 +1,77 @@
 #include "Aggregate.h"
 
-// non-oblivious aggregation
-// a single scan, assume that external_sort is already called
-// template<typename AggregatorType>
-// void non_oblivious_aggregate(Verify *verify_set,
-//                              uint8_t *input_rows, uint32_t input_rows_length,
-//                              uint32_t num_rows,
-//                              uint8_t *output_rows, uint32_t output_rows_length,
-//                              uint32_t *actual_output_rows_length, uint32_t *num_output_rows) {
+#include "ExpressionEvaluation.h"
+#include "common.h"
 
-//   (void)output_rows_length;
-  
-//   RowReader reader(input_rows, input_rows + input_rows_length, verify_set);
-//   RowWriter writer(output_rows);
-//   writer.set_self_task_id(verify_set->get_self_task_id());
+void non_oblivious_aggregate_step1(
+  uint8_t *agg_expr, size_t agg_expr_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t **first_row, size_t *first_row_length,
+  uint8_t **last_group, size_t *last_group_length) {
 
-//   NewRecord prev_row, cur_row, output_row;
-//   AggregatorType agg;
+  FlatbuffersAggExprEvaluator agg_expr_eval(agg_expr, agg_expr_length);
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  FlatbuffersRowWriter first_row_writer;
+  FlatbuffersRowWriter last_group_writer;
 
-//   uint32_t num_output_rows_result = 0;
-//   for (uint32_t i = 0; i < num_rows; i++) {
-//     if (i == 0) {
-//       reader.read(&prev_row);
-//       continue;
-//     }
+  const tuix::Row *a = nullptr;
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+    if (a == nullptr) {
+      first_row_writer.write(row);
+    }
+    a = agg_expr_eval.aggregate(a, row);
+  }
+  last_group_writer.write(a);
 
-//     agg.aggregate(&prev_row);
-//     reader.read(&cur_row);
+  *first_row = first_row_writer.output_buffer();
+  *first_row_length = first_row_writer.output_size();
 
-//     if (!agg.grouping_attrs_equal(&cur_row)) {
-//       output_row.clear();
-//       agg.append_result(&output_row, false);
-//       writer.write(&output_row);
-//       num_output_rows_result++;
-//     }
+  *last_group = last_group_writer.output_buffer();
+  *last_group_length = last_group_writer.output_size();
+}
 
-//     if (i == num_rows - 1) {
-//       agg.aggregate(&cur_row);
+void non_oblivious_aggregate_step2(
+  uint8_t *agg_expr, size_t agg_expr_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
+  uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
+  uint8_t **output_rows, size_t *output_rows_length) {
 
-//       output_row.clear();
-//       agg.append_result(&output_row, false);
-//       writer.write(&output_row);
-//       num_output_rows_result++;
-//     }
+  FlatbuffersAggExprEvaluator agg_expr_eval(agg_expr, agg_expr_length);
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  EncryptedBlocksToRowReader next_partition_first_row_reader(
+    next_partition_first_row, next_partition_first_row_length);
+  EncryptedBlocksToRowReader prev_partition_last_group_reader(
+    prev_partition_last_group, prev_partition_last_group_length);
+  FlatbuffersRowWriter w;
 
-//     prev_row.set(&cur_row);
-//   }
+  check(next_partition_first_row_reader.num_rows() <= 1,
+        "Incorrect number of starting rows from next partition passed: expected 0 or 1, got %d\n",
+        next_partition_first_row_reader.num_rows());
+  check(prev_partition_last_group_reader.num_rows() <= 1,
+        "Incorrect number of ending groups from prev partition passed: expected 0 or 1, got %d\n",
+        prev_partition_last_group_reader.num_rows());
 
-//   if (num_rows == 1) {
-//     agg.aggregate(&prev_row);
-//     output_row.clear();
-//     agg.append_result(&output_row, false);
-//     writer.write(&output_row);
-//     num_output_rows_result++;
-//   }
+  const tuix::Row *next_partition_first_row_ptr =
+    next_partition_first_row_reader.has_next() ? next_partition_first_row_reader.next() : nullptr;
 
-//   writer.close();
-//   *actual_output_rows_length = writer.bytes_written();
-//   *num_output_rows = num_output_rows_result;
-// }
+  const tuix::Row *a =
+    prev_partition_last_group_reader.has_next() ? prev_partition_last_group_reader.next() : nullptr;
+  const tuix::Row *cur = nullptr, *next;
+  while (next != next_partition_first_row_ptr) {
+    // Populate cur and next to enable lookahead
+    if (cur == nullptr) cur = r.next(); else cur = next;
+    if (r.has_next()) next = r.next(); else next = next_partition_first_row_ptr;
+
+    a = agg_expr_eval.aggregate(a, cur);
+
+    // Output the current aggregate if it is the last aggregate for its run
+    if (!agg_expr_eval.is_same_group(a, next)) {
+      w.write(a);
+    }
+  }
+
+  *output_rows = w.output_buffer();
+  *output_rows_length = w.output_size();
+}

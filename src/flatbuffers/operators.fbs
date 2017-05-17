@@ -30,19 +30,17 @@ table SortExpr {
 }
 
 // Aggregate
-enum AggOp : ubyte {
-    Sum, Min, Max, Avg, Count
+table AggregateExpr {
+    initial_values: [Expr];
+    update_exprs: [Expr];
+    merge_exprs: [Expr];
+    evaluate_expr: Expr;
 }
+// Supported: Average, Count, First, Last, Max, Min, Sum
 
-table AggColExpr {
-    col_num:uint;
-    operation:AggOp;
-    col_type:ColType;
-}
-
-table AggExpr {
-    group_by_cols:[uint];
-    agg_exprs:[AggColExpr];
+table AggregateOp {
+    grouping_expressions:[Expr];
+    aggregate_expressions:[AggregateExpr];
 }
 
 // Join
