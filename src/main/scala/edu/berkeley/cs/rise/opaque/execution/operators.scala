@@ -241,7 +241,7 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = Utils.serializeAggExpression(groupingExpressions, aggExpressions, child.schema)
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.schema)
 
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),

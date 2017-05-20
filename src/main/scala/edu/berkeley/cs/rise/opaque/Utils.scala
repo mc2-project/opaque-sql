@@ -563,6 +563,59 @@ object Utils {
     builder.sizedByteArray()
   }
 
+  def serializeAggOp(
+    groupingExpressions: Seq[Expression],
+    aggExpressions: Seq[NamedExpression],
+    input: Seq[Attribute]): Array[Byte] = {
+    val builder = new FlatBufferBuilder
+    builder.finish(
+      tuix.AggregateOp.createAggregateOp(
+        builder,
+        tuix.AggregateOp.createGroupingExpressionsVector(
+          builder,
+          groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
+        tuix.AggregateOp.createAggregateExpressionsVector(
+          builder,
+          aggExpressions.map {
+            case Alias(e: AggregateExpression, _) =>
+              serializeAggExpression(builder, e, input)
+          }.toArray)))
+    builder.sizedByteArray()
+  }
+
+  /**
+   * Serialize an AggregateExpression into a tuix.AggregateExpr. Returns the offset of the written
+   * tuix.AggregateExpr.
+   */
+  def serializeAggExpression(
+    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute]): Array[Byte] = {
+    e.aggregateFunction match {
+      case Average(child) =>
+        val sum = AttributeReference("sum", sumDataType)()
+        val count = AttributeReference("count", LongType)()
+        val aggSchema = Seq(sum, count)
+        // For aggregation, we concatenate the current aggregate row with the new input row and run
+        // the update expressions as a projection to obtain a new aggregate row. concatSchema
+        // describes the schema of the temporary concatenated row.
+        val concatSchema = aggSchema ++ input
+
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0), input),
+              /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Add(sum, child), concatSchema),
+              /* count = */ flatbuffersSerializeExpression(
+                builder, Add(count, Literal(1L)), concatSchema))),
+          flatbuffersSerializeExpression(
+                builder, Divide(sum, count), aggSchema))
+    }
+  }
+
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
     val allBlocks = for {
       block <- blocks
