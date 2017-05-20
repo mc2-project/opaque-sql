@@ -25,11 +25,12 @@ Work-in-progress:
 
 After downloading the Opaque codebase, build and test it as follows:
 
-1. Install GCC 4.8+ and the Intel SGX SDK with C++11 support:
+1. Install dependencies and the Intel SGX SDK with C++11 support:
 
     ```sh
-    sudo yum -y install gcc48.x86_64 gcc48-c++.x86_64
-    sudo yum -y update binutils
+    # For Ubuntu 16.04:
+    sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
+
     git clone https://github.com/ankurdave/linux-sgx -b c++11
     cd linux-sgx
     ./download_prebuilt.sh
