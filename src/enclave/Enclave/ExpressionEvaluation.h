@@ -539,4 +539,86 @@ private:
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;
 };
 
+class AggregateExpressionEvaluator {
+public:
+  AggregateExpressionEvaluator(const tuix::AggregateExpr *expr) : builder() {
+    for (auto initial_value_expr : expr->initial_values()) {
+      initial_value_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(initial_value_expr)));
+    }
+    for (auto update_expr : expr->update_exprs()) {
+      update_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(update_expr)));
+    }
+    evaluate_evaluator.set(new FlatbuffersExpressionEvaluator(expr->evaluate_expr()));
+  }
+private:
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
+  std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
+};
+
+class FlatbuffersAggOpEvaluator {
+public:
+  FlatbuffersAggOpEvaluator(uint8_t *buf, size_t len)
+    : builder() {
+    flatbuffers::Verifier v(buf, len);
+    check(v.VerifyBuffer<tuix::AggregateOp>(nullptr),
+          "Corrupt AggregateOp %p of length %d\n", buf, len);
+
+    const tuix::AggregateOp* agg_op = flatbuffers::GetRoot<tuix::AggregateOp>(buf);
+
+    for (auto it = agg_op->grouping_expressions()->begin();
+         it != agg_op->grouping_expressions()->end(); ++it) {
+      grouping_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(*it)));
+    }
+    for (auto it = agg_op->aggregate_expressions()->begin();
+         it != agg_op->key_aggregate_expressions()->end(); ++it) {
+      aggregate_evaluators.emplace_back(
+        std::unique_ptr<AggregateExpressionEvaluator>(
+          new AggregateExpressionEvaluator(*it)));
+    }
+  }
+
+  const tuix::Row *aggregate(const tuix::Row *a, const tuix::Row *row) {
+    // TODO
+  }
+
+  /** Return true if the two rows are from the same join group. */
+  bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {
+    builder.Clear();
+    for (auto it = grouping_evaluators.begin(); it != grouping_evaluators.end(); ++it) {
+      const tuix::Field *row1_eval_tmp = (*it)->eval(row1);
+      const tuix::Field *row1_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(row1_eval_tmp, builder));
+      const tuix::Field *row2_eval_tmp = (*it)->eval(row2);
+      const tuix::Field *row2_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
+        builder, flatbuffers_copy(row2_eval_tmp, builder));
+
+      bool row1_equals_row2 =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+              builder, row1_eval, row2_eval))
+          ->value())->value();
+
+      if (!row1_equals_row2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+private:
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> grouping_evaluators;
+  std::vector<std::unique_ptr<AggregateExpressionEvaluator>> aggregate_evaluators;
+};
+
 #endif

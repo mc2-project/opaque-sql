@@ -4,12 +4,12 @@
 #include "common.h"
 
 void non_oblivious_aggregate_step1(
-  uint8_t *agg_expr, size_t agg_expr_length,
+  uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **first_row, size_t *first_row_length,
   uint8_t **last_group, size_t *last_group_length) {
 
-  FlatbuffersAggExprEvaluator agg_expr_eval(agg_expr, agg_expr_length);
+  FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter first_row_writer;
   FlatbuffersRowWriter last_group_writer;
@@ -20,7 +20,7 @@ void non_oblivious_aggregate_step1(
     if (a == nullptr) {
       first_row_writer.write(row);
     }
-    a = agg_expr_eval.aggregate(a, row);
+    a = agg_op_eval.aggregate(a, row);
   }
   last_group_writer.write(a);
 
@@ -32,13 +32,13 @@ void non_oblivious_aggregate_step1(
 }
 
 void non_oblivious_aggregate_step2(
-  uint8_t *agg_expr, size_t agg_expr_length,
+  uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
   uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
   uint8_t **output_rows, size_t *output_rows_length) {
 
-  FlatbuffersAggExprEvaluator agg_expr_eval(agg_expr, agg_expr_length);
+  FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   EncryptedBlocksToRowReader next_partition_first_row_reader(
     next_partition_first_row, next_partition_first_row_length);
@@ -64,10 +64,10 @@ void non_oblivious_aggregate_step2(
     if (cur == nullptr) cur = r.next(); else cur = next;
     if (r.has_next()) next = r.next(); else next = next_partition_first_row_ptr;
 
-    a = agg_expr_eval.aggregate(a, cur);
+    a = agg_op_eval.aggregate(a, cur);
 
     // Output the current aggregate if it is the last aggregate for its run
-    if (!agg_expr_eval.is_same_group(a, next)) {
+    if (!agg_op_eval.is_same_group(a, next)) {
       w.write(a);
     }
   }
