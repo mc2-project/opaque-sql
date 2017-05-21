@@ -121,6 +121,14 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     case 2 => "C"
   }
 
+  testAgainstSpark("aggregate average") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+
+    words.groupBy("category").agg(average("price").as("avgPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
   // testAgainstSpark("aggregate") { securityLevel =>
   //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
   //   val words = makeDF(data, securityLevel, "id", "word", "count")

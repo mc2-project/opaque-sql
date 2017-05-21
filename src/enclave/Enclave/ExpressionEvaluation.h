@@ -564,7 +564,7 @@ private:
 class FlatbuffersAggOpEvaluator {
 public:
   FlatbuffersAggOpEvaluator(uint8_t *buf, size_t len)
-    : builder() {
+    : a(nullptr), builder(), builder2() {
     flatbuffers::Verifier v(buf, len);
     check(v.VerifyBuffer<tuix::AggregateOp>(nullptr),
           "Corrupt AggregateOp %p of length %d\n", buf, len);
@@ -585,8 +585,61 @@ public:
     }
   }
 
-  const tuix::Row *aggregate(const tuix::Row *a, const tuix::Row *row) {
-    // TODO
+  void reset_group() {
+    a = nullptr;
+    builder2.Clear();
+  }
+
+  void set(const tuix::Row *agg_row) {
+    a = agg_row;
+    builder2.Clear();
+  }
+
+  void aggregate(const tuix::Row *row) {
+    builder.Clear();
+    flatbuffers::Offset<tuix::Row> concat;
+
+    std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
+    if (a == nullptr) {
+      // write initial values to a
+      for (auto e : aggregate_evaluators) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(e->initial_value(), builder));
+      }
+      // concat row to a
+      for (auto field : row->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      concat = tuix::CreateRowDirect(builder, &concat_fields);
+    } else {
+      // concat row to a
+      for (auto field : a->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      for (auto field : row->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      concat = tuix::CreateRowDirect(builder, &concat_fields);
+    }
+    const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(concat);
+
+    // run update_exprs
+    builder2.Clear();
+    std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
+    for (auto e : aggregate_evaluators) {
+      output_fields.push_back(flatbuffers_copy<tuix::Field>(e->update(concat), builder2));
+    }
+    a = flatbuffers::GetTemporaryPointer<tuix::Row>(
+      tuix::CreateRowDirect(builder2, &output_fields));
+  }
+
+  const tuix::Row *evaluate() {
+    builder.Clear();
+    std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
+    for (auto e : aggregate_evaluators) {
+      output_fields.push_back(flatbuffers_copy<tuix::Field>(e->evaluate(), builder));
+    }
+    return flatbuffers::GetTemporaryPointer<tuix::Row>(
+      tuix::CreateRowDirect(builder, &output_fields))
   }
 
   /** Return true if the two rows are from the same join group. */
@@ -616,7 +669,11 @@ public:
   }
 
 private:
+  // Pointer into builder2
+  const tuix::Row *a;
+
   flatbuffers::FlatBufferBuilder builder;
+  flatbuffers::FlatBufferBuilder builder2;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> grouping_evaluators;
   std::vector<std::unique_ptr<AggregateExpressionEvaluator>> aggregate_evaluators;
 };

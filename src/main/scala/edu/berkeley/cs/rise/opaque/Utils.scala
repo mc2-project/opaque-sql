@@ -579,6 +579,8 @@ object Utils {
           aggExpressions.map {
             case Alias(e: AggregateExpression, _) =>
               serializeAggExpression(builder, e, input)
+            case e: NamedExpression =>
+              serializeAggExpression(builder, First(e, e), input)
           }.toArray)))
     builder.sizedByteArray()
   }
@@ -591,7 +593,7 @@ object Utils {
     builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute]): Array[Byte] = {
     e.aggregateFunction match {
       case Average(child) =>
-        val sum = AttributeReference("sum", sumDataType)()
+        val sum = AttributeReference("sum", DoubleType)()
         val count = AttributeReference("count", LongType)()
         val aggSchema = Seq(sum, count)
         // For aggregation, we concatenate the current aggregate row with the new input row and run
@@ -613,6 +615,27 @@ object Utils {
                 builder, Add(count, Literal(1L)), concatSchema))),
           flatbuffersSerializeExpression(
                 builder, Divide(sum, count), aggSchema))
+
+      case First(child) =>
+        val first = AttributeReference("fist", child.dataType)()
+        val valueSet = AttributeReference("valueSet", BooleanType)()
+        val aggSchema = Seq(first, valueSet)
+        val concatSchema = aggSchema ++ input
+
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            Array(
+              /* first = */ flatbuffersSerializeExpression(
+                builder, Literal.create(null, child.dataType), input),
+              /* valueSet = */ flatbuffersSerializeExpression(builder, Literal(false), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            Array(
+              /* first = */ flatbuffersSerializeExpression(
+                builder, If(valueSet, first, child), concatSchema),
+              /* valueSet = */ flatbuffersSerializeExpression(
+                builder, Literal(true), concatSchema))),
+          flatbuffersSerializeExpression(builder, first, aggSchema))
     }
   }
 

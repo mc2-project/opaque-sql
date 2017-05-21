@@ -38,7 +38,9 @@ table AggregateExpr {
 // Supported: Average, Count, First, Last, Max, Min, Sum
 
 table AggregateOp {
+    // Given an input row, extract its group.
     grouping_expressions:[Expr];
+    // Given multiple input rows from the same group, compute their aggregate.
     aggregate_expressions:[AggregateExpr];
 }
 

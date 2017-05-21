@@ -14,15 +14,21 @@ void non_oblivious_aggregate_step1(
   FlatbuffersRowWriter first_row_writer;
   FlatbuffersRowWriter last_group_writer;
 
-  const tuix::Row *a = nullptr;
+  const tuix::Row *a = nullptr, *prev, *cur = nullptr;
   while (r.has_next()) {
-    const tuix::Row *row = r.next();
+    prev = cur;
+    cur = r.next();
+
     if (a == nullptr) {
       first_row_writer.write(row);
     }
-    a = agg_op_eval.aggregate(a, row);
+
+    if (prev != nullptr & !agg_op_eval.is_same_group(prev, cur)) {
+      agg_op_eval.reset_group();
+    }
+    agg_op_eval.aggregate(cur);
   }
-  last_group_writer.write(a);
+  last_group_writer.write(agg_op_eval.evaluate());
 
   *first_row = first_row_writer.output_buffer();
   *first_row_length = first_row_writer.output_size();
@@ -56,19 +62,19 @@ void non_oblivious_aggregate_step2(
   const tuix::Row *next_partition_first_row_ptr =
     next_partition_first_row_reader.has_next() ? next_partition_first_row_reader.next() : nullptr;
 
-  const tuix::Row *a =
-    prev_partition_last_group_reader.has_next() ? prev_partition_last_group_reader.next() : nullptr;
+  agg_op_eval.set(
+    prev_partition_last_group_reader.has_next() ? prev_partition_last_group_reader.next() : nullptr);
   const tuix::Row *cur = nullptr, *next;
   while (next != next_partition_first_row_ptr) {
     // Populate cur and next to enable lookahead
     if (cur == nullptr) cur = r.next(); else cur = next;
     if (r.has_next()) next = r.next(); else next = next_partition_first_row_ptr;
 
-    a = agg_op_eval.aggregate(a, cur);
+    agg_op_eval.aggregate(cur);
 
     // Output the current aggregate if it is the last aggregate for its run
-    if (!agg_op_eval.is_same_group(a, next)) {
-      w.write(a);
+    if (next == nullptr || !agg_op_eval.is_same_group(cur, next)) {
+      w.write(agg_op_eval.evaluate());
     }
   }
 
