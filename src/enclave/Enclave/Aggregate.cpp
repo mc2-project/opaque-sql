@@ -20,10 +20,10 @@ void non_oblivious_aggregate_step1(
     cur = r.next();
 
     if (a == nullptr) {
-      first_row_writer.write(row);
+      first_row_writer.write(cur);
     }
 
-    if (prev != nullptr & !agg_op_eval.is_same_group(prev, cur)) {
+    if (prev != nullptr && !agg_op_eval.is_same_group(prev, cur)) {
       agg_op_eval.reset_group();
     }
     agg_op_eval.aggregate(cur);
