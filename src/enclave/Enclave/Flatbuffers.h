@@ -54,7 +54,7 @@ private:
 
 class EncryptedBlockToRowReader {
 public:
-  EncryptedBlockToRowReader() : initialized(false) {}
+  EncryptedBlockToRowReader() : rows(nullptr), initialized(false) {}
 
   void reset(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v(buf, len);
