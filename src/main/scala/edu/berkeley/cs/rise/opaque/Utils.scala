@@ -32,6 +32,7 @@ import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
@@ -271,6 +272,16 @@ object Utils {
             tuix.StringField.createValueVector(builder, utf8),
             utf8.length),
           isNull)
+      case (null, StringType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.StringField,
+          tuix.StringField.createStringField(
+            builder,
+            // TODO: pad strings to upper bound for obliviousness
+            tuix.StringField.createValueVector(builder, Array.empty),
+            0),
+          isNull)
     }
   }
 
@@ -429,6 +440,10 @@ object Utils {
         case (Alias(child, _), Seq(childOffset)) =>
           // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
           // tree. For now we just ignore them when evaluating expressions.
+          childOffset
+
+        case (Cast(child, _), Seq(childOffset)) =>
+          // TODO: Implement cast
           childOffset
 
         // Arithmetic
@@ -621,10 +636,10 @@ object Utils {
               /* count = */ flatbuffersSerializeExpression(
                 builder, Add(count, Literal(1L)), concatSchema))),
           flatbuffersSerializeExpression(
-                builder, Divide(sum, count), aggSchema))
+                builder, Multiply(sum, count), aggSchema))
 
       case First(child, Literal(false, BooleanType)) =>
-        val first = AttributeReference("fist", child.dataType)()
+        val first = AttributeReference("first", child.dataType)()
         val valueSet = AttributeReference("valueSet", BooleanType)()
         val aggSchema = Seq(first, valueSet)
         val concatSchema = aggSchema ++ input
