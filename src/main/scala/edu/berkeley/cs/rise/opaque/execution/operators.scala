@@ -96,10 +96,8 @@ case class EncryptExec(
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    timeOperator(child.execute(), "EncryptExec") { childRDD =>
-      childRDD.mapPartitions { rowIter =>
-        Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
-      }
+    child.execute().mapPartitions { rowIter =>
+      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
     }
   }
 }
