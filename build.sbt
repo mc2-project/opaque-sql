@@ -22,6 +22,21 @@ fork in Test := true
 
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 
+// scalacOptions ++= Seq(
+//   "-deprecation",
+//   "-encoding", "UTF-8",
+//   "-feature",
+//   "-unchecked",
+//   "-Xfatal-warnings",
+//   "-Xlint",
+//   "-Yno-adapted-args",
+//   "-Ywarn-dead-code",
+//   "-Ywarn-numeric-widen",
+//   "-Ywarn-value-discard",
+//   "-Xfuture",
+//   "-Ywarn-unused-import"
+// )
+
 val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
   "Location of Flatbuffers generated C++ files.")
 
@@ -73,6 +88,21 @@ val synthTestDataTask = TaskKey[Unit]("synthTestData",
   "Synthesizes test data.")
 
 test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
+
+val sgxGdbTask = TaskKey[Unit]("sgx-gdb",
+  "Runs unit tests under the sgx-gdb debugger.")
+
+buildType in sgxGdbTask := Debug
+
+sgxGdbTask := {
+  (compile in Test).value
+  Process(Seq(
+    "sgx-gdb", "java",
+    "-x",
+    ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
+    None,
+    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!
+}
 
 fetchFlatbuffersLibTask := {
   val flatbuffersSource = target.value / "flatbuffers" / s"flatbuffers-$flatbuffersVersion"
