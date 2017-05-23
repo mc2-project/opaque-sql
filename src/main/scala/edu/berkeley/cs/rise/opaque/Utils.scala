@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Descending
+import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
@@ -45,6 +46,10 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
+import org.apache.spark.sql.catalyst.expressions.aggregate.Average
+import org.apache.spark.sql.catalyst.expressions.aggregate.Final
+import org.apache.spark.sql.catalyst.expressions.aggregate.First
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
@@ -580,7 +585,7 @@ object Utils {
             case Alias(e: AggregateExpression, _) =>
               serializeAggExpression(builder, e, input)
             case e: NamedExpression =>
-              serializeAggExpression(builder, First(e, e), input)
+              serializeAggExpression(builder, AggregateExpression(First(e, Literal(false)), Final, false), input)
           }.toArray)))
     builder.sizedByteArray()
   }
@@ -590,7 +595,7 @@ object Utils {
    * tuix.AggregateExpr.
    */
   def serializeAggExpression(
-    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute]): Array[Byte] = {
+    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute]): Int = {
     e.aggregateFunction match {
       case Average(child) =>
         val sum = AttributeReference("sum", DoubleType)()
@@ -604,10 +609,12 @@ object Utils {
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
+            builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(builder, Literal(0), input),
               /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
                 builder, Add(sum, child), concatSchema),
@@ -616,7 +623,7 @@ object Utils {
           flatbuffersSerializeExpression(
                 builder, Divide(sum, count), aggSchema))
 
-      case First(child) =>
+      case First(child, Literal(false, BooleanType)) =>
         val first = AttributeReference("fist", child.dataType)()
         val valueSet = AttributeReference("valueSet", BooleanType)()
         val aggSchema = Seq(first, valueSet)
@@ -625,11 +632,13 @@ object Utils {
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
+            builder,
             Array(
               /* first = */ flatbuffersSerializeExpression(
                 builder, Literal.create(null, child.dataType), input),
               /* valueSet = */ flatbuffersSerializeExpression(builder, Literal(false), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
             Array(
               /* first = */ flatbuffersSerializeExpression(
                 builder, If(valueSet, first, child), concatSchema),

@@ -124,6 +124,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   }.nonEmpty)
 
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
+    import Utils.time
     Utils.ensureCached(childRDD)
     time(s"Force child of $desc") { childRDD.count }
     time(desc) {
@@ -241,7 +242,7 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.schema)
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
 
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
@@ -262,7 +263,7 @@ case class EncryptedAggregateExec(
 
       childRDD.zipPartitions(shiftedRDD) { (blockIter, aggBlockPairIter) =>
         (blockIter.toSeq, aggBlockPairIter.toSeq) match {
-          case Seq(block), Seq(Tuple2(nextPartitionFirstRow, prevPartitionLastGroup)) =>
+          case (Seq(block), Seq(Tuple2(nextPartitionFirstRow, prevPartitionLastGroup))) =>
             val (enclave, eid) = Utils.initEnclave()
             Iterator(Block(enclave.NonObliviousAggregateStep2(
               eid, aggExprSer, block.bytes,
@@ -304,7 +305,7 @@ case class EncryptedSortMergeJoinExec(
 
       childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
         (blockIter.toSeq, joinRowIter.toSeq) match {
-          case Seq(block), Seq(joinRow) =>
+          case (Seq(block), Seq(joinRow)) =>
             val (enclave, eid) = Utils.initEnclave()
             Iterator(Block(enclave.NonObliviousSortMergeJoin(
               eid, joinExprSer, block.bytes, joinRow.bytes)))
