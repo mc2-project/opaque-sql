@@ -115,9 +115,12 @@ buildFlatbuffersTask := {
   // modification time being newer than all generated headers. We do this because regenerating
   // Flatbuffers headers causes a full enclave rebuild, which is slow.
   val fbsLastMod = flatbuffers.map(_.lastModified).max
-  val gen = (flatbuffersGenCppDir.value +++ javaOutDir).get
+  val gen = (flatbuffersGenCppDir.value ** "*.h" +++ javaOutDir ** "*.java").get
 
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
+    streams.value.log.info(
+      s"${flatbuffers.maxBy(_.lastModified).getPath} newer than " +
+      gen.maxBy(_.lastModified).getPath)
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
       if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
