@@ -1075,7 +1075,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   jclass tuple2_class = env->FindClass("scala/Tuple2");
   jobject ret = env->NewObject(
     tuple2_class,
-    env->GetMethodID(tuple2_class, "<init>", "(Ljava/lang/Object;Ljava/lang/Object)V"),
+    env->GetMethodID(tuple2_class, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V"),
     first_row_array, last_group_array);
 
   return ret;
