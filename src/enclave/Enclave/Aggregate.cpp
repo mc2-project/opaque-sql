@@ -14,12 +14,12 @@ void non_oblivious_aggregate_step1(
   FlatbuffersRowWriter first_row_writer;
   FlatbuffersRowWriter last_group_writer;
 
-  const tuix::Row *a = nullptr, *prev, *cur = nullptr;
+  const tuix::Row *prev, *cur = nullptr;
   while (r.has_next()) {
     prev = cur;
     cur = r.next();
 
-    if (a == nullptr) {
+    if (prev == nullptr) {
       first_row_writer.write(cur);
     }
 
