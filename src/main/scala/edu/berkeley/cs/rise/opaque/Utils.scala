@@ -598,7 +598,7 @@ object Utils {
     // For aggregation, we concatenate the current aggregate row with the new input row and run
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
-    val concatSchema = input ++ aggSchema
+    val concatSchema = aggSchema ++ input
 
     val builder = new FlatBufferBuilder
     builder.finish(
