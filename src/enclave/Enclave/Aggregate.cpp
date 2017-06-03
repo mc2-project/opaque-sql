@@ -30,9 +30,11 @@ void non_oblivious_aggregate_step1(
   }
   last_group_writer.write(agg_op_eval.evaluate());
 
+  first_row_writer.finish(first_row_writer.write_encrypted_blocks());
   *first_row = first_row_writer.output_buffer();
   *first_row_length = first_row_writer.output_size();
 
+  last_group_writer.finish(last_group_writer.write_encrypted_blocks());
   *last_group = last_group_writer.output_buffer();
   *last_group_length = last_group_writer.output_size();
 }
@@ -78,6 +80,7 @@ void non_oblivious_aggregate_step2(
     }
   }
 
+  w.finish(w.write_encrypted_blocks());
   *output_rows = w.output_buffer();
   *output_rows_length = w.output_size();
 }
