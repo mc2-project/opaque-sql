@@ -587,6 +587,19 @@ object Utils {
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
     input: Seq[Attribute]): Array[Byte] = {
+    // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
+    // grouping expressions into AggregateExpressions that collect the first seen value.
+    val aggExpressionsWithFirst = aggExpressions.map {
+      case Alias(e: AggregateExpression, _) => e
+      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
+    }
+
+    val aggSchema = aggExpressionsWithFirst.flatMap(_.aggregateFunction.aggBufferAttributes)
+    // For aggregation, we concatenate the current aggregate row with the new input row and run
+    // the update expressions as a projection to obtain a new aggregate row. concatSchema
+    // describes the schema of the temporary concatenated row.
+    val concatSchema = input ++ aggSchema
+
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.AggregateOp.createAggregateOp(
@@ -596,12 +609,9 @@ object Utils {
           groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
         tuix.AggregateOp.createAggregateExpressionsVector(
           builder,
-          aggExpressions.map {
-            case Alias(e: AggregateExpression, _) =>
-              serializeAggExpression(builder, e, input)
-            case e: NamedExpression =>
-              serializeAggExpression(builder, AggregateExpression(First(e, Literal(false)), Final, false), input)
-          }.toArray)))
+          aggExpressionsWithFirst
+            .map(e => serializeAggExpression(builder, e, input, aggSchema, concatSchema))
+            .toArray)))
     builder.sizedByteArray()
   }
 
@@ -610,16 +620,12 @@ object Utils {
    * tuix.AggregateExpr.
    */
   def serializeAggExpression(
-    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute]): Int = {
+    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute],
+    aggSchema: Seq[Attribute], concatSchema: Seq[Attribute]): Int = {
     e.aggregateFunction match {
-      case Average(child) =>
-        val sum = AttributeReference("sum", DoubleType)()
-        val count = AttributeReference("count", LongType)()
-        val aggSchema = Seq(sum, count)
-        // For aggregation, we concatenate the current aggregate row with the new input row and run
-        // the update expressions as a projection to obtain a new aggregate row. concatSchema
-        // describes the schema of the temporary concatenated row.
-        val concatSchema = aggSchema ++ input
+      case avg @ Average(child) =>
+        val sum = avg.aggBufferAttributes(0)
+        val count = avg.aggBufferAttributes(1)
 
         tuix.AggregateExpr.createAggregateExpr(
           builder,
@@ -638,11 +644,9 @@ object Utils {
           flatbuffersSerializeExpression(
                 builder, Multiply(sum, count), aggSchema))
 
-      case First(child, Literal(false, BooleanType)) =>
-        val first = AttributeReference("first", child.dataType)()
-        val valueSet = AttributeReference("valueSet", BooleanType)()
-        val aggSchema = Seq(first, valueSet)
-        val concatSchema = aggSchema ++ input
+      case f @ First(child, Literal(false, BooleanType)) =>
+        val first = f.aggBufferAttributes(0)
+        val valueSet = f.aggBufferAttributes(1)
 
         tuix.AggregateExpr.createAggregateExpr(
           builder,
