@@ -1053,13 +1053,17 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   uint8_t *last_group;
   size_t last_group_length;
 
+  uint8_t *last_row;
+  size_t last_row_length;
+
   sgx_check("Non-Oblivious Aggregate Step 1",
             ecall_non_oblivious_aggregate_step1(
               eid,
               agg_op_ptr, agg_op_length,
               input_rows_ptr, input_rows_length,
               &first_row, &first_row_length,
-              &last_group, &last_group_length));
+              &last_group, &last_group_length,
+              &last_row, &last_row_length));
 
   jbyteArray first_row_array = env->NewByteArray(first_row_length);
   env->SetByteArrayRegion(first_row_array, 0, first_row_length, (jbyte *) first_row);
@@ -1069,14 +1073,19 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   env->SetByteArrayRegion(last_group_array, 0, last_group_length, (jbyte *) last_group);
   free(last_group);
 
+  jbyteArray last_row_array = env->NewByteArray(last_row_length);
+  env->SetByteArrayRegion(last_row_array, 0, last_row_length, (jbyte *) last_row);
+  free(last_row);
+
   env->ReleaseByteArrayElements(agg_op, (jbyte *) agg_op_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
 
-  jclass tuple2_class = env->FindClass("scala/Tuple2");
+  jclass tuple3_class = env->FindClass("scala/Tuple3");
   jobject ret = env->NewObject(
-    tuple2_class,
-    env->GetMethodID(tuple2_class, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V"),
-    first_row_array, last_group_array);
+    tuple3_class,
+    env->GetMethodID(tuple3_class, "<init>",
+                     "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V"),
+    first_row_array, last_group_array, last_row_array);
 
   return ret;
 }
@@ -1084,7 +1093,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows,
-  jbyteArray next_partition_first_row, jbyteArray prev_partition_last_group) {
+  jbyteArray next_partition_first_row, jbyteArray prev_partition_last_group,
+  jbyteArray prev_partition_last_row) {
   (void)obj;
 
   jboolean if_copy;
@@ -1105,6 +1115,11 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
   uint8_t *prev_partition_last_group_ptr =
     (uint8_t *) env->GetByteArrayElements(prev_partition_last_group, &if_copy);
 
+  uint32_t prev_partition_last_row_length =
+    (uint32_t) env->GetArrayLength(prev_partition_last_row);
+  uint8_t *prev_partition_last_row_ptr =
+    (uint8_t *) env->GetByteArrayElements(prev_partition_last_row, &if_copy);
+
   uint8_t *output_rows;
   size_t output_rows_length;
 
@@ -1115,6 +1130,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
               input_rows_ptr, input_rows_length,
               next_partition_first_row_ptr, next_partition_first_row_length,
               prev_partition_last_group_ptr, prev_partition_last_group_length,
+              prev_partition_last_row_ptr, prev_partition_last_row_length,
               &output_rows, &output_rows_length));
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -1127,6 +1143,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
     next_partition_first_row, (jbyte *) next_partition_first_row_ptr, 0);
   env->ReleaseByteArrayElements(
     prev_partition_last_group, (jbyte *) prev_partition_last_group_ptr, 0);
+  env->ReleaseByteArrayElements(
+    prev_partition_last_row, (jbyte *) prev_partition_last_row_ptr, 0);
 
   return ret;
 }

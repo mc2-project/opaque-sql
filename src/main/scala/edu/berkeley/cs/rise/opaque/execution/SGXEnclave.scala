@@ -45,10 +45,10 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
   @native def NonObliviousAggregateStep1(
-    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte])
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte])
   @native def NonObliviousAggregateStep2(
     eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], nextPartitionFirstRow: Array[Byte],
-    prevPartitionLastGroup: Array[Byte]): Array[Byte]
+    prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte]): Array[Byte]
 
   // Remote attestation, enclave side
   @native def RemoteAttestation0(): Array[Byte]

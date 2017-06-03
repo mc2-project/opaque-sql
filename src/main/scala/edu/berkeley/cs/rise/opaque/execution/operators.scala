@@ -246,26 +246,30 @@ case class EncryptedAggregateExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedAggregateExec") { childRDD =>
 
-      val (firstRows, lastGroups) = childRDD.map { block =>
+      val (firstRows, lastGroups, lastRows) = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        val (firstRow, lastGroup) = enclave.NonObliviousAggregateStep1(eid, aggExprSer, block.bytes)
-        (Block(firstRow), Block(lastGroup))
-      }.collect.unzip
+        val (firstRow, lastGroup, lastRow) = enclave.NonObliviousAggregateStep1(
+          eid, aggExprSer, block.bytes)
+        (Block(firstRow), Block(lastGroup), Block(lastRow))
+      }.collect.unzip3
 
       // Send first row to previous partition and last group to next partition
       val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
       val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
-      val shifted = shiftedFirstRows.zip(shiftedLastGroups)
+      val shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
+      val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
       val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      childRDD.zipPartitions(shiftedRDD) { (blockIter, aggBlockPairIter) =>
-        (blockIter.toSeq, aggBlockPairIter.toSeq) match {
-          case (Seq(block), Seq(Tuple2(nextPartitionFirstRow, prevPartitionLastGroup))) =>
+      childRDD.zipPartitions(shiftedRDD) { (blockIter, boundaryIter) =>
+        (blockIter.toSeq, boundaryIter.toSeq) match {
+          case (Seq(block), Seq(Tuple3(
+            nextPartitionFirstRow, prevPartitionLastGroup, prevPartitionLastRow))) =>
             val (enclave, eid) = Utils.initEnclave()
             Iterator(Block(enclave.NonObliviousAggregateStep2(
               eid, aggExprSer, block.bytes,
-              nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes)))
+              nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes,
+              prevPartitionLastRow.bytes)))
         }
       }
     }
