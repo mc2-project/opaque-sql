@@ -26,6 +26,54 @@ template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder, bool force_null);
 
+template<typename InputTuixField, typename InputType>
+flatbuffers::Offset<tuix::Field> flatbuffers_cast(
+  const tuix::Cast *cast, const tuix::Field *value, flatbuffers::FlatBufferBuilder& builder,
+  bool result_is_null) {
+  InputType value_eval = static_cast<const InputTuixField *>(value->value())->value();
+  switch (cast->target_type()) {
+  case tuix::ColType_IntegerType:
+  {
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_IntegerField,
+      tuix::CreateIntegerField(builder, static_cast<int32_t>(value_eval)).Union(),
+      result_is_null);
+  }
+  case tuix::ColType_LongType:
+  {
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_LongField,
+      tuix::CreateLongField(builder, static_cast<int64_t>(value_eval)).Union(),
+      result_is_null);
+  }
+  case tuix::ColType_FloatType:
+  {
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_FloatField,
+      tuix::CreateFloatField(builder, static_cast<float>(value_eval)).Union(),
+      result_is_null);
+  }
+  case tuix::ColType_DoubleType:
+  {
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_DoubleField,
+      tuix::CreateDoubleField(builder, static_cast<double>(value_eval)).Union(),
+      result_is_null);
+  }
+  default:
+  {
+    printf("Can't cast IntegerType to %s\n",
+           typeid(InputTuixField).name(), tuix::EnumNameColType(cast->target_type()));
+    std::exit(1);
+    return flatbuffers::Offset<tuix::Field>();
+  }
+  }
+}
+
 template<typename T> flatbuffers::Offset<T> GetOffset(
   flatbuffers::FlatBufferBuilder &builder, const T *pointer) {
   return flatbuffers::Offset<T>(builder.GetCurrentBufferPointer() + builder.GetSize()

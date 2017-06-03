@@ -442,9 +442,19 @@ object Utils {
           // tree. For now we just ignore them when evaluating expressions.
           childOffset
 
-        case (Cast(child, _), Seq(childOffset)) =>
-          // TODO: Implement cast
-          childOffset
+        case (Cast(child, dataType), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Cast,
+            tuix.Cast.createCast(
+              builder,
+              childOffset,
+              dataType match {
+                case IntegerType => tuix.ColType.IntegerType
+                case LongType => tuix.ColType.LongType
+                case FloatType => tuix.ColType.FloatType
+                case DoubleType => tuix.ColType.DoubleType
+              }))
 
         // Arithmetic
         case (Add(left, right), Seq(leftOffset, rightOffset)) =>
@@ -466,6 +476,13 @@ object Utils {
             builder,
             tuix.ExprUnion.Multiply,
             tuix.Multiply.createMultiply(
+              builder, leftOffset, rightOffset))
+
+        case (Divide(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Divide,
+            tuix.Divide.createDivide(
               builder, leftOffset, rightOffset))
 
         // Predicates
@@ -627,22 +644,24 @@ object Utils {
         val sum = avg.aggBufferAttributes(0)
         val count = avg.aggBufferAttributes(1)
 
+        // TODO: support aggregating null values
+        // TODO: support DecimalType to match Spark SQL behavior
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
-              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0), input),
+              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0.0), input),
               /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Add(sum, child), concatSchema),
+                builder, Add(sum, Cast(child, DoubleType)), concatSchema),
               /* count = */ flatbuffersSerializeExpression(
                 builder, Add(count, Literal(1L)), concatSchema))),
           flatbuffersSerializeExpression(
-                builder, Multiply(sum, count), aggSchema))
+            builder, Divide(sum, Cast(count, DoubleType)), aggSchema))
 
       case f @ First(child, Literal(false, BooleanType)) =>
         val first = f.aggBufferAttributes(0)

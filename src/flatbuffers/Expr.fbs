@@ -19,10 +19,11 @@ union ExprUnion {
     IsNotNull,
     Substring,
     Multiply,
+    Divide,
     Add,
     Subtract,
     If,
-    // TODO: Greatest, Least
+    Cast,
 }
 
 table Expr {
@@ -37,6 +38,11 @@ table Literal {
     value:Field;
 }
 
+table Cast {
+    value:Expr;
+    target_type:ColType;
+}
+
 // Arithmetic
 table Add {
     left:Expr;
@@ -49,6 +55,11 @@ table Subtract {
 }
 
 table Multiply {
+    left:Expr;
+    right:Expr;
+}
+
+table Divide {
     left:Expr;
     right:Expr;
 }

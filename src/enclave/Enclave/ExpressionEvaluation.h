@@ -207,6 +207,40 @@ private:
         static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
     }
 
+    case tuix::ExprUnion_Cast:
+    {
+      auto cast = static_cast<const tuix::Cast *>(expr->expr());
+      // Note: This temporary pointer will be invalidated when we next write to builder
+      const tuix::Field *value =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, cast->value()));
+      bool result_is_null = value->is_null();
+      switch (value->value_type()) {
+      case tuix::FieldUnion_IntegerField:
+      {
+        return flatbuffers_cast<tuix::IntegerField, int32_t>(cast, value, builder, result_is_null);
+      }
+      case tuix::FieldUnion_LongField:
+      {
+        return flatbuffers_cast<tuix::LongField, int64_t>(cast, value, builder, result_is_null);
+      }
+      case tuix::FieldUnion_FloatField:
+      {
+        return flatbuffers_cast<tuix::FloatField, float>(cast, value, builder, result_is_null);
+      }
+      case tuix::FieldUnion_DoubleField:
+      {
+        return flatbuffers_cast<tuix::DoubleField, double>(cast, value, builder, result_is_null);
+      }
+      default:
+      {
+        printf("Can't evaluate cast on %s\n",
+               tuix::EnumNameFieldUnion(value->value_type()));
+        std::exit(1);
+        return flatbuffers::Offset<tuix::Field>();
+      }
+      }
+    }
+
     // Arithmetic
     case tuix::ExprUnion_Add:
     {
@@ -233,6 +267,15 @@ private:
         builder,
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->left())),
         flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->right())));
+    }
+
+    case tuix::ExprUnion_Divide:
+    {
+      auto divide = static_cast<const tuix::Divide *>(expr->expr());
+      return eval_binary_arithmetic_op<tuix::Divide, std::divides>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, divide->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, divide->right())));
     }
 
     // Predicates
