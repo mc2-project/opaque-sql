@@ -645,16 +645,31 @@ public:
         std::unique_ptr<AggregateExpressionEvaluator>(
           new AggregateExpressionEvaluator(e)));
     }
+
+    reset_group();
   }
 
   void reset_group() {
-    a = nullptr;
     builder2.Clear();
+    // Write initial values to a
+    std::vector<flatbuffers::Offset<tuix::Field>> init_fields;
+    for (auto&& e : aggregate_evaluators) {
+      for (auto f : e->initial_values(nullptr)) {
+        init_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder2));
+      }
+    }
+    a = flatbuffers::GetTemporaryPointer<tuix::Row>(
+      builder2, tuix::CreateRowDirect(builder2, &init_fields));
   }
 
   void set(const tuix::Row *agg_row) {
-    a = agg_row;
     builder2.Clear();
+    if (agg_row) {
+      a = flatbuffers::GetTemporaryPointer<tuix::Row>(
+        builder2, flatbuffers_copy<tuix::Row>(agg_row, builder2));
+    } else {
+      reset_group();
+    }
   }
 
   void aggregate(const tuix::Row *row) {
@@ -662,28 +677,14 @@ public:
     flatbuffers::Offset<tuix::Row> concat;
 
     std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
-    if (a == nullptr) {
-      // write initial values to a
-      for (auto&& e : aggregate_evaluators) {
-        for (auto f : e->initial_values(row)) {
-          concat_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder));
-        }
-      }
-      // concat row to a
-      for (auto field : *row->field_values()) {
-        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
-      }
-      concat = tuix::CreateRowDirect(builder, &concat_fields);
-    } else {
-      // concat row to a
-      for (auto field : *a->field_values()) {
-        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
-      }
-      for (auto field : *row->field_values()) {
-        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
-      }
-      concat = tuix::CreateRowDirect(builder, &concat_fields);
+    // concat row to a
+    for (auto field : *a->field_values()) {
+      concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
     }
+    for (auto field : *row->field_values()) {
+      concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+    }
+    concat = tuix::CreateRowDirect(builder, &concat_fields);
     const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
 
     // run update_exprs
