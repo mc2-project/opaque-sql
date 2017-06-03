@@ -90,7 +90,7 @@ val synthTestDataTask = TaskKey[Unit]("synthTestData",
 test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
 
 val sgxGdbTask = TaskKey[Unit]("sgx-gdb",
-  "Runs unit tests under the sgx-gdb debugger.")
+  "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
 
 buildType in sgxGdbTask := Debug
 
@@ -148,9 +148,6 @@ buildFlatbuffersTask := {
   val gen = (flatbuffersGenCppDir.value ** "*.h" +++ javaOutDir ** "*.java").get
 
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
-    streams.value.log.info(
-      s"${flatbuffers.maxBy(_.lastModified).getPath} newer than " +
-      gen.maxBy(_.lastModified).getPath)
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
       if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
