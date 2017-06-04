@@ -21,6 +21,8 @@ import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.OpaqueDatasetFunctions
 
 object implicits {
+  import scala.language.implicitConversions
+
   implicit def datasetToOpaqueDatasetFunctions[T](ds: Dataset[T]): OpaqueDatasetFunctions[T] =
     new OpaqueDatasetFunctions[T](ds)
 }

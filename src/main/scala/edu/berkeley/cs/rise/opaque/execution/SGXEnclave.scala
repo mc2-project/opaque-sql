@@ -22,7 +22,7 @@ import ch.jodersky.jni.nativeLoader
 @nativeLoader("enclave_jni")
 class SGXEnclave extends java.io.Serializable {
   @native def StartEnclave(libraryPath: String): Long
-  @native def StopEnclave(enclaveId: Long)
+  @native def StopEnclave(enclaveId: Long): Unit
 
   @native def Project(eid: Long, projectList: Array[Byte], input: Array[Byte]): Array[Byte]
 
@@ -54,5 +54,5 @@ class SGXEnclave extends java.io.Serializable {
   @native def RemoteAttestation0(): Array[Byte]
   @native def RemoteAttestation1(eid: Long): Array[Byte]
   @native def RemoteAttestation2(eid: Long, msg2Input: Array[Byte]): Array[Byte]
-  @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte])
+  @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte]): Unit
 }

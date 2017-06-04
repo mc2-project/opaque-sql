@@ -71,8 +71,6 @@ import org.apache.spark.sql.catalyst.plans.NaturalJoin
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
-import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
@@ -128,13 +126,12 @@ object Utils {
 
   def findLibraryAsResource(libraryName: String): String = {
     // Derived from sbt-jni: macros/src/main/scala/ch/jodersky/jni/annotations.scala
-    import java.io.File
     import java.nio.file.{Files, Path}
     val lib = System.mapLibraryName(libraryName)
     val tmp: Path = Files.createTempDirectory("jni-")
     val plat: String = {
       val line = try {
-        scala.sys.process.Process("uname -sm").lines.head
+        scala.sys.process.Process("uname -sm").lineStream.head
       } catch {
         case ex: Exception => sys.error("Error running `uname` command")
       }
@@ -330,7 +327,7 @@ object Utils {
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
-    var encryptedBlockOffsets = ArrayBuilder.make[Int]
+    val encryptedBlockOffsets = ArrayBuilder.make[Int]
 
     // 1. Serialize the rows as plaintext using tuix.Rows
     var builder = new FlatBufferBuilder
@@ -683,7 +680,7 @@ object Utils {
   def serializeAggExpression(
     builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute],
     aggSchema: Seq[Attribute], concatSchema: Seq[Attribute]): Int = {
-    e.aggregateFunction match {
+    (e.aggregateFunction: @unchecked) match {
       case avg @ Average(child) =>
         val sum = avg.aggBufferAttributes(0)
         val count = avg.aggBufferAttributes(1)
@@ -749,7 +746,7 @@ object Utils {
 
       case l @ Last(child, Literal(false, BooleanType)) =>
         val last = l.aggBufferAttributes(0)
-        val valueSet = l.aggBufferAttributes(1)
+        // val valueSet = l.aggBufferAttributes(1)
 
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(

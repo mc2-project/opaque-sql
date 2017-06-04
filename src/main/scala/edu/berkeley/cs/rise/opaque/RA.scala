@@ -17,25 +17,12 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.net._
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Dataset
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
-import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
-import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.unsafe.types.UTF8String
 
-import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.execution.SP
-import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
-import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
 /*
  * Remote attestation code
@@ -103,7 +90,6 @@ object RA {
   }
 
   def finalAttest(index: Int, data: Iterator[_], attestResult:Array[Byte], inputIPAddr: String): Iterator[Boolean]= {
-    val ipAddr = getIP()
     this.synchronized {
       //println(s"synchronized finalAttest called ${Utils.attested}")
       val (enclave, eid) = Utils.initEnclave()
@@ -127,7 +113,6 @@ object RA {
     val numPartitions = data.getNumPartitions
 
     val master = new SP()
-    val enclave = new SGXEnclave()
 
     //println("Loaded libraries")
 
@@ -165,7 +150,7 @@ object RA {
     //println("Got msg1")
 
     var msg2_dedup = Map[String, Array[Byte]]()
-    var msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+    val msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
 
     for (index <- 0 until msg1.length) {
       val attested = msg1(index)._2
@@ -179,7 +164,6 @@ object RA {
 
     for (index <- 0 until msg1.length) {
       val attested = msg1(index)._2
-      val proc = msg1(index)._3
       val ipAddr = msg1(index)._4
 
       if (!attested) {
@@ -198,7 +182,7 @@ object RA {
 
     // get attestation result from the master
     var attResult_dedup = Map[String, Array[Byte]]()
-    var attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+    val attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
     for (index <- 0 until msg3.length) {
       val attested = msg3(index)._2
       val proc = msg3(index)._3
@@ -211,7 +195,6 @@ object RA {
 
     for (index <- 0 until msg3.length) {
       val attested = msg3(index)._2
-      val proc = msg3(index)._3
       val ipAddr = msg3(index)._4
 
       if (!attested) {

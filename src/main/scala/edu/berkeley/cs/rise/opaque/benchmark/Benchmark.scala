@@ -28,7 +28,7 @@ object Benchmark {
     System.getenv("SPARKSGX_DATA_DIR")
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
       .appName("QEDBenchmark")
       .getOrCreate()

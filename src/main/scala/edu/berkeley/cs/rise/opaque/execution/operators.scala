@@ -19,18 +19,14 @@ package edu.berkeley.cs.rise.opaque.execution
 
 import scala.collection.mutable.ArrayBuffer
 
-import edu.berkeley.cs.rise.opaque.RA
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.types.UTF8String
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -170,7 +166,6 @@ trait OpaqueOperatorExec extends SparkPlan {
       }
       numPartsToTry = math.max(0, numPartsToTry)  // guard against negative num of partitions
 
-      val left = n - buf.size
       val p = partsScanned.until(math.min(partsScanned + numPartsToTry, totalParts).toInt)
       val sc = sqlContext.sparkContext
       val res = sc.runJob(childRDD,
@@ -232,8 +227,6 @@ case class EncryptedAggregateExec(
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
-  import Utils.time
-
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
@@ -285,8 +278,6 @@ case class EncryptedSortMergeJoinExec(
     output: Seq[Attribute],
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
-
-  import Utils.time
 
   override def executeBlocked() = {
     val joinExprSer = Utils.serializeJoinExpression(
