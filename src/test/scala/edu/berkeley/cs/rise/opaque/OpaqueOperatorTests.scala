@@ -268,6 +268,26 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val result = words.agg(sum("count").as("totalCount"))
   }
 
+  testOpaqueObliviousOnly("pushup filtering") { securityLevel =>
+    val data = Seq(("number2", 4), ("number3", 1), ("number1", 5), ("number4", 123), ("number5", -1))
+    val df = makeDF(data, securityLevel, "a", "b")
+    val newDF = df.sort($"b").filter($"b" > lit(3)).sort($"a").toDF
+    val physicalPlan = newDF.queryExecution.executedPlan
+
+    val sorts = physicalPlan.collect {
+        case o: ObliviousSortExec => o
+    }
+
+    val is_filter_pushed_up = physicalPlan match {
+        case ObliviousFilterExec(condition, child) => true
+        case _ => false
+    }
+
+    // checks that the 2 sorts got combined
+    assert(sorts.size == 1)
+    assert(is_filter_pushed_up)
+  }
+
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
     data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =
     securityLevel.applyTo(
