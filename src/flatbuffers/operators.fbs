@@ -1,0 +1,59 @@
+include "Expr.fbs";
+
+// This file is part of the interface between Spark SQL and the SGX enclave --
+// the "trusted-untrusted interface," or TUIX.
+
+namespace edu.berkeley.cs.rise.opaque.tuix;
+
+// Filter
+table FilterExpr {
+    condition:Expr;
+}
+
+// Project
+table ProjectExpr {
+    project_list:[Expr];
+}
+
+// Sort
+enum SortDirection : ubyte {
+    Ascending, Descending
+}
+
+table SortOrder {
+    child:Expr;
+    direction:SortDirection;
+}
+
+table SortExpr {
+    sort_order:[SortOrder];
+}
+
+// Aggregate
+table AggregateExpr {
+    initial_values: [Expr];
+    update_exprs: [Expr];
+    evaluate_expr: Expr;
+}
+// Supported: Average, Count, First, Last, Max, Min, Sum
+
+table AggregateOp {
+    // Given an input row, extract its group.
+    grouping_expressions:[Expr];
+    // Given multiple input rows from the same group, compute their aggregate.
+    aggregate_expressions:[AggregateExpr];
+}
+
+// Join
+enum JoinType : ubyte {
+    Inner, FullOuter, LeftOuter, RightOuter, LeftSemi, LeftAnti, Cross
+}
+table JoinExpr {
+    join_type:JoinType;
+    // Currently only cross joins and equijoins are supported, so we store
+    // parallel arrays of key expressions and the join outputs pairs of rows
+    // where each expression from the left is equal to the matching expression
+    // from the right.
+    left_keys:[Expr];
+    right_keys:[Expr];
+}

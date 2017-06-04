@@ -91,10 +91,12 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Join(left, right, Inner, Some(joinExpr)) if isOblivious(p) =>
-      ObliviousJoin(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinExpr)
-    case p @ Join(left, right, Inner, Some(joinExpr)) if isEncrypted(p) =>
-      EncryptedJoin(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinExpr)
+    case p @ Join(left, right, joinType, condition) if isOblivious(p) =>
+      ObliviousJoin(
+        left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
+    case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
+      EncryptedJoin(
+        left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
     case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
       UndoCollapseProject.separateProjectAndAgg(p) match {
@@ -130,6 +132,13 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
               groupingExprs.map(e => SortOrder(e, Ascending)),
               child.asInstanceOf[OpaqueOperator]))
       }
+
+    // For now, just ignore limits. TODO: Implement Opaque operators for these
+    case p @ GlobalLimit(_, child) if isEncrypted(p) => child
+    case p @ LocalLimit(_, child) if isEncrypted(p) => child
+
+    case p @ Union(Seq(left, right)) if isEncrypted(p) =>
+      ObliviousUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
 
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(

@@ -5,15 +5,18 @@ dist: trusty
 sudo: required
 
 before_install:
+  - sudo apt-get install build-essential ocaml automake autoconf libtool
   - export CC=gcc-4.8
   - export CXX=g++-4.8
-  - wget https://download.01.org/intel-sgx/linux-1.7/sgx_linux_x64_sdk_1.7.100.36470.bin -O sgx_sdk.bin
-  - chmod +x sgx_sdk.bin
-  - echo yes | ./sgx_sdk.bin
+  - git clone https://github.com/ankurdave/linux-sgx -b c++11
+  - cd linux-sgx
+  - ./download_prebuilt.sh
+  - make --quiet sdk_install_pkg
+  - cd ..
+  - echo yes | ./linux-sgx/linux/installer/bin/sgx_linux_x64_sdk_*.bin
   - source sgxsdk/environment
   - openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
   - export SPARKSGX_DATA_DIR=$PWD/data
-  - export LIBSGXENCLAVE_PATH=$PWD/libSGXEnclave.so
-  - export LIBENCLAVESIGNED_PATH=$PWD/enclave.signed.so
-  - export LIBSGX_SP_PATH=$PWD/libservice_provider.so
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
+
+script: sbt -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test

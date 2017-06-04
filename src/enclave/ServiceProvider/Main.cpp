@@ -22,50 +22,14 @@
  *   suppliers or licensors in any way.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <stdint.h>
-
-//#include "Main.h"
-//#include "sgx_tcrypto.h"
-//#include "sgx_ukey_exchange.h"
-//#include "define.h"
-//#include "common.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
 
 #include "SP.h"
-//#include "sample_messages.h"    // this is for debugging remote attestation only
 #include "service_provider.h"
 
 lc_aes_gcm_128bit_key_t key = "helloworld12312";
-
-class scoped_timer {
-
-public:
-  scoped_timer(uint64_t *total_time) {
-    this->total_time = total_time;
-    struct timeval start;
-    gettimeofday(&start, NULL);
-    time_start = start.tv_sec * 1000000 + start.tv_usec;
-  }
-
-  ~scoped_timer() {
-    struct timeval end;
-    gettimeofday(&end, NULL);
-    time_end = end.tv_sec * 1000000 + end.tv_usec;
-    *total_time += time_end - time_start;
-  }
-
-  uint64_t * total_time;
-  uint64_t time_start, time_end;
-};
-
-// uint8_t* msg1_samples[] = { msg1_sample1, msg1_sample2 };
-// uint8_t* msg2_samples[] = { msg2_sample1, msg2_sample2 };
-// uint8_t* msg3_samples[] = { msg3_sample1, msg3_sample2 };
-// uint8_t* attestation_msg_samples[] = { attestation_msg_sample1, attestation_msg_sample2};
-
-
 
 // These SP (service provider) calls are supposed to be made in a trusted environment
 // For now we assume that the trusted master executes these calls
@@ -141,139 +105,6 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
   const char *private_key_filename = std::getenv("PRIVATE_KEY_PATH");
   read_secret_key(private_key_filename, NULL);
 }
-
-void test_encrypt() {
-  uint8_t p_key[16] = {0xff, 0xff, 0xff, 0xff,
-                      0xff, 0xff, 0xff, 0xff,
-                      0xff, 0xff, 0xff, 0xff,
-                      0xff, 0xff, 0xff, 0xff};
-
-  uint8_t p_src_[11] = "helloworld";
-  uint8_t *p_src = p_src_;
-  uint32_t src_len = 10;
-  uint8_t p_iv[SAMPLE_SP_IV_SIZE] = {
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff
-  };
-  lc_aes_gcm_128bit_tag_t mac;
-  uint8_t p_dst_[100];
-  uint8_t *p_dst = p_dst_;
-
-  lc_rijndael128GCM_encrypt((lc_aes_gcm_128bit_key_t *) &p_key,
-                            p_src, src_len,
-                            p_dst,
-                            p_iv, SAMPLE_SP_IV_SIZE,
-                            NULL, 0,
-                            &mac);
-
-  print_hex(p_src, src_len);
-  printf("\n");
-
-  print_hex(p_dst, src_len);
-  printf("\n");
-
-
-  uint8_t plaintext[100];
-  lc_rijndael128GCM_decrypt(p_dst, src_len,
-                            NULL, 0,
-                            (unsigned char *) mac,
-                            (unsigned char *) &p_key,
-                            (unsigned char *)  p_iv,
-                            (unsigned char *) plaintext);
-
-  print_hex(plaintext, src_len);
-  printf("\n");
-}
-
-
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Encrypt(
-  JNIEnv *env,
-  jobject obj,
-  jbyteArray plaintext) {
-  (void)obj;
-
-  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
-
-  uint8_t *plaintext_ptr = (uint8_t *) ptr;
-
-  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
-  jbyteArray ciphertext = env->NewByteArray(clength);
-
-  uint8_t ciphertext_copy[2048];
-
-  encrypt(&key, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength);
-
-  env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
-
-  env->ReleaseByteArrayElements(plaintext, ptr, 0);
-
-  return ciphertext;
-}
-
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Decrypt(
-  JNIEnv *env,
-  jobject obj,
-  jbyteArray ciphertext) {
-  (void)obj;
-
-  uint32_t clength = (uint32_t) env->GetArrayLength(ciphertext);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(ciphertext, &if_copy);
-
-  uint8_t *ciphertext_ptr = (uint8_t *) ptr;
-
-  const jsize plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
-  jbyteArray plaintext = env->NewByteArray(plength);
-
-  uint8_t plaintext_copy[2048];
-
-  decrypt(&key, ciphertext_ptr, (uint32_t) clength,
-          plaintext_copy, (uint32_t) plength);
-
-  env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *) plaintext_copy);
-
-  env->ReleaseByteArrayElements(ciphertext, ptr, 0);
-
-  return plaintext;
-}
-
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_EncryptAttribute(
-  JNIEnv *env,
-  jobject obj,
-  jbyteArray plaintext) {
-  (void)obj;
-
-  uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
-  (void) plength;
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
-
-  uint8_t *plaintext_ptr = (uint8_t *) ptr;
-
-  uint32_t ciphertext_length = 4 + ENC_HEADER_SIZE + HEADER_SIZE + ATTRIBUTE_UPPER_BOUND;
-  uint8_t *ciphertext_copy = (uint8_t *) malloc(ciphertext_length);
-
-  uint8_t *input_ptr = plaintext_ptr;
-  uint8_t *output_ptr = ciphertext_copy;
-  uint32_t actual_size = 0;
-
-  encrypt_attribute(&key,
-                    &input_ptr, &output_ptr,
-                    &actual_size);
-
-  jbyteArray ciphertext = env->NewByteArray(actual_size - 4);
-  env->SetByteArrayRegion(ciphertext, 0, actual_size - 4, (jbyte *) (ciphertext_copy + 4));
-
-  env->ReleaseByteArrayElements(plaintext, ptr, 0);
-
-  free(ciphertext_copy);
-
-  return ciphertext;
-}
-
 
 int main(int argc, char **argv) {
   (void)(argc);

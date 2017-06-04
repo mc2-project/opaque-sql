@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.logical.BinaryNode
 import org.apache.spark.sql.catalyst.plans.logical.LeafNode
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -166,7 +167,8 @@ case class EncryptedAggregate(
 case class ObliviousJoin(
     left: OpaqueOperator,
     right: OpaqueOperator,
-    joinExpr: Expression)
+    joinType: JoinType,
+    condition: Option[Expression])
   extends BinaryNode with OpaqueOperator {
 
   override def output: Seq[Attribute] = left.output ++ right.output
@@ -175,8 +177,17 @@ case class ObliviousJoin(
 case class EncryptedJoin(
     left: OpaqueOperator,
     right: OpaqueOperator,
-    joinExpr: Expression)
+    joinType: JoinType,
+    condition: Option[Expression])
   extends BinaryNode with OpaqueOperator {
 
   override def output: Seq[Attribute] = left.output ++ right.output
+}
+
+case class ObliviousUnion(
+    left: OpaqueOperator,
+    right: OpaqueOperator)
+  extends BinaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = left.output
 }

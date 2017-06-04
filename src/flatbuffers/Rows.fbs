@@ -1,0 +1,57 @@
+namespace edu.berkeley.cs.rise.opaque.tuix;
+
+// This file is part of the interface between Spark SQL and the SGX enclave --
+// the "trusted-untrusted interface," or TUIX.
+
+enum ColType : ubyte {
+    BooleanType,
+    IntegerType,
+    LongType,
+    FloatType,
+    DoubleType,
+    StringType,
+}
+
+table BooleanField {
+    value:bool;
+}
+
+table IntegerField {
+    value:int;
+}
+
+table LongField {
+    value:long;
+}
+
+table FloatField {
+    value:float;
+}
+
+table DoubleField {
+    value:double;
+}
+
+table StringField {
+    value:[ubyte];
+    length:uint;
+}
+
+union FieldUnion {
+    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField
+}
+
+table Field {
+    value:FieldUnion;
+    is_null:bool;
+}
+
+table Row {
+    field_values:[Field];
+    is_dummy:bool;
+}
+
+// Root of plaintext batch
+table Rows {
+    rows:[Row];
+}

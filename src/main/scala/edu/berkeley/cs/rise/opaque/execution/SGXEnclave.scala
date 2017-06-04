@@ -17,134 +17,42 @@
 
 package edu.berkeley.cs.rise.opaque.execution
 
-class MutableInteger(var value: Int = 0)
+import ch.jodersky.jni.nativeLoader
 
+@nativeLoader("enclave_jni")
 class SGXEnclave extends java.io.Serializable {
-  @native def StartEnclave(): Long
-  @native def StopEnclave(enclave_id: Long)
+  @native def StartEnclave(libraryPath: String): Long
+  @native def StopEnclave(enclaveId: Long)
 
-  @native def Project(
-    eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    input_rows: Array[Byte],
-    num_rows: Int
-  ): Array[Byte]
+  @native def Project(eid: Long, projectList: Array[Byte], input: Array[Byte]): Array[Byte]
 
-  @native def Filter(
-    enclave_id: Long, index: Int, numPart: Int,
-    op_code: Int, rows: Array[Byte], num_rows: Int,
-    num_output_rows: MutableInteger): Array[Byte]
+  @native def Filter(eid: Long, condition: Array[Byte], input: Array[Byte]): Array[Byte]
 
-  @native def Encrypt(
-    enclave_id: Long, plaintext: Array[Byte]): Array[Byte]
-  @native def Decrypt(
-    enclave_id: Long, ciphertext: Array[Byte]): Array[Byte]
+  @native def Encrypt(eid: Long, plaintext: Array[Byte]): Array[Byte]
+  @native def Decrypt(eid: Long, ciphertext: Array[Byte]): Array[Byte]
 
-  @native def Test(eid: Long)
-
-  @native def Sample(
-    enclave_id: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    input: Array[Byte],
-    num_rows: Int,
-    num_output_rows: MutableInteger
-  ): Array[Byte]
-
+  @native def Sample(eid: Long, input: Array[Byte]): Array[Byte]
   @native def FindRangeBounds(
-    enclave_id: Long,
-    op_code: Int,
-    num_partitions: Int,
-    input: Array[Byte],
-    num_rows: Int
-  ): Array[Byte]
-
+    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte]): Array[Byte]
   @native def PartitionForSort(
-    enclave_id: Long,
-    index: Int,
-    num_part: Int,
-    op_code: Int,
-    num_partitions: Int,
-    input: Array[Byte],
-    num_rows: Int,
-    boundary_rows: Array[Byte],
-    offsets: Array[Int],
-    rows_per_partition: Array[Int]
-  ): Array[Byte]
+    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte],
+    boundaries: Array[Byte]): Array[Array[Byte]]
+  @native def ExternalSort(eid: Long, order: Array[Byte], input: Array[Byte]): Array[Byte]
 
-  @native def ExternalSort(
-    enclave_id: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    input: Array[Byte],
-    num_items: Int
-  ): Array[Byte]
-
-  @native def FinalAggregation(
-    eid: Long,
-    op_code: Int,
-    rows: Array[Byte],
-    num_rows: Int
-  ): Array[Byte]
-
-  @native def NonObliviousAggregate(
-    eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    rows: Array[Byte],
-    num_rows: Int,
-    num_output_rows: MutableInteger
-  ): Array[Byte]
-
-  @native def JoinSortPreprocess(
-    eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    primary_rows: Array[Byte],
-    num_primary_rows: Int,
-    foreign_rows: Array[Byte],
-    num_foreign_rows: Int
-  ): Array[Byte]
-
+  @native def ScanCollectLastPrimary(
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte]): Array[Byte]
   @native def NonObliviousSortMergeJoin(
-    eid: Long,
-    index: Int,
-    numPart: Int,
-    op_code: Int,
-    rows: Array[Byte],
-    num_rows: Int,
-    num_output_rows: MutableInteger
-  ): Array[Byte]
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
-  @native def EncryptAttribute(
-    eid: Long,
-    plaintext: Array[Byte]
-  ): Array[Byte]
-
-  @native def CreateBlock(
-      eid: Long, rows: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
-
-  @native def SplitBlock(
-      eid: Long, block: Array[Byte], numRows: Int, rowsAreJoinRows: Boolean): Array[Byte]
-
-  @native def CountNumRows(
-    eid: Long, input_rows: Array[Byte]) : Int
-
-  @native def GlobalAggregate(
-    eid: Long, index: Int, numPart: Int,
-    op_code: Int, input_rows: Array[Byte], num_rows: Int, ret_num_rows: MutableInteger): Array[Byte]
-
+  @native def NonObliviousAggregateStep1(
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte])
+  @native def NonObliviousAggregateStep2(
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], nextPartitionFirstRow: Array[Byte],
+    prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte]): Array[Byte]
 
   // Remote attestation, enclave side
   @native def RemoteAttestation0(): Array[Byte]
   @native def RemoteAttestation1(eid: Long): Array[Byte]
   @native def RemoteAttestation2(eid: Long, msg2Input: Array[Byte]): Array[Byte]
   @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte])
-
 }

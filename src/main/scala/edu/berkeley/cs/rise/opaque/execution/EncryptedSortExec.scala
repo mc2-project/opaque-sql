@@ -29,37 +29,21 @@ import org.apache.spark.sql.execution.SparkPlan
 case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
-  private object Col extends ColumnNumberMatcher {
-    override def input: Seq[Attribute] = child.output
-  }
-
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked() = {
-    import Opcode._
-    val opcode = order match {
-      case Seq(SortOrder(Col(1, _), Ascending)) =>
-        OP_SORT_COL1
-      case Seq(SortOrder(Col(2, _), Ascending)) =>
-        OP_SORT_COL2
-      case Seq() =>
-        OP_NOSORT
-    }
-    if (opcode == OP_NOSORT) {
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    } else {
-      EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), opcode)
-    }
+    val orderSer = Utils.serializeSortOrder(order, child.output)
+    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
   }
 }
 
 object EncryptedSortExec {
   import Utils.time
 
-  def sort(childRDD: RDD[Block], opcode: Opcode): RDD[Block] = {
+  def sort(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
     Utils.ensureCached(childRDD)
     time("force child of EncryptedSort") { childRDD.count }
-    RA.initRA(childRDD)
+    // RA.initRA(childRDD)
 
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length
@@ -67,58 +51,39 @@ object EncryptedSortExec {
         if (numPartitions <= 1) {
           childRDD.map { block =>
             val (enclave, eid) = Utils.initEnclave()
-            val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, block.bytes, block.numRows)
-            Block(sortedRows, block.numRows)
+            val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)
+            Block(sortedRows)
           }
         } else {
-          // short circuit here
-          val num_rows = childRDD.map{
-            block => block.numRows}.sum
-
-          if (num_rows == 0) {
-            childRDD
-          } else {
-
-            // Collect a sample of the input rows
-            val sampled = time("non-oblivious sort - Sample") {
-              childRDD.map { block =>
-                val (enclave, eid) = Utils.initEnclave()
-                val numOutputRows = new MutableInteger
-                val sampledBlock = enclave.Sample(
-                  eid, 0, 0, opcode.value, block.bytes, block.numRows, numOutputRows)
-                Block(sampledBlock, numOutputRows.value)
-              }.collect
-            }
-            // Find range boundaries locally
-            val (enclave, eid) = Utils.initEnclave()
-            val boundaries = time("non-oblivious sort - FindRangeBounds") {
-              enclave.FindRangeBounds(
-                eid, opcode.value, numPartitions, Utils.concatByteArrays(sampled.map(_.bytes)),
-                sampled.map(_.numRows).sum)
-            }
-            // Broadcast the range boundaries and use them to partition the input
-            childRDD.flatMap { block =>
+          // Collect a sample of the input rows
+          val sampled = time("non-oblivious sort - Sample") {
+            Utils.concatEncryptedBlocks(childRDD.map { block =>
               val (enclave, eid) = Utils.initEnclave()
-              val offsets = new Array[Int](numPartitions + 1)
-              val rowsPerPartition = new Array[Int](numPartitions)
-              val partitions = enclave.PartitionForSort(
-                eid, 0, 0, opcode.value, numPartitions, block.bytes, block.numRows, boundaries, offsets,
-                rowsPerPartition)
-              offsets.sliding(2).zip(rowsPerPartition.iterator).zipWithIndex.map {
-                case ((Array(start, end), numRows), i) =>
-                  (i, Block(partitions.slice(start, end), numRows))
-              }
-            }
-            // Shuffle the input to achieve range partitioning and sort locally
-              .groupByKey(numPartitions).map {
-                case (i, blocks) =>
-                  val (enclave, eid) = Utils.initEnclave()
-                  val input = Utils.concatByteArrays(blocks.map(_.bytes).toArray)
-                  val numRows = blocks.map(_.numRows).sum
-                  val sortedRows = enclave.ExternalSort(eid, 0, 0, opcode.value, input, numRows)
-                  Block(sortedRows, numRows)
-              }
+              val sampledBlock = enclave.Sample(eid, block.bytes)
+              Block(sampledBlock)
+            }.collect)
           }
+          // Find range boundaries locally
+          val (enclave, eid) = Utils.initEnclave()
+          val boundaries = time("non-oblivious sort - FindRangeBounds") {
+            enclave.FindRangeBounds(eid, orderSer, numPartitions, sampled.bytes)
+          }
+          // Broadcast the range boundaries and use them to partition the input
+          childRDD.flatMap { block =>
+            val (enclave, eid) = Utils.initEnclave()
+            val partitions = enclave.PartitionForSort(
+              eid, orderSer, numPartitions, block.bytes, boundaries)
+            partitions.zipWithIndex.map {
+              case (partition, i) => (i, Block(partition))
+            }
+          }
+          // Shuffle the input to achieve range partitioning and sort locally
+            .groupByKey(numPartitions).map {
+              case (i, blocks) =>
+                val (enclave, eid) = Utils.initEnclave()
+                Block(enclave.ExternalSort(
+                  eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes))
+            }
         }
       Utils.ensureCached(result)
       result.count()

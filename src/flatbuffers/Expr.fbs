@@ -1,0 +1,125 @@
+include "Rows.fbs";
+
+// This file is part of the interface between Spark SQL and the SGX enclave --
+// the "trusted-untrusted interface," or TUIX.
+
+namespace edu.berkeley.cs.rise.opaque.tuix;
+
+union ExprUnion {
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    EqualTo,
+    Contains,
+    Col,
+    Literal,
+    And,
+    Or,
+    IsNull,
+    Substring,
+    Multiply,
+    Divide,
+    Add,
+    Subtract,
+    If,
+    Cast,
+}
+
+table Expr {
+    expr:ExprUnion;
+}
+
+table Col {
+    col_num:uint;
+}
+
+table Literal {
+    value:Field;
+}
+
+table Cast {
+    value:Expr;
+    target_type:ColType;
+}
+
+// Arithmetic
+table Add {
+    left:Expr;
+    right:Expr;
+}
+
+table Subtract {
+    left:Expr;
+    right:Expr;
+}
+
+table Multiply {
+    left:Expr;
+    right:Expr;
+}
+
+table Divide {
+    left:Expr;
+    right:Expr;
+}
+
+// Predicates
+table And {
+    left:Expr;
+    right:Expr;
+}
+
+table Or {
+    left:Expr;
+    right:Expr;
+}
+
+table LessThan {
+    left:Expr;
+    right:Expr;
+}
+
+table LessThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
+
+table GreaterThan {
+    left:Expr;
+    right:Expr;
+}
+
+table GreaterThanOrEqual {
+    left:Expr;
+    right:Expr;
+}
+
+table EqualTo {
+    left:Expr;
+    right:Expr;
+}
+
+// String expressions
+table Contains {
+    left:Expr;
+    right:Expr;
+}
+
+table Substring {
+    str:Expr;
+    pos:Expr;
+    len:Expr;
+}
+
+// Null expressions
+table IsNull {
+    child:Expr;
+}
+
+// Conditional expressions
+table If {
+    predicate:Expr;
+    true_value:Expr;
+    false_value:Expr;
+}

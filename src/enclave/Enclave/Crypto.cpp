@@ -1,7 +1,9 @@
 #include "Crypto.h"
 
-//const char *key_str = "helloworld123123";
-//const sgx_aes_gcm_128bit_key_t *key = (const sgx_aes_gcm_128bit_key_t *) key_str;
+#include <sgx_trts.h>
+
+#include "common.h"
+
 sgx_aes_gcm_128bit_key_t key_data = {0};
 sgx_aes_gcm_128bit_key_t *key = &key_data;
 const KeySchedule ks_backup = KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
@@ -178,14 +180,14 @@ void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size) {
 
   // simply copy to buffer if there isn't enough to encrypt
   if (leftover_plaintext_size + size < AES_BLOCK_SIZE) {
-	cpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
+	memcpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
 	leftover_plaintext_size += size;
 	return;
   }
 
   // otherwise, there must be enough bytes to at least encrypt a single AES block
   copy_bytes = AES_BLOCK_SIZE - leftover_plaintext_size;
-  cpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
+  memcpy(leftover_plaintext + leftover_plaintext_size, plaintext, copy_bytes);
   // go ahead and encrypt
   cipher->encrypt(leftover_plaintext, AES_BLOCK_SIZE, current_cipher_ptr, AES_BLOCK_SIZE);
   current_cipher_ptr += AES_BLOCK_SIZE;
@@ -203,7 +205,7 @@ void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size) {
   
   // copy leftover size to leftover_plaintext
   if (new_leftover_size > 0) {
-	cpy(leftover_plaintext, plaintext + copy_bytes + stream_enc_size, new_leftover_size);
+	memcpy(leftover_plaintext, plaintext + copy_bytes + stream_enc_size, new_leftover_size);
 	leftover_plaintext_size = new_leftover_size;
   }
 
@@ -259,7 +261,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
   uint32_t copied_bytes = 0;
 
   if (leftover_plaintext_size >= size) {
-	cpy(plaintext_ptr, leftover_plaintext_ptr, size);
+	memcpy(plaintext_ptr, leftover_plaintext_ptr, size);
 	leftover_plaintext_ptr += size;
 	leftover_plaintext_size -= size;
 	return;
@@ -267,7 +269,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
 
   // if there are bytes left over from leftover_plaintext, copy that first
   if (leftover_plaintext_size > 0) {
-	cpy(plaintext_ptr, leftover_plaintext_ptr, leftover_plaintext_size);
+	memcpy(plaintext_ptr, leftover_plaintext_ptr, leftover_plaintext_size);
 	copied_bytes = leftover_plaintext_size;
   }
 
@@ -317,7 +319,7 @@ void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {
   //printf("test_ptr is %u\n", *test_ptr);
 
   // copy final_size 
-  cpy(plaintext_ptr + copied_bytes + decrypt_bytes, leftover_plaintext_ptr, final_size);
+  memcpy(plaintext_ptr + copied_bytes + decrypt_bytes, leftover_plaintext_ptr, final_size);
   leftover_plaintext_ptr += final_size;
   leftover_plaintext_size -= final_size;
 }

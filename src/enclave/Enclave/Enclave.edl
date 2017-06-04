@@ -2,184 +2,79 @@
 /* Enclave.edl - Top EDL file. */
 
 enclave {
-    
-  include "user_types.h" /* buffer_t */
+
   include "stdbool.h"
   include "sgx_key_exchange.h"
   include "sgx_trts.h"
-  //include "jni.h"
-  //include "jni_md.h"
-  //include "define.h"
-
-  /* Import ECALL/OCALL from sub-directory EDLs.
-   *  [from]: specifies the location of EDL file.
-   *  [import]: specifies the functions to import,
-   *  [*]: implies to import all functions.
-   */
-
   from "sgx_tkey_exchange.edl" import *;
-  from "Edger8rSyntax/Types.edl" import *;
-  from "Edger8rSyntax/Pointers.edl" import *;
-  from "Edger8rSyntax/Arrays.edl" import *;
-  from "Edger8rSyntax/Functions.edl" import *;
 
-  //from "TrustedLibrary/Libc.edl" import ecall_malloc_free, ecall_sgx_cpuid;
-  //from "TrustedLibrary/Libcxx.edl" import ecall_exception, ecall_map;
-  //from "TrustedLibrary/Thread.edl" import ecall_increase_counter, ecall_producer, ecall_consumer;
-
-  /*
-   * ocall_print_string - invokes OCALL to display string buffer inside the enclave.
-   *  [in]: copy the string buffer to App outside.
-   *  [string]: specifies 'str' is a NULL terminated buffer.
-   */
   trusted {
     public void ecall_project(
-      int index,
-      int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows,
-      uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows,
-      uint32_t output_rows_length,
-      [out] uint32_t *actual_output_rows_length);
+      [in, count=project_list_length] uint8_t *project_list, size_t project_list_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+
     public void ecall_filter(
-      int index,
-      int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows,
-      uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows,
-      uint32_t output_rows_length,
-      [out] uint32_t *actual_output_rows_length,
-      [out] uint32_t *num_output_rows);
+      [in, count=condition_length] uint8_t *condition, size_t condition_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+
     public void ecall_encrypt(
-      [user_check] uint8_t *plaintext,
-      uint32_t length,
-      [user_check] uint8_t *ciphertext,
-      uint32_t cipher_length);
+      [user_check] uint8_t *plaintext, uint32_t length,
+      [user_check] uint8_t *ciphertext, uint32_t cipher_length);
+
     public void ecall_decrypt(
-      [in, size=ciphertext_length] uint8_t *ciphertext,
-      uint32_t ciphertext_length,
-      [out, size=plaintext_length] uint8_t *plaintext,
-      uint32_t plaintext_length);
-    public void ecall_test_int([in, size=1] int *ptr);
+      [in, size=ciphertext_length] uint8_t *ciphertext, uint32_t ciphertext_length,
+      [out, size=plaintext_length] uint8_t *plaintext, uint32_t plaintext_length);
 
-    public void ecall_stream_encryption_test();
-
-    public void ecall_join_sort_preprocess(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *primary_rows, uint32_t primary_rows_len, uint32_t num_primary_rows,
-      [user_check] uint8_t *foreign_rows, uint32_t foreign_rows_len, uint32_t num_foreign_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_len,
-      [out] uint32_t *actual_output_len);
-    public void ecall_encrypt_attribute(
-      [in, size=input_size] uint8_t *input, uint32_t input_size,
-      [out, size=output_size] uint8_t *output, uint32_t output_size,
-      [out] uint32_t *actual_size);
-
-    public void ecall_create_block(
-      [user_check] uint8_t *rows, uint32_t rows_len, uint32_t num_rows,
-      bool rows_are_join_rows, [user_check] uint8_t *block, uint32_t block_len,
-      [out] uint32_t *actual_size);
-
-    public void ecall_split_block(
-      [user_check] uint8_t *block, uint32_t block_len,
-      [user_check] uint8_t *rows, uint32_t rows_len, uint32_t num_rows,
-      bool rows_are_join_rows, [out] uint32_t *actual_size);
-
-    public void ecall_generate_random_encrypted_block(uint32_t num_cols,
-													  [in, count=num_cols] uint8_t *column_types,
-													  uint32_t num_rows,
-													  [user_check] uint8_t *output_buffer,
-													  [out] uint32_t *encrypted_buffer_size,
-													  uint8_t type);
-																							
-    public void ecall_row_parser([user_check] uint8_t *enc_block,
-								 uint32_t input_num_rows);
-
-    public void ecall_external_sort(
-      int index, int num_part,
-      int op_code,
-      uint32_t num_buffers,
-      [user_check] uint8_t **buffer_list,
-      [user_check] uint32_t *num_rows,
-      uint32_t row_upper_bound,
-      [user_check] uint8_t *scratch,
-	  [user_check] uint32_t *final_len);
-																  
     public void ecall_sample(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows,
-      uint32_t input_rows_len,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows,
-      [out] uint32_t *output_rows_len,
-      [out] uint32_t *num_output_rows);
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_find_range_bounds(
-      int op_code,
+      [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
       uint32_t num_partitions,
-      uint32_t num_buffers,
-      [user_check] uint8_t **buffer_list,
-      [user_check] uint32_t *num_rows,
-      uint32_t row_upper_bound,
-      [user_check] uint8_t *output_rows,
-      [out] uint32_t *output_rows_len,
-      [user_check] uint8_t *scratch);
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_partition_for_sort(
-      int index, int num_part,
-      int op_code,
-      uint8_t num_partitions,
-      uint32_t num_buffers,
-      [user_check] uint8_t **buffer_list,
-      [user_check] uint32_t *num_rows,
-      uint32_t row_upper_bound,
-      [user_check] uint8_t *boundary_rows,
-      uint32_t boundary_rows_len,
-      [user_check] uint8_t *output,
-      [user_check] uint8_t **output_partition_ptrs,
-      [user_check] uint32_t *output_partition_num_rows);
+      [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
+      uint32_t num_partitions,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [user_check] uint8_t *boundary_rows, size_t boundary_rows_length,
+      [out, count=num_partitions] uint8_t **output_partitions,
+      [out, count=num_partitions] size_t *output_partition_lengths);
 
-    public void ecall_non_oblivious_aggregate(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out] uint32_t *actual_size, [out] uint32_t *num_output_rows);
+    public void ecall_external_sort(
+      [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public void ecall_global_aggregate(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out] uint32_t *actual_size, [out] uint32_t *num_output_rows);
+    public void ecall_scan_collect_last_primary(
+      [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_non_oblivious_sort_merge_join(
-      int index, int num_part,
-      int op_code,
-      [user_check] uint8_t *input_rows, uint32_t input_rows_length,
-      uint32_t num_rows,
-      [user_check] uint8_t *output_rows, uint32_t output_rows_length,
-      [out] uint32_t *actual_output_length, [out] uint32_t *num_output_rows);
+      [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [user_check] uint8_t *join_row, size_t join_row_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public void ecall_generate_random_encrypted_block_with_opcode(uint32_t num_cols,
-								  [user_check] uint8_t *column_types,
-								  uint32_t num_rows,
-								  [user_check] uint8_t *output_buffer,
-								  [user_check] uint32_t *encrypted_buffer_size,
-								  uint8_t type,
-								  uint32_t opcode);
+    public void ecall_non_oblivious_aggregate_step1(
+      [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **first_row, [out] size_t *first_row_length,
+      [out] uint8_t **last_group, [out] size_t *last_group_length,
+      [out] uint8_t **last_row, [out] size_t *last_row_length);
 
-    public void ecall_count_rows([user_check] uint8_t *input_rows,
-								 uint32_t buffer_size,
-								 [out] uint32_t *output_rows);
+    public void ecall_non_oblivious_aggregate_step2(
+      [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [user_check] uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
+      [user_check] uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
+      [user_check] uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public sgx_status_t ecall_enclave_init_ra(int b_pse,
                                               [out] sgx_ra_context_t *p_context);
@@ -199,6 +94,7 @@ enclave {
     void ocall_print_string([in, string] const char *str);
     void ocall_malloc(size_t size, [out] uint8_t **ret);
     void ocall_free([user_check] uint8_t *buf);
+    void ocall_exit(int exit_code);
   };
 
 };

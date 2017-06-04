@@ -38,13 +38,12 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
-import edu.berkeley.cs.rise.opaque.execution.Opcode._
 import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.implicits._
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll {
   val spark = SparkSession.builder()
-    .master("local[2]")
+    .master("local[1]")
     .appName("QEDSuite")
     .getOrCreate()
 
@@ -55,36 +54,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   override def afterAll(): Unit = {
     spark.stop()
   }
-
-  ignore("nonObliviousSort multiple partitions") {
-    val data = Random.shuffle(for (i <- 0 until 256) yield (i, i.toString, 1))
-    val sorted = spark.createDataFrame(spark.sparkContext.makeRDD(data, 3))
-      .toDF("id", "word", "count")
-      .encrypted.sort($"word")
-    assert(sorted.collect === data.sortBy(_._2).map(Row.fromTuple))
-  }
-
-  // ignore("nonObliviousJoin multiple partitions") {
-  //   val p_data = for (i <- 0 until 4) yield (i.toString, i * 10)
-  //   val f_data = for (i <- 0 until 16 - 4) yield ((i % 4).toString, (i * 10).toString, i.toFloat)
-  //   val p = spark.createDataFrame(spark.sparkContext.makeRDD(p_data, 3)).toDF("pk", "x").encrypted
-  //   val f = spark.createDataFrame(spark.sparkContext.makeRDD(f_data, 3)).toDF("fk", "x", "y").encrypted
-  //   val joined = p.join(f, $"pk" === $"fk")
-  //   val expectedJoin =
-  //     for {
-  //       (pk, p_x) <- p_data
-  //       (fk, f_x, f_y) <- f_data
-  //       if pk == fk
-  //     } yield (pk, p_x, fk, f_x, f_y)
-  //   println(p_data)
-  //   println(f_data)
-  //   joined.explain(true)
-  //   assert(joined.collect.toSet === expectedJoin.map(Row.fromTuple).toSet)
-  // }
-
-  // TODO: test sensitivity propagation on operators
-
-  // TODO: test nonObliviousAggregate on multiple partitions
 
   // test remote attestation
   ignore("Remote attestation") {

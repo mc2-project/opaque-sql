@@ -1,17 +1,10 @@
 #ifndef REMOTE_ATTESTATION_H
 #define REMOTE_ATTESTATION_H
 
-#include <stdint.h>
-#include <wchar.h>
-#include <stddef.h>
-#include "sgx_edger8r.h"
-#include "user_types.h"
-#include "stdbool.h"
-#include "sgx_key_exchange.h"
-#include "sgx_trts.h"
-#include "common.h"
-#include "key.h"
-#include "Crypto.h"
+#include <cstdint>
+#include <cstddef>
+
+#include <sgx_key_exchange.h>
 
 sgx_status_t enclave_init_ra(int b_pse, sgx_ra_context_t *p_context);
 sgx_status_t enclave_ra_close(sgx_ra_context_t context);

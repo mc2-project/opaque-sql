@@ -1,0 +1,18 @@
+// This file is part of the interface between Spark SQL and the SGX enclave --
+// the "trusted-untrusted interface," or TUIX.
+
+namespace edu.berkeley.cs.rise.opaque.tuix;
+
+table EncryptedBlock {
+    num_rows:uint;
+    // When decrypted, this should contain a Rows object at its root
+    enc_rows:[ubyte];
+}
+
+table EncryptedBlocks {
+    blocks:[EncryptedBlock];
+}
+
+table SortedRuns {
+    runs:[EncryptedBlocks];
+}

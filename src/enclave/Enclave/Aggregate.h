@@ -1,25 +1,22 @@
-#include <stdarg.h>
-#include <stdio.h>      /* vsnprintf */
-#include <stdint.h>
-
-#include "Enclave.h"
-#include "Enclave_t.h"  /* print_string */
-#include "sgx_trts.h"
-#include "Crypto.h"
-#include "util.h"
-#include "EncryptedDAG.h"
+#include <cstddef>
+#include <cstdint>
 
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
 
-template<typename AggregatorType>
-void non_oblivious_aggregate(Verify *verify_set,
-                             uint8_t *input_rows, uint32_t input_rows_length,
-							 uint32_t num_rows,
-							 uint8_t *output_rows, uint32_t output_rows_length,
-                             uint32_t *actual_output_rows_length,
-                             uint32_t *num_output_rows);
+void non_oblivious_aggregate_step1(
+  uint8_t *agg_op, size_t agg_op_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t **first_row, size_t *first_row_length,
+  uint8_t **last_group, size_t *last_group_length,
+  uint8_t **last_row, size_t *last_row_length);
 
-#include "Aggregate.tcc"
+void non_oblivious_aggregate_step2(
+  uint8_t *agg_op, size_t agg_op_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
+  uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
+  uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
+  uint8_t **output_rows, size_t *output_rows_length);
 
 #endif // AGGREGATE_H

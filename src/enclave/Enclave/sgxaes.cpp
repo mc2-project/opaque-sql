@@ -1,5 +1,5 @@
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include "sgxaes.h"
 
 KeySchedule::KeySchedule(const unsigned char* k, size_t k_len) {
@@ -60,6 +60,7 @@ void AesGcm::aad(const unsigned char* data, size_t data_len) {
 
 void AesGcm::encrypt(const unsigned char* plaintext, size_t plaintext_len, unsigned char* ciphertext, size_t ciphertext_len) {
 	assert(plaintext_len==ciphertext_len);
+	(void)ciphertext_len;
 	if (state==Decrypting || state==Done) throw "Can't encrypt in this state";
 	if (plaintext_len%AES_BLOCK_SIZE == 0) {
 		state=Encrypting;
@@ -73,6 +74,7 @@ void AesGcm::encrypt(const unsigned char* plaintext, size_t plaintext_len, unsig
 
 void AesGcm::decrypt(const unsigned char* ciphertext, size_t ciphertext_len, unsigned char* plaintext, size_t plaintext_len) {
 	assert(plaintext_len==ciphertext_len);
+	(void)ciphertext_len;
 	if (state==Encrypting || state==Done) throw "Can't decrypt in this state";
 	if (plaintext_len%AES_BLOCK_SIZE == 0) {
 		state=Decrypting;
