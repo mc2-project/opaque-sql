@@ -292,6 +292,7 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
 
   override def numPartitions = 1
@@ -299,8 +300,9 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
 
 class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
-    .master("local[3]")
+    .master("local[1]")
     .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
   override def numPartitions = 3
