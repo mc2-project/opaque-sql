@@ -29,6 +29,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
@@ -40,10 +41,13 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.If
+import org.apache.spark.sql.catalyst.expressions.IsNull
+import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
@@ -486,6 +490,27 @@ object Utils {
               builder, leftOffset, rightOffset))
 
         // Predicates
+        case (And(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.And,
+            tuix.And.createAnd(
+              builder, leftOffset, rightOffset))
+
+        case (Or(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Or,
+            tuix.Or.createOr(
+              builder, leftOffset, rightOffset))
+
+        case (LessThan(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.LessThan,
+            tuix.LessThan.createLessThan(
+              builder, leftOffset, rightOffset))
+
         case (LessThanOrEqual(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
@@ -529,6 +554,14 @@ object Utils {
             tuix.ExprUnion.If,
             tuix.If.createIf(
               builder, predOffset, trueOffset, falseOffset))
+
+        // Null expressions
+        case (IsNull(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.IsNull,
+            tuix.IsNull.createIsNull(
+              builder, childOffset))
       }
     }
   }

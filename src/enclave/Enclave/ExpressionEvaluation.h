@@ -169,7 +169,50 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
     tuix::FieldUnion_BooleanField,
     tuix::CreateBooleanField(builder, result).Union(),
     result_is_null);
+}
 
+/**
+ * Evaluate a boolean operation on two tuix::Fields. The operation (template
+ * parameter Operation) must be a binary function object parameterized on its input type.
+ *
+ * The left and right Fields are the inputs to the binary operation. They may be temporary pointers
+ * invalidated by further writes to builder; this function will not read them after invalidating.
+ */
+template<typename TuixExpr, template<typename T> class Operation>
+flatbuffers::Offset<tuix::Field> eval_boolean_operation(
+  flatbuffers::FlatBufferBuilder &builder,
+  const tuix::Field *left,
+  const tuix::Field *right) {
+
+  check(left->value_type() == right->value_type(),
+        "%s can't operate on values of different types (%s and %s)\n",
+        typeid(TuixExpr).name(),
+        tuix::EnumNameFieldUnion(left->value_type()),
+        tuix::EnumNameFieldUnion(right->value_type()));
+  bool result_is_null = left->is_null() || right->is_null();
+  bool result = false;
+  if (!result_is_null) {
+    switch (left->value_type()) {
+    case tuix::FieldUnion_BooleanField:
+    {
+      result = Operation<bool>()(
+        static_cast<const tuix::BooleanField *>(left->value())->value(),
+        static_cast<const tuix::BooleanField *>(right->value())->value());
+      break;
+    }
+    default:
+      printf("Can't evaluate %s on %s\n",
+             typeid(TuixExpr).name(),
+             tuix::EnumNameFieldUnion(left->value_type()));
+      std::exit(1);
+    }
+  }
+  // Writing the result invalidates the left and right temporary pointers
+  return tuix::CreateField(
+    builder,
+    tuix::FieldUnion_BooleanField,
+    tuix::CreateBooleanField(builder, result).Union(),
+    result_is_null);
 }
 
 class FlatbuffersExpressionEvaluator {
@@ -279,6 +322,24 @@ private:
     }
 
     // Predicates
+    case tuix::ExprUnion_And:
+    {
+      auto a = static_cast<const tuix::And *>(expr->expr());
+      return eval_boolean_operation<tuix::And, std::logical_and>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, a->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, a->right())));
+    }
+
+    case tuix::ExprUnion_Or:
+    {
+      auto o = static_cast<const tuix::Or *>(expr->expr());
+      return eval_boolean_operation<tuix::Or, std::logical_or>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, o->left())),
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, o->right())));
+    }
+
     case tuix::ExprUnion_LessThan:
     {
       auto lt = static_cast<const tuix::LessThan *>(expr->expr());
@@ -422,6 +483,22 @@ private:
         return flatbuffers_copy<tuix::Field>(true_value, builder, true);
       }
     }
+
+    // Null expressions
+    case tuix::ExprUnion_IsNull:
+    {
+      auto e = static_cast<const tuix::IsNull *>(expr->expr());
+      // Note: This temporary pointer will be invalidated when we next write to builder
+      const tuix::Field *child =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->child()));
+      bool result = child->is_null();
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
     default:
       printf("Can't evaluate expression of type %s\n",
              tuix::EnumNameExprUnion(expr->expr_type()));

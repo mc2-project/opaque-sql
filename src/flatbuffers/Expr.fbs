@@ -16,7 +16,7 @@ union ExprUnion {
     Literal,
     And,
     Or,
-    IsNotNull,
+    IsNull,
     Substring,
     Multiply,
     Divide,
@@ -113,7 +113,7 @@ table Substring {
 }
 
 // Null expressions
-table IsNotNull {
+table IsNull {
     child:Expr;
 }
 
