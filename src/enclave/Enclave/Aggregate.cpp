@@ -34,7 +34,7 @@ void non_oblivious_aggregate_step1(
     }
     agg_op_eval.aggregate(cur);
   }
-  last_group_writer.write(agg_op_eval.evaluate());
+  last_group_writer.write(agg_op_eval.get_partial_agg());
 
   first_row_writer.finish(first_row_writer.write_encrypted_blocks());
   *first_row = first_row_writer.output_buffer();

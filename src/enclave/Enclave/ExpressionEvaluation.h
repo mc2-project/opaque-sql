@@ -699,6 +699,10 @@ public:
       builder2, tuix::CreateRowDirect(builder2, &output_fields));
   }
 
+  const tuix::Row *get_partial_agg() {
+    return a;
+  }
+
   const tuix::Row *evaluate() {
     builder.Clear();
     std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
