@@ -53,8 +53,13 @@ import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
+import org.apache.spark.sql.catalyst.expressions.aggregate.Count
 import org.apache.spark.sql.catalyst.expressions.aggregate.Final
 import org.apache.spark.sql.catalyst.expressions.aggregate.First
+import org.apache.spark.sql.catalyst.expressions.aggregate.Last
+import org.apache.spark.sql.catalyst.expressions.aggregate.Max
+import org.apache.spark.sql.catalyst.expressions.aggregate.Min
+import org.apache.spark.sql.catalyst.expressions.aggregate.Sum
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
@@ -246,6 +251,12 @@ object Utils {
           builder,
           tuix.FieldUnion.IntegerField,
           tuix.IntegerField.createIntegerField(builder, x),
+          isNull)
+      case (null, IntegerType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.IntegerField,
+          tuix.IntegerField.createIntegerField(builder, 0),
           isNull)
       case (x: Long, LongType) =>
         tuix.Field.createField(
@@ -696,10 +707,29 @@ object Utils {
           flatbuffersSerializeExpression(
             builder, Divide(sum, Cast(count, DoubleType)), aggSchema))
 
+      case c @ Count(children) =>
+        val count = c.aggBufferAttributes(0)
+
+        // TODO: support skipping null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* count = */ flatbuffersSerializeExpression(
+                builder, Add(count, Literal(1L)), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, count, aggSchema))
+
       case f @ First(child, Literal(false, BooleanType)) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
+        // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -716,6 +746,85 @@ object Utils {
               /* valueSet = */ flatbuffersSerializeExpression(
                 builder, Literal(true), concatSchema))),
           flatbuffersSerializeExpression(builder, first, aggSchema))
+
+      case l @ Last(child, Literal(false, BooleanType)) =>
+        val last = l.aggBufferAttributes(0)
+        val valueSet = l.aggBufferAttributes(1)
+
+        // TODO: support aggregating null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* last = */ flatbuffersSerializeExpression(
+                builder, Literal.create(null, child.dataType), input),
+              /* valueSet = */ flatbuffersSerializeExpression(builder, Literal(false), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* last = */ flatbuffersSerializeExpression(
+                builder, child, concatSchema),
+              /* valueSet = */ flatbuffersSerializeExpression(
+                builder, Literal(true), concatSchema))),
+          flatbuffersSerializeExpression(builder, last, aggSchema))
+
+      case m @ Max(child) =>
+        val max = m.aggBufferAttributes(0)
+
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* max = */ flatbuffersSerializeExpression(
+                builder, Literal.create(null, child.dataType), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* max = */ flatbuffersSerializeExpression(
+                builder, If(Or(IsNull(max), GreaterThan(child, max)), child, max), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, max, aggSchema))
+
+      case m @ Min(child) =>
+        val min = m.aggBufferAttributes(0)
+
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* min = */ flatbuffersSerializeExpression(
+                builder, Literal.create(null, child.dataType), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* min = */ flatbuffersSerializeExpression(
+                builder, If(Or(IsNull(min), LessThan(child, min)), child, min), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, min, aggSchema))
+
+      case s @ Sum(child) =>
+        val sum = s.aggBufferAttributes(0)
+
+        val sumDataType = s.dataType
+
+        // TODO: support aggregating null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Cast(Literal(0), sumDataType), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Add(sum, Cast(child, sumDataType)), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, sum, aggSchema))
     }
   }
 

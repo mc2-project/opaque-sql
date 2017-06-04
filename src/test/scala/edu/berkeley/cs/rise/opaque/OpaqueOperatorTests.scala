@@ -122,28 +122,68 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("aggregate average") { securityLevel =>
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
     words.groupBy("category").agg(avg("price").as("avgPrice"))
       .collect.sortBy { case Row(category: String, _) => category }
   }
 
-  // testAgainstSpark("aggregate") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "word", "count")
+  testAgainstSpark("aggregate count") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
 
-  //   words.groupBy("word").agg(sum("count").as("totalCount"))
-  //     .collect.sortBy { case Row(word: String, _) => word }
-  // }
+    words.groupBy("category").agg(count("category").as("itemsInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
 
-  // testAgainstSpark("aggregate on multiple columns") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
-  //   val words = makeDF(data, securityLevel, "str", "x", "y")
+  testAgainstSpark("aggregate first") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
 
-  //   words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
-  //     .collect.sortBy { case Row(str: String, _, _) => str }
-  // }
+    words.groupBy("category").agg(first("category").as("firstInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
+  testAgainstSpark("aggregate last") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+
+    words.groupBy("category").agg(last("category").as("lastInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
+  testAgainstSpark("aggregate max") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+
+    words.groupBy("category").agg(max("price").as("maxPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
+  testAgainstSpark("aggregate min") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+
+    words.groupBy("category").agg(min("price").as("minPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
+  testAgainstSpark("aggregate sum") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+
+    words.groupBy("word").agg(sum("count").as("totalCount"))
+      .collect.sortBy { case Row(word: String, _) => word }
+  }
+
+  testAgainstSpark("aggregate on multiple columns") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
+    val words = makeDF(data, securityLevel, "str", "x", "y")
+
+    words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
+      .collect.sortBy { case Row(str: String, _, _) => str }
+  }
 
   testAgainstSpark("sort") { securityLevel =>
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
@@ -233,11 +273,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
   // }
 
-  // testOpaqueOnly("global aggregate") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "word", "count")
-  //   val result = words.agg(sum("count").as("totalCount"))
-  // }
+  testOpaqueOnly("global aggregate") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val result = words.agg(sum("count").as("totalCount"))
+  }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
     data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =
