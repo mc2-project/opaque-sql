@@ -17,8 +17,10 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.UUID
 
 import scala.collection.mutable.ArrayBuilder
 
@@ -158,6 +160,19 @@ object Utils {
         "Error while extracting native library: " + ex)
     }
     extractedPath.toAbsolutePath.toString
+  }
+
+  def createTempDir(): File = {
+    val dir = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID.toString)
+    dir.mkdirs()
+    dir.getCanonicalFile
+  }
+
+  def deleteRecursively(file: File): Unit = {
+    for (contents <- Option(file.listFiles); f <- contents) {
+      deleteRecursively(f)
+      f.delete()
+    }
   }
 
   def initEnclave(): (SGXEnclave, Long) = {

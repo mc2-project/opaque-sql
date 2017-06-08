@@ -117,6 +117,26 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // +----+-----+
     ```
 
+6. Save and load an encrypted DataFrame:
+
+    ```scala
+    dfEncrypted.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save("dfEncrypted")
+    // The file dfEncrypted/part-00000 now contains encrypted data
+
+    import org.apache.spark.sql.types._
+    val df2 = (spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+      .schema(StructType(Seq(StructField("word", StringType), StructField("count", IntegerType))))
+      .load("dfEncrypted"))
+    df2.show
+    // +----+-----+
+    // |word|count|
+    // +----+-----+
+    // | foo|    4|
+    // | bar|    1|
+    // | baz|    5|
+    // +----+-----+
+    ```
+
 ## Contact
 
 If you want to know more about our project or have questions, please contact Wenting (wzheng@eecs.berkeley.edu) and/or Ankur (ankurdave@gmail.com).
