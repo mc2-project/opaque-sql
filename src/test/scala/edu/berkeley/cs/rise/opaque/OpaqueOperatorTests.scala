@@ -17,6 +17,8 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import java.io.File
+
 import scala.util.Random
 
 import org.apache.spark.sql.DataFrame
@@ -39,12 +41,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
   import testImplicits._
 
+  private var path: File = null
+
   override def beforeAll(): Unit = {
     Utils.initSQLContext(spark.sqlContext)
+    path = Utils.createTempDir()
+    path.delete()
   }
 
   override def afterAll(): Unit = {
     spark.stop()
+    Utils.deleteRecursively(path)
   }
 
   def testAgainstSpark(name: String)(f: SecurityLevel => Any): Unit = {
@@ -266,6 +273,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     val result = words.agg(sum("count").as("totalCount"))
+  }
+
+  testOpaqueOnly("save and load") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    val df2 = spark.read
+      .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+      .schema(df.schema)
+      .load(path.toString)
+    assert(df.collect.toSet === df2.collect.toSet)
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
