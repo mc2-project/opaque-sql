@@ -10,6 +10,7 @@ enum ColType : ubyte {
     FloatType,
     DoubleType,
     StringType,
+    DateType,
 }
 
 table BooleanField {
@@ -37,8 +38,12 @@ table StringField {
     length:uint;
 }
 
+table DateField {
+    value:int;
+}
+
 union FieldUnion {
-    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField
+    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField
 }
 
 table Field {

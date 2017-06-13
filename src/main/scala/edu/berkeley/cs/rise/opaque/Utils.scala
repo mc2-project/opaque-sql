@@ -290,6 +290,12 @@ object Utils {
           tuix.FieldUnion.DoubleField,
           tuix.DoubleField.createDoubleField(builder, x),
           isNull)
+      case (x: Int, DateType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.DateField,
+          tuix.DateField.createDateField(builder, x),
+          isNull)
       case (s: UTF8String, StringType) =>
         val utf8 = s.getBytes()
         tuix.Field.createField(
