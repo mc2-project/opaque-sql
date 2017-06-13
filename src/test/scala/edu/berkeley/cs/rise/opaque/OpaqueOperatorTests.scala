@@ -22,6 +22,7 @@ import java.io.File
 import scala.util.Random
 
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
@@ -31,6 +32,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
+import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
 
 trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   def spark: SparkSession
@@ -258,22 +260,22 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       $"x" <= $"x").collect.toSet
   }
 
-  // testOpaqueOnly("cache") { securityLevel =>
-  //   def numCached(ds: Dataset[_]): Int =
-  //     ds.queryExecution.executedPlan.collect {
-  //       case cached: EncryptedBlockRDDScanExec => cached
-  //     }.size
+  testOpaqueOnly("cache") { securityLevel =>
+    def numCached(ds: Dataset[_]): Int =
+      ds.queryExecution.executedPlan.collect {
+        case cached: EncryptedBlockRDDScanExec => cached
+      }.size
 
-  //   val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-  //   val df = makeDF(data, securityLevel, "a", "b").cache()
+    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+    val df = makeDF(data, securityLevel, "a", "b").cache()
 
-  //   val agg = df.groupBy($"a").agg(sum("b"))
+    val agg = df.groupBy($"a").agg(sum("b"))
 
-  //   assert(numCached(agg) === 1)
+    assert(numCached(agg) === 1)
 
-  //   val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-  //   assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
-  // }
+    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+  }
 
   testOpaqueOnly("global aggregate") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
