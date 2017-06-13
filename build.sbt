@@ -92,10 +92,17 @@ val synthTestDataTask = TaskKey[Unit]("synthTestData",
 
 test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
 
-val sgxGdbTask = TaskKey[Unit]("sgx-gdb",
+val sgxGdbTask = TaskKey[Unit]("sgx-gdb-task",
   "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
 
-buildType in sgxGdbTask := Debug
+def sgxGdbCommand = Command.command("sgx-gdb") { state =>
+  val extracted = Project extract state
+  val newState = extracted.append(Seq(buildType := Debug), state)
+  Project.extract(newState).runTask(sgxGdbTask, newState)
+  state
+}
+
+commands += sgxGdbCommand
 
 sgxGdbTask := {
   (compile in Test).value
