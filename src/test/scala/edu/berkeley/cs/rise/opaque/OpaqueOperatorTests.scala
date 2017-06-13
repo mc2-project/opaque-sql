@@ -187,6 +187,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.sort($"x").collect
   }
 
+  testAgainstSpark("sort zero elements") { securityLevel =>
+    val data = Seq.empty[(String, Int)]
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"x").collect
+  }
+
   testAgainstSpark("sort by float") { securityLevel =>
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
     val df = makeDF(data, securityLevel, "str", "x")

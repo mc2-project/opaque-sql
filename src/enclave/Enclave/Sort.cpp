@@ -194,6 +194,7 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
 }
 
 void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
+                        uint32_t num_partitions,
                         uint8_t *input_rows, size_t input_rows_length,
                         uint8_t *boundary_rows, size_t boundary_rows_length,
                         uint8_t **output_partition_ptrs, size_t *output_partition_lengths) {
@@ -217,7 +218,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   EncryptedBlocksToRowReader b(boundary_rows, boundary_rows_length);
   // Invariant: b_upper is the first boundary row strictly greater than the current range, or
   // nullptr if we are in the last range
-  const tuix::Row *b_upper = b.next();
+  const tuix::Row *b_upper = b.has_next() ? b.next() : nullptr;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
@@ -236,10 +237,17 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
 
     w.write(row);
   }
-  // Write out the final partition
-  w.finish(w.write_encrypted_blocks());
-  output_partition_ptrs[output_partition_idx] = w.output_buffer();
-  output_partition_lengths[output_partition_idx] = w.output_size();
+
+  // Write out the final partition. If there were fewer boundary rows than expected output
+  // partitions, write out enough empty partitions to ensure the expected number of output
+  // partitions.
+  while (output_partition_idx < num_partitions) {
+    w.finish(w.write_encrypted_blocks());
+    output_partition_ptrs[output_partition_idx] = w.output_buffer();
+    output_partition_lengths[output_partition_idx] = w.output_size();
+    w.clear();
+    output_partition_idx++;
+  }
 
   ocall_free(sorted_rows);
 }

@@ -68,8 +68,8 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                               uint8_t *input_rows, size_t input_rows_length,
                               uint8_t *boundary_rows, size_t boundary_rows_length,
                               uint8_t **output_partitions, size_t *output_partition_lengths) {
-  (void)num_partitions;
   partition_for_sort(sort_order, sort_order_length,
+                     num_partitions,
                      input_rows, input_rows_length,
                      boundary_rows, boundary_rows_length,
                      output_partitions, output_partition_lengths);
