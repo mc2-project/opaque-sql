@@ -1,6 +1,7 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
 
 #include <algorithm>
+#include <time.h>
 
 #include "EncryptedBlock_generated.h"
 #include "Expr_generated.h"
@@ -10,11 +11,26 @@
 #include "Crypto.h"
 #include "common.h"
 #include "Enclave_t.h"
+#include "util.h"
 
 #ifndef FLATBUFFERS_H
 #define FLATBUFFERS_H
 
 using namespace edu::berkeley::cs::rise::opaque;
+
+class Date {
+public:
+  Date(const int32_t &days_since_epoch) : days_since_epoch(days_since_epoch) {}
+
+  explicit operator int32_t() const { return days_since_epoch; }
+  explicit operator int64_t() const { return days_since_epoch; }
+  explicit operator float() const { return days_since_epoch; }
+  explicit operator double() const { return days_since_epoch; }
+
+  int32_t days_since_epoch;
+};
+
+std::string to_string(const Date &date);
 
 template<typename T>
 flatbuffers::Offset<T> flatbuffers_copy(
@@ -64,9 +80,20 @@ flatbuffers::Offset<tuix::Field> flatbuffers_cast(
       tuix::CreateDoubleField(builder, static_cast<double>(value_eval)).Union(),
       result_is_null);
   }
+  case tuix::ColType_StringType:
+  {
+    using std::to_string;
+    std::string str = to_string(value_eval);
+    std::vector<uint8_t> str_vec(str.begin(), str.end());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_StringField,
+      tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size()).Union(),
+      result_is_null);
+  }
   default:
   {
-    printf("Can't cast IntegerType to %s\n",
+    printf("Can't cast %s to %s\n",
            typeid(InputTuixField).name(), tuix::EnumNameColType(cast->target_type()));
     std::exit(1);
     return flatbuffers::Offset<tuix::Field>();

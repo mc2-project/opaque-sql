@@ -2,6 +2,16 @@
 
 #include "Flatbuffers.h"
 
+std::string to_string(const Date &date) {
+  uint64_t seconds_per_day = 60 * 60 * 24L;
+  uint64_t secs = date.days_since_epoch * seconds_per_day;
+  struct tm tm;
+  secs_to_tm(secs, &tm);
+  char buffer[80];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tm);
+  return std::string(buffer);
+}
+
 void print(const tuix::Row *in) {
   flatbuffers::uoffset_t num_fields = in->field_values()->size();
   printf("[");
@@ -43,6 +53,10 @@ void print(const tuix::Field *field) {
                          string_field->length()).c_str());
       break;
     }
+    case tuix::FieldUnion_DateField:
+      printf("%s", to_string(Date(static_cast<const tuix::DateField *>(field->value())->value()))
+             .c_str());
+      break;
     default:
       printf("print(tuix::Row *): Unknown field type %d\n",
              field->value_type());
@@ -123,6 +137,14 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         builder, &string_data, string_field->length()).Union(),
       is_null);
   }
+  case tuix::FieldUnion_DateField:
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_DateField,
+      tuix::CreateDateField(
+        builder,
+        static_cast<const tuix::DateField *>(field->value())->value()).Union(),
+      is_null);
   default:
     printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
            field->value_type());

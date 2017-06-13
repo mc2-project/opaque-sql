@@ -489,6 +489,7 @@ object Utils {
                 case LongType => tuix.ColType.LongType
                 case FloatType => tuix.ColType.FloatType
                 case DoubleType => tuix.ColType.DoubleType
+                case StringType => tuix.ColType.StringType
               }))
 
         // Arithmetic
