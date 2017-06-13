@@ -74,31 +74,31 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  // testAgainstSpark("least squares") { securityLevel =>
-  //   val answer = LeastSquaresBenchmark.query(spark, securityLevel, "tiny", numPartitions).collect
-  //   answer
-  // }
+  testAgainstSpark("least squares") { securityLevel =>
+    val answer = LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
+    answer
+  }
 
-  // testOpaqueOnly("pagerank") { securityLevel =>
-  //   PageRank.run(spark, securityLevel, "256", numPartitions)
-  // }
+  testOpaqueOnly("pagerank") { securityLevel =>
+    PageRank.run(spark, securityLevel, "256", numPartitions)
+  }
 
-  // testAgainstSpark("big data 1") { securityLevel =>
-  //   BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
-  // }
+  testAgainstSpark("big data 1") { securityLevel =>
+    BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
+  }
 
-  // testAgainstSpark("big data 2") { securityLevel =>
-  //   BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
-  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-  //     .sortBy(_._1)
-  //     .map {
-  //       case (str: String, f: Float) => (str, "%.2f".format(f))
-  //     }
-  // }
+  testAgainstSpark("big data 2") { securityLevel =>
+    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+      .sortBy(_._1)
+      .map {
+        case (str: String, f: Float) => (str, "%.2f".format(f))
+      }
+  }
 
-  // testAgainstSpark("big data 3") { securityLevel =>
-  //   BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
-  // }
+  testAgainstSpark("big data 3") { securityLevel =>
+    BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
+  }
 
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)

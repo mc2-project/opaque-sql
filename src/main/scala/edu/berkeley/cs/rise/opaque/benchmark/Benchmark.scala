@@ -53,8 +53,8 @@ object Benchmark {
     BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
     BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
 
-    LeastSquaresBenchmark.query(spark, Insecure, "1000000", numPartitions)
-    LeastSquaresBenchmark.query(spark, Encrypted, "1000000", numPartitions)
+    LeastSquares.query(spark, Insecure, "1000000", numPartitions)
+    LeastSquares.query(spark, Encrypted, "1000000", numPartitions)
 
     Thread.sleep(10000000)
 

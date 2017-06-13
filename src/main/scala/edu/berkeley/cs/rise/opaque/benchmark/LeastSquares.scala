@@ -23,7 +23,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
-object LeastSquaresBenchmark {
+object LeastSquares {
 
   def data(
     spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
