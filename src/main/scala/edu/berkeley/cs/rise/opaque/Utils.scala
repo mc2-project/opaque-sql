@@ -43,12 +43,14 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.If
+import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.Not
 import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
@@ -527,6 +529,13 @@ object Utils {
             tuix.Or.createOr(
               builder, leftOffset, rightOffset))
 
+        case (Not(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Not,
+            tuix.Not.createNot(
+              builder, childOffset))
+
         case (LessThan(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
@@ -585,6 +594,18 @@ object Utils {
             tuix.ExprUnion.IsNull,
             tuix.IsNull.createIsNull(
               builder, childOffset))
+
+        case (IsNotNull(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Not,
+            tuix.Not.createNot(
+              builder,
+              tuix.Expr.createExpr(
+                builder,
+                tuix.ExprUnion.IsNull,
+                tuix.IsNull.createIsNull(
+                  builder, childOffset))))
       }
     }
   }

@@ -16,6 +16,7 @@ union ExprUnion {
     Literal,
     And,
     Or,
+    Not,
     IsNull,
     Substring,
     Multiply,
@@ -73,6 +74,10 @@ table And {
 table Or {
     left:Expr;
     right:Expr;
+}
+
+table Not {
+    child:Expr;
 }
 
 table LessThan {

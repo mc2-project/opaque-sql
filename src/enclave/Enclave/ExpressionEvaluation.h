@@ -352,6 +352,26 @@ private:
         result_is_null);
     }
 
+    case tuix::ExprUnion_Not:
+    {
+      auto n = static_cast<const tuix::Not *>(expr->expr());
+      auto child = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, n->child()));
+
+      check(child->value_type() == tuix::FieldUnion_BooleanField,
+            "Not can't operate on %s\n",
+            tuix::EnumNameFieldUnion(child->value_type()));
+
+      bool child_value = static_cast<const tuix::BooleanField *>(child->value())->value();
+      bool result = !child_value, result_is_null = child->is_null();
+
+      // Writing the result invalidates the child temporary pointer
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        result_is_null);
+    }
+
     case tuix::ExprUnion_LessThan:
     {
       auto lt = static_cast<const tuix::LessThan *>(expr->expr());
