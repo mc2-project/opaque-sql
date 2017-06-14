@@ -129,6 +129,15 @@ trait OpaqueOperatorExec extends SparkPlan {
     }
   }
 
+  /**
+   * An Opaque operator cannot return plaintext rows, so this method should normally not be invoked.
+   * Instead use executeBlocked, which returns the data as encrypted blocks.
+   *
+   * However, when encrypted data is cached, Spark SQL's InMemoryRelation attempts to call this
+   * method and persist the resulting RDD. [[ConvertToOpaqueOperators]] later eliminates the dummy
+   * relation from the logical plan, but this only happens after InMemoryRelation has called this
+   * method. We therefore have to silently return an empty RDD here.
+   */
   override def doExecute() = {
     sqlContext.sparkContext.emptyRDD
     // throw new UnsupportedOperationException("use executeBlocked")

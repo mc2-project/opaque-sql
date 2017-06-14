@@ -28,6 +28,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import org.apache.spark.storage.StorageLevel
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
@@ -121,7 +122,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   testOpaqueOnly("cache") { securityLevel =>
     def numCached(ds: Dataset[_]): Int =
       ds.queryExecution.executedPlan.collect {
-        case cached: EncryptedBlockRDDScanExec => cached
+        case cached: EncryptedBlockRDDScanExec
+            if cached.rdd.getStorageLevel != StorageLevel.NONE =>
+          println(cached.rdd.getStorageLevel)
+          cached
       }.size
 
     val data = List((1, 3), (1, 4), (1, 5), (2, 4))
