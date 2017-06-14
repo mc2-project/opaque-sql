@@ -104,6 +104,36 @@ def sgxGdbCommand = Command.command("sgx-gdb") { state =>
 
 commands += sgxGdbCommand
 
+initialCommands in console :=
+  """
+    |import org.apache.spark.SparkContext
+    |import org.apache.spark.sql.SQLContext
+    |import org.apache.spark.sql.catalyst.analysis._
+    |import org.apache.spark.sql.catalyst.dsl._
+    |import org.apache.spark.sql.catalyst.errors._
+    |import org.apache.spark.sql.catalyst.expressions._
+    |import org.apache.spark.sql.catalyst.plans.logical._
+    |import org.apache.spark.sql.catalyst.rules._
+    |import org.apache.spark.sql.catalyst.util._
+    |import org.apache.spark.sql.execution
+    |import org.apache.spark.sql.functions._
+    |import org.apache.spark.sql.types._
+    |
+    |val spark = (org.apache.spark.sql.SparkSession.builder()
+    |  .master("local")
+    |  .appName("Opaque shell")
+    |  .getOrCreate())
+    |val sc = spark.sparkContext
+    |val sqlContext = spark.sqlContext
+    |
+    |import spark.implicits._
+    |
+    |import edu.berkeley.cs.rise.opaque.implicits._
+    |edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext)
+  """.stripMargin
+
+cleanupCommands in console := "spark.stop()"
+
 sgxGdbTask := {
   (compile in Test).value
   Process(Seq(
