@@ -266,6 +266,8 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       .schema(df.schema)
       .load(path.toString)
     assert(df.collect.toSet === df2.collect.toSet)
+    assert(df.groupBy("word").agg(sum("count")).collect.toSet
+      === df2.groupBy("word").agg(sum("count")).collect.toSet)
   }
 
   testAgainstSpark("least squares") { securityLevel =>

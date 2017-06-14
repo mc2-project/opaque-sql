@@ -17,6 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque.logical
 
+import edu.berkeley.cs.rise.opaque.EncryptedScan
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import org.apache.spark.sql.InMemoryRelationMatcher
@@ -28,6 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
@@ -66,6 +68,9 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
   }
 
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
+    case l @ LogicalRelation(baseRelation: EncryptedScan, _, _) =>
+      EncryptedBlockRDD(l.output, baseRelation.buildBlockedScan(), baseRelation.isOblivious)
+
     case p @ Project(projectList, child) if isOblivious(child) =>
       ObliviousProject(projectList, child.asInstanceOf[OpaqueOperator])
     case p @ Project(projectList, child) if isEncrypted(child) =>

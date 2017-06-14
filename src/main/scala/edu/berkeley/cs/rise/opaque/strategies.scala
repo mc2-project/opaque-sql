@@ -29,18 +29,12 @@ import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-
-    case l @ LogicalRelation(baseRelation: EncryptedScan, _, _) =>
-      EncryptedBlockRDDScanExec(
-        l.output, baseRelation.buildBlockedScan(), baseRelation.isOblivious) :: Nil
-
     case EncryptedProject(projectList, child) =>
       ObliviousProjectExec(projectList, planLater(child)) :: Nil
 
