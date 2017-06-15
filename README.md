@@ -1,4 +1,4 @@
-![](https://raw.github.com/ucbrise/opaque/gh-pages/opaque.png)
+<p align="center"><img src="https://raw.github.com/ucbrise/opaque/gh-pages/opaque.png" width="305"></p>
 
 # Opaque: Secure Apache Spark SQL
 
