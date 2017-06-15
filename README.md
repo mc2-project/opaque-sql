@@ -1,6 +1,6 @@
-<p align="center"><img src="https://raw.github.com/ucbrise/opaque/gh-pages/opaque.png" width="305"></p>
+<img src="https://raw.github.com/ucbrise/opaque/gh-pages/opaque.png" width="305" alt="Opaque">
 
-# Opaque: Secure Apache Spark SQL
+**Secure Apache Spark SQL**
 
 [![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
 
