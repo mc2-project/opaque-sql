@@ -1,3 +1,5 @@
+![](https://raw.github.com/ucbrise/opaque/gh-pages/opaque.png)
+
 # Opaque: Secure Apache Spark SQL
 
 [![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
