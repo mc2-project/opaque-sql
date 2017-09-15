@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 
 project(OpaqueEnclave)
 
+enable_language(ASM)
+
 option(FLATBUFFERS_LIB_DIR "Location of Flatbuffers library headers.")
 option(FLATBUFFERS_GEN_CPP_DIR "Location of Flatbuffers generated C++ files.")
 
