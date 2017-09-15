@@ -13,7 +13,7 @@ set(SOURCES
   Sort.cpp
   isv_enclave.cpp
   sgxaes.cpp
-  sgxaes_asm.o
+  sgxaes_asm.S
   util.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
   ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
