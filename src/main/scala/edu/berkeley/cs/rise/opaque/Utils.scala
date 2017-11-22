@@ -336,6 +336,8 @@ object Utils {
           f.value(new tuix.FloatField).asInstanceOf[tuix.FloatField].value
         case tuix.FieldUnion.DoubleField =>
           f.value(new tuix.DoubleField).asInstanceOf[tuix.DoubleField].value
+        case tuix.FieldUnion.DateField =>
+          f.value(new tuix.DateField).asInstanceOf[tuix.DateField].value
         case tuix.FieldUnion.StringField =>
           val stringField = f.value(new tuix.StringField).asInstanceOf[tuix.StringField]
           val sBytes = new Array[Byte](stringField.length.toInt)
