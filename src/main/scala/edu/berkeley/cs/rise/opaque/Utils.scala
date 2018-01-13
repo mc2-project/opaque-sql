@@ -64,6 +64,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.Last
 import org.apache.spark.sql.catalyst.expressions.aggregate.Max
 import org.apache.spark.sql.catalyst.expressions.aggregate.Min
 import org.apache.spark.sql.catalyst.expressions.aggregate.Sum
+import org.apache.spark.sql.catalyst.plans.Cross
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
@@ -479,7 +480,7 @@ object Utils {
           // tree. For now we just ignore them when evaluating expressions.
           childOffset
 
-        case (Cast(child, dataType), Seq(childOffset)) =>
+        case (Cast(child, dataType, _), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Cast,
@@ -673,6 +674,7 @@ object Utils {
           case RightOuter => tuix.JoinType.RightOuter
           case LeftSemi => tuix.JoinType.LeftSemi
           case LeftAnti => tuix.JoinType.LeftAnti
+          case Cross => tuix.JoinType.Cross
           case ExistenceJoin(_) => ???
           case NaturalJoin(_) => ???
           case UsingJoin(_, _) => ???

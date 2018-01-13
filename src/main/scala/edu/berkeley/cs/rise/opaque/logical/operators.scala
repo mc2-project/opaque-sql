@@ -75,13 +75,6 @@ case class EncryptedLocalRelation(
   }
 
   override protected def stringArgs = Iterator(output)
-
-  override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case EncryptedLocalRelation(otherOutput, otherPlaintextData, otherIsOblivious) =>
-      (otherOutput.map(_.dataType) == output.map(_.dataType) && otherPlaintextData == plaintextData
-        && otherIsOblivious == isOblivious)
-    case _ => false
-  }
 }
 
 case class EncryptedBlockRDD(
@@ -94,12 +87,6 @@ case class EncryptedBlockRDD(
 
   override def newInstance(): EncryptedBlockRDD.this.type =
     EncryptedBlockRDD(output.map(_.newInstance()), rdd, isOblivious).asInstanceOf[this.type]
-
-  override def sameResult(plan: LogicalPlan): Boolean = plan match {
-    case EncryptedBlockRDD(_, otherRDD, otherIsOblivious) =>
-      rdd.id == otherRDD.id && isOblivious == otherIsOblivious
-    case _ => false
-  }
 
   override def producedAttributes: AttributeSet = outputSet
 }
