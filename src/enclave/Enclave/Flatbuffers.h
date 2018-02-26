@@ -220,6 +220,7 @@ public:
   }
 
   const tuix::Row *next() {
+    // Note: this will invalidate any pointers returned by previous invocations of this method
     if (!r.has_next()) {
       assert(block_idx + 1 < encrypted_blocks->blocks()->size());
       block_idx++;
@@ -414,6 +415,37 @@ private:
   UntrustedMemoryAllocator untrusted_alloc;
   flatbuffers::FlatBufferBuilder enc_block_builder;
   std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;
+};
+
+class FlatbuffersTemporaryRow {
+public:
+  FlatbuffersTemporaryRow() : w(), r(nullptr), row(nullptr) {}
+  FlatbuffersTemporaryRow(const tuix::Row *row) : FlatbuffersTemporaryRow() {
+    if (row != nullptr) {
+      set(row);
+    }
+  }
+
+  void set(const tuix::Row *row) {
+    if (row != nullptr) {
+      w.clear();
+      w.write(row);
+      w.finish(w.write_encrypted_blocks());
+      r.reset(new EncryptedBlocksToRowReader(w.output_buffer(), w.output_size()));
+      this->row = r->next();
+    } else {
+      this->row = nullptr;
+    }
+  }
+
+  const tuix::Row *get() {
+    return row;
+  }
+
+private:
+  FlatbuffersRowWriter w;
+  std::unique_ptr<EncryptedBlocksToRowReader> r;
+  const tuix::Row *row;
 };
 
 void print(const tuix::Row *in);

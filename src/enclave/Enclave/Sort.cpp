@@ -218,14 +218,14 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   EncryptedBlocksToRowReader b(boundary_rows, boundary_rows_length);
   // Invariant: b_upper is the first boundary row strictly greater than the current range, or
   // nullptr if we are in the last range
-  const tuix::Row *b_upper = b.has_next() ? b.next() : nullptr;
+  FlatbuffersTemporaryRow b_upper(b.has_next() ? b.next() : nullptr);
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
 
     // Advance boundary rows to maintain the invariant on b_upper
-    while (b_upper != nullptr && !sort_eval.less_than(row, b_upper)) {
-      b_upper = b.has_next() ? b.next() : nullptr;
+    while (b_upper.get() != nullptr && !sort_eval.less_than(row, b_upper.get())) {
+      b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition
       w.finish(w.write_encrypted_blocks());
