@@ -28,7 +28,7 @@ add_custom_command(
   DEPENDS ../ServiceProvider/keygen
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
-include_directories(SYSTEM "$ENV{SGX_SDK}/include/stlport")
+include_directories(SYSTEM "$ENV{SGX_SDK}/include/libcxx")
 include_directories(SYSTEM "$ENV{SGX_SDK}/include/tlibc")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
@@ -42,7 +42,7 @@ set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS
 find_library(TRTS_LIB sgx_trts)
 find_library(TRTS_SIM_LIB sgx_trts_sim)
 find_library(TSTDC_LIB sgx_tstdc)
-find_library(TSTDCXX_LIB sgx_tstdcxx)
+find_library(TSTDCXX_LIB sgx_tcxx)
 find_library(TKEY_EXCHANGE_LIB sgx_tkey_exchange)
 find_library(TCRYPTO_LIB sgx_tcrypto)
 find_library(SERVICE_LIB sgx_tservice)
