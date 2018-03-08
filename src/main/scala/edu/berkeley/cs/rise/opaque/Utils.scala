@@ -278,6 +278,12 @@ object Utils {
           tuix.FieldUnion.LongField,
           tuix.LongField.createLongField(builder, x),
           isNull)
+      case (null, LongType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.LongField,
+          tuix.LongField.createLongField(builder, 0L),
+          isNull)
       case (x: Float, FloatType) =>
         tuix.Field.createField(
           builder,
@@ -289,6 +295,12 @@ object Utils {
           builder,
           tuix.FieldUnion.DoubleField,
           tuix.DoubleField.createDoubleField(builder, x),
+          isNull)
+      case (null, DoubleType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.DoubleField,
+          tuix.DoubleField.createDoubleField(builder, 0.0),
           isNull)
       case (x: Int, DateType) =>
         tuix.Field.createField(
