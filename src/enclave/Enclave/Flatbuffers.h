@@ -419,7 +419,7 @@ private:
 
 class FlatbuffersTemporaryRow {
 public:
-  FlatbuffersTemporaryRow() : w(), r(nullptr), row(nullptr) {}
+  FlatbuffersTemporaryRow() : builder(), row(nullptr) {}
   FlatbuffersTemporaryRow(const tuix::Row *row) : FlatbuffersTemporaryRow() {
     if (row != nullptr) {
       set(row);
@@ -428,11 +428,14 @@ public:
 
   void set(const tuix::Row *row) {
     if (row != nullptr) {
-      w.clear();
-      w.write(row);
-      w.finish(w.write_encrypted_blocks());
-      r.reset(new EncryptedBlocksToRowReader(w.output_buffer(), w.output_size()));
-      this->row = r->next();
+      builder.Clear();
+      builder.Finish(flatbuffers_copy(row, builder));
+      const uint8_t *buf = builder.GetBufferPointer();
+      size_t len = builder.GetSize();
+      flatbuffers::Verifier v(buf, len);
+      check(v.VerifyBuffer<tuix::Row>(nullptr),
+            "Corrupt Row %p of length %d\n", buf, len);
+      this->row = flatbuffers::GetRoot<tuix::Row>(buf);
     } else {
       this->row = nullptr;
     }
@@ -443,8 +446,7 @@ public:
   }
 
 private:
-  FlatbuffersRowWriter w;
-  std::unique_ptr<EncryptedBlocksToRowReader> r;
+  flatbuffers::FlatBufferBuilder builder;
   const tuix::Row *row;
 };
 
