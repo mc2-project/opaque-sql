@@ -250,9 +250,6 @@ public:
   }
 
   void reset(uint8_t *buf, size_t len) {
-    if (this->buf != nullptr) {
-      ocall_free(this->buf);
-    }
     this->buf = buf;
 
     flatbuffers::Verifier v(buf, len);
@@ -351,17 +348,18 @@ public:
   void write_encrypted_block() {
     builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
     size_t enc_rows_len = enc_size(builder.GetSize());
-    uint8_t *enc_rows = nullptr;
-    ocall_malloc(enc_rows_len, &enc_rows);
-    encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows);
+
+    uint8_t *enc_rows_ptr = nullptr;
+    ocall_malloc(enc_rows_len, &enc_rows_ptr);
+
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
+    encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
     enc_block_vector.push_back(
       tuix::CreateEncryptedBlock(
         enc_block_builder,
         rows_vector.size(),
-        enc_block_builder.CreateVector(enc_rows, enc_rows_len)));
-
-    ocall_free(enc_rows);
+        enc_block_builder.CreateVector(enc_rows.get(), enc_rows_len)));
 
     rows_vector.clear();
   }
@@ -385,10 +383,12 @@ public:
     enc_block_builder.Finish<T>(root);
   }
 
-  uint8_t *output_buffer() {
-    uint8_t *buf = nullptr;
-    ocall_malloc(output_size(), &buf);
-    memcpy(buf, enc_block_builder.GetBufferPointer(), output_size());
+  std::unique_ptr<uint8_t, decltype(&ocall_free)> output_buffer() {
+    uint8_t *buf_ptr;
+    ocall_malloc(output_size(), &buf_ptr);
+
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> buf(buf_ptr, &ocall_free);
+    memcpy(buf.get(), enc_block_builder.GetBufferPointer(), output_size());
     return buf;
   }
 

@@ -20,7 +20,7 @@ void scan_collect_last_primary(
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer();
+  *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size();
 }
 
@@ -56,6 +56,6 @@ void non_oblivious_sort_merge_join(
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer();
+  *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size();
 }
