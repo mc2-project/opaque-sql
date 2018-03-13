@@ -261,6 +261,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val result = words.agg(sum("count").as("totalCount"))
   }
 
+  testAgainstSpark("contains") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, abc(i))
+    val df = makeDF(data, securityLevel, "word", "abc")
+    df.filter($"word".contains(lit("1"))).collect
+  }
+
   testOpaqueOnly("save and load") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")

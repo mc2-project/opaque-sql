@@ -488,6 +488,49 @@ private:
       }
     }
 
+    case tuix::ExprUnion_Contains:
+    {
+      auto c = static_cast<const tuix::Contains *>(expr->expr());
+
+      // TODO: handle Contains(str, "")
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, c->left()));
+      const tuix::Field *right =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, c->right()));
+
+      check(left->value_type() == tuix::FieldUnion_StringField &&
+            right->value_type() == tuix::FieldUnion_StringField &&
+            "tuix::Contains requires left String, right String, not"
+            "left %s, right %s\n",
+            tuix::EnumNameFieldUnion(left->value_type()),
+            tuix::EnumNameFieldUnion(right->value_type()));
+      bool result_is_null = left->is_null() || right->is_null();
+      if (!result_is_null) {
+        auto left_field = static_cast<const tuix::StringField *>(left->value());
+        auto right_field = static_cast<const tuix::StringField *>(right->value());
+        auto last = flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), left_field->length());
+        auto it = std::find_end(
+          flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), 0),
+          last,
+          flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), 0),
+          flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), right_field->length()));
+        bool result = (it != last);
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, result).Union(),
+          false);
+      } else {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {

@@ -36,6 +36,7 @@ import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
+import org.apache.spark.sql.catalyst.expressions.Contains
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
@@ -627,6 +628,13 @@ object Utils {
                 tuix.ExprUnion.IsNull,
                 tuix.IsNull.createIsNull(
                   builder, childOffset))))
+
+        case (Contains(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Contains,
+            tuix.Contains.createContains(
+              builder, leftOffset, rightOffset))
       }
     }
   }
