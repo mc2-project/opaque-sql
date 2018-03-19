@@ -11,25 +11,25 @@ set(SOURCES
   Join.cpp
   Project.cpp
   Sort.cpp
-  isv_enclave.cpp
   sgxaes.cpp
   sgxaes_asm.S
   util.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
-  ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
+  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
+#  ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
 add_custom_command(
-  COMMAND ${SGX_EDGER8R} --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include"
+  COMMAND ${SGX_EDGER8R} --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include" --search-path "$ENV{TRUCE_SDK}/truce_enclave" --search-path "$ENV{SSL_SGX}/include"
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
 
-add_custom_command(
-  COMMAND ../ServiceProvider/keygen ${CMAKE_CURRENT_BINARY_DIR}/key.cpp
-  DEPENDS ../ServiceProvider/keygen
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
+#add_custom_command(
+#  COMMAND ../ServiceProvider/keygen ${CMAKE_CURRENT_BINARY_DIR}/key.cpp
+#  DEPENDS ../ServiceProvider/keygen
+#  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
-include_directories(SYSTEM "$ENV{SGX_SDK}/include/stlport")
+include_directories(SYSTEM "$ENV{SGX_SDK}/include/libcxx")
 include_directories(SYSTEM "$ENV{SGX_SDK}/include/tlibc")
+include_directories("$ENV{TRUCE_SDK}/truce_enclave")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
@@ -42,11 +42,15 @@ set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS
 find_library(TRTS_LIB sgx_trts)
 find_library(TRTS_SIM_LIB sgx_trts_sim)
 find_library(TSTDC_LIB sgx_tstdc)
-find_library(TSTDCXX_LIB sgx_tstdcxx)
+find_library(TSTDCXX_LIB sgx_tcxx)
 find_library(TKEY_EXCHANGE_LIB sgx_tkey_exchange)
 find_library(TCRYPTO_LIB sgx_tcrypto)
 find_library(SERVICE_LIB sgx_tservice)
 find_library(SERVICE_SIM_LIB sgx_tservice_sim)
+
+find_library(TRUCE_T_LIB truce_t)
+find_library(T_SGX_SSL sgx_tsgxssl)
+find_library(T_SGX_SSL_CRYPTO sgx_tsgxssl_crypto)
 
 if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
   set(Trts_Library_Path "${TRTS_SIM_LIB}")
@@ -56,8 +60,8 @@ else()
   set(Service_Library_Path "${SERVICE_LIB}")
 endif()
 
-target_link_libraries(enclave_trusted -Wl,--whole-archive "${Trts_Library_Path}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
-  "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${Service_Library_Path}" -Wl,--end-group)
+target_link_libraries(enclave_trusted -Wl,--whole-archive "${Trts_Library_Path}" -Wl,--no-whole-archive -Wl,--whole-archive "${T_SGX_SSL}" -Wl,--no-whole-archive -Wl,--start-group "${TSTDC_LIB}" "${TSTDCXX_LIB}"
+  "${TKEY_EXCHANGE_LIB}" "${TCRYPTO_LIB}" "${Service_Library_Path}" "${T_SGX_SSL_CRYPTO}" "${TRUCE_T_LIB}" -Wl,--end-group)
 
 add_custom_command(
   COMMAND ${SGX_ENCLAVE_SIGNER} sign -key "$ENV{SGX_SDK}/SampleCode/SampleEnclave/Enclave/Enclave_private.pem" -enclave $<TARGET_FILE:enclave_trusted> -out libenclave_trusted_signed.so -config ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.config.xml

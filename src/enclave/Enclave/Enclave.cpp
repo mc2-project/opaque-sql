@@ -11,6 +11,7 @@
 #include "Sort.h"
 #include "isv_enclave.h"
 
+
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
                    uint8_t *ciphertext, uint32_t cipher_length) {
   // IV (12 bytes) + ciphertext + mac (16 bytes)
@@ -131,26 +132,26 @@ void ecall_non_oblivious_aggregate_step2(
     output_rows, output_rows_length);
 }
 
-sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
-  return enclave_init_ra(b_pse, p_context);
+sgx_status_t ecall_enclave_init_ra(int , sgx_ra_context_t *) {
+  return SGX_ERROR_INVALID_PARAMETER;
 }
 
 
-void ecall_enclave_ra_close(sgx_ra_context_t context) {
-  enclave_ra_close(context);
+void ecall_enclave_ra_close(sgx_ra_context_t ) {
+  return; 
 }
 
-sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context, uint8_t* message,
-                                         size_t message_size, uint8_t* mac,
-                                         size_t mac_size) {
+sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t , uint8_t* ,
+                                         size_t , uint8_t* ,
+                                         size_t ) {
 
-  return verify_att_result_mac(context, message, message_size, mac, mac_size);
+  return SGX_ERROR_INVALID_PARAMETER;
 }
 
-sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
-                                   uint8_t* p_secret,
-                                   uint32_t secret_size,
-                                   uint8_t* gcm_mac) {
+sgx_status_t ecall_put_secret_data(sgx_ra_context_t ,
+                                   uint8_t* ,
+                                   uint32_t ,
+                                   uint8_t* ) {
 
-  return put_secret_data(context, p_secret, secret_size, gcm_mac);
+  return SGX_ERROR_INVALID_PARAMETER;
 }

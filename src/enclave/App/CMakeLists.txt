@@ -7,7 +7,7 @@ set(SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
 add_custom_command(
-  COMMAND ${SGX_EDGER8R} --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include"
+  COMMAND ${SGX_EDGER8R} --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave --search-path "$ENV{SGX_SDK}/include" --search-path "$ENV{TRUCE_SDK}/truce_enclave" --search-path "$ENV{SSL_SGX}/include"
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
@@ -22,7 +22,12 @@ find_library(URTS_SIM_LIB sgx_urts_sim)
 find_library(UAE_SERVICE_LIB sgx_uae_service)
 find_library(UAE_SERVICE_SIM_LIB sgx_uae_service_sim)
 
-target_link_libraries(enclave_jni ${UKEY_EXCHANGE_LIB} pthread)
+find_library(TRUCE_U_LIB truce_u)
+find_library(U_SGX_SSL sgx_usgxssl)
+find_library(CRYPTO crypto)
+
+
+target_link_libraries(enclave_jni ${UKEY_EXCHANGE_LIB} pthread ${TRUCE_U_LIB} ${CRYPTO} ${U_SGX_SSL})
 if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
   target_link_libraries(enclave_jni ${URTS_SIM_LIB} ${UAE_SERVICE_SIM_LIB})
 else()

@@ -44,10 +44,15 @@
 #include <sgx_eid.h>     /* sgx_enclave_id_t */
 #include <sgx_error.h>       /* sgx_status_t */
 #include <sgx_uae_service.h>
-#include <sgx_ukey_exchange.h>
+//#include <sgx_ukey_exchange.h>
 
 #include "Enclave_u.h"
-#include "service_provider.h"
+
+#include <arpa/inet.h> // htonl
+
+#include "truce_u.h"
+
+//#include "service_provider.h"
 
 #ifndef TRUE
 # define TRUE 1
@@ -64,8 +69,6 @@
 # define TOKEN_FILENAME   "enclave.token"
 # define ENCLAVE_FILENAME "enclave.signed.so"
 #endif
-
-static sgx_ra_context_t context = INT_MAX;
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -228,6 +231,107 @@ public:
 #else
 #define sgx_check(message, op) sgx_check_quiet(message, op)
 #endif
+
+
+int get_data_key(truce_session_t t_session, char *key_store_addr) {
+    char ks_address[100];
+    int ks_port = 48123; // default
+
+    
+    const char *port_pos = strchr(key_store_addr, ':');
+    if (port_pos) { // parse "address:port"
+        size_t addr_len = port_pos - key_store_addr;
+        memcpy(ks_address, key_store_addr, addr_len);
+        ks_address[addr_len] = '\0';
+        ks_port = atoi(port_pos + 1);
+    }
+    else {
+        int addr_len = strlen(key_store_addr);
+        memcpy(ks_address, key_store_addr, addr_len + 1);
+    }
+
+    printf("Key store address: %s, port: %d\n", ks_address, ks_port);
+
+    // Create connection to key store
+
+    int sockfd = 0;
+
+    if (!inet_connect(sockfd, ks_address, ks_port)) {
+        printf("\n Error : Connect to key store failed,  %s, port: %d\n", ks_address, ks_port);
+        return -1;
+    }
+
+    printf("Connected to Key store\n");
+
+    // Send Truce ID to key store
+    int tmp_int = htonl(TRUCE_ID_LENGTH);
+    int n = write(sockfd, &tmp_int, 4);
+    if (n < 4) {
+        printf("\n Error : Sent less than 4 bytes to key store\n");
+        close(sockfd);
+        return -1;
+    }
+    n = write(sockfd, t_session.truce_id, TRUCE_ID_LENGTH);
+    if (n < (int)TRUCE_ID_LENGTH) {
+        printf("\n Error : Sent less than %d bytes to key store\n",TRUCE_ID_LENGTH);
+        close(sockfd);
+        return -1;
+    }
+
+    // Receiving a secret
+
+    // length of the secret
+    bool retval = read_all(sockfd, (uint8_t *) &tmp_int, 4);
+    if (!retval) {
+    	printf("Warning: failed to read first 4 bytes from key store %d\n", sockfd);
+        close(sockfd);
+        return -1;
+    }
+
+    int rec_buf_len = ntohl(tmp_int);
+
+    if (rec_buf_len <= 0) {
+        printf("Error: Buf length.");
+        close(sockfd);
+        return -1;
+    }
+
+    uint8_t *rec_buf = (uint8_t *) malloc(rec_buf_len);
+    if (!rec_buf) {
+    	printf("Error: Failed to allocate %d bytes for rec_buf.\n",rec_buf_len);
+        close(sockfd);
+        return -1;
+    }
+
+    retval = read_all(sockfd, rec_buf, rec_buf_len);
+    if (!retval) {
+        printf("Warning: Failed to read %d bytes for rec_buf\n", rec_buf_len);
+        close(sockfd);
+        return -1;
+    }
+
+    memcpy(&tmp_int, rec_buf,4);
+    int type = ntohl(tmp_int);
+    memcpy(&tmp_int, rec_buf+4, 4);
+    int secret_buf_size = ntohl(tmp_int);
+
+
+    uint8_t* secret_buf = rec_buf+8;
+
+    printf("Received secret message. Type: %d, size: %d\n", type, secret_buf_size);
+
+    if (secret_buf_size <= 0) {
+        printf("Error: Wrong buffer size.");
+        close(sockfd);
+        return -1;
+    }
+
+    int ret = truce_add_secret(t_session, secret_buf, secret_buf_size);
+
+    free(rec_buf);
+
+    return ret;
+}
 
 /* Initialize the enclave:
  *   Step 1: retrive the launch token saved by last transaction
@@ -415,6 +519,53 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
               library_path_str, SGX_DEBUG_FLAG, &token, &updated, &eid, nullptr));
   env->ReleaseStringUTFChars(library_path, library_path_str);
 
+  // Create TruCE session
+  
+  // Read Truce config: 
+  FILE *config_file = fopen("/etc/opaque/truce.config","r");
+  if (NULL == config_file) {
+    printf("Error: JNI StartEnclave: Failed to open Truce config file\n");
+    return -1;
+  }
+  
+  char ts_addr[120];
+  char ks_addr[120];
+
+
+  int res = fscanf(config_file," TS_ADDRESS=%s",ts_addr);
+  if (1 != res) {
+    printf("Error: JNI StartEnclave: Failed to extract Truce server address\n");
+    return -1;
+  }
+
+  res = fscanf(config_file," KS_ADDRESS=%s",ks_addr);
+  if (1 != res) {
+    printf("Error: JNI StartEnclave: Failed to extract Key store address\n");
+    return -1;
+  }
+
+  fclose (config_file);
+  printf("TS_ADDR: %s, KS_ADDR: %s \n", ts_addr, ks_addr);
+
+  truce_config_t t_config;
+  t_config.truce_server_address = ts_addr;
+  //t_config.seal_folder = "/var/opaque/seal_files";
+  truce_session_t t_session;
+  bool success = truce_session(eid, t_config, t_session);
+
+  if (!success) {
+    printf("Error: JNI StartEnclave: Failed to create truce_session\n");
+    return -1;
+  }
+  else {
+    printf("\nJNI: Successfully created truce_session.\n");
+  }
+
+  sleep(1); // Give time to register the enclave in Truce server
+
+  printf("JNI: Getting the data key.\n");
+  get_data_key(t_session, ks_addr);
+
   return eid;
 }
 
@@ -456,238 +607,33 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
-    JNIEnv *env, jobject obj,
-    jlong eid) {
+    JNIEnv *, jobject ,
+    jlong ) {
 
-  (void)env;
-  (void)obj;
-  (void)eid;
+  printf("ERROR: Shouldnt be here: Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1");
 
-  // Remote attestation will be initiated when the ISV server challenges the ISV
-  // app or if the ISV app detects it doesn't have the credentials
-  // (shared secret) from a previous attestation required for secure
-  // communication with the server.
-
-  int ret = 0;
-  int enclave_lost_retry_time = 2;
-  sgx_status_t status;
-
-  // Ideally, this check would be around the full attestation flow.
-  do {
-    ret = ecall_enclave_init_ra(eid,
-                                &status,
-                                false,
-                                &context);
-  } while (SGX_ERROR_ENCLAVE_LOST == ret && enclave_lost_retry_time--);
-
-  if (status != SGX_SUCCESS) {
-    printf("[RemoteAttestation1] enclave_init_ra's status is %u\n", (uint32_t) status);
-    std::exit(1);
-  }
-
-  uint8_t *msg1 = (uint8_t *) malloc(sizeof(sgx_ra_msg1_t));
-
-#ifdef DEBUG
-  printf("[RemoteAttestation1] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
-#endif
-
-  ret = sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, (sgx_ra_msg1_t*) msg1);
-
-  if(SGX_SUCCESS != ret) {
-    ret = -1;
-    fprintf(stdout, "\nError, call sgx_ra_get_msg1 fail [%s].", __FUNCTION__);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  } else {
-#ifdef DEBUG
-    fprintf(stdout, "\nCall sgx_ra_get_msg1 success.\n");
-    fprintf(stdout, "\nMSG1 body generated -\n");
-    PRINT_BYTE_ARRAY(stdout, msg1, sizeof(sgx_ra_msg1_t));
-#endif
-  }
-
-  // The ISV application sends msg1 to the SP to get msg2,
-  // msg2 needs to be freed when no longer needed.
-  // The ISV decides whether to use linkable or unlinkable signatures.
-#ifdef DEBUG
-  fprintf(stdout, "\nSending msg1 to remote attestation service provider."
-          "Expecting msg2 back.\n");
-#endif
-
-  jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
-  env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), (jbyte *) msg1);
-
-  free(msg1);
-
-  return array_ret;
+  return nullptr;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2(
-    JNIEnv *env, jobject obj,
-    jlong eid,
-    jbyteArray msg2_input) {
+    JNIEnv *, jobject ,
+    jlong ,
+    jbyteArray ) {
 
-  (void)env;
-  (void)obj;
+  printf("ERROR: Shouldnt be here: Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2");
 
-  int ret = 0;
-  //sgx_ra_context_t context = INT_MAX;
-
-  (void)ret;
-  (void)eid;
-  // Successfully sent msg1 and received a msg2 back.
-  // Time now to check msg2.
-
-  //uint32_t input_len = (uint32_t) env->GetArrayLength(msg2_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg2_input, &if_copy);
-  sgx_ra_msg2_t* p_msg2_body = (sgx_ra_msg2_t*)(ptr);
-
-#ifdef DEBUG
-  printf("Printing p_msg2_body\n");
-  PRINT_BYTE_ARRAY(stdout, p_msg2_body, sizeof(sgx_ra_msg2_t));
-#endif
-
-  uint32_t msg3_size = 0;
-  sgx_ra_msg3_t *msg3 = NULL;
-
-  // The ISV app now calls uKE sgx_ra_proc_msg2,
-  // The ISV app is responsible for freeing the returned p_msg3!
-#ifdef DEBUG
-  printf("[RemoteAttestation2] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
-#endif
-  ret = sgx_ra_proc_msg2(context,
-                         eid,
-                         sgx_ra_proc_msg2_trusted,
-                         sgx_ra_get_msg3_trusted,
-                         p_msg2_body,
-                         sizeof(sgx_ra_msg2_t),
-                         &msg3,
-                         &msg3_size);
-
-  if (!msg3) {
-    fprintf(stdout, "\nError, call sgx_ra_proc_msg2 fail. msg3 = 0x%p [%s].\n", msg3, __FUNCTION__);
-    print_error_message((sgx_status_t) ret);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  }
-
-  if(SGX_SUCCESS != (sgx_status_t)ret) {
-    fprintf(stdout, "\nError, call sgx_ra_proc_msg2 fail. "
-            "ret = 0x%08x [%s].\n", ret, __FUNCTION__);
-    print_error_message((sgx_status_t) ret);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  } else {
-#ifdef DEBUG
-    fprintf(stdout, "\nCall sgx_ra_proc_msg2 success.\n");
-#endif
-  }
-
-  jbyteArray array_ret = env->NewByteArray(msg3_size);
-  env->SetByteArrayRegion(array_ret, 0, msg3_size, (jbyte *) msg3);
-
-  free(msg3);
-  return array_ret;
+  return nullptr;  
 }
 
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
-    JNIEnv *env, jobject obj,
-    jlong eid,
-    jbyteArray att_result_input) {
+    JNIEnv *, jobject ,
+    jlong ,
+    jbyteArray ) {
 
-  (void)env;
-  (void)obj;
+  printf("ERROR: Shouldnt be here: Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3");
 
-#ifdef DEBUG
-  printf("RemoteAttestation3 called\n");
-#endif
-
-  sgx_status_t status = SGX_SUCCESS;
-  //uint32_t input_len = (uint32_t) env->GetArrayLength(att_result_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(att_result_input, &if_copy);
-
-  ra_samp_response_header_t *att_result_full = (ra_samp_response_header_t *)(ptr);
-  sample_ra_att_result_msg_t *att_result = (sample_ra_att_result_msg_t *) att_result_full->body;
-
-#ifdef DEBUG
-  printf("[RemoteAttestation3] att_result's size is %u\n", att_result_full->size);
-#endif
-
-  // Check the MAC using MK on the attestation result message.
-  // The format of the attestation result message is ISV specific.
-  // This is a simple form for demonstration. In a real product,
-  // the ISV may want to communicate more information.
-  int ret = 0;
-  ret = ecall_verify_att_result_mac(eid,
-                                    &status,
-                                    context,
-                                    (uint8_t*)&att_result->platform_info_blob,
-                                    sizeof(ias_platform_info_blob_t),
-                                    (uint8_t*)&att_result->mac,
-                                    sizeof(sgx_mac_t));
-
-  if((SGX_SUCCESS != ret) || (SGX_SUCCESS != status)) {
-    fprintf(stdout, "\nError: INTEGRITY FAILED - attestation result message MK based cmac failed in [%s], status is %u", __FUNCTION__, (uint32_t) status);
-    return ;
-  }
-
-  bool attestation_passed = true;
-  // Check the attestation result for pass or fail.
-  // Whether attestation passes or fails is a decision made by the ISV Server.
-  // When the ISV server decides to trust the enclave, then it will return success.
-  // When the ISV server decided to not trust the enclave, then it will return failure.
-  if (0 != att_result_full->status[0] || 0 != att_result_full->status[1]) {
-    fprintf(stdout, "\nError, attestation result message MK based cmac "
-            "failed in [%s].", __FUNCTION__);
-    attestation_passed = false;
-  }
-
-  // The attestation result message should contain a field for the Platform
-  // Info Blob (PIB).  The PIB is returned by attestation server in the attestation report.
-  // It is not returned in all cases, but when it is, the ISV app
-  // should pass it to the blob analysis API called sgx_report_attestation_status()
-  // along with the trust decision from the ISV server.
-  // The ISV application will take action based on the update_info.
-  // returned in update_info by the API.
-  // This call is stubbed out for the sample.
-  //
-  // sgx_update_info_bit_t update_info;
-  // ret = sgx_report_attestation_status(
-  //     &p_att_result_msg_body->platform_info_blob,
-  //     attestation_passed ? 0 : 1, &update_info);
-
-  // Get the shared secret sent by the server using SK (if attestation
-  // passed)
-#ifdef DEBUG
-  printf("[RemoteAttestation3] %u\n", attestation_passed);
-#endif
-  if (attestation_passed) {
-    ret = ecall_put_secret_data(eid,
-                                &status,
-                                context,
-                                att_result->secret.payload,
-                                att_result->secret.payload_size,
-                                att_result->secret.payload_tag);
-
-    if((SGX_SUCCESS != ret)  || (SGX_SUCCESS != status)) {
-      fprintf(stdout, "\nError, attestation result message secret "
-              "using SK based AESGCM failed in [%s]. ret = "
-              "0x%0x. status = 0x%0x", __FUNCTION__, ret,
-              status);
-      return ;
-    }
-  }
-
-  fprintf(stdout, "\nSecret successfully received from server.");
-  fprintf(stdout, "\nRemote attestation success!\n");
-
-#ifdef DEBUG
-  fprintf(stdout, "Destroying the key exchange context\n");
-#endif
-  ecall_enclave_ra_close(eid, context);
+  return;
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(

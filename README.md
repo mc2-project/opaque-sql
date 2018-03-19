@@ -8,15 +8,11 @@ Opaque is a package for Apache Spark SQL that enables strong security for DataFr
 
 This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
-Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
+Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!).
 
 Work-in-progress:
 
 - Currently, Opaque supports a subset of Spark SQL operations and not yet UDFs. We are working on adding support for UDFs.
-
-- The current version also does not yet support computation integrity verification, though we are actively working on it.
-
-- The remote attestation code is not complete as it contains sample code from the Intel SDK.
 
 - If you find bugs in the code, please file an issue.
 
@@ -27,39 +23,55 @@ Work-in-progress:
 
 After downloading the Opaque codebase, build and test it as follows:
 
-1. Install dependencies and the Intel SGX SDK with C++11 support:
+1. Download and install the latest packages of Intel SGX LINUX from https://01.org/intel-software-guard-extensions/downloads.
+
+2. Install Trust Management Framework (TruCE) and its dependencies, 
+https://github.com/IBM/sgx-trust-management
+
+Build it in IAS simulation mode.Then run the Truce server, in a separate window:
+
+    ```sh
+    cd /path-to/sgx-trust-management/service_provider
+    ./truce_server
+    ```
+
+3. Install other dependencies:
 
     ```sh
     # For Ubuntu 16.04:
     sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
 
-    git clone https://github.com/ankurdave/linux-sgx -b c++11
-    cd linux-sgx
-    ./download_prebuilt.sh
-    make sdk_install_pkg
-    # Installer will prompt for install path, which can be user-local
-    ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
     ```
 
-2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
-   Note that only the NIST p-256 curve is supported.
+4. Compile and run the key store, in a separate window:
 
     ```sh
-    cd ${OPAQUE_HOME}
-    openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
+    export TRUCE_SDK=/path-to/sgx-trust-management/client
+    source sgxsdk/environment # from SGX SDK install directory in step 1
+    cd ${OPAQUE_HOME}/src/keystore
+    make
+    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/client
+    # address of Truce server
+    ./key_store 127.0.0.1
     ```
 
-3. Set the following environment variables:
+5. Set the following environment variables:
 
     ```sh
+    # Use TruCE and SSL-SGX installation paths from step 2.
+    export TRUCE_SDK=/path-to/sgx-trust-management/application
+    export SSL_SGX=/path-to/sgxssl
+    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/application
+
     source sgxsdk/environment # from SGX SDK install directory in step 1
     export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
-    export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 
     If running with real SGX hardware, also set `export SGX_MODE=HW` and `export SGX_PRERELEASE=1`.
 
-4. Run the Opaque tests:
+5. Create /etc/opaque folder and copy the  ${OPAQUE_HOME}/src/truce.config file there (if needed, modify the addresses of truce server and key store in the config file).
+
+6. Run the Opaque tests:
 
     ```sh
     cd ${OPAQUE_HOME}
@@ -77,13 +89,32 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     build/sbt package
     ```
 
-2. Launch the Spark shell with Opaque:
+2. In separate windows, start Truce server and Key store (if not running).
+    ```sh
+    cd /path-to/sgx-trust-management/service_provider
+    ./truce_server
+
+    cd ${OPAQUE_HOME}/src/keystore
+    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/client
+    source sgxsdk/environment # from SGX SDK install directory in step 1
+    # address of Truce server
+    ./key_store 127.0.0.1
+    ```
+
+3. Set the following environment variables:
+
+    ```sh
+    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/application
+    source sgxsdk/environment # from SGX SDK install directory in step 1
+    ```
+
+4. Launch the Spark shell with Opaque:
 
     ```sh
     ${SPARK_HOME}/bin/spark-shell --jars ${OPAQUE_HOME}/target/scala-2.11/opaque_2.11-0.1.jar
     ```
 
-3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
+5. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
 
     ```scala
     import edu.berkeley.cs.rise.opaque.implicits._
@@ -91,7 +122,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
     ```
 
-4. Create an encrypted DataFrame:
+6. Create an encrypted DataFrame:
 
     ```scala
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5))
@@ -99,7 +130,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     val dfEncrypted = df.encrypted
     ```
 
-5. Query the DataFrames and explain the query plan to see the secure operators:
+7. Query the DataFrames and explain the query plan to see the secure operators:
 
 
     ```scala
@@ -119,7 +150,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
     // +----+-----+
     ```
 
-6. Save and load an encrypted DataFrame:
+8. Save and load an encrypted DataFrame:
 
     ```scala
     dfEncrypted.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save("dfEncrypted")

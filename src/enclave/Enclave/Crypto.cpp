@@ -4,15 +4,46 @@
 
 #include "common.h"
 
+#include "truce_t.h"
+
 sgx_aes_gcm_128bit_key_t key_data = {0};
 sgx_aes_gcm_128bit_key_t *key = &key_data;
 const KeySchedule ks_backup = KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
-KeySchedule *ks = (KeySchedule *) &ks_backup;
+KeySchedule *ks = NULL; // = (KeySchedule *) &ks_backup;
 
 void initKeySchedule() {
   if (ks == NULL) {
-    print_hex(key_data, 16);
-    ks = new KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);
+
+    // Get decryption key from the secret list
+    truce_secret_t *s_ptr = truce_get_secrets();
+
+    if (NULL == s_ptr) {
+    	printf("No Truce secrets available\n");
+    	return;
+    }
+
+    while (NULL != s_ptr) {
+        int *key_id = (int *) s_ptr->secret; // In your app secret, the first 4 bytes are the key id
+        if (*key_id == 57) { // Your decryption key id is 57 (also, see the client)
+            break;
+        }
+        else {
+            s_ptr = s_ptr->next;
+        }
+    }
+
+    if (NULL == s_ptr) {
+    	printf("Failed to find key #57\n");
+    	return;
+    }
+
+    printf("Got data key \n");
+    //print_hex(s_ptr->secret, s_ptr->secret_len);
+
+    uint8_t *truce_key_data = s_ptr->secret + 4; // Your key starts at byte 4
+    
+    //print_hex(key_data, 16);
+    ks = new KeySchedule((unsigned char *) truce_key_data, SGX_AESGCM_KEY_SIZE);
   }
 }
 
