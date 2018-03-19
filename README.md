@@ -27,14 +27,31 @@ After downloading the Opaque codebase, build and test it as follows:
 
 2. Install Trust Management Framework (TruCE) and its dependencies, 
 https://github.com/IBM/sgx-trust-management. 
-Build it in IAS simulation mode.Then run the Truce server, in a separate window:
+Build it in IAS simulation mode. 
+
+3. In a separate window, run the Truce server:
 
     ```sh
+    # Use TruCE installation path from step 2.
     cd /path-to/sgx-trust-management/service_provider
     ./truce_server
     ```
 
-3. Install other dependencies:
+4. In a separate window, compile and run the key store:
+
+    ```sh
+    cd ${OPAQUE_HOME}/src/keystore
+    # Use TruCE installation path from step 2.
+    export TRUCE_SDK=/path-to/sgx-trust-management/client
+    source sgxsdk/environment # from SGX SDK install directory in step 1
+
+    make
+    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/client
+    # address of Truce server
+    ./key_store 127.0.0.1
+    ```
+
+5. Install other dependencies:
 
     ```sh
     # For Ubuntu 16.04:
@@ -42,20 +59,8 @@ Build it in IAS simulation mode.Then run the Truce server, in a separate window:
 
     ```
 
-4. Compile and run the key store, in a separate window:
 
-    ```sh
-    # Use TruCE installation path from step 2.
-    export TRUCE_SDK=/path-to/sgx-trust-management/client
-    source sgxsdk/environment # from SGX SDK install directory in step 1
-    cd ${OPAQUE_HOME}/src/keystore
-    make
-    export LD_LIBRARY_PATH=/path-to/sgx-trust-management/client
-    # address of Truce server
-    ./key_store 127.0.0.1
-    ```
-
-5. Set the following environment variables:
+6. Set the following environment variables:
 
     ```sh
     # Use TruCE and SSL-SGX installation paths from step 2.
@@ -69,9 +74,9 @@ Build it in IAS simulation mode.Then run the Truce server, in a separate window:
 
     If running with real SGX hardware, also set `export SGX_MODE=HW` and `export SGX_PRERELEASE=1`.
 
-5. Create /etc/opaque folder and copy the  ${OPAQUE_HOME}/src/truce.config file there (if needed, modify the addresses of truce server and key store in the config file).
+7. Create /etc/opaque folder and copy the  ${OPAQUE_HOME}/src/truce.config file there (if needed, modify the addresses of truce server and key store in the config file).
 
-6. Run the Opaque tests:
+8. Run the Opaque tests:
 
     ```sh
     cd ${OPAQUE_HOME}
