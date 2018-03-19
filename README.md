@@ -26,8 +26,7 @@ After downloading the Opaque codebase, build and test it as follows:
 1. Download and install the latest packages of Intel SGX LINUX from https://01.org/intel-software-guard-extensions/downloads.
 
 2. Install Trust Management Framework (TruCE) and its dependencies, 
-https://github.com/IBM/sgx-trust-management
-
+https://github.com/IBM/sgx-trust-management. 
 Build it in IAS simulation mode.Then run the Truce server, in a separate window:
 
     ```sh
@@ -46,6 +45,7 @@ Build it in IAS simulation mode.Then run the Truce server, in a separate window:
 4. Compile and run the key store, in a separate window:
 
     ```sh
+    # Use TruCE installation path from step 2.
     export TRUCE_SDK=/path-to/sgx-trust-management/client
     source sgxsdk/environment # from SGX SDK install directory in step 1
     cd ${OPAQUE_HOME}/src/keystore
@@ -96,7 +96,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
 
     cd ${OPAQUE_HOME}/src/keystore
     export LD_LIBRARY_PATH=/path-to/sgx-trust-management/client
-    source sgxsdk/environment # from SGX SDK install directory in step 1
+    source sgxsdk/environment # from SGX SDK install directory
     # address of Truce server
     ./key_store 127.0.0.1
     ```
@@ -105,7 +105,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is alr
 
     ```sh
     export LD_LIBRARY_PATH=/path-to/sgx-trust-management/application
-    source sgxsdk/environment # from SGX SDK install directory in step 1
+    source sgxsdk/environment # from SGX SDK install directory
     ```
 
 4. Launch the Spark shell with Opaque:
