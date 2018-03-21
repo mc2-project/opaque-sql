@@ -52,7 +52,7 @@ object OpaqueOperators extends Strategy {
           val leftProj = ObliviousProjectExec(leftProjSchema, planLater(left))
           val rightProj = ObliviousProjectExec(rightProjSchema, planLater(right))
           val unioned = ObliviousUnionExec(leftProj, rightProj)
-          val sorted = EncryptedSortExec(sortForJoin(leftKeys, tag, unioned.output), unioned)
+          val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned)
           val joined = EncryptedSortMergeJoinExec(
             joinType,
             leftKeysProj,
@@ -88,7 +88,7 @@ object OpaqueOperators extends Strategy {
     : (Seq[NamedExpression], Seq[NamedExpression], NamedExpression) = {
     val keysProj = keys.zipWithIndex.map { case (k, i) => Alias(k, "_" + i)() }
     val tag = Alias(Literal(if (isLeft) 0 else 1), "_tag")()
-    (Seq(tag) ++ keysProj ++ input, keysProj, tag.toAttribute)
+    (Seq(tag) ++ keysProj ++ input, keysProj.map(_.toAttribute), tag.toAttribute)
   }
 
   private def sortForJoin(
