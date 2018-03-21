@@ -361,6 +361,7 @@ public:
         rows_vector.size(),
         enc_block_builder.CreateVector(enc_rows.get(), enc_rows_len)));
 
+    builder.Clear();
     rows_vector.clear();
   }
 
