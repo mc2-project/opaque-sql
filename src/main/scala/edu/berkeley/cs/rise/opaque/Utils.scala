@@ -56,6 +56,7 @@ import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
 import org.apache.spark.sql.catalyst.expressions.aggregate.Count
@@ -635,6 +636,14 @@ object Utils {
             tuix.ExprUnion.Contains,
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
+
+        case (Year(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Year,
+            tuix.Year.createYear(
+              builder, childOffset))
+
       }
     }
   }

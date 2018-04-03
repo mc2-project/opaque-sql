@@ -25,6 +25,7 @@ union ExprUnion {
     Subtract,
     If,
     Cast,
+    Year,
 }
 
 table Expr {
@@ -127,4 +128,9 @@ table If {
     predicate:Expr;
     true_value:Expr;
     false_value:Expr;
+}
+
+// Date expressions
+table Year {
+    child:Expr;
 }
