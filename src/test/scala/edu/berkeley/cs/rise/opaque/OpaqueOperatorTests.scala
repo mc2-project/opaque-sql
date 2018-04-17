@@ -267,6 +267,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("year") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "id", "date")
+    df.select(year($"date")).collect
+  }
+
   testOpaqueOnly("save and load") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
@@ -287,6 +293,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
+  }
+
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
   }
 
   testAgainstSpark("big data 1") { securityLevel =>

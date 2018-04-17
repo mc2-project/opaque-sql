@@ -577,6 +577,33 @@ private:
         tuix::CreateBooleanField(builder, result).Union(),
         false);
     }
+    case tuix::ExprUnion_Year:
+    {
+      auto e = static_cast<const tuix::Year *>(expr->expr());
+      // Note: This temporary pointer will be invalidated when we next write to builder
+      const tuix::Field *child =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->child()));
+      check(child->value_type() == tuix::FieldUnion_DateField,
+            "tuix::Year requires child Date, not "
+            "%s\n",
+            tuix::EnumNameFieldUnion(child->value_type()));
+      uint32_t result = 0;
+      bool child_is_null = child->is_null();
+      if (!child_is_null) {
+        auto child_field = static_cast<const tuix::DateField *>(child->value());
+        //This is an approximation
+        //TODO take into account leap seconds
+        uint64_t date = 86400L*child_field->value();
+        struct tm tm;
+        secs_to_tm(date, &tm);
+        result = 1900 + tm.tm_year;
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_IntegerField,
+        tuix::CreateIntegerField(builder, result).Union(),
+        child_is_null);
+    }
 
     default:
       printf("Can't evaluate expression of type %s\n",
