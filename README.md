@@ -63,6 +63,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
     ```sh
     cd ${OPAQUE_HOME}
+    ./data/fetch-test-data.sh
     build/sbt test
     ```
 

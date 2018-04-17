@@ -18,5 +18,6 @@ before_install:
   - openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
   - export SPARKSGX_DATA_DIR=$PWD/data
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
+  - ./data/fetch-test-data.sh
 
 script: sbt -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
