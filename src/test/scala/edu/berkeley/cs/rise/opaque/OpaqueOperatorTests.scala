@@ -295,6 +295,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
   }
 
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  }
+
   testAgainstSpark("big data 1") { securityLevel =>
     BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
   }
