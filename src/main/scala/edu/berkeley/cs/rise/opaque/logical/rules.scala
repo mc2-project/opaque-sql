@@ -33,7 +33,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case Encrypt(isOblivious, LocalRelation(output, data)) =>
+    case Encrypt(isOblivious, LocalRelation(output, data, false)) =>
       EncryptedLocalRelation(output, data, isOblivious)
   }
 }
@@ -68,7 +68,7 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
   }
 
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    case l @ LogicalRelation(baseRelation: EncryptedScan, _, _) =>
+    case l @ LogicalRelation(baseRelation: EncryptedScan, _, _, false) =>
       EncryptedBlockRDD(l.output, baseRelation.buildBlockedScan(), baseRelation.isOblivious)
 
     case p @ Project(projectList, child) if isOblivious(child) =>
