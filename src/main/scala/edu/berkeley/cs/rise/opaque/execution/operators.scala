@@ -337,9 +337,11 @@ case class ObliviousUnionExec(
     // RA.initRA(leftRDD)
 
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      (leftBlockIter.toSeq, rightBlockIter.toSeq) match {
-        case (Seq(leftBlock), Seq(rightBlock)) =>
+      (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
+        case Seq(leftBlock, rightBlock) =>
           Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
+        case Seq(block) => Iterator(block)
+        case Seq() => Iterator.empty
       }
     }
     Utils.ensureCached(unioned)

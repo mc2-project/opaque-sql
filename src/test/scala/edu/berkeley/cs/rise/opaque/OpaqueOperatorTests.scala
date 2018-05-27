@@ -330,6 +330,7 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .master("local[1]")
     .appName("QEDSuite")
     .config("spark.sql.shuffle.partitions", 3)
+    .config("spark.default.parallelism", 3)
     .getOrCreate()
 
   override def numPartitions = 3
