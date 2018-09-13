@@ -263,6 +263,7 @@ case class EncryptedAggregateExec(
       assert(shifted.size == childRDD.partitions.length)
       val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
 
+      // TODO: fix this
       childRDD.zipPartitions(shiftedRDD) { (blockIter, boundaryIter) =>
         (blockIter.toSeq, boundaryIter.toSeq) match {
           case (Seq(block), Seq(Tuple3(
@@ -305,6 +306,7 @@ case class EncryptedSortMergeJoinExec(
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)
 
+      // TODO: Fix this zipPartitions
       childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
         (blockIter.toSeq, joinRowIter.toSeq) match {
           case (Seq(block), Seq(joinRow)) =>
@@ -336,6 +338,7 @@ case class ObliviousUnionExec(
 
     // RA.initRA(leftRDD)
 
+    // fix this zipPartitions
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
         case Seq(leftBlock, rightBlock) =>

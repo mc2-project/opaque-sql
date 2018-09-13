@@ -1,0 +1,1430 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+AES_BLOCK_SIZE	src/enclave/Enclave/sgxaes.h	/^const size_t AES_BLOCK_SIZE = 16;$/;"	v
+AES_MAX_EXP_KEY_SIZE	src/enclave/Enclave/sgxaes.h	/^const size_t AES_MAX_EXP_KEY_SIZE = 8*15;$/;"	v
+AGGREGATE_H	src/enclave/Enclave/Aggregate.h	/^#define AGGREGATE_H$/;"	d
+Aad	src/enclave/Enclave/sgxaes.h	/^	Aad,$/;"	e	enum:State
+AadFinal	src/enclave/Enclave/sgxaes.h	/^	AadFinal,$/;"	e	enum:State
+AesGcm	src/enclave/Enclave/sgxaes.cpp	/^AesGcm::AesGcm(const AesGcm& other) {$/;"	f	class:AesGcm
+AesGcm	src/enclave/Enclave/sgxaes.cpp	/^AesGcm::AesGcm(const KeySchedule* ks, const unsigned char* iv, size_t iv_len) {$/;"	f	class:AesGcm
+AesGcm	src/enclave/Enclave/sgxaes.h	/^struct AesGcm {$/;"	s
+AggregateExpressionEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  AggregateExpressionEvaluator(const tuix::AggregateExpr *expr) : builder() {$/;"	f	class:AggregateExpressionEvaluator
+AggregateExpressionEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^class AggregateExpressionEvaluator {$/;"	c
+AllocObject	src/enclave/Include/jni.h	/^    jobject (JNICALL *AllocObject)$/;"	m	struct:JNINativeInterface_
+AllocObject	src/enclave/Include/jni.h	/^    jobject AllocObject(jclass clazz) {$/;"	f	struct:JNIEnv_
+AttachCurrentThread	src/enclave/Include/jni.h	/^    jint (JNICALL *AttachCurrentThread)(JavaVM *vm, void **penv, void *args);$/;"	m	struct:JNIInvokeInterface_
+AttachCurrentThread	src/enclave/Include/jni.h	/^    jint AttachCurrentThread(void **penv, void *args) {$/;"	f	struct:JavaVM_
+AttachCurrentThreadAsDaemon	src/enclave/Include/jni.h	/^    jint (JNICALL *AttachCurrentThreadAsDaemon)(JavaVM *vm, void **penv, void *args);$/;"	m	struct:JNIInvokeInterface_
+AttachCurrentThreadAsDaemon	src/enclave/Include/jni.h	/^    jint AttachCurrentThreadAsDaemon(void **penv, void *args) {$/;"	f	struct:JavaVM_
+CALCULATE_POWERS_OF_H	src/enclave/Enclave/sgxaes_asm.S	/^CALCULATE_POWERS_OF_H:$/;"	l
+COMMON_H	src/enclave/Common/common.h	/^#define COMMON_H$/;"	d
+CRYPTO_H	src/enclave/Enclave/Crypto.h	/^#define CRYPTO_H$/;"	d
+CallBooleanMethod	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallBooleanMethod)$/;"	m	struct:JNINativeInterface_
+CallBooleanMethod	src/enclave/Include/jni.h	/^    jboolean CallBooleanMethod(jobject obj,$/;"	f	struct:JNIEnv_
+CallBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallBooleanMethodA)$/;"	m	struct:JNINativeInterface_
+CallBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean CallBooleanMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallBooleanMethodV)$/;"	m	struct:JNINativeInterface_
+CallBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean CallBooleanMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallByteMethod	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallByteMethod)$/;"	m	struct:JNINativeInterface_
+CallByteMethod	src/enclave/Include/jni.h	/^    jbyte CallByteMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallByteMethodA	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallByteMethodA)$/;"	m	struct:JNINativeInterface_
+CallByteMethodA	src/enclave/Include/jni.h	/^    jbyte CallByteMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallByteMethodV	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallByteMethodV)$/;"	m	struct:JNINativeInterface_
+CallByteMethodV	src/enclave/Include/jni.h	/^    jbyte CallByteMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallCharMethod	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallCharMethod)$/;"	m	struct:JNINativeInterface_
+CallCharMethod	src/enclave/Include/jni.h	/^    jchar CallCharMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallCharMethodA	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallCharMethodA)$/;"	m	struct:JNINativeInterface_
+CallCharMethodA	src/enclave/Include/jni.h	/^    jchar CallCharMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallCharMethodV	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallCharMethodV)$/;"	m	struct:JNINativeInterface_
+CallCharMethodV	src/enclave/Include/jni.h	/^    jchar CallCharMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallDoubleMethod	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallDoubleMethod)$/;"	m	struct:JNINativeInterface_
+CallDoubleMethod	src/enclave/Include/jni.h	/^    jdouble CallDoubleMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallDoubleMethodA)$/;"	m	struct:JNINativeInterface_
+CallDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble CallDoubleMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallDoubleMethodV)$/;"	m	struct:JNINativeInterface_
+CallDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble CallDoubleMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallFloatMethod	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallFloatMethod)$/;"	m	struct:JNINativeInterface_
+CallFloatMethod	src/enclave/Include/jni.h	/^    jfloat CallFloatMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallFloatMethodA	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallFloatMethodA)$/;"	m	struct:JNINativeInterface_
+CallFloatMethodA	src/enclave/Include/jni.h	/^    jfloat CallFloatMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallFloatMethodV	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallFloatMethodV)$/;"	m	struct:JNINativeInterface_
+CallFloatMethodV	src/enclave/Include/jni.h	/^    jfloat CallFloatMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallIntMethod	src/enclave/Include/jni.h	/^    jint (JNICALL *CallIntMethod)$/;"	m	struct:JNINativeInterface_
+CallIntMethod	src/enclave/Include/jni.h	/^    jint CallIntMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallIntMethodA	src/enclave/Include/jni.h	/^    jint (JNICALL *CallIntMethodA)$/;"	m	struct:JNINativeInterface_
+CallIntMethodA	src/enclave/Include/jni.h	/^    jint CallIntMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallIntMethodV	src/enclave/Include/jni.h	/^    jint (JNICALL *CallIntMethodV)$/;"	m	struct:JNINativeInterface_
+CallIntMethodV	src/enclave/Include/jni.h	/^    jint CallIntMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallLongMethod	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallLongMethod)$/;"	m	struct:JNINativeInterface_
+CallLongMethod	src/enclave/Include/jni.h	/^    jlong CallLongMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallLongMethodA	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallLongMethodA)$/;"	m	struct:JNINativeInterface_
+CallLongMethodA	src/enclave/Include/jni.h	/^    jlong CallLongMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallLongMethodV	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallLongMethodV)$/;"	m	struct:JNINativeInterface_
+CallLongMethodV	src/enclave/Include/jni.h	/^    jlong CallLongMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallNonvirtualBooleanMethod	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallNonvirtualBooleanMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualBooleanMethod	src/enclave/Include/jni.h	/^    jboolean CallNonvirtualBooleanMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallNonvirtualBooleanMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean CallNonvirtualBooleanMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallNonvirtualBooleanMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean CallNonvirtualBooleanMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualByteMethod	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallNonvirtualByteMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualByteMethod	src/enclave/Include/jni.h	/^    jbyte CallNonvirtualByteMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualByteMethodA	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallNonvirtualByteMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualByteMethodA	src/enclave/Include/jni.h	/^    jbyte CallNonvirtualByteMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualByteMethodV	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallNonvirtualByteMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualByteMethodV	src/enclave/Include/jni.h	/^    jbyte CallNonvirtualByteMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualCharMethod	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallNonvirtualCharMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualCharMethod	src/enclave/Include/jni.h	/^    jchar CallNonvirtualCharMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualCharMethodA	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallNonvirtualCharMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualCharMethodA	src/enclave/Include/jni.h	/^    jchar CallNonvirtualCharMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualCharMethodV	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallNonvirtualCharMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualCharMethodV	src/enclave/Include/jni.h	/^    jchar CallNonvirtualCharMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualDoubleMethod	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallNonvirtualDoubleMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualDoubleMethod	src/enclave/Include/jni.h	/^    jdouble CallNonvirtualDoubleMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallNonvirtualDoubleMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble CallNonvirtualDoubleMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallNonvirtualDoubleMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble CallNonvirtualDoubleMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualFloatMethod	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallNonvirtualFloatMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualFloatMethod	src/enclave/Include/jni.h	/^    jfloat CallNonvirtualFloatMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualFloatMethodA	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallNonvirtualFloatMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualFloatMethodA	src/enclave/Include/jni.h	/^    jfloat CallNonvirtualFloatMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualFloatMethodV	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallNonvirtualFloatMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualFloatMethodV	src/enclave/Include/jni.h	/^    jfloat CallNonvirtualFloatMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualIntMethod	src/enclave/Include/jni.h	/^    jint (JNICALL *CallNonvirtualIntMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualIntMethod	src/enclave/Include/jni.h	/^    jint CallNonvirtualIntMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualIntMethodA	src/enclave/Include/jni.h	/^    jint (JNICALL *CallNonvirtualIntMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualIntMethodA	src/enclave/Include/jni.h	/^    jint CallNonvirtualIntMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualIntMethodV	src/enclave/Include/jni.h	/^    jint (JNICALL *CallNonvirtualIntMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualIntMethodV	src/enclave/Include/jni.h	/^    jint CallNonvirtualIntMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualLongMethod	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallNonvirtualLongMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualLongMethod	src/enclave/Include/jni.h	/^    jlong CallNonvirtualLongMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualLongMethodA	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallNonvirtualLongMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualLongMethodA	src/enclave/Include/jni.h	/^    jlong CallNonvirtualLongMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualLongMethodV	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallNonvirtualLongMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualLongMethodV	src/enclave/Include/jni.h	/^    jlong CallNonvirtualLongMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualObjectMethod	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallNonvirtualObjectMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualObjectMethod	src/enclave/Include/jni.h	/^    jobject CallNonvirtualObjectMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualObjectMethodA	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallNonvirtualObjectMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualObjectMethodA	src/enclave/Include/jni.h	/^    jobject CallNonvirtualObjectMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualObjectMethodV	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallNonvirtualObjectMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualObjectMethodV	src/enclave/Include/jni.h	/^    jobject CallNonvirtualObjectMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualShortMethod	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallNonvirtualShortMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualShortMethod	src/enclave/Include/jni.h	/^    jshort CallNonvirtualShortMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualShortMethodA	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallNonvirtualShortMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualShortMethodA	src/enclave/Include/jni.h	/^    jshort CallNonvirtualShortMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualShortMethodV	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallNonvirtualShortMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualShortMethodV	src/enclave/Include/jni.h	/^    jshort CallNonvirtualShortMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualVoidMethod	src/enclave/Include/jni.h	/^    void (JNICALL *CallNonvirtualVoidMethod)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualVoidMethod	src/enclave/Include/jni.h	/^    void CallNonvirtualVoidMethod(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualVoidMethodA	src/enclave/Include/jni.h	/^    void (JNICALL *CallNonvirtualVoidMethodA)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualVoidMethodA	src/enclave/Include/jni.h	/^    void CallNonvirtualVoidMethodA(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallNonvirtualVoidMethodV	src/enclave/Include/jni.h	/^    void (JNICALL *CallNonvirtualVoidMethodV)$/;"	m	struct:JNINativeInterface_
+CallNonvirtualVoidMethodV	src/enclave/Include/jni.h	/^    void CallNonvirtualVoidMethodV(jobject obj, jclass clazz,$/;"	f	struct:JNIEnv_
+CallObjectMethod	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallObjectMethod)$/;"	m	struct:JNINativeInterface_
+CallObjectMethod	src/enclave/Include/jni.h	/^    jobject CallObjectMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallObjectMethodA	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallObjectMethodA)$/;"	m	struct:JNINativeInterface_
+CallObjectMethodA	src/enclave/Include/jni.h	/^    jobject CallObjectMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallObjectMethodV	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallObjectMethodV)$/;"	m	struct:JNINativeInterface_
+CallObjectMethodV	src/enclave/Include/jni.h	/^    jobject CallObjectMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallShortMethod	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallShortMethod)$/;"	m	struct:JNINativeInterface_
+CallShortMethod	src/enclave/Include/jni.h	/^    jshort CallShortMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallShortMethodA	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallShortMethodA)$/;"	m	struct:JNINativeInterface_
+CallShortMethodA	src/enclave/Include/jni.h	/^    jshort CallShortMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallShortMethodV	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallShortMethodV)$/;"	m	struct:JNINativeInterface_
+CallShortMethodV	src/enclave/Include/jni.h	/^    jshort CallShortMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallStaticBooleanMethod	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallStaticBooleanMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticBooleanMethod	src/enclave/Include/jni.h	/^    jboolean CallStaticBooleanMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallStaticBooleanMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticBooleanMethodA	src/enclave/Include/jni.h	/^    jboolean CallStaticBooleanMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean (JNICALL *CallStaticBooleanMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticBooleanMethodV	src/enclave/Include/jni.h	/^    jboolean CallStaticBooleanMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticByteMethod	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallStaticByteMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticByteMethod	src/enclave/Include/jni.h	/^    jbyte CallStaticByteMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticByteMethodA	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallStaticByteMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticByteMethodA	src/enclave/Include/jni.h	/^    jbyte CallStaticByteMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticByteMethodV	src/enclave/Include/jni.h	/^    jbyte (JNICALL *CallStaticByteMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticByteMethodV	src/enclave/Include/jni.h	/^    jbyte CallStaticByteMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticCharMethod	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallStaticCharMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticCharMethod	src/enclave/Include/jni.h	/^    jchar CallStaticCharMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticCharMethodA	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallStaticCharMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticCharMethodA	src/enclave/Include/jni.h	/^    jchar CallStaticCharMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticCharMethodV	src/enclave/Include/jni.h	/^    jchar (JNICALL *CallStaticCharMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticCharMethodV	src/enclave/Include/jni.h	/^    jchar CallStaticCharMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticDoubleMethod	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallStaticDoubleMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticDoubleMethod	src/enclave/Include/jni.h	/^    jdouble CallStaticDoubleMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallStaticDoubleMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticDoubleMethodA	src/enclave/Include/jni.h	/^    jdouble CallStaticDoubleMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble (JNICALL *CallStaticDoubleMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticDoubleMethodV	src/enclave/Include/jni.h	/^    jdouble CallStaticDoubleMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticFloatMethod	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallStaticFloatMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticFloatMethod	src/enclave/Include/jni.h	/^    jfloat CallStaticFloatMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticFloatMethodA	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallStaticFloatMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticFloatMethodA	src/enclave/Include/jni.h	/^    jfloat CallStaticFloatMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticFloatMethodV	src/enclave/Include/jni.h	/^    jfloat (JNICALL *CallStaticFloatMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticFloatMethodV	src/enclave/Include/jni.h	/^    jfloat CallStaticFloatMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticIntMethod	src/enclave/Include/jni.h	/^    jint (JNICALL *CallStaticIntMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticIntMethod	src/enclave/Include/jni.h	/^    jint CallStaticIntMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticIntMethodA	src/enclave/Include/jni.h	/^    jint (JNICALL *CallStaticIntMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticIntMethodA	src/enclave/Include/jni.h	/^    jint CallStaticIntMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticIntMethodV	src/enclave/Include/jni.h	/^    jint (JNICALL *CallStaticIntMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticIntMethodV	src/enclave/Include/jni.h	/^    jint CallStaticIntMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticLongMethod	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallStaticLongMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticLongMethod	src/enclave/Include/jni.h	/^    jlong CallStaticLongMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticLongMethodA	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallStaticLongMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticLongMethodA	src/enclave/Include/jni.h	/^    jlong CallStaticLongMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticLongMethodV	src/enclave/Include/jni.h	/^    jlong (JNICALL *CallStaticLongMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticLongMethodV	src/enclave/Include/jni.h	/^    jlong CallStaticLongMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticObjectMethod	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallStaticObjectMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticObjectMethod	src/enclave/Include/jni.h	/^    jobject CallStaticObjectMethod(jclass clazz, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallStaticObjectMethodA	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallStaticObjectMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticObjectMethodA	src/enclave/Include/jni.h	/^    jobject CallStaticObjectMethodA(jclass clazz, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallStaticObjectMethodV	src/enclave/Include/jni.h	/^    jobject (JNICALL *CallStaticObjectMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticObjectMethodV	src/enclave/Include/jni.h	/^    jobject CallStaticObjectMethodV(jclass clazz, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallStaticShortMethod	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallStaticShortMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticShortMethod	src/enclave/Include/jni.h	/^    jshort CallStaticShortMethod(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticShortMethodA	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallStaticShortMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticShortMethodA	src/enclave/Include/jni.h	/^    jshort CallStaticShortMethodA(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticShortMethodV	src/enclave/Include/jni.h	/^    jshort (JNICALL *CallStaticShortMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticShortMethodV	src/enclave/Include/jni.h	/^    jshort CallStaticShortMethodV(jclass clazz,$/;"	f	struct:JNIEnv_
+CallStaticVoidMethod	src/enclave/Include/jni.h	/^    void (JNICALL *CallStaticVoidMethod)$/;"	m	struct:JNINativeInterface_
+CallStaticVoidMethod	src/enclave/Include/jni.h	/^    void CallStaticVoidMethod(jclass cls, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallStaticVoidMethodA	src/enclave/Include/jni.h	/^    void (JNICALL *CallStaticVoidMethodA)$/;"	m	struct:JNINativeInterface_
+CallStaticVoidMethodA	src/enclave/Include/jni.h	/^    void CallStaticVoidMethodA(jclass cls, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallStaticVoidMethodV	src/enclave/Include/jni.h	/^    void (JNICALL *CallStaticVoidMethodV)$/;"	m	struct:JNINativeInterface_
+CallStaticVoidMethodV	src/enclave/Include/jni.h	/^    void CallStaticVoidMethodV(jclass cls, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallVoidMethod	src/enclave/Include/jni.h	/^    void (JNICALL *CallVoidMethod)$/;"	m	struct:JNINativeInterface_
+CallVoidMethod	src/enclave/Include/jni.h	/^    void CallVoidMethod(jobject obj, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+CallVoidMethodA	src/enclave/Include/jni.h	/^    void (JNICALL *CallVoidMethodA)$/;"	m	struct:JNINativeInterface_
+CallVoidMethodA	src/enclave/Include/jni.h	/^    void CallVoidMethodA(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+CallVoidMethodV	src/enclave/Include/jni.h	/^    void (JNICALL *CallVoidMethodV)$/;"	m	struct:JNINativeInterface_
+CallVoidMethodV	src/enclave/Include/jni.h	/^    void CallVoidMethodV(jobject obj, jmethodID methodID,$/;"	f	struct:JNIEnv_
+DATA_END	src/enclave/Enclave/sgxaes_asm.S	/^DATA_END:$/;"	l
+DAYS_PER_100Y	src/enclave/Enclave/util.cpp	/^#define DAYS_PER_100Y /;"	d	file:
+DAYS_PER_400Y	src/enclave/Enclave/util.cpp	/^#define DAYS_PER_400Y /;"	d	file:
+DAYS_PER_4Y	src/enclave/Enclave/util.cpp	/^#define DAYS_PER_4Y /;"	d	file:
+DEFINE_H	src/enclave/Include/define.h	/^#define DEFINE_H$/;"	d
+DERIVE_KEY_MK_VK	src/enclave/Enclave/isv_enclave.cpp	/^    DERIVE_KEY_MK_VK,$/;"	e	enum:_derive_key_type_t	file:
+DERIVE_KEY_SMK_SK	src/enclave/Enclave/isv_enclave.cpp	/^    DERIVE_KEY_SMK_SK = 0,$/;"	e	enum:_derive_key_type_t	file:
+Date	src/enclave/Enclave/Flatbuffers.h	/^  Date(const int32_t &days_since_epoch) : days_since_epoch(days_since_epoch) {}$/;"	f	class:Date
+Date	src/enclave/Enclave/Flatbuffers.h	/^class Date {$/;"	c
+Decrypting	src/enclave/Enclave/sgxaes.h	/^	Decrypting,$/;"	e	enum:State
+DefineClass	src/enclave/Include/jni.h	/^    jclass (JNICALL *DefineClass)$/;"	m	struct:JNINativeInterface_
+DefineClass	src/enclave/Include/jni.h	/^    jclass DefineClass(const char *name, jobject loader, const jbyte *buf,$/;"	f	struct:JNIEnv_
+DeleteGlobalRef	src/enclave/Include/jni.h	/^    void (JNICALL *DeleteGlobalRef)$/;"	m	struct:JNINativeInterface_
+DeleteGlobalRef	src/enclave/Include/jni.h	/^    void DeleteGlobalRef(jobject gref) {$/;"	f	struct:JNIEnv_
+DeleteLocalRef	src/enclave/Include/jni.h	/^    void (JNICALL *DeleteLocalRef)$/;"	m	struct:JNINativeInterface_
+DeleteLocalRef	src/enclave/Include/jni.h	/^    void DeleteLocalRef(jobject obj) {$/;"	f	struct:JNIEnv_
+DeleteWeakGlobalRef	src/enclave/Include/jni.h	/^    void (JNICALL *DeleteWeakGlobalRef)$/;"	m	struct:JNINativeInterface_
+DeleteWeakGlobalRef	src/enclave/Include/jni.h	/^    void DeleteWeakGlobalRef(jweak ref) {$/;"	f	struct:JNIEnv_
+DestroyJavaVM	src/enclave/Include/jni.h	/^    jint (JNICALL *DestroyJavaVM)(JavaVM *vm);$/;"	m	struct:JNIInvokeInterface_
+DestroyJavaVM	src/enclave/Include/jni.h	/^    jint DestroyJavaVM() {$/;"	f	struct:JavaVM_
+DetachCurrentThread	src/enclave/Include/jni.h	/^    jint (JNICALL *DetachCurrentThread)(JavaVM *vm);$/;"	m	struct:JNIInvokeInterface_
+DetachCurrentThread	src/enclave/Include/jni.h	/^    jint DetachCurrentThread() {$/;"	f	struct:JavaVM_
+Done	src/enclave/Enclave/sgxaes.h	/^	Done,$/;"	e	enum:State
+EC_DERIVATION_BUFFER_SIZE	src/enclave/ServiceProvider/ecp.cpp	/^#define EC_DERIVATION_BUFFER_SIZE(/;"	d	file:
+ENCLAVE_FILENAME	src/enclave/App/App.cpp	/^# define ENCLAVE_FILENAME /;"	d	file:
+EXPRESSION_EVALUATION_H	src/enclave/Enclave/ExpressionEvaluation.h	/^#define EXPRESSION_EVALUATION_H$/;"	d
+EXTERN_C	src/enclave/ServiceProvider/sp_crypto.h	/^    #define EXTERN_C /;"	d
+EXTERN_C	src/enclave/ServiceProvider/sp_crypto.h	/^    #define EXTERN_C$/;"	d
+EXTERN_C	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    #define EXTERN_C /;"	d
+EncryptedBlockIterator	src/enclave/Enclave/Flatbuffers.h	/^    flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator EncryptedBlockIterator;$/;"	t	class:EncryptedBlocksToRowReader
+EncryptedBlockToRowReader	src/enclave/Enclave/Flatbuffers.h	/^  EncryptedBlockToRowReader() : rows(nullptr), initialized(false) {}$/;"	f	class:EncryptedBlockToRowReader
+EncryptedBlockToRowReader	src/enclave/Enclave/Flatbuffers.h	/^class EncryptedBlockToRowReader {$/;"	c
+EncryptedBlocksToEncryptedBlockReader	src/enclave/Enclave/Flatbuffers.h	/^  EncryptedBlocksToEncryptedBlockReader(uint8_t *buf, size_t len) {$/;"	f	class:EncryptedBlocksToEncryptedBlockReader
+EncryptedBlocksToEncryptedBlockReader	src/enclave/Enclave/Flatbuffers.h	/^class EncryptedBlocksToEncryptedBlockReader {$/;"	c
+EncryptedBlocksToRowReader	src/enclave/Enclave/Flatbuffers.h	/^  EncryptedBlocksToRowReader(const tuix::EncryptedBlocks *encrypted_blocks)$/;"	f	class:EncryptedBlocksToRowReader
+EncryptedBlocksToRowReader	src/enclave/Enclave/Flatbuffers.h	/^  EncryptedBlocksToRowReader(uint8_t *buf, size_t len)$/;"	f	class:EncryptedBlocksToRowReader
+EncryptedBlocksToRowReader	src/enclave/Enclave/Flatbuffers.h	/^class EncryptedBlocksToRowReader {$/;"	c
+Encrypting	src/enclave/Enclave/sgxaes.h	/^	Encrypting,$/;"	e	enum:State
+EnsureLocalCapacity	src/enclave/Include/jni.h	/^    jint (JNICALL *EnsureLocalCapacity)$/;"	m	struct:JNINativeInterface_
+EnsureLocalCapacity	src/enclave/Include/jni.h	/^    jint EnsureLocalCapacity(jint capacity) {$/;"	f	struct:JNIEnv_
+ExceptionCheck	src/enclave/Include/jni.h	/^    jboolean (JNICALL *ExceptionCheck)$/;"	m	struct:JNINativeInterface_
+ExceptionCheck	src/enclave/Include/jni.h	/^    jboolean ExceptionCheck() {$/;"	f	struct:JNIEnv_
+ExceptionClear	src/enclave/Include/jni.h	/^    void (JNICALL *ExceptionClear)$/;"	m	struct:JNINativeInterface_
+ExceptionClear	src/enclave/Include/jni.h	/^    void ExceptionClear() {$/;"	f	struct:JNIEnv_
+ExceptionDescribe	src/enclave/Include/jni.h	/^    void (JNICALL *ExceptionDescribe)$/;"	m	struct:JNINativeInterface_
+ExceptionDescribe	src/enclave/Include/jni.h	/^    void ExceptionDescribe() {$/;"	f	struct:JNIEnv_
+ExceptionOccurred	src/enclave/Include/jni.h	/^    jthrowable (JNICALL *ExceptionOccurred)$/;"	m	struct:JNINativeInterface_
+ExceptionOccurred	src/enclave/Include/jni.h	/^    jthrowable ExceptionOccurred() {$/;"	f	struct:JNIEnv_
+FALSE	src/enclave/App/App.cpp	/^# define FALSE /;"	d	file:
+FILTER_H	src/enclave/Enclave/Filter.h	/^#define FILTER_H$/;"	d
+FLATBUFFERS_H	src/enclave/Enclave/Flatbuffers.h	/^#define FLATBUFFERS_H$/;"	d
+FatalError	src/enclave/Include/jni.h	/^    void (JNICALL *FatalError)$/;"	m	struct:JNINativeInterface_
+FatalError	src/enclave/Include/jni.h	/^    void FatalError(const char *msg) {$/;"	f	struct:JNIEnv_
+FindClass	src/enclave/Include/jni.h	/^    jclass (JNICALL *FindClass)$/;"	m	struct:JNINativeInterface_
+FindClass	src/enclave/Include/jni.h	/^    jclass FindClass(const char *name) {$/;"	f	struct:JNIEnv_
+FlatbuffersAggOpEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  FlatbuffersAggOpEvaluator(uint8_t *buf, size_t len)$/;"	f	class:FlatbuffersAggOpEvaluator
+FlatbuffersAggOpEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^class FlatbuffersAggOpEvaluator {$/;"	c
+FlatbuffersExpressionEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  FlatbuffersExpressionEvaluator(const tuix::Expr *expr) : builder(), expr(expr) {}$/;"	f	class:FlatbuffersExpressionEvaluator
+FlatbuffersExpressionEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^class FlatbuffersExpressionEvaluator {$/;"	c
+FlatbuffersJoinExprEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  FlatbuffersJoinExprEvaluator(uint8_t *buf, size_t len)$/;"	f	class:FlatbuffersJoinExprEvaluator
+FlatbuffersJoinExprEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^class FlatbuffersJoinExprEvaluator {$/;"	c
+FlatbuffersRowWriter	src/enclave/Enclave/Flatbuffers.h	/^  FlatbuffersRowWriter()$/;"	f	class:FlatbuffersRowWriter
+FlatbuffersRowWriter	src/enclave/Enclave/Flatbuffers.h	/^class FlatbuffersRowWriter {$/;"	c
+FlatbuffersSortOrderEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  FlatbuffersSortOrderEvaluator(const tuix::SortExpr *sort_expr)$/;"	f	class:FlatbuffersSortOrderEvaluator
+FlatbuffersSortOrderEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  FlatbuffersSortOrderEvaluator(uint8_t *buf, size_t len) {$/;"	f	class:FlatbuffersSortOrderEvaluator
+FlatbuffersSortOrderEvaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^class FlatbuffersSortOrderEvaluator {$/;"	c
+FlatbuffersTemporaryRow	src/enclave/Enclave/Flatbuffers.h	/^  FlatbuffersTemporaryRow() : builder(), row(nullptr) {}$/;"	f	class:FlatbuffersTemporaryRow
+FlatbuffersTemporaryRow	src/enclave/Enclave/Flatbuffers.h	/^  FlatbuffersTemporaryRow(const tuix::Row *row) : FlatbuffersTemporaryRow() {$/;"	f	class:FlatbuffersTemporaryRow
+FlatbuffersTemporaryRow	src/enclave/Enclave/Flatbuffers.h	/^class FlatbuffersTemporaryRow {$/;"	c
+FromReflectedField	src/enclave/Include/jni.h	/^    jfieldID (JNICALL *FromReflectedField)$/;"	m	struct:JNINativeInterface_
+FromReflectedField	src/enclave/Include/jni.h	/^    jfieldID FromReflectedField(jobject field) {$/;"	f	struct:JNIEnv_
+FromReflectedMethod	src/enclave/Include/jni.h	/^    jmethodID (JNICALL *FromReflectedMethod)$/;"	m	struct:JNINativeInterface_
+FromReflectedMethod	src/enclave/Include/jni.h	/^    jmethodID FromReflectedMethod(jobject method) {$/;"	f	struct:JNIEnv_
+GFMUL	src/enclave/Enclave/sgxaes_asm.S	/^GFMUL:$/;"	l
+GID_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define GID_SIZE /;"	d
+GID_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define GID_SIZE /;"	d
+GcmContext	src/enclave/Enclave/sgxaes.cpp	/^GcmContext::GcmContext() {$/;"	f	class:GcmContext
+GcmContext	src/enclave/Enclave/sgxaes.h	/^	GcmContext(const GcmContext& other) {$/;"	f	struct:GcmContext
+GcmContext	src/enclave/Enclave/sgxaes.h	/^struct GcmContext {$/;"	s
+GetArrayLength	src/enclave/Include/jni.h	/^    jsize (JNICALL *GetArrayLength)$/;"	m	struct:JNINativeInterface_
+GetArrayLength	src/enclave/Include/jni.h	/^    jsize GetArrayLength(jarray array) {$/;"	f	struct:JNIEnv_
+GetBooleanArrayElements	src/enclave/Include/jni.h	/^    jboolean * (JNICALL *GetBooleanArrayElements)$/;"	m	struct:JNINativeInterface_
+GetBooleanArrayElements	src/enclave/Include/jni.h	/^    jboolean * GetBooleanArrayElements(jbooleanArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetBooleanArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetBooleanArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetBooleanArrayRegion	src/enclave/Include/jni.h	/^    void GetBooleanArrayRegion(jbooleanArray array,$/;"	f	struct:JNIEnv_
+GetBooleanField	src/enclave/Include/jni.h	/^    jboolean (JNICALL *GetBooleanField)$/;"	m	struct:JNINativeInterface_
+GetBooleanField	src/enclave/Include/jni.h	/^    jboolean GetBooleanField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetByteArrayElements	src/enclave/Include/jni.h	/^    jbyte * (JNICALL *GetByteArrayElements)$/;"	m	struct:JNINativeInterface_
+GetByteArrayElements	src/enclave/Include/jni.h	/^    jbyte * GetByteArrayElements(jbyteArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetByteArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetByteArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetByteArrayRegion	src/enclave/Include/jni.h	/^    void GetByteArrayRegion(jbyteArray array,$/;"	f	struct:JNIEnv_
+GetByteField	src/enclave/Include/jni.h	/^    jbyte (JNICALL *GetByteField)$/;"	m	struct:JNINativeInterface_
+GetByteField	src/enclave/Include/jni.h	/^    jbyte GetByteField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetCharArrayElements	src/enclave/Include/jni.h	/^    jchar * (JNICALL *GetCharArrayElements)$/;"	m	struct:JNINativeInterface_
+GetCharArrayElements	src/enclave/Include/jni.h	/^    jchar * GetCharArrayElements(jcharArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetCharArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetCharArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetCharArrayRegion	src/enclave/Include/jni.h	/^    void GetCharArrayRegion(jcharArray array,$/;"	f	struct:JNIEnv_
+GetCharField	src/enclave/Include/jni.h	/^    jchar (JNICALL *GetCharField)$/;"	m	struct:JNINativeInterface_
+GetCharField	src/enclave/Include/jni.h	/^    jchar GetCharField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetDirectBufferAddress	src/enclave/Include/jni.h	/^    void* (JNICALL *GetDirectBufferAddress)$/;"	m	struct:JNINativeInterface_
+GetDirectBufferAddress	src/enclave/Include/jni.h	/^    void* GetDirectBufferAddress(jobject buf) {$/;"	f	struct:JNIEnv_
+GetDirectBufferCapacity	src/enclave/Include/jni.h	/^    jlong (JNICALL *GetDirectBufferCapacity)$/;"	m	struct:JNINativeInterface_
+GetDirectBufferCapacity	src/enclave/Include/jni.h	/^    jlong GetDirectBufferCapacity(jobject buf) {$/;"	f	struct:JNIEnv_
+GetDoubleArrayElements	src/enclave/Include/jni.h	/^    jdouble * (JNICALL *GetDoubleArrayElements)$/;"	m	struct:JNINativeInterface_
+GetDoubleArrayElements	src/enclave/Include/jni.h	/^    jdouble * GetDoubleArrayElements(jdoubleArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetDoubleArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetDoubleArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetDoubleArrayRegion	src/enclave/Include/jni.h	/^    void GetDoubleArrayRegion(jdoubleArray array,$/;"	f	struct:JNIEnv_
+GetDoubleField	src/enclave/Include/jni.h	/^    jdouble (JNICALL *GetDoubleField)$/;"	m	struct:JNINativeInterface_
+GetDoubleField	src/enclave/Include/jni.h	/^    jdouble GetDoubleField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetEnv	src/enclave/Include/jni.h	/^    jint (JNICALL *GetEnv)(JavaVM *vm, void **penv, jint version);$/;"	m	struct:JNIInvokeInterface_
+GetEnv	src/enclave/Include/jni.h	/^    jint GetEnv(void **penv, jint version) {$/;"	f	struct:JavaVM_
+GetFieldID	src/enclave/Include/jni.h	/^    jfieldID (JNICALL *GetFieldID)$/;"	m	struct:JNINativeInterface_
+GetFieldID	src/enclave/Include/jni.h	/^    jfieldID GetFieldID(jclass clazz, const char *name,$/;"	f	struct:JNIEnv_
+GetFloatArrayElements	src/enclave/Include/jni.h	/^    jfloat * (JNICALL *GetFloatArrayElements)$/;"	m	struct:JNINativeInterface_
+GetFloatArrayElements	src/enclave/Include/jni.h	/^    jfloat * GetFloatArrayElements(jfloatArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetFloatArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetFloatArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetFloatArrayRegion	src/enclave/Include/jni.h	/^    void GetFloatArrayRegion(jfloatArray array,$/;"	f	struct:JNIEnv_
+GetFloatField	src/enclave/Include/jni.h	/^    jfloat (JNICALL *GetFloatField)$/;"	m	struct:JNINativeInterface_
+GetFloatField	src/enclave/Include/jni.h	/^    jfloat GetFloatField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetIntArrayElements	src/enclave/Include/jni.h	/^    jint * (JNICALL *GetIntArrayElements)$/;"	m	struct:JNINativeInterface_
+GetIntArrayElements	src/enclave/Include/jni.h	/^    jint * GetIntArrayElements(jintArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetIntArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetIntArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetIntArrayRegion	src/enclave/Include/jni.h	/^    void GetIntArrayRegion(jintArray array,$/;"	f	struct:JNIEnv_
+GetIntField	src/enclave/Include/jni.h	/^    jint (JNICALL *GetIntField)$/;"	m	struct:JNINativeInterface_
+GetIntField	src/enclave/Include/jni.h	/^    jint GetIntField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetJavaVM	src/enclave/Include/jni.h	/^    jint (JNICALL *GetJavaVM)$/;"	m	struct:JNINativeInterface_
+GetJavaVM	src/enclave/Include/jni.h	/^    jint GetJavaVM(JavaVM **vm) {$/;"	f	struct:JNIEnv_
+GetLongArrayElements	src/enclave/Include/jni.h	/^    jlong * (JNICALL *GetLongArrayElements)$/;"	m	struct:JNINativeInterface_
+GetLongArrayElements	src/enclave/Include/jni.h	/^    jlong * GetLongArrayElements(jlongArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetLongArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetLongArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetLongArrayRegion	src/enclave/Include/jni.h	/^    void GetLongArrayRegion(jlongArray array,$/;"	f	struct:JNIEnv_
+GetLongField	src/enclave/Include/jni.h	/^    jlong (JNICALL *GetLongField)$/;"	m	struct:JNINativeInterface_
+GetLongField	src/enclave/Include/jni.h	/^    jlong GetLongField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetMethodID	src/enclave/Include/jni.h	/^    jmethodID (JNICALL *GetMethodID)$/;"	m	struct:JNINativeInterface_
+GetMethodID	src/enclave/Include/jni.h	/^    jmethodID GetMethodID(jclass clazz, const char *name,$/;"	f	struct:JNIEnv_
+GetObjectArrayElement	src/enclave/Include/jni.h	/^    jobject (JNICALL *GetObjectArrayElement)$/;"	m	struct:JNINativeInterface_
+GetObjectArrayElement	src/enclave/Include/jni.h	/^    jobject GetObjectArrayElement(jobjectArray array, jsize index) {$/;"	f	struct:JNIEnv_
+GetObjectClass	src/enclave/Include/jni.h	/^    jclass (JNICALL *GetObjectClass)$/;"	m	struct:JNINativeInterface_
+GetObjectClass	src/enclave/Include/jni.h	/^    jclass GetObjectClass(jobject obj) {$/;"	f	struct:JNIEnv_
+GetObjectField	src/enclave/Include/jni.h	/^    jobject (JNICALL *GetObjectField)$/;"	m	struct:JNINativeInterface_
+GetObjectField	src/enclave/Include/jni.h	/^    jobject GetObjectField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetObjectRefType	src/enclave/Include/jni.h	/^    jobjectRefType (JNICALL *GetObjectRefType)$/;"	m	struct:JNINativeInterface_
+GetObjectRefType	src/enclave/Include/jni.h	/^    jobjectRefType GetObjectRefType(jobject obj) {$/;"	f	struct:JNIEnv_
+GetOffset	src/enclave/Enclave/Flatbuffers.h	/^template<typename T> flatbuffers::Offset<T> GetOffset($/;"	f
+GetPrimitiveArrayCritical	src/enclave/Include/jni.h	/^    void * (JNICALL *GetPrimitiveArrayCritical)$/;"	m	struct:JNINativeInterface_
+GetPrimitiveArrayCritical	src/enclave/Include/jni.h	/^    void * GetPrimitiveArrayCritical(jarray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetShortArrayElements	src/enclave/Include/jni.h	/^    jshort * (JNICALL *GetShortArrayElements)$/;"	m	struct:JNINativeInterface_
+GetShortArrayElements	src/enclave/Include/jni.h	/^    jshort * GetShortArrayElements(jshortArray array, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetShortArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetShortArrayRegion)$/;"	m	struct:JNINativeInterface_
+GetShortArrayRegion	src/enclave/Include/jni.h	/^    void GetShortArrayRegion(jshortArray array,$/;"	f	struct:JNIEnv_
+GetShortField	src/enclave/Include/jni.h	/^    jshort (JNICALL *GetShortField)$/;"	m	struct:JNINativeInterface_
+GetShortField	src/enclave/Include/jni.h	/^    jshort GetShortField(jobject obj, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticBooleanField	src/enclave/Include/jni.h	/^    jboolean (JNICALL *GetStaticBooleanField)$/;"	m	struct:JNINativeInterface_
+GetStaticBooleanField	src/enclave/Include/jni.h	/^    jboolean GetStaticBooleanField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticByteField	src/enclave/Include/jni.h	/^    jbyte (JNICALL *GetStaticByteField)$/;"	m	struct:JNINativeInterface_
+GetStaticByteField	src/enclave/Include/jni.h	/^    jbyte GetStaticByteField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticCharField	src/enclave/Include/jni.h	/^    jchar (JNICALL *GetStaticCharField)$/;"	m	struct:JNINativeInterface_
+GetStaticCharField	src/enclave/Include/jni.h	/^    jchar GetStaticCharField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticDoubleField	src/enclave/Include/jni.h	/^    jdouble (JNICALL *GetStaticDoubleField)$/;"	m	struct:JNINativeInterface_
+GetStaticDoubleField	src/enclave/Include/jni.h	/^    jdouble GetStaticDoubleField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticFieldID	src/enclave/Include/jni.h	/^    jfieldID (JNICALL *GetStaticFieldID)$/;"	m	struct:JNINativeInterface_
+GetStaticFieldID	src/enclave/Include/jni.h	/^    jfieldID GetStaticFieldID(jclass clazz, const char *name,$/;"	f	struct:JNIEnv_
+GetStaticFloatField	src/enclave/Include/jni.h	/^    jfloat (JNICALL *GetStaticFloatField)$/;"	m	struct:JNINativeInterface_
+GetStaticFloatField	src/enclave/Include/jni.h	/^    jfloat GetStaticFloatField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticIntField	src/enclave/Include/jni.h	/^    jint (JNICALL *GetStaticIntField)$/;"	m	struct:JNINativeInterface_
+GetStaticIntField	src/enclave/Include/jni.h	/^    jint GetStaticIntField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticLongField	src/enclave/Include/jni.h	/^    jlong (JNICALL *GetStaticLongField)$/;"	m	struct:JNINativeInterface_
+GetStaticLongField	src/enclave/Include/jni.h	/^    jlong GetStaticLongField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticMethodID	src/enclave/Include/jni.h	/^    jmethodID (JNICALL *GetStaticMethodID)$/;"	m	struct:JNINativeInterface_
+GetStaticMethodID	src/enclave/Include/jni.h	/^    jmethodID GetStaticMethodID(jclass clazz, const char *name,$/;"	f	struct:JNIEnv_
+GetStaticObjectField	src/enclave/Include/jni.h	/^    jobject (JNICALL *GetStaticObjectField)$/;"	m	struct:JNINativeInterface_
+GetStaticObjectField	src/enclave/Include/jni.h	/^    jobject GetStaticObjectField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStaticShortField	src/enclave/Include/jni.h	/^    jshort (JNICALL *GetStaticShortField)$/;"	m	struct:JNINativeInterface_
+GetStaticShortField	src/enclave/Include/jni.h	/^    jshort GetStaticShortField(jclass clazz, jfieldID fieldID) {$/;"	f	struct:JNIEnv_
+GetStringChars	src/enclave/Include/jni.h	/^    const jchar *(JNICALL *GetStringChars)$/;"	m	struct:JNINativeInterface_
+GetStringChars	src/enclave/Include/jni.h	/^    const jchar *GetStringChars(jstring str, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetStringCritical	src/enclave/Include/jni.h	/^    const jchar * (JNICALL *GetStringCritical)$/;"	m	struct:JNINativeInterface_
+GetStringCritical	src/enclave/Include/jni.h	/^    const jchar * GetStringCritical(jstring string, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetStringLength	src/enclave/Include/jni.h	/^    jsize (JNICALL *GetStringLength)$/;"	m	struct:JNINativeInterface_
+GetStringLength	src/enclave/Include/jni.h	/^    jsize GetStringLength(jstring str) {$/;"	f	struct:JNIEnv_
+GetStringRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetStringRegion)$/;"	m	struct:JNINativeInterface_
+GetStringRegion	src/enclave/Include/jni.h	/^    void GetStringRegion(jstring str, jsize start, jsize len, jchar *buf) {$/;"	f	struct:JNIEnv_
+GetStringUTFChars	src/enclave/Include/jni.h	/^    const char* (JNICALL *GetStringUTFChars)$/;"	m	struct:JNINativeInterface_
+GetStringUTFChars	src/enclave/Include/jni.h	/^    const char* GetStringUTFChars(jstring str, jboolean *isCopy) {$/;"	f	struct:JNIEnv_
+GetStringUTFLength	src/enclave/Include/jni.h	/^    jsize (JNICALL *GetStringUTFLength)$/;"	m	struct:JNINativeInterface_
+GetStringUTFLength	src/enclave/Include/jni.h	/^    jsize GetStringUTFLength(jstring str) {$/;"	f	struct:JNIEnv_
+GetStringUTFRegion	src/enclave/Include/jni.h	/^    void (JNICALL *GetStringUTFRegion)$/;"	m	struct:JNINativeInterface_
+GetStringUTFRegion	src/enclave/Include/jni.h	/^    void GetStringUTFRegion(jstring str, jsize start, jsize len, char *buf) {$/;"	f	struct:JNIEnv_
+GetSuperclass	src/enclave/Include/jni.h	/^    jclass (JNICALL *GetSuperclass)$/;"	m	struct:JNINativeInterface_
+GetSuperclass	src/enclave/Include/jni.h	/^    jclass GetSuperclass(jclass sub) {$/;"	f	struct:JNIEnv_
+GetVersion	src/enclave/Include/jni.h	/^    jint (JNICALL *GetVersion)(JNIEnv *env);$/;"	m	struct:JNINativeInterface_
+GetVersion	src/enclave/Include/jni.h	/^    jint GetVersion() {$/;"	f	struct:JNIEnv_
+IAS_EPID_GROUP_STATUS_REKEY_AVAILABLE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_EPID_GROUP_STATUS_REKEY_AVAILABLE_BIT_POS /;"	d
+IAS_EPID_GROUP_STATUS_REVOKED_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_EPID_GROUP_STATUS_REVOKED_BIT_POS /;"	d
+IAS_PSE_ATTRIBUTES_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_ATTRIBUTES_INVALID,$/;"	e	enum:__anon3
+IAS_PSE_DESC_TYPE_NOT_SUPPORTED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_DESC_TYPE_NOT_SUPPORTED,$/;"	e	enum:__anon3
+IAS_PSE_EVAL_STATUS_EPID_GROUP_REVOKED_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_PSE_EVAL_STATUS_EPID_GROUP_REVOKED_BIT_POS /;"	d
+IAS_PSE_EVAL_STATUS_ISVSVN_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_PSE_EVAL_STATUS_ISVSVN_OUT_OF_DATE_BIT_POS /;"	d
+IAS_PSE_EVAL_STATUS_PRIVRL_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_PSE_EVAL_STATUS_PRIVRL_OUT_OF_DATE_BIT_POS /;"	d
+IAS_PSE_EVAL_STATUS_PSDASVN_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_PSE_EVAL_STATUS_PSDASVN_OUT_OF_DATE_BIT_POS /;"	d
+IAS_PSE_EVAL_STATUS_SIGRL_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_PSE_EVAL_STATUS_SIGRL_OUT_OF_DATE_BIT_POS /;"	d
+IAS_PSE_ISVSVN_OUT_OF_DATE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_ISVSVN_OUT_OF_DATE,$/;"	e	enum:__anon3
+IAS_PSE_MISCSELECT_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_MISCSELECT_INVALID,$/;"	e	enum:__anon3
+IAS_PSE_MRSIGNER_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_MRSIGNER_INVALID,$/;"	e	enum:__anon3
+IAS_PSE_OK	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PSE_OK,$/;"	e	enum:__anon3
+IAS_PS_HW_CA_ID_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_CA_ID_INVALID,$/;"	e	enum:__anon3
+IAS_PS_HW_GID_REVOKED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_GID_REVOKED,$/;"	e	enum:__anon3
+IAS_PS_HW_PRIVKEY_RLVER_MISMATCH	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_PRIVKEY_RLVER_MISMATCH,$/;"	e	enum:__anon3
+IAS_PS_HW_PSDA_SVN_OUT_OF_DATE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_PSDA_SVN_OUT_OF_DATE,$/;"	e	enum:__anon3
+IAS_PS_HW_SEC_INFO_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_SEC_INFO_INVALID,$/;"	e	enum:__anon3
+IAS_PS_HW_SIG_RLVER_MISMATCH	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_PS_HW_SIG_RLVER_MISMATCH,$/;"	e	enum:__anon3
+IAS_QUOTE_GROUP_OUT_OF_DATE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_GROUP_OUT_OF_DATE,$/;"	e	enum:__anon2
+IAS_QUOTE_GROUP_REVOKED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_GROUP_REVOKED,$/;"	e	enum:__anon2
+IAS_QUOTE_KEY_REVOKED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_KEY_REVOKED,$/;"	e	enum:__anon2
+IAS_QUOTE_OK	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_OK,$/;"	e	enum:__anon2
+IAS_QUOTE_SIGNATURE_INVALID	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_SIGNATURE_INVALID,$/;"	e	enum:__anon2
+IAS_QUOTE_SIGNATURE_REVOKED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_SIGNATURE_REVOKED,$/;"	e	enum:__anon2
+IAS_QUOTE_SIGRL_VERSION_MISMATCH	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_QUOTE_SIGRL_VERSION_MISMATCH,$/;"	e	enum:__anon2
+IAS_REVOC_REASON_AA_COMPROMISE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_AA_COMPROMISE,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_CA_COMPROMISED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_CA_COMPROMISED,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_CERTIFICATE_HOLD	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_CERTIFICATE_HOLD,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_CESSATION_OF_OPERATION	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_CESSATION_OF_OPERATION,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_KEY_COMPROMISE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_KEY_COMPROMISE,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_NONE	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_NONE,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_PRIVILEGE_WITHDRAWN	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_PRIVILEGE_WITHDRAWN,$/;"	e	enum:__anon4
+IAS_REVOC_REASON_SUPERCEDED	src/enclave/ServiceProvider/ias_ra.h	/^    IAS_REVOC_REASON_SUPERCEDED,$/;"	e	enum:__anon4
+IAS_TCB_EVAL_STATUS_CPUSVN_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_TCB_EVAL_STATUS_CPUSVN_OUT_OF_DATE_BIT_POS /;"	d
+IAS_TCB_EVAL_STATUS_ISVSVN_OUT_OF_DATE_BIT_POS	src/enclave/ServiceProvider/ias_ra.h	/^#define IAS_TCB_EVAL_STATUS_ISVSVN_OUT_OF_DATE_BIT_POS /;"	d
+ID_U	src/enclave/Enclave/isv_enclave.cpp	/^const char ID_U[] = "SGXRAENCLAVE";$/;"	v
+ID_U	src/enclave/ServiceProvider/ecp.cpp	/^const char ID_U[] = "SGXRAENCLAVE";$/;"	v
+ID_V	src/enclave/Enclave/isv_enclave.cpp	/^const char ID_V[] = "SGXRASERVER";$/;"	v
+ID_V	src/enclave/ServiceProvider/ecp.cpp	/^const char ID_V[] = "SGXRASERVER";$/;"	v
+ISVSVN_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define ISVSVN_SIZE /;"	d
+ISVSVN_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define ISVSVN_SIZE /;"	d
+ISV_KDF_ID	src/enclave/Enclave/isv_enclave.cpp	/^#define ISV_KDF_ID /;"	d	file:
+ISV_KDF_ID	src/enclave/ServiceProvider/service_provider.cpp	/^#define ISV_KDF_ID /;"	d	file:
+IsAssignableFrom	src/enclave/Include/jni.h	/^    jboolean (JNICALL *IsAssignableFrom)$/;"	m	struct:JNINativeInterface_
+IsAssignableFrom	src/enclave/Include/jni.h	/^    jboolean IsAssignableFrom(jclass sub, jclass sup) {$/;"	f	struct:JNIEnv_
+IsInstanceOf	src/enclave/Include/jni.h	/^    jboolean (JNICALL *IsInstanceOf)$/;"	m	struct:JNINativeInterface_
+IsInstanceOf	src/enclave/Include/jni.h	/^    jboolean IsInstanceOf(jobject obj, jclass clazz) {$/;"	f	struct:JNIEnv_
+IsSameObject	src/enclave/Include/jni.h	/^    jboolean (JNICALL *IsSameObject)$/;"	m	struct:JNINativeInterface_
+IsSameObject	src/enclave/Include/jni.h	/^    jboolean IsSameObject(jobject obj1, jobject obj2) {$/;"	f	struct:JNIEnv_
+JDK1_2	src/enclave/Include/jni.h	/^#define JDK1_2$/;"	d
+JDK1_4	src/enclave/Include/jni.h	/^#define JDK1_4$/;"	d
+JNICALL	src/enclave/Include/jni_md.h	/^#define JNICALL$/;"	d
+JNIEXPORT	src/enclave/Include/jni_md.h	/^  #define JNIEXPORT /;"	d
+JNIEXPORT	src/enclave/Include/jni_md.h	/^  #define JNIEXPORT$/;"	d
+JNIEnv	src/enclave/Include/jni.h	/^typedef JNIEnv_ JNIEnv;$/;"	t
+JNIEnv	src/enclave/Include/jni.h	/^typedef const struct JNINativeInterface_ *JNIEnv;$/;"	t	typeref:struct:JNINativeInterface_
+JNIEnv_	src/enclave/Include/jni.h	/^struct JNIEnv_ {$/;"	s
+JNIGlobalRefType	src/enclave/Include/jni.h	/^     JNIGlobalRefType     = 2,$/;"	e	enum:_jobjectType
+JNIIMPORT	src/enclave/Include/jni_md.h	/^  #define JNIIMPORT /;"	d
+JNIIMPORT	src/enclave/Include/jni_md.h	/^  #define JNIIMPORT$/;"	d
+JNIInvalidRefType	src/enclave/Include/jni.h	/^     JNIInvalidRefType    = 0,$/;"	e	enum:_jobjectType
+JNIInvokeInterface_	src/enclave/Include/jni.h	/^struct JNIInvokeInterface_ {$/;"	s
+JNILocalRefType	src/enclave/Include/jni.h	/^     JNILocalRefType      = 1,$/;"	e	enum:_jobjectType
+JNINativeInterface_	src/enclave/Include/jni.h	/^struct JNINativeInterface_ {$/;"	s
+JNINativeMethod	src/enclave/Include/jni.h	/^} JNINativeMethod;$/;"	t	typeref:struct:__anon1
+JNIWeakGlobalRefType	src/enclave/Include/jni.h	/^     JNIWeakGlobalRefType = 3$/;"	e	enum:_jobjectType
+JNI_ABORT	src/enclave/Include/jni.h	/^#define JNI_ABORT /;"	d
+JNI_COMMIT	src/enclave/Include/jni.h	/^#define JNI_COMMIT /;"	d
+JNI_EDETACHED	src/enclave/Include/jni.h	/^#define JNI_EDETACHED /;"	d
+JNI_EEXIST	src/enclave/Include/jni.h	/^#define JNI_EEXIST /;"	d
+JNI_EINVAL	src/enclave/Include/jni.h	/^#define JNI_EINVAL /;"	d
+JNI_ENOMEM	src/enclave/Include/jni.h	/^#define JNI_ENOMEM /;"	d
+JNI_ERR	src/enclave/Include/jni.h	/^#define JNI_ERR /;"	d
+JNI_EVERSION	src/enclave/Include/jni.h	/^#define JNI_EVERSION /;"	d
+JNI_FALSE	src/enclave/Include/jni.h	/^#define JNI_FALSE /;"	d
+JNI_OK	src/enclave/Include/jni.h	/^#define JNI_OK /;"	d
+JNI_TRUE	src/enclave/Include/jni.h	/^#define JNI_TRUE /;"	d
+JNI_VERSION_1_1	src/enclave/Include/jni.h	/^#define JNI_VERSION_1_1 /;"	d
+JNI_VERSION_1_2	src/enclave/Include/jni.h	/^#define JNI_VERSION_1_2 /;"	d
+JNI_VERSION_1_4	src/enclave/Include/jni.h	/^#define JNI_VERSION_1_4 /;"	d
+JNI_VERSION_1_6	src/enclave/Include/jni.h	/^#define JNI_VERSION_1_6 /;"	d
+JOIN_H	src/enclave/Enclave/Join.h	/^#define JOIN_H$/;"	d
+JavaVM	src/enclave/Include/jni.h	/^typedef JavaVM_ JavaVM;$/;"	t
+JavaVM	src/enclave/Include/jni.h	/^typedef const struct JNIInvokeInterface_ *JavaVM;$/;"	t	typeref:struct:JNIInvokeInterface_
+JavaVMAttachArgs	src/enclave/Include/jni.h	/^typedef struct JavaVMAttachArgs {$/;"	s
+JavaVMAttachArgs	src/enclave/Include/jni.h	/^} JavaVMAttachArgs;$/;"	t	typeref:struct:JavaVMAttachArgs
+JavaVMInitArgs	src/enclave/Include/jni.h	/^typedef struct JavaVMInitArgs {$/;"	s
+JavaVMInitArgs	src/enclave/Include/jni.h	/^} JavaVMInitArgs;$/;"	t	typeref:struct:JavaVMInitArgs
+JavaVMOption	src/enclave/Include/jni.h	/^typedef struct JavaVMOption {$/;"	s
+JavaVMOption	src/enclave/Include/jni.h	/^} JavaVMOption;$/;"	t	typeref:struct:JavaVMOption
+JavaVM_	src/enclave/Include/jni.h	/^struct JavaVM_ {$/;"	s
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Decrypt	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Decrypt($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1	src/enclave/App/App.cpp	/^Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2	src/enclave/App/App.cpp	/^Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin	src/enclave/App/App.cpp	/^Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort	src/enclave/App/App.cpp	/^Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3	src/enclave/App/App.cpp	/^JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample	src/enclave/App/App.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary	src/enclave/App/App.cpp	/^Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave	src/enclave/App/App.cpp	/^JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave	src/enclave/App/App.cpp	/^JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys	src/enclave/ServiceProvider/Main.cpp	/^JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys($/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0	src/enclave/ServiceProvider/Main.cpp	/^JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0(JNIEnv *env, jobject obj, jbyteArray msg0_input) {$/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg1	src/enclave/ServiceProvider/Main.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg1(JNIEnv *env, jobject obj, jbyteArray msg1_input) {$/;"	f
+Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3	src/enclave/ServiceProvider/Main.cpp	/^JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3(JNIEnv *env, jobject obj, jbyteArray msg3_input) {$/;"	f
+KeySchedule	src/enclave/Enclave/sgxaes.cpp	/^KeySchedule::KeySchedule(const unsigned char* k, size_t k_len) {$/;"	f	class:KeySchedule
+KeySchedule	src/enclave/Enclave/sgxaes.h	/^	KeySchedule(const KeySchedule& other) {$/;"	f	struct:KeySchedule
+KeySchedule	src/enclave/Enclave/sgxaes.h	/^struct KeySchedule {$/;"	s
+LC_AESCTR_KEY_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_AESCTR_KEY_SIZE /;"	d
+LC_AESGCM_IV_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_AESGCM_IV_SIZE /;"	d
+LC_AESGCM_KEY_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_AESGCM_KEY_SIZE /;"	d
+LC_AESGCM_MAC_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_AESGCM_MAC_SIZE /;"	d
+LC_CMAC_KEY_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_CMAC_KEY_SIZE /;"	d
+LC_CMAC_MAC_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_CMAC_MAC_SIZE /;"	d
+LC_ECP256_KEY_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_ECP256_KEY_SIZE /;"	d
+LC_ERROR_INVALID_PARAMETER	src/enclave/ServiceProvider/sp_crypto.h	/^    LC_ERROR_INVALID_PARAMETER  ,      \/\/ The parameter is incorrect$/;"	e	enum:lc_status_t
+LC_ERROR_OUT_OF_MEMORY	src/enclave/ServiceProvider/sp_crypto.h	/^    LC_ERROR_OUT_OF_MEMORY      ,      \/\/ Not enough memory is available to complete this operation$/;"	e	enum:lc_status_t
+LC_ERROR_UNEXPECTED	src/enclave/ServiceProvider/sp_crypto.h	/^    LC_ERROR_UNEXPECTED         ,      \/\/ Unexpected error$/;"	e	enum:lc_status_t
+LC_LIBCRYPTO_API	src/enclave/ServiceProvider/sp_crypto.h	/^        #define LC_LIBCRYPTO_API /;"	d
+LC_LIBCRYPTO_API	src/enclave/ServiceProvider/sp_crypto.h	/^    #define LC_LIBCRYPTO_API /;"	d
+LC_NISTP_ECP256_KEY_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_NISTP_ECP256_KEY_SIZE /;"	d
+LC_SHA256_HASH_SIZE	src/enclave/ServiceProvider/sp_crypto.h	/^#define LC_SHA256_HASH_SIZE /;"	d
+LC_SUCCESS	src/enclave/ServiceProvider/sp_crypto.h	/^    LC_SUCCESS                  = 0,$/;"	e	enum:lc_status_t
+LEAPOCH	src/enclave/Enclave/util.cpp	/^#define LEAPOCH /;"	d	file:
+MAC	src/enclave/Enclave/Crypto.h	/^  MAC() {$/;"	f	class:MAC
+MAC	src/enclave/Enclave/Crypto.h	/^class MAC {$/;"	c
+MAC_KEY_SIZE	src/enclave/ServiceProvider/ecp.cpp	/^#define MAC_KEY_SIZE /;"	d	file:
+MAX_BLOCK_SIZE	src/enclave/Include/define.h	/^#define MAX_BLOCK_SIZE /;"	d
+MAX_NUM_STREAMS	src/enclave/Include/define.h	/^#define MAX_NUM_STREAMS /;"	d
+MAX_PATH	src/enclave/App/App.cpp	/^# define MAX_PATH /;"	d	file:
+MSG3_BODY_SIZE	src/enclave/ServiceProvider/sample_messages.h	/^#define MSG3_BODY_SIZE /;"	d
+MergeItem	src/enclave/Enclave/Sort.cpp	/^class MergeItem {$/;"	c	file:
+MonitorEnter	src/enclave/Include/jni.h	/^    jint (JNICALL *MonitorEnter)$/;"	m	struct:JNINativeInterface_
+MonitorEnter	src/enclave/Include/jni.h	/^    jint MonitorEnter(jobject obj) {$/;"	f	struct:JNIEnv_
+MonitorExit	src/enclave/Include/jni.h	/^    jint (JNICALL *MonitorExit)$/;"	m	struct:JNINativeInterface_
+MonitorExit	src/enclave/Include/jni.h	/^    jint MonitorExit(jobject obj) {$/;"	f	struct:JNIEnv_
+New	src/enclave/Enclave/sgxaes.h	/^	New,$/;"	e	enum:State
+NewBooleanArray	src/enclave/Include/jni.h	/^    jbooleanArray (JNICALL *NewBooleanArray)$/;"	m	struct:JNINativeInterface_
+NewBooleanArray	src/enclave/Include/jni.h	/^    jbooleanArray NewBooleanArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewByteArray	src/enclave/Include/jni.h	/^    jbyteArray (JNICALL *NewByteArray)$/;"	m	struct:JNINativeInterface_
+NewByteArray	src/enclave/Include/jni.h	/^    jbyteArray NewByteArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewCharArray	src/enclave/Include/jni.h	/^    jcharArray (JNICALL *NewCharArray)$/;"	m	struct:JNINativeInterface_
+NewCharArray	src/enclave/Include/jni.h	/^    jcharArray NewCharArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewDirectByteBuffer	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewDirectByteBuffer)$/;"	m	struct:JNINativeInterface_
+NewDirectByteBuffer	src/enclave/Include/jni.h	/^    jobject NewDirectByteBuffer(void* address, jlong capacity) {$/;"	f	struct:JNIEnv_
+NewDoubleArray	src/enclave/Include/jni.h	/^    jdoubleArray (JNICALL *NewDoubleArray)$/;"	m	struct:JNINativeInterface_
+NewDoubleArray	src/enclave/Include/jni.h	/^    jdoubleArray NewDoubleArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewFloatArray	src/enclave/Include/jni.h	/^    jfloatArray (JNICALL *NewFloatArray)$/;"	m	struct:JNINativeInterface_
+NewFloatArray	src/enclave/Include/jni.h	/^    jfloatArray NewFloatArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewGlobalRef	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewGlobalRef)$/;"	m	struct:JNINativeInterface_
+NewGlobalRef	src/enclave/Include/jni.h	/^    jobject NewGlobalRef(jobject lobj) {$/;"	f	struct:JNIEnv_
+NewIntArray	src/enclave/Include/jni.h	/^    jintArray (JNICALL *NewIntArray)$/;"	m	struct:JNINativeInterface_
+NewIntArray	src/enclave/Include/jni.h	/^    jintArray NewIntArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewLocalRef	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewLocalRef)$/;"	m	struct:JNINativeInterface_
+NewLocalRef	src/enclave/Include/jni.h	/^    jobject NewLocalRef(jobject ref) {$/;"	f	struct:JNIEnv_
+NewLongArray	src/enclave/Include/jni.h	/^    jlongArray (JNICALL *NewLongArray)$/;"	m	struct:JNINativeInterface_
+NewLongArray	src/enclave/Include/jni.h	/^    jlongArray NewLongArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewObject	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewObject)$/;"	m	struct:JNINativeInterface_
+NewObject	src/enclave/Include/jni.h	/^    jobject NewObject(jclass clazz, jmethodID methodID, ...) {$/;"	f	struct:JNIEnv_
+NewObjectA	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewObjectA)$/;"	m	struct:JNINativeInterface_
+NewObjectA	src/enclave/Include/jni.h	/^    jobject NewObjectA(jclass clazz, jmethodID methodID,$/;"	f	struct:JNIEnv_
+NewObjectArray	src/enclave/Include/jni.h	/^    jobjectArray (JNICALL *NewObjectArray)$/;"	m	struct:JNINativeInterface_
+NewObjectArray	src/enclave/Include/jni.h	/^    jobjectArray NewObjectArray(jsize len, jclass clazz,$/;"	f	struct:JNIEnv_
+NewObjectV	src/enclave/Include/jni.h	/^    jobject (JNICALL *NewObjectV)$/;"	m	struct:JNINativeInterface_
+NewObjectV	src/enclave/Include/jni.h	/^    jobject NewObjectV(jclass clazz, jmethodID methodID,$/;"	f	struct:JNIEnv_
+NewShortArray	src/enclave/Include/jni.h	/^    jshortArray (JNICALL *NewShortArray)$/;"	m	struct:JNINativeInterface_
+NewShortArray	src/enclave/Include/jni.h	/^    jshortArray NewShortArray(jsize len) {$/;"	f	struct:JNIEnv_
+NewString	src/enclave/Include/jni.h	/^    jstring (JNICALL *NewString)$/;"	m	struct:JNINativeInterface_
+NewString	src/enclave/Include/jni.h	/^    jstring NewString(const jchar *unicode, jsize len) {$/;"	f	struct:JNIEnv_
+NewStringUTF	src/enclave/Include/jni.h	/^    jstring (JNICALL *NewStringUTF)$/;"	m	struct:JNINativeInterface_
+NewStringUTF	src/enclave/Include/jni.h	/^    jstring NewStringUTF(const char *utf) {$/;"	f	struct:JNIEnv_
+NewWeakGlobalRef	src/enclave/Include/jni.h	/^    jweak (JNICALL *NewWeakGlobalRef)$/;"	m	struct:JNINativeInterface_
+NewWeakGlobalRef	src/enclave/Include/jni.h	/^    jweak NewWeakGlobalRef(jobject obj) {$/;"	f	struct:JNIEnv_
+PRINT_BYTE_ARRAY	src/enclave/Common/common.h	/^inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len)$/;"	f
+PROJECT_H	src/enclave/Enclave/Project.h	/^#define PROJECT_H$/;"	d
+PSDA_SVN_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define PSDA_SVN_SIZE /;"	d
+PSDA_SVN_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define PSDA_SVN_SIZE /;"	d
+PSVN_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define PSVN_SIZE /;"	d
+PSVN_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define PSVN_SIZE /;"	d
+PopLocalFrame	src/enclave/Include/jni.h	/^    jobject (JNICALL *PopLocalFrame)$/;"	m	struct:JNINativeInterface_
+PopLocalFrame	src/enclave/Include/jni.h	/^    jobject PopLocalFrame(jobject result) {$/;"	f	struct:JNIEnv_
+PushLocalFrame	src/enclave/Include/jni.h	/^    jint (JNICALL *PushLocalFrame)$/;"	m	struct:JNINativeInterface_
+PushLocalFrame	src/enclave/Include/jni.h	/^    jint PushLocalFrame(jint capacity) {$/;"	f	struct:JNIEnv_
+RA_KEY_H	src/enclave/Enclave/key.h	/^#define RA_KEY_H$/;"	d
+REMOTE_ATTESTATION_H	src/enclave/Enclave/isv_enclave.h	/^#define REMOTE_ATTESTATION_H$/;"	d
+RegisterNatives	src/enclave/Include/jni.h	/^    jint (JNICALL *RegisterNatives)$/;"	m	struct:JNINativeInterface_
+RegisterNatives	src/enclave/Include/jni.h	/^    jint RegisterNatives(jclass clazz, const JNINativeMethod *methods,$/;"	f	struct:JNIEnv_
+ReleaseBooleanArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseBooleanArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseBooleanArrayElements	src/enclave/Include/jni.h	/^    void ReleaseBooleanArrayElements(jbooleanArray array,$/;"	f	struct:JNIEnv_
+ReleaseByteArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseByteArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseByteArrayElements	src/enclave/Include/jni.h	/^    void ReleaseByteArrayElements(jbyteArray array,$/;"	f	struct:JNIEnv_
+ReleaseCharArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseCharArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseCharArrayElements	src/enclave/Include/jni.h	/^    void ReleaseCharArrayElements(jcharArray array,$/;"	f	struct:JNIEnv_
+ReleaseDoubleArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseDoubleArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseDoubleArrayElements	src/enclave/Include/jni.h	/^    void ReleaseDoubleArrayElements(jdoubleArray array,$/;"	f	struct:JNIEnv_
+ReleaseFloatArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseFloatArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseFloatArrayElements	src/enclave/Include/jni.h	/^    void ReleaseFloatArrayElements(jfloatArray array,$/;"	f	struct:JNIEnv_
+ReleaseIntArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseIntArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseIntArrayElements	src/enclave/Include/jni.h	/^    void ReleaseIntArrayElements(jintArray array,$/;"	f	struct:JNIEnv_
+ReleaseLongArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseLongArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseLongArrayElements	src/enclave/Include/jni.h	/^    void ReleaseLongArrayElements(jlongArray array,$/;"	f	struct:JNIEnv_
+ReleasePrimitiveArrayCritical	src/enclave/Include/jni.h	/^    void (JNICALL *ReleasePrimitiveArrayCritical)$/;"	m	struct:JNINativeInterface_
+ReleasePrimitiveArrayCritical	src/enclave/Include/jni.h	/^    void ReleasePrimitiveArrayCritical(jarray array, void *carray, jint mode) {$/;"	f	struct:JNIEnv_
+ReleaseShortArrayElements	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseShortArrayElements)$/;"	m	struct:JNINativeInterface_
+ReleaseShortArrayElements	src/enclave/Include/jni.h	/^    void ReleaseShortArrayElements(jshortArray array,$/;"	f	struct:JNIEnv_
+ReleaseStringChars	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseStringChars)$/;"	m	struct:JNINativeInterface_
+ReleaseStringChars	src/enclave/Include/jni.h	/^    void ReleaseStringChars(jstring str, const jchar *chars) {$/;"	f	struct:JNIEnv_
+ReleaseStringCritical	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseStringCritical)$/;"	m	struct:JNINativeInterface_
+ReleaseStringCritical	src/enclave/Include/jni.h	/^    void ReleaseStringCritical(jstring string, const jchar *cstring) {$/;"	f	struct:JNIEnv_
+ReleaseStringUTFChars	src/enclave/Include/jni.h	/^    void (JNICALL *ReleaseStringUTFChars)$/;"	m	struct:JNINativeInterface_
+ReleaseStringUTFChars	src/enclave/Include/jni.h	/^    void ReleaseStringUTFChars(jstring str, const char* chars) {$/;"	f	struct:JNIEnv_
+RowIterator	src/enclave/Enclave/Flatbuffers.h	/^  typedef flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator RowIterator;$/;"	t	class:EncryptedBlocksToRowReader
+SAFE_FREE	src/enclave/ServiceProvider/service_provider.cpp	/^#define SAFE_FREE(/;"	d	file:
+SAMPLE_AESCTR_KEY_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_AESCTR_KEY_SIZE /;"	d
+SAMPLE_AESGCM_IV_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_AESGCM_IV_SIZE /;"	d
+SAMPLE_AESGCM_KEY_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_AESGCM_KEY_SIZE /;"	d
+SAMPLE_AESGCM_MAC_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_AESGCM_MAC_SIZE /;"	d
+SAMPLE_AES_CMAC_KDF_ID	src/enclave/ServiceProvider/service_provider.h	/^const uint16_t SAMPLE_AES_CMAC_KDF_ID = 0x0001;$/;"	v
+SAMPLE_CMAC_KEY_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_CMAC_KEY_SIZE /;"	d
+SAMPLE_CMAC_MAC_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_CMAC_MAC_SIZE /;"	d
+SAMPLE_CPUSVN_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_CPUSVN_SIZE /;"	d
+SAMPLE_DERIVE_KEY_MK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_MK,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_DERIVE_KEY_MK_VK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_MK_VK,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_DERIVE_KEY_SK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_SK,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_DERIVE_KEY_SMK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_SMK = 0,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_DERIVE_KEY_SMK_SK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_SMK_SK = 0,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_DERIVE_KEY_VK	src/enclave/ServiceProvider/ecp.h	/^    SAMPLE_DERIVE_KEY_VK,$/;"	e	enum:_sample_derive_key_type_t
+SAMPLE_ECP256_KEY_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_ECP256_KEY_SIZE /;"	d
+SAMPLE_ECP_KEY_SIZE	src/enclave/ServiceProvider/ecp.h	/^#define SAMPLE_ECP_KEY_SIZE /;"	d
+SAMPLE_EC_MAC_SIZE	src/enclave/ServiceProvider/ecp.h	/^#define SAMPLE_EC_MAC_SIZE /;"	d
+SAMPLE_ERROR_INVALID_PARAMETER	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    SAMPLE_ERROR_INVALID_PARAMETER  ,      \/\/ The parameter is incorrect$/;"	e	enum:sample_status_t
+SAMPLE_ERROR_OUT_OF_MEMORY	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    SAMPLE_ERROR_OUT_OF_MEMORY      ,      \/\/ Not enough memory is available to complete this operation$/;"	e	enum:sample_status_t
+SAMPLE_ERROR_UNEXPECTED	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    SAMPLE_ERROR_UNEXPECTED         ,      \/\/ Unexpected error$/;"	e	enum:sample_status_t
+SAMPLE_FEBITSIZE	src/enclave/ServiceProvider/ecp.h	/^    #define SAMPLE_FEBITSIZE /;"	d
+SAMPLE_FEBITSIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^    #define SAMPLE_FEBITSIZE /;"	d
+SAMPLE_HASH_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_HASH_SIZE /;"	d
+SAMPLE_LIBCRYPTO_API	src/enclave/sample_libcrypto/sample_libcrypto.h	/^        #define SAMPLE_LIBCRYPTO_API /;"	d
+SAMPLE_LIBCRYPTO_API	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    #define SAMPLE_LIBCRYPTO_API /;"	d
+SAMPLE_MAC_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_MAC_SIZE /;"	d
+SAMPLE_MAC_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define SAMPLE_MAC_SIZE /;"	d
+SAMPLE_NISTP256_KEY_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define SAMPLE_NISTP256_KEY_SIZE /;"	d
+SAMPLE_NISTP_ECP256_KEY_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_NISTP_ECP256_KEY_SIZE /;"	d
+SAMPLE_QUOTE_LINKABLE_SIGNATURE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_QUOTE_LINKABLE_SIGNATURE /;"	d
+SAMPLE_QUOTE_UNLINKABLE_SIGNATURE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_QUOTE_UNLINKABLE_SIGNATURE /;"	d
+SAMPLE_REPORT_DATA_SIZE	src/enclave/ServiceProvider/ias_ra.h	/^#define SAMPLE_REPORT_DATA_SIZE /;"	d
+SAMPLE_SHA256_HASH_SIZE	src/enclave/sample_libcrypto/sample_libcrypto.h	/^#define SAMPLE_SHA256_HASH_SIZE /;"	d
+SAMPLE_SP_IV_SIZE	src/enclave/ServiceProvider/service_provider.h	/^#define SAMPLE_SP_IV_SIZE /;"	d
+SAMPLE_SP_TAG_SIZE	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define SAMPLE_SP_TAG_SIZE /;"	d
+SAMPLE_SP_TAG_SIZE	src/enclave/ServiceProvider/service_provider.h	/^#define SAMPLE_SP_TAG_SIZE /;"	d
+SAMPLE_SUCCESS	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    SAMPLE_SUCCESS                  = 0,$/;"	e	enum:sample_status_t
+SGX_AES_H	src/enclave/Enclave/sgxaes.h	/^#define SGX_AES_H$/;"	d
+SP_IAS_FAILED	src/enclave/ServiceProvider/service_provider.h	/^    SP_IAS_FAILED,$/;"	e	enum:__anon5
+SP_INTEGRITY_FAILED	src/enclave/ServiceProvider/service_provider.h	/^    SP_INTEGRITY_FAILED,$/;"	e	enum:__anon5
+SP_INTERNAL_ERROR	src/enclave/ServiceProvider/service_provider.h	/^    SP_INTERNAL_ERROR,$/;"	e	enum:__anon5
+SP_OK	src/enclave/ServiceProvider/service_provider.h	/^    SP_OK,$/;"	e	enum:__anon5
+SP_PROTOCOL_ERROR	src/enclave/ServiceProvider/service_provider.h	/^    SP_PROTOCOL_ERROR,$/;"	e	enum:__anon5
+SP_QUOTE_VERIFICATION_FAILED	src/enclave/ServiceProvider/service_provider.h	/^    SP_QUOTE_VERIFICATION_FAILED,$/;"	e	enum:__anon5
+SP_QUOTE_VERSION_ERROR	src/enclave/ServiceProvider/service_provider.h	/^    SP_QUOTE_VERSION_ERROR,$/;"	e	enum:__anon5
+SP_UNSUPPORTED_EXTENDED_EPID_GROUP	src/enclave/ServiceProvider/service_provider.h	/^    SP_UNSUPPORTED_EXTENDED_EPID_GROUP,$/;"	e	enum:__anon5
+SWAP_ENDIAN_32B	src/enclave/ServiceProvider/ias_ra.cpp	/^    #define SWAP_ENDIAN_32B(/;"	d	file:
+SWAP_ENDIAN_DW	src/enclave/ServiceProvider/ias_ra.cpp	/^    #define SWAP_ENDIAN_DW(/;"	d	file:
+SetBooleanArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetBooleanArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetBooleanArrayRegion	src/enclave/Include/jni.h	/^    void SetBooleanArrayRegion(jbooleanArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetBooleanField	src/enclave/Include/jni.h	/^    void (JNICALL *SetBooleanField)$/;"	m	struct:JNINativeInterface_
+SetBooleanField	src/enclave/Include/jni.h	/^    void SetBooleanField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetByteArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetByteArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetByteArrayRegion	src/enclave/Include/jni.h	/^    void SetByteArrayRegion(jbyteArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetByteField	src/enclave/Include/jni.h	/^    void (JNICALL *SetByteField)$/;"	m	struct:JNINativeInterface_
+SetByteField	src/enclave/Include/jni.h	/^    void SetByteField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetCharArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetCharArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetCharArrayRegion	src/enclave/Include/jni.h	/^    void SetCharArrayRegion(jcharArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetCharField	src/enclave/Include/jni.h	/^    void (JNICALL *SetCharField)$/;"	m	struct:JNINativeInterface_
+SetCharField	src/enclave/Include/jni.h	/^    void SetCharField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetDoubleArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetDoubleArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetDoubleArrayRegion	src/enclave/Include/jni.h	/^    void SetDoubleArrayRegion(jdoubleArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetDoubleField	src/enclave/Include/jni.h	/^    void (JNICALL *SetDoubleField)$/;"	m	struct:JNINativeInterface_
+SetDoubleField	src/enclave/Include/jni.h	/^    void SetDoubleField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetFloatArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetFloatArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetFloatArrayRegion	src/enclave/Include/jni.h	/^    void SetFloatArrayRegion(jfloatArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetFloatField	src/enclave/Include/jni.h	/^    void (JNICALL *SetFloatField)$/;"	m	struct:JNINativeInterface_
+SetFloatField	src/enclave/Include/jni.h	/^    void SetFloatField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetIntArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetIntArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetIntArrayRegion	src/enclave/Include/jni.h	/^    void SetIntArrayRegion(jintArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetIntField	src/enclave/Include/jni.h	/^    void (JNICALL *SetIntField)$/;"	m	struct:JNINativeInterface_
+SetIntField	src/enclave/Include/jni.h	/^    void SetIntField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetLongArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetLongArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetLongArrayRegion	src/enclave/Include/jni.h	/^    void SetLongArrayRegion(jlongArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetLongField	src/enclave/Include/jni.h	/^    void (JNICALL *SetLongField)$/;"	m	struct:JNINativeInterface_
+SetLongField	src/enclave/Include/jni.h	/^    void SetLongField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetObjectArrayElement	src/enclave/Include/jni.h	/^    void (JNICALL *SetObjectArrayElement)$/;"	m	struct:JNINativeInterface_
+SetObjectArrayElement	src/enclave/Include/jni.h	/^    void SetObjectArrayElement(jobjectArray array, jsize index,$/;"	f	struct:JNIEnv_
+SetObjectField	src/enclave/Include/jni.h	/^    void (JNICALL *SetObjectField)$/;"	m	struct:JNINativeInterface_
+SetObjectField	src/enclave/Include/jni.h	/^    void SetObjectField(jobject obj, jfieldID fieldID, jobject val) {$/;"	f	struct:JNIEnv_
+SetShortArrayRegion	src/enclave/Include/jni.h	/^    void (JNICALL *SetShortArrayRegion)$/;"	m	struct:JNINativeInterface_
+SetShortArrayRegion	src/enclave/Include/jni.h	/^    void SetShortArrayRegion(jshortArray array, jsize start, jsize len,$/;"	f	struct:JNIEnv_
+SetShortField	src/enclave/Include/jni.h	/^    void (JNICALL *SetShortField)$/;"	m	struct:JNINativeInterface_
+SetShortField	src/enclave/Include/jni.h	/^    void SetShortField(jobject obj, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticBooleanField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticBooleanField)$/;"	m	struct:JNINativeInterface_
+SetStaticBooleanField	src/enclave/Include/jni.h	/^    void SetStaticBooleanField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticByteField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticByteField)$/;"	m	struct:JNINativeInterface_
+SetStaticByteField	src/enclave/Include/jni.h	/^    void SetStaticByteField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticCharField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticCharField)$/;"	m	struct:JNINativeInterface_
+SetStaticCharField	src/enclave/Include/jni.h	/^    void SetStaticCharField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticDoubleField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticDoubleField)$/;"	m	struct:JNINativeInterface_
+SetStaticDoubleField	src/enclave/Include/jni.h	/^    void SetStaticDoubleField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticFloatField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticFloatField)$/;"	m	struct:JNINativeInterface_
+SetStaticFloatField	src/enclave/Include/jni.h	/^    void SetStaticFloatField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticIntField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticIntField)$/;"	m	struct:JNINativeInterface_
+SetStaticIntField	src/enclave/Include/jni.h	/^    void SetStaticIntField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticLongField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticLongField)$/;"	m	struct:JNINativeInterface_
+SetStaticLongField	src/enclave/Include/jni.h	/^    void SetStaticLongField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticObjectField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticObjectField)$/;"	m	struct:JNINativeInterface_
+SetStaticObjectField	src/enclave/Include/jni.h	/^    void SetStaticObjectField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SetStaticShortField	src/enclave/Include/jni.h	/^    void (JNICALL *SetStaticShortField)$/;"	m	struct:JNINativeInterface_
+SetStaticShortField	src/enclave/Include/jni.h	/^    void SetStaticShortField(jclass clazz, jfieldID fieldID,$/;"	f	struct:JNIEnv_
+SortedRunsReader	src/enclave/Enclave/Flatbuffers.h	/^  SortedRunsReader(uint8_t *buf, size_t len)$/;"	f	class:SortedRunsReader
+SortedRunsReader	src/enclave/Enclave/Flatbuffers.h	/^class SortedRunsReader {$/;"	c
+State	src/enclave/Enclave/sgxaes.h	/^enum State {$/;"	g
+StreamCipher	src/enclave/Enclave/Crypto.cpp	/^StreamCipher::StreamCipher(uint8_t *ciphertext_ptr) {$/;"	f	class:StreamCipher
+StreamCipher	src/enclave/Enclave/Crypto.h	/^class StreamCipher {$/;"	c
+StreamDecipher	src/enclave/Enclave/Crypto.cpp	/^StreamDecipher::StreamDecipher(uint8_t *ciphertext_ptr, uint32_t enc_size) {$/;"	f	class:StreamDecipher
+StreamDecipher	src/enclave/Enclave/Crypto.h	/^class StreamDecipher {$/;"	c
+TOKEN_FILENAME	src/enclave/App/App.cpp	/^# define TOKEN_FILENAME /;"	d	file:
+TRUE	src/enclave/App/App.cpp	/^# define TRUE /;"	d	file:
+TYPE_IAS_ATT_EVIDENCE	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_IAS_ATT_EVIDENCE,$/;"	e	enum:_ias_msg_type_t
+TYPE_IAS_ATT_RESULT	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_IAS_ATT_RESULT,$/;"	e	enum:_ias_msg_type_t
+TYPE_IAS_ENROLL	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_IAS_ENROLL,$/;"	e	enum:_ias_msg_type_t
+TYPE_IAS_GET_SIGRL	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_IAS_GET_SIGRL,$/;"	e	enum:_ias_msg_type_t
+TYPE_IAS_SIGRL	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_IAS_SIGRL,$/;"	e	enum:_ias_msg_type_t
+TYPE_RA_ATT_RESULT	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_RA_ATT_RESULT,$/;"	e	enum:_ra_msg_type_t
+TYPE_RA_MSG0	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_RA_MSG0,$/;"	e	enum:_ra_msg_type_t
+TYPE_RA_MSG1	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_RA_MSG1,$/;"	e	enum:_ra_msg_type_t
+TYPE_RA_MSG2	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_RA_MSG2,$/;"	e	enum:_ra_msg_type_t
+TYPE_RA_MSG3	src/enclave/ServiceProvider/service_provider.h	/^     TYPE_RA_MSG3,$/;"	e	enum:_ra_msg_type_t
+Tag	src/enclave/Enclave/sgxaes.h	/^struct Tag {$/;"	s
+Throw	src/enclave/Include/jni.h	/^    jint (JNICALL *Throw)$/;"	m	struct:JNINativeInterface_
+Throw	src/enclave/Include/jni.h	/^    jint Throw(jthrowable obj) {$/;"	f	struct:JNIEnv_
+ThrowNew	src/enclave/Include/jni.h	/^    jint (JNICALL *ThrowNew)$/;"	m	struct:JNINativeInterface_
+ThrowNew	src/enclave/Include/jni.h	/^    jint ThrowNew(jclass clazz, const char *msg) {$/;"	f	struct:JNIEnv_
+ToReflectedField	src/enclave/Include/jni.h	/^    jobject (JNICALL *ToReflectedField)$/;"	m	struct:JNINativeInterface_
+ToReflectedField	src/enclave/Include/jni.h	/^    jobject ToReflectedField(jclass cls, jfieldID fieldID, jboolean isStatic) {$/;"	f	struct:JNIEnv_
+ToReflectedMethod	src/enclave/Include/jni.h	/^    jobject (JNICALL *ToReflectedMethod)$/;"	m	struct:JNINativeInterface_
+ToReflectedMethod	src/enclave/Include/jni.h	/^    jobject ToReflectedMethod(jclass cls, jmethodID methodID, jboolean isStatic) {$/;"	f	struct:JNIEnv_
+UNUSED	src/enclave/ServiceProvider/ias_ra.cpp	/^#define UNUSED(/;"	d	file:
+UTIL_H	src/enclave/Enclave/util.h	/^#define UTIL_H$/;"	d
+UnregisterNatives	src/enclave/Include/jni.h	/^    jint (JNICALL *UnregisterNatives)$/;"	m	struct:JNINativeInterface_
+UnregisterNatives	src/enclave/Include/jni.h	/^    jint UnregisterNatives(jclass clazz) {$/;"	f	struct:JNIEnv_
+UntrustedMemoryAllocator	src/enclave/Enclave/Flatbuffers.h	/^class UntrustedMemoryAllocator : public flatbuffers::simple_allocator {$/;"	c
+_ECP_H	src/enclave/ServiceProvider/ecp.h	/^#define _ECP_H$/;"	d
+_ERRNO_T_DEFINED	src/enclave/ServiceProvider/ecp.h	/^#define _ERRNO_T_DEFINED$/;"	d
+_IAS_RA_H	src/enclave/ServiceProvider/ias_ra.h	/^#define _IAS_RA_H$/;"	d
+_Included_SGXEnclave	src/enclave/App/SGXEnclave.h	/^#define _Included_SGXEnclave$/;"	d
+_Included_SP	src/enclave/ServiceProvider/SP.h	/^#define _Included_SP$/;"	d
+_JAVASOFT_JNI_H_	src/enclave/Include/jni.h	/^#define _JAVASOFT_JNI_H_$/;"	d
+_JAVASOFT_JNI_MD_H_	src/enclave/Include/jni_md.h	/^#define _JAVASOFT_JNI_MD_H_$/;"	d
+_JNI_IMPORT_OR_EXPORT_	src/enclave/Include/jni.h	/^#define _JNI_IMPORT_OR_EXPORT_ /;"	d
+_REMOTE_ATTESTATION_RESULT_H_	src/enclave/ServiceProvider/remote_attestation_result.h	/^#define _REMOTE_ATTESTATION_RESULT_H_$/;"	d
+_SERVICE_PROVIDER_H	src/enclave/ServiceProvider/service_provider.h	/^#define _SERVICE_PROVIDER_H$/;"	d
+_SORT_H_	src/enclave/Enclave/Sort.h	/^#define _SORT_H_$/;"	d
+__has_attribute	src/enclave/Include/jni_md.h	/^  #define __has_attribute(/;"	d
+_derive_key_type_t	src/enclave/Enclave/isv_enclave.cpp	/^typedef enum _derive_key_type_t$/;"	g	file:
+_hash_buffer_t	src/enclave/Enclave/isv_enclave.cpp	/^typedef struct _hash_buffer_t$/;"	s	file:
+_hash_buffer_t	src/enclave/ServiceProvider/ecp.cpp	/^typedef struct _hash_buffer_t$/;"	s	file:
+_ias_att_report_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct _ias_att_report_t$/;"	s
+_ias_msg_type_t	src/enclave/ServiceProvider/service_provider.h	/^typedef enum _ias_msg_type_t$/;"	g
+_jarray	src/enclave/Include/jni.h	/^class _jarray : public _jobject {};$/;"	c
+_jbooleanArray	src/enclave/Include/jni.h	/^class _jbooleanArray : public _jarray {};$/;"	c
+_jbyteArray	src/enclave/Include/jni.h	/^class _jbyteArray : public _jarray {};$/;"	c
+_jcharArray	src/enclave/Include/jni.h	/^class _jcharArray : public _jarray {};$/;"	c
+_jclass	src/enclave/Include/jni.h	/^class _jclass : public _jobject {};$/;"	c
+_jdoubleArray	src/enclave/Include/jni.h	/^class _jdoubleArray : public _jarray {};$/;"	c
+_jfloatArray	src/enclave/Include/jni.h	/^class _jfloatArray : public _jarray {};$/;"	c
+_jintArray	src/enclave/Include/jni.h	/^class _jintArray : public _jarray {};$/;"	c
+_jlongArray	src/enclave/Include/jni.h	/^class _jlongArray : public _jarray {};$/;"	c
+_jobject	src/enclave/Include/jni.h	/^class _jobject {};$/;"	c
+_jobjectArray	src/enclave/Include/jni.h	/^class _jobjectArray : public _jarray {};$/;"	c
+_jobjectType	src/enclave/Include/jni.h	/^typedef enum _jobjectType {$/;"	g
+_jshortArray	src/enclave/Include/jni.h	/^class _jshortArray : public _jarray {};$/;"	c
+_jstring	src/enclave/Include/jni.h	/^class _jstring : public _jobject {};$/;"	c
+_jthrowable	src/enclave/Include/jni.h	/^class _jthrowable : public _jobject {};$/;"	c
+_ra_msg_type_t	src/enclave/ServiceProvider/service_provider.h	/^typedef enum _ra_msg_type_t$/;"	g
+_ra_samp_request_header_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct _ra_samp_request_header_t {$/;"	s
+_ra_samp_response_header_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct _ra_samp_response_header_t {$/;"	s
+_sample_derive_key_type_t	src/enclave/ServiceProvider/ecp.h	/^typedef enum _sample_derive_key_type_t$/;"	g
+_sgx_errlist_t	src/enclave/App/App.cpp	/^typedef struct _sgx_errlist_t {$/;"	s	file:
+_sp_db_item_t	src/enclave/ServiceProvider/service_provider.cpp	/^typedef struct _sp_db_item_t$/;"	s	file:
+a	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Row *a;$/;"	m	class:FlatbuffersAggOpEvaluator
+a_len	src/enclave/Enclave/sgxaes.h	/^	size_t a_len;$/;"	m	struct:AesGcm
+aad	src/enclave/Enclave/sgxaes.cpp	/^void AesGcm::aad(const unsigned char* data, size_t data_len) {$/;"	f	class:AesGcm
+acquire_sbt_jar	build/sbt	/^acquire_sbt_jar () {$/;"	f
+addDebugger	build/sbt	/^addDebugger () { addJava "-Xdebug" ; addJava "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$1"; }$/;"	f
+addJava	build/sbt	/^addJava ()     { vlog "[addJava] arg = '$1'"   ;     java_args+=("$1"); }$/;"	f
+addResidual	build/sbt	/^addResidual () { vlog "[residual] arg = '$1'"  ; residual_args+=("$1"); }$/;"	f
+addResolver	build/sbt	/^addResolver () { addSbt "set resolvers += $1"; }$/;"	f
+addSbt	build/sbt	/^addSbt ()      { vlog "[addSbt] arg = '$1'"    ;  sbt_commands+=("$1"); }$/;"	f
+addScalac	build/sbt	/^addScalac ()   { vlog "[addScalac] arg = '$1'" ;   scalac_args+=("$1"); }$/;"	f
+aggregate	src/enclave/Enclave/ExpressionEvaluation.h	/^  void aggregate(const tuix::Row *row) {$/;"	f	class:FlatbuffersAggOpEvaluator
+aggregate_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<AggregateExpressionEvaluator>> aggregate_evaluators;$/;"	m	class:FlatbuffersAggOpEvaluator
+algorithm_id	src/enclave/Enclave/isv_enclave.cpp	/^    uint8_t algorithm_id[4];$/;"	m	struct:_hash_buffer_t	file:
+algorithm_id	src/enclave/ServiceProvider/ecp.cpp	/^    uint8_t algorithm_id[4];$/;"	m	struct:_hash_buffer_t	file:
+align	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  align[1];$/;"	m	struct:_ra_samp_response_header_t
+align	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  align[3];$/;"	m	struct:_ra_samp_request_header_t
+allocate	src/enclave/Enclave/Flatbuffers.h	/^  virtual uint8_t *allocate(size_t size) const {$/;"	f	class:UntrustedMemoryAllocator
+attestation_msg_sample1	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t attestation_msg_sample1[] =$/;"	v
+attestation_msg_sample2	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t attestation_msg_sample2[] =$/;"	v
+attributes	src/enclave/ServiceProvider/ias_ra.h	/^    sample_attributes_t     attributes;     \/\/ ( 48) Any special Capabilities$/;"	m	struct:sample_report_body_t
+b	src/enclave/Include/jni.h	/^    jbyte    b;$/;"	m	union:jvalue
+b	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_ec256_private_t            b;$/;"	m	struct:_sp_db_item_t	file:
+basename	src/enclave/ServiceProvider/ias_ra.h	/^    sample_basename_t       basename;       \/\/ 16$/;"	m	struct:sample_quote_t
+begin	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {$/;"	f	class:EncryptedBlocksToEncryptedBlockReader
+begin	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator begin() {$/;"	f	class:EncryptedBlockToRowReader
+block_idx	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t block_idx;$/;"	m	class:EncryptedBlocksToRowReader
+body	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  body[];$/;"	m	struct:_ra_samp_response_header_t
+body	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t body[];$/;"	m	struct:_ra_samp_request_header_t
+buf	src/enclave/Enclave/Flatbuffers.h	/^  uint8_t *buf;$/;"	m	class:SortedRunsReader
+build_props_sbt	build/sbt	/^build_props_sbt () {$/;"	f
+build_props_scala	build/sbt	/^build_props_scala () {$/;"	f
+builder	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:AggregateExpressionEvaluator
+builder	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersAggOpEvaluator
+builder	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersExpressionEvaluator
+builder	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersJoinExprEvaluator
+builder	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersSortOrderEvaluator
+builder	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersRowWriter
+builder	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::FlatBufferBuilder builder;$/;"	m	class:FlatbuffersTemporaryRow
+builder2	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::FlatBufferBuilder builder2;$/;"	m	class:FlatbuffersAggOpEvaluator
+bytes_written	src/enclave/Enclave/Crypto.cpp	/^uint32_t StreamCipher::bytes_written() {$/;"	f	class:StreamCipher
+c	src/enclave/Include/jni.h	/^    jchar    c;$/;"	m	union:jvalue
+check	src/enclave/Common/common.h	/^#define check(/;"	d
+check	src/enclave/Enclave/ExpressionEvaluation.h	/^#define check(/;"	d
+checkJava	build/sbt	/^checkJava() {$/;"	f
+cipher	src/enclave/Enclave/Crypto.h	/^  AesGcm *cipher;$/;"	m	class:StreamCipher
+cipher	src/enclave/Enclave/Crypto.h	/^  AesGcm *cipher;$/;"	m	class:StreamDecipher
+cipher_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *cipher_ptr;$/;"	m	class:StreamCipher
+cipher_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *cipher_ptr;$/;"	m	class:StreamDecipher
+ciphertext_size	src/enclave/Enclave/Crypto.h	/^  uint32_t ciphertext_size;$/;"	m	class:StreamCipher
+clear	src/enclave/Enclave/Flatbuffers.h	/^  void clear() {$/;"	f	class:FlatbuffersRowWriter
+clear	src/enclave/Enclave/util.cpp	/^void clear(uint8_t *dest, uint32_t len) {$/;"	f
+cmp	src/enclave/Enclave/util.cpp	/^int cmp(const uint8_t *value1, const uint8_t *value2, uint32_t len) {$/;"	f
+context	src/enclave/App/App.cpp	/^static sgx_ra_context_t context = INT_MAX;$/;"	v	file:
+counter	src/enclave/Enclave/isv_enclave.cpp	/^    uint8_t counter[4];$/;"	m	struct:_hash_buffer_t	file:
+counter	src/enclave/ServiceProvider/ecp.cpp	/^    uint8_t counter[4];$/;"	m	struct:_hash_buffer_t	file:
+cpu_svn	src/enclave/ServiceProvider/ias_ra.h	/^    sample_cpu_svn_t        cpu_svn;        \/\/ (  0) Security Version of the CPU$/;"	m	struct:sample_report_body_t
+csv	data/disease/synth_disease_data.py	/^import csv$/;"	i
+ctr	src/enclave/Enclave/sgxaes.h	/^	unsigned char ctr[AES_BLOCK_SIZE];$/;"	m	struct:GcmContext
+current_cipher_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *current_cipher_ptr;$/;"	m	class:StreamCipher
+current_cipher_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *current_cipher_ptr;$/;"	m	class:StreamDecipher
+d	src/enclave/Include/jni.h	/^    jdouble  d;$/;"	m	union:jvalue
+days_since_epoch	src/enclave/Enclave/Flatbuffers.h	/^  int32_t days_since_epoch;$/;"	m	class:Date
+deallocate	src/enclave/Enclave/Flatbuffers.h	/^  virtual void deallocate(uint8_t *p) const {$/;"	f	class:UntrustedMemoryAllocator
+debug	src/enclave/Common/common.h	/^#define debug(/;"	d
+dec_size	src/enclave/Enclave/Crypto.cpp	/^uint32_t dec_size(uint32_t ciphertext_size) {$/;"	f
+decrypt	src/enclave/Enclave/Crypto.cpp	/^void StreamDecipher::decrypt(uint8_t *plaintext_ptr, uint32_t size) {$/;"	f	class:StreamDecipher
+decrypt	src/enclave/Enclave/Crypto.cpp	/^void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,$/;"	f
+decrypt	src/enclave/Enclave/sgxaes.cpp	/^void AesGcm::decrypt(const unsigned char* ciphertext, size_t ciphertext_len, unsigned char* plaintext, size_t plaintext_len) {$/;"	f	class:AesGcm
+decrypt	src/enclave/ServiceProvider/sp_crypto.cpp	/^void decrypt(lc_aes_gcm_128bit_key_t *key,$/;"	f
+decrypt_with_aad	src/enclave/Enclave/Crypto.cpp	/^void decrypt_with_aad(const uint8_t *ciphertext, uint32_t ciphertext_length,$/;"	f
+default_jvm_opts	build/sbt	/^default_jvm_opts () {$/;"	f
+derive_key	src/enclave/Enclave/isv_enclave.cpp	/^bool derive_key($/;"	f
+derive_key	src/enclave/ServiceProvider/ecp.cpp	/^bool derive_key(const lc_ec256_dh_shared_t *p_shared_key,$/;"	f
+derive_key	src/enclave/ServiceProvider/ecp.cpp	/^bool derive_key(const sample_ec256_dh_shared_t *p_shared_key,$/;"	f
+derive_key_type_t	src/enclave/Enclave/isv_enclave.cpp	/^} derive_key_type_t;$/;"	t	typeref:enum:_derive_key_type_t	file:
+die	build/sbt	/^die ()     { echo "Aborting: $@" ; exit 1; }$/;"	f
+download_url	build/sbt	/^download_url () {$/;"	f
+ecall_decrypt	src/enclave/Enclave/Enclave.cpp	/^void ecall_decrypt(uint8_t *ciphertext,$/;"	f
+ecall_enclave_init_ra	src/enclave/Enclave/Enclave.cpp	/^sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {$/;"	f
+ecall_enclave_ra_close	src/enclave/Enclave/Enclave.cpp	/^void ecall_enclave_ra_close(sgx_ra_context_t context) {$/;"	f
+ecall_encrypt	src/enclave/Enclave/Enclave.cpp	/^void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,$/;"	f
+ecall_external_sort	src/enclave/Enclave/Enclave.cpp	/^void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+ecall_filter	src/enclave/Enclave/Enclave.cpp	/^void ecall_filter(uint8_t *condition, size_t condition_length,$/;"	f
+ecall_find_range_bounds	src/enclave/Enclave/Enclave.cpp	/^void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+ecall_non_oblivious_aggregate_step1	src/enclave/Enclave/Enclave.cpp	/^void ecall_non_oblivious_aggregate_step1($/;"	f
+ecall_non_oblivious_aggregate_step2	src/enclave/Enclave/Enclave.cpp	/^void ecall_non_oblivious_aggregate_step2($/;"	f
+ecall_non_oblivious_sort_merge_join	src/enclave/Enclave/Enclave.cpp	/^void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,$/;"	f
+ecall_partition_for_sort	src/enclave/Enclave/Enclave.cpp	/^void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+ecall_project	src/enclave/Enclave/Enclave.cpp	/^void ecall_project(uint8_t *condition, size_t condition_length,$/;"	f
+ecall_put_secret_data	src/enclave/Enclave/Enclave.cpp	/^sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,$/;"	f
+ecall_sample	src/enclave/Enclave/Enclave.cpp	/^void ecall_sample(uint8_t *input_rows, size_t input_rows_length,$/;"	f
+ecall_scan_collect_last_primary	src/enclave/Enclave/Enclave.cpp	/^void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length,$/;"	f
+ecall_verify_att_result_mac	src/enclave/Enclave/Enclave.cpp	/^sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context, uint8_t* message,$/;"	f
+echoLine	build/sbt	/^  echoLine () {$/;"	f
+echoerr	build/sbt	/^echoerr () { echo >&2 "$@"; }$/;"	f
+enc_block_builder	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::FlatBufferBuilder enc_block_builder;$/;"	m	class:FlatbuffersRowWriter
+enc_block_vector	src/enclave/Enclave/Flatbuffers.h	/^  std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;$/;"	m	class:FlatbuffersRowWriter
+enc_size	src/enclave/Enclave/Crypto.cpp	/^uint32_t enc_size(uint32_t plaintext_size) {$/;"	f
+enclave_init_ra	src/enclave/Enclave/isv_enclave.cpp	/^sgx_status_t enclave_init_ra(int b_pse,$/;"	f
+enclave_ra_close	src/enclave/Enclave/isv_enclave.cpp	/^sgx_status_t SGXAPI enclave_ra_close(sgx_ra_context_t context) {$/;"	f
+encrypt	src/enclave/Enclave/Crypto.cpp	/^void StreamCipher::encrypt(uint8_t *plaintext, uint32_t size) {$/;"	f	class:StreamCipher
+encrypt	src/enclave/Enclave/Crypto.cpp	/^void encrypt(uint8_t *plaintext, uint32_t plaintext_length,$/;"	f
+encrypt	src/enclave/Enclave/sgxaes.cpp	/^void AesGcm::encrypt(const unsigned char* plaintext, size_t plaintext_len, unsigned char* ciphertext, size_t ciphertext_len) {$/;"	f	class:AesGcm
+encrypt	src/enclave/ServiceProvider/sp_crypto.cpp	/^void encrypt(lc_aes_gcm_128bit_key_t *key,$/;"	f
+encrypt_with_aad	src/enclave/Enclave/Crypto.cpp	/^void encrypt_with_aad(uint8_t *plaintext, uint32_t plaintext_length,$/;"	f
+encrypted_blocks	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::EncryptedBlocks *encrypted_blocks;$/;"	m	class:EncryptedBlocksToEncryptedBlockReader
+encrypted_blocks	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::EncryptedBlocks *encrypted_blocks;$/;"	m	class:EncryptedBlocksToRowReader
+end	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator end() {$/;"	f	class:EncryptedBlocksToEncryptedBlockReader
+end	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator end() {$/;"	f	class:EncryptedBlockToRowReader
+enroll	src/enclave/ServiceProvider/service_provider.h	/^    sample_enroll enroll;$/;"	m	struct:sample_extended_epid_group
+epid_group_id	src/enclave/ServiceProvider/ias_ra.h	/^    sample_epid_group_id_t  epid_group_id;  \/\/ 4$/;"	m	struct:sample_quote_t
+err	src/enclave/App/App.cpp	/^  sgx_status_t err;$/;"	m	struct:_sgx_errlist_t	file:
+errno_t	src/enclave/ServiceProvider/ecp.h	/^typedef int errno_t;$/;"	t
+eval	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Field *eval(const tuix::Row *row) {$/;"	f	class:FlatbuffersExpressionEvaluator
+eval_binary_arithmetic_op	src/enclave/Enclave/ExpressionEvaluation.h	/^flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op($/;"	f
+eval_binary_comparison	src/enclave/Enclave/ExpressionEvaluation.h	/^flatbuffers::Offset<tuix::Field> eval_binary_comparison($/;"	f
+eval_helper	src/enclave/Enclave/ExpressionEvaluation.h	/^  flatbuffers::Offset<tuix::Field> eval_helper(const tuix::Row *row, const tuix::Expr *expr) {$/;"	f	class:FlatbuffersExpressionEvaluator
+evaluate	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Field *evaluate(const tuix::Row *agg) {$/;"	f	class:AggregateExpressionEvaluator
+evaluate	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Row *evaluate() {$/;"	f	class:FlatbuffersAggOpEvaluator
+evaluate_evaluator	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;$/;"	m	class:AggregateExpressionEvaluator
+execRunner	build/sbt	/^execRunner () {$/;"	f
+exit	src/enclave/Enclave/util.cpp	/^void exit(int exit_code) {$/;"	f
+expr	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Expr *expr;$/;"	m	class:FlatbuffersExpressionEvaluator
+extended_epid_group_id	src/enclave/ServiceProvider/service_provider.h	/^    uint32_t                    extended_epid_group_id;$/;"	m	struct:sample_ra_msg0_t
+extended_epid_group_id	src/enclave/ServiceProvider/service_provider.h	/^    uint32_t extended_epid_group_id;$/;"	m	struct:sample_extended_epid_group
+external_merge	src/enclave/Enclave/Sort.cpp	/^flatbuffers::Offset<tuix::EncryptedBlocks> external_merge($/;"	f
+external_sort	src/enclave/Enclave/Sort.cpp	/^void external_sort(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+extraInfo	src/enclave/Include/jni.h	/^    void *extraInfo;$/;"	m	struct:JavaVMOption
+f	src/enclave/Include/jni.h	/^    jfloat   f;$/;"	m	union:jvalue
+filter	src/enclave/Enclave/Filter.cpp	/^void filter(uint8_t *condition, size_t condition_length,$/;"	f
+find_range_bounds	src/enclave/Enclave/Sort.cpp	/^void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+finish	src/enclave/Enclave/Crypto.cpp	/^void StreamCipher::finish() {$/;"	f	class:StreamCipher
+finish	src/enclave/Enclave/Flatbuffers.h	/^  void finish(flatbuffers::Offset<T> root) {$/;"	f	class:FlatbuffersRowWriter
+flags	src/enclave/ServiceProvider/ias_ra.h	/^    uint64_t                flags;$/;"	m	struct:sample_attributes_t
+flatbuffers_cast	src/enclave/Enclave/Flatbuffers.h	/^flatbuffers::Offset<tuix::Field> flatbuffers_cast($/;"	f
+flatbuffers_copy	src/enclave/Enclave/Flatbuffers.cpp	/^flatbuffers::Offset<tuix::Field> flatbuffers_copy($/;"	f
+flatbuffers_copy	src/enclave/Enclave/Flatbuffers.cpp	/^flatbuffers::Offset<tuix::Row> flatbuffers_copy($/;"	f
+fnPtr	src/enclave/Include/jni.h	/^    void *fnPtr;$/;"	m	struct:__anon1
+freebl_cipher_func	src/enclave/Enclave/sgxaes.h	/^	const void* freebl_cipher_func;$/;"	m	struct:KeySchedule
+functions	src/enclave/Include/jni.h	/^    const struct JNIInvokeInterface_ *functions;$/;"	m	struct:JavaVM_	typeref:struct:JavaVM_::JNIInvokeInterface_
+functions	src/enclave/Include/jni.h	/^    const struct JNINativeInterface_ *functions;$/;"	m	struct:JNIEnv_	typeref:struct:JNIEnv_::JNINativeInterface_
+g_a	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_ec256_public_t             g_a;$/;"	m	struct:_sp_db_item_t	file:
+g_a	src/enclave/ServiceProvider/service_provider.h	/^    sample_ec_pub_t             g_a;        \/* the Endian-ness of Ga is$/;"	m	struct:sample_ra_msg1_t
+g_a	src/enclave/ServiceProvider/service_provider.h	/^  sample_ec_pub_t             g_a;           \/* the Endian-ness of Ga is*\/$/;"	m	struct:sample_ra_msg3_t
+g_authentication_token	src/enclave/ServiceProvider/service_provider.cpp	/^static int g_authentication_token = 0;$/;"	v	file:
+g_b	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_ec256_public_t             g_b;$/;"	m	struct:_sp_db_item_t	file:
+g_b	src/enclave/ServiceProvider/service_provider.h	/^    sample_ec_pub_t             g_b;        \/* the Endian-ness of Gb is$/;"	m	struct:sample_ra_msg2_t
+g_extended_epid_groups	src/enclave/ServiceProvider/service_provider.cpp	/^static const sample_extended_epid_group g_extended_epid_groups[] = {$/;"	v	file:
+g_is_sp_registered	src/enclave/ServiceProvider/service_provider.cpp	/^static bool g_is_sp_registered = false;$/;"	v	file:
+g_rk_priv_key	src/enclave/ServiceProvider/ias_ra.cpp	/^static const lc_ec256_private_t g_rk_priv_key =$/;"	v	file:
+g_secret	src/enclave/Enclave/isv_enclave.cpp	/^uint8_t g_secret[8] = {0};$/;"	v
+g_secret	src/enclave/ServiceProvider/service_provider.cpp	/^uint8_t g_secret[8] = {0,1,2,3,4,5,6,7};$/;"	v
+g_sim_spid	src/enclave/ServiceProvider/ias_ra.cpp	/^static sample_spid_t g_sim_spid = {"Service X"};$/;"	v	file:
+g_sp_credentials	src/enclave/ServiceProvider/service_provider.cpp	/^static int g_sp_credentials = 0;$/;"	v	file:
+g_sp_db	src/enclave/ServiceProvider/service_provider.cpp	/^static sp_db_item_t g_sp_db;$/;"	v	file:
+g_sp_extended_epid_group_id	src/enclave/ServiceProvider/service_provider.cpp	/^static const sample_extended_epid_group* g_sp_extended_epid_group_id= NULL;$/;"	v	file:
+g_sp_priv_key	src/enclave/ServiceProvider/service_provider.cpp	/^sgx_ec256_private_t g_sp_priv_key = {{0}};$/;"	v
+g_sp_pub_key	src/enclave/ServiceProvider/service_provider.cpp	/^sgx_ec256_public_t g_sp_pub_key = {{0}, {0}};$/;"	v
+g_spid	src/enclave/ServiceProvider/service_provider.cpp	/^sample_spid_t g_spid;$/;"	v
+gcKeySchedule	src/enclave/Enclave/Crypto.cpp	/^void gcKeySchedule() {$/;"	f
+gctx	src/enclave/Enclave/sgxaes.h	/^	GcmContext gctx;$/;"	m	struct:AesGcm
+get	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Row *get() {$/;"	f	class:FlatbuffersTemporaryRow
+getJavaVersion	build/sbt	/^getJavaVersion() { "$1" -version 2>&1 | grep -E -e '(java|openjdk) version' | awk '{ print $3 }' | tr -d \\"; }$/;"	f
+get_ec_point	src/enclave/ServiceProvider/sp_crypto.cpp	/^EC_POINT *get_ec_point(lc_ec256_public_t *p_public) {$/;"	f
+get_partial_agg	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::Row *get_partial_agg() {$/;"	f	class:FlatbuffersAggOpEvaluator
+get_priv_key	src/enclave/ServiceProvider/sp_crypto.cpp	/^EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {$/;"	f
+get_script_path	build/sbt	/^get_script_path () {$/;"	f
+get_sigrl	src/enclave/ServiceProvider/service_provider.h	/^    sample_get_sigrl get_sigrl;$/;"	m	struct:sample_extended_epid_group
+gid	src/enclave/ServiceProvider/service_provider.h	/^    sample_epid_group_id_t      gid;        \/* the Endian-ness of GID is$/;"	m	struct:sample_ra_msg1_t
+global_eid	src/enclave/App/App.cpp	/^sgx_enclave_id_t global_eid = 0;$/;"	v
+group	src/enclave/Include/jni.h	/^    jobject group;$/;"	m	struct:JavaVMAttachArgs
+grouping_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> grouping_evaluators;$/;"	m	class:FlatbuffersAggOpEvaluator
+gx	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t gx[SAMPLE_ECP_KEY_SIZE];$/;"	m	struct:sample_ec_pub_t
+gx	src/enclave/ServiceProvider/sp_crypto.h	/^    uint8_t gx[LC_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_public_t
+gx	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint8_t gx[SAMPLE_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_public_t
+gy	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t gy[SAMPLE_ECP_KEY_SIZE];$/;"	m	struct:sample_ec_pub_t
+gy	src/enclave/ServiceProvider/sp_crypto.h	/^    uint8_t gy[LC_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_public_t
+gy	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint8_t gy[SAMPLE_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_public_t
+has_next	src/enclave/Enclave/Flatbuffers.h	/^  bool has_next() {$/;"	f	class:EncryptedBlockToRowReader
+has_next	src/enclave/Enclave/Flatbuffers.h	/^  bool has_next() {$/;"	f	class:EncryptedBlocksToRowReader
+hash_buffer_t	src/enclave/Enclave/isv_enclave.cpp	/^} hash_buffer_t;$/;"	t	typeref:struct:_hash_buffer_t	file:
+hash_buffer_t	src/enclave/ServiceProvider/ecp.cpp	/^} hash_buffer_t;$/;"	t	typeref:struct:_hash_buffer_t	file:
+htbl	src/enclave/Enclave/sgxaes.h	/^	unsigned char htbl[16*AES_BLOCK_SIZE];$/;"	m	struct:GcmContext
+i	src/enclave/Include/jni.h	/^    jint     i;$/;"	m	union:jvalue
+ias_att_report_t	src/enclave/ServiceProvider/ias_ra.h	/^} ias_att_report_t;$/;"	t	typeref:struct:_ias_att_report_t
+ias_enroll	src/enclave/ServiceProvider/ias_ra.cpp	/^int ias_enroll($/;"	f
+ias_get_sigrl	src/enclave/ServiceProvider/ias_ra.cpp	/^int ias_get_sigrl($/;"	f
+ias_msg_type_t	src/enclave/ServiceProvider/service_provider.h	/^} ias_msg_type_t;$/;"	t	typeref:enum:_ias_msg_type_t
+ias_platform_info_blob_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^typedef struct ias_platform_info_blob_t$/;"	s
+ias_platform_info_blob_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^} ias_platform_info_blob_t;$/;"	t	typeref:struct:ias_platform_info_blob_t
+ias_pse_status_t	src/enclave/ServiceProvider/ias_ra.h	/^} ias_pse_status_t;$/;"	t	typeref:enum:__anon3
+ias_quote_status_t	src/enclave/ServiceProvider/ias_ra.h	/^} ias_quote_status_t;$/;"	t	typeref:enum:__anon2
+ias_revoc_reason_t	src/enclave/ServiceProvider/ias_ra.h	/^} ias_revoc_reason_t;$/;"	t	typeref:enum:__anon4
+ias_verify_attestation_evidence	src/enclave/ServiceProvider/ias_ra.cpp	/^int ias_verify_attestation_evidence($/;"	f
+id	src/enclave/ServiceProvider/ias_ra.h	/^    uint32_t                id;$/;"	m	struct:_ias_att_report_t
+id	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 id[16];$/;"	m	struct:sample_spid_t
+ignoreUnrecognized	src/enclave/Include/jni.h	/^    jboolean ignoreUnrecognized;$/;"	m	struct:JavaVMInitArgs
+info_blob	src/enclave/ServiceProvider/ias_ra.h	/^    ias_platform_info_blob_t    info_blob;$/;"	m	struct:_ias_att_report_t
+init	src/enclave/Enclave/Flatbuffers.h	/^  void init(const tuix::EncryptedBlock *encrypted_block) {$/;"	f	class:EncryptedBlockToRowReader
+initKeySchedule	src/enclave/Enclave/Crypto.cpp	/^void initKeySchedule() {$/;"	f
+init_default_option_file	build/sbt	/^init_default_option_file () {$/;"	f
+init_row_reader	src/enclave/Enclave/Flatbuffers.h	/^  void init_row_reader() {$/;"	f	class:EncryptedBlocksToRowReader
+initial_value_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;$/;"	m	class:AggregateExpressionEvaluator
+initial_values	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<const tuix::Field *> initial_values(const tuix::Row *unused) {$/;"	f	class:AggregateExpressionEvaluator
+initialize_enclave	src/enclave/App/App.cpp	/^int initialize_enclave(void)$/;"	f
+initialized	src/enclave/Enclave/Flatbuffers.h	/^  bool initialized;$/;"	m	class:EncryptedBlockToRowReader
+intel_aes_encrypt_init_128	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_encrypt_init_128:$/;"	l
+intel_aes_encrypt_init_192	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_encrypt_init_192:$/;"	l
+intel_aes_encrypt_init_256	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_encrypt_init_256:$/;"	l
+intel_aes_gcmAAD	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_gcmAAD:$/;"	l
+intel_aes_gcmDEC	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_gcmDEC:$/;"	l
+intel_aes_gcmENC	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_gcmENC:$/;"	l
+intel_aes_gcmINIT	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_gcmINIT:$/;"	l
+intel_aes_gcmTAG	src/enclave/Enclave/sgxaes_asm.S	/^intel_aes_gcmTAG:$/;"	l
+is_cygwin	build/sbt	/^is_cygwin () [[ "$(uname -a)" == "CYGWIN"* ]]$/;"	f
+is_primary	src/enclave/Enclave/ExpressionEvaluation.h	/^  bool is_primary(const tuix::Row *row) {$/;"	f	class:FlatbuffersJoinExprEvaluator
+is_same_group	src/enclave/Enclave/ExpressionEvaluation.h	/^  bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {$/;"	f	class:FlatbuffersAggOpEvaluator
+is_same_group	src/enclave/Enclave/ExpressionEvaluation.h	/^  bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {$/;"	f	class:FlatbuffersJoinExprEvaluator
+isv_prod_id	src/enclave/ServiceProvider/ias_ra.h	/^    sample_prod_id_t        isv_prod_id;    \/\/ (256) Product ID of the Enclave$/;"	m	struct:sample_report_body_t
+isv_svn	src/enclave/ServiceProvider/ias_ra.h	/^    sample_isv_svn_t        isv_svn;        \/\/ (258) Security Version of the$/;"	m	struct:sample_report_body_t
+iv	src/enclave/Enclave/sgxaes.h	/^	unsigned char iv[AES_BLOCK_SIZE*2];$/;"	m	struct:KeySchedule
+iv_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *iv_ptr;$/;"	m	class:StreamCipher
+iv_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *iv_ptr;$/;"	m	class:StreamDecipher
+j	src/enclave/Include/jni.h	/^    jlong    j;$/;"	m	union:jvalue
+jar_file	build/sbt	/^jar_file () {$/;"	f
+jar_url	build/sbt	/^jar_url ()  { make_url "$1"; }$/;"	f
+jarray	src/enclave/Include/jni.h	/^typedef _jarray *jarray;$/;"	t
+jarray	src/enclave/Include/jni.h	/^typedef jobject jarray;$/;"	t
+java_version	build/sbt	/^java_version () {$/;"	f
+jboolean	src/enclave/Include/jni.h	/^typedef unsigned char   jboolean;$/;"	t
+jbooleanArray	src/enclave/Include/jni.h	/^typedef _jbooleanArray *jbooleanArray;$/;"	t
+jbooleanArray	src/enclave/Include/jni.h	/^typedef jarray jbooleanArray;$/;"	t
+jbyte	src/enclave/Include/jni_md.h	/^typedef signed char jbyte;$/;"	t
+jbyteArray	src/enclave/Include/jni.h	/^typedef _jbyteArray *jbyteArray;$/;"	t
+jbyteArray	src/enclave/Include/jni.h	/^typedef jarray jbyteArray;$/;"	t
+jchar	src/enclave/Include/jni.h	/^typedef unsigned short  jchar;$/;"	t
+jcharArray	src/enclave/Include/jni.h	/^typedef _jcharArray *jcharArray;$/;"	t
+jcharArray	src/enclave/Include/jni.h	/^typedef jarray jcharArray;$/;"	t
+jclass	src/enclave/Include/jni.h	/^typedef _jclass *jclass;$/;"	t
+jclass	src/enclave/Include/jni.h	/^typedef jobject jclass;$/;"	t
+jdouble	src/enclave/Include/jni.h	/^typedef double          jdouble;$/;"	t
+jdoubleArray	src/enclave/Include/jni.h	/^typedef _jdoubleArray *jdoubleArray;$/;"	t
+jdoubleArray	src/enclave/Include/jni.h	/^typedef jarray jdoubleArray;$/;"	t
+jfieldID	src/enclave/Include/jni.h	/^typedef struct _jfieldID *jfieldID;$/;"	t	typeref:struct:_jfieldID
+jfloat	src/enclave/Include/jni.h	/^typedef float           jfloat;$/;"	t
+jfloatArray	src/enclave/Include/jni.h	/^typedef _jfloatArray *jfloatArray;$/;"	t
+jfloatArray	src/enclave/Include/jni.h	/^typedef jarray jfloatArray;$/;"	t
+jint	src/enclave/Include/jni_md.h	/^typedef int jint;$/;"	t
+jintArray	src/enclave/Include/jni.h	/^typedef _jintArray *jintArray;$/;"	t
+jintArray	src/enclave/Include/jni.h	/^typedef jarray jintArray;$/;"	t
+jlong	src/enclave/Include/jni_md.h	/^typedef long jlong;$/;"	t
+jlong	src/enclave/Include/jni_md.h	/^typedef long long jlong;$/;"	t
+jlongArray	src/enclave/Include/jni.h	/^typedef _jlongArray *jlongArray;$/;"	t
+jlongArray	src/enclave/Include/jni.h	/^typedef jarray jlongArray;$/;"	t
+jmethodID	src/enclave/Include/jni.h	/^typedef struct _jmethodID *jmethodID;$/;"	t	typeref:struct:_jmethodID
+jobject	src/enclave/Include/jni.h	/^typedef _jobject *jobject;$/;"	t
+jobject	src/enclave/Include/jni.h	/^typedef struct _jobject *jobject;$/;"	t	typeref:struct:_jobject
+jobjectArray	src/enclave/Include/jni.h	/^typedef _jobjectArray *jobjectArray;$/;"	t
+jobjectArray	src/enclave/Include/jni.h	/^typedef jarray jobjectArray;$/;"	t
+jobjectRefType	src/enclave/Include/jni.h	/^} jobjectRefType;$/;"	t	typeref:enum:_jobjectType
+jshort	src/enclave/Include/jni.h	/^typedef short           jshort;$/;"	t
+jshortArray	src/enclave/Include/jni.h	/^typedef _jshortArray *jshortArray;$/;"	t
+jshortArray	src/enclave/Include/jni.h	/^typedef jarray jshortArray;$/;"	t
+jsize	src/enclave/Include/jni.h	/^typedef jint            jsize;$/;"	t
+jstring	src/enclave/Include/jni.h	/^typedef _jstring *jstring;$/;"	t
+jstring	src/enclave/Include/jni.h	/^typedef jobject jstring;$/;"	t
+jthrowable	src/enclave/Include/jni.h	/^typedef _jthrowable *jthrowable;$/;"	t
+jthrowable	src/enclave/Include/jni.h	/^typedef jobject jthrowable;$/;"	t
+jvalue	src/enclave/Include/jni.h	/^typedef union jvalue {$/;"	u
+jvalue	src/enclave/Include/jni.h	/^} jvalue;$/;"	t	typeref:union:jvalue
+jweak	src/enclave/Include/jni.h	/^typedef jobject jweak;$/;"	t
+kdf_id	src/enclave/ServiceProvider/service_provider.h	/^    uint16_t                    kdf_id;     \/* key derivation function id in little endian. $/;"	m	struct:sample_ra_msg2_t
+key	src/enclave/Enclave/Crypto.cpp	/^sgx_aes_gcm_128bit_key_t *key = &key_data;$/;"	v
+key	src/enclave/ServiceProvider/Main.cpp	/^lc_aes_gcm_128bit_key_t key = "helloworld12312";$/;"	v
+key_data	src/enclave/Enclave/Crypto.cpp	/^sgx_aes_gcm_128bit_key_t key_data = {0};$/;"	v
+key_derivation	src/enclave/Enclave/isv_enclave.cpp	/^sgx_status_t key_derivation(const sgx_ec256_dh_shared_t* shared_key,$/;"	f
+key_expansion128	src/enclave/Enclave/sgxaes_asm.S	/^key_expansion128:$/;"	l
+key_expansion192	src/enclave/Enclave/sgxaes_asm.S	/^key_expansion192:$/;"	l
+key_expansion256	src/enclave/Enclave/sgxaes_asm.S	/^key_expansion256:$/;"	l
+key_str	src/enclave/ServiceProvider/service_provider.cpp	/^const char *key_str = "helloworld123123";$/;"	v
+ks	src/enclave/Enclave/Crypto.cpp	/^KeySchedule *ks = (KeySchedule *) &ks_backup;$/;"	v
+ks	src/enclave/Enclave/sgxaes.h	/^	const KeySchedule* ks;$/;"	m	struct:GcmContext
+ks	src/enclave/Enclave/sgxaes.h	/^	uint32_t ks[AES_MAX_EXP_KEY_SIZE];$/;"	m	struct:KeySchedule
+ks_backup	src/enclave/Enclave/Crypto.cpp	/^const KeySchedule ks_backup = KeySchedule((unsigned char *) key_data, SGX_AESGCM_KEY_SIZE);$/;"	v
+l	src/enclave/Include/jni.h	/^    jobject  l;$/;"	m	union:jvalue
+latest_equivalent_tcb_psvn	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint8_t latest_equivalent_tcb_psvn[PSVN_SIZE];$/;"	m	struct:ias_platform_info_blob_t
+latest_psda_svn	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint8_t latest_psda_svn[PSDA_SVN_SIZE];$/;"	m	struct:ias_platform_info_blob_t
+latest_pse_isvsvn	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint8_t latest_pse_isvsvn[ISVSVN_SIZE];$/;"	m	struct:ias_platform_info_blob_t
+lc_aes_ctr_128bit_key_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_aes_ctr_128bit_key_t[LC_AESCTR_KEY_SIZE];$/;"	t
+lc_aes_gcm_128bit_key_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_aes_gcm_128bit_key_t[LC_AESGCM_KEY_SIZE];$/;"	t
+lc_aes_gcm_128bit_tag_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_aes_gcm_128bit_tag_t[LC_AESGCM_MAC_SIZE];$/;"	t
+lc_cmac_128bit_key_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_cmac_128bit_key_t[LC_CMAC_KEY_SIZE];$/;"	t
+lc_cmac_128bit_tag_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_cmac_128bit_tag_t[LC_CMAC_MAC_SIZE];$/;"	t
+lc_cmac_state_handle_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef void* lc_cmac_state_handle_t;$/;"	t
+lc_ec256_dh_shared_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef struct lc_ec256_dh_shared_t$/;"	s
+lc_ec256_dh_shared_t	src/enclave/ServiceProvider/sp_crypto.h	/^} lc_ec256_dh_shared_t;$/;"	t	typeref:struct:lc_ec256_dh_shared_t
+lc_ec256_private_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef struct lc_ec256_private_t$/;"	s
+lc_ec256_private_t	src/enclave/ServiceProvider/sp_crypto.h	/^} lc_ec256_private_t;$/;"	t	typeref:struct:lc_ec256_private_t
+lc_ec256_public_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef struct lc_ec256_public_t$/;"	s
+lc_ec256_public_t	src/enclave/ServiceProvider/sp_crypto.h	/^} lc_ec256_public_t;$/;"	t	typeref:struct:lc_ec256_public_t
+lc_ec256_signature_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef struct lc_ec256_signature_t$/;"	s
+lc_ec256_signature_t	src/enclave/ServiceProvider/sp_crypto.h	/^} lc_ec256_signature_t;$/;"	t	typeref:struct:lc_ec256_signature_t
+lc_ec_dh_shared_t	src/enclave/ServiceProvider/ecp.h	/^} lc_ec_dh_shared_t;$/;"	t	typeref:struct:sample_ec_dh_shared_t
+lc_ecc256_close_context	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ecc256_close_context(lc_ecc_state_handle_t ecc_handle) {$/;"	f
+lc_ecc256_compute_shared_dhkey	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,$/;"	f
+lc_ecc256_create_key_pair	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,$/;"	f
+lc_ecc256_open_context	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ecc256_open_context(lc_ecc_state_handle_t* ecc_handle) {$/;"	f
+lc_ecc_state_handle_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef void* lc_ecc_state_handle_t;$/;"	t
+lc_ecdsa_sign	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ecdsa_sign(const uint8_t *p_data,$/;"	f
+lc_rijndael128GCM_decrypt	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,$/;"	f
+lc_rijndael128GCM_encrypt	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,$/;"	f
+lc_rijndael128_cmac_msg	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,$/;"	f
+lc_sha256_close	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_sha256_close(lc_sha_state_handle_t sha_handle) {$/;"	f
+lc_sha256_get_hash	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash) {$/;"	f
+lc_sha256_hash_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef uint8_t lc_sha256_hash_t[LC_SHA256_HASH_SIZE];$/;"	t
+lc_sha256_init	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_sha256_init(lc_sha_state_handle_t* p_sha_handle) {$/;"	f
+lc_sha256_update	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {$/;"	f
+lc_sha_state_handle_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef SHA256_CTX* lc_sha_state_handle_t;$/;"	t
+lc_ssl2sgx	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t lc_ssl2sgx(EC_KEY *ssl_key,$/;"	f
+lc_status_t	src/enclave/ServiceProvider/sp_crypto.h	/^typedef enum lc_status_t {$/;"	g
+lc_status_t	src/enclave/ServiceProvider/sp_crypto.h	/^} lc_status_t;$/;"	t	typeref:enum:lc_status_t
+left_key_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> left_key_evaluators;$/;"	m	class:FlatbuffersJoinExprEvaluator
+leftover_plaintext	src/enclave/Enclave/Crypto.h	/^  uint8_t leftover_plaintext[AES_BLOCK_SIZE];$/;"	m	class:StreamCipher
+leftover_plaintext	src/enclave/Enclave/Crypto.h	/^  uint8_t leftover_plaintext[AES_BLOCK_SIZE];$/;"	m	class:StreamDecipher
+leftover_plaintext_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *leftover_plaintext_ptr;$/;"	m	class:StreamDecipher
+leftover_plaintext_size	src/enclave/Enclave/Crypto.h	/^  uint32_t leftover_plaintext_size;$/;"	m	class:StreamCipher
+leftover_plaintext_size	src/enclave/Enclave/Crypto.h	/^  uint32_t leftover_plaintext_size;$/;"	m	class:StreamDecipher
+less_than	src/enclave/Enclave/ExpressionEvaluation.h	/^  bool less_than(const tuix::Row *row1, const tuix::Row *row2) {$/;"	f	class:FlatbuffersSortOrderEvaluator
+m_len	src/enclave/Enclave/sgxaes.h	/^	size_t m_len;$/;"	m	struct:AesGcm
+mac	src/enclave/Enclave/Crypto.cpp	/^void MAC::mac(uint8_t *mac_ptr, uint32_t len) {$/;"	f	class:MAC
+mac	src/enclave/ServiceProvider/remote_attestation_result.h	/^  lc_cmac_128bit_tag_t        mac;    \/* mac_smk(attestation_status)*\/$/;"	m	struct:sample_ra_att_result_msg_t
+mac	src/enclave/ServiceProvider/service_provider.h	/^    sample_mac_t                mac;        \/* mac_smk(g_b||spid||quote_type||$/;"	m	struct:sample_ra_msg2_t
+mac	src/enclave/ServiceProvider/service_provider.h	/^  sample_mac_t                mac;           \/* mac_smk(g_a||ps_sec_prop||quote)*\/$/;"	m	struct:sample_ra_msg3_t
+mac_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *mac_ptr;$/;"	m	class:StreamCipher
+mac_ptr	src/enclave/Enclave/Crypto.h	/^  uint8_t *mac_ptr;$/;"	m	class:StreamDecipher
+main	build/sbt	/^main () {$/;"	f
+main	data/disease/synth_disease_data.py	/^def main():$/;"	f
+main	src/enclave/App/App.cpp	/^int SGX_CDECL main(int argc, char *argv[])$/;"	f
+main	src/enclave/ServiceProvider/Main.cpp	/^int main(int argc, char **argv) {$/;"	f
+mainFiltered	build/sbt	/^mainFiltered () {$/;"	f
+make_url	build/sbt	/^make_url () {$/;"	f
+maybe_finish_block	src/enclave/Enclave/Flatbuffers.h	/^  void maybe_finish_block() {$/;"	f	class:FlatbuffersRowWriter
+memcpy_s	src/enclave/Common/common.h	/^inline int memcpy_s(void *dest,$/;"	f
+mk_key	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_aes_gcm_128bit_key_t       mk_key;   \/\/ Shared secret key for generating MAC's$/;"	m	struct:_sp_db_item_t	file:
+mr_enclave	src/enclave/ServiceProvider/ias_ra.h	/^    sample_measurement_t    mr_enclave;     \/\/ ( 64) The value of the enclave's$/;"	m	struct:sample_report_body_t
+mr_reserved1	src/enclave/ServiceProvider/ias_ra.h	/^    sample_measurement_t    mr_reserved1;   \/\/ (192)$/;"	m	struct:sample_report_body_t
+mr_reserved2	src/enclave/ServiceProvider/ias_ra.h	/^    sample_measurement_t    mr_reserved2;   \/\/ (224)$/;"	m	struct:sample_report_body_t
+mr_signer	src/enclave/ServiceProvider/ias_ra.h	/^    sample_measurement_t    mr_signer;      \/\/ (128) The value of the enclave's$/;"	m	struct:sample_report_body_t
+msg	src/enclave/App/App.cpp	/^  const char *msg;$/;"	m	struct:_sgx_errlist_t	file:
+msg1_sample1	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg1_sample1[] =$/;"	v
+msg1_sample2	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg1_sample2[] =$/;"	v
+msg2_sample1	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg2_sample1[] =$/;"	v
+msg2_sample2	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg2_sample2[] =$/;"	v
+msg3_sample1	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg3_sample1[MSG3_BODY_SIZE] = $/;"	v
+msg3_sample2	src/enclave/ServiceProvider/sample_messages.h	/^uint8_t msg3_sample2[MSG3_BODY_SIZE] = $/;"	v
+nOptions	src/enclave/Include/jni.h	/^    jint nOptions;$/;"	m	struct:JavaVMInitArgs
+name	src/enclave/Include/jni.h	/^    char *name;$/;"	m	struct:JavaVMAttachArgs
+name	src/enclave/Include/jni.h	/^    char *name;$/;"	m	struct:__anon1
+name	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 name[32];$/;"	m	struct:sample_basename_t
+name_max_length	data/disease/synth_disease_data.py	/^name_max_length = 16$/;"	v
+name_min_length	data/disease/synth_disease_data.py	/^name_min_length = 3$/;"	v
+nb	src/enclave/Enclave/sgxaes.h	/^	uint32_t nb;$/;"	m	struct:KeySchedule
+next	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Row *next() {$/;"	f	class:EncryptedBlockToRowReader
+next	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Row *next() {$/;"	f	class:EncryptedBlocksToRowReader
+next_from_run	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Row *next_from_run(uint32_t run_idx) {$/;"	f	class:SortedRunsReader
+non_oblivious_aggregate_step1	src/enclave/Enclave/Aggregate.cpp	/^void non_oblivious_aggregate_step1($/;"	f
+non_oblivious_aggregate_step2	src/enclave/Enclave/Aggregate.cpp	/^void non_oblivious_aggregate_step2($/;"	f
+non_oblivious_sort_merge_join	src/enclave/Enclave/Join.cpp	/^void non_oblivious_sort_merge_join($/;"	f
+nr	src/enclave/Enclave/sgxaes.h	/^	uint32_t nr;$/;"	m	struct:KeySchedule
+num_rows	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t num_rows() {$/;"	f	class:EncryptedBlocksToRowReader
+num_runs	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t num_runs() {$/;"	f	class:SortedRunsReader
+ocall_exit	src/enclave/App/App.cpp	/^void ocall_exit(int exit_code) {$/;"	f
+ocall_free	src/enclave/App/App.cpp	/^void ocall_free(uint8_t *buf) {$/;"	f
+ocall_malloc	src/enclave/App/App.cpp	/^void ocall_malloc(size_t size, uint8_t **ret) {$/;"	f
+ocall_print_string	src/enclave/App/App.cpp	/^void ocall_print_string(const char *str)$/;"	f
+onSbtRunnerExit	build/sbt	/^onSbtRunnerExit() {$/;"	f
+operator double	src/enclave/Enclave/Flatbuffers.h	/^  explicit operator double() const { return days_since_epoch; }$/;"	f	class:Date
+operator float	src/enclave/Enclave/Flatbuffers.h	/^  explicit operator float() const { return days_since_epoch; }$/;"	f	class:Date
+operator int32_t	src/enclave/Enclave/Flatbuffers.h	/^  explicit operator int32_t() const { return days_since_epoch; }$/;"	f	class:Date
+operator int64_t	src/enclave/Enclave/Flatbuffers.h	/^  explicit operator int64_t() const { return days_since_epoch; }$/;"	f	class:Date
+optionString	src/enclave/Include/jni.h	/^    char *optionString;$/;"	m	struct:JavaVMOption
+options	src/enclave/Include/jni.h	/^    JavaVMOption *options;$/;"	m	struct:JavaVMInitArgs
+output_buffer	src/enclave/Enclave/Flatbuffers.h	/^  std::unique_ptr<uint8_t, decltype(&ocall_free)> output_buffer() {$/;"	f	class:FlatbuffersRowWriter
+output_num_rows	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t output_num_rows() {$/;"	f	class:FlatbuffersRowWriter
+output_size	src/enclave/Enclave/Flatbuffers.h	/^  size_t output_size() {$/;"	f	class:FlatbuffersRowWriter
+partition_for_sort	src/enclave/Enclave/Sort.cpp	/^void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,$/;"	f
+payload	src/enclave/ServiceProvider/remote_attestation_result.h	/^  uint8_t         payload[32];          \/* 32: Ciphertext of the payload; this should be the secret key*\/$/;"	m	struct:sp_aes_gcm_data_t
+payload_size	src/enclave/ServiceProvider/remote_attestation_result.h	/^  uint32_t        payload_size;       \/*  0: Size of the payload which is*\/$/;"	m	struct:sp_aes_gcm_data_t
+payload_tag	src/enclave/ServiceProvider/remote_attestation_result.h	/^  uint8_t         payload_tag[SAMPLE_SP_TAG_SIZE];   \/* 16: AES-GMAC of the plain text, payload, and the sizes*\/$/;"	m	struct:sp_aes_gcm_data_t
+perf	src/enclave/Common/common.h	/^#define perf(/;"	d
+performance_rekey_gid	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint8_t performance_rekey_gid[GID_SIZE];$/;"	m	struct:ias_platform_info_blob_t
+platform_info_blob	src/enclave/ServiceProvider/remote_attestation_result.h	/^  ias_platform_info_blob_t    platform_info_blob;$/;"	m	struct:sample_ra_att_result_msg_t
+policy_report	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 policy_report[];\/\/ IAS_Q: Why does it specify a$/;"	m	struct:_ias_att_report_t
+policy_report_size	src/enclave/ServiceProvider/ias_ra.h	/^    uint32_t                policy_report_size;$/;"	m	struct:_ias_att_report_t
+print	src/enclave/Enclave/Flatbuffers.cpp	/^void print(const tuix::Field *field) {$/;"	f
+print	src/enclave/Enclave/Flatbuffers.cpp	/^void print(const tuix::Row *in) {$/;"	f
+print_bytes	src/enclave/Enclave/util.cpp	/^void print_bytes(uint8_t *ptr, uint32_t len) {$/;"	f
+print_ec_key	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t print_ec_key(EC_KEY *ec_key) {$/;"	f
+print_error_message	src/enclave/App/App.cpp	/^void print_error_message(sgx_status_t ret)$/;"	f
+print_hex	src/enclave/Common/common.h	/^inline void print_hex(unsigned char *mem, uint32_t len) {$/;"	f
+print_priv_key	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t print_priv_key(lc_ec256_private_t p_private) {$/;"	f
+print_pub_key	src/enclave/ServiceProvider/sp_crypto.cpp	/^lc_status_t print_pub_key(lc_ec256_public_t p_public) {$/;"	f
+printf	src/enclave/Enclave/util.cpp	/^int printf(const char *fmt, ...) {$/;"	f
+process_args	build/sbt	/^process_args () {$/;"	f
+project	src/enclave/Enclave/Project.cpp	/^void project(uint8_t *project_list, size_t project_list_length,$/;"	f
+ps_sec_prop	src/enclave/ServiceProvider/service_provider.cpp	/^  sample_ps_sec_prop_desc_t     ps_sec_prop;$/;"	m	struct:_sp_db_item_t	file:
+ps_sec_prop	src/enclave/ServiceProvider/service_provider.h	/^  sample_ps_sec_prop_desc_t   ps_sec_prop;$/;"	m	struct:sample_ra_msg3_t
+pse_evaluation_status	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint16_t pse_evaluation_status;$/;"	m	struct:ias_platform_info_blob_t
+pse_status	src/enclave/ServiceProvider/ias_ra.h	/^    ias_pse_status_t        pse_status;$/;"	m	struct:_ias_att_report_t
+put_secret_data	src/enclave/Enclave/isv_enclave.cpp	/^sgx_status_t put_secret_data($/;"	f
+qe_svn	src/enclave/ServiceProvider/ias_ra.h	/^    sample_isv_svn_t        qe_svn;         \/\/ 8$/;"	m	struct:sample_quote_t
+query_sgx_status	src/enclave/App/App.cpp	/^int query_sgx_status()$/;"	f
+quote	src/enclave/ServiceProvider/service_provider.h	/^  uint8_t                     quote[];$/;"	m	struct:sample_ra_msg3_t
+quote_type	src/enclave/ServiceProvider/service_provider.h	/^    uint16_t                    quote_type; \/* unlinkable Quote(0) or linkable Quote(0) in little endian*\/$/;"	m	struct:sample_ra_msg2_t
+r	src/enclave/Enclave/Flatbuffers.h	/^  EncryptedBlockToRowReader r;$/;"	m	class:EncryptedBlocksToRowReader
+r	src/enclave/ServiceProvider/ecp.h	/^    uint8_t r[SAMPLE_ECP_KEY_SIZE];$/;"	m	struct:sample_ec_priv_t
+r	src/enclave/ServiceProvider/sp_crypto.h	/^    uint8_t r[LC_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_private_t
+r	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint8_t r[SAMPLE_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_private_t
+ra_msg_type_t	src/enclave/ServiceProvider/service_provider.h	/^} ra_msg_type_t;$/;"	t	typeref:enum:_ra_msg_type_t
+ra_samp_request_header_t	src/enclave/ServiceProvider/service_provider.h	/^} ra_samp_request_header_t;$/;"	t	typeref:struct:_ra_samp_request_header_t
+ra_samp_response_header_t	src/enclave/ServiceProvider/service_provider.h	/^} ra_samp_response_header_t;$/;"	t	typeref:struct:_ra_samp_response_header_t
+rand	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 rand[16];$/;"	m	struct:sample_quote_nonce_t
+random	data/disease/synth_disease_data.py	/^import random$/;"	i
+randomword	data/disease/synth_disease_data.py	/^def randomword():$/;"	f
+readConfigFile	build/sbt	/^readConfigFile() {$/;"	f
+read_secret_key	src/enclave/ServiceProvider/service_provider.cpp	/^int read_secret_key(const char *filename,$/;"	f
+report_body	src/enclave/ServiceProvider/ias_ra.h	/^    sample_report_body_t    report_body;    \/\/ 48$/;"	m	struct:sample_quote_t
+report_data	src/enclave/ServiceProvider/ias_ra.h	/^    sample_report_data_t    report_data;    \/\/ (320) Data provided by the user$/;"	m	struct:sample_report_body_t
+require_arg	build/sbt	/^  require_arg () {$/;"	f
+reserved	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 reserved[6];    \/\/ 10$/;"	m	struct:sample_quote_t
+reserved	src/enclave/ServiceProvider/remote_attestation_result.h	/^  uint8_t         reserved[12];       \/*  4: Reserved bits*\/$/;"	m	struct:sp_aes_gcm_data_t
+reserved0	src/enclave/Include/jni.h	/^    void *reserved0;$/;"	m	struct:JNIInvokeInterface_
+reserved0	src/enclave/Include/jni.h	/^    void *reserved0;$/;"	m	struct:JNINativeInterface_
+reserved1	src/enclave/Include/jni.h	/^    void *reserved1;$/;"	m	struct:JNIInvokeInterface_
+reserved1	src/enclave/Include/jni.h	/^    void *reserved1;$/;"	m	struct:JNINativeInterface_
+reserved1	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 reserved1[32];  \/\/ ( 16)$/;"	m	struct:sample_report_body_t
+reserved2	src/enclave/Include/jni.h	/^    void *reserved2;$/;"	m	struct:JNIInvokeInterface_
+reserved2	src/enclave/Include/jni.h	/^    void *reserved2;$/;"	m	struct:JNINativeInterface_
+reserved2	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 reserved2[32];  \/\/ ( 96)$/;"	m	struct:sample_report_body_t
+reserved3	src/enclave/Include/jni.h	/^    void *reserved3;$/;"	m	struct:JNINativeInterface_
+reserved3	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 reserved3[32];  \/\/ (160)$/;"	m	struct:sample_report_body_t
+reserved4	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 reserved4[60];  \/\/ (260)$/;"	m	struct:sample_report_body_t
+reset	src/enclave/Enclave/Crypto.cpp	/^void StreamCipher::reset(uint8_t *new_ciphertext_ptr) {$/;"	f	class:StreamCipher
+reset	src/enclave/Enclave/Crypto.cpp	/^void StreamDecipher::reset(uint8_t *new_ciphertext_ptr, uint32_t enc_size) {$/;"	f	class:StreamDecipher
+reset	src/enclave/Enclave/Flatbuffers.h	/^  void reset(const tuix::EncryptedBlock *encrypted_block) {$/;"	f	class:EncryptedBlockToRowReader
+reset	src/enclave/Enclave/Flatbuffers.h	/^  void reset(uint8_t *buf, size_t len) {$/;"	f	class:EncryptedBlockToRowReader
+reset	src/enclave/Enclave/Flatbuffers.h	/^  void reset(uint8_t *buf, size_t len) {$/;"	f	class:SortedRunsReader
+reset_group	src/enclave/Enclave/ExpressionEvaluation.h	/^  void reset_group() {$/;"	f	class:FlatbuffersAggOpEvaluator
+ret	src/enclave/Enclave/sgxaes_asm.S	/^ret$/;"	l
+reverse_endian	src/enclave/ServiceProvider/sp_crypto.cpp	/^void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len) {$/;"	f
+reverse_endian_by_32	src/enclave/ServiceProvider/sp_crypto.cpp	/^void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len) {$/;"	f
+revocation_reason	src/enclave/ServiceProvider/ias_ra.h	/^    uint32_t                revocation_reason;$/;"	m	struct:_ias_att_report_t
+right_key_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;$/;"	m	class:FlatbuffersJoinExprEvaluator
+row	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Row *row;$/;"	m	class:FlatbuffersTemporaryRow
+row_idx	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t row_idx;$/;"	m	class:EncryptedBlockToRowReader
+rows	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::Rows *rows;$/;"	m	class:EncryptedBlockToRowReader
+rows_buf	src/enclave/Enclave/Flatbuffers.h	/^  std::unique_ptr<uint8_t> rows_buf;$/;"	m	class:EncryptedBlockToRowReader
+rows_vector	src/enclave/Enclave/Flatbuffers.h	/^  std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;$/;"	m	class:FlatbuffersRowWriter
+run_has_next	src/enclave/Enclave/Flatbuffers.h	/^  bool run_has_next(uint32_t run_idx) {$/;"	f	class:SortedRunsReader
+run_idx	src/enclave/Enclave/Sort.cpp	/^  uint32_t run_idx;$/;"	m	class:MergeItem	file:
+run_readers	src/enclave/Enclave/Flatbuffers.h	/^  std::vector<EncryptedBlocksToRowReader> run_readers;$/;"	m	class:SortedRunsReader
+s	src/enclave/Include/jni.h	/^    jshort   s;$/;"	m	union:jvalue
+s	src/enclave/ServiceProvider/ecp.h	/^  uint8_t s[SAMPLE_ECP_KEY_SIZE];$/;"	m	struct:sample_ec_dh_shared_t
+s	src/enclave/ServiceProvider/sp_crypto.h	/^  uint8_t s[LC_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_dh_shared_t
+s	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint8_t s[SAMPLE_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_dh_shared_t
+sample	src/enclave/Enclave/Sort.cpp	/^void sample(uint8_t *input_rows, size_t input_rows_length,$/;"	f
+sample_aes_ctr_128bit_key_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_aes_ctr_128bit_key_t[SAMPLE_AESCTR_KEY_SIZE];$/;"	t
+sample_aes_gcm_128bit_key_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_aes_gcm_128bit_key_t[SAMPLE_AESGCM_KEY_SIZE];$/;"	t
+sample_aes_gcm_128bit_tag_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_aes_gcm_128bit_tag_t[SAMPLE_AESGCM_MAC_SIZE];$/;"	t
+sample_attributes_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_attributes_t$/;"	s
+sample_attributes_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_attributes_t;$/;"	t	typeref:struct:sample_attributes_t
+sample_basename_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_basename_t$/;"	s
+sample_basename_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_basename_t;$/;"	t	typeref:struct:sample_basename_t
+sample_cmac_128bit_key_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_cmac_128bit_key_t[SAMPLE_CMAC_KEY_SIZE];$/;"	t
+sample_cmac_128bit_tag_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_cmac_128bit_tag_t[SAMPLE_CMAC_MAC_SIZE];$/;"	t
+sample_cmac_state_handle_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef void* sample_cmac_state_handle_t;$/;"	t
+sample_cpu_svn_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint8_t             sample_cpu_svn_t[SAMPLE_CPUSVN_SIZE];$/;"	t
+sample_derive_key_type_t	src/enclave/ServiceProvider/ecp.h	/^} sample_derive_key_type_t;$/;"	t	typeref:enum:_sample_derive_key_type_t
+sample_ec256_dh_shared_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef struct sample_ec256_dh_shared_t$/;"	s
+sample_ec256_dh_shared_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^} sample_ec256_dh_shared_t;$/;"	t	typeref:struct:sample_ec256_dh_shared_t
+sample_ec256_private_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef struct sample_ec256_private_t$/;"	s
+sample_ec256_private_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^} sample_ec256_private_t;$/;"	t	typeref:struct:sample_ec256_private_t
+sample_ec256_public_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef struct sample_ec256_public_t$/;"	s
+sample_ec256_public_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^} sample_ec256_public_t;$/;"	t	typeref:struct:sample_ec256_public_t
+sample_ec256_signature_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef struct sample_ec256_signature_t$/;"	s
+sample_ec256_signature_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^} sample_ec256_signature_t;$/;"	t	typeref:struct:sample_ec256_signature_t
+sample_ec_dh_shared_t	src/enclave/ServiceProvider/ecp.h	/^typedef struct sample_ec_dh_shared_t$/;"	s
+sample_ec_key_128bit_t	src/enclave/ServiceProvider/ecp.h	/^typedef uint8_t sample_ec_key_128bit_t[16];$/;"	t
+sample_ec_priv_t	src/enclave/ServiceProvider/ecp.h	/^typedef struct sample_ec_priv_t$/;"	s
+sample_ec_priv_t	src/enclave/ServiceProvider/ecp.h	/^} sample_ec_priv_t;$/;"	t	typeref:struct:sample_ec_priv_t
+sample_ec_pub_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ec_pub_t$/;"	s
+sample_ec_pub_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ec_pub_t;$/;"	t	typeref:struct:sample_ec_pub_t
+sample_ec_sign256_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^typedef struct sample_ec_sign256_t$/;"	s
+sample_ec_sign256_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^} sample_ec_sign256_t;$/;"	t	typeref:struct:sample_ec_sign256_t
+sample_ecc_state_handle_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef void* sample_ecc_state_handle_t;$/;"	t
+sample_enroll	src/enclave/ServiceProvider/service_provider.h	/^  typedef int (*sample_enroll)(int sp_credentials, sample_spid_t* spid,$/;"	t
+sample_epid_group_id_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint8_t sample_epid_group_id_t[4];$/;"	t
+sample_epid_group_status	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint8_t sample_epid_group_status;$/;"	m	struct:ias_platform_info_blob_t
+sample_extended_epid_group	src/enclave/ServiceProvider/service_provider.h	/^  typedef struct sample_extended_epid_group$/;"	s
+sample_extended_epid_group	src/enclave/ServiceProvider/service_provider.h	/^  } sample_extended_epid_group;$/;"	t	typeref:struct:sample_extended_epid_group
+sample_get_sigrl	src/enclave/ServiceProvider/service_provider.h	/^  typedef int(*sample_get_sigrl)(const sample_epid_group_id_t gid, uint32_t* p_sig_rl_size,$/;"	t
+sample_isv_svn_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint16_t            sample_isv_svn_t;$/;"	t
+sample_key_128bit_t	src/enclave/ServiceProvider/service_provider.h	/^typedef uint8_t                 sample_key_128bit_t[16];$/;"	t
+sample_mac_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint8_t             sample_mac_t[SAMPLE_MAC_SIZE];$/;"	t
+sample_mac_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^typedef uint8_t                     sample_mac_t[SAMPLE_MAC_SIZE];$/;"	t
+sample_measurement_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint8_t             sample_measurement_t[SAMPLE_HASH_SIZE];$/;"	t
+sample_prod_id_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint16_t            sample_prod_id_t;$/;"	t
+sample_ps_sec_prop_desc	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  sample_ps_sec_prop_desc[256];$/;"	m	struct:sample_ps_sec_prop_desc_t
+sample_ps_sec_prop_desc_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ps_sec_prop_desc_t$/;"	s
+sample_ps_sec_prop_desc_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ps_sec_prop_desc_t;$/;"	t	typeref:struct:sample_ps_sec_prop_desc_t
+sample_quote_nonce_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_quote_nonce_t$/;"	s
+sample_quote_nonce_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_quote_nonce_t;$/;"	t	typeref:struct:sample_quote_nonce_t
+sample_quote_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_quote_t {$/;"	s
+sample_quote_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_quote_t;$/;"	t	typeref:struct:sample_quote_t
+sample_ra_att_result_msg_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^typedef struct sample_ra_att_result_msg_t {$/;"	s
+sample_ra_att_result_msg_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^} sample_ra_att_result_msg_t;$/;"	t	typeref:struct:sample_ra_att_result_msg_t
+sample_ra_context_t	src/enclave/ServiceProvider/service_provider.h	/^typedef uint32_t                sample_ra_context_t;$/;"	t
+sample_ra_key_128_t	src/enclave/ServiceProvider/service_provider.h	/^typedef sample_key_128bit_t     sample_ra_key_128_t;$/;"	t
+sample_ra_msg0_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ra_msg0_t$/;"	s
+sample_ra_msg0_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ra_msg0_t;$/;"	t	typeref:struct:sample_ra_msg0_t
+sample_ra_msg1_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ra_msg1_t$/;"	s
+sample_ra_msg1_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ra_msg1_t;$/;"	t	typeref:struct:sample_ra_msg1_t
+sample_ra_msg2_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ra_msg2_t$/;"	s
+sample_ra_msg2_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ra_msg2_t;$/;"	t	typeref:struct:sample_ra_msg2_t
+sample_ra_msg3_t	src/enclave/ServiceProvider/service_provider.h	/^typedef struct sample_ra_msg3_t$/;"	s
+sample_ra_msg3_t	src/enclave/ServiceProvider/service_provider.h	/^} sample_ra_msg3_t;$/;"	t	typeref:struct:sample_ra_msg3_t
+sample_report_body_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_report_body_t {$/;"	s
+sample_report_body_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_report_body_t;$/;"	t	typeref:struct:sample_report_body_t
+sample_report_data_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef uint8_t             sample_report_data_t[SAMPLE_REPORT_DATA_SIZE];$/;"	t
+sample_sha256_hash_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef uint8_t sample_sha256_hash_t[SAMPLE_SHA256_HASH_SIZE];$/;"	t
+sample_sha_state_handle_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef void* sample_sha_state_handle_t;$/;"	t
+sample_spid_t	src/enclave/ServiceProvider/ias_ra.h	/^typedef struct sample_spid_t$/;"	s
+sample_spid_t	src/enclave/ServiceProvider/ias_ra.h	/^} sample_spid_t;$/;"	t	typeref:struct:sample_spid_t
+sample_status_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^typedef enum sample_status_t$/;"	g
+sample_status_t	src/enclave/sample_libcrypto/sample_libcrypto.h	/^} sample_status_t;$/;"	t	typeref:enum:sample_status_t
+sample_tcb_evaluation_status	src/enclave/ServiceProvider/remote_attestation_result.h	/^     uint16_t sample_tcb_evaluation_status;$/;"	m	struct:ias_platform_info_blob_t
+sample_verify_attestation_evidence	src/enclave/ServiceProvider/service_provider.h	/^  typedef int(*sample_verify_attestation_evidence)(sample_quote_t* p_isv_quote,$/;"	t
+scan_collect_last_primary	src/enclave/Enclave/Join.cpp	/^void scan_collect_last_primary($/;"	f
+scoped_timer	src/enclave/App/App.cpp	/^  scoped_timer(uint64_t *total_time) {$/;"	f	class:scoped_timer
+scoped_timer	src/enclave/App/App.cpp	/^class scoped_timer {$/;"	c	file:
+secret	src/enclave/ServiceProvider/remote_attestation_result.h	/^  sp_aes_gcm_data_t           secret;$/;"	m	struct:sample_ra_att_result_msg_t
+secs_to_tm	src/enclave/Enclave/util.cpp	/^int secs_to_tm(long long t, struct tm *tm) {$/;"	f
+set	src/enclave/Enclave/ExpressionEvaluation.h	/^  void set(const tuix::Row *agg_row) {$/;"	f	class:FlatbuffersAggOpEvaluator
+set	src/enclave/Enclave/Flatbuffers.h	/^  void set(const tuix::Row *row) {$/;"	f	class:FlatbuffersTemporaryRow
+setJavaHome	build/sbt	/^setJavaHome () {$/;"	f
+setScalaVersion	build/sbt	/^setScalaVersion () {$/;"	f
+setThisBuild	build/sbt	/^setThisBuild () {$/;"	f
+setTraceLevel	build/sbt	/^setTraceLevel() {$/;"	f
+set_sbt_version	build/sbt	/^set_sbt_version () {$/;"	f
+sgx_check	src/enclave/App/App.cpp	/^#define sgx_check(/;"	d	file:
+sgx_check_quiet	src/enclave/App/App.cpp	/^void sgx_check_quiet(const char* message, sgx_status_t ret)$/;"	f
+sgx_errlist	src/enclave/App/App.cpp	/^static sgx_errlist_t sgx_errlist[] = {$/;"	v	file:
+sgx_errlist_t	src/enclave/App/App.cpp	/^} sgx_errlist_t;$/;"	t	typeref:struct:_sgx_errlist_t	file:
+shared_secret	src/enclave/Enclave/isv_enclave.cpp	/^    sgx_ec256_dh_shared_t shared_secret;$/;"	m	struct:_hash_buffer_t	file:
+shared_secret	src/enclave/ServiceProvider/ecp.cpp	/^    sgx_ec_dh_shared_t shared_secret;$/;"	m	struct:_hash_buffer_t	file:
+shouldFilter	build/sbt	/^shouldFilter () { [[ -f ~\/.sbtignore ]] && ! egrep -q '\\b(shell|console|consoleProject)\\b' <<<"${residual_args[@]}"; }$/;"	f
+sig_rl	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t                     sig_rl[];$/;"	m	struct:sample_ra_msg2_t
+sig_rl_size	src/enclave/ServiceProvider/service_provider.h	/^    uint32_t                    sig_rl_size;$/;"	m	struct:sample_ra_msg2_t
+sign_gb_ga	src/enclave/ServiceProvider/service_provider.h	/^    sample_ec_sign256_t         sign_gb_ga; \/* In little endian*\/$/;"	m	struct:sample_ra_msg2_t
+sign_type	src/enclave/ServiceProvider/ias_ra.h	/^    uint16_t                sign_type;      \/\/ 2$/;"	m	struct:sample_quote_t
+signature	src/enclave/Include/jni.h	/^    char *signature;$/;"	m	struct:__anon1
+signature	src/enclave/ServiceProvider/ias_ra.h	/^    uint8_t                 signature[];    \/\/ 436$/;"	m	struct:sample_quote_t
+signature	src/enclave/ServiceProvider/remote_attestation_result.h	/^     sample_ec_sign256_t signature;$/;"	m	struct:ias_platform_info_blob_t
+signature_len	src/enclave/ServiceProvider/ias_ra.h	/^    uint32_t                signature_len;  \/\/ 432$/;"	m	struct:sample_quote_t
+size	src/enclave/ServiceProvider/service_provider.h	/^    uint32_t size;      \/*size of the response body*\/$/;"	m	struct:_ra_samp_response_header_t
+size	src/enclave/ServiceProvider/service_provider.h	/^    uint32_t size;     \/*size of request body*\/$/;"	m	struct:_ra_samp_request_header_t
+sk_key	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_aes_gcm_128bit_key_t       sk_key;   \/\/ Shared secret key for encryption$/;"	m	struct:_sp_db_item_t	file:
+smk_key	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_aes_gcm_128bit_key_t       smk_key;  \/\/ Used only for SIGMA protocol$/;"	m	struct:_sp_db_item_t	file:
+sort_expr	src/enclave/Enclave/ExpressionEvaluation.h	/^  const tuix::SortExpr *sort_expr;$/;"	m	class:FlatbuffersSortOrderEvaluator
+sort_order_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> sort_order_evaluators;$/;"	m	class:FlatbuffersSortOrderEvaluator
+sort_single_encrypted_block	src/enclave/Enclave/Sort.cpp	/^flatbuffers::Offset<tuix::EncryptedBlocks> sort_single_encrypted_block($/;"	f
+sorted_runs	src/enclave/Enclave/Flatbuffers.h	/^  const tuix::SortedRuns *sorted_runs;$/;"	m	class:SortedRunsReader
+sp_aes_gcm_data_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^typedef struct sp_aes_gcm_data_t {$/;"	s
+sp_aes_gcm_data_t	src/enclave/ServiceProvider/remote_attestation_result.h	/^} sp_aes_gcm_data_t;$/;"	t	typeref:struct:sp_aes_gcm_data_t
+sp_db_item_t	src/enclave/ServiceProvider/service_provider.cpp	/^} sp_db_item_t;$/;"	t	typeref:struct:_sp_db_item_t	file:
+sp_ra_msg_status_t	src/enclave/ServiceProvider/service_provider.h	/^} sp_ra_msg_status_t;$/;"	t	typeref:enum:__anon5
+sp_ra_proc_msg0_req	src/enclave/ServiceProvider/service_provider.cpp	/^int sp_ra_proc_msg0_req(uint32_t extended_epid_group_id) {$/;"	f
+sp_ra_proc_msg1_req	src/enclave/ServiceProvider/service_provider.cpp	/^int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,$/;"	f
+sp_ra_proc_msg3_req	src/enclave/ServiceProvider/service_provider.cpp	/^int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,$/;"	f
+spid	src/enclave/ServiceProvider/service_provider.h	/^    sample_spid_t               spid;       \/* In little endian*\/$/;"	m	struct:sample_ra_msg2_t
+state	src/enclave/Enclave/sgxaes.h	/^	State state;$/;"	m	struct:AesGcm
+status	src/enclave/ServiceProvider/ias_ra.h	/^    ias_quote_status_t      status;$/;"	m	struct:_ias_att_report_t
+status	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  status[2];$/;"	m	struct:_ra_samp_response_header_t
+std	src/enclave/Common/common.h	/^namespace std {$/;"	n
+std	src/enclave/Enclave/util.h	/^namespace std {$/;"	n
+str_MK	src/enclave/ServiceProvider/ecp.cpp	/^const char str_MK[] = "MK";$/;"	v
+str_SK	src/enclave/ServiceProvider/ecp.cpp	/^const char str_SK[] = "SK";$/;"	v
+str_SMK	src/enclave/ServiceProvider/ecp.cpp	/^const char str_SMK[] = "SMK";$/;"	v
+str_VK	src/enclave/ServiceProvider/ecp.cpp	/^const char str_VK[] = "VK";$/;"	v
+string	data/disease/synth_disease_data.py	/^import string$/;"	i
+sug	src/enclave/App/App.cpp	/^  const char *sug; \/* Suggestion *\/$/;"	m	struct:_sgx_errlist_t	file:
+sys	data/disease/synth_disease_data.py	/^import sys$/;"	i
+t	src/enclave/Enclave/sgxaes.h	/^	unsigned char t[16];$/;"	m	struct:Tag
+t	src/enclave/Enclave/sgxaes.h	/^	unsigned char t[AES_BLOCK_SIZE];$/;"	m	struct:GcmContext
+tag	src/enclave/Enclave/sgxaes.cpp	/^Tag AesGcm::tag() const {$/;"	f	class:AesGcm
+time_end	src/enclave/App/App.cpp	/^  uint64_t time_start, time_end;$/;"	m	class:scoped_timer	file:
+time_start	src/enclave/App/App.cpp	/^  uint64_t time_start, time_end;$/;"	m	class:scoped_timer	file:
+to_string	src/enclave/Enclave/Flatbuffers.cpp	/^std::string to_string(const Date &date) {$/;"	f
+total_cipher_size	src/enclave/Enclave/Crypto.h	/^  uint32_t total_cipher_size;$/;"	m	class:StreamDecipher
+total_num_rows	src/enclave/Enclave/Flatbuffers.h	/^  uint32_t total_num_rows;$/;"	m	class:FlatbuffersRowWriter
+total_time	src/enclave/App/App.cpp	/^  uint64_t * total_time;$/;"	m	class:scoped_timer	file:
+type	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  type;      \/* set to one of ra_msg_type_t*\/$/;"	m	struct:_ra_samp_response_header_t
+type	src/enclave/ServiceProvider/service_provider.h	/^    uint8_t  type;     \/* set to one of ra_msg_type_t*\/$/;"	m	struct:_ra_samp_request_header_t
+untrusted_alloc	src/enclave/Enclave/Flatbuffers.h	/^  UntrustedMemoryAllocator untrusted_alloc;$/;"	m	class:FlatbuffersRowWriter
+update	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<const tuix::Field *> update(const tuix::Row *concat) {$/;"	f	class:AggregateExpressionEvaluator
+update_build_props_sbt	build/sbt	/^update_build_props_sbt () {$/;"	f
+update_evaluators	src/enclave/Enclave/ExpressionEvaluation.h	/^  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;$/;"	m	class:AggregateExpressionEvaluator
+url_base	build/sbt	/^url_base () {$/;"	f
+usage	build/sbt	/^usage () {$/;"	f
+v	src/enclave/Enclave/Sort.cpp	/^  const tuix::Row *v;$/;"	m	class:MergeItem	file:
+verify_att_result_mac	src/enclave/Enclave/isv_enclave.cpp	/^sgx_status_t verify_att_result_mac(sgx_ra_context_t context,$/;"	f
+verify_attestation_evidence	src/enclave/ServiceProvider/service_provider.h	/^    sample_verify_attestation_evidence verify_attestation_evidence;$/;"	m	struct:sample_extended_epid_group
+verify_cmac128	src/enclave/ServiceProvider/ecp.cpp	/^bool verify_cmac128(lc_cmac_128bit_key_t mac_key,$/;"	f
+version	src/enclave/Include/jni.h	/^    jint version;$/;"	m	struct:JavaVMAttachArgs
+version	src/enclave/Include/jni.h	/^    jint version;$/;"	m	struct:JavaVMInitArgs
+version	src/enclave/ServiceProvider/ias_ra.h	/^    uint16_t                version;        \/\/ 0$/;"	m	struct:sample_quote_t
+vk_key	src/enclave/ServiceProvider/service_provider.cpp	/^  lc_aes_gcm_128bit_key_t       vk_key;   \/\/ Shared secret key for the REPORT_DATA$/;"	m	struct:_sp_db_item_t	file:
+vlog	build/sbt	/^vlog ()    { [[ -n "$verbose" ]] && echoerr "$@"; }$/;"	f
+write	src/enclave/Enclave/Flatbuffers.h	/^  void write(const std::vector<const tuix::Field *> &row_fields) {$/;"	f	class:FlatbuffersRowWriter
+write	src/enclave/Enclave/Flatbuffers.h	/^  void write(const tuix::Row *row) {$/;"	f	class:FlatbuffersRowWriter
+write	src/enclave/Enclave/Flatbuffers.h	/^  void write(const tuix::Row *row1, const tuix::Row *row2) {$/;"	f	class:FlatbuffersRowWriter
+write_encrypted_block	src/enclave/Enclave/Flatbuffers.h	/^  void write_encrypted_block() {$/;"	f	class:FlatbuffersRowWriter
+write_encrypted_blocks	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Offset<tuix::EncryptedBlocks> write_encrypted_blocks() {$/;"	f	class:FlatbuffersRowWriter
+write_pubkey	src/enclave/ServiceProvider/service_provider.cpp	/^void write_pubkey(const char *filename,$/;"	f
+write_sorted_runs	src/enclave/Enclave/Flatbuffers.h	/^  flatbuffers::Offset<tuix::SortedRuns> write_sorted_runs($/;"	f	class:FlatbuffersRowWriter
+x	src/enclave/ServiceProvider/remote_attestation_result.h	/^    uint32_t x[SAMPLE_NISTP256_KEY_SIZE];$/;"	m	struct:sample_ec_sign256_t
+x	src/enclave/ServiceProvider/sp_crypto.h	/^    uint32_t x[LC_NISTP_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_signature_t
+x	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint32_t x[SAMPLE_NISTP_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_signature_t
+x0	src/enclave/Enclave/sgxaes.h	/^	unsigned char x0[AES_BLOCK_SIZE];$/;"	m	struct:GcmContext
+xfrm	src/enclave/ServiceProvider/ias_ra.h	/^    uint64_t                xfrm;$/;"	m	struct:sample_attributes_t
+y	src/enclave/ServiceProvider/remote_attestation_result.h	/^    uint32_t y[SAMPLE_NISTP256_KEY_SIZE];$/;"	m	struct:sample_ec_sign256_t
+y	src/enclave/ServiceProvider/sp_crypto.h	/^    uint32_t y[LC_NISTP_ECP256_KEY_SIZE];$/;"	m	struct:lc_ec256_signature_t
+y	src/enclave/sample_libcrypto/sample_libcrypto.h	/^    uint32_t y[SAMPLE_NISTP_ECP256_KEY_SIZE];$/;"	m	struct:sample_ec256_signature_t
+z	src/enclave/Include/jni.h	/^    jboolean z;$/;"	m	union:jvalue
+~MAC	src/enclave/Enclave/Crypto.h	/^  ~MAC() {$/;"	f	class:MAC
+~StreamCipher	src/enclave/Enclave/Crypto.cpp	/^StreamCipher::~StreamCipher() {$/;"	f	class:StreamCipher
+~StreamDecipher	src/enclave/Enclave/Crypto.cpp	/^StreamDecipher::~StreamDecipher() {$/;"	f	class:StreamDecipher
+~scoped_timer	src/enclave/App/App.cpp	/^  ~scoped_timer() {$/;"	f	class:scoped_timer
