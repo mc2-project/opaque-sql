@@ -10,7 +10,8 @@ import org.apache.spark.SparkContext
 // 		    appName("Console").
 // 		    config("spark.app.id", "Console").   // to silence Metrics warning
 // 		    getOrCreate()
-// 		edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
+
+edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
 
 val df1 = spark.read.json("person.json")
 val df1_repart = df1.repartition(5)
@@ -27,6 +28,6 @@ val df2_repart_enc = df2_repart.encrypted
 df1_repart_enc.repartition(5)
 
 val enc_join = df1_repart_enc.join(df2_repart_enc, Seq("PersonID"))
-enc_join.show
+// enc_join.show
 // 	}
 // }
