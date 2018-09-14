@@ -1,7 +1,15 @@
 import edu.berkeley.cs.rise.opaque.implicits._
+import org.apache.spark.sql.SparkSession
+  import org.apache.spark.SparkContext
+  
 
 object Join {
 	def main(args: Array[String]): Unit = {
+		val spark = SparkSession.builder.
+		    master("local[*]").
+		    appName("Console").
+		    config("spark.app.id", "Console").   // to silence Metrics warning
+		    getOrCreate()
 		edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
 
 		val df1 = spark.read.json("person.json")
