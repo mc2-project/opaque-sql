@@ -307,6 +307,8 @@ case class EncryptedSortMergeJoinExec(
         sparkContext.parallelize(shifted, childRDD.partitions.length)
 
       // TODO: Fix this zipPartitions
+      println(childRDD.getNumPartitions)
+      println(processedJoinRowsRDD.getNumPartitions)
       childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
         (blockIter.toSeq, joinRowIter.toSeq) match {
           case (Seq(block), Seq(joinRow)) =>
