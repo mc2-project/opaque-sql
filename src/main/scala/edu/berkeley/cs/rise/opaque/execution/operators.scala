@@ -306,7 +306,8 @@ case class EncryptedSortMergeJoinExec(
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      // TODO: Fix this zipPartitions
+      // TODO
+      println("In encrypted sort merge join exec")
       println(childRDD.getNumPartitions)
       println(processedJoinRowsRDD.getNumPartitions)
       childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
@@ -340,7 +341,10 @@ case class ObliviousUnionExec(
 
     // RA.initRA(leftRDD)
 
-    // fix this zipPartitions
+    //  TODO
+    println("In oblivious union exec")
+    println(childRDD.getNumPartitions)
+    println(processedJoinRowsRDD.getNumPartitions)
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
         case Seq(leftBlock, rightBlock) =>
