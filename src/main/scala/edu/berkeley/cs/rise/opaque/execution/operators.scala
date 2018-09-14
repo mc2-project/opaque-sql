@@ -344,7 +344,7 @@ case class ObliviousUnionExec(
     //  TODO
     println("In oblivious union exec")
     println(leftRDD.getNumPartitions)
-    println(right.getNumPartitions)
+    println(rightRDD.getNumPartitions)
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
         case Seq(leftBlock, rightBlock) =>
