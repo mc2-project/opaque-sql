@@ -1,5 +1,7 @@
 import edu.berkeley.cs.rise.opaque.implicits._
-edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
+import edu.berkeley.cs.rise.opaque._
+
+Utils.initSQLContext(spark.sqlContext)
 
 val df1 = spark.read.json("person.json")
 val df1_repart = df1.repartition(5)
