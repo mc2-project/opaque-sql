@@ -263,7 +263,6 @@ case class EncryptedAggregateExec(
       assert(shifted.size == childRDD.partitions.length)
       val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      // TODO: fix this
       childRDD.zipPartitions(shiftedRDD) { (blockIter, boundaryIter) =>
         (blockIter.toSeq, boundaryIter.toSeq) match {
           case (Seq(block), Seq(Tuple3(
@@ -342,11 +341,13 @@ case class ObliviousUnionExec(
     val num_left_partitions = leftRDD.getNumPartitions
     val num_right_partitions = rightRDD.getNumPartitions
     if (num_left_partitions != num_right_partitions) {
-      if (num_left_partitions > num_right_partitions) {
-        leftRDD = leftRDD.repartition(num_right_partitions)
-      } else {
-        rightRDD = rightRDD.repartition(num_left_partitions)
-      }
+      // if (num_left_partitions > num_right_partitions) {
+      //   leftRDD = leftRDD.repartition(num_right_partitions)
+      // } else {
+      //   rightRDD = rightRDD.repartition(num_left_partitions)
+      // }
+      leftRDD = leftRDD.repartition(1)
+      rightRDD = rightRDD.reparition(1)
     }
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
