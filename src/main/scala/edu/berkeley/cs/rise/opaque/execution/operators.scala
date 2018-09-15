@@ -306,10 +306,6 @@ case class EncryptedSortMergeJoinExec(
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      // TODO
-      println("In encrypted sort merge join exec")
-      println(childRDD.getNumPartitions)
-      println(processedJoinRowsRDD.getNumPartitions)
       childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
         (blockIter.toSeq, joinRowIter.toSeq) match {
           case (Seq(block), Seq(joinRow)) =>
@@ -332,8 +328,8 @@ case class ObliviousUnionExec(
     left.output
 
   override def executeBlocked() = {
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)
     time("Force left child of ObliviousUnionExec") { leftRDD.count }
     Utils.ensureCached(rightRDD)
@@ -343,8 +339,15 @@ case class ObliviousUnionExec(
 
     //  TODO
     println("In oblivious union exec")
-    println(leftRDD.getNumPartitions)
-    println(rightRDD.getNumPartitions)
+    val num_left_partitions = leftRDD.getNumPartitions
+    val num_right_partitions = rightRDD.getNumPartitions
+    if (num_left_partitions != num_right_partitions) {
+      if (num_left_partitions > num_right_partitions) {
+        rightRDD = rightRDD.repartition(num_left_partitions)
+      } else {
+        leftRDD = leftRDD.repartition(num_right_partitions)
+      }
+    }
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
         case Seq(leftBlock, rightBlock) =>
