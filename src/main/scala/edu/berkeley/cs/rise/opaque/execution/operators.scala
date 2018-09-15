@@ -347,7 +347,7 @@ case class ObliviousUnionExec(
       //   rightRDD = rightRDD.repartition(num_left_partitions)
       // }
       leftRDD = leftRDD.repartition(1)
-      rightRDD = rightRDD.reparition(1)
+      rightRDD = rightRDD.repartition(1)
     }
     val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
       (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
