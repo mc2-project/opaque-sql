@@ -347,13 +347,9 @@ case class ObliviousUnionExec(
         rightRDD = rightRDD.coalesce(num_left_partitions)
       }
     }
-    val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
-        case Seq(leftBlock, rightBlock) =>
-          Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
-        case Seq(block) => Iterator(block)
-        case Seq() => Iterator.empty
-      }
+    val unioned = leftRDD.zipPartitions(rightRDD.repartition(leftRDD.partitions.length)) {
+      (leftBlockIter, rightBlockIter) =>
+        Iterator(Utils.concatEncryptedBlocks(leftBlockIter.toSeq ++ rightBlockIter.toSeq))
     }
     Utils.ensureCached(unioned)
     time("ObliviousUnionExec") { unioned.count }
