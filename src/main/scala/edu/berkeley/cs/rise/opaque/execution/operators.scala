@@ -336,10 +336,13 @@ case class ObliviousUnionExec(
 
     // RA.initRA(leftRDD)
 
-    val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      (leftBlockIter.toSeq, rightBlockIter.toSeq) match {
-        case (Seq(leftBlock), Seq(rightBlock)) =>
-          Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
+    val num_left_partitions = leftRDD.getNumPartitions
+    val num_right_partitions = rightRDD.getNumPartitions
+    if (num_left_partitions != num_right_partitions) {
+      if (num_left_partitions > num_right_partitions) {
+        leftRDD = leftRDD.coalesce(num_right_partitions)
+      } else {
+        rightRDD = rightRDD.coalesce(num_left_partitions)
       }
     }
     val unioned = leftRDD.zipPartitions(rightRDD) {

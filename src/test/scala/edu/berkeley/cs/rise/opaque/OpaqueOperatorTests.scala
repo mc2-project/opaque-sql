@@ -333,4 +333,19 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .getOrCreate()
 
   override def numPartitions = 3
+
+  import testImplicits._
+  def makePartitionedDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+    data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*): DataFrame =
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*))
+  testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = makeDF(p_data, securityLevel, "pk", "x")
+    val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
 }
