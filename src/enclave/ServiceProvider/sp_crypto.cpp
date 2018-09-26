@@ -549,6 +549,18 @@ lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
 
 }
 
+// OpenSSL 1.0.2 backward compatibility - see
+// https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)
+{
+    if (pr != NULL)
+        *pr = sig->r;
+    if (ps != NULL)
+        *ps = sig->s;
+}
+#endif
+
 lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
                           uint32_t data_size,
                           lc_ec256_private_t *p_private,
@@ -586,8 +598,10 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   unsigned char * x_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
   unsigned char * y_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
-  BN_bn2bin(sig->r, (uint8_t *) x_);
-  BN_bn2bin(sig->s, (uint8_t *) y_);
+  BIGNUM *pr, *ps;
+  ECDSA_SIG_get0(sig, &pr, &ps);
+  BN_bn2bin(pr, (uint8_t *) x_);
+  BN_bn2bin(ps, (uint8_t *) y_);
 
   // reverse r and s
   reverse_endian(x_, (uint8_t *) p_signature->x, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
