@@ -282,7 +282,7 @@ private:
 };
 
 
-class UntrustedMemoryAllocator : public flatbuffers::simple_allocator {
+class UntrustedMemoryAllocator : public flatbuffers::Allocator {
 public:
   virtual uint8_t *allocate(size_t size) const {
     uint8_t *result = nullptr;
