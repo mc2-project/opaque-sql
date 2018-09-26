@@ -598,7 +598,7 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   unsigned char * x_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
   unsigned char * y_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
-  BIGNUM *pr, *ps;
+  const BIGNUM *pr, *ps;
   ECDSA_SIG_get0(sig, &pr, &ps);
   BN_bn2bin(pr, (uint8_t *) x_);
   BN_bn2bin(ps, (uint8_t *) y_);
