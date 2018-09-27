@@ -148,8 +148,6 @@ int read_secret_key(const char *filename,
   EVP_PKEY *pkey = PEM_read_PrivateKey(secret_key_file, NULL, NULL, NULL);
   if (pkey == NULL) {
     printf("[read_secret_key] returned private key is null\n");
-  } else {
-    assert(EVP_PKEY_type(pkey->type) == EVP_PKEY_EC);
   }
 
   BIO *o = BIO_new_fp(stdout, BIO_NOCLOSE);
