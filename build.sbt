@@ -138,7 +138,6 @@ sgxGdbTask := {
   (compile in Test).value
   Process(Seq(
     "sgx-gdb", "java",
-    "-Xmx2048m",
     "-x",
     ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
     None,
