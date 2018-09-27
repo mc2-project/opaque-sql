@@ -137,11 +137,10 @@ cleanupCommands in console := "spark.stop()"
 sgxGdbTask := {
   (compile in Test).value
   Process(Seq(
-    "sgx-gdb", "java")
-    ++ (javaOptions in Test).value
-    ++ Seq(
-      "-x",
-      ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
+    "sgx-gdb", "java",
+    "-Xmx2048m",
+    "-x",
+    ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
     None,
     "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!
 }
