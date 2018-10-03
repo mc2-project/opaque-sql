@@ -32,8 +32,11 @@ After downloading the Opaque codebase, build and test it as follows:
     ```sh
     # For Ubuntu 16.04:
     sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
+    
+    # For Ubuntu 18.04:
+    sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool wget python default-jdk cmake libssl-dev
 
-    git clone https://github.com/intel/linux-sgx.git -b sgx_2.1.3
+    git clone https://github.com/intel/linux-sgx.git -b sgx_2.3
     cd linux-sgx
     ./download_prebuilt.sh
     make sdk_install_pkg
