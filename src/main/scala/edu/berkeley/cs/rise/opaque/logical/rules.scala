@@ -33,26 +33,12 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-    case Encrypt(isOblivious, LocalRelation(output, data)) =>
-      EncryptedLocalRelation(output, data, isOblivious)
+    case Encrypt(LocalRelation(output, data)) =>
+      EncryptedLocalRelation(output, data)
   }
 }
 
 object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
-  def isOblivious(plan: LogicalPlan): Boolean = {
-    isEncrypted(plan) && plan.find {
-      case p: OpaqueOperator => p.isOblivious
-      case _ => false
-    }.nonEmpty
-  }
-
-  def isOblivious(plan: SparkPlan): Boolean = {
-    isEncrypted(plan) && plan.find {
-      case p: OpaqueOperatorExec => p.isOblivious
-      case _ => false
-    }.nonEmpty
-  }
-
   def isEncrypted(plan: LogicalPlan): Boolean = {
     plan.find {
       case _: OpaqueOperator => true
@@ -69,10 +55,8 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
 
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case l @ LogicalRelation(baseRelation: EncryptedScan, _, _) =>
-      EncryptedBlockRDD(l.output, baseRelation.buildBlockedScan(), baseRelation.isOblivious)
+      EncryptedBlockRDD(l.output, baseRelation.buildBlockedScan())
 
-    case p @ Project(projectList, child) if isOblivious(child) =>
-      ObliviousProject(projectList, child.asInstanceOf[OpaqueOperator])
     case p @ Project(projectList, child) if isEncrypted(child) =>
       EncryptedProject(projectList, child.asInstanceOf[OpaqueOperator])
 
@@ -83,40 +67,16 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
       child
 
-    case p @ Filter(condition, child) if isOblivious(child) =>
-      ObliviousFilter(condition, ObliviousPermute(child.asInstanceOf[OpaqueOperator]))
     case p @ Filter(condition, child) if isEncrypted(child) =>
       EncryptedFilter(condition, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Sort(order, true, child) if isOblivious(child) =>
-      ObliviousSort(order, child.asInstanceOf[OpaqueOperator])
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Join(left, right, joinType, condition) if isOblivious(p) =>
-      ObliviousJoin(
-        left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
     case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
-    case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
-      UndoCollapseProject.separateProjectAndAgg(p) match {
-        case Some((projectExprs, aggExprs)) =>
-          ObliviousProject(
-            projectExprs,
-            ObliviousAggregate(
-              groupingExprs, aggExprs,
-              ObliviousSort(
-                groupingExprs.map(e => SortOrder(e, Ascending)),
-                child.asInstanceOf[OpaqueOperator])))
-        case None =>
-          ObliviousAggregate(
-            groupingExprs, aggExprs,
-            ObliviousSort(
-              groupingExprs.map(e => SortOrder(e, Ascending)),
-              child.asInstanceOf[OpaqueOperator]))
-      }
     case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
       UndoCollapseProject.separateProjectAndAgg(p) match {
         case Some((projectExprs, aggExprs)) =>
@@ -140,14 +100,13 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ LocalLimit(_, child) if isEncrypted(p) => child
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
-      ObliviousUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
+      EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
 
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(
         output,
         Utils.ensureCached(
           child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-          storageLevel),
-        isOblivious(child))
+          storageLevel))
   }
 }

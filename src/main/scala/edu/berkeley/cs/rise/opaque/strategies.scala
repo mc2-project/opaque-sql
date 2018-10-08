@@ -36,10 +36,10 @@ import edu.berkeley.cs.rise.opaque.logical._
 object OpaqueOperators extends Strategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case EncryptedProject(projectList, child) =>
-      ObliviousProjectExec(projectList, planLater(child)) :: Nil
+      EncryptedProjectExec(projectList, planLater(child)) :: Nil
 
     case EncryptedFilter(condition, child) =>
-      ObliviousFilterExec(condition, planLater(child)) :: Nil
+      EncryptedFilterExec(condition, planLater(child)) :: Nil
 
     case EncryptedSort(order, child) =>
       EncryptedSortExec(order, planLater(child)) :: Nil
@@ -49,9 +49,9 @@ object OpaqueOperators extends Strategy {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
           val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
           val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
-          val leftProj = ObliviousProjectExec(leftProjSchema, planLater(left))
-          val rightProj = ObliviousProjectExec(rightProjSchema, planLater(right))
-          val unioned = ObliviousUnionExec(leftProj, rightProj)
+          val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
+          val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
+          val unioned = EncryptedUnionExec(leftProj, rightProj)
           val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned)
           val joined = EncryptedSortMergeJoinExec(
             joinType,
@@ -61,24 +61,24 @@ object OpaqueOperators extends Strategy {
             rightProjSchema.map(_.toAttribute),
             (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
             sorted)
-          ObliviousProjectExec(dropTags(left.output, right.output), joined) :: Nil
+          EncryptedProjectExec(dropTags(left.output, right.output), joined) :: Nil
         case _ => Nil
       }
 
     case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
       EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
 
-    case ObliviousUnion(left, right) =>
-      ObliviousUnionExec(planLater(left), planLater(right)) :: Nil
+    case EncryptedUnion(left, right) =>
+      EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
 
-    case Encrypt(isOblivious, child) =>
-      EncryptExec(isOblivious, planLater(child)) :: Nil
+    case Encrypt(child) =>
+      EncryptExec(planLater(child)) :: Nil
 
-    case EncryptedLocalRelation(output, plaintextData, isOblivious) =>
-      EncryptedLocalTableScanExec(output, plaintextData, isOblivious) :: Nil
+    case EncryptedLocalRelation(output, plaintextData) =>
+      EncryptedLocalTableScanExec(output, plaintextData) :: Nil
 
-    case EncryptedBlockRDD(output, rdd, isOblivious) =>
-      EncryptedBlockRDDScanExec(output, rdd, isOblivious) :: Nil
+    case EncryptedBlockRDD(output, rdd) =>
+      EncryptedBlockRDDScanExec(output, rdd) :: Nil
 
     case _ => Nil
   }
