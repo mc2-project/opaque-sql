@@ -263,9 +263,21 @@ synthTestDataTask := {
       diseaseDir <- (baseDirectory.value / "data" / "disease").get
       name <- Seq("disease.csv", "gene.csv", "treatment.csv", "patient-125.csv")
     } yield new File(diseaseDir, name)
+  val tpchDataFiles =
+    for {
+      tpchDir <- (baseDirectory.value / "data" / "tpch" / "sf_small").get
+      name <- Seq(
+        "customer.tbl", "lineitem.tbl", "nation.tbl", "orders.tbl", "partsupp.tbl", "part.tbl",
+        "region.tbl", "supplier.tbl")
+    } yield new File(tpchDir, name)
   if (!diseaseDataFiles.forall(_.exists)) {
     import sys.process._
     val ret = Seq("data/disease/synth-disease-data").!
-    if (ret != 0) sys.error("Failed to synthesize test data.")
+    if (ret != 0) sys.error("Failed to synthesize disease test data.")
+  }
+  if (!tpchDataFiles.forall(_.exists)) {
+    import sys.process._
+    val ret = Seq("data/tpch/synth-tpch-data").!
+    if (ret != 0) sys.error("Failed to synthesize TPC-H test data.")
   }
 }

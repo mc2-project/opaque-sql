@@ -1,4 +1,10 @@
-#!/bin/sh
+#!/bin/bash
+
+set -eu
+
+cd "$(dirname $0)"
+
+rm -rf tpch-dbgen
 git clone https://github.com/electrum/tpch-dbgen
 cd tpch-dbgen
 make
