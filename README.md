@@ -32,8 +32,11 @@ After downloading the Opaque codebase, build and test it as follows:
     ```sh
     # For Ubuntu 16.04:
     sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
+    
+    # For Ubuntu 18.04:
+    sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool wget python default-jdk cmake libssl-dev
 
-    git clone https://github.com/ankurdave/linux-sgx -b c++11
+    git clone https://github.com/intel/linux-sgx.git -b sgx_2.3
     cd linux-sgx
     ./download_prebuilt.sh
     make sdk_install_pkg
@@ -69,7 +72,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming Spark is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.0.2](https://github.com/apache/spark/releases/tag/v2.0.2) is already installed:
 
 1. Package Opaque into a JAR:
 

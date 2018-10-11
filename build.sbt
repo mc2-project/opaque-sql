@@ -14,7 +14,7 @@ sparkComponents ++= Seq("core", "sql", "catalyst")
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 
-val flatbuffersVersion = "1.6.0"
+val flatbuffersVersion = "1.7.0"
 
 parallelExecution := false
 
