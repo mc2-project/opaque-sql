@@ -254,7 +254,7 @@ object Utils {
 
 
   def flatbuffersCreateField(
-      builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = { 
+      builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
       case (b: Boolean, BooleanType) =>
         tuix.Field.createField(
@@ -452,14 +452,15 @@ object Utils {
           UTF8String.fromBytes(sBytes)
         case tuix.FieldUnion.BinaryField =>
           val binaryField = f.value(new tuix.BinaryField).asInstanceOf[tuix.BinaryField]
-          val length = binaryField.length;
+          val length = binaryField.length
           val bBytes = new Array[Byte](length.toInt)
           binaryField.valueAsByteBuffer.get(bBytes)
           bBytes
         case tuix.FieldUnion.ByteField =>
           f.value(new tuix.ByteField).asInstanceOf[tuix.ByteField].value
         case tuix.FieldUnion.CalendarIntervalField =>
-          val calendarIntervalField = f.value(new tuix.CalendarIntervalField).asInstanceOf[tuix.CalendarIntervalField]
+          val calendarIntervalField =
+            f.value(new tuix.CalendarIntervalField).asInstanceOf[tuix.CalendarIntervalField]
           val months = calendarIntervalField.months
           val microseconds = calendarIntervalField.microseconds
           new CalendarInterval(months, microseconds)

@@ -16,7 +16,7 @@ enum ColType : ubyte {
     CalendarIntervalType,
     NullType,
     ShortType,
-    TimestampType
+    TimestampType,
 }
 
 table BooleanField {
