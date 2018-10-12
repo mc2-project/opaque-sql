@@ -50,8 +50,7 @@ trait BinaryExecNode extends SparkPlan {
 
 case class EncryptedLocalTableScanExec(
     output: Seq[Attribute],
-    plaintextData: Seq[InternalRow],
-    override val isOblivious: Boolean)
+    plaintextData: Seq[InternalRow])
   extends LeafExecNode with OpaqueOperatorExec {
 
   private val unsafeRows: Array[InternalRow] = {
@@ -84,9 +83,7 @@ case class EncryptedLocalTableScanExec(
   }
 }
 
-case class EncryptExec(
-    override val isOblivious: Boolean,
-    child: SparkPlan)
+case class EncryptExec(child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
@@ -100,8 +97,7 @@ case class EncryptExec(
 
 case class EncryptedBlockRDDScanExec(
     output: Seq[Attribute],
-    rdd: RDD[Block],
-    override val isOblivious: Boolean)
+    rdd: RDD[Block])
   extends LeafExecNode with OpaqueOperatorExec {
 
   override def executeBlocked(): RDD[Block] = rdd
@@ -111,11 +107,6 @@ case class Block(bytes: Array[Byte]) extends Serializable
 
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
-
-  def isOblivious: Boolean = children.exists(_.find {
-    case p: OpaqueOperatorExec => p.isOblivious
-    case _ => false
-  }.nonEmpty)
 
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
     import Utils.time
@@ -197,14 +188,14 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 }
 
-case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
+case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked() = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "ObliviousProjectExec") {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Project(eid, projectListSer, block.bytes))
@@ -214,14 +205,14 @@ case class ObliviousProjectExec(projectList: Seq[NamedExpression], child: SparkP
 }
 
 
-case class ObliviousFilterExec(condition: Expression, child: SparkPlan)
+case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "ObliviousFilterExec") {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Filter(eid, conditionSer, block.bytes))
@@ -317,7 +308,7 @@ case class EncryptedSortMergeJoinExec(
   }
 }
 
-case class ObliviousUnionExec(
+case class EncryptedUnionExec(
     left: SparkPlan,
     right: SparkPlan)
   extends BinaryExecNode with OpaqueOperatorExec {
@@ -330,9 +321,9 @@ case class ObliviousUnionExec(
     var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)
-    time("Force left child of ObliviousUnionExec") { leftRDD.count }
+    time("Force left child of EncryptedUnionExec") { leftRDD.count }
     Utils.ensureCached(rightRDD)
-    time("Force right child of ObliviousUnionExec") { rightRDD.count }
+    time("Force right child of EncryptedUnionExec") { rightRDD.count }
 
     // RA.initRA(leftRDD)
 
@@ -350,7 +341,7 @@ case class ObliviousUnionExec(
         Iterator(Utils.concatEncryptedBlocks(leftBlockIter.toSeq ++ rightBlockIter.toSeq))
     }
     Utils.ensureCached(unioned)
-    time("ObliviousUnionExec") { unioned.count }
+    time("EncryptedUnionExec") { unioned.count }
     unioned
   }
 }

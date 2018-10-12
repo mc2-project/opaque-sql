@@ -21,6 +21,6 @@ import edu.berkeley.cs.rise.opaque.logical.Encrypt
 
 class OpaqueDatasetFunctions[T](ds: Dataset[T]) extends Serializable {
   def encrypted(): DataFrame = {
-    Dataset.ofRows(ds.sparkSession, Encrypt(false, ds.logicalPlan))
+    Dataset.ofRows(ds.sparkSession, Encrypt(ds.logicalPlan))
   }
 }
