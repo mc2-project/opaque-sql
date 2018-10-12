@@ -32,6 +32,11 @@ import org.apache.spark.storage.StorageLevel
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.Row
+import org.apache.spark.unsafe.types.CalendarInterval
+import java.sql.Timestamp
+
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
 
@@ -78,6 +83,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
+  }
+
+  testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
+    val data: Seq[(Array[Byte], Byte)] = Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+    makeDF(data, securityLevel, "BinaryType", "ByteType").collect
+  }
+
+  testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema)).collect
+  }
+
+  testAgainstSpark("create DataFrame with ShortType + TimestampType") { securityLevel =>
+    val data: Seq[(Short, Timestamp)] = Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
+    makeDF(data, securityLevel, "ShortType", "TimestampType").collect
   }
 
   testAgainstSpark("filter") { securityLevel =>
@@ -340,7 +367,6 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .master("local[1]")
     .appName("QEDSuite")
     .config("spark.sql.shuffle.partitions", 3)
-    .config("spark.default.parallelism", 3)
     .getOrCreate()
 
   override def numPartitions = 3

@@ -23,6 +23,7 @@ import java.nio.ByteOrder
 import java.util.UUID
 
 import scala.collection.mutable.ArrayBuilder
+import org.apache.spark.unsafe.types.CalendarInterval
 
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.rdd.RDD
@@ -292,6 +293,12 @@ object Utils {
           tuix.FieldUnion.FloatField,
           tuix.FloatField.createFloatField(builder, x),
           isNull)
+      case (null, FloatType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, 0),
+          isNull)
       case (x: Double, DoubleType) =>
         tuix.Field.createField(
           builder,
@@ -309,6 +316,93 @@ object Utils {
           builder,
           tuix.FieldUnion.DateField,
           tuix.DateField.createDateField(builder, x),
+          isNull)
+      case (null, DateType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.DateField,
+          tuix.DateField.createDateField(builder, 0),
+          isNull)
+      case (x: Array[Byte], BinaryType) =>
+        val length = x.size
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.BinaryField,
+          tuix.BinaryField.createBinaryField(
+            builder, 
+            tuix.BinaryField.createValueVector(builder, x),
+            length),
+          isNull)
+      case (null, BinaryType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.BinaryField,
+          tuix.BinaryField.createBinaryField(
+            builder,
+            tuix.BinaryField.createValueVector(builder, Array.empty),
+            0),
+          isNull)
+      case (x: Byte, ByteType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ByteField,
+          tuix.ByteField.createByteField(builder, x),
+          isNull)
+      case (null, ByteType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ByteField,
+          tuix.ByteField.createByteField(builder, 0),
+          isNull)
+      case (x: CalendarInterval, CalendarIntervalType) =>
+        val months = x.months
+        val microseconds = x.microseconds
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.CalendarIntervalField,
+          tuix.CalendarIntervalField.createCalendarIntervalField(builder, months, microseconds),
+          isNull)
+      case (null, CalendarIntervalType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.CalendarIntervalField,
+          tuix.CalendarIntervalField.createCalendarIntervalField(builder, 0, 0L),
+          isNull)
+      case (x: Byte, NullType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.NullField,
+          tuix.NullField.createNullField(builder, x),
+          isNull)
+      case (null, NullType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.NullField,
+          tuix.NullField.createNullField(builder, 0),
+          isNull)
+      case (x: Short, ShortType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ShortField,
+          tuix.ShortField.createShortField(builder, x),
+          isNull)
+      case (null, ShortType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ShortField,
+          tuix.ShortField.createShortField(builder, 0),
+          isNull)
+      case (x: Long, TimestampType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.TimestampField,
+          tuix.TimestampField.createTimestampField(builder, x),
+          isNull)
+      case (null, TimestampType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.TimestampField,
+          tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
       case (s: UTF8String, StringType) =>
         val utf8 = s.getBytes()
@@ -357,6 +451,26 @@ object Utils {
           val sBytes = new Array[Byte](stringField.length.toInt)
           stringField.valueAsByteBuffer.get(sBytes)
           UTF8String.fromBytes(sBytes)
+        case tuix.FieldUnion.BinaryField =>
+          val binaryField = f.value(new tuix.BinaryField).asInstanceOf[tuix.BinaryField]
+          val length = binaryField.length
+          val bBytes = new Array[Byte](length.toInt)
+          binaryField.valueAsByteBuffer.get(bBytes)
+          bBytes
+        case tuix.FieldUnion.ByteField =>
+          f.value(new tuix.ByteField).asInstanceOf[tuix.ByteField].value
+        case tuix.FieldUnion.CalendarIntervalField =>
+          val calendarIntervalField =
+            f.value(new tuix.CalendarIntervalField).asInstanceOf[tuix.CalendarIntervalField]
+          val months = calendarIntervalField.months
+          val microseconds = calendarIntervalField.microseconds
+          new CalendarInterval(months, microseconds)
+        case tuix.FieldUnion.NullField =>
+          f.value(new tuix.NullField).asInstanceOf[tuix.NullField].value
+        case tuix.FieldUnion.ShortField =>
+          f.value(new tuix.ShortField).asInstanceOf[tuix.ShortField].value
+        case tuix.FieldUnion.TimestampField =>
+          f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
       }
     }
   }
