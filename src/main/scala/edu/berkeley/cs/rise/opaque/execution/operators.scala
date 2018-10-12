@@ -327,8 +327,8 @@ case class ObliviousUnionExec(
     left.output
 
   override def executeBlocked() = {
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)
     time("Force left child of ObliviousUnionExec") { leftRDD.count }
     Utils.ensureCached(rightRDD)
@@ -336,13 +336,18 @@ case class ObliviousUnionExec(
 
     // RA.initRA(leftRDD)
 
-    val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      (leftBlockIter.toSeq ++ rightBlockIter.toSeq) match {
-        case Seq(leftBlock, rightBlock) =>
-          Iterator(Utils.concatEncryptedBlocks(Seq(leftBlock, rightBlock)))
-        case Seq(block) => Iterator(block)
-        case Seq() => Iterator.empty
+    val num_left_partitions = leftRDD.getNumPartitions
+    val num_right_partitions = rightRDD.getNumPartitions
+    if (num_left_partitions != num_right_partitions) {
+      if (num_left_partitions > num_right_partitions) {
+        leftRDD = leftRDD.coalesce(num_right_partitions)
+      } else {
+        rightRDD = rightRDD.coalesce(num_left_partitions)
       }
+    }
+    val unioned = leftRDD.zipPartitions(rightRDD) {
+      (leftBlockIter, rightBlockIter) =>
+        Iterator(Utils.concatEncryptedBlocks(leftBlockIter.toSeq ++ rightBlockIter.toSeq))
     }
     Utils.ensureCached(unioned)
     time("ObliviousUnionExec") { unioned.count }
