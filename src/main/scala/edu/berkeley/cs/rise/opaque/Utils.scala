@@ -255,7 +255,7 @@ object Utils {
 
 
   def flatbuffersCreateField(
-      builder: FlatBufferBuilder, value: Any, dataType: Either[ArrayType, DataType], isNull: Boolean): Int = {
+      builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
       case (b: Boolean, BooleanType) =>
         tuix.Field.createField(
@@ -404,7 +404,7 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
-      case (x: Array[Any], ArrayType) =>
+      case (x: Array[Any], Seq) =>
         val length = x.size
         tuix.Field.createField(
           builder,
