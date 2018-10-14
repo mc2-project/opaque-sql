@@ -107,6 +107,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     makeDF(data, securityLevel, "ShortType", "TimestampType").collect
   }
 
+  testAgainstSpark("create DataFrame with ArrayType + MapType") { securityLevel =>
+    val data: Seq[(Array, Map)] = Seq((Array[Int](0 -128, 127), Map("AL" -> "Alabama", "AK" -> "Alaska")))
+    makeDF(data, securityLevel, "ShortType", "TimestampType").collect
+  }
+
   testAgainstSpark("filter") { securityLevel =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),

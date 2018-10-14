@@ -17,6 +17,8 @@ enum ColType : ubyte {
     NullType,
     ShortType,
     TimestampType,
+    ArrayType,
+    MapType
 }
 
 table BooleanField {
@@ -74,8 +76,21 @@ table TimestampField {
     value:ulong;
 }
 
+table ArrayField {
+    value:[Field];
+}
+
+table KeyValuePair {
+    key:Field;
+    value:Field;
+}
+
+table MapField {
+    value:[KeyValuePair];
+}
+
 union FieldUnion {
-    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField, BinaryField, ByteField, CalendarIntervalField, NullField, ShortField, TimestampField
+    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField, BinaryField, ByteField, CalendarIntervalField, NullField, ShortField, TimestampField, ArrayField, MapField
 }
 
 table Field {

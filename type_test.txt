@@ -1,0 +1,25 @@
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.Row
+import edu.berkeley.cs.rise.opaque.implicits._
+
+
+val binary_array:Array[Byte] = Array(0, 0, 1, 1)
+
+val data = Seq(
+  Row(binary_array, "dog"),
+  Row(binary_array, "cat"),
+  Row(binary_array, "ant")
+)
+
+val schema = StructType(
+  List(
+    StructField("binary", BinaryType, true),
+    StructField("animal_type", StringType, true)
+  )
+)
+
+val df = spark.createDataFrame(
+  spark.sparkContext.parallelize(data),
+  schema
+)
+

@@ -404,6 +404,48 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
+      case (x: Array, ArrayType) =>
+        val length = x.size
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ArrayField,
+          tuix.ArrayField.createArrayField(
+            builder, 
+            tuix.ArrayField.createValueVector(builder, x),
+            length),
+          isNull)
+      case (null, ArrayType) =>
+        uix.Field.createField(
+          builder,
+          tuix.FieldUnion.ArrayField,
+          tuix.ArrayField.createArrayField(
+            builder,
+            tuix.ArrayField.createValueVector(builder, Array.empty),
+            0),
+          isNull)
+      case (x: Map[Any, Any], MapType) =>
+        val keyValuePairs = new ArrayBuffer()
+        var k = 0
+        for (k <- x.keys) {
+          val v = x get k
+          val kvPair = tuix.KeyValuePair.createKeyValuePair(builder, k, v)
+          keyValuePairs += kvPair
+        } 
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createValueVector(builder, keyValuePairs.toArray())),
+          isNull)
+      case (null, MapType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createValueVector(builder, Array.empty)),
+          isNull)
       case (s: UTF8String, StringType) =>
         val utf8 = s.getBytes()
         tuix.Field.createField(
@@ -471,6 +513,14 @@ object Utils {
           f.value(new tuix.ShortField).asInstanceOf[tuix.ShortField].value
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
+        case tuix.FieldUnion.ArrayField =>
+          val arrayField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
+          val length = arrayField.length
+          val arr = new Array(length.toInt)
+          arrayField.valueAsByteBuffer.get(arr)
+          arr
+        case tuix.FieldUnion.MapField =>
+          f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
     }
   }
