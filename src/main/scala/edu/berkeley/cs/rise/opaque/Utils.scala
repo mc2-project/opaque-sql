@@ -392,7 +392,7 @@ object Utils {
           tuix.FieldUnion.ShortField,
           tuix.ShortField.createShortField(builder, 0),
           isNull)
-      case (x: Array[Any], ArrayType) =>
+      case (x: Array[Any], LongType) =>
         val length = x.size
         tuix.Field.createField(
           builder,
