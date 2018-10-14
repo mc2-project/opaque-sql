@@ -4,4 +4,4 @@ set -eu
 
 cd "$(dirname $0)"
 
-python synth_disease_data.py $@
+python2.7 synth_disease_data.py $@

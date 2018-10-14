@@ -3,12 +3,32 @@ import random
 import string
 import sys
 
-name_min_length = 3
-name_max_length = 16
+word_min_length = 3
+word_max_length = 16
+treatment_max_length = 32
+
+# Derived from https://github.com/treyhunner/names
+first_names = [
+  'Mary', 'Patricia', 'Linda', 'Barbara', 'Elizabeth', 'Jennifer', 'Maria',
+  'Susan', 'Margaret', 'Dorothy', 'Lisa', 'Nancy', 'Karen', 'Betty', 'Helen',
+  'Sandra', 'Donna', 'Carol', 'Ruth', 'Sharon', 'James', 'John', 'Robert',
+  'Michael', 'William', 'David', 'Richard', 'Charles', 'Joseph', 'Thomas',
+  'Christopher', 'Daniel', 'Paul', 'Mark', 'Donald', 'George', 'Kenneth',
+  'Steven', 'Edward', 'Brian']
+last_names = [
+  'Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson',
+  'Moore', 'Taylor', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris',
+  'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson', 'Clark', 'Rodriguez',
+  'Lewis', 'Lee', 'Walker', 'Hall', 'Allen', 'Young', 'Hernandez', 'King',
+  'Wright', 'Lopez', 'Hill', 'Scott', 'Green', 'Adams', 'Baker', 'Gonzalez',
+  'Nelson', 'Carter']
 
 def randomword():
   return ''.join(random.choice(string.lowercase)
-                 for i in range(random.randint(name_min_length, name_max_length)))
+                 for i in range(random.randint(word_min_length, word_max_length)))
+
+def random_name():
+  return '%s %s' % (random.choice(first_names), random.choice(last_names))
 
 def main():
   print 'Loading icd_codes.txt...'
@@ -18,6 +38,15 @@ def main():
       d_id, d_name = line.split(' ', 1)
       d_name = d_name.strip()
       icd_codes.append([d_id, d_name])
+
+  print 'Loading cpt_treatments.csv...'
+  cpt_treatments = []
+  with open('cpt_treatments.csv', 'rb') as f:
+    r = csv.reader(f)
+    for row in r:
+      t_id, t_name = row[0], row[1]
+      t_name = t_name.strip()
+      cpt_treatments.append(t_name)
 
   num_diseases = len(icd_codes)
   num_genes = num_diseases * 4
@@ -42,7 +71,7 @@ def main():
     w = csv.writer(f)
     for t_id in range(num_treatments):
       t_disease_id = icd_codes[random.randint(0, len(icd_codes) - 1)][0]
-      t_name = randomword()
+      t_name = random.choice(cpt_treatments)[:treatment_max_length]
       t_cost = random.randint(1, 50000)
       w.writerow([t_id, t_disease_id, t_name, t_cost])
 
@@ -54,7 +83,7 @@ def main():
       w = csv.writer(f)
       for p_id in range(num_patients):
         p_disease_id = icd_codes[random.randint(0, len(icd_codes) - 1)][0]
-        p_name = randomword()
+        p_name = random_name()
         w.writerow([p_id, p_disease_id, p_name])
 
 if __name__ == '__main__':

@@ -282,14 +282,15 @@ private:
 };
 
 
-class UntrustedMemoryAllocator : public flatbuffers::simple_allocator {
+class UntrustedMemoryAllocator : public flatbuffers::Allocator {
 public:
-  virtual uint8_t *allocate(size_t size) const {
+  virtual uint8_t *allocate(size_t size) {
     uint8_t *result = nullptr;
     ocall_malloc(size, &result);
     return result;
   }
-  virtual void deallocate(uint8_t *p) const {
+  virtual void deallocate(uint8_t *p, size_t size) {
+    (void)size;
     ocall_free(p);
   }
 };
