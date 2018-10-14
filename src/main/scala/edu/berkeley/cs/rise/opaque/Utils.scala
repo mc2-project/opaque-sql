@@ -404,7 +404,7 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
-      case (x: Array, ArrayType) =>
+      case (x: Array[TypeTag], ArrayType) =>
         val length = x.size
         tuix.Field.createField(
           builder,
@@ -415,7 +415,7 @@ object Utils {
             length),
           isNull)
       case (null, ArrayType) =>
-        uix.Field.createField(
+        tuix.Field.createField(
           builder,
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
