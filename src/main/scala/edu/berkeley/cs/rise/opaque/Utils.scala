@@ -255,7 +255,7 @@ object Utils {
 
 
   def flatbuffersCreateField(
-      builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
+      builder: FlatBufferBuilder, value: Any, dataType: Either(DataType, ArrayType), isNull: Boolean): Int = {
     (value, dataType) match {
       case (b: Boolean, BooleanType) =>
         tuix.Field.createField(

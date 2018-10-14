@@ -78,6 +78,7 @@ table TimestampField {
 
 table ArrayField {
     value:[Field];
+    length: uint;
 }
 
 table KeyValuePair {
