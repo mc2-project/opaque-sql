@@ -408,14 +408,14 @@ object Utils {
         // Iterate through each element in x and turn it into Field type
         val length = x.size
         println(elementType)
-        tuix.Field.createField(
-          builder,
-          tuix.FieldUnion.ArrayField,
-          tuix.ArrayField.createArrayField(
-            builder, 
-            tuix.ArrayField.createValueVector(builder, arr),
-            length),
-          isNull)
+        // tuix.Field.createField(
+        //   builder,
+        //   tuix.FieldUnion.ArrayField,
+        //   tuix.ArrayField.createArrayField(
+        //     builder, 
+        //     tuix.ArrayField.createValueVector(builder, arr),
+        //     length),
+        //   isNull)
       case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
           builder,
@@ -519,7 +519,7 @@ object Utils {
           val arrayField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val length = arrayField.length
           val arr = new Array(length.toInt)
-          arrayField.valueAsByteBuffer.get(arr)
+          // arrayField.valueAsByteBuffer.get(arr)
           arr
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
