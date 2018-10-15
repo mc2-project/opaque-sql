@@ -392,7 +392,7 @@ object Utils {
           tuix.FieldUnion.ShortField,
           tuix.ShortField.createShortField(builder, 0),
           isNull)
-      case (x: Array[Any], LongType) =>
+      case (x: Array[_], ArrayType(elementType, containsNull)) =>
         val length = x.size
         tuix.Field.createField(
           builder,
@@ -402,7 +402,7 @@ object Utils {
             tuix.ArrayField.createValueVector(builder, x),
             length),
           isNull)
-      case (null, ArrayType) =>
+      case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.ArrayField,
