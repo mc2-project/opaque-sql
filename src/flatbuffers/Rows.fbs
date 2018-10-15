@@ -76,20 +76,6 @@ table TimestampField {
     value:ulong;
 }
 
-table ArrayField {
-    value:[Field];
-    length: uint;
-}
-
-table KeyValuePair {
-    key:Field;
-    value:Field;
-}
-
-table MapField {
-    value:[KeyValuePair];
-}
-
 union FieldUnion {
     BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField, BinaryField, ByteField, CalendarIntervalField, NullField, ShortField, TimestampField, ArrayField, MapField
 }
@@ -107,4 +93,18 @@ table Row {
 // Root of plaintext batch
 table Rows {
     rows:[Row];
+}
+
+table ArrayField {
+    value:[Field];
+    length: uint;
+}
+
+table KeyValuePair {
+    key:Field;
+    value:Field;
+}
+
+table MapField {
+    value:[KeyValuePair];
 }
