@@ -77,7 +77,7 @@ table TimestampField {
 }
 
 union FieldUnion {
-    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField, BinaryField, ByteField, CalendarIntervalField, NullField, ShortField, TimestampField, ArrayField, MapField
+    BooleanField, IntegerField, LongField, FloatField, DoubleField, StringField, DateField, BinaryField, ByteField, CalendarIntervalField, NullField, ShortField, TimestampField
 }
 
 table Field {
