@@ -96,7 +96,7 @@ table Rows {
 }
 
 table ArrayField {
-    value:[FieldUnion];
+    value:[Field];
     length: uint;
 }
 
