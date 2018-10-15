@@ -404,14 +404,16 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
-      case (x: Array[tuix.Field], ArrayType(elementType, containsNull)) =>
+      case (x: Array[_], ArrayType(elementType, containsNull)) =>
+        // Iterate through each element in x and turn it into Field type
         val length = x.size
+        println(elementType)
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
             builder, 
-            tuix.ArrayField.createValueVector(builder, x),
+            tuix.ArrayField.createValueVector(builder, arr),
             length),
           isNull)
       case (null, ArrayType(elementType, containsNull)) =>
@@ -423,7 +425,7 @@ object Utils {
             tuix.ArrayField.createValueVector(builder, Array.empty),
             0),
           isNull)
-      // case (x: Map[Any, Any], MapType) =>
+      // case (x: Map[_, _], MapType) =>
       //   val keyValuePairs = new ArrayBuffer()
       //   var k = 0
       //   for (k <- x.keys) {
@@ -519,8 +521,8 @@ object Utils {
           val arr = new Array(length.toInt)
           arrayField.valueAsByteBuffer.get(arr)
           arr
-        case tuix.FieldUnion.MapField =>
-          f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
+        // case tuix.FieldUnion.MapField =>
+        //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
     }
   }

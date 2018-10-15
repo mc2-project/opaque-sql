@@ -96,7 +96,7 @@ table Rows {
 }
 
 table ArrayField {
-    value:[StringField];
+    value:[Field];
     length: uint;
 }
 
