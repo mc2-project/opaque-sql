@@ -521,9 +521,9 @@ object Utils {
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
-          val arr = new Array(arrField.size)
+          val arr = new Array(arrField.value.size)
           var i = 0
-          for (field <- arrField) {
+          for (field <- arrField.value) {
             arr(i) = field.value
             i += 1
           }
