@@ -407,15 +407,21 @@ object Utils {
       case (x: Array[_], ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         val length = x.size
-        println(elementType)
-        // tuix.Field.createField(
-        //   builder,
-        //   tuix.FieldUnion.ArrayField,
-        //   tuix.ArrayField.createArrayField(
-        //     builder, 
-        //     tuix.ArrayField.createValueVector(builder, arr),
-        //     length),
-        //   isNull)
+        val fieldsArray = Array[elementType](x.size)
+        var i = 0
+        for (el <- x) {
+          val field = flatbuffersCreateField(builder, el, elementType, isNull)
+          fieldsArray(i) = field
+          i += 1
+        }
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ArrayField,
+          tuix.ArrayField.createArrayField(
+            builder, 
+            tuix.ArrayField.createValueVector(builder, fieldsArray),
+            length),
+          isNull)
       case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
           builder,
@@ -517,7 +523,7 @@ object Utils {
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
           val arrayField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
-          val length = arrayField.length
+          // val length = arrayField.length USE .size()
           val arr = new Array(length.toInt)
           // arrayField.valueAsByteBuffer.get(arr)
           arr

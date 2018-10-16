@@ -100,11 +100,7 @@ table ArrayField {
     length: uint;
 }
 
-table KeyValuePair {
-    key:Field;
-    value:Field;
-}
-
 table MapField {
-    value:[KeyValuePair];
+    keys:[Field];
+    values:[Field];
 }
