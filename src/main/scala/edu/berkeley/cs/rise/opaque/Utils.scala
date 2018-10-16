@@ -407,21 +407,22 @@ object Utils {
       case (x: Array[_], ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         val length = x.size
-        val fieldsArray = Array[_](x.size)
-        var i = 0
-        for (el <- x) {
-          val field = flatbuffersCreateField(builder, el, elementType, isNull)
-          fieldsArray(i) = field
-          i += 1
-        }
-        tuix.Field.createField(
-          builder,
-          tuix.FieldUnion.ArrayField,
-          tuix.ArrayField.createArrayField(
-            builder, 
-            tuix.ArrayField.createValueVector(builder, fieldsArray),
-            length),
-          isNull)
+        println(elementType)
+        // val fieldsArray = Array[_](x.size)
+        // var i = 0
+        // for (el <- x) {
+        //   val field = flatbuffersCreateField(builder, el, elementType, isNull)
+        //   fieldsArray(i) = field
+        //   i += 1
+        // }
+        // tuix.Field.createField(
+        //   builder,
+        //   tuix.FieldUnion.ArrayField,
+        //   tuix.ArrayField.createArrayField(
+        //     builder, 
+        //     tuix.ArrayField.createValueVector(builder, fieldsArray),
+        //     length),
+        //   isNull)
       case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
           builder,
