@@ -520,7 +520,7 @@ object Utils {
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
-          val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
+          val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val arr = new Array(arrField.size)
           var i = 0
           for (field <- arrField) {
