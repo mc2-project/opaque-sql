@@ -522,7 +522,7 @@ object Utils {
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
-          // f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
+          f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
           // val arr = new Array(arrayField.size)
           // arrayField.valueAsByteBuffer.get(arr)
           // arr
