@@ -419,8 +419,7 @@ object Utils {
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
             builder, 
-            tuix.ArrayField.createValueVector(builder, fieldsArray),
-            length),
+            tuix.ArrayField.createValueVector(builder, fieldsArray)),
           isNull)
       case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
@@ -428,8 +427,7 @@ object Utils {
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
             builder,
-            tuix.ArrayField.createValueVector(builder, Array.empty),
-            0),
+            tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
       // case (x: Map[_, _], MapType) =>
       //   val keyValuePairs = new ArrayBuffer()
