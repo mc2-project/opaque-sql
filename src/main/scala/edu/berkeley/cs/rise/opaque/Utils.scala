@@ -404,10 +404,10 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
-      case (x: Array[_], ArrayType(elementType, containsNull)) =>
+      case (x: Array[_], ArrayType(elementType: T, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         val length = x.size
-        println(elementType)
+        println(T)
         // val fieldsArray = Array[_](x.size)
         // var i = 0
         // for (el <- x) {
@@ -523,7 +523,7 @@ object Utils {
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
-          f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
+          // f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
           // val arr = new Array(arrayField.size)
           // arrayField.valueAsByteBuffer.get(arr)
           // arr
