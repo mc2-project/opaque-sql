@@ -96,7 +96,7 @@ table Rows {
 }
 
 table ArrayField {
-    elements:[Field];
+    value:[Field];
 }
 
 table MapField {
