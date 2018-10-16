@@ -520,10 +520,14 @@ object Utils {
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
-          f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
-          // val arr = new Array(arrayField.size)
-          // arrayField.valueAsByteBuffer.get(arr)
-          // arr
+          val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField].value
+          val arr = new Array(arrField.size)
+          var i = 0
+          for (field <- arrField) {
+            arr(i) = field.value
+            i += 1
+          }
+          arr
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
