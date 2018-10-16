@@ -407,7 +407,7 @@ object Utils {
       case (x: Array[_], ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         val length = x.size
-        val fieldsArray = Array[tuix.Field](x.size)
+        val fieldsArray = Array[Int](x.size)
         var i = 0
         for (el <- x) {
           val field = flatbuffersCreateField(builder, el, elementType, isNull)
