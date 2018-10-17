@@ -521,7 +521,7 @@ object Utils {
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
-          val arr = new Array(arrField.valueLength)
+          val arr = new Array[Any](arrField.valueLength)
           for (i <- 0 until arrField.valueLength) {
             flatbuffersExtractFieldValue(arrField.value(i))
           }
