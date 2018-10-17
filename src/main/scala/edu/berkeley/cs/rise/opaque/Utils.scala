@@ -523,10 +523,9 @@ object Utils {
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val arr = new Array(arrField.valueLength)
           for (i <- 0 until arrField.valueLength) {
-            val field = arrField.value(i)
-            flatbuffersExtractFieldValue(field)
+            arr.update(i, flatbuffersExtractFieldValue(arrField.value(i)))
           }
-          // arr
+          arr
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
