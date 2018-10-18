@@ -407,10 +407,7 @@ object Utils {
           isNull)
       case (x: ArrayData, ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
-        // val arr = x.array
         val fieldsArray = new ArrayBuilder.ofInt
-        // var i = 0
-        println("num_elements: " + x.numElements)
         for (i <- 0 until x.numElements) {
           val field = flatbuffersCreateField(builder, x.get(i, elementType), elementType, isNull)
           fieldsArray += field
@@ -505,7 +502,7 @@ object Utils {
           val length = binaryField.length
           val bBytes = new Array[Byte](length.toInt)
           binaryField.valueAsByteBuffer.get(bBytes)
-          ArrayData.toARraydata(bBytes)
+          bBytes
         case tuix.FieldUnion.ByteField =>
           f.value(new tuix.ByteField).asInstanceOf[tuix.ByteField].value
         case tuix.FieldUnion.CalendarIntervalField =>
@@ -521,6 +518,8 @@ object Utils {
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
+          import org.apache.spark.sql.catalyst.util.ArrayData
+
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val arr = new Array[Any](arrField.valueLength)
           for (i <- 0 until arrField.valueLength) {
