@@ -90,12 +90,12 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
       w.finish(runs[0]);
-      *output_rows = w.output_buffer();
+      *output_rows = w.output_buffer().release();
       *output_rows_length = w.output_size();
       return;
     } else {
       w.finish(w.write_encrypted_blocks());
-      *output_rows = w.output_buffer();
+      *output_rows = w.output_buffer().release();
       *output_rows_length = w.output_size();
       return;
     }
@@ -104,7 +104,9 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
   // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
   // queue, and re-encrypting to a different buffer.
-  SortedRunsReader r(w.output_buffer(), w.output_size());
+  auto runs_buf = w.output_buffer();
+  auto runs_len = w.output_size();
+  SortedRunsReader r(runs_buf.get(), runs_len);
   while (r.num_runs() > 1) {
     debug("external_sort: Merging %d runs, up to %d at a time\n",
          r.num_runs(), MAX_NUM_STREAMS);
@@ -121,11 +123,13 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
 
     if (runs.size() > 1) {
       w.finish(w.write_sorted_runs(runs));
-      r.reset(w.output_buffer(), w.output_size());
+      runs_buf = w.output_buffer();
+      runs_len = w.output_size();
+      r.reset(runs_buf.get(), runs_len);
     } else {
       // Done merging. Return the single remaining sorted run.
       w.finish(runs[0]);
-      *output_rows = w.output_buffer();
+      *output_rows = w.output_buffer().release();
       *output_rows_length = w.output_size();
       return;
     }
@@ -156,7 +160,7 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer();
+  *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size();
 }
 
@@ -187,7 +191,7 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer();
+  *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size();
 
   ocall_free(sorted_rows);
@@ -218,18 +222,18 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   EncryptedBlocksToRowReader b(boundary_rows, boundary_rows_length);
   // Invariant: b_upper is the first boundary row strictly greater than the current range, or
   // nullptr if we are in the last range
-  const tuix::Row *b_upper = b.has_next() ? b.next() : nullptr;
+  FlatbuffersTemporaryRow b_upper(b.has_next() ? b.next() : nullptr);
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
 
     // Advance boundary rows to maintain the invariant on b_upper
-    while (b_upper != nullptr && !sort_eval.less_than(row, b_upper)) {
-      b_upper = b.has_next() ? b.next() : nullptr;
+    while (b_upper.get() != nullptr && !sort_eval.less_than(row, b_upper.get())) {
+      b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition
       w.finish(w.write_encrypted_blocks());
-      output_partition_ptrs[output_partition_idx] = w.output_buffer();
+      output_partition_ptrs[output_partition_idx] = w.output_buffer().release();
       output_partition_lengths[output_partition_idx] = w.output_size();
       w.clear();
       output_partition_idx++;
@@ -243,7 +247,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // partitions.
   while (output_partition_idx < num_partitions) {
     w.finish(w.write_encrypted_blocks());
-    output_partition_ptrs[output_partition_idx] = w.output_buffer();
+    output_partition_ptrs[output_partition_idx] = w.output_buffer().release();
     output_partition_lengths[output_partition_idx] = w.output_size();
     w.clear();
     output_partition_idx++;

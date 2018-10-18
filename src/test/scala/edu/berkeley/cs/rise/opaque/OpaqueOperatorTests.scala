@@ -32,6 +32,11 @@ import org.apache.spark.storage.StorageLevel
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.Row
+import org.apache.spark.unsafe.types.CalendarInterval
+import java.sql.Timestamp
+
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
 
@@ -78,6 +83,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
+  }
+
+  testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
+    val data: Seq[(Array[Byte], Byte)] = Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+    makeDF(data, securityLevel, "BinaryType", "ByteType").collect
+  }
+
+  testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema)).collect
+  }
+
+  testAgainstSpark("create DataFrame with ShortType + TimestampType") { securityLevel =>
+    val data: Seq[(Short, Timestamp)] = Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
+    makeDF(data, securityLevel, "ShortType", "TimestampType").collect
   }
 
   testAgainstSpark("filter") { securityLevel =>
@@ -261,6 +288,18 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val result = words.agg(sum("count").as("totalCount"))
   }
 
+  testAgainstSpark("contains") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, abc(i))
+    val df = makeDF(data, securityLevel, "word", "abc")
+    df.filter($"word".contains(lit("1"))).collect
+  }
+
+  testAgainstSpark("year") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "id", "date")
+    df.select(year($"date")).collect
+  }
+
   testOpaqueOnly("save and load") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
@@ -281,6 +320,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
+  }
+
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
   }
 
   testAgainstSpark("big data 1") { securityLevel =>
@@ -327,4 +370,19 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .getOrCreate()
 
   override def numPartitions = 3
+
+  import testImplicits._
+  def makePartitionedDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+    data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*): DataFrame =
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*))
+  testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = makeDF(p_data, securityLevel, "pk", "x")
+    val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
 }

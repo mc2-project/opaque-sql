@@ -16,36 +16,36 @@ void non_oblivious_aggregate_step1(
   FlatbuffersRowWriter last_group_writer;
   FlatbuffersRowWriter last_row_writer;
 
-  const tuix::Row *prev, *cur = nullptr;
+  FlatbuffersTemporaryRow prev, cur;
   while (r.has_next()) {
-    prev = cur;
-    cur = r.next();
+    prev.set(cur.get());
+    cur.set(r.next());
 
-    if (prev == nullptr) {
-      first_row_writer.write(cur);
+    if (prev.get() == nullptr) {
+      first_row_writer.write(cur.get());
     }
 
     if (!r.has_next()) {
-      last_row_writer.write(cur);
+      last_row_writer.write(cur.get());
     }
 
-    if (prev != nullptr && !agg_op_eval.is_same_group(prev, cur)) {
+    if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
       agg_op_eval.reset_group();
     }
-    agg_op_eval.aggregate(cur);
+    agg_op_eval.aggregate(cur.get());
   }
   last_group_writer.write(agg_op_eval.get_partial_agg());
 
   first_row_writer.finish(first_row_writer.write_encrypted_blocks());
-  *first_row = first_row_writer.output_buffer();
+  *first_row = first_row_writer.output_buffer().release();
   *first_row_length = first_row_writer.output_size();
 
   last_group_writer.finish(last_group_writer.write_encrypted_blocks());
-  *last_group = last_group_writer.output_buffer();
+  *last_group = last_group_writer.output_buffer().release();
   *last_group_length = last_group_writer.output_size();
 
   last_row_writer.finish(last_row_writer.write_encrypted_blocks());
-  *last_row = last_row_writer.output_buffer();
+  *last_row = last_row_writer.output_buffer().release();
   *last_row_length = last_row_writer.output_size();
 }
 
@@ -84,36 +84,36 @@ void non_oblivious_aggregate_step2(
   const tuix::Row *prev_partition_last_row_ptr =
     prev_partition_last_row_reader.has_next() ? prev_partition_last_row_reader.next() : nullptr;
 
-  const tuix::Row *prev, *cur = prev_partition_last_row_ptr, *next;
+  FlatbuffersTemporaryRow prev, cur(prev_partition_last_row_ptr), next;
   bool stop = false;
   if (r.has_next()) {
-    next = r.next();
+    next.set(r.next());
   } else {
     stop = true;
   }
   while (!stop) {
     // Populate prev, cur, next to enable lookbehind and lookahead
-    prev = cur;
-    cur = next;
+    prev.set(cur.get());
+    cur.set(next.get());
     if (r.has_next()) {
-      next = r.next();
+      next.set(r.next());
     } else {
-      next = next_partition_first_row_ptr;
+      next.set(next_partition_first_row_ptr);
       stop = true;
     }
 
-    if (prev != nullptr && !agg_op_eval.is_same_group(prev, cur)) {
+    if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
       agg_op_eval.reset_group();
     }
-    agg_op_eval.aggregate(cur);
+    agg_op_eval.aggregate(cur.get());
 
     // Output the current aggregate if it is the last aggregate for its run
-    if (next == nullptr || !agg_op_eval.is_same_group(cur, next)) {
+    if (next.get() == nullptr || !agg_op_eval.is_same_group(cur.get(), next.get())) {
       w.write(agg_op_eval.evaluate());
     }
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer();
+  *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size();
 }
