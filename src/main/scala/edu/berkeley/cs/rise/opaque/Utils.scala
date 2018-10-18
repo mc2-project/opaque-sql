@@ -526,8 +526,7 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          arrData = new ArrayData
-          arrData.toArrayData(arr)
+          ArrayData.toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
