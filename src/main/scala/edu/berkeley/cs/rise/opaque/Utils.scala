@@ -524,11 +524,22 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          ArrayData.toArrayData(arr)
+          toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
     }
+  }
+
+  def toArrayData(input: Any): ArrayData = input match {
+    case a: Array[Boolean] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Byte] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Short] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Int] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Long] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Float] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Double] => UnsafeArrayData.fromPrimitiveArray(a)
+    case other => new GenericArrayData(other)
   }
 
   val MaxBlockSize = 1000
