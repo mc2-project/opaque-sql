@@ -411,6 +411,7 @@ object Utils {
         val fieldsArray = Array[Int](x.numElements)
         // var i = 0
         for (i <- 0 until x.numElements) {
+          println(i)
           val field = flatbuffersCreateField(builder, x.get(i, elementType), elementType, isNull)
           fieldsArray(i) = field
           // i += 1
