@@ -80,6 +80,12 @@ import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayData
 
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.{SpecializedGetters, UnsafeArrayData}
+import org.apache.spark.sql.types._
+import org.apache.spark.unsafe.Platform
+import org.apache.spark.unsafe.array.ByteArrayMethods
+
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
@@ -89,6 +95,45 @@ import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+
+object ArrayData {
+  def toArrayData(input: Any): ArrayData = input match {
+    case a: Array[Boolean] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Byte] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Short] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Int] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Long] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Float] => UnsafeArrayData.fromPrimitiveArray(a)
+    case a: Array[Double] => UnsafeArrayData.fromPrimitiveArray(a)
+    case other => new GenericArrayData(other)
+  }
+
+
+  /**
+   * Allocate [[UnsafeArrayData]] or [[GenericArrayData]] based on given parameters.
+   *
+   * @param elementSize a size of an element in bytes. If less than zero, the type of an element is
+   *                    non-primitive type
+   * @param numElements the number of elements the array should contain
+   * @param additionalErrorMessage string to include in the error message
+   */
+  def allocateArrayData(
+      elementSize: Int,
+      numElements: Long,
+      additionalErrorMessage: String): ArrayData = {
+    if (elementSize >= 0 && !UnsafeArrayData.shouldUseGenericArrayData(elementSize, numElements)) {
+      UnsafeArrayData.createFreshArray(numElements.toInt, elementSize)
+    } else if (numElements <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH.toLong) {
+      new GenericArrayData(new Array[Any](numElements.toInt))
+    } else {
+      throw new RuntimeException(s"Cannot create array with $numElements " +
+        "elements of data due to exceeding the limit " +
+        s"${ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH} elements for ArrayData. " +
+        additionalErrorMessage)
+    }
+  }
+}
+
 
 object Utils {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -524,13 +569,12 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          ArrayData.array(arr)
+          toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
     }
   }
-
   val MaxBlockSize = 1000
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
