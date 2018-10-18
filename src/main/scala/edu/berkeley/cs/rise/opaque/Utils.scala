@@ -16,6 +16,7 @@
  */
 
 package edu.berkeley.cs.rise.opaque
+import org.apache.spark.sql.catalyst.util.ArrayData
 
 import java.io.File
 import java.nio.ByteBuffer
@@ -81,7 +82,6 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
-import org.apache.spark.sql.catalyst.util.ArrayData
 
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
