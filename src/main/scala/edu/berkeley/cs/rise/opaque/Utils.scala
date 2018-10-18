@@ -79,7 +79,6 @@ import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayData
-import org.apache.spark.sql.catalyst.util.ArrayData.toArrayData
 
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -525,7 +524,7 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          toArrayData(arr)
+          arr.toArrayData
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
