@@ -409,11 +409,11 @@ object Utils {
         // Iterate through each element in x and turn it into Field type
         // val arr = x.array
         val fieldsArray = Array[Int](x.numElements)
-        var i = 0
+        // var i = 0
         for (i <- 0 until x.numElements) {
           val field = flatbuffersCreateField(builder, x.get(i, elementType), elementType, isNull)
           fieldsArray(i) = field
-          i += 1
+          // i += 1
         }
         tuix.Field.createField(
           builder,
