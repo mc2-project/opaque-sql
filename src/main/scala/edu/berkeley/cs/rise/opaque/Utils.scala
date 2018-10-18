@@ -410,7 +410,7 @@ object Utils {
         // val arr = x.array
         val fieldsArray = new ArrayBuilder.ofInt
         // var i = 0
-        println(x.numElements)
+        println("num_elements: " + x.numElements)
         for (i <- 0 until x.numElements) {
           val field = flatbuffersCreateField(builder, x.get(i, elementType), elementType, isNull)
           fieldsArray += field
@@ -526,7 +526,7 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          arr
+          toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
