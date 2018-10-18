@@ -404,7 +404,7 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
-      case (x: Array[_], ArrayType(elementType, containsNull)) =>
+      case (x: ArrayData[_], ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         val length = x.size
         val fieldsArray = Array[Int](x.size)
