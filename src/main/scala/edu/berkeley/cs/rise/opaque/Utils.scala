@@ -80,12 +80,6 @@ import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayData
 
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{SpecializedGetters, UnsafeArrayData}
-import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.Platform
-import org.apache.spark.unsafe.array.ByteArrayMethods
-
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
@@ -530,22 +524,11 @@ object Utils {
           for (i <- 0 until arrField.valueLength) {
             arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
           }
-          toArrayData(arr)
+          ArrayData.array(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
     }
-  }
-
-  def toArrayData(input: Any): ArrayData = input match {
-    case a: Array[Boolean] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Byte] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Short] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Int] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Long] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Float] => UnsafeArrayData.fromPrimitiveArray(a)
-    case a: Array[Double] => UnsafeArrayData.fromPrimitiveArray(a)
-    case other => new GenericArrayData(other)
   }
 
   val MaxBlockSize = 1000
