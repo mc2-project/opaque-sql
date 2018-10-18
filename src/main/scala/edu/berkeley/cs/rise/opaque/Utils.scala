@@ -407,10 +407,10 @@ object Utils {
           isNull)
       case (x: ArrayData, ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
-        val length = x.size
-        val fieldsArray = Array[Int](x.size)
+        val arr = x.toArray[_]
+        val fieldsArray = Array[Int](arr.size)
         var i = 0
-        for (el <- x) {
+        for (el <- arr) {
           val field = flatbuffersCreateField(builder, el, elementType, isNull)
           fieldsArray(i) = field
           i += 1
