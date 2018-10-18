@@ -407,7 +407,7 @@ object Utils {
           isNull)
       case (x: ArrayData, ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
-        val arr = x.toArray[_]
+        val arr = x.toArray[Any]
         val fieldsArray = Array[Int](arr.size)
         var i = 0
         for (el <- arr) {
