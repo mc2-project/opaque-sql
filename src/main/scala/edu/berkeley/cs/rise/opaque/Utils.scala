@@ -408,7 +408,7 @@ object Utils {
       case (x: ArrayData, ArrayType(elementType, containsNull)) =>
         // Iterate through each element in x and turn it into Field type
         // val arr = x.array
-        val fieldsArray = new ArrayBuffer[Int]
+        val fieldsArray = new ArrayBuilder.ofInt
         // var i = 0
         println(x.numElements)
         for (i <- 0 until x.numElements) {
@@ -420,7 +420,7 @@ object Utils {
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
             builder, 
-            tuix.ArrayField.createValueVector(builder, fieldsArray.toArray)),
+            tuix.ArrayField.createValueVector(builder, fieldsArray.result)),
           isNull)
       case (null, ArrayType(elementType, containsNull)) =>
         tuix.Field.createField(
