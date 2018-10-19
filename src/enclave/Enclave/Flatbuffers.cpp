@@ -147,13 +147,13 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
       is_null);
   case tuix::FieldUnion_ArrayField:
   {
-    auto string_field = static_cast<const tuix::ArrrayField *>(field->value());
+    auto array_field = static_cast<const tuix::ArrayField *>(field->value());
     std::vector<uint8_t> array_data(array_field->value()->begin(),
                                      array_field->value()->end());
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_ArrayField,
-      tuix::CreateStringFieldDirect(
+      tuix::CreateArrayFieldDirect(
         builder, &array_data, array_field->length()).Union(),
       is_null);
   }
