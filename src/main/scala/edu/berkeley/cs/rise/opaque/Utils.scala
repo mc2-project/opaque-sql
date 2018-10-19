@@ -523,8 +523,12 @@ object Utils {
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val arr = new Array[Any](arrField.valueLength)
           for (i <- 0 until arrField.valueLength) {
-            println(arrField.value(i))
-            arr(i) = flatbuffersExtractFieldValue(arrField.value(i))
+            arr(i) = 
+              if (!arrField.value(i).isNull()) {
+                flatbuffersExtractFieldValue(arrField.value(i))
+              } else {
+                null
+              }
           }
           ArrayData.toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
