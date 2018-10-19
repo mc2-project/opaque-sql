@@ -4,11 +4,11 @@ version := "0.1"
 
 organization := "edu.berkeley.cs.amplab"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.12"
 
 spName := "amplab/opaque"
 
-sparkVersion := "2.0.2"
+sparkVersion := "2.3.2"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
