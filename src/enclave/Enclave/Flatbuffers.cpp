@@ -145,6 +145,18 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         builder,
         static_cast<const tuix::DateField *>(field->value())->value()).Union(),
       is_null);
+  case tuix::FieldUnion_ArrayField:
+  {
+    auto string_field = static_cast<const tuix::ArrrayField *>(field->value());
+    std::vector<uint8_t> array_data(array_field->value()->begin(),
+                                     array_field->value()->end());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_ArrayField,
+      tuix::CreateStringFieldDirect(
+        builder, &array_data, array_field->length()).Union(),
+      is_null);
+  }
   default:
     printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
            field->value_type());
