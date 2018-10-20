@@ -97,7 +97,6 @@ table Rows {
 
 table ArrayField {
     value:[Field];
-    length: long;
 }
 
 table MapField {
