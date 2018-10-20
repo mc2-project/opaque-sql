@@ -154,7 +154,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
       builder,
       tuix::FieldUnion_ArrayField,
       tuix::CreateArrayFieldDirect(
-        builder, &array_data, array_field->length()).Union(),
+        builder, &array_data),
       is_null);
   }
   default:
