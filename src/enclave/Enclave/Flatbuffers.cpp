@@ -148,7 +148,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   case tuix::FieldUnion_ArrayField:
   {
     auto array_field = static_cast<const tuix::ArrayField *>(field->value());
-    std::vector<flatbuffers::Offset<tuix::Field>> array_data(array_field->value()->begin(), 
+    std::vector<flatbuffers::Offset<tuix::Field>> array_data(0, 
       5);
     return tuix::CreateField(
       builder,
