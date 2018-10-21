@@ -91,6 +91,18 @@ flatbuffers::Offset<tuix::Field> flatbuffers_cast(
       tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size()).Union(),
       result_is_null);
   }
+  case tuix::ColType_ArrayType:
+  {
+    auto array_field = static_cast<const tuix::ArrayField *>(value_eval);
+    auto copied_array_offset = builder.CreateVector(array_field->value()->data(),
+                                                    array_field->value()->size());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_ArrayField,
+      tuix::CreateArrayField(
+        builder, copied_array_offset).Union(),
+      is_null);
+  }
   default:
   {
     printf("Can't cast %s to %s\n",
