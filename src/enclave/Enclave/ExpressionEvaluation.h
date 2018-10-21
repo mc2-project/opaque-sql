@@ -234,6 +234,10 @@ private:
       {
         return flatbuffers_cast<tuix::DateField, Date>(cast, value, builder, result_is_null);
       }
+      case tuix::FieldUnion_ArrayField:
+      {
+        return flatbuffers_cast<tuix::ArrayField, Array>(cast, value, builder, result_is_null);
+      }
       default:
       {
         printf("Can't evaluate cast on %s\n",
