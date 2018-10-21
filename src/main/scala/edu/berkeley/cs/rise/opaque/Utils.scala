@@ -521,15 +521,19 @@ object Utils {
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
+          println("524")
           val arr = new Array[Any](arrField.valueLength)
+          println("526")
           for (i <- 0 until arrField.valueLength) {
             arr(i) = 
               if (!arrField.value(i).isNull()) {
+                println("530")
                 flatbuffersExtractFieldValue(arrField.value(i))
               } else {
                 null
               }
           }
+          println("536")
           ArrayData.toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
