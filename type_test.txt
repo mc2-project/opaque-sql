@@ -3,7 +3,7 @@ import org.apache.spark.sql.Row
 import edu.berkeley.cs.rise.opaque.implicits._
 
 
-val binary_array:Array[Byte] = Array(0, 0, 1, 1)
+val binary_array:Array[Int] = Array(0, -128, 127, 1)
 
 val data = Seq(
   Row(binary_array, "dog"),
@@ -13,7 +13,7 @@ val data = Seq(
 
 val schema = StructType(
   List(
-    StructField("binary", BinaryType, true),
+    StructField("array", ArrayType(IntegerType), true),
     StructField("animal_type", StringType, true)
   )
 )
