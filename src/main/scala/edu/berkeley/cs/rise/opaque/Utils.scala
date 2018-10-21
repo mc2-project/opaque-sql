@@ -530,7 +530,7 @@ object Utils {
                 null
               }
           }
-          // ArrayData.toArrayData(arr)
+          ArrayData.toArrayData(arr)
         // case tuix.FieldUnion.MapField =>
         //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
       }
