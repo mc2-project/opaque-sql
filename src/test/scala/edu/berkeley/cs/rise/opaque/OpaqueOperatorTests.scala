@@ -118,8 +118,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.collect
   }
 
-  }
-
   testAgainstSpark("filter") { securityLevel =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
