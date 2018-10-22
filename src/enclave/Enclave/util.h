@@ -4,6 +4,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <ctime>
+#include <string>
 
 /*
  * printf:
@@ -16,6 +17,8 @@ void exit(int exit_code);
 namespace std {
     using ::exit;
 }
+
+std::string string_format(const std::string &fmt, ...);
 
 void print_bytes(uint8_t *ptr, uint32_t len);
 
