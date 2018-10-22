@@ -236,7 +236,19 @@ private:
       }
       case tuix::FieldUnion_ArrayField:
       {
-        return flatbuffers_cast<tuix::ArrayField, Array>(cast, value, builder, result_is_null);
+        if (cast->target_type() != tuix::ColType_StringType) {
+          printf("Can't cast Array to %s, only StringType\n",
+               tuix::EnumNameColType(cast->target_type()));
+          std::exit(1);
+        }
+        auto array_field = static_cast<const tuix::ArrayField *>(value->value());
+        std::string str = to_string(array_field);
+        std::vector<uint8_t> str_vec(str.begin(), str.end());
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size()).Union(),
+          result_is_null);
       }
       default:
       {
