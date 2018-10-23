@@ -81,6 +81,8 @@ import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
+
 
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -535,11 +537,13 @@ object Utils {
           ArrayData.toArrayData(arr)
         case tuix.FieldUnion.MapField =>
           val mapField = f.value(new tuix.MapField).asInstanceOf[tuix.MapField]
-          var map = Map[Any, Any]()
+          val keys = new Array[Any](mapField.keysLength)
+          val values = new Array[Any](mapField.valuesLength)
           for (i <- 0 until mapField.keysLength) {
-            map += ((flatbuffersExtractFieldValue(mapField.keys(i))) -> flatbuffersExtractFieldValue(mapField.values(i)))
+            keys(i) = flatbuffersExtractFieldValue(mapField.keys(i))
+            values(i) = flatbuffersExtractFieldValue(mapField.values(i))
           }
-          map
+          ArrayBasedMapData(ArrayData.toArrayData(keys), ArrayData.toArrayData(values))
       }
     }
   }
