@@ -16,7 +16,7 @@ std::string to_string(const tuix::Field *f) {
   if (f->is_null()) {
     return "null";
   }
-   switch (f->value_type()) {
+  switch (f->value_type()) {
   case tuix::FieldUnion_BooleanField:
     return to_string(f->value_as_BooleanField());
   case tuix::FieldUnion_IntegerField:
@@ -47,7 +47,7 @@ std::string to_string(const tuix::Field *f) {
     return to_string(f->value_as_ArrayField());
   case tuix::FieldUnion_MapField:
     return to_string(f->value_as_MapField());
-   default:
+  default:
     printf("to_string(tuix::Field): Unknown field type %d\n",
            f->value_type());
     std::exit(1);
@@ -91,13 +91,13 @@ std::string to_string(const tuix::BinaryField *f) {
   return s;
 }
 
- std::string to_string(const tuix::ByteField *f) {
+std::string to_string(const tuix::ByteField *f) {
   std::string s;
   s.append(string_format("%02X", f->value()));
   return s;
 }
 
- std::string to_string(const tuix::CalendarIntervalField *f) {
+std::string to_string(const tuix::CalendarIntervalField *f) {
   (void)f;
   throw "Can't convert CalendarIntervalField to string";
 }
@@ -111,7 +111,7 @@ std::string to_string(const tuix::ShortField *f) {
   return std::to_string(f->value());
 }
 
- std::string to_string(const tuix::TimestampField *f) {
+std::string to_string(const tuix::TimestampField *f) {
   // TODO: Support fractional seconds to mimic the behavior of java.sql.Timestamp#toString
   uint64_t secs = f->value() / 1000;
   struct tm tm;
@@ -120,7 +120,8 @@ std::string to_string(const tuix::ShortField *f) {
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
   return std::string(buffer);
 }
- std::string to_string(const tuix::ArrayField *f) {
+
+std::string to_string(const tuix::ArrayField *f) {
   std::string s;
   s.append("[");
   bool first = true;
@@ -134,7 +135,8 @@ std::string to_string(const tuix::ShortField *f) {
   s.append("]");
   return s;
 }
- std::string to_string(const tuix::MapField *f) {
+
+std::string to_string(const tuix::MapField *f) {
   std::string s;
   s.append("{");
   for (uint32_t i = 0; i < f->keys()->size(); ++i) {
@@ -267,8 +269,8 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
     for (auto f : *map_field->keys()) {
       copied_key_fields.push_back(flatbuffers_copy(f, builder, false));
     }
-    for (auto f: *map_field->values()) {
-       copied_value_fields.push_back(flatbuffers_copy(f, builder, false));
+    for (auto f : *map_field->values()) {
+      copied_value_fields.push_back(flatbuffers_copy(f, builder, false));
     }
     return tuix::CreateField(
       builder,

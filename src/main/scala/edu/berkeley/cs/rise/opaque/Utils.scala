@@ -23,7 +23,6 @@ import java.nio.ByteOrder
 import java.util.UUID
 
 import scala.collection.mutable.ArrayBuilder
-import org.apache.spark.unsafe.types.CalendarInterval
 
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.rdd.RDD
@@ -79,13 +78,12 @@ import org.apache.spark.sql.catalyst.plans.NaturalJoin
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
+import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
-import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
-
-
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.rise.opaque.execution.Block
@@ -421,7 +419,7 @@ object Utils {
           builder,
           tuix.FieldUnion.ArrayField,
           tuix.ArrayField.createArrayField(
-            builder, 
+            builder,
             tuix.ArrayField.createValueVector(builder, fieldsArray.result)),
           isNull)
       case (null, ArrayType(elementType, containsNull)) =>
@@ -438,7 +436,7 @@ object Utils {
         for (i <- 0 until x.numElements) {
           keys += flatbuffersCreateField(builder, x.keyArray.get(i, keyType), keyType, isNull)
           values += flatbuffersCreateField(builder, x.valueArray.get(i, valueType), valueType, isNull)
-        } 
+        }
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.MapField,
@@ -527,7 +525,7 @@ object Utils {
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
           val arr = new Array[Any](arrField.valueLength)
           for (i <- 0 until arrField.valueLength) {
-            arr(i) = 
+            arr(i) =
               if (!arrField.value(i).isNull()) {
                 flatbuffersExtractFieldValue(arrField.value(i))
               } else {
@@ -543,10 +541,11 @@ object Utils {
             keys(i) = flatbuffersExtractFieldValue(mapField.keys(i))
             values(i) = flatbuffersExtractFieldValue(mapField.values(i))
           }
-          ArrayBasedMapData.apply(keys, values)
+          ArrayBasedMapData(keys, values)
       }
     }
   }
+
   val MaxBlockSize = 1000
 
   def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {

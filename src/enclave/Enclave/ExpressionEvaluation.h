@@ -238,7 +238,7 @@ private:
       {
         if (cast->target_type() != tuix::ColType_StringType) {
           printf("Can't cast Array to %s, only StringType\n",
-               tuix::EnumNameColType(cast->target_type()));
+                 tuix::EnumNameColType(cast->target_type()));
           std::exit(1);
         }
         auto array_field = static_cast<const tuix::ArrayField *>(value->value());
@@ -253,8 +253,8 @@ private:
       case tuix::FieldUnion_MapField:
       {
         if (cast->target_type() != tuix::ColType_StringType) {
-          printf("Can't cast Array to %s, only StringType\n",
-               tuix::EnumNameColType(cast->target_type()));
+          printf("Can't cast Map to %s, only StringType\n",
+                 tuix::EnumNameColType(cast->target_type()));
           std::exit(1);
         }
         auto map_field = static_cast<const tuix::MapField *>(value->value());

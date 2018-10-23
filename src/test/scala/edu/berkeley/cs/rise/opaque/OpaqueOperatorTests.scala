@@ -114,7 +114,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (array, "cat"),
       (array, "ant"))
     val df = makeDF(data, securityLevel, "array", "string")
-    df.show()
     df.collect
   }
 
@@ -124,9 +123,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (map, "dog"),
       (map, "cat"),
       (map, "ant"))
-
     val df = makeDF(data, securityLevel, "map", "string")
-    df.show()
     df.collect
   }
 

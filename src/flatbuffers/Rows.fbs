@@ -18,7 +18,7 @@ enum ColType : ubyte {
     ShortType,
     TimestampType,
     ArrayType,
-    MapType
+    MapType,
 }
 
 table BooleanField {
