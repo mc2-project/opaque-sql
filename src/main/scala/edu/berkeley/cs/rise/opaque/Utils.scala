@@ -80,6 +80,7 @@ import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayData
+import org.apache.spark.sql.catalyst.util.MapData
 
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -429,7 +430,7 @@ object Utils {
             builder,
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
-      case (x: Map[_, _], MapType(keyType, valueType, valueContainsNull)) =>
+      case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
         var keys = new ArrayBuilder.ofInt()
         var values = new ArrayBuilder.ofInt()
         for (k <- x.keys) {
