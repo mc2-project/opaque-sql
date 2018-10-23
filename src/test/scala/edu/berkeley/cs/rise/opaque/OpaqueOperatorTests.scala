@@ -124,9 +124,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (map, "dog"),
       (map, "cat"),
       (map, "ant"))
-    val df = makeDF(data, securityLevel, "map", "string")
+
+    val schema = StructType(Seq(
+      StructField("MapType", MapType(StringType, IntegerType)),
+      StructField("StringType", StringType)))
+
+    val df = spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema)
+
+    securityLevel.applyTo(df).collect
     df.show()
-    df.collect
   }
 
   testAgainstSpark("filter") { securityLevel =>
