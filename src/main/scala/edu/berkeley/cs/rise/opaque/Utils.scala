@@ -537,7 +537,7 @@ object Utils {
           val mapField = f.value(new tuix.MapField).asInstanceOf[tuix.MapField]
           var map = Map[Any, Any]()
           for (i <- 0 until mapField.keysLength) {
-            map(flatbuffersExtractFieldValue(mapField.keys(i))) = flatbuffersExtractFieldValue(mapField.values(i))
+            map += ((flatbuffersExtractFieldValue(mapField.keys(i))) -> flatbuffersExtractFieldValue(mapField.values(i)))
           }
           map
       }
