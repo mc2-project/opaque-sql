@@ -429,29 +429,33 @@ object Utils {
             builder,
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
-      // case (x: Map[_, _], MapType) =>
-      //   val keyValuePairs = new ArrayBuffer()
-      //   var k = 0
-      //   for (k <- x.keys) {
-      //     val v = x get k
-      //     val kvPair = tuix.KeyValuePair.createKeyValuePair(builder, k, v)
-      //     keyValuePairs += kvPair
-      //   } 
-      //   tuix.Field.createField(
-      //     builder,
-      //     tuix.FieldUnion.MapField,
-      //     tuix.MapField.createMapField(
-      //       builder,
-      //       tuix.MapField.createValueVector(builder, keyValuePairs.toArray())),
-      //     isNull)
-      // case (null, MapType) =>
-      //   tuix.Field.createField(
-      //     builder,
-      //     tuix.FieldUnion.MapField,
-      //     tuix.MapField.createMapField(
-      //       builder,
-      //       tuix.MapField.createValueVector(builder, Array.empty)),
-      //     isNull)
+      case (x: Map[_, _], MapType(keyType, valueType, valueContainsNull)) =>
+        var keys = new ArrayBuffer()
+        var values = new ArrayBuffer()
+        for (k <- x.keys) {
+          val v = x(k)
+          keys += k
+          values += v
+        } 
+        val keyFields = flatbuffersCreateField(builder, keys.toArray, ArrayType(keyType, false), isNull)
+        val valFields = flatbuffersCreateField(builder, values.toArray, ArrayType(valueType, valueContainsNull), isNull)
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createKeysVector(builder, keyFields),
+            tuix.MapField.createValuesVector(builder, valFields)),
+          isNull)
+      case (null, MapType(keyType, valueType, valueContainsNull)) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createKeysVector(builder, Array.empty)
+            tuix.MapField.createValuesVector(builder, Array.empty)),
+          isNull)
       case (s: UTF8String, StringType) =>
         val utf8 = s.getBytes()
         tuix.Field.createField(
@@ -521,22 +525,23 @@ object Utils {
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
         case tuix.FieldUnion.ArrayField =>
           val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
-          println("524")
           val arr = new Array[Any](arrField.valueLength)
-          println("526")
           for (i <- 0 until arrField.valueLength) {
             arr(i) = 
               if (!arrField.value(i).isNull()) {
-                println("530")
                 flatbuffersExtractFieldValue(arrField.value(i))
               } else {
                 null
               }
           }
-          println("536")
           ArrayData.toArrayData(arr)
-        // case tuix.FieldUnion.MapField =>
-        //   f.value(new tuix.MapField).asInstanceOf[tuix.MapField].value
+        case tuix.FieldUnion.MapField =>
+          val mapField = f.value(new tuix.MapField).asInstanceOf[tuix.MapField]
+          var map = Map[Any, Any]()
+          for (i <- 0 until mapField.keysLength) {
+            map(flatbuffersExtractFieldValue(mapField.keys(i))) = flatbuffersExtractFieldValue(mapField.values(i))
+          }
+          map
       }
     }
   }
