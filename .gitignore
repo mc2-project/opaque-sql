@@ -64,6 +64,7 @@ R-unit-tests.log
 R/unit-tests.out
 python/lib/pyspark.zip
 lint-r-report.log
+/.tags
 
 # For Hive
 metastore_db/

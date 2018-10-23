@@ -23,7 +23,6 @@ import java.nio.ByteOrder
 import java.util.UUID
 
 import scala.collection.mutable.ArrayBuilder
-import org.apache.spark.unsafe.types.CalendarInterval
 
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.rdd.RDD
@@ -79,8 +78,12 @@ import org.apache.spark.sql.catalyst.plans.NaturalJoin
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
+import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
+import org.apache.spark.sql.catalyst.util.ArrayData
+import org.apache.spark.sql.catalyst.util.MapData
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.unsafe.types.UTF8String
 
 import edu.berkeley.cs.rise.opaque.execution.Block
@@ -405,6 +408,52 @@ object Utils {
           tuix.FieldUnion.TimestampField,
           tuix.TimestampField.createTimestampField(builder, 0),
           isNull)
+      case (x: ArrayData, ArrayType(elementType, containsNull)) =>
+        // Iterate through each element in x and turn it into Field type
+        val fieldsArray = new ArrayBuilder.ofInt
+        for (i <- 0 until x.numElements) {
+          val field = flatbuffersCreateField(builder, x.get(i, elementType), elementType, isNull)
+          fieldsArray += field
+        }
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ArrayField,
+          tuix.ArrayField.createArrayField(
+            builder,
+            tuix.ArrayField.createValueVector(builder, fieldsArray.result)),
+          isNull)
+      case (null, ArrayType(elementType, containsNull)) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.ArrayField,
+          tuix.ArrayField.createArrayField(
+            builder,
+            tuix.ArrayField.createValueVector(builder, Array.empty)),
+          isNull)
+      case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
+        var keys = new ArrayBuilder.ofInt()
+        var values = new ArrayBuilder.ofInt()
+        for (i <- 0 until x.numElements) {
+          keys += flatbuffersCreateField(builder, x.keyArray.get(i, keyType), keyType, isNull)
+          values += flatbuffersCreateField(builder, x.valueArray.get(i, valueType), valueType, isNull)
+        }
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createKeysVector(builder, keys.result),
+            tuix.MapField.createValuesVector(builder, values.result)),
+          isNull)
+      case (null, MapType(keyType, valueType, valueContainsNull)) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.MapField,
+          tuix.MapField.createMapField(
+            builder,
+            tuix.MapField.createKeysVector(builder, Array.empty),
+            tuix.MapField.createValuesVector(builder, Array.empty)),
+          isNull)
       case (s: UTF8String, StringType) =>
         val utf8 = s.getBytes()
         tuix.Field.createField(
@@ -472,6 +521,27 @@ object Utils {
           f.value(new tuix.ShortField).asInstanceOf[tuix.ShortField].value
         case tuix.FieldUnion.TimestampField =>
           f.value(new tuix.TimestampField).asInstanceOf[tuix.TimestampField].value
+        case tuix.FieldUnion.ArrayField =>
+          val arrField = f.value(new tuix.ArrayField).asInstanceOf[tuix.ArrayField]
+          val arr = new Array[Any](arrField.valueLength)
+          for (i <- 0 until arrField.valueLength) {
+            arr(i) =
+              if (!arrField.value(i).isNull()) {
+                flatbuffersExtractFieldValue(arrField.value(i))
+              } else {
+                null
+              }
+          }
+          ArrayData.toArrayData(arr)
+        case tuix.FieldUnion.MapField =>
+          val mapField = f.value(new tuix.MapField).asInstanceOf[tuix.MapField]
+          val keys = new Array[Any](mapField.keysLength)
+          val values = new Array[Any](mapField.valuesLength)
+          for (i <- 0 until mapField.keysLength) {
+            keys(i) = flatbuffersExtractFieldValue(mapField.keys(i))
+            values(i) = flatbuffersExtractFieldValue(mapField.values(i))
+          }
+          ArrayBasedMapData(keys, values)
       }
     }
   }

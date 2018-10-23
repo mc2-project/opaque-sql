@@ -18,6 +18,7 @@
 
 using namespace edu::berkeley::cs::rise::opaque;
 
+/** Wrapper around a date that provides conversions to various types. */
 class Date {
 public:
   Date(const int32_t &days_since_epoch) : days_since_epoch(days_since_epoch) {}
@@ -31,6 +32,22 @@ public:
 };
 
 std::string to_string(const Date &date);
+std::string to_string(const tuix::Field *f);
+std::string to_string(const tuix::BooleanField *f);
+std::string to_string(const tuix::IntegerField *f);
+std::string to_string(const tuix::LongField *f);
+std::string to_string(const tuix::FloatField *f);
+std::string to_string(const tuix::DoubleField *f);
+std::string to_string(const tuix::StringField *f);
+std::string to_string(const tuix::DateField *f);
+std::string to_string(const tuix::BinaryField *f);
+std::string to_string(const tuix::ByteField *f);
+std::string to_string(const tuix::CalendarIntervalField *f);
+std::string to_string(const tuix::NullField *f);
+std::string to_string(const tuix::ShortField *f);
+std::string to_string(const tuix::TimestampField *f);
+std::string to_string(const tuix::ArrayField *f);
+std::string to_string(const tuix::MapField *f);
 
 template<typename T>
 flatbuffers::Offset<T> flatbuffers_copy(
@@ -42,6 +59,7 @@ template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder, bool force_null);
 
+/** Helper function for casting among primitive types and strings. */
 template<typename InputTuixField, typename InputType>
 flatbuffers::Offset<tuix::Field> flatbuffers_cast(
   const tuix::Cast *cast, const tuix::Field *value, flatbuffers::FlatBufferBuilder& builder,
