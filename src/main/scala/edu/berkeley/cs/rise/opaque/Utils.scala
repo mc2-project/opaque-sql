@@ -433,9 +433,9 @@ object Utils {
       case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
         var keys = new ArrayBuilder.ofInt()
         var values = new ArrayBuilder.ofInt()
-        for ((k, v) <- x) {
-          keys += flatbuffersCreateField(builder, k, keyType, isNull)
-          values += flatbuffersCreateField(builder, v, valueType, isNull)
+        for (i <- 0 until x.numElements) {
+          keys += flatbuffersCreateField(builder, x.keyArray.get(i, keyType), keyType, isNull)
+          values += flatbuffersCreateField(builder, x.valueArray.get(i, valueType), valueType, isNull)
         } 
         tuix.Field.createField(
           builder,
