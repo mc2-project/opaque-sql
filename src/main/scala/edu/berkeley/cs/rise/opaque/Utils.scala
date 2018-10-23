@@ -543,7 +543,7 @@ object Utils {
             keys(i) = flatbuffersExtractFieldValue(mapField.keys(i))
             values(i) = flatbuffersExtractFieldValue(mapField.values(i))
           }
-          ArrayBasedMapData(ArrayData.toArrayData(keys), ArrayData.toArrayData(values))
+          ArrayBasedMapData.apply(keys, values)
       }
     }
   }
