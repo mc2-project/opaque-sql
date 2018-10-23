@@ -3,17 +3,16 @@ import org.apache.spark.sql.Row
 import edu.berkeley.cs.rise.opaque.implicits._
 
 
-val binary_array:Array[Int] = Array(0, -128, 127, 1)
+val map = Map("x" -> 24, "y" -> 25, "z" -> 26)
 
 val data = Seq(
-  Row(binary_array, "dog"),
-  Row(binary_array, "cat"),
-  Row(binary_array, "ant")
-)
+  Row(map, "dog"),
+  Row(map, "cat"),
+  Row(map, "ant"))
 
 val schema = StructType(
   List(
-    StructField("array", ArrayType(IntegerType), true),
+    StructField("array", MapType(StringType, IntegerType), true),
     StructField("animal_type", StringType, true)
   )
 )
