@@ -453,7 +453,7 @@ object Utils {
           tuix.FieldUnion.MapField,
           tuix.MapField.createMapField(
             builder,
-            tuix.MapField.createKeysVector(builder, Array.empty)
+            tuix.MapField.createKeysVector(builder, Array.empty),
             tuix.MapField.createValuesVector(builder, Array.empty)),
           isNull)
       case (s: UTF8String, StringType) =>
