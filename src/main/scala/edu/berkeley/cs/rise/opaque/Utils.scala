@@ -433,8 +433,7 @@ object Utils {
       case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
         var keys = new ArrayBuilder.ofInt()
         var values = new ArrayBuilder.ofInt()
-        for (k <- x.keys) {
-          val v = x(k)
+        for ((k, v) <- x) {
           keys += flatbuffersCreateField(builder, k, keyType, isNull)
           values += flatbuffersCreateField(builder, v, valueType, isNull)
         } 
