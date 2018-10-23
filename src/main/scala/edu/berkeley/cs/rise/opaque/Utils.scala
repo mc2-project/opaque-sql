@@ -430,22 +430,20 @@ object Utils {
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
       case (x: Map[_, _], MapType(keyType, valueType, valueContainsNull)) =>
-        var keys = new ArrayBuffer()
-        var values = new ArrayBuffer()
+        var keys = new ArrayBuilder.ofInt()
+        var values = new ArrayBuilder.ofInt()
         for (k <- x.keys) {
           val v = x(k)
-          keys += k
-          values += v
+          keys += flatbuffersCreateField(builder, k, keyType, isNull)
+          values += flatbuffersCreateField(builder, v, valueType, isNull)
         } 
-        val keyFields = flatbuffersCreateField(builder, keys.toArray, ArrayType(keyType, false), isNull)
-        val valFields = flatbuffersCreateField(builder, values.toArray, ArrayType(valueType, valueContainsNull), isNull)
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.MapField,
           tuix.MapField.createMapField(
             builder,
-            tuix.MapField.createKeysVector(builder, keyFields),
-            tuix.MapField.createValuesVector(builder, valFields)),
+            tuix.MapField.createKeysVector(builder, keys.result),
+            tuix.MapField.createValuesVector(builder, values.result)),
           isNull)
       case (null, MapType(keyType, valueType, valueContainsNull)) =>
         tuix.Field.createField(
