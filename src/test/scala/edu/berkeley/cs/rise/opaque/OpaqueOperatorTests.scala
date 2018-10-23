@@ -126,7 +126,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (map, "ant"))
 
     val df = makeDF(data, securityLevel, "map", "string")
-    df.show()
     df.collect
   }
 
