@@ -66,6 +66,7 @@
 #endif
 
 static sgx_ra_context_t context = INT_MAX;
+JavaVM* jvm;
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -365,7 +366,13 @@ void ocall_free(uint8_t *buf) {
 }
 
 void ocall_exit(int exit_code) {
-  std::exit(exit_code);
+  JNIENV* env;
+  jint rs = jvm->AttachCurrentThread(&env, NULL);
+  assert (rs == JNI_OK);
+
+  sprintf(exBuffer, "Process exited with exit code %i", exit_code);
+  (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), exBuffer);
+  // std::exit(exit_code);
 }
 
 #if defined(_MSC_VER)
@@ -404,6 +411,8 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   JNIEnv *env, jobject obj, jstring library_path) {
   (void)env;
   (void)obj;
+
+  env->GetJavaVM(&jvm);
 
   sgx_enclave_id_t eid;
   sgx_launch_token_t token = {0};

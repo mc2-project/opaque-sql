@@ -1,0 +1,24 @@
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.Row
+import edu.berkeley.cs.rise.opaque.implicits._
+
+
+val map = Map("x" -> 24, "y" -> 25, "z" -> 26)
+
+val data = Seq(
+  Row(map, "dog"),
+  Row(map, "cat"),
+  Row(map, "ant"))
+
+val schema = StructType(
+  List(
+    StructField("array", MapType(StringType, IntegerType), true),
+    StructField("animal_type", StringType, true)
+  )
+)
+
+val df = spark.createDataFrame(
+  spark.sparkContext.parallelize(data),
+  schema
+)
+
