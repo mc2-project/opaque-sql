@@ -370,7 +370,7 @@ void ocall_exit(int exit_code) {
   jint rs = jvm->AttachCurrentThread(&env, NULL);
   assert (rs == JNI_OK);
 
-  sprintf(exBuffer, "Process exited with exit code %i", exit_code);
+  sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
   (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), exBuffer);
   // std::exit(exit_code);
 }
