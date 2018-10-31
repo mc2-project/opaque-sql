@@ -366,9 +366,9 @@ void ocall_free(uint8_t *buf) {
 }
 
 void ocall_exit(int exit_code) {
-  JNIENV* env;
+  JNIEnv* env;
   jint rs = jvm->AttachCurrentThread(&env, NULL);
-  assert (rs == JNI_OK);
+  // assert (rs == JNI_OK);
 
   sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
   (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), exBuffer);
