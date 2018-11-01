@@ -260,7 +260,7 @@ int initialize_enclave(void)
     DWORD read_num = 0;
     ReadFile(token_handler, token, sizeof(sgx_launch_token_t), &read_num, NULL);
     if (read_num != 0 && read_num != sizeof(sgx_launch_token_t)) {
-      /* If token is invalid, clear the buffer */
+      /* if token is invalid, clear the buffer */
       memset(&token, 0x0, sizeof(sgx_launch_token_t));
       printf("Warning: Invalid launch token read from \"%s\".\n", token_path);
     }
