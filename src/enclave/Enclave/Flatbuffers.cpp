@@ -45,8 +45,8 @@ std::string to_string(const tuix::Field *f) {
     return to_string(f->value_as_TimestampField());
   case tuix::FieldUnion_ArrayField:
     return to_string(f->value_as_ArrayField());
-  case tuix::FieldUnion_MapField:
-    return to_string(f->value_as_MapField());
+  // case tuix::FieldUnion_MapField:
+  //   return to_string(f->value_as_MapField());
   default:
     printf("to_string(tuix::Field): Unknown field type %d\n",
            f->value_type());
