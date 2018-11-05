@@ -376,7 +376,7 @@ void ocall_exit(int exit_code) {
   jclass exception = env->FindClass("java/lang/Exception");
   env->ThrowNew(exception, exBuffer);
   // printf("exit code: %i\n", exit_code);
-  std::exit(exit_code);
+  // std::exit(exit_code);
 
 }
 
