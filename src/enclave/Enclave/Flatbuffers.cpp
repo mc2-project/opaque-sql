@@ -283,7 +283,6 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
     printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
            field->value_type());
     ocall_exit(1);
-    printf("after exit");
     return flatbuffers::Offset<tuix::Field>();
   }
 }
