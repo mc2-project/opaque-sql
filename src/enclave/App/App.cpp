@@ -367,7 +367,7 @@ void ocall_free(uint8_t *buf) {
 
 void ocall_exit(int exit_code) {
   JNIEnv* env;
-  // printf("JVM: %p\n", jvm);
+  printf("JVM: %p\n", jvm);
   jvm->AttachCurrentThread((void**) &env, NULL);
 
   // char exBuffer[50];
