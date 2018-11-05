@@ -367,7 +367,6 @@ void ocall_free(uint8_t *buf) {
 
 void ocall_exit(int exit_code) {
   JNIEnv* env;
-  int x = exit_code;
   // printf("JVM: %p\n", jvm);
   jvm->AttachCurrentThread((void**) &env, NULL);
 
@@ -376,7 +375,7 @@ void ocall_exit(int exit_code) {
   // printf("do i make it here3\n");
   // env->ThrowNew(env->FindClass("java/lang/Exception"), exBuffer);
   // fflush(stdout);
-  // std::exit(exit_code);
+  std::exit(exit_code);
 }
 
 #if defined(_MSC_VER)
