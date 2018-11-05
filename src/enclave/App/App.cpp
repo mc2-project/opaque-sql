@@ -367,9 +367,9 @@ void ocall_free(uint8_t *buf) {
 
 void ocall_exit(int exit_code) {
   JNIEnv* env;
-  // (*jvm)->AttachCurrentThread(jvm, &env, NULL);
+  jvm->AttachCurrentThread(&env, NULL);
 
-  char* exBuffer;
+  char* exBuffer[35];
   sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
   // (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), exBuffer);
   // std::exit(exit_code);
