@@ -368,6 +368,7 @@ void ocall_free(uint8_t *buf) {
 void ocall_exit(int exit_code) {
   JNIEnv* env;
   jvm->AttachCurrentThread((void**) &env, NULL);
+  printf("do i make it here");
 
   char exBuffer[35];
   sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
