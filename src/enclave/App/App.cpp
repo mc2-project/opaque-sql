@@ -412,7 +412,7 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   (void)env;
   (void)obj;
 
-  GetJavaVM(env, &jvm);
+  env->GetJavaVM(env, &jvm);
 
   sgx_enclave_id_t eid;
   sgx_launch_token_t token = {0};
