@@ -376,8 +376,9 @@ void ocall_exit(int exit_code) {
   // jclass exception = env->FindClass("java/lang/Exception");
   // env->ThrowNew(exception, "Enclave exited with exit code %i", exit_code);
   // fflush(stdout);
-  // std::exit(exit_code);
   printf("exit code: %i\n", exit_code);
+  std::exit(exit_code);
+  
 }
 
 #if defined(_MSC_VER)
