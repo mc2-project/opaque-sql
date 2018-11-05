@@ -375,7 +375,8 @@ void ocall_exit(int exit_code) {
   // printf("do i make it here3\n");
   // env->ThrowNew(env->FindClass("java/lang/Exception"), exBuffer);
   // fflush(stdout);
-  std::exit(exit_code);
+  // std::exit(exit_code);
+  printf("exit code: %i", exit_code);
 }
 
 #if defined(_MSC_VER)
