@@ -377,6 +377,7 @@ void ocall_exit(int exit_code) {
   // fflush(stdout);
   // std::exit(exit_code);
   printf("exit code: %i", exit_code);
+  fflush(stdout);
 }
 
 #if defined(_MSC_VER)
