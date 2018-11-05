@@ -375,7 +375,7 @@ void ocall_exit(int exit_code) {
   // env->ThrowNew(env->FindClass("java/lang/Exception"), exBuffer);
   // printf("after throw exception\n");
   // fflush(stdout);
-  // std::exit(exit_code);
+  std::exit(exit_code);
 }
 
 #if defined(_MSC_VER)
