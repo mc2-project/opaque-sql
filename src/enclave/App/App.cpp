@@ -373,7 +373,7 @@ void ocall_exit(int exit_code) {
   sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
   printf("do i make it here3\n");
   // env->ThrowNew(env->FindClass("java/lang/Exception"), exBuffer);
-  fflush(stdout);
+  // fflush(stdout);
   // std::exit(exit_code);
 }
 
