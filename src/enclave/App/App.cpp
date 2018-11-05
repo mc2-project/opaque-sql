@@ -369,8 +369,8 @@ void ocall_exit(int exit_code) {
   JNIEnv* env;
   // (*jvm)->AttachCurrentThread(jvm, &env, NULL);
 
-  // char* exBuffer;
-  // sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
+  char* exBuffer;
+  sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
   // (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/Exception"), exBuffer);
   // std::exit(exit_code);
 }
@@ -412,7 +412,7 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   (void)env;
   (void)obj;
 
-  env->GetJavaVM(env, &jvm);
+  env->GetJavaVM(&jvm);
 
   sgx_enclave_id_t eid;
   sgx_launch_token_t token = {0};
