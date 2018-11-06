@@ -381,7 +381,7 @@ void ocall_exit(int exit_code) {
 void ocall_throw(const char *message) {
   JNIEnv* env;
   jvm->AttachCurrentThread((void**) &env, NULL);
-  jclass exception = env->FindClass("java/lang/Exception");
+  jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
   env->ThrowNew(exception, message);
 }
 

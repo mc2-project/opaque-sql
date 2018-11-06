@@ -18,9 +18,11 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.sql.Timestamp
 
 import scala.util.Random
 
+import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
@@ -28,14 +30,11 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.unsafe.types.CalendarInterval
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
-
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.Row
-import org.apache.spark.unsafe.types.CalendarInterval
-import java.sql.Timestamp
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -345,9 +344,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
         schema))
     // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
     // StringType
-    intercept[java.lang.Exception] {
+    val e = intercept[SparkException] {
       df.select($"CalendarIntervalType".cast(StringType)).collect
     }
+    assert(e.getCause.isInstanceOf[OpaqueException])
   }
 
   testAgainstSpark("least squares") { securityLevel =>
