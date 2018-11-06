@@ -98,7 +98,7 @@ std::string to_string(const tuix::ByteField *f) {
 
 std::string to_string(const tuix::CalendarIntervalField *f) {
   (void)f;
-  throw "Can't convert CalendarIntervalField to string";
+  throw std::runtime_error("Can't convert CalendarIntervalField to string");
 }
 
 std::string to_string(const tuix::NullField *f) {
