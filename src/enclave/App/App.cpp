@@ -366,18 +366,23 @@ void ocall_free(uint8_t *buf) {
 }
 
 void ocall_exit(int exit_code) {
+  std::exit(exit_code);
+}
+
+/**
+ * Throw a Java exception with the specified message.
+ *
+ * This function is intended to be invoked from an ecall that was in turn invoked by a JNI method.
+ * As a result of calling this function, the JNI method will throw a Java exception upon its return.
+ *
+ * Important: Note that this function will return to the caller. The exception is only thrown at the
+ * end of the JNI method invocation.
+ */
+void ocall_throw(const char *message) {
   JNIEnv* env;
-  // printf("JVM: %p\n", jvm);
   jvm->AttachCurrentThread((void**) &env, NULL);
-
-  char exBuffer[50];
-  sprintf(exBuffer, "Enclave exited with exit code %i", exit_code);
-  // printf("do i make it here3\n");
-  jclass exception = env->FindClass("java/lang/Exception");
-  env->ThrowNew(exception, exBuffer);
-  // printf("exit code: %i\n", exit_code);
-  // std::exit(exit_code);
-
+  jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
+  env->ThrowNew(exception, message);
 }
 
 #if defined(_MSC_VER)

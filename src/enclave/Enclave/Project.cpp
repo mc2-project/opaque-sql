@@ -7,8 +7,11 @@ void project(uint8_t *project_list, size_t project_list_length,
              uint8_t *input_rows, size_t input_rows_length,
              uint8_t **output_rows, size_t *output_rows_length) {
   flatbuffers::Verifier v(project_list, project_list_length);
-  check(v.VerifyBuffer<tuix::ProjectExpr>(nullptr),
-        "Corrupt ProjectExpr %p of length %d\n", project_list, project_list_length);
+  if (!v.VerifyBuffer<tuix::ProjectExpr>(nullptr)) {
+      throw std::runtime_error(
+          std::string("Corrupt ProjectExpr buffer of length ")
+          + std::to_string(project_list_length));
+  }
 
   // Create a vector of expression evaluators, one per output column
   const tuix::ProjectExpr* project_expr =

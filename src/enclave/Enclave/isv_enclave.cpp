@@ -34,6 +34,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 #include <sgx_tcrypto.h>
 #include <sgx_tkey_exchange.h>
@@ -218,8 +219,7 @@ sgx_status_t enclave_init_ra(int b_pse,
     ret = sgx_ecc256_open_context(&ecc_state);
     if (ret != SGX_SUCCESS) {
         if (SGX_ERROR_OUT_OF_MEMORY != ret) {
-          printf("SGX out of memory\n");
-          std::exit(1);
+          throw std::runtime_error("SGX out of memory");
         }
         printf("SGX ecc256 open context failure\n");
         return ret;
@@ -229,8 +229,7 @@ sgx_status_t enclave_init_ra(int b_pse,
                                  ecc_state, &valid);
     if (ret != SGX_SUCCESS) {
       if (ret != SGX_ERROR_OUT_OF_MEMORY) {
-        printf("SGX out of memory 2\n");
-        std::exit(1);
+        throw std::runtime_error("SGX out of memory 2");
       }
       sgx_ecc256_close_context(ecc_state);
       return ret;
@@ -238,8 +237,7 @@ sgx_status_t enclave_init_ra(int b_pse,
 
     if (!valid) {
       sgx_ecc256_close_context(ecc_state);
-      printf("pub_key points invalid\n");
-      std::exit(1);
+      throw std::runtime_error("pub_key points invalid");
     }
     sgx_ecc256_close_context(ecc_state);
 
