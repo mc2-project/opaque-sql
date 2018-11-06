@@ -41,6 +41,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <time.h>
+#include <stdexcept>
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(ptr) {if (NULL != (ptr)) {free(ptr); (ptr) = NULL;}}
@@ -142,9 +143,12 @@ int read_secret_key(const char *filename,
 
   int ret = 0;
   FILE *secret_key_file = fopen(filename, "r");
-  check(secret_key_file != nullptr,
-        "Error: Private key file '%s' does not exist. Set environment variable "
-        "$PRIVATE_KEY_PATH.\n", filename);
+  if (secret_key_file == nullptr) {
+      throw std::runtime_error(
+          std::string("Error: Private key file '")
+          + std::string(filename)
+          + std::string("' does not exist. Set environment variable $PRIVATE_KEY_PATH."));
+  }
   EVP_PKEY *pkey = PEM_read_PrivateKey(secret_key_file, NULL, NULL, NULL);
   if (pkey == NULL) {
     printf("[read_secret_key] returned private key is null\n");

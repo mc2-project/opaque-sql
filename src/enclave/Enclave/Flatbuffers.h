@@ -111,10 +111,11 @@ flatbuffers::Offset<tuix::Field> flatbuffers_cast(
   }
   default:
   {
-    printf("Can't cast %s to %s\n",
-           typeid(InputTuixField).name(), tuix::EnumNameColType(cast->target_type()));
-    std::exit(1);
-    return flatbuffers::Offset<tuix::Field>();
+    throw std::runtime_error(
+      std::string("Can't cast ")
+      + std::string(typeid(InputTuixField).name())
+      + std::string(" to ")
+      + std::string(tuix::EnumNameColType(cast->target_type())));
   }
   }
 }
@@ -129,8 +130,11 @@ class EncryptedBlocksToEncryptedBlockReader {
 public:
   EncryptedBlocksToEncryptedBlockReader(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v(buf, len);
-    check(v.VerifyBuffer<tuix::EncryptedBlocks>(nullptr),
-          "Corrupt EncryptedBlocks %p of length %d\n", buf, len);
+    if (!v.VerifyBuffer<tuix::EncryptedBlocks>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt EncryptedBlocks buffer of length ")
+        + std::to_string(len));
+    }
     encrypted_blocks = flatbuffers::GetRoot<tuix::EncryptedBlocks>(buf);
     debug("EncryptedBlocksToEncryptedBlockReader: %d blocks\n", encrypted_blocks->blocks()->size());
   }
@@ -151,8 +155,11 @@ public:
 
   void reset(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v(buf, len);
-    check(v.VerifyBuffer<tuix::EncryptedBlock>(nullptr),
-          "Corrupt EncryptedBlock %p of length %d\n", buf, len);
+    if (!v.VerifyBuffer<tuix::EncryptedBlock>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt EncryptedBlock buffer of length ")
+        + std::to_string(len));
+    }
     auto encrypted_block = flatbuffers::GetRoot<tuix::EncryptedBlock>(buf);
     init(encrypted_block);
   }
@@ -186,13 +193,21 @@ private:
     decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
             rows_buf.get());
     flatbuffers::Verifier v(rows_buf.get(), rows_len);
-    check(v.VerifyBuffer<tuix::Rows>(nullptr),
-          "Corrupt Rows %p of length %d\n", rows_buf.get(), rows_len);
+    if (!v.VerifyBuffer<tuix::Rows>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt Rows buffer of length ")
+        + std::to_string(rows_len));
+    }
 
     rows = flatbuffers::GetRoot<tuix::Rows>(rows_buf.get());
-    check(rows->rows()->size() == num_rows,
-          "EncryptedBlock claimed to contain %d rows but actually contains %d rows\n",
-          num_rows == rows->rows()->size());
+    if (rows->rows()->size() != num_rows) {
+      throw std::runtime_error(
+        std::string("EncryptedBlock claimed to contain ")
+        + std::to_string(num_rows)
+        + std::string("rows but actually contains ")
+        + std::to_string(rows->rows()->size())
+        + std::string(" rows"));
+    }
 
     row_idx = 0;
     initialized = true;
@@ -213,8 +228,11 @@ public:
   EncryptedBlocksToRowReader(uint8_t *buf, size_t len)
     : block_idx(0) {
     flatbuffers::Verifier v(buf, len);
-    check(v.VerifyBuffer<tuix::EncryptedBlocks>(nullptr),
-          "Corrupt EncryptedBlocks %p of length %d\n", buf, len);
+    if (!v.VerifyBuffer<tuix::EncryptedBlocks>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt EncryptedBlocks buffer of length ")
+        + std::to_string(len));
+    }
     encrypted_blocks = flatbuffers::GetRoot<tuix::EncryptedBlocks>(buf);
     init_row_reader();
   }
@@ -271,8 +289,11 @@ public:
     this->buf = buf;
 
     flatbuffers::Verifier v(buf, len);
-    check(v.VerifyBuffer<tuix::SortedRuns>(nullptr),
-          "Corrupt SortedRuns %p of length %d\n", buf, len);
+    if (!v.VerifyBuffer<tuix::SortedRuns>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt SortedRuns buffer of length ")
+        + std::to_string(len));
+    }
     sorted_runs = flatbuffers::GetRoot<tuix::SortedRuns>(buf);
 
     run_readers.clear();
@@ -453,8 +474,11 @@ public:
       const uint8_t *buf = builder.GetBufferPointer();
       size_t len = builder.GetSize();
       flatbuffers::Verifier v(buf, len);
-      check(v.VerifyBuffer<tuix::Row>(nullptr),
-            "Corrupt Row %p of length %d\n", buf, len);
+      if (!v.VerifyBuffer<tuix::Row>(nullptr)) {
+        throw std::runtime_error(
+          std::string("Corrupt Row buffer of length ")
+          + std::to_string(len));
+      }
       this->row = flatbuffers::GetRoot<tuix::Row>(buf);
     } else {
       this->row = nullptr;

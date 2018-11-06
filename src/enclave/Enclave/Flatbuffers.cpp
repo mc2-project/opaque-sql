@@ -48,10 +48,9 @@ std::string to_string(const tuix::Field *f) {
   case tuix::FieldUnion_MapField:
     return to_string(f->value_as_MapField());
   default:
-    printf("to_string(tuix::Field): Unknown field type %d\n",
-           f->value_type());
-    std::exit(1);
-    return "";
+    throw std::runtime_error(
+      std::string("to_string(tuix::Field): Unknown field type ")
+      + std::to_string(f->value_type()));
   }
 }
 
@@ -280,9 +279,8 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   //     is_null);
   // }
   default:
-    printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
-           field->value_type());
-    std::exit(1);
-    return flatbuffers::Offset<tuix::Field>();
+    throw std::runtime_error(
+      std::string("flatbuffers_copy tuix::Field: Unknown field type ")
+                  + std::to_string(field->value_type()));
   }
 }
