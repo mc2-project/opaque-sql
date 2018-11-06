@@ -22,6 +22,8 @@ import java.sql.Timestamp
 
 import scala.util.Random
 
+import org.apache.log4j.Level
+import org.apache.log4j.LogManager
 import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
@@ -76,6 +78,16 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
     test(name + " - Spark") {
       f(Insecure)
+    }
+  }
+
+  def withLoggingOff[A](f: () => A): A = {
+    val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
+    for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
+    try {
+      f()
+    } finally {
+      for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.WARN)
     }
   }
 
@@ -345,7 +357,9 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
     // StringType
     val e = intercept[SparkException] {
-      df.select($"CalendarIntervalType".cast(StringType)).collect
+      withLoggingOff {
+        df.select($"CalendarIntervalType".cast(StringType)).collect
+      }
     }
     assert(e.getCause.isInstanceOf[OpaqueException])
   }
