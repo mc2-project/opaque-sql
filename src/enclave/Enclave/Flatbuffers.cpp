@@ -272,24 +272,24 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         builder, &copied_fields).Union(),
       is_null);
   }
-  // case tuix::FieldUnion_MapField:
-  // {
-  //   auto map_field = static_cast<const tuix::MapField *>(field->value());
-  //   std::vector<flatbuffers::Offset<tuix::Field>> copied_key_fields;
-  //   std::vector<flatbuffers::Offset<tuix::Field>> copied_value_fields;
-  //   for (auto f : *map_field->keys()) {
-  //     copied_key_fields.push_back(flatbuffers_copy(f, builder, false));
-  //   }
-  //   for (auto f : *map_field->values()) {
-  //     copied_value_fields.push_back(flatbuffers_copy(f, builder, false));
-  //   }
-  //   return tuix::CreateField(
-  //     builder,
-  //     tuix::FieldUnion_MapField,
-  //     tuix::CreateMapFieldDirect(
-  //       builder, &copied_key_fields, &copied_value_fields).Union(),
-  //     is_null);
-  // }
+  case tuix::FieldUnion_MapField:
+  {
+    auto map_field = static_cast<const tuix::MapField *>(field->value());
+    std::vector<flatbuffers::Offset<tuix::Field>> copied_key_fields;
+    std::vector<flatbuffers::Offset<tuix::Field>> copied_value_fields;
+    for (auto f : *map_field->keys()) {
+      copied_key_fields.push_back(flatbuffers_copy(f, builder, false));
+    }
+    for (auto f : *map_field->values()) {
+      copied_value_fields.push_back(flatbuffers_copy(f, builder, false));
+    }
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_MapField,
+      tuix::CreateMapFieldDirect(
+        builder, &copied_key_fields, &copied_value_fields).Union(),
+      is_null);
+  }
   default:
     throw std::runtime_error(
       std::string("flatbuffers_copy tuix::Field: Unknown field type ")
