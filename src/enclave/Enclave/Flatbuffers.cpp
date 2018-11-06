@@ -246,6 +246,18 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         builder,
         static_cast<const tuix::DateField *>(field->value())->value()).Union(),
       is_null);
+  case tuix::FieldUnion_CalendarIntervalField:
+  {
+    auto cif = static_cast<const tuix::CalendarIntervalField *>(field->value());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_CalendarIntervalField,
+      tuix::CreateCalendarIntervalField(
+        builder,
+        cif->months(),
+        cif->microseconds()).Union(),
+      is_null);
+  }
   case tuix::FieldUnion_ArrayField:
   {
     auto array_field = static_cast<const tuix::ArrayField *>(field->value());

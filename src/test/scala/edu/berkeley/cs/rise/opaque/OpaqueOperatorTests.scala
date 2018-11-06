@@ -334,6 +334,22 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       === df2.groupBy("word").agg(sum("count")).collect.toSet)
   }
 
+  testOpaqueOnly("cast error") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+    // StringType
+    intercept[java.lang.Exception] {
+      df.select($"CalendarIntervalType".cast(StringType)).collect
+    }
+  }
+
   testAgainstSpark("least squares") { securityLevel =>
     val answer = LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
     answer
