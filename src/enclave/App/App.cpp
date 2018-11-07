@@ -66,6 +66,7 @@
 #endif
 
 static sgx_ra_context_t context = INT_MAX;
+JavaVM* jvm;
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -368,6 +369,22 @@ void ocall_exit(int exit_code) {
   std::exit(exit_code);
 }
 
+/**
+ * Throw a Java exception with the specified message.
+ *
+ * This function is intended to be invoked from an ecall that was in turn invoked by a JNI method.
+ * As a result of calling this function, the JNI method will throw a Java exception upon its return.
+ *
+ * Important: Note that this function will return to the caller. The exception is only thrown at the
+ * end of the JNI method invocation.
+ */
+void ocall_throw(const char *message) {
+  JNIEnv* env;
+  jvm->AttachCurrentThread((void**) &env, NULL);
+  jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
+  env->ThrowNew(exception, message);
+}
+
 #if defined(_MSC_VER)
 /* query and enable SGX device*/
 int query_sgx_status()
@@ -404,6 +421,8 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   JNIEnv *env, jobject obj, jstring library_path) {
   (void)env;
   (void)obj;
+
+  env->GetJavaVM(&jvm);
 
   sgx_enclave_id_t eid;
   sgx_launch_token_t token = {0};

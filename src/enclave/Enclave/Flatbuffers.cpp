@@ -48,10 +48,9 @@ std::string to_string(const tuix::Field *f) {
   case tuix::FieldUnion_MapField:
     return to_string(f->value_as_MapField());
   default:
-    printf("to_string(tuix::Field): Unknown field type %d\n",
-           f->value_type());
-    std::exit(1);
-    return "";
+    throw std::runtime_error(
+      std::string("to_string(tuix::Field): Unknown field type ")
+      + std::to_string(f->value_type()));
   }
 }
 
@@ -99,7 +98,7 @@ std::string to_string(const tuix::ByteField *f) {
 
 std::string to_string(const tuix::CalendarIntervalField *f) {
   (void)f;
-  throw "Can't convert CalendarIntervalField to string";
+  throw std::runtime_error("Can't convert CalendarIntervalField to string");
 }
 
 std::string to_string(const tuix::NullField *f) {
@@ -247,6 +246,18 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         builder,
         static_cast<const tuix::DateField *>(field->value())->value()).Union(),
       is_null);
+  case tuix::FieldUnion_CalendarIntervalField:
+  {
+    auto cif = static_cast<const tuix::CalendarIntervalField *>(field->value());
+    return tuix::CreateField(
+      builder,
+      tuix::FieldUnion_CalendarIntervalField,
+      tuix::CreateCalendarIntervalField(
+        builder,
+        cif->months(),
+        cif->microseconds()).Union(),
+      is_null);
+  }
   case tuix::FieldUnion_ArrayField:
   {
     auto array_field = static_cast<const tuix::ArrayField *>(field->value());
@@ -280,9 +291,8 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
       is_null);
   }
   default:
-    printf("flatbuffers_copy tuix::Field: Unknown field type %d\n",
-           field->value_type());
-    std::exit(1);
-    return flatbuffers::Offset<tuix::Field>();
+    throw std::runtime_error(
+      std::string("flatbuffers_copy tuix::Field: Unknown field type ")
+                  + std::to_string(field->value_type()));
   }
 }
