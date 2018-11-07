@@ -18,9 +18,13 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.sql.Timestamp
 
 import scala.util.Random
 
+import org.apache.log4j.Level
+import org.apache.log4j.LogManager
+import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
@@ -28,14 +32,11 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.unsafe.types.CalendarInterval
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
-
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.Row
-import org.apache.spark.unsafe.types.CalendarInterval
-import java.sql.Timestamp
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -77,6 +78,16 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
     test(name + " - Spark") {
       f(Insecure)
+    }
+  }
+
+  def withLoggingOff[A](f: () => A): A = {
+    val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
+    for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
+    try {
+      f()
+    } finally {
+      for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.WARN)
     }
   }
 
@@ -344,6 +355,24 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     } finally {
       spark.catalog.dropTempView("df")
     }
+
+  testOpaqueOnly("cast error") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+    // StringType
+    val e = intercept[SparkException] {
+      withLoggingOff {
+        df.select($"CalendarIntervalType".cast(StringType)).collect
+      }
+    }
+    assert(e.getCause.isInstanceOf[OpaqueException])
   }
 
   testAgainstSpark("least squares") { securityLevel =>

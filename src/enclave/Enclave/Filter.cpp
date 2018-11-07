@@ -10,8 +10,11 @@ void filter(uint8_t *condition, size_t condition_length,
             uint8_t **output_rows, size_t *output_rows_length) {
 
   flatbuffers::Verifier v(condition, condition_length);
-  check(v.VerifyBuffer<tuix::FilterExpr>(nullptr),
-        "Corrupt FilterExpr %p of length %d\n", condition, condition_length);
+  if (!v.VerifyBuffer<tuix::FilterExpr>(nullptr)) {
+      throw std::runtime_error(
+          std::string("Corrupt FilterExpr buffer of length ")
+          + std::to_string(condition_length));
+  }
 
   const tuix::FilterExpr* condition_expr = flatbuffers::GetRoot<tuix::FilterExpr>(condition);
   FlatbuffersExpressionEvaluator condition_eval(condition_expr->condition());
@@ -22,11 +25,14 @@ void filter(uint8_t *condition, size_t condition_length,
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     const tuix::Field *condition_result = condition_eval.eval(row);
-    check(condition_result->value_type() == tuix::FieldUnion_BooleanField,
-          "Filter expression returned %s instead of BooleanField\n",
-          tuix::EnumNameFieldUnion(condition_result->value_type()));
-    check(!condition_result->is_null(),
-          "Filter expression returned null\n");
+    if (condition_result->value_type() != tuix::FieldUnion_BooleanField) {
+      throw std::runtime_error(
+        std::string("Filter expression expected to return BooleanField, instead returned ")
+        + std::string(tuix::EnumNameFieldUnion(condition_result->value_type())));
+    }
+    if (condition_result->is_null()) {
+      throw std::runtime_error("Filter expression returned null");
+    }
 
     bool keep_row = static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     if (keep_row) {
