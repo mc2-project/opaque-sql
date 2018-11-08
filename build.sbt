@@ -8,7 +8,7 @@ scalaVersion := "2.11.12"
 
 spName := "amplab/opaque"
 
-sparkVersion := "2.3.2"
+sparkVersion := "2.4.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
