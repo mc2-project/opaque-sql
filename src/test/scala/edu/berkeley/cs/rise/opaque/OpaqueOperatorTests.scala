@@ -53,6 +53,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   private var path: File = null
 
   override def beforeAll(): Unit = {
+    LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
     Utils.initSQLContext(spark.sqlContext)
     path = Utils.createTempDir()
     path.delete()
@@ -195,6 +196,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    df.unpersist()
   }
 
   testAgainstSpark("sort") { securityLevel =>

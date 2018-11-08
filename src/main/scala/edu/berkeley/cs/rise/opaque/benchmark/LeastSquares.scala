@@ -41,7 +41,7 @@ object LeastSquares {
   def query(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
     : DataFrame = {
     import spark.implicits._
-    val dataDF = data(spark, securityLevel, size, numPartitions).cache()
+    val dataDF = Utils.ensureCached(data(spark, securityLevel, size, numPartitions))
     Utils.time("Load least squares data") { Utils.force(dataDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),

@@ -241,13 +241,26 @@ object Utils extends Logging {
   }
 
   def ensureCached[T](
-      rdd: RDD[T], storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): RDD[T] = {
+      rdd: RDD[T], storageLevel: StorageLevel): RDD[T] = {
     if (rdd.getStorageLevel == StorageLevel.NONE) {
       rdd.persist(storageLevel)
     } else {
       rdd
     }
   }
+
+  def ensureCached[T](rdd: RDD[T]): RDD[T] = ensureCached(rdd, StorageLevel.MEMORY_ONLY)
+
+  def ensureCached[T](
+      ds: Dataset[T], storageLevel: StorageLevel): Dataset[T] = {
+    if (ds.storageLevel == StorageLevel.NONE) {
+      ds.persist(storageLevel)
+    } else {
+      ds
+    }
+  }
+
+  def ensureCached[T](ds: Dataset[T]): Dataset[T] = ensureCached(ds, StorageLevel.MEMORY_ONLY)
 
   def force(ds: Dataset[_]): Unit = {
     val rdd: RDD[_] = ds.queryExecution.executedPlan match {

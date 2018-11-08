@@ -36,20 +36,20 @@ object PageRank {
       .option("delimiter", " ")
       .csv(s"${Benchmark.dataDir}/pagerank/PageRank$size.in")
     val edges =
-      securityLevel.applyTo(
-        data
-          .filter($"isVertex" === lit(0))
-          .select($"src", $"dst", lit(1.0f).as("weight"))
-          .repartition(numPartitions))
-        .cache()
+      Utils.ensureCached(
+        securityLevel.applyTo(
+          data
+            .filter($"isVertex" === lit(0))
+            .select($"src", $"dst", lit(1.0f).as("weight"))
+            .repartition(numPartitions)))
     Utils.time("load edges") { Utils.force(edges) }
     val vertices =
-      securityLevel.applyTo(
-        data
-          .filter($"isVertex" === lit(1))
-          .select($"src".as("id"), lit(1.0f).as("rank"))
-          .repartition(numPartitions))
-        .cache()
+      Utils.ensureCached(
+        securityLevel.applyTo(
+          data
+            .filter($"isVertex" === lit(1))
+            .select($"src".as("id"), lit(1.0f).as("rank"))
+            .repartition(numPartitions)))
     Utils.time("load vertices") { Utils.force(vertices) }
     val newV =
       Utils.timeBenchmark(
