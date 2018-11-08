@@ -29,14 +29,6 @@ namespace std {
 #define perf(...) do {} while (0)
 #endif
 
-#define check(test, ...) do {                   \
-    bool result = test;                         \
-    if (!result) {                              \
-      printf(__VA_ARGS__);                      \
-      std::exit(1);                                  \
-    }                                           \
-  } while (0)
-
 inline int memcpy_s(void *dest,
                     size_t numberOfElements,
                     const void *src,

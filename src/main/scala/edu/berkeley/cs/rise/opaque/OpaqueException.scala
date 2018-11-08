@@ -15,19 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.storage.StorageLevel
+/** Represents an exception originating from an Opaque enclave. */
+class OpaqueException(message: String) extends Exception(message) {
+  def this(message: String, cause: Throwable) {
+    this(message)
+    initCause(cause)
+  }
 
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.execution.columnar.InMemoryRelation
+  def this(cause: Throwable) {
+    this(Option(cause).map(_.toString).orNull, cause)
 
-object InMemoryRelationMatcher {
-  def unapply(plan: LogicalPlan): Option[(Seq[Attribute], StorageLevel, SparkPlan)] = plan match {
-    case p @ InMemoryRelation(output, cacheBuilder) =>
-      Some((output, cacheBuilder.storageLevel, p.cachedPlan))
-    case _ => None
+  }
+
+  def this() {
+    this(null: String)
   }
 }

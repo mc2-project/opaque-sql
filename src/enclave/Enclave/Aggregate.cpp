@@ -67,15 +67,21 @@ void non_oblivious_aggregate_step2(
     prev_partition_last_row, prev_partition_last_row_length);
   FlatbuffersRowWriter w;
 
-  check(next_partition_first_row_reader.num_rows() <= 1,
-        "Incorrect number of starting rows from next partition passed: expected 0 or 1, got %d\n",
-        next_partition_first_row_reader.num_rows());
-  check(prev_partition_last_group_reader.num_rows() <= 1,
-        "Incorrect number of ending groups from prev partition passed: expected 0 or 1, got %d\n",
-        prev_partition_last_group_reader.num_rows());
-  check(prev_partition_last_row_reader.num_rows() <= 1,
-        "Incorrect number of ending rows from prev partition passed: expected 0 or 1, got %d\n",
-        prev_partition_last_row_reader.num_rows());
+  if (next_partition_first_row_reader.num_rows() > 1) {
+      throw std::runtime_error(
+          std::string("Incorrect number of starting rows from next partition passed: expected 0 or 1, got ")
+          + std::to_string(next_partition_first_row_reader.num_rows()));
+  }
+  if (prev_partition_last_group_reader.num_rows() > 1) {
+      throw std::runtime_error(
+          std::string("Incorrect number of ending groups from prev partition passed: expected 0 or 1, got ")
+          + std::to_string(prev_partition_last_group_reader.num_rows()));
+  }
+  if (prev_partition_last_row_reader.num_rows() > 1) {
+      throw std::runtime_error(
+          std::string("Incorrect number of ending rows from prev partition passed: expected 0 or 1, got ")
+          + std::to_string(prev_partition_last_row_reader.num_rows()));
+  }
 
   const tuix::Row *next_partition_first_row_ptr =
     next_partition_first_row_reader.has_next() ? next_partition_first_row_reader.next() : nullptr;

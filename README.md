@@ -71,7 +71,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.3.2](https://github.com/apache/spark/releases/tag/v2.3.2) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0](https://github.com/apache/spark/releases/tag/v2.4.0) is already installed:
 
 1. Package Opaque into a JAR:
 

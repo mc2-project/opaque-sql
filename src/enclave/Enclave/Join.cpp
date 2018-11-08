@@ -35,17 +35,23 @@ void non_oblivious_sort_merge_join(
   EncryptedBlocksToRowReader j(join_row, join_row_length);
   FlatbuffersRowWriter w;
 
-  check(j.num_rows() <= 1,
-        "Incorrect number of join rows passed: expected 0 or 1, got %d\n", j.num_rows());
+  if (j.num_rows() > 1) {
+    throw std::runtime_error(
+      std::string("Incorrect number of join rows passed: expected 0 or 1, got ")
+      + std::to_string(j.num_rows()));
+  }
+
   FlatbuffersTemporaryRow primary(j.has_next() ? j.next() : nullptr);
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
 
     if (join_expr_eval.is_primary(current)) {
-      check(!primary.get() || !join_expr_eval.is_same_group(primary.get(), current),
-            "non_oblivious_sort_merge_join - primary table uniqueness constraint violation: "
-            "multiple rows from the primary table had the same join attribute\n");
+      if (primary.get() && join_expr_eval.is_same_group(primary.get(), current)) {
+        throw std::runtime_error(
+          "non_oblivious_sort_merge_join - primary table uniqueness constraint violation: "
+          "multiple rows from the primary table had the same join attribute");
+      }
       // Advance to a new join attribute
       primary.set(current);
     } else {

@@ -18,9 +18,13 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.sql.Timestamp
 
 import scala.util.Random
 
+import org.apache.log4j.Level
+import org.apache.log4j.LogManager
+import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
@@ -28,14 +32,11 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SQLImplicits
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.unsafe.types.CalendarInterval
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
-
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.Row
-import org.apache.spark.unsafe.types.CalendarInterval
-import java.sql.Timestamp
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -52,6 +53,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   private var path: File = null
 
   override def beforeAll(): Unit = {
+    LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
     Utils.initSQLContext(spark.sqlContext)
     path = Utils.createTempDir()
     path.delete()
@@ -80,13 +82,24 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  def withLoggingOff[A](f: () => A): A = {
+    val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
+    for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
+    try {
+      f()
+    } finally {
+      for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.WARN)
+    }
+  }
+
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
   }
 
   testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
-    val data: Seq[(Array[Byte], Byte)] = Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+    val data: Seq[(Array[Byte], Byte)] =
+      Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
     makeDF(data, securityLevel, "BinaryType", "ByteType").collect
   }
 
@@ -171,7 +184,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       ds.queryExecution.executedPlan.collect {
         case cached: EncryptedBlockRDDScanExec
             if cached.rdd.getStorageLevel != StorageLevel.NONE =>
-          println(cached.rdd.getStorageLevel)
           cached
       }.size
 
@@ -184,6 +196,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    df.unpersist()
   }
 
   testAgainstSpark("sort") { securityLevel =>
@@ -333,6 +346,38 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       === df2.groupBy("word").agg(sum("count")).collect.toSet)
   }
 
+  testAgainstSpark("SQL API") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.createTempView("df")
+    try {
+      spark.sql("SELECT * FROM df WHERE x > 10").collect
+    } finally {
+      spark.catalog.dropTempView("df")
+    }
+  }
+
+  testOpaqueOnly("cast error") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+    // StringType
+    val e = intercept[SparkException] {
+      withLoggingOff {
+        df.select($"CalendarIntervalType".cast(StringType)).collect
+      }
+    }
+    assert(e.getCause.isInstanceOf[OpaqueException])
+  }
+
   testAgainstSpark("least squares") { securityLevel =>
     val answer = LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
     answer
@@ -379,7 +424,7 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
     .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
 
-  override def numPartitions = 1
+  override def numPartitions: Int = 1
 }
 
 class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
@@ -389,15 +434,20 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
-  override def numPartitions = 3
+  override def numPartitions: Int = 3
 
   import testImplicits._
-  def makePartitionedDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-    data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*): DataFrame =
+
+  def makePartitionedDF[
+      A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+      data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
+    : DataFrame = {
     securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data, numPartitions))
         .toDF(columnNames: _*))
+  }
+
   testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)

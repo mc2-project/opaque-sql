@@ -20,9 +20,12 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.OpaqueDatasetFunctions
 
+// scalastyle:off
+// Disable style checker so "implicits" object can start with lowercase i
 object implicits {
   import scala.language.implicitConversions
 
   implicit def datasetToOpaqueDatasetFunctions[T](ds: Dataset[T]): OpaqueDatasetFunctions[T] =
     new OpaqueDatasetFunctions[T](ds)
 }
+// scalastyle:on

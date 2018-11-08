@@ -129,7 +129,7 @@ trait OpaqueOperatorExec extends SparkPlan {
    * relation from the logical plan, but this only happens after InMemoryRelation has called this
    * method. We therefore have to silently return an empty RDD here.
    */
-  override def doExecute() = {
+  override def doExecute(): RDD[InternalRow] = {
     sqlContext.sparkContext.emptyRDD
     // throw new UnsupportedOperationException("use executeBlocked")
   }
@@ -174,7 +174,7 @@ trait OpaqueOperatorExec extends SparkPlan {
       res.foreach {
         case Some(block) =>
           buf ++= Utils.decryptBlockFlatbuffers(block)
-        case None => {}
+        case None =>
       }
 
       partsScanned += p.size
@@ -193,7 +193,7 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
-  override def executeBlocked() = {
+  override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => childRDD.map { block =>
@@ -279,7 +279,7 @@ case class EncryptedSortMergeJoinExec(
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
-  override def executeBlocked() = {
+  override def executeBlocked(): RDD[Block] = {
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 
@@ -317,7 +317,7 @@ case class EncryptedUnionExec(
   override def output: Seq[Attribute] =
     left.output
 
-  override def executeBlocked() = {
+  override def executeBlocked(): RDD[Block] = {
     var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)

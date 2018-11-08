@@ -41,7 +41,7 @@ object LeastSquares {
   def query(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
     : DataFrame = {
     import spark.implicits._
-    val dataDF = data(spark, securityLevel, size, numPartitions).cache()
+    val dataDF = Utils.ensureCached(data(spark, securityLevel, size, numPartitions))
     Utils.time("Load least squares data") { Utils.force(dataDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
@@ -49,8 +49,18 @@ object LeastSquares {
       "system" -> securityLevel.name,
       "size" -> size) {
 
-      val df = dataDF.select(($"x1" * $"x1").as("c11"), ($"x1" * $"x2"). as("c12"), ($"x2" * $"x2").as("c22"), ($"x1" * $"y").as("b1"), ($"x2" * $"y"). as("b2"))
-        .agg(sum("c11").as("c11sum"), sum("c12").as("c12sum"), sum("c22").as("c22sum"), sum("b1").as("b1sum"), sum("b2").as("b2sum"))
+      val df = dataDF.select(
+        ($"x1" * $"x1").as("c11"),
+        ($"x1" * $"x2"). as("c12"),
+        ($"x2" * $"x2").as("c22"),
+        ($"x1" * $"y").as("b1"),
+        ($"x2" * $"y"). as("b2"))
+        .agg(
+          sum("c11").as("c11sum"),
+          sum("c12").as("c12sum"),
+          sum("c22").as("c22sum"),
+          sum("b1").as("b1sum"),
+          sum("b2").as("b2sum"))
 
       Utils.force(df)
 
