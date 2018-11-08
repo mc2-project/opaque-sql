@@ -344,6 +344,19 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       === df2.groupBy("word").agg(sum("count")).collect.toSet)
   }
 
+  testAgainstSpark("SQL API") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.createTempView("df")
+    try {
+      spark.sql("SELECT * FROM df WHERE x > 10").collect
+    } finally {
+      spark.catalog.dropTempView("df")
+    }
+  }
+
   testOpaqueOnly("cast error") { securityLevel =>
     val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
     val schema = StructType(Seq(
