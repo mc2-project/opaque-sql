@@ -26,8 +26,8 @@ import org.apache.spark.sql.execution.columnar.InMemoryRelation
 
 object InMemoryRelationMatcher {
   def unapply(plan: LogicalPlan): Option[(Seq[Attribute], StorageLevel, SparkPlan)] = plan match {
-    case p @ InMemoryRelation(output, _, _, storageLevel, child, _) =>
-      Some((output, storageLevel, child))
+    case p @ InMemoryRelation(output, cacheBuilder) =>
+      Some((output, cacheBuilder.storageLevel, p.cachedPlan))
     case _ => None
   }
 }
