@@ -355,6 +355,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     } finally {
       spark.catalog.dropTempView("df")
     }
+  }
 
   testOpaqueOnly("cast error") { securityLevel =>
     val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
