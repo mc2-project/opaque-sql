@@ -17,9 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
-import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
@@ -149,14 +147,18 @@ object TPCH {
       val supplierDF = supplier(sqlContext, securityLevel, size, numPartitions)
       val lineitemDF = lineitem(sqlContext, securityLevel, size, numPartitions)
       val partsuppDF = partsupp(sqlContext, securityLevel, size, numPartitions)
-      val ordersDF= orders(sqlContext, securityLevel, size, numPartitions)
-      val nationDF= nation(sqlContext, securityLevel, size, numPartitions)
+      val ordersDF = orders(sqlContext, securityLevel, size, numPartitions)
+      val nationDF = nation(sqlContext, securityLevel, size, numPartitions)
       (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
    }
 
    /** TPC-H query 9 - Product Type Profit Measure Query */
    def tpch9(
-       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int, quantityThreshold: Option[Int] = None) : DataFrame = {
+       sqlContext: SQLContext,
+       securityLevel: SecurityLevel,
+       size: String,
+       numPartitions: Int,
+       quantityThreshold: Option[Int] = None) : DataFrame = {
      import sqlContext.implicits._
      val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
        tpch9EncryptedDFs(sqlContext, securityLevel, size, numPartitions)

@@ -25,6 +25,7 @@ import java.util.UUID
 import scala.collection.mutable.ArrayBuilder
 
 import com.google.flatbuffers.FlatBufferBuilder
+import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
@@ -92,21 +93,21 @@ import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
-object Utils {
+object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
 
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
     if (perf) {
-      println(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
+      logInfo(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
     }
     result
   }
 
   def logPerf(message: String): Unit = {
     if (perf) {
-      println(message)
+      logInfo(message)
     }
   }
 
@@ -131,7 +132,7 @@ object Utils {
     val attrs = benchmarkAttrs.toMap + (
       "time" -> timeMs,
       "sgx" -> (if (System.getenv("SGX_MODE") == "HW") "hw" else "sim"))
-    println(jsonSerialize(attrs))
+    logInfo(jsonSerialize(attrs))
     result
   }
 
@@ -189,7 +190,7 @@ object Utils {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
         eid = enclave.StartEnclave(findLibraryAsResource("enclave_trusted_signed"))
-        println("Starting an enclave")
+        logInfo("Starting an enclave")
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
@@ -333,7 +334,7 @@ object Utils {
           builder,
           tuix.FieldUnion.BinaryField,
           tuix.BinaryField.createBinaryField(
-            builder, 
+            builder,
             tuix.BinaryField.createValueVector(builder, x),
             length),
           isNull)
@@ -434,8 +435,10 @@ object Utils {
         var keys = new ArrayBuilder.ofInt()
         var values = new ArrayBuilder.ofInt()
         for (i <- 0 until x.numElements) {
-          keys += flatbuffersCreateField(builder, x.keyArray.get(i, keyType), keyType, isNull)
-          values += flatbuffersCreateField(builder, x.valueArray.get(i, valueType), valueType, isNull)
+          keys += flatbuffersCreateField(
+            builder, x.keyArray.get(i, keyType), keyType, isNull)
+          values += flatbuffersCreateField(
+            builder, x.valueArray.get(i, valueType), valueType, isNull)
         }
         tuix.Field.createField(
           builder,
@@ -888,9 +891,11 @@ object Utils {
           case LeftSemi => tuix.JoinType.LeftSemi
           case LeftAnti => tuix.JoinType.LeftAnti
           case Cross => tuix.JoinType.Cross
+          // scalastyle:off
           case ExistenceJoin(_) => ???
           case NaturalJoin(_) => ???
           case UsingJoin(_, _) => ???
+          // scalastyle:on
         },
         tuix.JoinExpr.createLeftKeysVector(
           builder,

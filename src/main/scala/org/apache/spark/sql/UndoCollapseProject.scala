@@ -46,9 +46,9 @@ object UndoCollapseProject {
         case _ => true
       }
       if (needsSeparation) {
-        // Extract AggregateExpressions into a separate list and wrap them in Aliases, replacing them
-        // with AttributeReferences in the output. Also extract AttributeReferences, since these must
-        // be replicated to the aggregate expression list to avoid losing them.
+        // Extract AggregateExpressions into a separate list and wrap them in Aliases, replacing
+        // them with AttributeReferences in the output. Also extract AttributeReferences, since
+        // these must be replicated to the aggregate expression list to avoid losing them.
         val pureAggExprs = new ArrayBuffer[NamedExpression]
         val pureProjectExprs: Seq[NamedExpression] =
           aggExprs.map(_.transform {
