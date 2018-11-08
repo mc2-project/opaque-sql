@@ -53,6 +53,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   private var path: File = null
 
   override def beforeAll(): Unit = {
+    LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
     Utils.initSQLContext(spark.sqlContext)
     path = Utils.createTempDir()
     path.delete()
@@ -97,7 +98,8 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
-    val data: Seq[(Array[Byte], Byte)] = Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+    val data: Seq[(Array[Byte], Byte)] =
+      Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
     makeDF(data, securityLevel, "BinaryType", "ByteType").collect
   }
 
@@ -182,7 +184,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       ds.queryExecution.executedPlan.collect {
         case cached: EncryptedBlockRDDScanExec
             if cached.rdd.getStorageLevel != StorageLevel.NONE =>
-          println(cached.rdd.getStorageLevel)
           cached
       }.size
 
@@ -195,6 +196,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    df.unpersist()
   }
 
   testAgainstSpark("sort") { securityLevel =>
@@ -422,7 +424,7 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
     .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
 
-  override def numPartitions = 1
+  override def numPartitions: Int = 1
 }
 
 class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
@@ -432,15 +434,20 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
-  override def numPartitions = 3
+  override def numPartitions: Int = 3
 
   import testImplicits._
-  def makePartitionedDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-    data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*): DataFrame =
+
+  def makePartitionedDF[
+      A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+      data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
+    : DataFrame = {
     securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data, numPartitions))
         .toDF(columnNames: _*))
+  }
+
   testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
     val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)

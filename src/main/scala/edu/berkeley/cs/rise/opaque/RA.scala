@@ -19,6 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import java.net._
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
@@ -29,7 +30,7 @@ import edu.berkeley.cs.rise.opaque.execution.SP
  * Note: Opaque utilizes ONE enclave per *machine* for performance reasons.
  */
 
-object RA {
+object RA extends Logging {
 
   def getIP(): String = {
     val localhost = InetAddress.getLocalHost
@@ -40,7 +41,7 @@ object RA {
   def getEPID(data: Iterator[_]): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
     val ipAddr = getIP()
     this.synchronized {
-      //println("synchronized getEPID")
+      logTrace("synchronized getEPID")
       val enclave = new SGXEnclave()
       if (!Utils.attested && !Utils.attesting_getepid) {
         val epid = enclave.RemoteAttestation0()
@@ -56,7 +57,7 @@ object RA {
   def getMsg1(index: Int, data: Iterator[_]): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
     val ipAddr = getIP()
     this.synchronized {
-      //println("getMsg1")
+      logTrace("getMsg1")
       // first, need to start the enclave
       val (enclave, eid) = Utils.initEnclave()
 
@@ -72,10 +73,15 @@ object RA {
     }
   }
 
-  def getMsg3(index: Int, data: Iterator[_], msg2: Array[Byte], inputIPAddr: String): Iterator[(Array[Byte], Boolean, Boolean, String)] = {
+  def getMsg3(
+      index: Int,
+      data: Iterator[_],
+      msg2: Array[Byte],
+      inputIPAddr: String)
+    : Iterator[(Array[Byte], Boolean, Boolean, String)] = {
     val ipAddr = getIP()
     this.synchronized {
-      //println("synchronized getMsg3 called")
+      logTrace("synchronized getMsg3 called")
       val (enclave, eid) = Utils.initEnclave()
 
       if (!Utils.attested && !Utils.attesting_getmsg3) {
@@ -89,9 +95,14 @@ object RA {
     }
   }
 
-  def finalAttest(index: Int, data: Iterator[_], attestResult:Array[Byte], inputIPAddr: String): Iterator[Boolean]= {
+  def finalAttest(
+      index: Int,
+      data: Iterator[_],
+      attestResult: Array[Byte],
+      inputIPAddr: String)
+    : Iterator[Boolean] = {
     this.synchronized {
-      //println(s"synchronized finalAttest called ${Utils.attested}")
+      logTrace(s"synchronized finalAttest called ${Utils.attested}")
       val (enclave, eid) = Utils.initEnclave()
       if (!Utils.attested && !Utils.attesting_final_ra) {
         enclave.RemoteAttestation3(eid, attestResult)
@@ -107,110 +118,110 @@ object RA {
   }
 
   // this should only be called from the master!
-  def initRA(data: RDD[_]) = {
+  def initRA(data: RDD[_]): Unit = {
 
     // numPartitions = number of machines
     val numPartitions = data.getNumPartitions
 
     val master = new SP()
 
-    //println("Loaded libraries")
+    logTrace("Loaded libraries")
 
     // load master keys
     master.LoadKeys()
 
     if (false) {
 
-    //println("Loaded public and private keys")
+      logTrace("Loaded public and private keys")
 
-    // check EPIDs
-    val EPIDInfo = data.mapPartitions{
-      x => getEPID(x)
-    }.collect
+      // check EPIDs
+      val EPIDInfo = data.mapPartitions{
+        x => getEPID(x)
+      }.collect
 
-    //println("Got EPIDs")
+      logTrace("Got EPIDs")
 
-    for (v <- EPIDInfo) {
-      val epid = v._1
-      val attested = v._2
-      val proc = v._3
-      if (!attested && proc) {
-        master.SPProcMsg0(epid)
+      for (v <- EPIDInfo) {
+        val epid = v._1
+        val attested = v._2
+        val proc = v._3
+        if (!attested && proc) {
+          master.SPProcMsg0(epid)
+        }
       }
-    }
 
-    //println("Checked EPIDs")
+      logTrace("Checked EPIDs")
 
-    // // get msg1 from enclave
+      // get msg1 from enclave
 
-    val msg1 = data.mapPartitionsWithIndex{
-      (index, block) => getMsg1(index, block)
-    }.collect
+      val msg1 = data.mapPartitionsWithIndex{
+        (index, block) => getMsg1(index, block)
+      }.collect
 
-    //println("Got msg1")
+      logTrace("Got msg1")
 
-    var msg2_dedup = Map[String, Array[Byte]]()
-    val msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+      var msg2_dedup = Map[String, Array[Byte]]()
+      val msg2 = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
 
-    for (index <- 0 until msg1.length) {
-      val attested = msg1(index)._2
-      val proc = msg1(index)._3
-      val ipAddr = msg1(index)._4
-      if (!attested && proc) {
-        val ret = master.SPProcMsg1(msg1(index)._1)
-        msg2_dedup += (ipAddr -> ret)
+      for (index <- 0 until msg1.length) {
+        val attested = msg1(index)._2
+        val proc = msg1(index)._3
+        val ipAddr = msg1(index)._4
+        if (!attested && proc) {
+          val ret = master.SPProcMsg1(msg1(index)._1)
+          msg2_dedup += (ipAddr -> ret)
+        }
       }
-    }
 
-    for (index <- 0 until msg1.length) {
-      val attested = msg1(index)._2
-      val ipAddr = msg1(index)._4
+      for (index <- 0 until msg1.length) {
+        val attested = msg1(index)._2
+        val ipAddr = msg1(index)._4
 
-      if (!attested) {
-        msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+        if (!attested) {
+          msg2(index) = (ipAddr, msg2_dedup(ipAddr))
+        }
       }
-    }
 
-    //println("Sent msg2")
+      logTrace("Sent msg2")
 
-    val msg3 = data.mapPartitionsWithIndex {
-      (index, data) =>
-      getMsg3(index, data, msg2(index)._2, msg2(index)._1)
-    }.collect
+      val msg3 = data.mapPartitionsWithIndex {
+        (index, data) =>
+        getMsg3(index, data, msg2(index)._2, msg2(index)._1)
+      }.collect
 
-    //println("Got msg3")
+      logTrace("Got msg3")
 
-    // get attestation result from the master
-    var attResult_dedup = Map[String, Array[Byte]]()
-    val attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
-    for (index <- 0 until msg3.length) {
-      val attested = msg3(index)._2
-      val proc = msg3(index)._3
-      val ipAddr = msg3(index)._4
-      if (!attested && proc) {
-        val ret = master.SPProcMsg3(msg3(index)._1)
-        attResult_dedup += (ipAddr -> ret)
+      // get attestation result from the master
+      var attResult_dedup = Map[String, Array[Byte]]()
+      val attResult = Array.fill[(String, Array[Byte])](numPartitions)(("", new Array[Byte](0)))
+      for (index <- 0 until msg3.length) {
+        val attested = msg3(index)._2
+        val proc = msg3(index)._3
+        val ipAddr = msg3(index)._4
+        if (!attested && proc) {
+          val ret = master.SPProcMsg3(msg3(index)._1)
+          attResult_dedup += (ipAddr -> ret)
+        }
       }
-    }
 
-    for (index <- 0 until msg3.length) {
-      val attested = msg3(index)._2
-      val ipAddr = msg3(index)._4
+      for (index <- 0 until msg3.length) {
+        val attested = msg3(index)._2
+        val ipAddr = msg3(index)._4
 
-      if (!attested) {
-        attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+        if (!attested) {
+          attResult(index) = (ipAddr, attResult_dedup(ipAddr))
+        }
       }
-    }
-    //println("Got attestation result")
+      logTrace("Got attestation result")
 
-    // send final attestation result to each enclave
-    data.mapPartitionsWithIndex { (index, data) =>
-      finalAttest(index, data, attResult(index)._2, attResult(index)._1)
-    }.collect
+      // send final attestation result to each enclave
+      data.mapPartitionsWithIndex { (index, data) =>
+        finalAttest(index, data, attResult(index)._2, attResult(index)._1)
+      }.collect
 
-    //println("Sent attestation results; attestation DONE")
+      logTrace("Sent attestation results; attestation DONE")
 
-    // attestation done
+      // attestation done
     }
   }
 

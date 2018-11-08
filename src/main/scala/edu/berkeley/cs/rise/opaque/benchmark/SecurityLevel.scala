@@ -26,11 +26,11 @@ sealed trait SecurityLevel {
 }
 
 case object Encrypted extends SecurityLevel {
-  override def name = "encrypted"
-  override def applyTo[T](df: DataFrame) = df.encrypted
+  override def name: String = "encrypted"
+  override def applyTo[T](df: DataFrame): DataFrame = df.encrypted
 }
 
 case object Insecure extends SecurityLevel {
-  override def name = "spark sql"
-  override def applyTo[T](df: DataFrame) = df
+  override def name: String = "spark sql"
+  override def applyTo[T](df: DataFrame): DataFrame = df
 }
