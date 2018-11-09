@@ -3,6 +3,7 @@ language: scala
 os: linux
 dist: xenial
 sudo: required
+jdk: openjdk8
 
 before_install:
   - sudo apt-get install wget build-essential libssl-dev
