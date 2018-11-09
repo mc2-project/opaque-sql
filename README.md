@@ -27,21 +27,20 @@ Work-in-progress:
 
 After downloading the Opaque codebase, build and test it as follows:
 
-1. Install dependencies and the Intel SGX SDK with C++11 support:
+1. Install dependencies and the [Intel SGX SDK](https://01.org/intel-software-guard-extensions/downloads):
 
     ```sh
-    # For Ubuntu 16.04:
-    sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
-    
-    # For Ubuntu 18.04:
-    sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool wget python default-jdk cmake libssl-dev
+    # For Ubuntu 16.04 or 18.04:
+    sudo apt install wget build-essential default-jdk python cmake libssl-dev
 
-    git clone https://github.com/intel/linux-sgx.git -b sgx_2.3
-    cd linux-sgx
-    ./download_prebuilt.sh
-    make sdk_install_pkg
+    # If not on Ubuntu 16.04, choose the correct installer for your platform from https://download.01.org/intel-sgx/linux-2.3.1/
+    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
+    chmod +x ./sgx_installer.bin
+
     # Installer will prompt for install path, which can be user-local
-    ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
+    ./sgx_installer.bin
+
+    source sgxsdk/environment
     ```
 
 2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
@@ -55,7 +54,6 @@ After downloading the Opaque codebase, build and test it as follows:
 3. Set the following environment variables:
 
     ```sh
-    source sgxsdk/environment # from SGX SDK install directory in step 1
     export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
