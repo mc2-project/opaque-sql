@@ -3,7 +3,6 @@ scala: 2.11.12
 
 os: linux
 dist: xenial
-sudo: false
 jdk: openjdk8
 
 before_install:
