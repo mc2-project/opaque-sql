@@ -10,5 +10,5 @@ cd tpch-dbgen
 make
 ./dbgen -vf -s 0.01
 mkdir -p $SPARKSGX_DATA_DIR/tpch/sf_small
-ls -la # For debugging "permission denied" errors on the next line
+chmod u+r *.tbl
 cp *.tbl $SPARKSGX_DATA_DIR/tpch/sf_small/
