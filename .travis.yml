@@ -2,11 +2,10 @@ language: scala
 
 os: linux
 dist: xenial
-sudo: required
+sudo: false
 jdk: openjdk8
 
 before_install:
-  - sudo apt-get install wget build-essential openjdk-8-jdk python cmake libssl-dev
   - PATH=$(echo "$PATH" | sed -e 's/:\/usr\/local\/lib\/jvm\/openjdk11\/bin//')
   - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
   - java -version
@@ -19,3 +18,14 @@ before_install:
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
 
 script: sbt -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
+
+# Cache SBT and Ivy artifacts
+# From https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+before_cache:
+  # Clean up the cached directories to avoid unnecessary cache updates
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
