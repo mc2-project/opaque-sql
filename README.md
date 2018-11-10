@@ -31,7 +31,7 @@ After downloading the Opaque codebase, build and test it as follows:
 
     ```sh
     # For Ubuntu 16.04 or 18.04:
-    sudo apt install wget build-essential default-jdk python cmake libssl-dev
+    sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
 
     # If not on Ubuntu 16.04, choose the correct installer for your platform from https://download.01.org/intel-sgx/linux-2.3.1/
     wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin

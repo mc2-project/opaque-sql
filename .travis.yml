@@ -6,7 +6,7 @@ sudo: required
 jdk: openjdk8
 
 before_install:
-  - sudo apt-get install wget build-essential openjdk-8-jdk libssl-dev
+  - sudo apt-get install wget build-essential openjdk-8-jdk python cmake libssl-dev
   - PATH=$(echo "$PATH" | sed -e 's/:\/usr\/local\/lib\/jvm\/openjdk11\/bin//')
   - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
   - java -version
