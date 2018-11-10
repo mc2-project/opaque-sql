@@ -1,4 +1,5 @@
 language: scala
+scala: 2.11.12
 
 os: linux
 dist: xenial
@@ -18,7 +19,7 @@ before_install:
   - export SPARKSGX_DATA_DIR=$PWD/data
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
 
-script: sbt -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
+script: sbt ++$TRAVIS_SCALA_VERSION -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
 
 # Cache SBT and Ivy artifacts
 # From https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
