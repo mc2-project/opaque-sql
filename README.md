@@ -4,21 +4,19 @@
 
 [![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
 
-Opaque is a package for Apache Spark SQL that enables strong security for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Opaque allows encrypting the contents of a DataFrame. Subsequent operations on them will run within SGX enclaves.
+Opaque is a package for Apache Spark SQL that enables strong security for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Opaque allows encrypting the contents of a DataFrame. Subsequent DataFrame operations will run within SGX enclaves.
 
 This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
-Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
+This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). It currently has the following limitations:
 
-Work-in-progress:
+- Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
-- Currently, Opaque supports a subset of Spark SQL operations and not yet UDFs. We are working on adding support for UDFs.
+- Not all Spark SQL operations are supported. UDFs are currently not supported.
 
-- The current version also does not yet support computation integrity verification, though we are actively working on it.
+- Computation integrity verification (section 4.2 of the NSDI paper) is not included.
 
 - The remote attestation code is not complete as it contains sample code from the Intel SDK.
-
-- If you find bugs in the code, please file an issue.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
