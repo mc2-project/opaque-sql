@@ -119,6 +119,11 @@ initialCommands in console :=
     |import org.apache.spark.sql.execution
     |import org.apache.spark.sql.functions._
     |import org.apache.spark.sql.types._
+    |import org.apache.log4j.Level
+    |import org.apache.log4j.LogManager
+    |
+    |LogManager.getLogger("org.apache.spark").setLevel(Level.WARN)
+    |LogManager.getLogger("org.apache.spark.executor.Executor").setLevel(Level.WARN)
     |
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
