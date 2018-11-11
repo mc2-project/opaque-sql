@@ -23,7 +23,7 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 ## Installation
 
-After downloading the Opaque codebase, build and test it as follows:
+After downloading the Opaque codebase, build and test it as follows. (Alternatively, we offer a [Docker image](docker/) that contains a prebuilt version of Opaque.)
 
 1. Install dependencies and the [Intel SGX SDK](https://01.org/intel-software-guard-extensions/downloads):
 
@@ -31,11 +31,13 @@ After downloading the Opaque codebase, build and test it as follows:
     # For Ubuntu 16.04 or 18.04:
     sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
 
-    # If not on Ubuntu 16.04, choose the correct installer for your platform from https://download.01.org/intel-sgx/linux-2.3.1/
+    # For Ubuntu 16.04:
     wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
-    chmod +x ./sgx_installer.bin
+    # For Ubuntu 18.04:
+    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin
 
     # Installer will prompt for install path, which can be user-local
+    chmod +x ./sgx_installer.bin
     ./sgx_installer.bin
 
     source sgxsdk/environment
