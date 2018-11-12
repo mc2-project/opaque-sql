@@ -17,12 +17,10 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
+import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SQLContext
@@ -45,9 +43,11 @@ class EncryptedSource
   override def createRelation(
     sqlContext: SQLContext,
     parameters: Map[String, String]): BaseRelation = {
-    val schemaFile = new File(parameters("path"), "schema")
-    val schema = new ObjectInputStream(new FileInputStream(schemaFile))
-      .readObject().asInstanceOf[StructType]
+    val schemaPath = new Path(parameters("path"), "schema")
+    val fs = schemaPath.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+    val is = new ObjectInputStream(fs.open(schemaPath))
+    val schema = is.readObject().asInstanceOf[StructType]
+    is.close()
     createRelation(sqlContext, parameters, schema)
   }
 
@@ -55,8 +55,8 @@ class EncryptedSource
     sqlContext: SQLContext,
     parameters: Map[String, String],
     schema: StructType): BaseRelation = {
-    val dataDir = new File(parameters("path"), "data")
-    EncryptedScan(dataDir.getPath, schema)(
+    val dataDir = new Path(parameters("path"), "data")
+    EncryptedScan(dataDir.toString, schema)(
       sqlContext.sparkSession)
   }
 
@@ -68,15 +68,16 @@ class EncryptedSource
     val blocks: RDD[Block] = data.queryExecution.executedPlan.asInstanceOf[OpaqueOperatorExec]
       .executeBlocked()
 
-    val dataDir = new File(parameters("path"), "data")
-    blocks.map(block => (0, block.bytes)).saveAsSequenceFile(dataDir.getPath)
+    val dataDir = new Path(parameters("path"), "data")
+    blocks.map(block => (0, block.bytes)).saveAsSequenceFile(dataDir.toString)
 
-    val schemaFile = new File(parameters("path"), "schema")
-    val os = new ObjectOutputStream(new FileOutputStream(schemaFile))
+    val schemaPath = new Path(parameters("path"), "schema")
+    val fs = schemaPath.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+    val os = new ObjectOutputStream(fs.create(schemaPath))
     os.writeObject(data.schema)
     os.close()
 
-    EncryptedScan(dataDir.getPath, data.schema)(
+    EncryptedScan(dataDir.toString, data.schema)(
       sqlContext.sparkSession)
   }
 }
