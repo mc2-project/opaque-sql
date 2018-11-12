@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import java.io.File
 import java.sql.Timestamp
 
 import scala.util.Random
@@ -50,18 +49,13 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
   import testImplicits._
 
-  private var path: File = null
-
   override def beforeAll(): Unit = {
     LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
     Utils.initSQLContext(spark.sqlContext)
-    path = Utils.createTempDir()
-    path.delete()
   }
 
   override def afterAll(): Unit = {
     spark.stop()
-    Utils.deleteRecursively(path)
   }
 
   def testAgainstSpark(name: String)(f: SecurityLevel => Any): Unit = {
@@ -336,14 +330,46 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   testOpaqueOnly("save and load") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
     df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-    val df2 = spark.read
-      .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
-      .schema(df.schema)
-      .load(path.toString)
-    assert(df.collect.toSet === df2.collect.toSet)
-    assert(df.groupBy("word").agg(sum("count")).collect.toSet
-      === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    try {
+      val df2 = spark.read
+        .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+        .schema(df.schema)
+        .load(path.toString)
+      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.groupBy("word").agg(sum("count")).collect.toSet
+        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    } finally {
+      Utils.deleteRecursively(path)
+    }
+  }
+
+  testOpaqueOnly("load from SQL") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+
+    try {
+      spark.sql(s"""
+        |CREATE TEMPORARY VIEW df2
+        |(${df.schema.toDDL})
+        |USING edu.berkeley.cs.rise.opaque.EncryptedSource
+        |OPTIONS (
+        |  path "${path}"
+        |)""".stripMargin)
+      val df2 = spark.sql(s"""
+        |SELECT * FROM df2
+        |""".stripMargin)
+
+      assert(df.collect.toSet === df2.collect.toSet)
+    } finally {
+      spark.catalog.dropTempView("df2")
+      Utils.deleteRecursively(path)
+    }
   }
 
   testAgainstSpark("SQL API") { securityLevel =>
