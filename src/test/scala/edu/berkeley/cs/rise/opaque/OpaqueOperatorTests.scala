@@ -337,13 +337,41 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
     df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-    val df2 = spark.read
-      .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
-      .schema(df.schema)
-      .load(path.toString)
-    assert(df.collect.toSet === df2.collect.toSet)
-    assert(df.groupBy("word").agg(sum("count")).collect.toSet
-      === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    try {
+      val df2 = spark.read
+        .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+        .schema(df.schema)
+        .load(path.toString)
+      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.groupBy("word").agg(sum("count")).collect.toSet
+        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    } finally {
+      path.delete()
+    }
+  }
+
+  testOpaqueOnly("load from SQL") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+
+    try {
+      spark.sql(s"""
+        |CREATE TEMPORARY VIEW df2
+        |(${df.schema.toDDL})
+        |USING edu.berkeley.cs.rise.opaque.EncryptedSource
+        |OPTIONS (
+        |  path "${path}"
+        |)""".stripMargin)
+      val df2 = spark.sql(s"""
+        |SELECT * FROM df2
+        |""".stripMargin)
+
+      assert(df.collect.toSet === df2.collect.toSet)
+    } finally {
+      spark.catalog.dropTempView("df2")
+      path.delete()
+    }
   }
 
   testAgainstSpark("SQL API") { securityLevel =>
