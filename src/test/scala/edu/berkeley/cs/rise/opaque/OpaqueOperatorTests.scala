@@ -327,7 +327,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(year($"date")).collect
   }
 
-  testOpaqueOnly("save and load") { securityLevel =>
+  testOpaqueOnly("save and load with explicit schema") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
     val path = Utils.createTempDir()
@@ -346,7 +346,25 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  testOpaqueOnly("load from SQL") { securityLevel =>
+  testOpaqueOnly("save and load without schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    try {
+      val df2 = spark.read
+        .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+        .load(path.toString)
+      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.groupBy("word").agg(sum("count")).collect.toSet
+        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    } finally {
+      Utils.deleteRecursively(path)
+    }
+  }
+
+  testOpaqueOnly("load from SQL with explicit schema") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
     val path = Utils.createTempDir()
@@ -357,6 +375,31 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       spark.sql(s"""
         |CREATE TEMPORARY VIEW df2
         |(${df.schema.toDDL})
+        |USING edu.berkeley.cs.rise.opaque.EncryptedSource
+        |OPTIONS (
+        |  path "${path}"
+        |)""".stripMargin)
+      val df2 = spark.sql(s"""
+        |SELECT * FROM df2
+        |""".stripMargin)
+
+      assert(df.collect.toSet === df2.collect.toSet)
+    } finally {
+      spark.catalog.dropTempView("df2")
+      Utils.deleteRecursively(path)
+    }
+  }
+
+  testOpaqueOnly("load from SQL without schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+
+    try {
+      spark.sql(s"""
+        |CREATE TEMPORARY VIEW df2
         |USING edu.berkeley.cs.rise.opaque.EncryptedSource
         |OPTIONS (
         |  path "${path}"
