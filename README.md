@@ -4,44 +4,43 @@
 
 [![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
 
-Opaque is a package for Apache Spark SQL that enables strong security for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Opaque allows encrypting the contents of a DataFrame. Subsequent operations on them will run within SGX enclaves.
+Opaque is a package for Apache Spark SQL that enables encryption for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within SGX enclaves.
 
 This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
-Disclaimers: This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
+This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). It currently has the following limitations:
 
-Work-in-progress:
+- Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
-- Currently, Opaque supports a subset of Spark SQL operations and not yet UDFs. We are working on adding support for UDFs.
+- Not all Spark SQL operations are supported. UDFs are currently not supported.
 
-- The current version also does not yet support computation integrity verification, though we are actively working on it.
+- Computation integrity verification (section 4.2 of the NSDI paper) is not included.
 
 - The remote attestation code is not complete as it contains sample code from the Intel SDK.
-
-- If you find bugs in the code, please file an issue.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
 
 ## Installation
 
-After downloading the Opaque codebase, build and test it as follows:
+After downloading the Opaque codebase, build and test it as follows. (Alternatively, we offer a [Docker image](docker/) that contains a prebuilt version of Opaque.)
 
-1. Install dependencies and the Intel SGX SDK with C++11 support:
+1. Install dependencies and the [Intel SGX SDK](https://01.org/intel-software-guard-extensions/downloads):
 
     ```sh
-    # For Ubuntu 16.04:
-    sudo apt-get install build-essential ocaml automake autoconf libtool wget python default-jdk cmake libssl-dev
-    
-    # For Ubuntu 18.04:
-    sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool wget python default-jdk cmake libssl-dev
+    # For Ubuntu 16.04 or 18.04:
+    sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
 
-    git clone https://github.com/intel/linux-sgx.git -b sgx_2.3
-    cd linux-sgx
-    ./download_prebuilt.sh
-    make sdk_install_pkg
+    # For Ubuntu 16.04:
+    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
+    # For Ubuntu 18.04:
+    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin
+
     # Installer will prompt for install path, which can be user-local
-    ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
+    chmod +x ./sgx_installer.bin
+    ./sgx_installer.bin
+
+    source sgxsdk/environment
     ```
 
 2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
@@ -55,7 +54,6 @@ After downloading the Opaque codebase, build and test it as follows:
 3. Set the following environment variables:
 
     ```sh
-    source sgxsdk/environment # from SGX SDK install directory in step 1
     export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```

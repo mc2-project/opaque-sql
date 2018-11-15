@@ -16,7 +16,8 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 
 val flatbuffersVersion = "1.7.0"
 
-parallelExecution := false
+concurrentRestrictions in Global := Seq(
+  Tags.limit(Tags.Test, 1))
 
 fork in Test := true
 
@@ -118,6 +119,11 @@ initialCommands in console :=
     |import org.apache.spark.sql.execution
     |import org.apache.spark.sql.functions._
     |import org.apache.spark.sql.types._
+    |import org.apache.log4j.Level
+    |import org.apache.log4j.LogManager
+    |
+    |LogManager.getLogger("org.apache.spark").setLevel(Level.WARN)
+    |LogManager.getLogger("org.apache.spark.executor.Executor").setLevel(Level.WARN)
     |
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
@@ -158,13 +164,14 @@ fetchFlatbuffersLibTask := {
     // Build flatbuffers with cmake
     import sys.process._
     streams.value.log.info(s"Building Flatbuffers")
+    val nproc = java.lang.Runtime.getRuntime.availableProcessors
     if (Process(Seq(
       "cmake", "-G", "Unix Makefiles",
       "-DFLATBUFFERS_BUILD_TESTS=OFF",
       "-DFLATBUFFERS_BUILD_FLATLIB=OFF",
       "-DFLATBUFFERS_BUILD_FLATHASH=OFF",
       "-DFLATBUFFERS_BUILD_FLATC=ON"), flatbuffersSource).! != 0
-      || Process(Seq("make"), flatbuffersSource).! != 0) {
+      || Process(Seq("make", "-j" + nproc), flatbuffersSource).! != 0) {
       sys.error("Flatbuffers library build failed.")
     }
   }
@@ -238,7 +245,8 @@ enclaveBuildTask := {
       s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
       enclaveSourceDir.getPath), enclaveBuildDir).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
-  val buildResult = Process(Seq("make"), enclaveBuildDir).!
+  val nproc = java.lang.Runtime.getRuntime.availableProcessors
+  val buildResult = Process(Seq("make", "-j" + nproc), enclaveBuildDir).!
   if (buildResult != 0) sys.error("C++ build failed.")
   val installResult = Process(Seq("make", "install"), enclaveBuildDir).!
   if (installResult != 0) sys.error("C++ build failed.")

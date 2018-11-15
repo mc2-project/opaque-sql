@@ -1,22 +1,32 @@
 language: scala
+scala: 2.11.12
 
 os: linux
-dist: trusty
-sudo: required
+dist: xenial
+jdk: openjdk8
 
 before_install:
-  - sudo apt-get install build-essential ocaml automake autoconf libtool
-  - export CC=gcc-4.8
-  - export CXX=g++-4.8
-  - git clone https://github.com/intel/linux-sgx.git -b sgx_2.3
-  - cd linux-sgx
-  - ./download_prebuilt.sh
-  - make --quiet sdk_install_pkg
-  - echo yes | ./linux/installer/bin/sgx_linux_x64_sdk_*.bin
+  - sudo apt-get install wget build-essential openjdk-8-jdk python cmake libssl-dev
+  - PATH=$(echo "$PATH" | sed -e 's/:\/usr\/local\/lib\/jvm\/openjdk11\/bin//')
+  - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+  - java -version
+  - wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
+  - chmod +x ./sgx_installer.bin
+  - echo yes | ./sgx_installer.bin
   - source sgxsdk/environment
-  - cd ..
   - openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
   - export SPARKSGX_DATA_DIR=$PWD/data
   - export PRIVATE_KEY_PATH=$PWD/private_key.pem
 
-script: sbt -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
+script: sbt ++$TRAVIS_SCALA_VERSION -Dspark.ui.showConsoleProgress=false 'set ivyLoggingLevel := UpdateLogging.Quiet' test
+
+# Cache SBT and Ivy artifacts
+# From https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+before_cache:
+  # Clean up the cached directories to avoid unnecessary cache updates
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
