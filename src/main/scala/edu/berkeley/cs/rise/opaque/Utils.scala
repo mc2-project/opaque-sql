@@ -218,7 +218,7 @@ object Utils extends Logging {
 
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
-    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce)
+    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
 
     val dataToEncrypt = iv ++ data
 
