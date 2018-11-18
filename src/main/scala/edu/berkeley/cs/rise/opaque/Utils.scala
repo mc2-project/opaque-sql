@@ -212,33 +212,30 @@ object Utils extends Logging {
     
     // Convert key to SecretKeySpec type
     val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
+    val cipherKey = new SecretKeySpec(key, "AES")
 
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
     println(iv.mkString(", "))
-    
+
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     cipher.doFinal(data)
     
     iv ++ data
-    // val iv_copy: Array[Byte] = dataToEncrypt.take(GCM_IV_LENGTH)
-    // println(iv_copy.mkString(", "))
-
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
     val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
+    val cipherKey = new SecretKeySpec(key, "AES")
 
     val iv = data.take(GCM_IV_LENGTH)
-    data.drop(GCM_IV_LENGTH)
+    val cipherText = data.drop(GCM_IV_LENGTH)
     // val mac = data.dropRight(GCM_MAC_LENGTH)
     println(iv.mkString(", "))
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    cipher.doFinal(data)
+    cipher.doFinal(cipherText)
   }
 
   var eid = 0L
