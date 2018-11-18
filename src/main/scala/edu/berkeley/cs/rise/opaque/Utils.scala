@@ -21,8 +21,8 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
-import javax.crypto.*;
-import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto._
+import javax.crypto.spec.GCMParameterSpec
 import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
