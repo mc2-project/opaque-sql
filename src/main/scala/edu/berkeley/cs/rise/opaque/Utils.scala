@@ -220,9 +220,7 @@ object Utils extends Logging {
 
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-    val cipherText = cipher.doFinal(data)
-    println(cipherText.mkString(", "))
-    
+    val cipherText = cipher.doFinal(data)    
     iv ++ cipherText
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
@@ -231,7 +229,6 @@ object Utils extends Logging {
 
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
-    println(cipherText.mkString(", "))
     // val mac = data.dropRight(GCM_MAC_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
