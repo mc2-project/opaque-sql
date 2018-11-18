@@ -41,13 +41,13 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   test("java encryption/decryption") {
     val data = Array[Byte](0, 1, 2)
     val (enclave, eid) = Utils.initEnclave()
-    // val encrypted = enclave.Encrypt(eid, data)
+    val encrypted = enclave.Encrypt(eid, data)
     // assert(encrypted === Utils.encrypt(data))
-    // val decrypted = enclave.Decrypt(eid, encrypted)
+    val decrypted = enclave.Decrypt(eid, encrypted)
     // assert(decrypted === Utils.decrypt(data))
-    assert(data === Utils.decrypt(Utils.encrypt(data)))
-    assert(data === enclave.decrypt(Utils.encrypt(data)))
-    assert(data === Utils.decrypt(enclave.encrypt(data)))
+    assert(data === Utils.decrypt(Utils.encrypt(data))
+    assert(data === enclave.decrypt(Utils.encrypt(data))
+    assert(data === Utils.decrypt(enclave.encrypt(data))
   }
 }
 
