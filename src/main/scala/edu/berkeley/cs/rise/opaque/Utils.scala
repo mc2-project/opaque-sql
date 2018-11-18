@@ -219,7 +219,7 @@ object Utils extends Logging {
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
 
     val dataToEncrypt = iv ++ data
-    println(dataToEncrypt.drop(GCM_IV_LENGTH).mkString(", "))
+    println(dataToEncrypt.take(GCM_IV_LENGTH).mkString(", "))
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     cipher.doFinal(dataToEncrypt)
@@ -228,7 +228,8 @@ object Utils extends Logging {
     val key = new Array[Byte](GCM_KEY_LENGTH)
     val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
 
-    val iv = data.drop(GCM_IV_LENGTH)
+    val iv = data.take(GCM_IV_LENGTH)
+    data.drop(GCM_IV_LENGTH)
     // val mac = data.dropRight(GCM_MAC_LENGTH)
     println(iv.mkString(", "))
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
