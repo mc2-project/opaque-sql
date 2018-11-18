@@ -223,7 +223,8 @@ object Utils extends Logging {
     cipher.doFinal(data)
     
     val dataToEncrypt = iv ++ data
-    println(dataToEncrypt.take(GCM_IV_LENGTH).mkString(", "))
+    val iv_copy = dataToEncrypt.take(GCM_IV_LENGTH)
+    println(iv_copy.mkString(", "))
 
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
