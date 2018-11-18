@@ -203,7 +203,7 @@ object Utils extends Logging {
     }
   }
 
-  final val GCM_NONCE_LENGTH = 12 
+  final val GCM_NONCE_LENGTH = 16 
   final val GCM_TAG_LENGTH = 16
 
   val random = SecureRandom.getInstanceStrong()
