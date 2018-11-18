@@ -21,6 +21,9 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
+import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
+import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
 
@@ -197,6 +200,32 @@ object Utils extends Logging {
         (enclave, eid)
       }
     }
+  }
+
+  final val GCM_NONCE_LENGTH = 12 
+  final val GCM_TAG_LENGTH = 16
+
+  val random = SecureRandom.getInstanceStrong()
+  val key = new Array[Byte](128)
+
+  // Convert key to SecretKeySpec type
+  val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
+  val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+  val nonce = new Array[Byte](GCM_NONCE_LENGTH)
+  random.nextBytes(nonce)
+  val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce)
+
+  def encrypt(data: Array[Byte]): Array[Byte] = {
+    // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
+    // to encrypt `data`
+    cipher.init(Cipher.ENCRYPT_MODE, key, spec)
+    cipher.doFinal(data)
+  }
+  def decrypt(data: Array[Byte]): Array[Byte] = {
+    // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
+    // to decrypt `data`  
+    cipher.init(Cipher.DECRYPT_MODE, key, spec)
+    cipher.doFinal(data)
   }
 
   var eid = 0L
