@@ -23,6 +23,7 @@ import java.nio.ByteOrder
 import java.util.UUID
 import javax.crypto._
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
@@ -218,13 +219,13 @@ object Utils extends Logging {
   def encrypt(data: Array[Byte]): Array[Byte] = {
     // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
     // to encrypt `data`
-    cipher.init(Cipher.ENCRYPT_MODE, key, spec)
+    cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     cipher.doFinal(data)
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
     // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
     // to decrypt `data`  
-    cipher.init(Cipher.DECRYPT_MODE, key, spec)
+    cipher.init(Cipher.DECRYPT_MODE, cipherKey, spec)
     cipher.doFinal(data)
   }
 
