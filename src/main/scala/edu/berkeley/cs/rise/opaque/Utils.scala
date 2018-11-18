@@ -203,29 +203,40 @@ object Utils extends Logging {
     }
   }
 
-  final val GCM_NONCE_LENGTH = 16 
+  final val GCM_IV_LENGTH = 12 
+  final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
-
-  val random = SecureRandom.getInstanceStrong()
-  val key = new Array[Byte](16)
-
-  // Convert key to SecretKeySpec type
-  val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
-  val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-  val nonce = new Array[Byte](GCM_NONCE_LENGTH)
-  random.nextBytes(nonce)
-  val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce)
-
+  
   def encrypt(data: Array[Byte]): Array[Byte] = {
     // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
     // to encrypt `data`
+    val random = SecureRandom.getInstanceStrong()
+    
+    // Convert key to SecretKeySpec type
+    val key = new Array[Byte](GCM_KEY_LENGTH)
+    val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
+
+    val iv = new Array[Byte](GCM_IV_LENGTH)
+    random.nextBytes(iv)
+    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce)
+
+    val dataToEncrypt = iv ++ data
+
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-    cipher.doFinal(data)
+    cipher.doFinal(dataToEncrypt)
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
     // TODO: use https://gist.github.com/praseodym/f2499b3e14d872fe5b4a with an all-zero 128-bit key
     // to decrypt `data`  
-    cipher.init(Cipher.DECRYPT_MODE, cipherKey, spec)
+    val key = new Array[Byte](GCM_KEY_LENGTH)
+    val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
+
+    val iv = data.drop(GCM_IV_LENGTH)
+    // val mac = data.dropRight(GCM_MAC_LENGTH)
+
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+    cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
     cipher.doFinal(data)
   }
 
