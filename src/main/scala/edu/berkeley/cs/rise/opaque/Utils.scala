@@ -217,14 +217,15 @@ object Utils extends Logging {
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-
+    println(iv.mkString(", "))
+    
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     cipher.doFinal(data)
     
-    val dataToEncrypt = iv ++ data
-    val iv_copy: Array[Byte] = dataToEncrypt.take(GCM_IV_LENGTH)
-    println(iv_copy.mkString(", "))
+    iv ++ data
+    // val iv_copy: Array[Byte] = dataToEncrypt.take(GCM_IV_LENGTH)
+    // println(iv_copy.mkString(", "))
 
   }
   def decrypt(data: Array[Byte]): Array[Byte] = {
