@@ -207,7 +207,7 @@ object Utils extends Logging {
   final val GCM_TAG_LENGTH = 16
 
   val random = SecureRandom.getInstanceStrong()
-  val key = new Array[Byte](128)
+  val key = new Array[Byte](16)
 
   // Convert key to SecretKeySpec type
   val cipherKey = new SecretKeySpec(key, 0, key.length, "AES")
