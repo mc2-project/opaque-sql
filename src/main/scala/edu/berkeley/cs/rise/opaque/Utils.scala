@@ -209,15 +209,11 @@ object Utils extends Logging {
   
   def encrypt(data: Array[Byte]): Array[Byte] = {
     val random = SecureRandom.getInstance("SHA1PRNG")
-    
-    // Convert key to SecretKeySpec type
     val key = new Array[Byte](GCM_KEY_LENGTH)
     val cipherKey = new SecretKeySpec(key, "AES")
-
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     val cipherText = cipher.doFinal(data)    
@@ -226,10 +222,8 @@ object Utils extends Logging {
   def decrypt(data: Array[Byte]): Array[Byte] = {
     val key = new Array[Byte](GCM_KEY_LENGTH)
     val cipherKey = new SecretKeySpec(key, "AES")
-
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
-    // val mac = data.dropRight(GCM_MAC_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
     cipher.doFinal(cipherText)
