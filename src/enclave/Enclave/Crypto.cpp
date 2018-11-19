@@ -37,15 +37,16 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
 
   uint8_t *iv_ptr = ciphertext;
+  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
+  sgx_aes_gcm_128bit_tag_t *mac_ptr =
+    (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
+
   // generate random IV
   sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
 
   AesGcm cipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-  
 }
 
 
@@ -66,8 +67,9 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
   uint32_t plaintext_length = ciphertext_length - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;
-  sgx_aes_gcm_128bit_tag_t *mac_ptr = (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+  uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + SGX_AESGCM_IV_SIZE);
+  sgx_aes_gcm_128bit_tag_t *mac_ptr =
+    (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
 
   AesGcm decipher(ks, iv_ptr, SGX_AESGCM_IV_SIZE);
   decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
