@@ -219,6 +219,7 @@ object Utils extends Logging {
     val cipherText = cipher.doFinal(data)    
     iv ++ cipherText
   }
+  
   def decrypt(data: Array[Byte]): Array[Byte] = {
     val key = new Array[Byte](GCM_KEY_LENGTH)
     val cipherKey = new SecretKeySpec(key, "AES")
