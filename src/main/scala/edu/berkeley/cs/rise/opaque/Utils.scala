@@ -208,7 +208,7 @@ object Utils extends Logging {
   final val GCM_TAG_LENGTH = 16
   
   def encrypt(data: Array[Byte]): Array[Byte] = {
-    val random = SecureRandom.getInstanceStrong()
+    val random = SecureRandom.getInstance("SHA1PRNG")
     
     // Convert key to SecretKeySpec type
     val key = new Array[Byte](GCM_KEY_LENGTH)
