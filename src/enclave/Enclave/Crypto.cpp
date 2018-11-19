@@ -30,7 +30,7 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 
   initKeySchedule();
 
-  // key size is 12 bytes/128 bits
+  // key size is 16 bytes/128 bits
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
 
@@ -58,7 +58,7 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
   // decrypt using a global key
   // TODO: fix this; should use key obtained from client
 
-  // key size is 12 bytes/128 bits
+  // key size is 16 bytes/128 bits
   // IV size is 12 bytes/96 bits
   // MAC size is 16 bytes/128 bits
 
