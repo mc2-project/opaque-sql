@@ -673,7 +673,7 @@ object Utils extends Logging {
 
       // 2. Decrypt the row data
       val (enclave, eid) = initEnclave()
-      val plaintext = decrypt(eid, ciphertext)
+      val plaintext = decrypt(ciphertext)
 
       // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
       val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
