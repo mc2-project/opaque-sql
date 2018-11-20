@@ -30,21 +30,6 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   }
 }
 
-void ecall_decrypt(uint8_t *ciphertext,
-                   uint32_t ciphertext_length,
-                   uint8_t *plaintext,
-                   uint32_t plaintext_length) {
-  try {
-    // IV (12 bytes) + ciphertext + mac (16 bytes)
-    assert(ciphertext_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
-    (void)ciphertext_length;
-    (void)plaintext_length;
-    decrypt(ciphertext, ciphertext_length, plaintext);
-  } catch (const std::runtime_error &e) {
-    ocall_throw(e.what());
-  }
-}
-
 void ecall_project(uint8_t *condition, size_t condition_length,
                    uint8_t *input_rows, size_t input_rows_length,
                    uint8_t **output_rows, size_t *output_rows_length) {
