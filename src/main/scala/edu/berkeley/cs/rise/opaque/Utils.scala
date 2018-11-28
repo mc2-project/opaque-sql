@@ -21,6 +21,10 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
+import javax.crypto._
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
 
@@ -197,6 +201,33 @@ object Utils extends Logging {
         (enclave, eid)
       }
     }
+  }
+
+  final val GCM_IV_LENGTH = 12 
+  final val GCM_KEY_LENGTH = 16
+  final val GCM_TAG_LENGTH = 16
+  
+  def encrypt(data: Array[Byte]): Array[Byte] = {
+    val random = SecureRandom.getInstance("SHA1PRNG")
+    val key = new Array[Byte](GCM_KEY_LENGTH)
+    val cipherKey = new SecretKeySpec(key, "AES")
+    val iv = new Array[Byte](GCM_IV_LENGTH)
+    random.nextBytes(iv)
+    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+    cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
+    val cipherText = cipher.doFinal(data)    
+    iv ++ cipherText
+  }
+  
+  def decrypt(data: Array[Byte]): Array[Byte] = {
+    val key = new Array[Byte](GCM_KEY_LENGTH)
+    val cipherKey = new SecretKeySpec(key, "AES")
+    val iv = data.take(GCM_IV_LENGTH)
+    val cipherText = data.drop(GCM_IV_LENGTH)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+    cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
+    cipher.doFinal(cipherText)
   }
 
   var eid = 0L
@@ -642,7 +673,7 @@ object Utils extends Logging {
 
       // 2. Decrypt the row data
       val (enclave, eid) = initEnclave()
-      val plaintext = enclave.Decrypt(eid, ciphertext)
+      val plaintext = decrypt(ciphertext)
 
       // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
       val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
