@@ -88,7 +88,18 @@ enclave {
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
-    void ocall_malloc(size_t size, [out] uint8_t **ret);
+
+    /**
+     * Allocate memory outside of the enclave and return the pointer in `ret`.
+     *
+     * Before dereferencing the resulting pointer, the caller must check whether it is actually
+     * outside the enclave using `sgx_is_outside_enclave()`. Otherwise, an attacker could cause the
+     * enclave to perform unexpected operations on its own memory. The function `ocall_malloc()`
+     * wraps this function with such a bounds check and most callers should use that function
+     * instead.
+     */
+    void unsafe_ocall_malloc(size_t size, [out] uint8_t **ret);
+
     void ocall_free([user_check] uint8_t *buf);
     void ocall_exit(int exit_code);
     void ocall_throw([in, string] const char *message);
