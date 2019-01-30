@@ -419,6 +419,21 @@ public:
     return tuix::CreateSortedRunsDirect(enc_block_builder, &enc_blocks_vector);
   }
 
+  void write_shuffle_output(
+    flatbuffers::Offset<tuix::EncryptedBlocks> encrypted_blocks,
+    uint32_t destination_partition) {
+
+    shuffle_output_vector.push_back(
+      tuix::CreateShuffleOutputDirect(
+        enc_block_builder,
+        destination_partition,
+        encrypted_blocks));
+  }
+
+  flatbuffers::Offset<tuix::ShuffleOutputs> write_shuffle_outputs() {
+    return tuix::CreateShuffleOutputsDirect(enc_block_builder, &shuffle_output_vector);
+  }
+
   template<typename T>
   void finish(flatbuffers::Offset<T> root) {
     enc_block_builder.Finish<T>(root);
@@ -456,6 +471,9 @@ private:
   UntrustedMemoryAllocator untrusted_alloc;
   flatbuffers::FlatBufferBuilder enc_block_builder;
   std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;
+
+  // Optionally, for writing the resulting [ShuffleOutput]s
+  std::vector<flatbuffers::Offset<tuix::ShuffleOutput>> shuffle_output_vector;
 };
 
 class FlatbuffersTemporaryRow {

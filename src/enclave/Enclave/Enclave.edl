@@ -84,6 +84,24 @@ enclave {
                                               [in,size=secret_size] uint8_t* p_secret,
                                               uint32_t secret_size,
                                               [in,count=16] uint8_t* gcm_mac);
+
+    public void ecall_column_sort(
+                  int index, int num_part,
+                  int op_code,
+          int round, 
+                  [user_check] uint8_t *input_rows,
+                  uint32_t input_rows_len,
+          [user_check] uint32_t *num_rows,
+          [user_check] uint8_t **buffer_list,
+          uint32_t num_buffers,
+          uint32_t row_upper_bound,
+          uint32_t column,
+          uint32_t r,
+          uint32_t s,
+          [user_check] uint8_t **output_buffers,
+          [out,count=s] uint32_t *output_buffer_sizes,
+          [user_check] uint8_t *single_buffer_scratch);
+
   };
 
   untrusted {

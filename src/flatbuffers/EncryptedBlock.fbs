@@ -16,3 +16,12 @@ table EncryptedBlocks {
 table SortedRuns {
     runs:[EncryptedBlocks];
 }
+
+table ShuffleOutputs {
+    outputs:[ShuffleOutput];
+}
+
+table ShuffleOutput {
+    destination_partition:uint,
+    rows:EncryptedBlocks;
+}

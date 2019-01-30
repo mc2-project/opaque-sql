@@ -694,6 +694,41 @@ object Utils extends Logging {
     }).flatten
   }
 
+  /**
+   * Extracts an EncryptedBlocks tagged with its destination partition for each ShuffleOutput in the
+   * given input, which must be a ShuffleOutputs.
+   */
+  def extractShuffleOutputs(input: Array[Byte]): Iterator[(Int, Array[Byte])] = {
+    // 4. Extract the serialized tuix.ShuffleOutputs from the Scala byte array
+    val buf = ByteBuffer.wrap(block.bytes)
+
+    // 3. Deserialize the tuix.ShuffleOutputs
+    val shuffleOutputs = tuix.ShuffleOutputs.getRootAsShuffleOutputs(buf)
+    (for (i <- 0 until shuffleOutputs.outputsLength) yield {
+      val shuffleOutput = shuffleOutputs.outputs(i)
+      val builder = new FlatBufferBuilder
+
+      val blockOffsets =
+        for (j <- 0 until shuffleOutput.rows.blocksLength) yield {
+          tuix.EncryptedBlock.createEncryptedBlock(
+            builder,
+            shuffleOutput.rows.blocks(i).numRows,
+            shuffleOutput.rows.blocks(i).encRows)
+        }
+
+      builder.finish(
+        tuix.EncryptedBlocks.createEncryptedBlocks(
+          builder,
+          tuix.EncryptedBlocks.createBlocksVector(
+            builder,
+            blockOffsets)))
+      val encryptedBlockBytes = builder.sizedByteArray()
+
+      (shuffleOutput.destinationPartition, encryptedBlockBytes)
+    }).flatten
+  }
+
+
   def treeFold[BaseType <: TreeNode[BaseType], B](
     tree: BaseType)(op: (Seq[B], BaseType) => B): B = {
     val fromChildren: Seq[B] = tree.children.map(c => treeFold(c)(op))
