@@ -18,6 +18,14 @@ namespace std {
     using ::exit;
 }
 
+/**
+ * Allocate memory outside of the enclave and return the pointer in `ret`.
+ *
+ * This is a checked wrapper around `unsafe_ocall_malloc`. The resulting pointer is safe to write
+ * to.
+ */
+void ocall_malloc(size_t size, uint8_t **ret);
+
 std::string string_format(const std::string &fmt, ...);
 
 void print_bytes(uint8_t *ptr, uint32_t len);

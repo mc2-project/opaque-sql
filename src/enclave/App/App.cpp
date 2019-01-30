@@ -357,7 +357,7 @@ void ocall_print_string(const char *str)
   fflush(stdout);
 }
 
-void ocall_malloc(size_t size, uint8_t **ret) {
+void unsafe_ocall_malloc(size_t size, uint8_t **ret) {
   *ret = static_cast<uint8_t *>(malloc(size));
 }
 
