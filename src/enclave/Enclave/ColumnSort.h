@@ -95,7 +95,6 @@ void transpose(uint8_t *input_rows, size_t input_rows_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  uint32_t i = 0;
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
 
@@ -144,6 +143,10 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
               uint8_t **output_rows, size_t *output_rows_length) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
+
+  uint32_t n = r.num_rows();
+  assert(n % 2 == 0);
+
   uint32_t row = 1;
   uint32_t col = partition_idx + 1;
   uint32_t idx = 0;
