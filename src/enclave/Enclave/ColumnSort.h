@@ -142,5 +142,33 @@ void transpose(uint8_t *input_rows, size_t input_rows_length,
 void untranspose(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_rows, size_t *output_rows_length) {
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  FlatbuffersRowWriter w;
+  uint32_t row = 1;
+  uint32_t col = partition_idx + 1;
+  uint32_t idx = 0;
+  uint32_t dst_column = 0;
+  uint32_t dst_partition_idx = 0;
+  uint32_t prev_dst_partition_idx = 0;
 
+  while (r.has_next()) {
+    const tuix::Row *row = r.next();
+    w.write(row)
+
+    idx = (row - 1) * num_partitions + col;
+    dst_column = (idx - 1) / input_rows_length + 1;
+    dst_partition_idx = dst_column - 1;
+
+    if (dst_partition_idx != prev_dst_partition_idx) {
+      // Rows are going to a different partition
+      w.write_shuffle_output(w.write_encrypted_blocks(), prev_dst_partition_idx);
+    }
+
+    prev_dst_partition_idx = dst_partition_idx;
+    row++;
+  }
+
+  w.finish(w.write_shuffle_outputs());
+  *output_rows = w.output_buffer().release();
+  *output_rows_length = w.output_size(); 
 }
