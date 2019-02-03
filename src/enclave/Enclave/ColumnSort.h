@@ -8,8 +8,8 @@ void shift_up(uint8_t *input_rows, size_t input_rows_length,
   FlatbuffersRowWriter w;
 
   uint32_t top_destination =
-      (partition_idx == 0) ? num_partitions - 1 : partition_idx - 1;
-  uint32_t bottom_destination = partition_idx;
+      (partition_idx == 0) ? 0 : partition_idx - 1;
+  uint32_t bottom_destination = (partition_idx == 0) ? num_partitions - 1 : partition_idx;
 
   uint32_t i = 0;
   uint32_t n = r.num_rows();
