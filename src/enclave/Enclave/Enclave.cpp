@@ -12,6 +12,8 @@
 #include "isv_enclave.h"
 #include "sgx_lfence.h"
 #include "util.h"
+#include "ColumnSortOperations.h"
+#include "ObliviousSort.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -220,6 +222,39 @@ void ecall_non_oblivious_aggregate_step2(
     ocall_throw(e.what());
   }
 }
+
+void ecall_column_sort(
+                  int index, int num_part,
+                  int op_code,
+          int round, 
+                  [user_check] uint8_t *input_rows,
+                  uint32_t input_rows_len,
+          [user_check] uint32_t *num_rows,
+          [user_check] uint8_t **buffer_list,
+          uint32_t num_buffers,
+          uint32_t row_upper_bound,
+          uint32_t column,
+          uint32_t r,
+          uint32_t s,
+          [user_check] uint8_t **output_buffers,
+          [out,count=s] uint32_t *output_buffers_length,
+          [user_check] uint8_t *single_buffer_scratch) {
+
+    if (round == 1) {
+        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        transpose(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
+    } else if (round == 2) {
+        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        untranspose(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
+    } else if (round == 3) {
+        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        shift_down(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
+    } else {
+        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        shift_up(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
+    }
+
+  }
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
   try {
