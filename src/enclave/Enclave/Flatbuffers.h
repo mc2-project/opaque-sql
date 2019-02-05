@@ -458,7 +458,7 @@ public:
     uint32_t destination_partition) {
 
     shuffle_output_vector.push_back(
-      tuix::CreateShuffleOutputDirect(
+      tuix::CreateShuffleOutput(
         enc_block_builder,
         destination_partition,
         encrypted_blocks));

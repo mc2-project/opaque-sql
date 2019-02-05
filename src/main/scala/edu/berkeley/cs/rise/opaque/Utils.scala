@@ -698,22 +698,25 @@ object Utils extends Logging {
    * Extracts an EncryptedBlocks tagged with its destination partition for each ShuffleOutput in the
    * given input, which must be a ShuffleOutputs.
    */
-  def extractShuffleOutputs(input: Array[Byte]): Iterator[(Int, Array[Byte])] = {
+  def extractShuffleOutputs(block: Block): Seq[(Int, Block)] = {
     // 4. Extract the serialized tuix.ShuffleOutputs from the Scala byte array
     val buf = ByteBuffer.wrap(block.bytes)
 
     // 3. Deserialize the tuix.ShuffleOutputs
     val shuffleOutputs = tuix.ShuffleOutputs.getRootAsShuffleOutputs(buf)
-    (for (i <- 0 until shuffleOutputs.outputsLength) yield {
+    for (i <- 0 until shuffleOutputs.outputsLength) yield {
       val shuffleOutput = shuffleOutputs.outputs(i)
       val builder = new FlatBufferBuilder
 
       val blockOffsets =
         for (j <- 0 until shuffleOutput.rows.blocksLength) yield {
+          val encryptedBlock = shuffleOutput.rows.blocks(i)
+          val encRows = new Array[Byte](encryptedBlock.encRowsLength)
+          encryptedBlock.encRowsAsByteBuffer.get(encRows)
           tuix.EncryptedBlock.createEncryptedBlock(
             builder,
-            shuffleOutput.rows.blocks(i).numRows,
-            shuffleOutput.rows.blocks(i).encRows)
+            encryptedBlock.numRows,            
+            tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
         }
 
       builder.finish(
@@ -721,11 +724,11 @@ object Utils extends Logging {
           builder,
           tuix.EncryptedBlocks.createBlocksVector(
             builder,
-            blockOffsets)))
+            blockOffsets.toArray)))
       val encryptedBlockBytes = builder.sizedByteArray()
 
-      (shuffleOutput.destinationPartition, encryptedBlockBytes)
-    }).flatten
+      (shuffleOutput.destinationPartition.toInt, Block(encryptedBlockBytes))
+    }
   }
 
 
