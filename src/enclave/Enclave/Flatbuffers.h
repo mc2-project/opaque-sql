@@ -53,6 +53,21 @@ template<typename T>
 flatbuffers::Offset<T> flatbuffers_copy(
   const T *flatbuffers_obj, flatbuffers::FlatBufferBuilder& builder, bool force_null = false);
 template<>
+flatbuffers::Offset<tuix::ShuffleOutput> flatbuffers_copy(
+  const tuix::ShuffleOutput *shuffle_output,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null);
+template<>
+flatbuffers::Offset<tuix::EncryptedBlocks> flatbuffers_copy(
+  const tuix::EncryptedBlocks *encrypted_blocks,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null);
+template<>
+flatbuffers::Offset<tuix::EncryptedBlock> flatbuffers_copy(
+  const tuix::EncryptedBlock *encrypted_block,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null);
+template<>
 flatbuffers::Offset<tuix::Row> flatbuffers_copy(
   const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null);
 template<>
@@ -147,6 +162,25 @@ public:
 
 private:
   const tuix::EncryptedBlocks *encrypted_blocks;
+};
+
+class ShuffleOutputReader {
+public:
+  ShuffleOutputReader(uint8_t *buf, size_t len) {
+    flatbuffers::Verifier v(buf, len);
+    if (!v.VerifyBuffer<tuix::ShuffleOutput>(nullptr)) {
+      throw std::runtime_error(
+        std::string("Corrupt ShuffleOutput buffer of length ")
+        + std::to_string(len));
+    }
+    shuffle_output = flatbuffers::GetRoot<tuix::ShuffleOutput>(buf);
+  }
+  const tuix::ShuffleOutput *get() {
+    return shuffle_output;
+  }
+
+ private:
+  const tuix::ShuffleOutput *shuffle_output;
 };
 
 class EncryptedBlockToRowReader {

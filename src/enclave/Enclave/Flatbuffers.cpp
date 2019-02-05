@@ -168,6 +168,49 @@ void print(const tuix::Field *field) {
 }
 
 template<>
+flatbuffers::Offset<tuix::ShuffleOutput> flatbuffers_copy(
+  const tuix::ShuffleOutput *shuffle_output,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null) {
+
+  return tuix::CreateShuffleOutput(
+    builder,
+    shuffle_output->destination_partition(),
+    flatbuffers_copy(shuffle_output->rows(), builder, force_null));
+}
+
+template<>
+flatbuffers::Offset<tuix::EncryptedBlocks> flatbuffers_copy(
+  const tuix::EncryptedBlocks *encrypted_blocks,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null) {
+
+  flatbuffers::uoffset_t num_blocks = encrypted_blocks->blocks()->size();
+  std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> blocks(num_blocks);
+  for (flatbuffers::uoffset_t i = 0; i < num_blocks; i++) {
+    blocks[i] = flatbuffers_copy<tuix::EncryptedBlock>(
+      encrypted_blocks->blocks()->Get(i), builder, force_null);
+  }
+  return tuix::CreateEncryptedBlocksDirect(builder, &blocks);
+}
+
+template<>
+flatbuffers::Offset<tuix::EncryptedBlock> flatbuffers_copy(
+  const tuix::EncryptedBlock *encrypted_block,
+  flatbuffers::FlatBufferBuilder& builder,
+  bool force_null) {
+  (void)force_null;
+
+  std::vector<uint8_t> enc_rows(encrypted_block->enc_rows()->begin(),
+                                encrypted_block->enc_rows()->end());
+  return tuix::CreateEncryptedBlockDirect(
+    builder,
+    encrypted_block->num_rows(),
+    &enc_rows);
+}
+
+
+template<>
 flatbuffers::Offset<tuix::Row> flatbuffers_copy(
   const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
 

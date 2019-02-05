@@ -145,6 +145,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey(s)
       .flatMap(x => ParseDataPostProcess(x, 1, r, s))
 
+
+
     val data_2 = data_1.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 2, r, s))
     }.flatMap(x => ParseData(x, r, s))
@@ -153,9 +155,8 @@ object ObliviousSortExec extends java.io.Serializable {
 
     val data_3 = data_2.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 3, r, s))
-    }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
-      .flatMap(x => ParseDataPostProcess(x, 3, r, s))
+    }.map(x => extractShuffleOutputs(x))
+      .reduceByKey((x, y) => concatByteArrays(Array[x, y]))
 
     val data_4 = data_3.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 4, r, s))
