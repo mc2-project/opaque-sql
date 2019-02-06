@@ -139,13 +139,12 @@ object ObliviousSortExec extends java.io.Serializable {
 
     val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
 
+    // --- something like this ------------
     val data_1 = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 1, r, s))
-    }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
-      .flatMap(x => ParseDataPostProcess(x, 1, r, s))
-
-
+    }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
+      .groupByKey()
+      .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
     val data_2 = data_1.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 2, r, s))
