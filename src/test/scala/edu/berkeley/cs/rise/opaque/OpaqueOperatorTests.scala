@@ -134,6 +134,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.collect
   }
 
+  testAgainstSpark("create DataFrame with nulls for all types") { securityLevel =>
+    val schema = StructType(Seq(
+      StructField("boolean", BooleanType),
+      StructField("integer", IntegerType),
+      StructField("long", LongType),
+      StructField("float", FloatType),
+      StructField("double", DoubleType),
+      StructField("date", DateType),
+      StructField("binary", BinaryType),
+      StructField("byte", ByteType),
+      StructField("calendar_interval", CalendarIntervalType),
+      StructField("null", NullType),
+      StructField("short", ShortType),
+      StructField("timestamp", TimestampType),
+      StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
+      StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
+      StructField("string", StringType)))
+
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
+        schema)).collect
+  }
+
   testAgainstSpark("filter") { securityLevel =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),

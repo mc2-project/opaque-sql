@@ -312,6 +312,12 @@ object Utils extends Logging {
           tuix.FieldUnion.BooleanField,
           tuix.BooleanField.createBooleanField(builder, b),
           isNull)
+      case (null, BooleanType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.BooleanField,
+          tuix.BooleanField.createBooleanField(builder, false),
+          isNull)
       case (x: Int, IntegerType) =>
         tuix.Field.createField(
           builder,
