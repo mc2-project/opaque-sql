@@ -23,9 +23,11 @@ find_library(UAE_SERVICE_LIB sgx_uae_service)
 find_library(UAE_SERVICE_SIM_LIB sgx_uae_service_sim)
 
 target_link_libraries(enclave_jni ${UKEY_EXCHANGE_LIB} pthread)
-if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
+if(NOT "$ENV{SGX_MODE}" STREQUAL "HW")
+  message(STATUS "Building for simulated SGX")
   target_link_libraries(enclave_jni ${URTS_SIM_LIB} ${UAE_SERVICE_SIM_LIB})
 else()
+  message(STATUS "Building for SGX hardware")
   target_link_libraries(enclave_jni ${URTS_LIB} ${UAE_SERVICE_LIB})
 endif()
 
