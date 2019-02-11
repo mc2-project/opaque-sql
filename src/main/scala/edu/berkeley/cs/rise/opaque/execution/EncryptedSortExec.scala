@@ -60,10 +60,12 @@ object EncryptedSortExec {
               Block(sampledBlock)
             }.collect)
           }
-          // Find range boundaries locally
-          val (enclave, eid) = Utils.initEnclave()
+          // Find range boundaries parceled out to a single worker
           val boundaries = time("non-oblivious sort - FindRangeBounds") {
-            enclave.FindRangeBounds(eid, orderSer, numPartitions, sampled.bytes)
+            childRDD.context.parallelize(Array(sampled.bytes), 1).map { sampledBytes =>
+              val (enclave, eid) = Utils.initEnclave()
+              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
+            }.collect.head
           }
           // Broadcast the range boundaries and use them to partition the input
           childRDD.flatMap { block =>
