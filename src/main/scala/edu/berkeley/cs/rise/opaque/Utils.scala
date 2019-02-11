@@ -595,7 +595,18 @@ object Utils extends Logging {
 
   val MaxBlockSize = 1000
 
-  def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
+  /**
+   * Encrypts the given Spark SQL [[InternalRow]]s into a [[Block]] (a serialized
+   * tuix.EncryptedBlocks).
+   *
+   * If `useEnclave` is true, it will attempt to use the local enclave. Otherwise, it will attempt
+   * to use the local encryption key, which is intended to be available only on the driver, not the
+   * workers.
+   */
+  def encryptInternalRowsFlatbuffers(
+      rows: Seq[InternalRow],
+      types: Seq[DataType],
+      useEnclave: Boolean): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
     val encryptedBlockOffsets = ArrayBuilder.make[Int]
@@ -615,8 +626,13 @@ object Utils extends Logging {
       val plaintext = builder.sizedByteArray()
 
       // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
-      val (enclave, eid) = initEnclave()
-      val ciphertext = enclave.Encrypt(eid, plaintext)
+      val ciphertext =
+        if (useEnclave) {
+          val (enclave, eid) = initEnclave()
+          enclave.Encrypt(eid, plaintext)
+        } else {
+          encrypt(plaintext)
+        }
 
       encryptedBlockOffsets += tuix.EncryptedBlock.createEncryptedBlock(
         builder2,
@@ -659,6 +675,13 @@ object Utils extends Logging {
     Block(encryptedBlockBytes)
   }
 
+  /**
+   * Decrypts the given [[Block]] (a serialized tuix.EncryptedBlocks) and returns the rows within as
+   * Spark SQL [[InternalRow]]s.
+   *
+   * This function can only be called from the driver. The decryption key will not be available on
+   * the workers.
+   */
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
     // 4. Extract the serialized tuix.EncryptedBlocks from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
@@ -672,7 +695,6 @@ object Utils extends Logging {
       ciphertextBuf.get(ciphertext)
 
       // 2. Decrypt the row data
-      val (enclave, eid) = initEnclave()
       val plaintext = decrypt(ciphertext)
 
       // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
