@@ -28,23 +28,6 @@ object ObliviousSortExec extends java.io.Serializable {
     Iterator((key, numRows))
   }
 
-  def ColumnSortPreProcess(
-    index: Int, data: Iterator[Block], index_offsets: Seq[Int],
-    op_code: Opcode, r: Int, s: Int) : Iterator[(Int, Array[Byte])] = {
-
-    val (enclave, eid) = Utils.initEnclave()
-    val joinArray = Utils.concatByteArrays(data.map(_.bytes).toArray)
-
-    val ret = enclave.EnclaveColumnSort(eid,
-      index, s,
-      op_code.value, 0, joinArray, r, s, 0, index, 0, index_offsets(index))
-
-    val ret_array = new Array[(Int, Array[Byte])](1)
-    ret_array(0) = (0, ret)
-
-    ret_array.iterator
-  }
-
   def ColumnSortPad(data: (Int, Array[Byte]), r: Int, s: Int, op_code: Opcode): (Int, Array[Byte]) = {
     val (enclave, eid) = Utils.initEnclave()
 
@@ -56,20 +39,19 @@ object ObliviousSortExec extends java.io.Serializable {
   }
 
   def ColumnSortPartition(
-    input: (Int, Array[Byte]),
+    input: Array[Byte],
     index: Int, numpart: Int,
     op_code: Opcode,
     round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
 
-    val cur_column = input._1
-    val data = input._2
+    val data = input
 
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
       index, numpart,
-      op_code.value, round+1, data, r, s, cur_column, 0, 0, 0)
+      op_code.value, round, data, r, s, index+1, 0, 0, 0)
 
-    (cur_column, ret)
+    ret
   }
 
   def NewColumnSort(sc: SparkContext, data: RDD[Block], opcode: Opcode, r_input: Int = 0, s_input: Int = 0)
@@ -129,48 +111,33 @@ object ObliviousSortExec extends java.io.Serializable {
 
     RA.initRA(data)
 
-    val parsed_data = data.mapPartitionsWithIndex(
-      (index, x) =>
-      ColumnSortPreProcess(index, x, offsets, opcode, r, s)
-    )
-      .flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
-      .flatMap(x => ParseDataPostProcess(x, 0, r, s))
-
     val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
 
-    // --- something like this ------------
-    val data_1 = padded_data.mapPartitionsWithIndex {
+    // --------  something like this ------------
+    val transposed_data = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 1, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
-    val data_2 = data_1.mapPartitionsWithIndex {
+    val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 2, r, s))
-    }.flatMap(x => ParseData(x, r, s))
-    .groupByKey(s)
-      .flatMap(x => ParseDataPostProcess(x, 2, r, s))
+    }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
+      .groupByKey()
+      .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
-    val data_3 = data_2.mapPartitionsWithIndex {
+    val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 3, r, s))
-    }.map(x => extractShuffleOutputs(x))
-      .reduceByKey((x, y) => concatByteArrays(Array[x, y]))
+    }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
+      .groupByKey()
+      .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
-    val data_4 = data_3.mapPartitionsWithIndex {
+    val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortPartition(x, index, s, opcode, 4, r, s))
-    }.flatMap(x => ParseData(x, r, s))
-      .groupByKey(s)
-      .flatMap(x => ParseDataPostProcess(x, 4, r, s))
-      .sortByKey()
+    }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
+      .groupByKey()
+      .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
-    val result = data_4.map{x => FinalFilter(x._1, x._2, r, len, opcode)}
-      .filter(x => x._1.nonEmpty)
-      .mapPartitions { iter =>
-        val array = iter.toArray
-        Iterator(Block(Utils.concatByteArrays(array.map(_._1)), array.map(_._2).sum))
-      }
-
-    result
+    shifted_up_data
   }
 }
