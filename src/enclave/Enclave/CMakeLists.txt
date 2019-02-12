@@ -8,6 +8,8 @@ set(SOURCES
   Enclave.cpp
   Filter.cpp
   Flatbuffers.cpp
+  FlatbuffersReaders.cpp
+  FlatbuffersWriters.cpp
   Join.cpp
   Project.cpp
   Sort.cpp
