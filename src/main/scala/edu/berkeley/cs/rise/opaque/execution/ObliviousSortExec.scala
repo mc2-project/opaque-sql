@@ -111,7 +111,8 @@ object ObliviousSortExec extends java.io.Serializable {
 
     RA.initRA(data)
 
-    val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
+    // val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
+    // Add some padding here
 
     // --------  something like this ------------
     val transposed_data = padded_data.mapPartitionsWithIndex {

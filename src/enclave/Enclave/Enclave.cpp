@@ -226,6 +226,8 @@ void ecall_non_oblivious_aggregate_step2(
 void ecall_column_sort(
                   int index, int num_part,
                   int op_code,
+                  uint8_t *sort_order,
+                  size_t sort_order_length,
           int round, 
                   [user_check] uint8_t *input_rows,
                   uint32_t input_rows_len,
@@ -241,16 +243,16 @@ void ecall_column_sort(
           [user_check] uint8_t *single_buffer_scratch) {
 
     if (round == 1) {
-        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffers, output_buffers_length);
         transpose(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
     } else if (round == 2) {
-        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffers, output_buffers_length);
         untranspose(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
     } else if (round == 3) {
-        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffers, output_buffers_length);
         shift_down(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
     } else {
-        oblivious_sort(, , input_rows, input_rows_length, output_buffers, output_buffers_length);
+        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffers, output_buffers_length);
         shift_up(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
     }
 

@@ -158,3 +158,15 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
   *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size(); 
 }
+
+void column_sort_padding(int op_code,
+                         Verify *verify_set,
+                         uint8_t *input_rows,
+                         uint32_t input_rows_len,
+                         uint32_t num_rows,
+                         uint32_t row_upper_bound,
+                         uint32_t r,
+                         uint32_t s,
+                         uint8_t *output_rows,
+                         uint32_t *output_rows_size) {
+}

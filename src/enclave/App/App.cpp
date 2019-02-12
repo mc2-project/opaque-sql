@@ -1171,3 +1171,21 @@ int SGX_CDECL main(int argc, char *argv[])
 
   return 0;
 }
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
+    JNIEnv *env,
+    jobject obj,
+    jlong eid,
+    jint index,
+    jint number_part,
+    jint sort_order,
+    jint sort_order_length,
+    jint round,
+    jbyteArray input,
+    jint r,
+    jint s,
+    jint column_input,
+    jint current_part,
+    jint num_part,
+    jint offset) {
+}
