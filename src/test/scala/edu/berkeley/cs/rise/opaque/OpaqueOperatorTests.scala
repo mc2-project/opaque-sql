@@ -556,4 +556,16 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
     p.join(f, $"pk" === $"fk").collect.toSet
   }
+
+  testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
+    // This test is intended to ensure that primary groups are never split across multiple
+    // partitions, which would break our implementation of non-foreign-key join.
+
+    val p_data = for (i <- 1 to 128) yield (i, 1)
+    val f_data = for (i <- 1 to 128) yield (i, 1)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
 }
