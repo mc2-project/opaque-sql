@@ -1,6 +1,8 @@
 #include "Join.h"
 
 #include "ExpressionEvaluation.h"
+#include "FlatbuffersReaders.h"
+#include "FlatbuffersWriters.h"
 #include "common.h"
 
 void scan_collect_last_primary(
@@ -9,19 +11,17 @@ void scan_collect_last_primary(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter w;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     if (join_expr_eval.is_primary(row)) {
       w.clear();
-      w.write(row);
+      w.append(row);
     }
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_length = w.output_size();
+  w.output_buffer(output_rows, output_rows_length);
 }
 
 void non_oblivious_sort_merge_join(
@@ -31,9 +31,9 @@ void non_oblivious_sort_merge_join(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  EncryptedBlocksToRowReader j(join_row, join_row_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader j(BufferRefView<tuix::EncryptedBlocks>(join_row, join_row_length));
+  RowWriter w;
 
   if (j.num_rows() > 1) {
     throw std::runtime_error(
@@ -56,12 +56,10 @@ void non_oblivious_sort_merge_join(
       primary.set(current);
     } else {
       if (primary.get() != nullptr && join_expr_eval.is_same_group(primary.get(), current)) {
-        w.write(primary.get(), current);
+        w.append(primary.get(), current);
       }
     }
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_length = w.output_size();
+  w.output_buffer(output_rows, output_rows_length);
 }
