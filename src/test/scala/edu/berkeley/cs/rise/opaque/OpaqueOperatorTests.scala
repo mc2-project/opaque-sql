@@ -263,6 +263,14 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     p.join(f, $"pk" === $"fk").collect.toSet
   }
 
+  testAgainstSpark("non-foreign-key join") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
   def abc(i: Int): String = (i % 3) match {
     case 0 => "A"
     case 1 => "B"
