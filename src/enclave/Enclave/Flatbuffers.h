@@ -88,6 +88,7 @@ public:
   int32_t days_since_epoch;
 };
 
+std::string to_string(const tuix::Row *row);
 std::string to_string(const Date &date);
 std::string to_string(const tuix::Field *f);
 std::string to_string(const tuix::BooleanField *f);

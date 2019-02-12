@@ -2,6 +2,20 @@
 
 #include "Flatbuffers.h"
 
+std::string to_string(const tuix::Row *row) {
+  std::string s;
+  flatbuffers::uoffset_t num_fields = row->field_values()->size();
+  s.append("[");
+  for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+    s.append(to_string(row->field_values()->Get(i)));
+    if (i + 1 < num_fields) {
+      s.append(",");
+    }
+  }
+  s.append("]");
+  return s;
+}
+
 std::string to_string(const Date &date) {
   uint64_t seconds_per_day = 60 * 60 * 24L;
   uint64_t secs = date.days_since_epoch * seconds_per_day;
