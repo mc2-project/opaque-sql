@@ -44,7 +44,7 @@ scalacOptions in (Compile, console) := Seq.empty
 val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
   "Location of Flatbuffers generated C++ files.")
 
-flatbuffersGenCppDir := sourceManaged.value / "flatbuffers" / "gen-cpp"
+flatbuffersGenCppDir := sourceManaged.value / "tuix" / "gen-cpp"
 
 val buildType = SettingKey[BuildType]("buildType",
   "Release, Debug, or Profile.")
@@ -64,29 +64,29 @@ val buildFlatbuffersTask = TaskKey[Seq[File]]("buildFlatbuffers",
 
 sourceGenerators in Compile += buildFlatbuffersTask.taskValue
 
-val enclaveBuildTask = TaskKey[File]("enclaveBuild",
-  "Builds the C++ enclave code, returning the directory containing the resulting shared libraries.")
+val nativeBuildTask = TaskKey[File]("nativeBuild",
+  "Builds the C++ code, returning the directory containing the resulting shared libraries.")
 
-baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
+baseDirectory in nativeBuildTask := (baseDirectory in ThisBuild).value
 
-compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
+compile in Compile := { (compile in Compile).dependsOn(nativeBuildTask).value }
 
-val copyEnclaveLibrariesToResourcesTask = TaskKey[Seq[File]]("copyEnclaveLibrariesToResources",
-  "Copies the enclave libraries to the managed resources directory, returning the copied files.")
+val copyNativeLibrariesToResourcesTask = TaskKey[Seq[File]]("copyNativeLibrariesToResources",
+  "Copies the native libraries to the managed resources directory, returning the copied files.")
 
-resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
+resourceGenerators in Compile += copyNativeLibrariesToResourcesTask.taskValue
 
 // Add the managed resource directory to the resource classpath so we can find libraries at runtime
 managedResourceDirectories in Compile += resourceManaged.value
 
-// Watch the enclave C++ files
+// Watch the C++ files
 watchSources ++=
-  ((sourceDirectory.value / "enclave") ** (
+  ((sourceDirectory.value / "main" / "native") ** (
     ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
-  ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
+  ((sourceDirectory.value / "main" / "tuix") ** "*.fbs").get
 
 val synthTestDataTask = TaskKey[Unit]("synthTestData",
   "Synthesizes test data.")
@@ -185,12 +185,12 @@ buildFlatbuffersTask := {
 
   val flatc = fetchFlatbuffersLibTask.value / "flatc"
 
-  val javaOutDir = sourceManaged.value / "flatbuffers" / "gen-java"
+  val javaOutDir = sourceManaged.value / "tuix" / "gen-java"
 
-  val flatbuffers = ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
+  val flatbuffers = ((sourceDirectory.value / "main" / "tuix") ** "*.fbs").get
   // Only regenerate Flatbuffers headers if any .fbs file changed, indicated by their latest
   // modification time being newer than all generated headers. We do this because regenerating
-  // Flatbuffers headers causes a full enclave rebuild, which is slow.
+  // Flatbuffers headers causes a full rebuild of the native code, which is slow.
   val fbsLastMod = flatbuffers.map(_.lastModified).max
   val gen = (flatbuffersGenCppDir.value ** "*.h" +++ javaOutDir ** "*.java").get
 
@@ -230,33 +230,33 @@ nativePlatform := {
   }
 }
 
-enclaveBuildTask := {
-  buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
+nativeBuildTask := {
+  buildFlatbuffersTask.value // Native build depends on the generated C++ headers
   import sys.process._
-  val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
-  val enclaveBuildDir = target.value / "enclave"
-  enclaveBuildDir.mkdirs()
+  val nativeSourceDir = baseDirectory.value / "src" / "main" / "native"
+  val nativeBuildDir = target.value / "native"
+  nativeBuildDir.mkdirs()
   val cmakeResult =
     Process(Seq(
       "cmake",
-      s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
+      s"-DCMAKE_INSTALL_PREFIX:PATH=${nativeBuildDir.getPath}",
       s"-DCMAKE_BUILD_TYPE=${buildType.value}",
       s"-DFLATBUFFERS_LIB_DIR=${(fetchFlatbuffersLibTask.value / "include").getPath}",
       s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
-      enclaveSourceDir.getPath), enclaveBuildDir).!
+      nativeSourceDir.getPath), nativeBuildDir).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val nproc = java.lang.Runtime.getRuntime.availableProcessors
-  val buildResult = Process(Seq("make", "-j" + nproc), enclaveBuildDir).!
+  val buildResult = Process(Seq("make", "-j" + nproc), nativeBuildDir).!
   if (buildResult != 0) sys.error("C++ build failed.")
-  val installResult = Process(Seq("make", "install"), enclaveBuildDir).!
+  val installResult = Process(Seq("make", "install"), nativeBuildDir).!
   if (installResult != 0) sys.error("C++ build failed.")
-  enclaveBuildDir / "lib"
+  nativeBuildDir / "lib"
 }
 
-copyEnclaveLibrariesToResourcesTask := {
-  val libraries = (enclaveBuildTask.value ** "*.so").get
+copyNativeLibrariesToResourcesTask := {
+  val libraries = (nativeBuildTask.value ** "*.so").get
   val mappings: Seq[(File, String)] =
-    libraries pair rebase(enclaveBuildTask.value, s"/native/${nativePlatform.value}")
+    libraries pair rebase(nativeBuildTask.value, s"/native/${nativePlatform.value}")
   val resources: Seq[File] = for ((file, path) <- mappings) yield {
     val resource = resourceManaged.value / path
     IO.copyFile(file, resource)
