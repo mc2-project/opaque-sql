@@ -1,6 +1,7 @@
 using namespace edu::berkeley::cs::rise::opaque;
 
 #include "ColumnSort.h"
+#include "Flatbuffers.h"
 
 void shift_up(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
@@ -139,7 +140,7 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    w.write(row)
+    w.write(row);
 
     idx = (row - 1) * num_partitions + col;
     dst_column = (idx - 1) / input_rows_length + 1;
@@ -159,14 +160,31 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
   *output_rows_length = w.output_size(); 
 }
 
-void column_sort_padding(int op_code,
-                         Verify *verify_set,
-                         uint8_t *input_rows,
+void column_sort_padding(uint8_t *input_rows,
                          uint32_t input_rows_len,
-                         uint32_t num_rows,
-                         uint32_t row_upper_bound,
                          uint32_t r,
                          uint32_t s,
                          uint8_t *output_rows,
                          uint32_t *output_rows_size) {
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  FlatbuffersRowWriter w;
+  uint32_t n = r.num_rows();
+
+  const tuix::Row *row;
+
+  while (r.has_next()) {
+    *row = r.next();
+    w.write(row);
+  }
+
+  uint32_t num_dummies = r - num_rows;
+  for (uint32_t i = 0; i < num_dummies; i++) {
+    w.write(w.create_dummy(row));
+  }
+
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer().release();
+  *output_rows_length = w.output_size(); 
+
 }
+

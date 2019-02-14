@@ -41,7 +41,8 @@ object ObliviousSortExec extends java.io.Serializable {
   def ColumnSortPartition(
     input: Array[Byte],
     index: Int, numpart: Int,
-    op_code: Opcode,
+    sort_order: Int,
+    sort_order_length: Int,
     round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
 
     val data = input
