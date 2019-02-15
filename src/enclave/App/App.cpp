@@ -1188,4 +1188,17 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jint current_part,
     jint num_part,
     jint offset) {
+  if (round == 0) {
+    // pad
+  } else if (round == 1) {
+    // sort + transpose
+  } else if (round == 2) {
+    // sort + untranspose
+  } else if (round == 3) {
+    // sort + shift down
+  } else if (round == 4) {
+    // sort + shift up
+  } else if (round == 5) {
+    // filter
+  }
 }

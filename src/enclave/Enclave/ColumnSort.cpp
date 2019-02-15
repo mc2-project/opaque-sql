@@ -160,15 +160,15 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
   *output_rows_length = w.output_size(); 
 }
 
-void column_sort_padding(uint8_t *input_rows,
+void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_len,
                          uint32_t r,
                          uint32_t s,
                          uint8_t *output_rows,
-                         uint32_t *output_rows_size) {
+                         uint32_t *output_rows_length) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
-  uint32_t n = r.num_rows();
+  uint32_t num_rows = r.num_rows();
 
   const tuix::Row *row;
 
@@ -180,11 +180,36 @@ void column_sort_padding(uint8_t *input_rows,
   uint32_t num_dummies = r - num_rows;
   for (uint32_t i = 0; i < num_dummies; i++) {
     w.write(w.create_dummy(row));
-  }
+  } 
 
   w.finish(w.write_encrypted_blocks());
   *output_rows = w.output_buffer().release();
   *output_rows_length = w.output_size(); 
 
 }
+
+void column_sort_filter(uint8_t *input_rows,
+                         uint32_t input_rows_len,
+                         uint32_t r,
+                         uint32_t s,
+                         uint8_t *output_rows,
+                         uint32_t *output_rows_length) {
+  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
+  FlatbuffersRowWriter w;
+
+  const tuix::Row *row;
+
+  while (r.has_next()) {
+    *row = r.next();
+    if (!row.isDummy) {
+      w.write(row);
+    }
+  }
+
+  w.finish(w.write_encrypted_blocks());
+  *output_rows = w.output_buffer().release();
+  *output_rows_length = w.output_size(); 
+}
+
+
 

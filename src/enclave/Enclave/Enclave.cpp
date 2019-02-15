@@ -224,23 +224,17 @@ void ecall_non_oblivious_aggregate_step2(
 }
 
 void ecall_column_sort(
-                  int index, int num_part,
-                  int op_code,
+                  int index
                   uint8_t *sort_order,
                   size_t sort_order_length,
-          int round, 
+                  int round, 
                   [user_check] uint8_t *input_rows,
                   uint32_t input_rows_len,
-          [user_check] uint32_t *num_rows,
-          [user_check] uint8_t **buffer_list,
-          uint32_t num_buffers,
-          uint32_t row_upper_bound,
-          uint32_t column,
-          uint32_t r,
-          uint32_t s,
-          [user_check] uint8_t **output_buffers,
-          [out,count=s] uint32_t *output_buffers_length,
-          [user_check] uint8_t *single_buffer_scratch) {
+                  uint32_t column,
+                  uint32_t r,
+                  uint32_t s,
+                  [user_check] uint8_t **output_buffers,
+                  [out,count=s] uint32_t *output_buffers_length) {
 
     if (round == 1) {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffers, output_buffers_length);
@@ -256,6 +250,25 @@ void ecall_column_sort(
         shift_up(input_rows, input_rows_len, column - 1, s, output_buffers, output_buffers_length);
     }
 
+  }
+
+  void ecall_column_sort_pad(
+                  [user_check] uint8_t *input_rows,
+                  uint32_t input_rows_len,
+                  uint32_t r,
+                  uint32_t s,
+                  [user_check] uint8_t **output_buffers,
+                  [out,count=s] uint32_t *output_buffers_length) {
+    column_sort_pad(input_rows, input_rows_len, r, s, output_buffers, output_buffers_length)
+  }
+
+  void ecall_column_sort_filter([user_check] uint8_t *input_rows,
+                  uint32_t input_rows_len,
+                  uint32_t r,
+                  uint32_t s,
+                  [user_check] uint8_t **output_buffers,
+                  [out,count=s] uint32_t *output_buffers_length) {
+    column_sort_filter(input_rows, input_rows_len, r, s, output_buffers, output_buffers_length)
   }
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
