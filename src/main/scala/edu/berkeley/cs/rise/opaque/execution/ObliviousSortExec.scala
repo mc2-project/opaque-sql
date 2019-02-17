@@ -32,23 +32,21 @@ object ObliviousSortExec extends java.io.Serializable {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
-      0, r,
-      , 1, data, r, s, 0, 0, 0, 0)
+      0, 0, 0, data, r, s, 0)
 
     ret
   }
 
   def ColumnSortOp(
     data: Array[Byte],
-    index: Int, numpart: Int,
+    partition_index: Int, numpart: Int,
     sort_order: Int,
     sort_order_length: Int,
     round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
 
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
-      index, numpart,
-      op_code.value, round, data, r, s, index+1, 0, 0, 0)
+      sort_order, sort_order_length, round, data, r, s, partition_index)
 
     ret
   }
@@ -57,8 +55,7 @@ object ObliviousSortExec extends java.io.Serializable {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
-      0, r,
-      , 1, data, r, s, 0, 0, 0, 0)
+      0, 0, 5, data, r, s, 0)
 
     ret
   }
@@ -120,35 +117,39 @@ object ObliviousSortExec extends java.io.Serializable {
 
     RA.initRA(data)
 
-    // val padded_data = parsed_data.map(x => ColumnSortPad(x, r, s, opcode))
-    // Add some padding here
+    // Pad with dummy rows
+    val padded_data = data.map(x => ColumnSortPad(x, r, s))
 
-    // --------  something like this ------------
+    // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, s, opcode, 1, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
+    // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, s, opcode, 2, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
+    // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, s, opcode, 3, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
+    // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSort(x, index, s, opcode, 4, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
 
-    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, r, s, opcode))
+    // Filter out dummy rows
+    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, r, s))
 
     filtered_data
   }

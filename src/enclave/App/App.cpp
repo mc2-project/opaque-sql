@@ -1176,29 +1176,26 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     JNIEnv *env,
     jobject obj,
     jlong eid,
-    jint index,
-    jint number_part,
     jint sort_order,
     jint sort_order_length,
     jint round,
     jbyteArray input,
     jint r,
     jint s,
-    jint column_input,
-    jint current_part,
-    jint num_part,
-    jint offset) {
+    jint partition_index) {
+
+  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
+  uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
+  uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
+
+  // TODO: figure out output_buffers, output_buffer_sizes
+
   if (round == 0) {
-    // pad
-  } else if (round == 1) {
-    // sort + transpose
-  } else if (round == 2) {
-    // sort + untranspose
-  } else if (round == 3) {
-    // sort + shift down
-  } else if (round == 4) {
-    // sort + shift up
+    ecall_column_sort_pad(input, input_len, r, s, output_buffers, output_buffer_sizes);
   } else if (round == 5) {
-    // filter
+    ecall_column_sort_filter(input, input_len, r, s, output_buffers, output_buffer_sizes);
+  } else {
+    ecall_column_sort(round, sort_order, sort_order_length, input, input_len, partition_index, 
+      r, s, output_buffers, output_buffer_sizes);
   }
 }
