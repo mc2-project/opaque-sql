@@ -1184,18 +1184,33 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jint s,
     jint partition_index) {
 
+  // Copy jbyteArray input as uint8_t array
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
-  uint8_t **output_buffers = (uint8_t **) malloc(sizeof(uint8_t *) * s);
-  uint32_t *output_buffer_sizes = (uint32_t *) malloc(sizeof(uint32_t) * ((uint32_t) s));
+  jboolean if_copy = false;
+  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
+  uint8_t *input_copy = (uint8_t *) malloc(input_len);
 
-  // TODO: figure out output_buffers, output_buffer_sizes
+  for (uint32_t i = 0; i < input_len; i++) {
+    input_copy[i] = *(ptr + i);
+  }
+
+  uint32_t *output_buffer = (uint32_t *) malloc(sizeof(uint32_t) * r);
+  uint32_t output_buffer_size;
+
 
   if (round == 0) {
-    ecall_column_sort_pad(input, input_len, r, s, output_buffers, output_buffer_sizes);
+    ecall_column_sort_pad(input_copy, input_len, r, s, output_buffer, &output_buffer_size);
   } else if (round == 5) {
-    ecall_column_sort_filter(input, input_len, r, s, output_buffers, output_buffer_sizes);
+    ecall_column_sort_filter(input_copy, input_len, r, s, output_buffer, &output_buffer_size);
   } else {
-    ecall_column_sort(round, sort_order, sort_order_length, input, input_len, partition_index, 
-      r, s, output_buffers, output_buffer_sizes);
+    ecall_column_sort(round, sort_order, sort_order_length, input_copy, input_len, partition_index, 
+      r, s, output_buffer, &output_buffer_size);
   }
+
+  jbyteArray ret = env->NewByteArray(output_buffer_size);
+  env->SetByteArrayRegion(ret, 0, final_size, (jbyte *) output_buffer);
+
+  free(output_buffer);
+  free(input_copy);
+
 }

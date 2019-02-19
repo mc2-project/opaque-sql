@@ -5,7 +5,7 @@ using namespace edu::berkeley::cs::rise::opaque;
 
 void shift_up(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_rows, size_t *output_rows_sizes) {
+              uint8_t *output_row, size_t *output_row_size) {
 
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
@@ -44,13 +44,13 @@ void shift_up(uint8_t *input_rows, size_t input_rows_length,
   }
 
   w.finish(w.write_shuffle_outputs());
-  *output_rows = w.output_buffer().release();
+  output_row = w.output_buffer().release();
   *output_rows_sizes = w.output_size();
 }
 
 void shift_down(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_rows, size_t *output_rows_sizes) {
+              uint8_t *output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
@@ -88,13 +88,13 @@ void shift_down(uint8_t *input_rows, size_t input_rows_length,
   }
 
   w.finish(w.write_shuffle_outputs());
-  *output_rows = w.output_buffer().release();
-  *output_rows_sizes = w.output_size();
+  output_row = w.output_buffer().release();
+  *output_row_size = w.output_size();
 }
 
 void transpose(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_rows, size_t *output_rows_sizes) {
+              uint8_t **output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
@@ -118,13 +118,13 @@ void transpose(uint8_t *input_rows, size_t input_rows_length,
   }
 
   shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
-  *output_rows = shuffle_output_writer.output_buffer().release();
-  *output_rows_sizes = shuffle_output_writer.output_size();
+  output_row = shuffle_output_writer.output_buffer().release();
+  *output_row_size = shuffle_output_writer.output_size();
 }
 
 void untranspose(uint8_t *input_rows, size_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_rows, size_t *output_rows_sizes) {
+              uint8_t *output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
@@ -156,16 +156,16 @@ void untranspose(uint8_t *input_rows, size_t input_rows_length,
   }
 
   w.finish(w.write_shuffle_outputs());
-  *output_rows = w.output_buffer().release();
-  *output_rows_sizes = w.output_size(); 
+  output_row = w.output_buffer().release();
+  *output_row_size = w.output_size(); 
 }
 
 void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_len,
                          uint32_t r,
                          uint32_t s,
-                         uint8_t *output_rows,
-                         uint32_t *output_rows_sizes) {
+                         uint8_t *output_row,
+                         uint32_t *output_rows_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
   uint32_t num_rows = r.num_rows();
@@ -183,8 +183,8 @@ void column_sort_pad(uint8_t *input_rows,
   } 
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_sizes = w.output_size(); 
+  output_row = w.output_buffer().release();
+  *output_row_size = w.output_size(); 
 
 }
 
@@ -192,8 +192,8 @@ void column_sort_filter(uint8_t *input_rows,
                          uint32_t input_rows_len,
                          uint32_t r,
                          uint32_t s,
-                         uint8_t *output_rows,
-                         uint32_t *output_rows_sizes) {
+                         uint8_t *output_row,
+                         uint32_t *output_row_sizes) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
@@ -207,8 +207,8 @@ void column_sort_filter(uint8_t *input_rows,
   }
 
   w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_sizes = w.output_size(); 
+  output_row = w.output_buffer().release();
+  *output_row_size = w.output_size(); 
 }
 
 
