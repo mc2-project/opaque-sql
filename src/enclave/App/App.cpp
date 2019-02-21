@@ -1197,7 +1197,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t *output_buffer = (uint32_t *) malloc(sizeof(uint32_t) * r);
   uint32_t output_buffer_size;
 
-
   if (round == 0) {
     ecall_column_sort_pad(input_copy, input_len, r, s, output_buffer, &output_buffer_size);
   } else if (round == 5) {
@@ -1211,6 +1210,5 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   env->SetByteArrayRegion(ret, 0, final_size, (jbyte *) output_buffer);
 
   free(output_buffer);
-  free(input_copy);
-
+  free(input_copy); 
 }
