@@ -261,7 +261,8 @@ void ecall_column_sort(
     column_sort_pad(input_rows, input_rows_len, r, s, output_buffer, output_buffer_length);
   }
 
-  void ecall_column_sort_filter([user_check] uint8_t *input_rows,
+  void ecall_column_sort_filter(
+                  [user_check] uint8_t *input_rows,
                   uint32_t input_rows_len,
                   uint32_t r,
                   uint32_t s,

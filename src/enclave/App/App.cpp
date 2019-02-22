@@ -1175,7 +1175,6 @@ int SGX_CDECL main(int argc, char *argv[])
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
     jobject obj,
-    jlong eid,
     jint sort_order,
     jint sort_order_length,
     jint round,
@@ -1183,6 +1182,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jint r,
     jint s,
     jint partition_index) {
+
+  void(obj);
 
   // Copy jbyteArray input as uint8_t array
   uint32_t input_len = (uint32_t) env->GetArrayLength(input);
@@ -1207,8 +1208,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   }
 
   jbyteArray ret = env->NewByteArray(output_buffer_size);
-  env->SetByteArrayRegion(ret, 0, final_size, (jbyte *) output_buffer);
+  env->SetByteArrayRegion(ret, 0, output_buffer_size, (jbyte *) output_buffer);
 
   free(output_buffer);
   free(input_copy); 
+
+  return ret;
 }

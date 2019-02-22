@@ -51,7 +51,7 @@ class SGXEnclave extends java.io.Serializable {
     prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte]): Array[Byte]
 
   @native def EnclaveColumnSort(
-    eid: Long, sort_order: Int,
+    sort_order: Int,
     sort_order_length: Int, round: Int, input: Array[Byte], r: Int, s: Int, partition_index: Int) : Array[Byte]
 
   // Remote attestation, enclave side
