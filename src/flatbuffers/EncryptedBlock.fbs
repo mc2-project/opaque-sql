@@ -22,6 +22,6 @@ table ShuffleOutputs {
 }
 
 table ShuffleOutput {
-    destination_partition:uint,
+    destination_partition:uint;
     rows:EncryptedBlocks;
 }
