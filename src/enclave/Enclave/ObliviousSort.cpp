@@ -70,7 +70,7 @@ void oblivious_merge(FlatbuffersSortOrderEvaluator &sort_eval, const tuix::Encry
 
 void oblivious_sort(uint8_t *sort_order, size_t sort_order_length,
                    uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t *output_row, size_t *output_row_length) {
+                   uint8_t **output_row, size_t *output_row_length) {
   FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
 
   // 1. Sort each EncryptedBlock individually by decrypting it, sorting within the enclave, and
@@ -88,12 +88,12 @@ void oblivious_sort(uint8_t *sort_order, size_t sort_order_length,
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
       w.finish(runs[0]);
-      output_row = w.output_buffer().release();
+      *output_row = w.output_buffer().release();
       *output_row_length = w.output_size();
       return;
     } else {
       w.finish(w.write_encrypted_blocks());
-      output_row = w.output_buffer().release();
+      *output_row = w.output_buffer().release();
       *output_row_length = w.output_size();
       return;
     }
@@ -138,6 +138,6 @@ void oblivious_sort(uint8_t *sort_order, size_t sort_order_length,
     w.write(block.GetRoot());
   }  
   w.finish(w.write_encrypted_blocks());
-  output_row = w.output_buffer().release();
+  *output_row = w.output_buffer().release();
   *output_row_length = w.output_size();
 }

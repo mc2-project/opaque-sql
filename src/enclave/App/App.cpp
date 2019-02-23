@@ -1199,12 +1199,12 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t output_buffer_size;
 
   if (round == 0) {
-    ecall_column_sort_pad(input_copy, input_len, r, s, output_buffer, &output_buffer_size);
+    ecall_column_sort_pad(input_copy, input_len, r, s, &output_buffer, &output_buffer_size);
   } else if (round == 5) {
-    ecall_column_sort_filter(input_copy, input_len, r, s, output_buffer, &output_buffer_size);
+    ecall_column_sort_filter(input_copy, input_len, r, s, &output_buffer, &output_buffer_size);
   } else {
     ecall_column_sort(round, sort_order, sort_order_length, input_copy, input_len, partition_index, 
-      r, s, output_buffer, &output_buffer_size);
+      r, s, &output_buffer, &output_buffer_size);
   }
 
   jbyteArray ret = env->NewByteArray(output_buffer_size);

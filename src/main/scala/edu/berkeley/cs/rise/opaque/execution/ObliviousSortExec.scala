@@ -28,11 +28,11 @@ object ObliviousSortExec extends java.io.Serializable {
     Iterator((key, numRows))
   }
 
-  def ColumnSortPad(data: Array[Byte], r: Int, s: Int): Array[Byte] = {
+  def ColumnSortPad(data: Block, r: Int, s: Int): Array[Byte] = {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
-      0, 0, 0, data, r, s, 0)
+      0, 0, 0, data.bytes, r, s, 0)
 
     ret
   }
@@ -42,7 +42,7 @@ object ObliviousSortExec extends java.io.Serializable {
     partition_index: Int, numpart: Int,
     sort_order: Int,
     sort_order_length: Int,
-    round: Int, r: Int, s: Int) : (Int, Array[Byte]) = {
+    round: Int, r: Int, s: Int) : Array[Byte] = {
 
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
@@ -51,13 +51,13 @@ object ObliviousSortExec extends java.io.Serializable {
     ret
   }
 
-  def ColumnSortFilter(data: Array[Byte], r: Int, s: Int): Array[Byte] = {
+  def ColumnSortFilter(data: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
       0, 0, 5, data, r, s, 0)
 
-    ret
+    Block(ret)
   }
 
   def NewColumnSort(sc: SparkContext, data: RDD[Block], opcode: Opcode, r_input: Int = 0, s_input: Int = 0)
@@ -115,8 +115,6 @@ object ObliviousSortExec extends java.io.Serializable {
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
 
-    RA.initRA(data)
-
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, r, s))
 
@@ -143,7 +141,7 @@ object ObliviousSortExec extends java.io.Serializable {
 
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
-      (index, l) => l.map(x => ColumnSort(x, index, s, opcode, 4, r, s))
+      (index, l) => l.map(x => ColumnSortOp(x, index, s, opcode, 4, r, s))
     }.mapPartitions(blockIter => extractShuffleOutputs(blockIter))
       .groupByKey()
       .mapPartitions(pairIter => concatByteArrays(pairIter.map(_._2)))
