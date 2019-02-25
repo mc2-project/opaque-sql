@@ -93,7 +93,7 @@ enclave {
       uint32_t input_rows_length,
       uint32_t partition_index,
       uint32_t r,
-      uint32_t s,
+      int s,
       [out] uint8_t **output_buffer,
       [out] uint32_t *output_buffer_length);
 
