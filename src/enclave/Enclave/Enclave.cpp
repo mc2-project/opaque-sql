@@ -226,14 +226,14 @@ void ecall_non_oblivious_aggregate_step2(
 void ecall_column_sort(
                   int round,
                   uint8_t *sort_order,
-                  size_t sort_order_length,
+                  uint32_t sort_order_length,
                   uint8_t *input_rows,
-                  size_t input_rows_length,
+                  uint32_t input_rows_length,
                   uint32_t partition_index,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
+                  uint32_t *output_buffer_length) {
 
     if (round == 1) {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
@@ -253,21 +253,21 @@ void ecall_column_sort(
 
   void ecall_column_sort_pad(
                   uint8_t *input_rows,
-                  size_t input_rows_length,
+                  uint32_t input_rows_length,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
+                  uint32_t *output_buffer_length) {
     column_sort_pad(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 
   void ecall_column_sort_filter(
                   uint8_t *input_rows,
-                  size_t input_rows_length,
+                  uint32_t input_rows_length,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
+                  uint32_t *output_buffer_length) {
     column_sort_filter(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 

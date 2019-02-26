@@ -68,9 +68,9 @@ void oblivious_merge(FlatbuffersSortOrderEvaluator &sort_eval, const tuix::Encry
   }
 }
 
-void oblivious_sort(uint8_t *sort_order, size_t sort_order_length,
-                   uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t **output_row, size_t *output_row_length) {
+void oblivious_sort(uint8_t *sort_order, uint32_t sort_order_length,
+                   uint8_t *input_rows, uint32_t input_rows_length,
+                   uint8_t **output_row, uint32_t *output_row_length) {
   FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
 
   // 1. Sort each EncryptedBlock individually by decrypting it, sorting within the enclave, and

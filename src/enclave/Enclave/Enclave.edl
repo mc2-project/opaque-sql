@@ -88,7 +88,7 @@ enclave {
     public void ecall_column_sort(
       int round,
       [in, count=sort_order_length] uint8_t *sort_order,
-      size_t sort_order_length,
+      uint32_t sort_order_length,
       [user_check] uint8_t *input_rows,
       uint32_t input_rows_length,
       uint32_t partition_index,
@@ -99,7 +99,7 @@ enclave {
 
     public void ecall_column_sort_pad(
       [user_check] uint8_t *input_rows,
-      uint32_t input_rows_len,
+      uint32_t input_rows_length,
       uint32_t r,
       uint32_t s,
       [out] uint8_t **output_buffer,
@@ -107,7 +107,7 @@ enclave {
 
     public void ecall_column_sort_filter(
       [user_check] uint8_t *input_rows,
-      uint32_t input_rows_len,
+      uint32_t input_rows_length,
       uint32_t r,
       uint32_t s,
       [out] uint8_t **output_buffer,
