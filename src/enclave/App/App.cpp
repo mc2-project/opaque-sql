@@ -1182,7 +1182,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     jint r,
     jint s,
     jint partition_index) {
-
   void(obj);
 
   // Copy jbyteArray input as uint8_t array
