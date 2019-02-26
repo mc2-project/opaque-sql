@@ -232,7 +232,7 @@ void ecall_column_sort(
                   uint32_t partition_index,
                   uint32_t r,
                   uint32_t s,
-                  [out] uint8_t *output_buffer,
+                  [out] uint8_t **output_buffer,
                   [out] uint32_t *output_buffer_length) {
 
     if (round == 1) {
