@@ -396,7 +396,7 @@ public:
     std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
     for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
       field_values[i] = flatbuffers_copy<tuix::Field>(
-        row->field_values()->Get(i), builder, force_null);
+        row->field_values()->Get(i), builder, true);
     }
     return tuix::CreateRowDirect(builder, &field_values, true);
   }
