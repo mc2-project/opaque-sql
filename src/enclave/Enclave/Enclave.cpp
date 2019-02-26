@@ -12,7 +12,7 @@
 #include "isv_enclave.h"
 #include "sgx_lfence.h"
 #include "util.h"
-#include "ColumnSortOperations.h"
+#include "ColumnSort.h"
 #include "ObliviousSort.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
