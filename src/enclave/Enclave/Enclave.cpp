@@ -228,47 +228,47 @@ void ecall_column_sort(
                   uint8_t *sort_order,
                   size_t sort_order_length,
                   uint8_t *input_rows,
-                  uint32_t input_rows_length,
+                  size_t input_rows_length,
                   uint32_t partition_index,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
+                  size_t *output_buffer_length) {
 
     if (round == 1) {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
-        transpose(input_rows, input_rows_len, partition_index, s, output_buffer, output_buffer_length);
+        transpose(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 2) {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
-        untranspose(input_rows, input_rows_len, partition_index, s, output_buffer, output_buffer_length);
+        untranspose(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 3) {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
-        shift_down(input_rows, input_rows_len, partition_index, s, output_buffer, output_buffer_length);
+        shift_down(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
         oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
-        shift_up(input_rows, input_rows_len, partition_index, s, output_buffer, output_buffer_length);
+        shift_up(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
   }
 
   void ecall_column_sort_pad(
                   uint8_t *input_rows,
-                  uint32_t input_rows_len,
+                  size_t input_rows_length,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
-    column_sort_pad(input_rows, input_rows_len, r, s, output_buffer, output_buffer_length);
+                  size_t *output_buffer_length) {
+    column_sort_pad(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 
   void ecall_column_sort_filter(
                   uint8_t *input_rows,
-                  uint32_t input_rows_len,
+                  size_t input_rows_length,
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
-    column_sort_filter(input_rows, input_rows_len, r, s, output_buffer, output_buffer_length);
+                  size_t *output_buffer_length) {
+    column_sort_filter(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
