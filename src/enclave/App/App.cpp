@@ -1175,6 +1175,7 @@ int SGX_CDECL main(int argc, char *argv[])
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
+    jlong eid,
     jobject obj,
     jint sort_order,
     jint sort_order_length,
@@ -1199,12 +1200,12 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
   uint32_t output_buffer_size;
 
   if (round == 0) {
-    ecall_column_sort_pad(input_copy, input_len, r, s, &output_buffer, &output_buffer_size);
+    sgx_check("Column Sort Pad", ecall_column_sort_pad(eid, input_copy, input_len, r, s, &output_buffer, &output_buffer_size));
   } else if (round == 5) {
-    ecall_column_sort_filter(input_copy, input_len, r, s, &output_buffer, &output_buffer_size);
+    sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_copy, input_len, r, s, &output_buffer, &output_buffer_size));
   } else {
-    ecall_column_sort(round, sort_order, sort_order_length, input_copy, input_len, partition_index, 
-      r, s, &output_buffer, &output_buffer_size);
+    sgx_check("Column Sort", ecall_column_sort(eid, round, sort_order, sort_order_length, input_copy, input_len, partition_index, 
+      r, s, &output_buffer, &output_buffer_size));
   }
 
   jbyteArray ret = env->NewByteArray(output_buffer_size);
