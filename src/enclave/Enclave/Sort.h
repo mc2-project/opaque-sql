@@ -45,9 +45,4 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                         uint8_t *boundary_rows, size_t boundary_rows_length,
                         uint8_t **output_partition_ptrs, size_t *output_partition_lengths);
 
-flatbuffers::Offset<tuix::EncryptedBlocks> sort_single_encrypted_block(
-  FlatbuffersRowWriter &w,
-  const tuix::EncryptedBlock *block,
-  FlatbuffersSortOrderEvaluator &sort_eval);
-
 #endif /* _SORT_H_ */
