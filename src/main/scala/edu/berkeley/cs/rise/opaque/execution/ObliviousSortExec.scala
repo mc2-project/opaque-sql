@@ -39,7 +39,7 @@ object ObliviousSortExec extends java.io.Serializable {
 
   def ColumnSortOp(
     data: Array[Byte],
-    partition_index: Int, numpart: Int,
+    partition_index: Int,
     sort_order: Int,
     sort_order_length: Int,
     round: Int, r: Int, s: Int) : Array[Byte] = {
@@ -60,7 +60,7 @@ object ObliviousSortExec extends java.io.Serializable {
     Block(ret)
   }
 
-  def NewColumnSort(sc: SparkContext, data: RDD[Block], opcode: Opcode, r_input: Int = 0, s_input: Int = 0)
+  def NewColumnSort(sc: SparkContext, data: RDD[Block], sort_order: Int, r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // parse the bytes and split into blocks, one for each destination column
 

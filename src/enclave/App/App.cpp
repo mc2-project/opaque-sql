@@ -1204,7 +1204,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
   } else if (round == 5) {
     sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_copy, input_len, r, s, &output_buffer, &output_buffer_size));
   } else {
-    sgx_check("Column Sort", ecall_column_sort(eid, round, sort_order, sort_order_length, input_copy, input_len, partition_index, 
+    sgx_check("Column Sort", ecall_column_sort(eid, round, &sort_order, sort_order_length, input_copy, input_len, partition_index, 
       r, s, &output_buffer, &output_buffer_size));
   }
 
