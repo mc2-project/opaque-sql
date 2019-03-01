@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 /**
  * Sort an arbitrary number of encrypted input rows by decrypting a limited number of rows at a time
  * into enclave memory, sorting them using quicksort, and re-encrypting them to untrusted memory.
