@@ -1177,34 +1177,33 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
     jobject,
     jlong eid,
-    jint sort_order,
-    jint sort_order_length,
+    jbyteArray sort_order,
     jint round,
-    jbyteArray input,
+    jbyteArray input_rows,
     jint r,
     jint s,
     jint partition_index) {
   // void(obj);
 
-  // Copy jbyteArray input as uint8_t array
-  uint32_t input_len = (uint32_t) env->GetArrayLength(input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(input, &if_copy);
-  uint8_t *input_copy = (uint8_t *) malloc(input_len);
+  jboolean if_copy;
 
-  for (uint32_t i = 0; i < input_len; i++) {
-    input_copy[i] = *(ptr + i);
-  }
+  uint32_t sort_order_length = static_cast<uint32_t>(env->GetArrayLength(sort_order));
+  uint8_t *sort_order_ptr = reinterpret_cast<uint8_t *>(
+    env->GetByteArrayElements(sort_order, &if_copy));
+
+  uint32_t input_length = static_cast<uint32_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
+    env->GetByteArrayElements(input_rows, &if_copy));
 
   uint8_t *output_buffer = (uint8_t *) malloc(sizeof(uint8_t) * r);
   uint32_t output_buffer_size;
 
   if (round == 0) {
-    sgx_check("Column Sort Pad", ecall_column_sort_pad(eid, input_copy, input_len, r, s, &output_buffer, &output_buffer_size));
+    sgx_check("Column Sort Pad", ecall_column_sort_pad(eid, input_rows_ptr, input_length, r, s, &output_buffer, &output_buffer_size));
   } else if (round == 5) {
-    sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_copy, input_len, r, s, &output_buffer, &output_buffer_size));
+    sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_rows_ptr, input_length, r, s, &output_buffer, &output_buffer_size));
   } else {
-    sgx_check("Column Sort", ecall_column_sort(eid, round, &sort_order, sort_order_length, input_copy, input_len, partition_index, 
+    sgx_check("Column Sort", ecall_column_sort(eid, round, &sort_order_ptr, sort_order_length, input_rows_ptr, input_length, partition_index, 
       r, s, &output_buffer, &output_buffer_size));
   }
 
