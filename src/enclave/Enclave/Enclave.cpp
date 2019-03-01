@@ -13,7 +13,6 @@
 #include "sgx_lfence.h"
 #include "util.h"
 #include "ColumnSort.h"
-#include "ObliviousSort.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -236,16 +235,16 @@ void ecall_column_sort(
                   uint32_t *output_buffer_length) {
     // void(r);
     if (round == 1) {
-        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
+        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
         transpose(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 2) {
-        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
+        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
         untranspose(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 3) {
-        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
+        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
         shift_down(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
-        oblivious_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
+        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
         shift_up(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
