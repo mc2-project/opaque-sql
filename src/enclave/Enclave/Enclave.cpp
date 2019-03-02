@@ -232,7 +232,7 @@ void ecall_column_sort(
                   uint32_t,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
+                  size_t *output_buffer_length) {
     // void(r);
     if (round == 1) {
         external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
