@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include <cstdint>
+#include <cstddef>
 
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,

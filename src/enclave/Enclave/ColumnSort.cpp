@@ -1,5 +1,3 @@
-using namespace edu::berkeley::cs::rise::opaque;
-
 #include "ColumnSort.h"
 #include "Flatbuffers.h"
 
@@ -45,7 +43,7 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
 
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
-  *output_rows_sizes = w.output_size();
+  *output_row_size = w.output_size();
 }
 
 void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
@@ -54,7 +52,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  uint32_t top_destination = partition_idx
+  uint32_t top_destination = partition_idx;
   uint32_t bottom_destination = (partition_idx == num_partitions - 1) ? 0 : partition_idx + 1;
 
 
