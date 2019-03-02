@@ -1175,7 +1175,7 @@ int SGX_CDECL main(int argc, char *argv[])
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     JNIEnv *env,
-    jobject,
+    jobject obj,
     jlong eid,
     jbyteArray sort_order,
     jint round,
@@ -1183,7 +1183,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     jint r,
     jint s,
     jint partition_index) {
-  // void(obj);
+  (void)obj;
 
   jboolean if_copy;
 
