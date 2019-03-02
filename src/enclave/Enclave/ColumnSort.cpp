@@ -94,9 +94,12 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
+  void(partition_idx);
+
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
+  
   for (uint32_t k = 0; k < num_partitions; k++) {
     FlatbuffersRowWriter w;
     ws.push_back(w);
@@ -170,10 +173,10 @@ void column_sort_pad(uint8_t *input_rows,
   FlatbuffersRowWriter w;
   uint32_t num_rows = r.num_rows();
 
-  const tuix::Row *row;
+  tuix::Row *row;
 
   while (r.has_next()) {
-    *row = r.next();
+    row = r.next();
     w.write(row);
   }
 
@@ -195,10 +198,10 @@ void column_sort_filter(uint8_t *input_rows,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  const tuix::Row *row;
+  tuix::Row *row;
 
   while (r.has_next()) {
-    *row = r.next();
+    row = r.next();
     if (!row->is_dummy()) {
       w.write(row);
     }
