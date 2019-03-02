@@ -162,6 +162,7 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
 
 void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_length,
+                         uint32_t rows_per_partition,
                          uint8_t **output_row,
                          uint32_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
@@ -175,7 +176,7 @@ void column_sort_pad(uint8_t *input_rows,
     w.write(row);
   }
 
-  uint32_t num_dummies = r - num_rows;
+  uint32_t num_dummies = rows_per_partition - num_rows;
   for (uint32_t i = 0; i < num_dummies; i++) {
     w.write(w.create_dummy_row(row));
   } 
@@ -197,7 +198,7 @@ void column_sort_filter(uint8_t *input_rows,
 
   while (r.has_next()) {
     *row = r.next();
-    if (!row->is_dummy()) {
+    if (!row.is_dummy()) {
       w.write(row);
     }
   }

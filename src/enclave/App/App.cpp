@@ -1199,9 +1199,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
   size_t output_buffer_size;
 
   if (round == 0) {
-    sgx_check("Column Sort Pad", ecall_column_sort_pad(eid, input_rows_ptr, input_length, r, s, &output_buffer, &output_buffer_size));
+    sgx_check("Column Sort Pad", ecall_column_sort_pad(eid, input_rows_ptr, input_length, r, &output_buffer, &output_buffer_size));
   } else if (round == 5) {
-    sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_rows_ptr, input_length, r, s, &output_buffer, &output_buffer_size));
+    sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_rows_ptr, input_length, &output_buffer, &output_buffer_size));
   } else {
     sgx_check("Column Sort", ecall_column_sort(eid, round, sort_order_ptr, sort_order_length, input_rows_ptr, input_length, partition_index, 
       r, s, &output_buffer, &output_buffer_size));
