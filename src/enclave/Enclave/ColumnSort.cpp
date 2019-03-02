@@ -5,7 +5,7 @@ using namespace edu::berkeley::cs::rise::opaque;
 
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, uint32_t *output_row_size) {
+              uint8_t **output_row, size_t *output_row_size) {
 
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
@@ -50,7 +50,7 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
 
 void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, uint32_t *output_row_size) {
+              uint8_t **output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
@@ -94,7 +94,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, uint32_t *output_row_size) {
+              uint8_t **output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
@@ -124,7 +124,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
 void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, uint32_t *output_row_size) {
+              uint8_t **output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
@@ -164,7 +164,7 @@ void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_length,
                          uint32_t rows_per_partition,
                          uint8_t **output_row,
-                         uint32_t *output_row_size) {
+                         size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
   uint32_t num_rows = r.num_rows();
@@ -190,7 +190,7 @@ void column_sort_pad(uint8_t *input_rows,
 void column_sort_filter(uint8_t *input_rows,
                          uint32_t input_rows_length,
                          uint8_t **output_row,
-                         uint32_t *output_row_size) {
+                         size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 

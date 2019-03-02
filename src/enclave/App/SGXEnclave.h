@@ -55,7 +55,7 @@ extern "C" {
 
   JNIEXPORT jbyteArray JNICALL 
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
-    JNIEnv *, jobject, jlong, jint, jint, jint, jbyteArray, jint, jint, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray, jint, jint, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
     JNIEnv *, jobject);

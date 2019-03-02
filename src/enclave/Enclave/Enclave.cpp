@@ -256,7 +256,7 @@ void ecall_column_sort(
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
+                  size_t *output_buffer_length) {
     column_sort_pad(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 
@@ -266,7 +266,7 @@ void ecall_column_sort(
                   uint32_t r,
                   uint32_t s,
                   uint8_t **output_buffer,
-                  uint32_t *output_buffer_length) {
+                  size_t *output_buffer_length) {
     column_sort_filter(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
   }
 
