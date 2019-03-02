@@ -254,20 +254,17 @@ void ecall_column_sort(
                   uint8_t *input_rows,
                   uint32_t input_rows_length,
                   uint32_t r,
-                  uint32_t s,
                   uint8_t **output_buffer,
                   size_t *output_buffer_length) {
-    column_sort_pad(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
+    column_sort_pad(input_rows, input_rows_length, r, output_buffer, output_buffer_length);
   }
 
   void ecall_column_sort_filter(
                   uint8_t *input_rows,
                   uint32_t input_rows_length,
-                  uint32_t r,
-                  uint32_t s,
                   uint8_t **output_buffer,
                   size_t *output_buffer_length) {
-    column_sort_filter(input_rows, input_rows_length, r, s, output_buffer, output_buffer_length);
+    column_sort_filter(input_rows, input_rows_length, output_buffer, output_buffer_length);
   }
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
