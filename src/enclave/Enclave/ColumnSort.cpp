@@ -1,5 +1,6 @@
 #include "ColumnSort.h"
 #include "Flatbuffers.h"
+#include <vector>
 
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
@@ -102,7 +103,9 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   }
 
   uint32_t i = 0;
+
   while (r.has_next()) {
+    const tuix::Row *row = r.next();
     ws[i % num_partitions].write(row);
     i++;
   }
@@ -137,11 +140,11 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t prev_dst_partition_idx = 0;
 
   while (r.has_next()) {
-    const tuix::Row *row = r.next();
-    w.write(row);
+    const tuix::Row *in_row = r.next();
+    w.write(in_row);
 
     idx = (row - 1) * num_partitions + col;
-    dst_column = (idx - 1) / input_rows_length + 1;
+    dst_column = (idx - 1) / n + 1;
     dst_partition_idx = dst_column - 1;
 
     if (dst_partition_idx != prev_dst_partition_idx) {
@@ -196,7 +199,7 @@ void column_sort_filter(uint8_t *input_rows,
 
   while (r.has_next()) {
     *row = r.next();
-    if (!row.is_dummy()) {
+    if (!row->is_dummy()) {
       w.write(row);
     }
   }
