@@ -162,10 +162,8 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
 
 void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_length,
-                         uint32_t r,
-                         uint32_t s,
                          uint8_t **output_row,
-                         uint32_t *output_rows_size) {
+                         uint32_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
   uint32_t num_rows = r.num_rows();
@@ -190,8 +188,6 @@ void column_sort_pad(uint8_t *input_rows,
 
 void column_sort_filter(uint8_t *input_rows,
                          uint32_t input_rows_length,
-                         uint32_t r,
-                         uint32_t s,
                          uint8_t **output_row,
                          uint32_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
@@ -201,7 +197,7 @@ void column_sort_filter(uint8_t *input_rows,
 
   while (r.has_next()) {
     *row = r.next();
-    if (!row.is_dummy()) {
+    if (!row->is_dummy()) {
       w.write(row);
     }
   }
