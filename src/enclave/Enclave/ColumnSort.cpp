@@ -117,7 +117,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   for (uint32_t j = 0; j < ws.size(); j++) {
     ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
 
-    ShuffleOutputReader sor(ws[j]->output_buffer(), ws[j]->output_size());
+    ShuffleOutputReader sor(ws[j]->output_buffer().release(), ws[j]->output_size());
     flatbuffers_copy(sor.get(), shuffle_output_writer, false);
   }
 
