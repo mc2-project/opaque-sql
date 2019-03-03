@@ -389,8 +389,7 @@ public:
     maybe_finish_block();
   }
 
-  flatbuffers::Offset<tuix::Row> create_dummy_row(
-    const tuix::Row *row) {
+  void write_dummy_row(const tuix::Row *row) {
 
     flatbuffers::uoffset_t num_fields = row->field_values()->size();
     std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
@@ -398,7 +397,9 @@ public:
       field_values[i] = flatbuffers_copy<tuix::Field>(
         row->field_values()->Get(i), builder, true);
     }
-    return tuix::CreateRowDirect(builder, &field_values, true);
+    row_vectors.push_back(tuix::CreateRowDirect(builder, &field_values, true));
+    total_num_rows++;
+    maybe_finish_block();
   }
 
   /** Copy the given Fields to the output. */

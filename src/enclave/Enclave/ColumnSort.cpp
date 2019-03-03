@@ -101,24 +101,24 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
 
   for (uint32_t k = 0; k < num_partitions; k++) {
-    FlatbuffersRowWriter w;
-    ws.push_back(w);
-  }
+    ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
+      new FlatbuffersRowWriter()));
+  } 
 
   uint32_t i = 0;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    ws[i % num_partitions].write(row);
+    ws[i % num_partitions]->write(row);
     i++;
   }
 
   FlatbuffersRowWriter shuffle_output_writer;
   for (uint32_t j = 0; j < ws.size(); j++) {
-    ws[j].write_shuffle_output(ws[j].write_encrypted_blocks(), j);
+    ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
 
-    ShuffleOutputReader sor(ws[j].output_buffer(), ws[j].output_size());
-    flatbuffers_copy(sor.get(), shuffle_output_writer);
+    ShuffleOutputReader sor(ws[j]->output_buffer(), ws[j]->output_size());
+    flatbuffers_copy(sor.get(), shuffle_output_writer, false);
   }
 
   shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
@@ -182,7 +182,7 @@ void column_sort_pad(uint8_t *input_rows,
 
   uint32_t num_dummies = rows_per_partition - num_rows;
   for (uint32_t i = 0; i < num_dummies; i++) {
-    w.write(w.create_dummy_row(row));
+    w.write_dummy_row(row);
   } 
 
   w.finish(w.write_encrypted_blocks());
