@@ -119,7 +119,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
 
     ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
-    flatbuffers_copy(sor.get(), shuffle_output_writer, false);
+    shuffle_output_writer.append_shuffle_output(sor.get());
   }
 
   shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());

@@ -477,6 +477,13 @@ public:
         encrypted_blocks));
   }
 
+  void append_shuffle_output(
+    flatbuffers::Offset<tuix::ShuffleOutput> shuffle_output) {
+
+    shuffle_output_vector.push_back(
+      flatbuffers_copy(shuffle_output, builder, false));
+  }
+
   flatbuffers::Offset<tuix::ShuffleOutputs> write_shuffle_outputs() {
     return tuix::CreateShuffleOutputsDirect(enc_block_builder, &shuffle_output_vector);
   }
