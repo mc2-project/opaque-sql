@@ -249,14 +249,14 @@ object Utils extends Logging {
   def concatByteArrays(arrays: Array[Block]): Array[Byte] = {
     arrays match {
       case Array() => Array.empty
-      case Array(bytes) => bytes
+      case Array(bytes) => bytes.bytes
       case _ =>
         val totalBytes = arrays.map(_.bytes.length.toLong).sum
         assert(totalBytes < Int.MaxValue)
         val buf = ByteBuffer.allocate(totalBytes.toInt)
         buf.order(ByteOrder.LITTLE_ENDIAN)
         for (a <- arrays) {
-          buf.put(a)
+          buf.put(a.bytes)
         }
         buf.flip()
         val all = new Array[Byte](buf.limit())
