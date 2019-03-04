@@ -17,9 +17,12 @@
 
 package edu.berkeley.cs.rise.opaque.execution
 
+import java.nio.ByteBuffer
+
 import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.tuix
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
@@ -103,7 +106,19 @@ case class EncryptedBlockRDDScanExec(
   override def executeBlocked(): RDD[Block] = rdd
 }
 
-case class Block(bytes: Array[Byte]) extends Serializable
+case class Block(bytes: Array[Byte]) extends Serializable {
+  def numRows: Long = {
+    val buf = ByteBuffer.wrap(bytes)
+    var result = 0L
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    for (i <- 0 until encryptedBlocks.blocksLength) {
+      val encryptedBlock = encryptedBlocks.blocks(i)
+      result += encryptedBlock.numRows
+    }
+    result
+  }
+}
+
 
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
