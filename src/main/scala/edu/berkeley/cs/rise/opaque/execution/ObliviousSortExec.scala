@@ -113,7 +113,7 @@ object ObliviousSortExec extends java.io.Serializable {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => pairIter.flatMap(pair => Utils.concatByteArrays(pair._2.toArray)))
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
