@@ -32,13 +32,13 @@ object ObliviousSortExec extends java.io.Serializable {
     data: Array[Byte],
     partition_index: Int,
     sort_order: Array[Byte],
-    round: Int, r: Int, s: Int) : Array[Byte] = {
+    round: Int, r: Int, s: Int) : Block = {
 
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data, r, s, partition_index)
 
-    ret
+    Block(ret)
   }
 
   def ColumnSortFilter(data: Array[Byte], r: Int, s: Int): Block = {
