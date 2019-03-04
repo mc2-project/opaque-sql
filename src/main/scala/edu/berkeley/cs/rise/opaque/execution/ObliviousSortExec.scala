@@ -1,6 +1,5 @@
 package edu.berkeley.cs.rise.opaque.execution
 
-import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -9,7 +8,7 @@ object ObliviousSortExec extends java.io.Serializable {
 
   val Multiplier = 1 // TODO: fix bug when this is 1
 
-  import Utils.{time, logPerf}
+  import Utils.logPerf
 
   def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
     var numRows:Long = 0.toLong
