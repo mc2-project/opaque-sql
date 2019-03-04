@@ -174,7 +174,7 @@ void column_sort_pad(uint8_t *input_rows,
   FlatbuffersRowWriter w;
   uint32_t num_rows = r.num_rows();
 
-  const tuix::Row *row;
+  const tuix::Row *row = NULL;
 
   while (r.has_next()) {
     row = r.next();
@@ -199,7 +199,7 @@ void column_sort_filter(uint8_t *input_rows,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  const tuix::Row *row;
+  const tuix::Row *row = NULL;
 
   while (r.has_next()) {
     row = r.next();
