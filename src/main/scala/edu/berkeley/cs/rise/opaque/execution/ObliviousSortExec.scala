@@ -111,28 +111,28 @@ object ObliviousSortExec extends java.io.Serializable {
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(block)))
+    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => pairIter.flatMap(pair => Utils.concatByteArrays(pair.map(_._2))))
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 2, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(block)))
+    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Utils.concatByteArrays(pairIter.map(_._2)))
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 3, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(block)))
+    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Utils.concatByteArrays(pairIter.map(_._2)))
 
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(block)))
+    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Utils.concatByteArrays(pairIter.map(_._2)))
 
