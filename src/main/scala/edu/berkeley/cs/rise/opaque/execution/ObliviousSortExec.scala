@@ -7,6 +7,10 @@ import org.apache.spark.rdd.RDD
 
 object ObliviousSortExec extends java.io.Serializable {
 
+  val Multiplier = 1 // TODO: fix bug when this is 1
+
+  import Utils.{time, logPerf}
+
   def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Int)] = {
     var numRows = 0
     for (v <- data) {
@@ -34,7 +38,7 @@ object ObliviousSortExec extends java.io.Serializable {
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data, r, s, partition_index)
 
-    ret
+    Block(ret)
   }
 
   def ColumnSortFilter(data: Array[Byte], r: Int, s: Int): Block = {
