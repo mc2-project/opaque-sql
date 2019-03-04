@@ -478,7 +478,7 @@ public:
   }
 
   void append_shuffle_output(
-    tuix::ShuffleOutput* shuffle_output) {
+    const tuix::ShuffleOutput* shuffle_output) {
 
     shuffle_output_vector.push_back(
       flatbuffers_copy(shuffle_output, builder, false));
