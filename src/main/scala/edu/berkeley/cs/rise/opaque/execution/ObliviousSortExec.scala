@@ -11,7 +11,7 @@ object ObliviousSortExec extends java.io.Serializable {
 
   import Utils.{time, logPerf}
 
-  def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Int)] = {
+  def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
     var numRows = 0
     for (v <- data) {
       numRows = numRows + v.numRows
@@ -32,13 +32,13 @@ object ObliviousSortExec extends java.io.Serializable {
     data: Array[Byte],
     partition_index: Int,
     sort_order: Array[Byte],
-    round: Int, r: Int, s: Int) : Block = {
+    round: Int, r: Int, s: Int) : Array[Byte] = {
 
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data, r, s, partition_index)
 
-    Block(ret)
+    ret
   }
 
   def ColumnSortFilter(data: Array[Byte], r: Int, s: Int): Block = {
@@ -113,7 +113,7 @@ object ObliviousSortExec extends java.io.Serializable {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(block)))
       .groupByKey()
-      .mapPartitions(pairIter => Utils.concatByteArrays(pairIter.map(_._2)))
+      .mapPartitions(pairIter => pairIter.flatMap(pair => Utils.concatByteArrays(pair.map(_._2))))
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
