@@ -65,12 +65,12 @@ object ObliviousSortExec extends java.io.Serializable {
 
     val numRows = data
       .mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)
-    var len = 0
+    var len = 0.toLong
 
     val offsets = ArrayBuffer.empty[Int]
 
     offsets += 0
-    var cur = 0
+    var cur = 0.toLong
     for (idx <- 0 until numRows.length) {
       cur += numRows(idx)._2
       offsets += cur
