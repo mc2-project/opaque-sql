@@ -19,13 +19,13 @@ object ObliviousSortExec extends java.io.Serializable {
     Iterator((key, numRows))
   }
 
-  def ColumnSortPad(data: Block, r: Int, s: Int): Array[Byte] = {
+  def ColumnSortPad(data: Block, r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
       null, 0, data.bytes, r, s, 0)
 
-    ret
+    Block(ret)
   }
 
   def ColumnSortOp(

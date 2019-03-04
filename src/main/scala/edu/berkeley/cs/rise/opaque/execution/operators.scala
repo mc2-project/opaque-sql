@@ -107,7 +107,7 @@ case class EncryptedBlockRDDScanExec(
 }
 
 case class Block(bytes: Array[Byte]) extends Serializable {
-  def numRows: Long = {
+  def numRows: Int = {
     val buf = ByteBuffer.wrap(bytes)
     var result = 0L
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
