@@ -12,7 +12,7 @@ object ObliviousSortExec extends java.io.Serializable {
   import Utils.{time, logPerf}
 
   def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
-    var numRows = 0
+    var numRows:Long = 0.toLong
     for (v <- data) {
       numRows = numRows + v.numRows
     }

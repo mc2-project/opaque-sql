@@ -246,10 +246,10 @@ object Utils extends Logging {
         sqlContext.experimental.extraStrategies)
   }
 
-  def concatByteArrays(arrays: Array[Block]): Array[Byte] = {
+  def concatByteArrays(arrays: Array[Block]): Block = {
     arrays match {
-      case Array() => Array.empty
-      case Array(bytes) => bytes.bytes
+      case Array() => Block(Array.empty)
+      case Array(bytes) => Block(bytes.bytes)
       case _ =>
         val totalBytes = arrays.map(_.bytes.length.toLong).sum
         assert(totalBytes < Int.MaxValue)
@@ -261,7 +261,7 @@ object Utils extends Logging {
         buf.flip()
         val all = new Array[Byte](buf.limit())
         buf.get(all)
-        all
+        Block(all)
     }
   }
 
