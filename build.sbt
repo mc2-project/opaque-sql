@@ -12,6 +12,8 @@ sparkVersion := "2.4.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
+libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 
 val flatbuffersVersion = "1.7.0"

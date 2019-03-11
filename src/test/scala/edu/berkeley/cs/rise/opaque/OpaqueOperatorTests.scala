@@ -484,6 +484,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     answer
   }
 
+  testAgainstSpark("logistic regression") { securityLevel =>
+    LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
+  }
+
   testOpaqueOnly("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions)
   }
