@@ -21,6 +21,9 @@ import java.util.Random
 
 import breeze.linalg.{DenseVector, Vector}
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
+import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
+import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
@@ -62,10 +65,6 @@ object LogisticRegression {
     val D = 10
     val ITERATIONS = 5
 
-    val dot = udf((a: Seq[Double], b: Seq[Double]) =>
-      new DenseVector(a.toArray).dot(new DenseVector(b.toArray)))
-    val vectormultiply = udf((v: Seq[Double], c: Double) =>
-      (new DenseVector(v.toArray) * c).toArray)
     val vectorsum = new VectorSum
 
     val points = Utils.ensureCached(data(spark, securityLevel, numPartitions, rand, N, D, 0.7))
@@ -82,9 +81,9 @@ object LogisticRegression {
         println(s"On iteration $i")
         val gradient = points
           .select(
-            (vectormultiply(
+            vectormultiply(
               $"x",
-              (lit(1.0) / (lit(1.0) + exp(-$"y" * dot(lit(w.toArray), $"x"))) - lit(1.0)) * $"y"))
+              (lit(1.0) / (lit(1.0) + exp(-$"y" * dot(lit(w.toArray), $"x"))) - lit(1.0)) * $"y")
               .as("v"))
           .groupBy().agg(vectorsum($"v"))
           .first().getSeq[Double](0).toArray

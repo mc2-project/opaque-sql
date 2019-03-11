@@ -1,9 +1,27 @@
-package edu.berkeley.cs.rise.opaque.benchmark
+package edu.berkeley.cs.rise.opaque.expressions
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.BinaryOperator
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.NullIntolerant
+import org.apache.spark.sql.catalyst.expressions.Unevaluable
+import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
+import org.apache.spark.sql.catalyst.expressions.codegen.ExprCode
 import org.apache.spark.sql.expressions.MutableAggregationBuffer
 import org.apache.spark.sql.expressions.UserDefinedAggregateFunction
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+
+/** Placeholder expression for the vector sum operation, for Opaque internal use. */
+private[opaque] case class VectorAddExpr(left: Expression, right: Expression)
+    extends BinaryOperator with NullIntolerant with Unevaluable {
+  override def dataType: DataType = left.dataType
+
+  override lazy val resolved: Boolean = childrenResolved && checkInputDataTypes().isSuccess
+
+  override def inputType = DataTypes.createArrayType(DoubleType)
+
+  override def symbol: String = "+"
+}
 
 class VectorSum extends UserDefinedAggregateFunction {
   private def addArray(agg: Array[Double], arr: Array[Double]): Unit = {
