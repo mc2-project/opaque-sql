@@ -11,25 +11,25 @@ import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.types.DataTypes
 import org.apache.spark.sql.types.DoubleType
 
-object DotProduct {
-  def dot(v1: Column, v2: Column): Column =
-    new Column(DotProduct(v1.expr, v2.expr))
+object VectorAdd {
+  def vectoradd(v1: Column, v2: Column): Column =
+    new Column(VectorAdd(v1.expr, v2.expr))
 }
 
-case class DotProduct(left: Expression, right: Expression)
+case class VectorAdd(left: Expression, right: Expression)
     extends BinaryOperator with NullIntolerant with CodegenFallback {
 
-  override def dataType: DataType = DoubleType
+  override def dataType: DataType = left.dataType
 
   override def inputType = DataTypes.createArrayType(DoubleType)
 
-  override def symbol: String = "dot"
+  override def symbol: String = "+"
 
-  override def sqlOperator: String = "$dot"
+  override def sqlOperator: String = "$plus"
 
-  protected override def nullSafeEval(input1: Any, input2: Any): Double = {
+  protected override def nullSafeEval(input1: Any, input2: Any): ArrayData = {
     val v1 = input1.asInstanceOf[ArrayData].toDoubleArray
     val v2 = input2.asInstanceOf[ArrayData].toDoubleArray
-    new DenseVector(v1).dot(new DenseVector(v2))
+    ArrayData.toArrayData ((new DenseVector(v1) + new DenseVector(v2)).toArray)
   }
 }

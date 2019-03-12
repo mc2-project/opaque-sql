@@ -26,6 +26,10 @@ union ExprUnion {
     If,
     Cast,
     Year,
+    VectorAdd,
+    VectorMultiply,
+    DotProduct,
+    Exp,
 }
 
 table Expr {
@@ -133,4 +137,25 @@ table If {
 // Date expressions
 table Year {
     child:Expr;
+}
+
+// Math expressions
+table Exp {
+    child:Expr;
+}
+
+// Opaque UDFs
+table VectorAdd {
+    left:Expr;
+    right:Expr;
+}
+
+table VectorMultiply {
+    left:Expr;
+    right:Expr;
+}
+
+table DotProduct {
+    left:Expr;
+    right:Expr;
 }

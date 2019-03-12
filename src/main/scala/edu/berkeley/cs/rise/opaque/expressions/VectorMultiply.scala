@@ -7,6 +7,7 @@ import org.apache.spark.sql.catalyst.expressions.ExpectsInputTypes
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.NullIntolerant
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.types.DataTypes
 import org.apache.spark.sql.types.DoubleType
@@ -23,7 +24,9 @@ case class VectorMultiply(left: Expression, right: Expression)
 
   override def inputTypes = Seq(DataTypes.createArrayType(DoubleType), DoubleType)
 
-  protected override def nullSafeEval(input1: Any, input2: Any): Any =
-    (new DenseVector(input1.asInstanceOf[Seq[Double]].toArray) * input2.asInstanceOf[Double])
-      .toArray
+  protected override def nullSafeEval(input1: Any, input2: Any): ArrayData = {
+    val v = input1.asInstanceOf[ArrayData].toDoubleArray
+    val c = input2.asInstanceOf[Double]
+    ArrayData.toArrayData((new DenseVector(v) * c).toArray)
+  }
 }

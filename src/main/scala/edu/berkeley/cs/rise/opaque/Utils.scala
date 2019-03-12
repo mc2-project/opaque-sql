@@ -46,6 +46,7 @@ import org.apache.spark.sql.catalyst.expressions.Contains
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
+import org.apache.spark.sql.catalyst.expressions.Exp
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
@@ -97,7 +98,9 @@ import org.apache.spark.unsafe.types.UTF8String
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
-import edu.berkeley.cs.rise.opaque.expressions.VectorAddExpr
+import edu.berkeley.cs.rise.opaque.expressions.DotProduct
+import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
+import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
@@ -920,12 +923,34 @@ object Utils extends Logging {
             tuix.Year.createYear(
               builder, childOffset))
 
-        // Opaque UDFs
-        case (VectorAddExpr(left, right), Seq(leftOffset, rightOffset)) =>
+        // Math expressions
+        case (Exp(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
-            tuix.ExprUnion.Add,
-            tuix.Add.createAdd(
+            tuix.ExprUnion.Exp,
+            tuix.Exp.createExp(
+              builder, childOffset))
+
+        // Opaque UDFs
+        case (VectorAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorAdd,
+            tuix.VectorAdd.createVectorAdd(
+              builder, leftOffset, rightOffset))
+
+        case (VectorMultiply(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorMultiply,
+            tuix.VectorMultiply.createVectorMultiply(
+              builder, leftOffset, rightOffset))
+
+        case (DotProduct(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DotProduct,
+            tuix.DotProduct.createDotProduct(
               builder, leftOffset, rightOffset))
       }
     }
@@ -1200,7 +1225,7 @@ object Utils extends Logging {
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, VectorAddExpr(sum, child), concatSchema))),
+                builder, VectorAdd(sum, child), concatSchema))),
           flatbuffersSerializeExpression(
             builder, sum, aggSchema))
     }
