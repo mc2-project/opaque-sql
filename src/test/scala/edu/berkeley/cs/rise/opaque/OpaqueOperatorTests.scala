@@ -56,8 +56,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   import testImplicits._
 
   override def beforeAll(): Unit = {
-    LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
-    LogManager.getLogger("org.apache.spark.scheduler.TaskSetManager").setLevel(Level.ERROR)
     Utils.initSQLContext(spark.sqlContext)
   }
 
