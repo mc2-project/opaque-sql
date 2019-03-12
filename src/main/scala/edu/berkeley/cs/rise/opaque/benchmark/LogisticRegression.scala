@@ -78,7 +78,6 @@ object LogisticRegression {
       val w = DenseVector.fill(D) {2 * rand.nextDouble - 1}
 
       for (i <- 1 to ITERATIONS) {
-        println(s"On iteration $i")
         val gradient = points
           .select(
             vectormultiply(

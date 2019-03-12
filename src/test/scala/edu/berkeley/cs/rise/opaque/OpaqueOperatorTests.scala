@@ -19,6 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import java.sql.Timestamp
 
+import scala.collection.mutable
 import scala.util.Random
 
 import org.apache.log4j.Level
@@ -34,9 +35,9 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
+import org.scalactic.TolerantNumerics
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
-import org.scalactic.TolerantNumerics
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -83,12 +84,21 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   def withLoggingOff[A](f: () => A): A = {
-    val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
-    for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
+    val sparkLoggers = Seq(
+      "org.apache.spark",
+      "org.apache.spark.executor.Executor",
+      "org.apache.spark.scheduler.TaskSetManager")
+    val logLevels = new mutable.HashMap[String, Level]
+    for (l <- sparkLoggers) {
+      logLevels(l) = LogManager.getLogger(l).getLevel
+      LogManager.getLogger(l).setLevel(Level.OFF)
+    }
     try {
       f()
     } finally {
-      for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.WARN)
+      for (l <- sparkLoggers) {
+        LogManager.getLogger(l).setLevel(logLevels(l))
+      }
     }
   }
 
