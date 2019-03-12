@@ -19,7 +19,7 @@ package edu.berkeley.cs.rise.opaque.benchmark
 
 import java.util.Random
 
-import breeze.linalg.{DenseVector, Vector}
+import breeze.linalg.DenseVector
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
@@ -59,7 +59,7 @@ object LogisticRegression {
   }
 
   def train(spark: SparkSession, securityLevel: SecurityLevel, N: Int, numPartitions: Int)
-    : Vector[Double] = {
+    : Array[Double] = {
     import spark.implicits._
     val rand = new Random(42)
     val D = 10
@@ -89,7 +89,7 @@ object LogisticRegression {
         w -= new DenseVector(gradient)
       }
 
-      w
+      w.toArray
     }
   }
 }
