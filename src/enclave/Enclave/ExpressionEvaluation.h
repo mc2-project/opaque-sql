@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <typeinfo>
+#include <cmath>
 
 #include "Flatbuffers.h"
 
@@ -660,9 +661,191 @@ private:
         tuix::CreateIntegerField(builder, result).Union(),
         child_is_null);
     }
+
+    // Math expressions
+    case tuix::ExprUnion_Exp:
+    {
+      auto e = static_cast<const tuix::Exp *>(expr->expr());
+      auto child = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->child()));
+
+      if (child->value_type() != tuix::FieldUnion_DoubleField) {
+        throw std::runtime_error(
+          std::string("Exp can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(child->value_type())));
+      }
+
+      auto x = child->value_as_DoubleField()->value();
+      double result = 0.0;
+      bool result_is_null = child->is_null();
+      if (!result_is_null) {
+        result = std::exp(x);
+      }
+
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_DoubleField,
+        tuix::CreateDoubleField(builder, result).Union(),
+        result_is_null);
+    }
+
+    // Opaque UDFs
+    case tuix::ExprUnion_VectorAdd:
+    {
+      auto e = static_cast<const tuix::DotProduct *>(expr->expr());
+      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
+      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+
+      if (left->value_type() != tuix::FieldUnion_ArrayField
+          || right->value_type() != tuix::FieldUnion_ArrayField) {
+        throw std::runtime_error(
+          std::string("VectorAdd can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+
+      auto v1 = left->value_as_ArrayField()->value();
+      auto v2 = right->value_as_ArrayField()->value();
+
+      std::vector<double> result_values;
+      bool result_is_null = left->is_null() || right->is_null();
+      if (!result_is_null) {
+        flatbuffers::uoffset_t size = std::max(v1->size(), v2->size());
+        for (flatbuffers::uoffset_t i = 0; i < size; ++i) {
+          if (i < v1->size() && v1->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+            throw std::runtime_error(
+              std::string("VectorAdd expected Array[Double], but the left array contained ")
+              + std::string(tuix::EnumNameFieldUnion(v1->Get(i)->value_type())));
+          }
+          if (i < v2->size() && v2->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+            throw std::runtime_error(
+              std::string("VectorAdd expected Array[Double], but the right array contained ")
+              + std::string(tuix::EnumNameFieldUnion(v2->Get(i)->value_type())));
+          }
+
+          double v1_i = i < v1->size() ? v1->Get(i)->value_as_DoubleField()->value() : 0.0;
+          double v2_i = i < v2->size() ? v2->Get(i)->value_as_DoubleField()->value() : 0.0;
+
+          result_values.push_back(v1_i + v2_i);
+        }
+      }
+
+      std::vector<flatbuffers::Offset<tuix::Field>> result;
+      for (double result_i : result_values) {
+        result.push_back(
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, result_i).Union(),
+            false));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_ArrayField,
+        tuix::CreateArrayFieldDirect(builder, &result).Union(),
+        result_is_null);
+    }
+
+    case tuix::ExprUnion_VectorMultiply:
+    {
+      auto e = static_cast<const tuix::VectorMultiply *>(expr->expr());
+      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
+      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+
+      if (left->value_type() != tuix::FieldUnion_ArrayField
+          || right->value_type() != tuix::FieldUnion_DoubleField) {
+        throw std::runtime_error(
+          std::string("VectorMultiply can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+
+      auto v = left->value_as_ArrayField()->value();
+      double c = right->value_as_DoubleField()->value();
+
+      std::vector<double> result_values;
+      bool result_is_null = left->is_null() || right->is_null();
+      if (!result_is_null) {
+        for (flatbuffers::uoffset_t i = 0; i < v->size(); ++i) {
+          if (v->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+            throw std::runtime_error(
+              std::string("VectorMultiply expected Array[Double], but the array contained ")
+              + std::string(tuix::EnumNameFieldUnion(v->Get(i)->value_type())));
+          }
+          double v_i = v->Get(i)->value_as_DoubleField()->value();
+
+          result_values.push_back(v_i * c);
+        }
+      }
+
+      std::vector<flatbuffers::Offset<tuix::Field>> result;
+      for (double result_i : result_values) {
+        result.push_back(
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, result_i).Union(),
+            false));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_ArrayField,
+        tuix::CreateArrayFieldDirect(builder, &result).Union(),
+        result_is_null);
+    }
+
+    case tuix::ExprUnion_DotProduct:
+    {
+      auto e = static_cast<const tuix::DotProduct *>(expr->expr());
+      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
+      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+
+      if (left->value_type() != tuix::FieldUnion_ArrayField
+          || right->value_type() != tuix::FieldUnion_ArrayField) {
+        throw std::runtime_error(
+          std::string("DotProduct can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+
+      auto v1 = left->value_as_ArrayField()->value();
+      auto v2 = right->value_as_ArrayField()->value();
+
+      double result = 0.0;
+      bool result_is_null = left->is_null() || right->is_null();
+      if (!result_is_null) {
+        flatbuffers::uoffset_t size = std::min(v1->size(), v2->size());
+        for (flatbuffers::uoffset_t i = 0; i < size; ++i) {
+          if (v1->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+            throw std::runtime_error(
+              std::string("VectorMultiply expected Array[Double], but the left array contained ")
+              + std::string(tuix::EnumNameFieldUnion(v1->Get(i)->value_type())));
+          }
+          if (v2->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+            throw std::runtime_error(
+              std::string("VectorMultiply expected Array[Double], but the right array contained ")
+              + std::string(tuix::EnumNameFieldUnion(v2->Get(i)->value_type())));
+          }
+
+          double v1_i = v1->Get(i)->value_as_DoubleField()->value();
+          double v2_i = v2->Get(i)->value_as_DoubleField()->value();
+
+          result += v1_i * v2_i;
+        }
+      }
+
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_DoubleField,
+        tuix::CreateDoubleField(builder, result).Union(),
+        result_is_null);
+    }
+
     default:
       throw std::runtime_error(
-        std::string("Can't evaluate expression of type")
+        std::string("Can't evaluate expression of type ")
         + std::string(tuix::EnumNameExprUnion(expr->expr_type())));
     }
   }

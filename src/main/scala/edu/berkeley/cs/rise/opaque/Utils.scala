@@ -20,11 +20,12 @@ package edu.berkeley.cs.rise.opaque
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.SecureRandom
 import java.util.UUID
+
 import javax.crypto._
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
 
@@ -45,6 +46,7 @@ import org.apache.spark.sql.catalyst.expressions.Contains
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
+import org.apache.spark.sql.catalyst.expressions.Exp
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
@@ -61,6 +63,7 @@ import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
@@ -86,6 +89,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
@@ -94,6 +98,10 @@ import org.apache.spark.unsafe.types.UTF8String
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
+import edu.berkeley.cs.rise.opaque.expressions.DotProduct
+import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
+import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
+import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
@@ -797,6 +805,17 @@ object Utils extends Logging {
             tuix.Divide.createDivide(
               builder, leftOffset, rightOffset))
 
+        case (UnaryMinus(child), Seq(childOffset)) =>
+          // Implement UnaryMinus(child) as Subtract(Literal(0), child)
+          val zeroOffset = flatbuffersSerializeExpression(
+            builder, Cast(Literal(0), child.dataType), input)
+
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Subtract,
+            tuix.Subtract.createSubtract(
+              builder, zeroOffset, childOffset))
+
         // Predicates
         case (And(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
@@ -904,6 +923,35 @@ object Utils extends Logging {
             tuix.Year.createYear(
               builder, childOffset))
 
+        // Math expressions
+        case (Exp(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Exp,
+            tuix.Exp.createExp(
+              builder, childOffset))
+
+        // Opaque UDFs
+        case (VectorAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorAdd,
+            tuix.VectorAdd.createVectorAdd(
+              builder, leftOffset, rightOffset))
+
+        case (VectorMultiply(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorMultiply,
+            tuix.VectorMultiply.createVectorMultiply(
+              builder, leftOffset, rightOffset))
+
+        case (DotProduct(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DotProduct,
+            tuix.DotProduct.createDotProduct(
+              builder, leftOffset, rightOffset))
       }
     }
   }
@@ -1157,6 +1205,27 @@ object Utils extends Logging {
             Array(
               /* sum = */ flatbuffersSerializeExpression(
                 builder, Add(sum, Cast(child, sumDataType)), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, sum, aggSchema))
+
+      case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
+        val sum = vs.aggBufferAttributes(0)
+
+        val sumDataType = vs.dataType
+
+        // TODO: support aggregating null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Literal(Array[Double]()), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, VectorAdd(sum, child), concatSchema))),
           flatbuffersSerializeExpression(
             builder, sum, aggSchema))
     }
