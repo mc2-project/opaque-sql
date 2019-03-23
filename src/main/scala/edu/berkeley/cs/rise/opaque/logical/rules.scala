@@ -35,6 +35,9 @@ object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
     case Encrypt(LocalRelation(output, data, false)) =>
       EncryptedLocalRelation(output, data)
+
+    case Oblivious(LocalRelation(output, data, false)) =>
+      ObliviousLocalRelation(output, data)
   }
 }
 
@@ -53,10 +56,26 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     }.nonEmpty
   }
 
+  def isOblivious(plan: LogicalPlan): Boolean = {
+    plan.find {
+      case p: OpaqueOperator => p.isOblivious
+      case _ => false
+    }.nonEmpty
+  }
+
+  def isOblivious(plan: SparkPlan): Boolean = {
+    plan.find {
+      case p: OpaqueOperatorExec => p.isOblivious
+      case _ => false
+    }.nonEmpty
+  }
+
   def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case l @ LogicalRelation(baseRelation: EncryptedScan, _, _, false) =>
       EncryptedBlockRDD(l.output, baseRelation.buildBlockedScan())
 
+    case p @ Project(projectList, child) if isOblivious(child) =>
+      ObliviousProject(projectList, child.asInstanceOf[OpaqueOperator])
     case p @ Project(projectList, child) if isEncrypted(child) =>
       EncryptedProject(projectList, child.asInstanceOf[OpaqueOperator])
 
@@ -67,16 +86,40 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
       child
 
+    case p @ Filter(condition, child) if isOblivious(child) =>
+      ObliviousFilter(condition, child.asInstanceOf[OpaqueOperator])
     case p @ Filter(condition, child) if isEncrypted(child) =>
       EncryptedFilter(condition, child.asInstanceOf[OpaqueOperator])
 
+    case p @ Sort(order, true, child) if isOblivious(child) =>
+      ObliviousSort(order, child.asInstanceOf[OpaqueOperator])
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
+    case p @ Join(left, right, joinType, condition) if isOblivious(p) =>
+      ObliviousJoin(
+        left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
     case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
+    case p @ Aggregate(groupingExprs, aggExprs, child) if isOblivious(p) =>
+      UndoCollapseProject.separateProjectAndAgg(p) match {
+        case Some((projectExprs, aggExprs)) =>
+          ObliviousProject(
+            projectExprs,
+            ObliviousAggregate(
+              groupingExprs, aggExprs,
+              ObliviousSort(
+                groupingExprs.map(e => SortOrder(e, Ascending)),
+                child.asInstanceOf[OpaqueOperator])))
+        case None =>
+          ObliviousAggregate(
+            groupingExprs, aggExprs,
+            ObliviousSort(
+              groupingExprs.map(e => SortOrder(e, Ascending)),
+              child.asInstanceOf[OpaqueOperator]))
+      }
     case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
       UndoCollapseProject.separateProjectAndAgg(p) match {
         case Some((projectExprs, aggExprs)) =>
@@ -102,6 +145,12 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
 
+    case InMemoryRelationMatcher(output, storageLevel, child) if isOblivious(child) =>
+      ObliviousBlockRDD(
+        output,
+        Utils.ensureCached(
+          child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
+          storageLevel))
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(
         output,

@@ -26,6 +26,8 @@ import org.apache.spark.sql.execution.SparkPlan
 case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
+  override def isOblivious: Boolean = false
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {

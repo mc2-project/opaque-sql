@@ -25,6 +25,11 @@ sealed trait SecurityLevel {
   def applyTo[T](df: DataFrame): DataFrame
 }
 
+case object Oblivious extends SecurityLevel {
+  override def name: String = "oblivious"
+  override def applyTo[T](df: DataFrame): DataFrame = df.oblivious
+}
+
 case object Encrypted extends SecurityLevel {
   override def name: String = "encrypted"
   override def applyTo[T](df: DataFrame): DataFrame = df.encrypted

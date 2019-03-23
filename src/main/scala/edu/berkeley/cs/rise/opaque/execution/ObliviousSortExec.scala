@@ -1,8 +1,24 @@
 package edu.berkeley.cs.rise.opaque.execution
 
 import edu.berkeley.cs.rise.opaque.Utils
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.execution.SparkPlan
+
+case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def isOblivious: Boolean = true
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    val orderSer = Utils.serializeSortOrder(order, child.output)
+    ObliviousSortExec.NewColumnSort(
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
+  }
+}
 
 object ObliviousSortExec extends java.io.Serializable {
 
@@ -49,7 +65,7 @@ object ObliviousSortExec extends java.io.Serializable {
     Block(ret)
   }
 
-  def NewColumnSort(sc: SparkContext, data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
+  def NewColumnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // parse the bytes and split into blocks, one for each destination column
 
