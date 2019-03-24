@@ -34,11 +34,11 @@ object ObliviousSortExec extends java.io.Serializable {
     Iterator((key, numRows))
   }
 
-  def ColumnSortPad(data: Block, r: Int, s: Int): Block = {
+  def ColumnSortPad(data: Block, sort_order: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
-      null, 0, data.bytes, r, s, 0)
+      sort_order, 0, data.bytes, r, s, 0)
 
     Block(ret)
   }
@@ -56,11 +56,11 @@ object ObliviousSortExec extends java.io.Serializable {
     ret
   }
 
-  def ColumnSortFilter(data: Block, r: Int, s: Int): Block = {
+  def ColumnSortFilter(data: Block, sort_order: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
     val ret = enclave.EnclaveColumnSort(eid,
-      null, 5, data.bytes, r, s, 0)
+      sort_order, 5, data.bytes, r, s, 0)
 
     Block(ret)
   }
