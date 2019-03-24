@@ -44,6 +44,9 @@ object OpaqueOperators extends Strategy {
     case EncryptedSort(order, child) =>
       EncryptedSortExec(order, planLater(child)) :: Nil
 
+    case ObliviousSort(order, child) =>
+      ObliviousSortExec(order, planLater(child)) :: Nil
+
     case EncryptedJoin(left, right, joinType, condition) =>
       Join(left, right, joinType, condition) match {
         case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
@@ -73,6 +76,9 @@ object OpaqueOperators extends Strategy {
 
     case Encrypt(child) =>
       EncryptExec(planLater(child)) :: Nil
+
+    case Oblivious(child) =>
+      ObliviousExec(planLater(child)) :: Nil
 
     case EncryptedLocalRelation(output, plaintextData) =>
       EncryptedLocalTableScanExec(output, plaintextData) :: Nil

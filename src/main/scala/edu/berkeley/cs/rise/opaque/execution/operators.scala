@@ -56,6 +56,8 @@ case class EncryptedLocalTableScanExec(
     plaintextData: Seq[InternalRow])
   extends LeafExecNode with OpaqueOperatorExec {
 
+  override def isOblivious: Boolean = false
+
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
     val result: Array[InternalRow] = plaintextData.map(r => proj(r).copy()).toArray
@@ -89,6 +91,22 @@ case class EncryptedLocalTableScanExec(
 case class EncryptExec(child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
+  override def isOblivious: Boolean = false
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    child.execute().mapPartitions { rowIter =>
+      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
+    }
+  }
+}
+
+case class ObliviousExec(child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def isOblivious: Boolean = true
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
@@ -102,6 +120,8 @@ case class EncryptedBlockRDDScanExec(
     output: Seq[Attribute],
     rdd: RDD[Block])
   extends LeafExecNode with OpaqueOperatorExec {
+
+  override def isOblivious: Boolean = false
 
   override def executeBlocked(): RDD[Block] = rdd
 }
@@ -122,6 +142,8 @@ case class Block(bytes: Array[Byte]) extends Serializable {
 
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
+
+  def isOblivious: Boolean
 
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
     import Utils.time
@@ -208,6 +230,8 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
+  override def isOblivious: Boolean = false
+
   override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
@@ -225,6 +249,8 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 
   override def output: Seq[Attribute] = child.output
 
+  override def isOblivious: Boolean = false
+
   override def executeBlocked(): RDD[Block] = {
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
@@ -241,6 +267,8 @@ case class EncryptedAggregateExec(
     aggExpressions: Seq[NamedExpression],
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def isOblivious: Boolean = false
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
@@ -294,6 +322,8 @@ case class EncryptedSortMergeJoinExec(
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
+  override def isOblivious: Boolean = false
+
   override def executeBlocked(): RDD[Block] = {
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
@@ -328,6 +358,8 @@ case class EncryptedUnionExec(
     right: SparkPlan)
   extends BinaryExecNode with OpaqueOperatorExec {
   import Utils.time
+
+  override def isOblivious: Boolean = false
 
   override def output: Seq[Attribute] =
     left.output

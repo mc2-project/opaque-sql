@@ -41,12 +41,27 @@ trait OpaqueOperator extends LogicalPlan {
    * references to include all inputs to prevent Catalyst from dropping any input columns.
    */
   override def references: AttributeSet = inputSet
+
+  def isOblivious: Boolean = children.exists(_.find {
+    case p: OpaqueOperator => p.isOblivious
+    case _ => false
+  }.nonEmpty)
 }
 
 case class Encrypt(child: LogicalPlan)
   extends UnaryNode with OpaqueOperator {
 
   override def output: Seq[Attribute] = child.output
+
+  override def isOblivious: Boolean = false
+}
+
+case class Oblivious(child: LogicalPlan)
+  extends UnaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def isOblivious: Boolean = true
 }
 
 case class EncryptedLocalRelation(
@@ -56,6 +71,30 @@ case class EncryptedLocalRelation(
 
   // A local relation must have resolved output.
   require(output.forall(_.resolved), "Unresolved attributes found when constructing LocalRelation.")
+
+  override def isOblivious: Boolean = false
+
+  /**
+   * Returns an identical copy of this relation with new exprIds for all attributes.  Different
+   * attributes are required when a relation is going to be included multiple times in the same
+   * query.
+   */
+  override final def newInstance(): this.type = {
+    EncryptedLocalRelation(output.map(_.newInstance()), plaintextData).asInstanceOf[this.type]
+  }
+
+  override protected def stringArgs = Iterator(output)
+}
+
+case class ObliviousLocalRelation(
+    output: Seq[Attribute],
+    plaintextData: Seq[InternalRow])
+  extends LeafNode with MultiInstanceRelation with OpaqueOperator {
+
+  // A local relation must have resolved output.
+  require(output.forall(_.resolved), "Unresolved attributes found when constructing LocalRelation.")
+
+  override def isOblivious: Boolean = true
 
   /**
    * Returns an identical copy of this relation with new exprIds for all attributes.  Different
@@ -76,13 +115,36 @@ case class EncryptedBlockRDD(
 
   override def children: Seq[LogicalPlan] = Nil
 
+  override def isOblivious: Boolean = false
+
   override def newInstance(): EncryptedBlockRDD.this.type =
     EncryptedBlockRDD(output.map(_.newInstance()), rdd).asInstanceOf[this.type]
 
   override def producedAttributes: AttributeSet = outputSet
 }
 
+case class ObliviousBlockRDD(
+    output: Seq[Attribute],
+    rdd: RDD[Block])
+  extends OpaqueOperator with MultiInstanceRelation {
+
+  override def children: Seq[LogicalPlan] = Nil
+
+  override def isOblivious: Boolean = true
+
+  override def newInstance(): ObliviousBlockRDD.this.type =
+    ObliviousBlockRDD(output.map(_.newInstance()), rdd).asInstanceOf[this.type]
+
+  override def producedAttributes: AttributeSet = outputSet
+}
+
 case class EncryptedProject(projectList: Seq[NamedExpression], child: OpaqueOperator)
+  extends UnaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+}
+
+case class ObliviousProject(projectList: Seq[NamedExpression], child: OpaqueOperator)
   extends UnaryNode with OpaqueOperator {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
@@ -94,7 +156,18 @@ case class EncryptedFilter(condition: Expression, child: OpaqueOperator)
   override def output: Seq[Attribute] = child.output
 }
 
+case class ObliviousFilter(condition: Expression, child: OpaqueOperator)
+  extends UnaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = child.output
+}
+
 case class EncryptedSort(order: Seq[SortOrder], child: OpaqueOperator)
+  extends UnaryNode with OpaqueOperator {
+  override def output: Seq[Attribute] = child.output
+}
+
+case class ObliviousSort(order: Seq[SortOrder], child: OpaqueOperator)
   extends UnaryNode with OpaqueOperator {
   override def output: Seq[Attribute] = child.output
 }
@@ -110,7 +183,28 @@ case class EncryptedAggregate(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 }
 
+case class ObliviousAggregate(
+    groupingExpressions: Seq[Expression],
+    aggExpressions: Seq[NamedExpression],
+    child: OpaqueOperator)
+  extends UnaryNode with OpaqueOperator {
+
+  override def producedAttributes: AttributeSet =
+    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+}
+
 case class EncryptedJoin(
+    left: OpaqueOperator,
+    right: OpaqueOperator,
+    joinType: JoinType,
+    condition: Option[Expression])
+  extends BinaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = left.output ++ right.output
+}
+
+case class ObliviousJoin(
     left: OpaqueOperator,
     right: OpaqueOperator,
     joinType: JoinType,
