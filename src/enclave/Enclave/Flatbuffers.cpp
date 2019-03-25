@@ -213,7 +213,7 @@ flatbuffers::Offset<tuix::EncryptedBlock> flatbuffers_copy(
 template<>
 flatbuffers::Offset<tuix::Row> flatbuffers_copy(
   const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
-
+  printf("row copy");
   flatbuffers::uoffset_t num_fields = row->field_values()->size();
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
