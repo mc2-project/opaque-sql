@@ -108,8 +108,8 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     printf("got row\n");
-    FlatbuffersRowWriter* rw = ws[i % num_partitions];
-    rw->write(row);
+    FlatbuffersRowWriter rw = ws[i % num_partitions];
+    rw.write(row);
     printf("wrote row\n");
     i++;
   }
