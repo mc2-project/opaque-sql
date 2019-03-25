@@ -234,20 +234,18 @@ void ecall_column_sort(
                   uint8_t **output_buffer,
                   size_t *output_buffer_length) {
     (void)r;
-    uint8_t *temp_buffer;
-    size_t temp_buffer_length;
+    uint8_t *sorted_rows;
+    size_t sorted_rows_length;
+    external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows, &sorted_rows_length);
+
     if (round == 1) {
-        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &temp_buffer, &temp_buffer_length);
-        transpose(temp_buffer, temp_buffer_length, partition_index, s, output_buffer, output_buffer_length);
+        transpose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 2) {
-        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &temp_buffer, &temp_buffer_length);
-        untranspose(temp_buffer, temp_buffer_length, partition_index, s, output_buffer, output_buffer_length);
+        untranspose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 3) {
-        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &temp_buffer, &temp_buffer_length);
-        shift_down(temp_buffer, temp_buffer_length, partition_index, s, output_buffer, output_buffer_length);
+        shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
-        external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &temp_buffer, &temp_buffer_length);
-        shift_up(temp_buffer, temp_buffer_length, partition_index, s, output_buffer, output_buffer_length);
+        shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
   }
