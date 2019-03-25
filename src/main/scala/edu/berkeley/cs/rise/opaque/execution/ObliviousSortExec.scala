@@ -68,7 +68,6 @@ object ObliviousSortExec extends java.io.Serializable {
   def NewColumnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // parse the bytes and split into blocks, one for each destination column
-    println("NewColumnSort line 71")
     val NumMachines = data.partitions.length
     val NumCores = 1
 
@@ -115,10 +114,11 @@ object ObliviousSortExec extends java.io.Serializable {
     }
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
-
+    println("before pad")
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
-
+    println("after pad")
+    
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
