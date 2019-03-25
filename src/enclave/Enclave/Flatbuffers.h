@@ -385,6 +385,7 @@ public:
   /** Copy the given Row to the output. */
   void write(const tuix::Row *row) {
     rows_vector.push_back(flatbuffers_copy(row, builder));
+    printf("fbrw pushed back");
     total_num_rows++;
     maybe_finish_block();
   }
@@ -516,6 +517,7 @@ private:
       write_encrypted_block();
     }
   }
+  printf("line 520 flatbuffers.h");
 
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
