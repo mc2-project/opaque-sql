@@ -95,7 +95,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
   (void)partition_idx;
-
+  printf("transpose hello");
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
@@ -104,7 +104,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
       new FlatbuffersRowWriter()));
   } 
-
+  printf("created all fb row writers");
   uint32_t i = 0;
 
   while (r.has_next()) {
@@ -112,6 +112,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     ws[i % num_partitions]->write(row);
     i++;
   }
+  printf("wrote to all corresponding row writers");
 
   FlatbuffersRowWriter shuffle_output_writer;
   for (uint32_t j = 0; j < ws.size(); j++) {
@@ -121,7 +122,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
     shuffle_output_writer.append_shuffle_output(sor.get());
   }
-
+  printf("created shuffle outputs");
   shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
   *output_row = shuffle_output_writer.output_buffer().release();
   *output_row_size = shuffle_output_writer.output_size();
