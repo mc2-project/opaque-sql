@@ -99,21 +99,17 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
 
-  for (uint32_t k = 0; k < num_partitions; k++) {
-    ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
-      new FlatbuffersRowWriter()));
-  } 
+  // for (uint32_t k = 0; k < num_partitions; k++) {
+  //   ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
+  //     new FlatbuffersRowWriter()));
+  // } 
   uint32_t i = 0;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     printf("looking for this index: %i\n", i % num_partitions);
     FlatbuffersRowWriter* rw = ws[i % num_partitions].get();
-    print(row);
 
-    FlatbuffersRowWriter w;
-    w.write(row);
-    printf("wrote row lol\n");
     rw->write(row);
     i++;
   }
