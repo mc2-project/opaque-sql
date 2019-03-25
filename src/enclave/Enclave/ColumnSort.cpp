@@ -112,7 +112,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     // rw->write(row);
     FlatbuffersRowWriter w;
     w.write(row);
-    printf("wrote row\n")
+    printf("wrote row\n");
     i++;
   }
   printf("wrote to all corresponding row writers");
