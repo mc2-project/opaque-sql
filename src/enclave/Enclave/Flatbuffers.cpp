@@ -214,13 +214,10 @@ template<>
 flatbuffers::Offset<tuix::Row> flatbuffers_copy(
   const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
   flatbuffers::uoffset_t num_fields = row->field_values()->size();
-  printf("217");
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
-  printf("219");
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
     field_values[i] = flatbuffers_copy<tuix::Field>(
       row->field_values()->Get(i), builder, force_null);
-    printf("223");
   }
   return tuix::CreateRowDirect(builder, &field_values);
 }
