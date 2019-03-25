@@ -117,7 +117,7 @@ object ObliviousSortExec extends java.io.Serializable {
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
 
     // Pad with dummy rows
-    val padded_data = data.map(x => ColumnSortPad(x, r, s))
+    val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
 
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
@@ -148,7 +148,7 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Filter out dummy rows
-    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, r, s))
+    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
