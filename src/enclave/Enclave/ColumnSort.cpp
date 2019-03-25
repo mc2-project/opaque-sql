@@ -95,6 +95,9 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
   (void)partition_idx;
+  (void)output_row;
+  (void)output_row_size;
+
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<FlatbuffersRowWriter> ws(num_partitions);
