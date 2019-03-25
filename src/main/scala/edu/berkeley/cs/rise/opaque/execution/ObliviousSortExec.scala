@@ -49,7 +49,9 @@ object ObliviousSortExec extends java.io.Serializable {
     sort_order: Array[Byte],
     round: Int, r: Int, s: Int) : Array[Byte] = {
 
+    println("in columnsort op")
     val (enclave, eid) = Utils.initEnclave()
+    println("initialized enclave")
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data.bytes, r, s, partition_index)
 
@@ -118,7 +120,7 @@ object ObliviousSortExec extends java.io.Serializable {
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
     println("after pad")
-    
+
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
