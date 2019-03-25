@@ -167,6 +167,7 @@ private:
 class ShuffleOutputReader {
 public:
   ShuffleOutputReader(uint8_t *buf, size_t len) {
+    printf("ShuffleOutputReader constructor");
     flatbuffers::Verifier v(buf, len);
     if (!v.VerifyBuffer<tuix::ShuffleOutput>(nullptr)) {
       throw std::runtime_error(
