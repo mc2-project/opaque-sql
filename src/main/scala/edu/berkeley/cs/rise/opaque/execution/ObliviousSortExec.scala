@@ -68,7 +68,7 @@ object ObliviousSortExec extends java.io.Serializable {
   def NewColumnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // parse the bytes and split into blocks, one for each destination column
-
+    println("NewColumnSort line 71")
     val NumMachines = data.partitions.length
     val NumCores = 1
 
