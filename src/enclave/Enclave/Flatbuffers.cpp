@@ -226,8 +226,12 @@ template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
   bool is_null = force_null || field->is_null();
+
+  printf("flatbuffers_copy field");
+
   switch (field->value_type()) {
   case tuix::FieldUnion_BooleanField:
+    printf("booleanfield");
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_BooleanField,
@@ -236,7 +240,6 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         static_cast<const tuix::BooleanField *>(field->value())->value()).Union(),
       is_null);
   case tuix::FieldUnion_IntegerField:
-    printf("integerfield");
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_IntegerField,
@@ -245,6 +248,8 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         static_cast<const tuix::IntegerField *>(field->value())->value()).Union(),
       is_null);
   case tuix::FieldUnion_LongField:
+    printf("longfield");
+
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_LongField,
@@ -253,6 +258,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         static_cast<const tuix::LongField *>(field->value())->value()).Union(),
       is_null);
   case tuix::FieldUnion_FloatField:
+    printf("floatfield");
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_FloatField,
@@ -261,6 +267,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
         static_cast<const tuix::FloatField *>(field->value())->value()).Union(),
       is_null);
   case tuix::FieldUnion_DoubleField:
+    printf("doublefield");
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_DoubleField,
