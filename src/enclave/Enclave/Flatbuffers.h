@@ -384,6 +384,7 @@ public:
 
   /** Copy the given Row to the output. */
   void write(const tuix::Row *row) {
+    printf("Write");
     rows_vector.push_back(flatbuffers_copy(row, builder));
     printf("fbrw pushed back");
     total_num_rows++;
@@ -513,7 +514,6 @@ public:
 
 private:
   void maybe_finish_block() {
-    printf("maybe finish block");
     if (builder.GetSize() >= MAX_BLOCK_SIZE) {
       write_encrypted_block();
     }
