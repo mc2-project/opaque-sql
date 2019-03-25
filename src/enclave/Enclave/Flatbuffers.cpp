@@ -225,7 +225,7 @@ flatbuffers::Offset<tuix::Row> flatbuffers_copy(
 template<>
 flatbuffers::Offset<tuix::Field> flatbuffers_copy(
   const tuix::Field *field, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
-
+  print(field);
   bool is_null = force_null || field->is_null();
   switch (field->value_type()) {
   case tuix::FieldUnion_BooleanField:
