@@ -111,18 +111,18 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   }
   printf("wrote to all corresponding row writers");
 
-  // FlatbuffersRowWriter shuffle_output_writer;
-  // for (uint32_t j = 0; j < ws.size(); j++) {
-  //   ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
-  //   std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
+  FlatbuffersRowWriter shuffle_output_writer;
+  for (uint32_t j = 0; j < ws.size(); j++) {
+    ws[j].write_shuffle_output(ws[j].write_encrypted_blocks(), j);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j].output_buffer();
 
-  //   ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
-  //   shuffle_output_writer.append_shuffle_output(sor.get());
-  // }
-  // printf("created shuffle outputs");
-  // shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
-  // *output_row = shuffle_output_writer.output_buffer().release();
-  // *output_row_size = shuffle_output_writer.output_size();
+    ShuffleOutputReader sor(out_buffer.get(), ws[j].output_size());
+    shuffle_output_writer.append_shuffle_output(sor.get());
+  }
+  printf("created shuffle outputs");
+  shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
+  *output_row = shuffle_output_writer.output_buffer().release();
+  *output_row_size = shuffle_output_writer.output_size();
 }
 
 void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
