@@ -103,12 +103,12 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
       new FlatbuffersRowWriter()));
   } 
-  printf("created all fb row writers\n");
   uint32_t i = 0;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    printf("yeah we got a row\n");
+    printf("ws size %d\n", ws.size());
+    printf("looking for this index: %i", i % num_partitions);
     ws[i % num_partitions]->write(row);
     printf("wrote a row\n");
     i++;

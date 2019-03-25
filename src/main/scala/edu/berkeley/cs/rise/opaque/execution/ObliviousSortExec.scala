@@ -49,9 +49,7 @@ object ObliviousSortExec extends java.io.Serializable {
     sort_order: Array[Byte],
     round: Int, r: Int, s: Int) : Array[Byte] = {
 
-    println("in columnsort op")
     val (enclave, eid) = Utils.initEnclave()
-    println("initialized enclave")
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data.bytes, r, s, partition_index)
 
