@@ -513,11 +513,11 @@ public:
 
 private:
   void maybe_finish_block() {
+    printf("maybe finish block");
     if (builder.GetSize() >= MAX_BLOCK_SIZE) {
       write_encrypted_block();
     }
   }
-  printf("line 520 flatbuffers.h");
 
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
