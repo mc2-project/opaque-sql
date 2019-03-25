@@ -111,7 +111,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     printf("looking for this index: %i\n", i % num_partitions);
     FlatbuffersRowWriter* rw = ws[i % num_partitions].get();
     printf("found a row writer\n");
-    rw.write(row);
+    rw->write(row);
     printf("wrote a row\n");
     i++;
   }
