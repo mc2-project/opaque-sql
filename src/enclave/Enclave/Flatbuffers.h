@@ -169,12 +169,10 @@ public:
   ShuffleOutputReader(uint8_t *buf, size_t len) {
     flatbuffers::Verifier v(buf, len);
     if (!v.VerifyBuffer<tuix::ShuffleOutput>(nullptr)) {
-      printf("buffer not ok\n");
       throw std::runtime_error(
         std::string("Corrupt ShuffleOutput buffer of length ")
         + std::to_string(len));
     }
-    printf("buffer is ok\n");
     shuffle_output = flatbuffers::GetRoot<tuix::ShuffleOutput>(buf);
   }
   const tuix::ShuffleOutput *get() {

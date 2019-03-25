@@ -112,7 +112,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   for (uint32_t j = 0; j < num_partitions; j++) {
     ws[j].write_shuffle_output(ws[j].write_encrypted_blocks(), j);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j].output_buffer();
-    printf("creating shuffleoutputreader...\n");
+    printf("\n%d\n", out_buffer.get());
     ShuffleOutputReader sor(out_buffer.get(), ws[j].output_size());
     printf("120");
     shuffle_output_writer.append_shuffle_output(sor.get());
