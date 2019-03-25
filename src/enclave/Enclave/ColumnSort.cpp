@@ -112,7 +112,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   printf("wrote to all corresponding row writers");
 
   FlatbuffersRowWriter shuffle_output_writer;
-  for (uint32_t j = 0; j < ws.size(); j++) {
+  for (uint32_t j = 0; j < num_partitions; j++) {
     ws[j].write_shuffle_output(ws[j].write_encrypted_blocks(), j);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j].output_buffer();
 
