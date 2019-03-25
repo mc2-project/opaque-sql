@@ -117,7 +117,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     // std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j].output_buffer();
     uint32_t size = ws[j].output_size();
     printf("size: %d\n", size);
-    ShuffleOutputReader sor(ws[j].output_buffer(), ws[j].output_size());
+    ShuffleOutputReader sor(ws[j].output_buffer().get(), ws[j].output_size());
     printf("120");
     shuffle_output_writer.append_shuffle_output(sor.get());
   }
