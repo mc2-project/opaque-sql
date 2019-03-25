@@ -59,6 +59,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   def testAgainstSpark(name: String)(f: SecurityLevel => Any): Unit = {
+    println("line 61")
     test(name + " - encrypted") {
       assert(f(Encrypted) === f(Insecure))
     }
@@ -68,24 +69,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     // test(name + " - encrypted") {
     //   assert(f(Encrypted) === f(Insecure))
     // }
+    println("line 72")
     test(name + " - oblivious") {
       assert(f(Oblivious) === f(Insecure))
     }
   }
 
   def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
+    println("line 79")
     test(name + " - encrypted") {
       f(Encrypted)
     }
   }
 
   def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
+    println("line 86")
     test(name + " - Spark") {
       f(Insecure)
     }
   }
 
   def withLoggingOff[A](f: () => A): A = {
+    println("line 93")
     val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
     for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
     try {
