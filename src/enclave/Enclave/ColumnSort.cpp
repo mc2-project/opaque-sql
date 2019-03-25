@@ -95,7 +95,6 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
   (void)partition_idx;
-  printf("transpose hello");
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
   std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws(num_partitions);
@@ -104,12 +103,14 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(
       new FlatbuffersRowWriter()));
   } 
-  printf("created all fb row writers");
+  printf("created all fb row writers\n");
   uint32_t i = 0;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    printf("yeah we got a row\n");
     ws[i % num_partitions]->write(row);
+    printf("wrote a row\n");
     i++;
   }
   printf("wrote to all corresponding row writers");

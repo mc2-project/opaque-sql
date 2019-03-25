@@ -236,9 +236,7 @@ void ecall_column_sort(
     (void)r;
     if (round == 1) {
         external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
-        printf("round 1 external sort");
         transpose(input_rows, input_rows_length, partition_index, s, output_buffer, output_buffer_length);
-        printf("round 1 transpose");
     } else if (round == 2) {
         external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
         printf("round 2 external sort");
