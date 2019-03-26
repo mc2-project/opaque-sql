@@ -105,8 +105,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     ws[i % num_partitions].write(row);
-    print(row);
-    printf(" going to %d partition", i % num_partitions);
+    printf("\nBuffer: %s\n", ws[i % num_partitions].output_buffer().get());
     i++;
   }
 
