@@ -470,18 +470,20 @@ public:
     flatbuffers::Offset<tuix::EncryptedBlocks> encrypted_blocks,
     uint32_t destination_partition) {
 
-    shuffle_output_vector.push_back(
-      tuix::CreateShuffleOutput(
+    auto shuffle_output = tuix::CreateShuffleOutput(
         enc_block_builder,
         destination_partition,
-        encrypted_blocks));
+        encrypted_blocks);
+
+    enc_block_builder.Finish<tuix::ShuffleOutput>(shuffle_output);
+    shuffle_output_vector.push_back(shuffle_output);
   }
 
   void append_shuffle_output(
     const tuix::ShuffleOutput* shuffle_output) {
 
     shuffle_output_vector.push_back(
-      flatbuffers_copy(shuffle_output, builder, false));
+      flatbuffers_copy(shuffle_output, enc_block_builder, false));
   }
 
   flatbuffers::Offset<tuix::ShuffleOutputs> write_shuffle_outputs() {
