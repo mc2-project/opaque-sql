@@ -587,6 +587,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
   }
 
+  testAgainstSpark("k-means") { securityLevel =>
+    import scala.math.Ordering.Implicits.seqDerivedOrdering
+    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+
   testAgainstSpark("pagerank") { securityLevel =>
     PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
   }

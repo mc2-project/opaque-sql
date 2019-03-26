@@ -30,6 +30,7 @@ union ExprUnion {
     VectorMultiply,
     DotProduct,
     Exp,
+    ClosestPoint,
 }
 
 table Expr {
@@ -156,6 +157,11 @@ table VectorMultiply {
 }
 
 table DotProduct {
+    left:Expr;
+    right:Expr;
+}
+
+table ClosestPoint {
     left:Expr;
     right:Expr;
 }
