@@ -106,6 +106,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
     const tuix::Row *row = r.next();
     ws[i % num_partitions].write(row);
     printf("\nBuffer: %s\n", ws[i % num_partitions].output_buffer().get());
+    // I think nothing is being written to the buffer but still unsure
     i++;
   }
 
