@@ -6,6 +6,7 @@ import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.expressions.BinaryExpression
 import org.apache.spark.sql.catalyst.expressions.ExpectsInputTypes
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.ExpressionDescription
 import org.apache.spark.sql.catalyst.expressions.NullIntolerant
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -18,6 +19,19 @@ object ClosestPoint {
     new Column(ClosestPoint(point.expr, centroids.expr))
 }
 
+@ExpressionDescription(
+  usage = """
+    _FUNC_(point, centroids) - Given an `Array[Double]` and an `Array[Array[Double]]`, finds the
+      point in the latter closest to the former using squared distance.
+  """,
+  arguments = """
+    Arguments:
+      * point - list of coordinates representing a point
+      * centroids - list of lists of coordinates, each representing a point
+  """)
+/**
+ *
+ */
 case class ClosestPoint(left: Expression, right: Expression)
     extends BinaryExpression with NullIntolerant with CodegenFallback with ExpectsInputTypes {
 
