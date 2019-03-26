@@ -98,6 +98,7 @@ import org.apache.spark.unsafe.types.UTF8String
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
+import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct
 import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
@@ -951,6 +952,13 @@ object Utils extends Logging {
             builder,
             tuix.ExprUnion.DotProduct,
             tuix.DotProduct.createDotProduct(
+              builder, leftOffset, rightOffset))
+
+        case (ClosestPoint(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.ClosestPoint,
+            tuix.ClosestPoint.createClosestPoint(
               builder, leftOffset, rightOffset))
       }
     }

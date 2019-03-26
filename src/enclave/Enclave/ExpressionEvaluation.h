@@ -3,6 +3,7 @@
 #include <functional>
 #include <typeinfo>
 #include <cmath>
+#include <limits>
 
 #include "Flatbuffers.h"
 
@@ -157,6 +158,37 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
       std::string str1(reinterpret_cast<const char *>(field1->value()->data()), field1->length());
       std::string str2(reinterpret_cast<const char *>(field2->value()->data()), field2->length());
       result = Operation<std::string>()(str1, str2);
+      break;
+    }
+    case tuix::FieldUnion_ArrayField:
+    {
+      auto vector1 = left->value_as_ArrayField()->value();
+      auto vector2 = right->value_as_ArrayField()->value();
+
+      std::vector<double> vector1_packed;
+      std::vector<double> vector2_packed;
+
+      for (flatbuffers::uoffset_t i = 0; i < vector1->size(); ++i) {
+        if (vector1->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+          throw std::runtime_error(
+            std::string("For comparison, only Array[Double] is supported, but array contained ")
+            + std::string(tuix::EnumNameFieldUnion(vector1->Get(i)->value_type())));
+        }
+
+        vector1_packed.push_back(vector1->Get(i)->value_as_DoubleField()->value());
+      }
+
+      for (flatbuffers::uoffset_t i = 0; i < vector2->size(); ++i) {
+        if (vector2->Get(i)->value_type() != tuix::FieldUnion_DoubleField) {
+          throw std::runtime_error(
+            std::string("For comparison, only Array[Double] is supported, but array contained ")
+            + std::string(tuix::EnumNameFieldUnion(vector2->Get(i)->value_type())));
+        }
+
+        vector2_packed.push_back(vector2->Get(i)->value_as_DoubleField()->value());
+      }
+
+      result = Operation<std::vector<double>>()(vector1_packed, vector2_packed);
       break;
     }
     default:
@@ -840,6 +872,82 @@ private:
         builder,
         tuix::FieldUnion_DoubleField,
         tuix::CreateDoubleField(builder, result).Union(),
+        result_is_null);
+    }
+
+    case tuix::ExprUnion_ClosestPoint:
+    {
+      auto e = static_cast<const tuix::ClosestPoint *>(expr->expr());
+      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
+      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+
+      if (left->value_type() != tuix::FieldUnion_ArrayField
+          || right->value_type() != tuix::FieldUnion_ArrayField) {
+        throw std::runtime_error(
+          std::string("ClosestPoint can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+
+      auto point = left->value_as_ArrayField()->value();
+      auto centroids = right->value_as_ArrayField()->value();
+
+      flatbuffers::uoffset_t best_index = 0;
+      double best_distance = std::numeric_limits<double>::infinity();
+
+      bool result_is_null = left->is_null() || right->is_null();
+      if (!result_is_null) {
+        for (flatbuffers::uoffset_t i = 0; i < centroids->size(); ++i) {
+          auto centroid_i = centroids->Get(i)->value_as_ArrayField()->value();
+
+          double distance_i = 0.0;
+
+          for (flatbuffers::uoffset_t j = 0; j < point->size() && j < centroid_i->size(); ++j) {
+            if (point->Get(j)->value_type() != tuix::FieldUnion_DoubleField) {
+              throw std::runtime_error(
+                std::string("ClosestPoint expected Array[Double], but points contained ")
+                + std::string(tuix::EnumNameFieldUnion(point->Get(j)->value_type())));
+            }
+            if (centroid_i->Get(j)->value_type() != tuix::FieldUnion_DoubleField) {
+              throw std::runtime_error(
+                std::string("ClosestPoint expected Array[Double], but a centroid contained ")
+                + std::string(tuix::EnumNameFieldUnion(centroid_i->Get(j)->value_type())));
+            }
+
+            double point_j = point->Get(j)->value_as_DoubleField()->value();
+            double centroid_i_j = centroid_i->Get(j)->value_as_DoubleField()->value();
+
+            double dist = point_j - centroid_i_j;
+            distance_i += dist * dist;
+          }
+
+          if (distance_i < best_distance) {
+            best_distance = distance_i;
+            best_index = i;
+          }
+        }
+      }
+
+      std::vector<double> result_values;
+      auto result_centroid = centroids->Get(best_index)->value_as_ArrayField()->value();
+      for (flatbuffers::uoffset_t i = 0; i < result_centroid->size(); ++i) {
+        result_values.push_back(result_centroid->Get(i)->value_as_DoubleField()->value());
+      }
+
+      std::vector<flatbuffers::Offset<tuix::Field>> result;
+      for (double result_i : result_values) {
+        result.push_back(
+          tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, result_i).Union(),
+            false));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_ArrayField,
+        tuix::CreateArrayFieldDirect(builder, &result).Union(),
         result_is_null);
     }
 
