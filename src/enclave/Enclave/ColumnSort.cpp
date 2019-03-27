@@ -72,6 +72,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    print(row);
     w.write(row);
 
     if (i + 1 == n / 2) {
