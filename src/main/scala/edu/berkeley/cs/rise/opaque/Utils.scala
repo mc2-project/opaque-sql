@@ -704,13 +704,13 @@ object Utils extends Logging {
 
     // 3. Deserialize the tuix.ShuffleOutputs
     val shuffleOutputs = tuix.ShuffleOutputs.getRootAsShuffleOutputs(buf)
-    println("shuffleoutputs.outputslength: %d".format(shuffleOutputs.outputsLength))
     for (i <- 0 until shuffleOutputs.outputsLength) yield {
       val shuffleOutput = shuffleOutputs.outputs(i)
       val builder = new FlatBufferBuilder
       val blockOffsets =
         for (j <- 0 until shuffleOutput.rows.blocksLength) yield {
           val encryptedBlock = shuffleOutput.rows.blocks(i)
+          println(encryptedBlock.encRowsLength)
           val encRows = new Array[Byte](encryptedBlock.encRowsLength)
           encryptedBlock.encRowsAsByteBuffer.get(encRows)
           tuix.EncryptedBlock.createEncryptedBlock(
