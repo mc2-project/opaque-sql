@@ -109,9 +109,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    printf("Attempting to write row");
     ws[i % num_partitions]->write(row);
-    printf("Finished writing row\n");
     i++;
   }
 
@@ -119,13 +117,11 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   for (uint32_t j = 0; j < num_partitions; j++) {
     ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
-    printf("\nBuffer: %p\n", out_buffer.get());
+    printf("\nBuffer: %s\n", *out_buffer.get());
     // buffer is messed up
     ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
-    printf("120");
     shuffle_output_writer.append_shuffle_output(sor.get());
   }
-  printf("created shuffle outputs");
   shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
   *output_row = shuffle_output_writer.output_buffer().release();
   *output_row_size = shuffle_output_writer.output_size();
