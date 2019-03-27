@@ -126,12 +126,18 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
+    println("Transposed: \n")
+    println(transposed_data)
+
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 2, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+
+    println("Untransposed: \n")
+    println(untransposed_data)
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
@@ -140,12 +146,19 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
+    println("Shifed down: \n")
+    println(shifted_down_data)
+
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+
+
+    println("Shifed up: \n")
+    println(shifted_up_data)
 
     // Filter out dummy rows
     val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))

@@ -1184,7 +1184,6 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
     jint s,
     jint partition_index) {
   (void)obj;
-  printf("in JNI enclavecolumnsort");
   jboolean if_copy;
 
   uint32_t sort_order_length = static_cast<uint32_t>(env->GetArrayLength(sort_order));
@@ -1203,7 +1202,6 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_EnclaveColumnSort(
   } else if (round == 5) {
     sgx_check("Column Sort Filter", ecall_column_sort_filter(eid, input_rows_ptr, input_length, &output_buffer, &output_buffer_size));
   } else {
-    printf("in JNI enclavecolumnsort");
     sgx_check("Column Sort", ecall_column_sort(eid, round, sort_order_ptr, sort_order_length, input_rows_ptr, input_length, partition_index, 
       r, s, &output_buffer, &output_buffer_size));
   }
