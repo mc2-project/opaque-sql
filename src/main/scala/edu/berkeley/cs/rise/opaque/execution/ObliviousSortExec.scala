@@ -124,18 +124,12 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Transposed: ")
-    println(transposed_data.count())
-
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 2, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
-
-    // println("Untransposed: \n")
-    // untransposed_data.collect().foreach(println)
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {

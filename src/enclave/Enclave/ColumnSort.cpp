@@ -9,6 +9,8 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
+  printf("Shift up called\n");
+
   uint32_t top_destination =
     (partition_idx == 0) ? 0 : partition_idx - 1;
   uint32_t bottom_destination = (partition_idx == 0) ? num_partitions - 1 : partition_idx;
@@ -46,6 +48,8 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
   *output_row_size = w.output_size();
+  printf("Shift up finished\n");
+
 }
 
 void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
@@ -53,6 +57,8 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
               uint8_t **output_row, size_t *output_row_size) {
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
+
+  printf("Shift down called!\n");
 
   uint32_t top_destination = partition_idx;
   uint32_t bottom_destination = (partition_idx == num_partitions - 1) ? 0 : partition_idx + 1;
@@ -90,6 +96,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
   *output_row_size = w.output_size();
+  printf("Shift down finished!\n");
 }
 
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
