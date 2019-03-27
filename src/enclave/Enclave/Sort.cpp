@@ -86,6 +86,7 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
       runs.push_back(sort_single_encrypted_block(w, *it, sort_eval));
     }
+    printf("do i make it here\n");
     if (runs.size() > 1) {
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
