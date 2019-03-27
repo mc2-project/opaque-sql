@@ -98,30 +98,30 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
 
-  FlatbuffersRowWriter ws[num_partitions];
-  // std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws;
+  // FlatbuffersRowWriter ws[num_partitions];
+  std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws;
 
-  // for (uint32_t i = 0; i < num_partitions; ++i) {
-  //   ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(new FlatbuffersRowWriter()));
-  // }
+  for (uint32_t i = 0; i < num_partitions; ++i) {
+    ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(new FlatbuffersRowWriter()));
+  }
 
   uint32_t i = 0;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     printf("Attempting to write row");
-    ws[i % num_partitions].write(row);
+    ws[i % num_partitions]->write(row);
     printf("Finished writing row\n");
     i++;
   }
 
   FlatbuffersRowWriter shuffle_output_writer;
   for (uint32_t j = 0; j < num_partitions; j++) {
-    ws[j].write_shuffle_output(ws[j].write_encrypted_blocks(), j);
-    std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j].output_buffer();
+    ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
     printf("\nBuffer: %p\n", out_buffer.get());
     // buffer is messed up
-    ShuffleOutputReader sor(out_buffer.get(), ws[j].output_size());
+    ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
     printf("120");
     shuffle_output_writer.append_shuffle_output(sor.get());
   }
