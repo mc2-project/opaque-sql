@@ -217,11 +217,13 @@ void column_sort_filter(uint8_t *input_rows,
   printf("column sort filter called\n");
   while (r.has_next()) {
     row = r.next();
-    print(row);
     if (!row->is_dummy()) {
-      printf("found a dummy row\n");
       w.write(row);
+    } else {
+      printf("\nfound a dummy row: ");
     }
+    print(row);
+    
   }
 
   w.finish(w.write_encrypted_blocks());
