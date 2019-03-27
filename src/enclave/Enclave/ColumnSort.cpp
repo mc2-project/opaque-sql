@@ -58,8 +58,6 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  printf("Shift down called!\n");
-
   uint32_t top_destination = partition_idx;
   uint32_t bottom_destination = (partition_idx == num_partitions - 1) ? 0 : partition_idx + 1;
 
@@ -68,13 +66,10 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
 
-  printf("shift down rows: %i", n);
-
   bool top_written = false, bottom_written = false;
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    print(row);
     w.write(row);
 
     if (i + 1 == n / 2) {
@@ -85,7 +80,6 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
         w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
         bottom_written = true;
     }
-
     i++;
   }
 
@@ -99,7 +93,6 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
   *output_row_size = w.output_size();
-  printf("Shift down finished!\n");
 }
 
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,

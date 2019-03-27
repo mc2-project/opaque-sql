@@ -245,6 +245,7 @@ void ecall_column_sort(
     } else if (round == 3) {
         shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
+        printf("shift up?");
         shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
