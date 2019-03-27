@@ -77,8 +77,8 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
       top_written = true;
     }
     if (i == n - 1) {
-        w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
-        bottom_written = true;
+      w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+      bottom_written = true;
     }
     i++;
   }

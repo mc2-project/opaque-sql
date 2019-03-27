@@ -236,6 +236,7 @@ void ecall_column_sort(
     (void)r;
     uint8_t *sorted_rows;
     size_t sorted_rows_length;
+    printf("sorting issue?\n\n");
     external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows, &sorted_rows_length);
 
     if (round == 1) {
