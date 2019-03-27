@@ -390,7 +390,6 @@ public:
   }
 
   void write_dummy_row(const tuix::Row *row) {
-
     flatbuffers::uoffset_t num_fields = row->field_values()->size();
     std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
     for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
@@ -454,7 +453,6 @@ public:
 
   flatbuffers::Offset<tuix::EncryptedBlocks> write_encrypted_blocks() {
     if (rows_vector.size() > 0) {
-      printf("rows_vector size: %i\n", rows_vector.size());
       write_encrypted_block();
     }
     auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector);
