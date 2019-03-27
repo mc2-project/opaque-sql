@@ -21,6 +21,7 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    print(row);
     w.write(row);
 
     if (i + 1 == n / 2) {
@@ -142,7 +143,6 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *in_row = r.next();
-    print(in_row);
     w.write(in_row);
 
     idx = (row - 1) * num_partitions + col;
