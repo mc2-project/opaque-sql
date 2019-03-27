@@ -110,7 +110,7 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    printf("Attempting to write row\n");
+    print(row);
     ws[i % num_partitions]->write(row);
     printf("\nBuffer: %p\n", ws[i % num_partitions]->output_buffer().get());
     // I think nothing is being written to the buffer but still unsure
