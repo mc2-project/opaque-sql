@@ -37,7 +37,7 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
       top_written = true;
     }
-    if (i == n - 1) {
+    if (i == n) {
       w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
       bottom_written = true;
     }
@@ -90,7 +90,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
       top_written = true;
     }
-    if (i == n - 1) {
+    if (i == n) {
       w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
       bottom_written = true;
     }
