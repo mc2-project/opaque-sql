@@ -86,11 +86,11 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
       runs.push_back(sort_single_encrypted_block(w, *it, sort_eval));
     }
-    printf("do i make it here\n");
     if (runs.size() > 1) {
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
       w.finish(runs[0]);
+      printf("runs size is 1\n");
       *output_rows = w.output_buffer().release();
       *output_rows_length = w.output_size();
       return;
@@ -101,7 +101,7 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       return;
     }
   }
-
+  printf("About to merge sorted runs\n");
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
   // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
   // queue, and re-encrypting to a different buffer.
@@ -121,7 +121,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
 
       runs.push_back(external_merge(r, run_start, num_runs, w, sort_eval));
     }
-
     if (runs.size() > 1) {
       w.finish(w.write_sorted_runs(runs));
       runs_buf = w.output_buffer();
