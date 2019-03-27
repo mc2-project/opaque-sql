@@ -107,6 +107,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
   *output_row_size = w.output_size();
+  printf("Shift down finished!\n\n");
 }
 
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
