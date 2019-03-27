@@ -11,9 +11,16 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
 
   printf("Shift up called\n");
 
-  uint32_t top_destination =
-    (partition_idx == 0) ? 0 : partition_idx - 1;
-  uint32_t bottom_destination = (partition_idx == 0) ? num_partitions - 1 : partition_idx;
+  uint32_t top_destination;
+  uint32_t bottom_destination;
+
+  if (num_partitions == 1) {
+    top_destination = partition_idx;
+    bottom_destination = partition_idx;
+  } else {
+    top_destination = (partition_idx == 0) ? 0 : partition_idx - 1;
+    bottom_destination = (partition_idx == 0) ? num_partitions - 1 : partition_idx;
+  }
 
   uint32_t i = 0;
   uint32_t n = r.num_rows();
@@ -58,10 +65,17 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   EncryptedBlocksToRowReader r(input_rows, input_rows_length);
   FlatbuffersRowWriter w;
 
-  uint32_t top_destination = partition_idx;
-  uint32_t bottom_destination = (partition_idx == num_partitions - 1) ? 0 : partition_idx + 1;
+  uint32_t top_destination;
+  uint32_t bottom_destination;
 
-
+  if (num_partitions == 1) {
+    top_destination = partition_idx;
+    bottom_destination = partition_idx;
+  } else {
+    top_destination = partition_idx;
+    bottom_destination = (partition_idx == num_partitions - 1) ? 0 : partition_idx + 1;
+  }
+  
   uint32_t i = 0;
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
