@@ -234,6 +234,12 @@ void ecall_column_sort(
                   uint8_t **output_buffer,
                   size_t *output_buffer_length) {
     (void)r;
+
+    if (round == 6) {
+      external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
+      return;
+    }
+
     uint8_t *sorted_rows;
     size_t sorted_rows_length;
     external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows, &sorted_rows_length);
