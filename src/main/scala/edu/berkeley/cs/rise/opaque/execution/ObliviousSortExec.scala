@@ -138,8 +138,6 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Shifted down: \n")
-
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
