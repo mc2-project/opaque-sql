@@ -90,9 +90,11 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
       w.finish(runs[0]);
+      printf("93\n");
       *output_rows = w.output_buffer().release();
+      printf("95\n");
       *output_rows_length = w.output_size();
-      printf("runs size is 1\n");
+      printf("97\n");
       return;
     } else {
       w.finish(w.write_encrypted_blocks());
