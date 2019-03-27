@@ -214,10 +214,12 @@ void column_sort_filter(uint8_t *input_rows,
   FlatbuffersRowWriter w;
 
   const tuix::Row *row = NULL;
-
+  printf("column sort filter called\n");
   while (r.has_next()) {
     row = r.next();
+    print(row);
     if (!row->is_dummy()) {
+      printf("found a dummy row\n");
       w.write(row);
     }
   }
