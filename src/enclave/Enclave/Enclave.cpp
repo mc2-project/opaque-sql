@@ -244,7 +244,7 @@ void ecall_column_sort(
         untranspose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else if (round == 3) {
         shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
-    } else {
+    } else if (round == 4) {
         shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
