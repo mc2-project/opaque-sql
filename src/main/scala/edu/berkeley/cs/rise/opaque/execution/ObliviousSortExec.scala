@@ -124,8 +124,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Transposed: ")
-    println(transposed_data.count())
+    // println("Transposed: ")
+    // println(transposed_data.count())
     // transposed_data.collect().foreach(println)
 
     // Oblivious sort, untranspose

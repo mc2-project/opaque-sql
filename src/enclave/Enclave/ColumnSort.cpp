@@ -108,13 +108,13 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    print(row);
     ws[i % num_partitions]->write(row);
     i++;
   }
 
   FlatbuffersRowWriter shuffle_output_writer;
   for (uint32_t j = 0; j < num_partitions; j++) {
+    printf("Size of ws[%i]: %i", j, ws[j]->output_size());
     ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
     ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
