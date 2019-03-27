@@ -384,6 +384,7 @@ public:
 
   /** Copy the given Row to the output. */
   void write(const tuix::Row *row) {
+    print(row);
     rows_vector.push_back(flatbuffers_copy(row, builder));
     total_num_rows++;
     maybe_finish_block();
