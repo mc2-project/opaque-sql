@@ -396,7 +396,7 @@ public:
       field_values[i] = flatbuffers_copy<tuix::Field>(
         row->field_values()->Get(i), builder, true);
     }
-    rows_vector.push_back(tuix::CreateRow(builder, &field_values, true));
+    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values, true));
     total_num_rows++;
     maybe_finish_block();
   }
