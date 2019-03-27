@@ -59,6 +59,7 @@ object ObliviousSortExec extends java.io.Serializable {
   def ColumnSortFilter(data: Block, sort_order: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
+    println("filter called");
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, 5, data.bytes, r, s, 0)
 
@@ -157,7 +158,7 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Filter out dummy rows
-    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))
+    val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
