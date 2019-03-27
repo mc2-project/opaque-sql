@@ -127,7 +127,7 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     println("Transposed: \n")
-    println(transposed_data)
+    transposed_data.collect().foreach(println)
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
@@ -137,7 +137,7 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     println("Untransposed: \n")
-    println(untransposed_data)
+    untransposed_data.collect().foreach(println)
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
@@ -147,7 +147,7 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     println("Shifed down: \n")
-    println(shifted_down_data)
+    shifted_down_data.collect().foreach(println)
 
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
@@ -158,7 +158,8 @@ object ObliviousSortExec extends java.io.Serializable {
 
 
     println("Shifed up: \n")
-    println(shifted_up_data)
+    shifted_up_data.collect().foreach(println)
+
 
     // Filter out dummy rows
     val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))
