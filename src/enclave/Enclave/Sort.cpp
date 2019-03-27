@@ -79,8 +79,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // re-encrypting to a different buffer.
   FlatbuffersRowWriter w;
   {
-    printf("82\n");
-
     EncryptedBlocksToEncryptedBlockReader r(input_rows, input_rows_length);
     std::vector<flatbuffers::Offset<tuix::EncryptedBlocks>> runs;
     uint32_t i = 0;
@@ -92,11 +90,8 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       w.finish(w.write_sorted_runs(runs));
     } else if (runs.size() == 1) {
       w.finish(runs[0]);
-      printf("93\n");
       *output_rows = w.output_buffer().release();
-      printf("95\n");
       *output_rows_length = w.output_size();
-      printf("97\n");
       return;
     } else {
       w.finish(w.write_encrypted_blocks());
@@ -105,7 +100,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       return;
     }
   }
-  printf("About to merge sorted runs\n");
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
   // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
   // queue, and re-encrypting to a different buffer.

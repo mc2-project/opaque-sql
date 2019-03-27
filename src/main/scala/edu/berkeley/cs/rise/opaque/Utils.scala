@@ -717,7 +717,6 @@ object Utils extends Logging {
             encryptedBlock.numRows,            
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
         }
-      println("720")
       builder.finish(
         tuix.EncryptedBlocks.createEncryptedBlocks(
           builder,

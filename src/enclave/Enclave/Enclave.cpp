@@ -236,7 +236,6 @@ void ecall_column_sort(
     (void)r;
     uint8_t *sorted_rows;
     size_t sorted_rows_length;
-    printf("ex sort");
     external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows, &sorted_rows_length);
 
     if (round == 1) {
@@ -246,7 +245,6 @@ void ecall_column_sort(
     } else if (round == 3) {
         shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
-        printf("shift up?");
         shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     }
 
