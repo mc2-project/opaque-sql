@@ -436,6 +436,8 @@ public:
     builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
     size_t enc_rows_len = enc_size(builder.GetSize());
 
+    printf("enc_rows_len = %i", enc_rows_len);
+
     uint8_t *enc_rows_ptr = nullptr;
     ocall_malloc(enc_rows_len, &enc_rows_ptr);
 
@@ -454,7 +456,6 @@ public:
 
   flatbuffers::Offset<tuix::EncryptedBlocks> write_encrypted_blocks() {
     if (rows_vector.size() > 0) {
-      printf("Vector size should be greater than zero");
       write_encrypted_block();
     }
     auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector);
