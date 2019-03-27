@@ -68,6 +68,8 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
 
+  printf("shift down rows: %i", n);
+
   bool top_written = false, bottom_written = false;
 
   while (r.has_next()) {
