@@ -707,7 +707,6 @@ object Utils extends Logging {
     for (i <- 0 until shuffleOutputs.outputsLength) yield {
       val shuffleOutput = shuffleOutputs.outputs(i)
       val builder = new FlatBufferBuilder
-      println("here?")
       val blockOffsets =
         for (j <- 0 until shuffleOutput.rows.blocksLength) yield {
           val encryptedBlock = shuffleOutput.rows.blocks(i)
@@ -718,7 +717,7 @@ object Utils extends Logging {
             encryptedBlock.numRows,            
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
         }
-
+      println("720")
       builder.finish(
         tuix.EncryptedBlocks.createEncryptedBlocks(
           builder,
