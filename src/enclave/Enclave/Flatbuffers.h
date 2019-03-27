@@ -454,6 +454,7 @@ public:
 
   flatbuffers::Offset<tuix::EncryptedBlocks> write_encrypted_blocks() {
     if (rows_vector.size() > 0) {
+      printf("Vector size should be greater than zero");
       write_encrypted_block();
     }
     auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector);
