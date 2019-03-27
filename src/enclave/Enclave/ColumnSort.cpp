@@ -168,6 +168,9 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
     row++;
   }
 
+  // Write shuffle output for the last chunk of rows
+  w.write_shuffle_output(w.write_encrypted_blocks(), prev_dst_partition_idx);
+
   w.finish(w.write_shuffle_outputs());
   *output_row = w.output_buffer().release();
   *output_row_size = w.output_size(); 
