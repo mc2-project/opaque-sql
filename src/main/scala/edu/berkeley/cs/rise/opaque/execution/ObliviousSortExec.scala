@@ -114,10 +114,8 @@ object ObliviousSortExec extends java.io.Serializable {
     }
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
-    println("before pad")
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
-    println("after pad")
 
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
@@ -126,8 +124,9 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Transposed: \n")
-    transposed_data.collect().foreach(println)
+    println("Transposed: ")
+    println(transposed_data.count())
+    // transposed_data.collect().foreach(println)
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
@@ -136,8 +135,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Untransposed: \n")
-    untransposed_data.collect().foreach(println)
+    // println("Untransposed: \n")
+    // untransposed_data.collect().foreach(println)
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
@@ -146,8 +145,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("Shifed down: \n")
-    shifted_down_data.collect().foreach(println)
+    // println("Shifed down: \n")
+    // shifted_down_data.collect().foreach(println)
 
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
@@ -157,8 +156,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
 
-    println("Shifed up: \n")
-    shifted_up_data.collect().foreach(println)
+    // println("Shifed up: \n")
+    // shifted_up_data.collect().foreach(println)
 
 
     // Filter out dummy rows
