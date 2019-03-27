@@ -88,10 +88,12 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 
     if (i + 1 == n / 2) {
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
+      printf("top\n");
       top_written = true;
     }
     if (i == n) {
       w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+      printf("bottom\n");
       bottom_written = true;
     }
     i++;
