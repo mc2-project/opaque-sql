@@ -709,8 +709,7 @@ object Utils extends Logging {
       val builder = new FlatBufferBuilder
       val blockOffsets =
         for (j <- 0 until shuffleOutput.rows.blocksLength) yield {
-          val encryptedBlock = shuffleOutput.rows.blocks(i)
-          println(shuffleOutput.rows.blocksLength)
+          val encryptedBlock = shuffleOutput.rows.blocks(j)
           val encRows = new Array[Byte](encryptedBlock.encRowsLength)
           encryptedBlock.encRowsAsByteBuffer.get(encRows)
           tuix.EncryptedBlock.createEncryptedBlock(
