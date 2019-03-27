@@ -276,7 +276,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_StringField,
-      tuix::CreateStringFieldDirect(
+      tuix::CreateStringField(
         builder, &string_data, string_field->length()).Union(),
       is_null);
   }
