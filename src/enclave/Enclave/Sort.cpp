@@ -79,6 +79,8 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // re-encrypting to a different buffer.
   FlatbuffersRowWriter w;
   {
+    printf("82\n");
+
     EncryptedBlocksToEncryptedBlockReader r(input_rows, input_rows_length);
     std::vector<flatbuffers::Offset<tuix::EncryptedBlocks>> runs;
     uint32_t i = 0;
