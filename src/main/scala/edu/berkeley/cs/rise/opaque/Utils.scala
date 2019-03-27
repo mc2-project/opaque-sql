@@ -704,6 +704,7 @@ object Utils extends Logging {
 
     // 3. Deserialize the tuix.ShuffleOutputs
     val shuffleOutputs = tuix.ShuffleOutputs.getRootAsShuffleOutputs(buf)
+    println("shuffleoutputs.outputslength: %d".format(shuffleOutputs.outputsLength))
     for (i <- 0 until shuffleOutputs.outputsLength) yield {
       val shuffleOutput = shuffleOutputs.outputs(i)
       val builder = new FlatBufferBuilder
