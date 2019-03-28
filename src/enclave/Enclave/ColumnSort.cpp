@@ -121,6 +121,10 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    if (row->is_dummy) {
+      printf("\nDUMMY ROW: ");
+      print(row);
+    }
     ws[i % num_partitions]->write(row);
     i++;
   }
