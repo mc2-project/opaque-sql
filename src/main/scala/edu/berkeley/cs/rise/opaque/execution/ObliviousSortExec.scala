@@ -60,7 +60,7 @@ object ObliviousSortExec extends java.io.Serializable {
     sort_order: Array[Byte]) : Array[Byte] = {
 
     val (enclave, eid) = Utils.initEnclave()
-    val ret = enclave.EnclaveExternalSort(eid,
+    val ret = enclave.ExternalSort(eid,
       sort_order, data.bytes)
 
     ret
