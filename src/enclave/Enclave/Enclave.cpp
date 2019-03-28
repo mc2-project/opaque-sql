@@ -236,6 +236,7 @@ void ecall_column_sort(
     (void)r;
 
     if (round == 6) {
+      printf("6!");
       external_sort(sort_order, sort_order_length, input_rows, input_rows_length, output_buffer, output_buffer_length);
       return;
     }

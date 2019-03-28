@@ -147,6 +147,13 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
+    // Final oblivious sort
+    val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
+      (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 6, r, s))
+    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
+      .groupByKey()
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+
     // Filter out dummy rows
     val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
