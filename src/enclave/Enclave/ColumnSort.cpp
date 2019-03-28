@@ -196,7 +196,6 @@ void column_sort_pad(uint8_t *input_rows,
 
   uint32_t num_dummies = rows_per_partition - num_rows;
   for (uint32_t i = 0; i < num_dummies; i++) {
-    printf("\nDummy row supposed to be written");
     w.write_dummy_row(row);
   } 
 
@@ -214,7 +213,6 @@ void column_sort_filter(uint8_t *input_rows,
   FlatbuffersRowWriter w;
 
   const tuix::Row *row = NULL;
-  printf("column sort filter called\n");
   while (r.has_next()) {
     row = r.next();
     if (!row->is_dummy()) {
