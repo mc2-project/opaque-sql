@@ -198,7 +198,7 @@ void column_sort_pad(uint8_t *input_rows,
     w.write(row);
   }
 
-  uint32_t num_dummies = rows_per_partition - num_rows;
+  // uint32_t num_dummies = rows_per_partition - num_rows;
   // for (uint32_t i = 0; i < num_dummies; i++) {
   //   w.write_dummy_row(row);
   // } 
