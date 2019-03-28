@@ -219,7 +219,7 @@ flatbuffers::Offset<tuix::Row> flatbuffers_copy(
     field_values[i] = flatbuffers_copy<tuix::Field>(
       row->field_values()->Get(i), builder, force_null);
   }
-  return tuix::CreateRowDirect(builder, &field_values, false);
+  return tuix::CreateRowDirect(builder, &field_values);
 }
 
 template<>
@@ -272,7 +272,7 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
     auto string_field = static_cast<const tuix::StringField *>(field->value());
     std::vector<uint8_t> string_data(string_field->value()->begin(),
                                      string_field->value()->end());
-
+    
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_StringField,
