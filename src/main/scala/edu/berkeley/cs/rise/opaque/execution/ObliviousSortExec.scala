@@ -145,20 +145,11 @@ object ObliviousSortExec extends java.io.Serializable {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+      .mapPartitionsWithIndex{(index, pIter) => pIter.map(pairIter => Iterator(Utils.concatEncryptedBlocksWithIndex(index == NumMachines - 1, pairIter.flatMap(_._2).toSeq)))}
 
-
-    // TODO: Can we somehow concatEncryptedBlocks in a certain ordering to avoid having to make this ecall for sorting
-    // the last partition?
-    // Final Oblivious sort
-    val sorted_data = shifted_up_data.mapPartitionsWithIndex {
-      (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 6, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
-      .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Filter out dummy rows
-    val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
+    val filtered_data = final_sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
