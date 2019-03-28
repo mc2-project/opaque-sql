@@ -1196,7 +1196,7 @@ object Utils extends Logging {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
       if (last_partition) {
-        i <- 0 until encryptedBlocks.blocksLength by -1
+        i <- (encryptedBlocks.blocksLength to 0 by -1)
       } else {
         i <- 0 until encryptedBlocks.blocksLength
       }
