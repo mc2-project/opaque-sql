@@ -48,10 +48,20 @@ object ObliviousSortExec extends java.io.Serializable {
     partition_index: Int,
     sort_order: Array[Byte],
     round: Int, r: Int, s: Int) : Array[Byte] = {
-    println(round)
     val (enclave, eid) = Utils.initEnclave()
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, round, data.bytes, r, s, partition_index)
+
+    ret
+  }
+
+  def ExternalSort(
+    data: Block,
+    sort_order: Array[Byte]) : Array[Byte] = {
+
+    val (enclave, eid) = Utils.initEnclave()
+    val ret = enclave.EnclaveExternalSort(eid,
+      sort_order, data.bytes)
 
     ret
   }
@@ -117,7 +127,6 @@ object ObliviousSortExec extends java.io.Serializable {
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
     
     // Pad with dummy rows
-    println("padding")
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
 
     // Oblivious sort, transpose
@@ -148,16 +157,11 @@ object ObliviousSortExec extends java.io.Serializable {
       .groupByKey()
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
-    println("finish shift up in scala")
     // Final oblivious sort
-    val sort_data = shifted_up_data.mapPartitionsWithIndex {
-      (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 6, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
-      .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+    val sorted_data = shifted_up_data.mapPartitions(x => ExternalSort(x, sort_order))
 
     // Filter out dummy rows
-    val filtered_data = sort_data.map(x => ColumnSortFilter(x, sort_order, r, s))
+    val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
