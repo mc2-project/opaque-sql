@@ -199,9 +199,9 @@ void column_sort_pad(uint8_t *input_rows,
   }
 
   uint32_t num_dummies = rows_per_partition - num_rows;
-  for (uint32_t i = 0; i < num_dummies; i++) {
-    w.write_dummy_row(row);
-  } 
+  // for (uint32_t i = 0; i < num_dummies; i++) {
+  //   w.write_dummy_row(row);
+  // } 
 
   w.finish(w.write_encrypted_blocks());
   *output_row = w.output_buffer().release();
