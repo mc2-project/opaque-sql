@@ -117,6 +117,7 @@ object ObliviousSortExec extends java.io.Serializable {
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
     
     // Pad with dummy rows
+    println("padding")
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
 
     // Oblivious sort, transpose
