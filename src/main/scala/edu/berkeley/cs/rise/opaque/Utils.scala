@@ -1191,21 +1191,6 @@ object Utils extends Logging {
     Block(builder.sizedByteArray())
   }
 
-  def concatEncryptedBlocksWithIndex(last_partition: Boolean, blocks: Seq[Block]): Block = {
-    if (last_partition) {
-      val allBlocks = for {
-        block <- blocks
-        encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-        i <- 0 until encryptedBlocks.blocksLength by -1
-      } yield encryptedBlocks.blocks(i)
-    } else {
-      val allBlocks = for {
-        block <- blocks
-        encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-        i <- 0 until encryptedBlocks.blocksLength
-      } yield encryptedBlocks.blocks(i)
-    }
-
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(

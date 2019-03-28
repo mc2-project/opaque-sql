@@ -145,11 +145,10 @@ object ObliviousSortExec extends java.io.Serializable {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
     }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitionsWithIndex{(index, pIter) => pIter.map(pairIter => Iterator(Utils.concatEncryptedBlocksWithIndex(index == NumMachines - 1, pairIter.flatMap(_._2).toSeq)))}
-
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Filter out dummy rows
-    val filtered_data = final_sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
+    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
