@@ -158,7 +158,8 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
 
     // Final oblivious sort
-    val sorted_data = shifted_up_data.mapPartitions(x => ExternalSort(x, sort_order))
+    val sorted_data = shifted_up_data.mapPartitionsWithIndex {
+      (index, l) => l.map(x => ExternalSort(x, sort_order))
 
     // Filter out dummy rows
     val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
