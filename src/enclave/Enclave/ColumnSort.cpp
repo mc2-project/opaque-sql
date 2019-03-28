@@ -222,7 +222,7 @@ void column_sort_filter(uint8_t *input_rows,
     } else {
       printf("\nfound a dummy row: ");
     }
-    // print(row);
+    print(row);
 
   }
 
