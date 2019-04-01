@@ -109,7 +109,7 @@ object ObliviousSortExec extends java.io.Serializable {
       s = NumMachines * NumCores * Multiplier
       r = (math.ceil(len * 1.0 / s)).toInt
     }
-
+    println(r)
     // r should be even and a multiple of s
     if (r < 2 * math.pow(s, 2).toInt) {
       r = 2 * math.pow(s, 2).toInt
