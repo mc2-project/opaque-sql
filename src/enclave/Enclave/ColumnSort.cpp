@@ -2,6 +2,10 @@
 #include "Flatbuffers.h"
 #include <vector>
 
+
+/* 
+* Split each partition in half 
+*/
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
@@ -52,6 +56,12 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   *output_row_size = w.output_size();
 }
 
+/*
+* Split each partition in half and shift each half "downwards"
+* The top half of each partition stays in the same partition
+* The bottom half of each partition goes to the following partition
+* The bottom half of the last partition loops around to the first partition
+*/ 
 void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
@@ -106,7 +116,8 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 *   1 2 3
 *   4 5 6
 *   7 8 9
-* 
+* 1 goes to partition 1, 4 goes to partition 2, 7 goes to partition 3
+* 2 goes to partition 1, 5 goes to partition 2, 8 goes to partition 3, etc
 */
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
@@ -141,6 +152,16 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   *output_row_size = shuffle_output_writer.output_size();
 }
 
+
+/*
+* Read horizontally, write vertically
+* i.e. for a matrix
+*   1 2 3
+*   4 5 6
+*   7 8 9
+* 1 goes to partition 1, 2 goes to partition 1, 3 goes to partition 1
+* 4 goes to partition 2, 5 goes to partition 2, 6 goes to partition 2, etc
+*/
 void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
@@ -156,6 +177,7 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t dst_column = 0;
   uint32_t dst_partition_idx = 0;
   uint32_t prev_dst_partition_idx = 0;
+
   while (r.has_next()) {
     idx = (row - 1) * num_partitions + col;
     dst_column = (idx - 1) / n + 1;
@@ -181,6 +203,9 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
   *output_row_size = w.output_size(); 
 }
 
+/*
+* Pad with dummy rows so that each partition has the same number of rows
+*/
 void column_sort_pad(uint8_t *input_rows,
                          uint32_t input_rows_length,
                          uint32_t rows_per_partition,
@@ -208,6 +233,9 @@ void column_sort_pad(uint8_t *input_rows,
 
 }
 
+/*
+* Remove all dummy rows that were added during padding from each partition 
+*/
 void column_sort_filter(uint8_t *input_rows,
                          uint32_t input_rows_length,
                          uint8_t **output_row,
