@@ -22,9 +22,7 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
 
 object ObliviousSortExec extends java.io.Serializable {
 
-  val Multiplier = 1 // TODO: fix bug when this is 1
-
-  import Utils.logPerf
+  val Multiplier = 1
 
   def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
     var numRows:Long = 0.toLong
@@ -69,7 +67,6 @@ object ObliviousSortExec extends java.io.Serializable {
   def ColumnSortFilter(data: Array[Byte], sort_order: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
 
-    println("filter called");
     val ret = enclave.EnclaveColumnSort(eid,
       sort_order, 5, data, r, s, 0)
 
@@ -107,22 +104,17 @@ object ObliviousSortExec extends java.io.Serializable {
       s = NumMachines * NumCores * Multiplier
       r = (math.ceil(len * 1.0 / s)).toInt
     }
-    println(r)
+
     // r should be even and a multiple of s
-    // if (r < 2 * math.pow(s, 2).toInt) {
-    //   r = 2 * math.pow(s, 2).toInt
-    //   logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len, r=$r")
-    // }
+    if (r < 2 * math.pow(s, 2).toInt) {
+      r = 2 * math.pow(s, 2).toInt
+    }
 
-    // if (s % 2 == 0 && r % s != 0) {
-    //   logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
-    //   r = (r / s + 1) * s
-    // } else if (r % (2 * s) != 0) {
-    //   logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
-    //   r = (r / (2 * s) + 1) * (s * 2)
-    // }
-
-    logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
+    if (s % 2 == 0 && r % s != 0) {
+      r = (r / s + 1) * s
+    } else if (r % (2 * s) != 0) {
+      r = (r / (2 * s) + 1) * (s * 2)
+    }
     
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
