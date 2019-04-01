@@ -155,9 +155,6 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t prev_dst_partition_idx = 0;
   printf("untranspose\n");
   while (r.has_next()) {
-    const tuix::Row *in_row = r.next();
-    w.write(in_row);
-    print(in_row);
     idx = (row - 1) * num_partitions + col;
     dst_column = (idx - 1) / n + 1;
     dst_partition_idx = dst_column - 1;
@@ -166,6 +163,10 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
       // Rows are going to a different partition
       w.write_shuffle_output(w.write_encrypted_blocks(), prev_dst_partition_idx);
     }
+
+    const tuix::Row *in_row = r.next();
+    w.write(in_row);
+    print(in_row);
 
     prev_dst_partition_idx = dst_partition_idx;
     row++;
