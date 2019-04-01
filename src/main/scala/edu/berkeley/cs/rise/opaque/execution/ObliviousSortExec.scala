@@ -92,11 +92,9 @@ object ObliviousSortExec extends java.io.Serializable {
       .mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)
     var len = 0.toLong
 
-    println(numRows)
+    println(data.count())
 
-    var cur = 0.toLong
     for (idx <- 0 until numRows.length) {
-      cur += numRows(idx)._2
       len += numRows(idx)._2
     }
 
