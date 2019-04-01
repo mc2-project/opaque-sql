@@ -221,9 +221,7 @@ void column_sort_filter(uint8_t *input_rows,
     row = r.next();
     if (!row->is_dummy()) {
       w.write(row);
-    }
-    print(row);
-
+    } 
   }
 
   w.finish(w.write_encrypted_blocks());
