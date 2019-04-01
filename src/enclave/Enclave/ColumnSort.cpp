@@ -34,7 +34,7 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     w.write(row);
-    if (i + 1 == n / 2) {
+    if (i == n / 2) {
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
       top_written = true;
     }
@@ -89,7 +89,7 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     w.write(row);
-    if (i + 1 == n / 2) {
+    if (i == n / 2) {
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
       top_written = true;
     }
