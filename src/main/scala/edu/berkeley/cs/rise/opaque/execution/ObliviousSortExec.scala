@@ -99,7 +99,7 @@ object ObliviousSortExec extends java.io.Serializable {
     if (len == 0) {
       return data
     }
-    println(len)
+
     var s = s_input
     var r = r_input
 
@@ -109,18 +109,18 @@ object ObliviousSortExec extends java.io.Serializable {
     }
     println(r)
     // r should be even and a multiple of s
-    if (r < 2 * math.pow(s, 2).toInt) {
-      r = 2 * math.pow(s, 2).toInt
-      logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len, r=$r")
-    }
+    // if (r < 2 * math.pow(s, 2).toInt) {
+    //   r = 2 * math.pow(s, 2).toInt
+    //   logPerf(s"Padding r from $r to ${2 * math.pow(s, 2).toInt}. s=$s, len=$len, r=$r")
+    // }
 
-    if (s % 2 == 0 && r % s != 0) {
-      logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
-      r = (r / s + 1) * s
-    } else if (r % (2 * s) != 0) {
-      logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
-      r = (r / (2 * s) + 1) * (s * 2)
-    }
+    // if (s % 2 == 0 && r % s != 0) {
+    //   logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
+    //   r = (r / s + 1) * s
+    // } else if (r % (2 * s) != 0) {
+    //   logPerf(s"Padding r from $r to ${(r / s + 1) * s * 2}. s=$s, len=$len, r=$r")
+    //   r = (r / (2 * s) + 1) * (s * 2)
+    // }
 
     logPerf(s"len=$len, s=$s, r=$r, NumMachines: $NumMachines, NumCores: $NumCores, Multiplier: $Multiplier")
     
