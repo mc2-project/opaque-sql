@@ -203,8 +203,8 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   // }
 
   testObliviousAgainstSpark("sort") { securityLevel =>
-    val data = Random.shuffle((0 until 18).map(x => (x.toString, x)).toSeq)
-    val df = makeDF(data, securityLevel, "str", "x")
+    val data = Random.shuffle((0 until 18).map(x => (x, x.toString)).toSeq)
+    val df = makeDF(data, securityLevel, "x", "str")
     df.sort($"x").collect
   }
 
