@@ -216,6 +216,7 @@ void column_sort_filter(uint8_t *input_rows,
   const tuix::Row *row = NULL;
   while (r.has_next()) {
     row = r.next();
+    print(row);
     if (!row->is_dummy()) {
       w.write(row);
     } 
