@@ -245,7 +245,10 @@ void ecall_column_sort(
     } else if (round == 3) {
         shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
     } else {
-        shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
+      uint8_t *temp_buffer;
+      size_t temp_length;
+      shift_up(sorted_rows, sorted_rows_length, partition_index, s, *temp_buffer, &temp_length);
+      external_sort(sort_order, sort_order_length, temp_buffer, temp_length, output_buffer, output_buffer_length);
     }
   }
 
