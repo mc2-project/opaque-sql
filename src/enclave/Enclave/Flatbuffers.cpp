@@ -219,7 +219,7 @@ flatbuffers::Offset<tuix::Row> flatbuffers_copy(
     field_values[i] = flatbuffers_copy<tuix::Field>(
       row->field_values()->Get(i), builder, force_null);
   }
-  return tuix::CreateRowDirect(builder, &field_values);
+  return tuix::CreateRowDirect(builder, &field_values, row->is_dummy());
 }
 
 template<>
