@@ -221,8 +221,6 @@ void column_sort_filter(uint8_t *input_rows,
     row = r.next();
     if (!row->is_dummy()) {
       w.write(row);
-    } else {
-      printf("\nfound a dummy row: ");
     }
     print(row);
 
