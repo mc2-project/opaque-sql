@@ -4,7 +4,9 @@
 
 
 /* 
-* Split each partition in half 
+* Split each partition in half and shift each half "upwards"
+* The top half of each partition goes to the previous partition
+* The bottom half of each partition stays in the same partition
 */
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,

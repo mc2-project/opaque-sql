@@ -115,7 +115,7 @@ object ObliviousSortExec extends java.io.Serializable {
     } else if (r % (2 * s) != 0) {
       r = (r / (2 * s) + 1) * (s * 2)
     }
-    
+    println(r)
     // Pad with dummy rows
     val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
 
