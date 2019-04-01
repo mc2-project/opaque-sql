@@ -101,7 +101,12 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 }
 
 /*
-*
+* Read vertically, write horizontally
+* i.e. for a matrix
+*   1 2 3
+*   4 5 6
+*   7 8 9
+* 
 */
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
