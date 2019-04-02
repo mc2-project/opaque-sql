@@ -33,7 +33,6 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   assert(n % 2 == 0);
 
   bool top_written = false, bottom_written = false;
-  printf("\nShift up");
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     w.write(row);
