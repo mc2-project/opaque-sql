@@ -152,7 +152,7 @@ object ObliviousSortExec extends java.io.Serializable {
       (index, l) => l.map(x => ExternalSort(x, sort_order))}
 
     // Filter out dummy rows
-    val filtered_data = shifted_up_data.map(x => ColumnSortFilter(x.bytes, sort_order, r, s))
+    val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }
