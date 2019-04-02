@@ -729,6 +729,7 @@ public:
             eval_binary_comparison<tuix::LessThan, std::less>(
               builder, a_eval, b_eval))
           ->value())->value();
+      a_less_than_b = a_less_than_b || (!row->is_dummy() && row2->is_dummy());
       bool b_less_than_a =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
@@ -736,6 +737,8 @@ public:
             eval_binary_comparison<tuix::LessThan, std::less>(
               builder, b_eval, a_eval))
           ->value())->value();
+      b_less_than_a = b_less_than_a || (row->is_dummy() && !row2->is_dummy());
+
 
       if (a_less_than_b) {
         return true;
