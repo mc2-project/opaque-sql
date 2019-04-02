@@ -272,7 +272,6 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
     auto string_field = static_cast<const tuix::StringField *>(field->value());
     std::vector<uint8_t> string_data(string_field->value()->begin(),
                                      string_field->value()->end());
-
     return tuix::CreateField(
       builder,
       tuix::FieldUnion_StringField,

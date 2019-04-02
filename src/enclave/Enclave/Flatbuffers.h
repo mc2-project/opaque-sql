@@ -408,7 +408,7 @@ public:
     for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
       field_values[i] = flatbuffers_copy<tuix::Field>(row_fields[i], builder);
     }
-    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values, false));
+    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
     total_num_rows++;
     maybe_finish_block();
   }
@@ -426,7 +426,7 @@ public:
     for (auto it = row2->field_values()->begin(); it != row2->field_values()->end(); ++it, ++i) {
       field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder);
     }
-    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values, false));
+    rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
     total_num_rows++;
     maybe_finish_block();
   }

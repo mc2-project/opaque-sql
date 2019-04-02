@@ -909,7 +909,7 @@ public:
       }
     }
     a = flatbuffers::GetTemporaryPointer<tuix::Row>(
-      builder2, tuix::CreateRowDirect(builder2, &init_fields, false));
+      builder2, tuix::CreateRowDirect(builder2, &init_fields));
   }
 
   void set(const tuix::Row *agg_row) {
@@ -934,7 +934,7 @@ public:
     for (auto field : *row->field_values()) {
       concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
     }
-    concat = tuix::CreateRowDirect(builder, &concat_fields, false);
+    concat = tuix::CreateRowDirect(builder, &concat_fields);
     const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
 
     // run update_exprs
@@ -946,7 +946,7 @@ public:
       }
     }
     a = flatbuffers::GetTemporaryPointer<tuix::Row>(
-      builder2, tuix::CreateRowDirect(builder2, &output_fields, false));
+      builder2, tuix::CreateRowDirect(builder2, &output_fields));
   }
 
   const tuix::Row *get_partial_agg() {
@@ -961,7 +961,7 @@ public:
     }
     return flatbuffers::GetTemporaryPointer<tuix::Row>(
       builder,
-      tuix::CreateRowDirect(builder, &output_fields, false));
+      tuix::CreateRowDirect(builder, &output_fields));
   }
 
   /** Return true if the two rows are from the same join group. */
