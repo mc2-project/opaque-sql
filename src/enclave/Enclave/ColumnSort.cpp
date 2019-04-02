@@ -31,8 +31,10 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   assert(n % 2 == 0);
 
   bool top_written = false, bottom_written = false;
+  printf("\nShift up");
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    print(row);
     w.write(row);
     if (i + 1 == n / 2) {
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
@@ -84,10 +86,11 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t i = 0;
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
-
+  printf("\nShift down");
   bool top_written = false, bottom_written = false;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    print(row);
     w.write(row);
     if (i + 1 == n / 2) {
       w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
@@ -136,8 +139,10 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
   }
 
   uint32_t i = 0;
+  printf("Transpose");
   while (r.has_next()) {
     const tuix::Row *row = r.next();
+    print(row);
     ws[i % num_partitions]->write(row);
     i++;
   }
@@ -179,7 +184,7 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
   uint32_t dst_column = 0;
   uint32_t dst_partition_idx = 0;
   uint32_t prev_dst_partition_idx = 0;
-
+  printf("\nUntranspose");
   while (r.has_next()) {
     idx = (row - 1) * num_partitions + col;
     dst_column = (idx - 1) / n + 1;
@@ -191,6 +196,7 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
     }
 
     const tuix::Row *in_row = r.next();
+    print(in_row);
     w.write(in_row);
 
     prev_dst_partition_idx = dst_partition_idx;
