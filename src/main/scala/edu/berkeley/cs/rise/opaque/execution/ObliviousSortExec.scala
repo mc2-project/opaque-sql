@@ -75,13 +75,13 @@ object ObliviousSortExec extends java.io.Serializable {
 
   def NewColumnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
-    // parse the bytes and split into blocks, one for each destination column
+    // Parse the bytes and split into blocks, one for each destination column
     val NumMachines = data.partitions.length
     val NumCores = 1
 
-    // let len be N
-    // divide N into r * s, where s is the number of machines, and r is the size of the
-    // constraints: s | r; r >= 2 * (s-1)^2
+    // Let len be N
+    // Divide N into r * s, where s is the number of machines, and r is the size of the
+    // Constraints: s | r; r >= 2 * (s-1)^2
 
     Utils.ensureCached(data)
 
