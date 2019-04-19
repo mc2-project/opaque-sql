@@ -1,6 +1,8 @@
 #include "Aggregate.h"
 
 #include "ExpressionEvaluation.h"
+#include "FlatbuffersReaders.h"
+#include "FlatbuffersWriters.h"
 #include "common.h"
 
 void non_oblivious_aggregate_step1(
@@ -11,10 +13,10 @@ void non_oblivious_aggregate_step1(
   uint8_t **last_row, size_t *last_row_length) {
 
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter first_row_writer;
-  FlatbuffersRowWriter last_group_writer;
-  FlatbuffersRowWriter last_row_writer;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter first_row_writer;
+  RowWriter last_group_writer;
+  RowWriter last_row_writer;
 
   FlatbuffersTemporaryRow prev, cur;
   while (r.has_next()) {
@@ -22,11 +24,11 @@ void non_oblivious_aggregate_step1(
     cur.set(r.next());
 
     if (prev.get() == nullptr) {
-      first_row_writer.write(cur.get());
+      first_row_writer.append(cur.get());
     }
 
     if (!r.has_next()) {
-      last_row_writer.write(cur.get());
+      last_row_writer.append(cur.get());
     }
 
     if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
@@ -34,19 +36,11 @@ void non_oblivious_aggregate_step1(
     }
     agg_op_eval.aggregate(cur.get());
   }
-  last_group_writer.write(agg_op_eval.get_partial_agg());
+  last_group_writer.append(agg_op_eval.get_partial_agg());
 
-  first_row_writer.finish(first_row_writer.write_encrypted_blocks());
-  *first_row = first_row_writer.output_buffer().release();
-  *first_row_length = first_row_writer.output_size();
-
-  last_group_writer.finish(last_group_writer.write_encrypted_blocks());
-  *last_group = last_group_writer.output_buffer().release();
-  *last_group_length = last_group_writer.output_size();
-
-  last_row_writer.finish(last_row_writer.write_encrypted_blocks());
-  *last_row = last_row_writer.output_buffer().release();
-  *last_row_length = last_row_writer.output_size();
+  first_row_writer.output_buffer(first_row, first_row_length);
+  last_group_writer.output_buffer(last_group, last_group_length);
+  last_row_writer.output_buffer(last_row, last_row_length);
 }
 
 void non_oblivious_aggregate_step2(
@@ -58,14 +52,17 @@ void non_oblivious_aggregate_step2(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  EncryptedBlocksToRowReader next_partition_first_row_reader(
-    next_partition_first_row, next_partition_first_row_length);
-  EncryptedBlocksToRowReader prev_partition_last_group_reader(
-    prev_partition_last_group, prev_partition_last_group_length);
-  EncryptedBlocksToRowReader prev_partition_last_row_reader(
-    prev_partition_last_row, prev_partition_last_row_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader next_partition_first_row_reader(
+    BufferRefView<tuix::EncryptedBlocks>(
+      next_partition_first_row, next_partition_first_row_length));
+  RowReader prev_partition_last_group_reader(
+    BufferRefView<tuix::EncryptedBlocks>(
+      prev_partition_last_group, prev_partition_last_group_length));
+  RowReader prev_partition_last_row_reader(
+    BufferRefView<tuix::EncryptedBlocks>(
+      prev_partition_last_row, prev_partition_last_row_length));
+  RowWriter w;
 
   if (next_partition_first_row_reader.num_rows() > 1) {
       throw std::runtime_error(
@@ -115,11 +112,9 @@ void non_oblivious_aggregate_step2(
 
     // Output the current aggregate if it is the last aggregate for its run
     if (next.get() == nullptr || !agg_op_eval.is_same_group(cur.get(), next.get())) {
-      w.write(agg_op_eval.evaluate());
+      w.append(agg_op_eval.evaluate());
     }
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_length = w.output_size();
+  w.output_buffer(output_rows, output_rows_length);
 }

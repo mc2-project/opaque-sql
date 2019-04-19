@@ -19,6 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import java.sql.Timestamp
 
+import scala.collection.mutable
 import scala.util.Random
 
 import org.apache.log4j.Level
@@ -34,11 +35,16 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
+import org.scalactic.Equality
+import org.scalactic.TolerantNumerics
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
+import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
+import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
+import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
 trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   def spark: SparkSession
@@ -50,7 +56,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   import testImplicits._
 
   override def beforeAll(): Unit = {
-    LogManager.getLogger("edu.berkeley.cs.rise.opaque").setLevel(Level.WARN)
     Utils.initSQLContext(spark.sqlContext)
   }
 
@@ -58,8 +63,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     spark.stop()
   }
 
-  def testAgainstSpark(name: String)(f: SecurityLevel => Any): Unit = {
+  private def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
+    new Equality[Array[A]] {
+      def areEqual(a: Array[A], b: Any): Boolean = {
+        b match {
+          case b: Array[_] =>
+            (a.length == b.length
+              && a.zip(b).forall {
+                case (x, y) => implicitly[Equality[A]].areEqual(x, y)
+              })
+          case _ => false
+        }
+      }
+      override def toString: String = s"TolerantArrayEquality"
+    }
+  }
+
+  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
+  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
+  implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
+
+  def testAgainstSpark[A : Equality](name: String)(f: SecurityLevel => A): Unit = {
     test(name + " - encrypted") {
+      // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
+      // using the numeric tolerance specified above
       assert(f(Encrypted) === f(Insecure))
     }
   }
@@ -77,12 +104,21 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   def withLoggingOff[A](f: () => A): A = {
-    val sparkLoggers = Seq("org.apache.spark", "org.apache.spark.executor.Executor")
-    for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.OFF)
+    val sparkLoggers = Seq(
+      "org.apache.spark",
+      "org.apache.spark.executor.Executor",
+      "org.apache.spark.scheduler.TaskSetManager")
+    val logLevels = new mutable.HashMap[String, Level]
+    for (l <- sparkLoggers) {
+      logLevels(l) = LogManager.getLogger(l).getLevel
+      LogManager.getLogger(l).setLevel(Level.OFF)
+    }
     try {
       f()
     } finally {
-      for (l <- sparkLoggers) LogManager.getLogger(l).setLevel(Level.WARN)
+      for (l <- sparkLoggers) {
+        LogManager.getLogger(l).setLevel(logLevels(l))
+      }
     }
   }
 
@@ -132,6 +168,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (map, "ant"))
     val df = makeDF(data, securityLevel, "map", "string")
     df.collect
+  }
+
+  testAgainstSpark("create DataFrame with nulls for all types") { securityLevel =>
+    val schema = StructType(Seq(
+      StructField("boolean", BooleanType),
+      StructField("integer", IntegerType),
+      StructField("long", LongType),
+      StructField("float", FloatType),
+      StructField("double", DoubleType),
+      StructField("date", DateType),
+      StructField("binary", BinaryType),
+      StructField("byte", ByteType),
+      StructField("calendar_interval", CalendarIntervalType),
+      StructField("null", NullType),
+      StructField("short", ShortType),
+      StructField("timestamp", TimestampType),
+      StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
+      StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
+      StructField("string", StringType)))
+
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
+        schema)).collect
   }
 
   testAgainstSpark("filter") { securityLevel =>
@@ -239,6 +299,14 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     p.join(f, $"pk" === $"fk").collect.toSet
   }
 
+  testAgainstSpark("non-foreign-key join") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
   def abc(i: Int): String = (i % 3) match {
     case 0 => "A"
     case 1 => "B"
@@ -309,10 +377,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       .collect.sortBy { case Row(str: String, _, _) => str }
   }
 
-  testOpaqueOnly("global aggregate") { securityLevel =>
+  testAgainstSpark("global aggregate") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
-    val result = words.agg(sum("count").as("totalCount"))
+    words.agg(sum("count").as("totalCount")).collect
   }
 
   testAgainstSpark("contains") { securityLevel =>
@@ -447,13 +515,83 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     assert(e.getCause.isInstanceOf[OpaqueException])
   }
 
-  testAgainstSpark("least squares") { securityLevel =>
-    val answer = LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
-    answer
+  testAgainstSpark("exp") { securityLevel =>
+    val data: Seq[(Double, Double)] = Seq(
+      (2.0, 3.0))
+    val schema = StructType(Seq(
+      StructField("x", DoubleType),
+      StructField("y", DoubleType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(exp($"y")).collect
   }
 
-  testOpaqueOnly("pagerank") { securityLevel =>
-    PageRank.run(spark, securityLevel, "256", numPartitions)
+  testAgainstSpark("vector multiply") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), 3.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(vectormultiply($"v", $"c")).collect
+  }
+
+  testAgainstSpark("dot product") { securityLevel =>
+    val data: Seq[(Array[Double], Array[Double])] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
+    val schema = StructType(Seq(
+      StructField("v1", DataTypes.createArrayType(DoubleType)),
+      StructField("v2", DataTypes.createArrayType(DoubleType))))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(dot($"v1", $"v2")).collect
+  }
+
+  testAgainstSpark("vector sum") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 2.0, 3.0), 4.0),
+      (Array[Double](5.0, 7.0, 7.0), 8.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    val vectorsum = new VectorSum
+    df.groupBy().agg(vectorsum($"v")).collect
+  }
+
+  testAgainstSpark("least squares") { securityLevel =>
+    LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
+  }
+
+  testAgainstSpark("logistic regression") { securityLevel =>
+    LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
+  }
+
+  testAgainstSpark("k-means") { securityLevel =>
+    import scala.math.Ordering.Implicits.seqDerivedOrdering
+    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+
+  testAgainstSpark("pagerank") { securityLevel =>
+    PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
   }
 
   testAgainstSpark("TPC-H 9") { securityLevel =>
@@ -468,9 +606,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
       .map { case Row(a: String, b: Double) => (a, b.toFloat) }
       .sortBy(_._1)
-      .map {
-        case (str: String, f: Float) => (str, "%.2f".format(f))
-      }
   }
 
   testAgainstSpark("big data 3") { securityLevel =>
@@ -524,4 +659,16 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
     val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
     p.join(f, $"pk" === $"fk").collect.toSet
   }
+
+  testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
+    // This test is intended to ensure that primary groups are never split across multiple
+    // partitions, which would break our implementation of non-foreign-key join.
+
+    val p_data = for (i <- 1 to 128) yield (i, 1)
+    val f_data = for (i <- 1 to 128) yield (i, 1)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
 }

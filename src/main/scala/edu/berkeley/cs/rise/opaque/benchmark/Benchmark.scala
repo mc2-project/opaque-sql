@@ -20,6 +20,14 @@ package edu.berkeley.cs.rise.opaque.benchmark
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.sql.SparkSession
 
+/**
+ * Convenient runner for benchmarks.
+ *
+ * To run locally, use
+ * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark'`.
+ *
+ * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
+ */
 object Benchmark {
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
@@ -37,26 +45,13 @@ object Benchmark {
     // val numPartitions =
     //   if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
 
-    val numPartitions = 5
-
     // Warmup
-    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
-    BigDataBenchmark.q2(spark, Encrypted, "tiny", numPartitions)
+    LogisticRegression.train(spark, Encrypted, 1000, 1)
+    LogisticRegression.train(spark, Encrypted, 1000, 1)
 
     // Run
-    BigDataBenchmark.q1(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q1(spark, Encrypted, "1million", numPartitions)
-
-    BigDataBenchmark.q2(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q2(spark, Encrypted, "1million", numPartitions)
-
-    BigDataBenchmark.q3(spark, Insecure, "1million", numPartitions)
-    BigDataBenchmark.q3(spark, Encrypted, "1million", numPartitions)
-
-    LeastSquares.query(spark, Insecure, "1000000", numPartitions)
-    LeastSquares.query(spark, Encrypted, "1000000", numPartitions)
-
-    Thread.sleep(10000000)
+    LogisticRegression.train(spark, Insecure, 100000, 1)
+    LogisticRegression.train(spark, Encrypted, 100000, 1)
 
     spark.stop()
   }

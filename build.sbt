@@ -12,7 +12,9 @@ sparkVersion := "2.4.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 val flatbuffersVersion = "1.7.0"
 
@@ -20,8 +22,19 @@ concurrentRestrictions in Global := Seq(
   Tags.limit(Tags.Test, 1))
 
 fork in Test := true
+fork in run := true
 
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
+javaOptions in run ++= Seq(
+  "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")
+
+// Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
+// spark-submit. From
+// https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
+run in Compile := Defaults.runTask(
+  fullClasspath in Compile,
+  mainClass in (Compile, run),
+  runner in (Compile, run)).evaluated
 
 scalacOptions ++= Seq(
   "-deprecation",
