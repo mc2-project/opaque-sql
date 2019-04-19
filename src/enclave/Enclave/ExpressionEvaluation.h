@@ -315,45 +315,55 @@ private:
     case tuix::ExprUnion_Add:
     {
       auto add = static_cast<const tuix::Add *>(expr->expr());
+      auto left_offset = eval_helper(row, add->left());
+      auto right_offset = eval_helper(row, add->right());
       return eval_binary_arithmetic_op<tuix::Add, std::plus>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, add->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, add->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_Subtract:
     {
       auto subtract = static_cast<const tuix::Subtract *>(expr->expr());
+      auto left_offset = eval_helper(row, subtract->left());
+      auto right_offset = eval_helper(row, subtract->right());
       return eval_binary_arithmetic_op<tuix::Subtract, std::minus>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, subtract->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, subtract->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_Multiply:
     {
       auto multiply = static_cast<const tuix::Multiply *>(expr->expr());
+      auto left_offset = eval_helper(row, multiply->left());
+      auto right_offset = eval_helper(row, multiply->right());
       return eval_binary_arithmetic_op<tuix::Multiply, std::multiplies>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, multiply->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_Divide:
     {
       auto divide = static_cast<const tuix::Divide *>(expr->expr());
+      auto left_offset = eval_helper(row, divide->left());
+      auto right_offset = eval_helper(row, divide->right());
       return eval_binary_arithmetic_op<tuix::Divide, std::divides>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, divide->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, divide->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     // Predicates
     case tuix::ExprUnion_And:
     {
       auto a = static_cast<const tuix::And *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, a->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, a->right()));
+      auto left_offset = eval_helper(row, a->left());
+      auto right_offset = eval_helper(row, a->right());
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_BooleanField
           || right->value_type() != tuix::FieldUnion_BooleanField) {
@@ -392,8 +402,10 @@ private:
     case tuix::ExprUnion_Or:
     {
       auto o = static_cast<const tuix::Or *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, o->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, o->right()));
+      auto left_offset = eval_helper(row, o->left());
+      auto right_offset = eval_helper(row, o->right());
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_BooleanField
           || right->value_type() != tuix::FieldUnion_BooleanField) {
@@ -454,59 +466,69 @@ private:
     case tuix::ExprUnion_LessThan:
     {
       auto lt = static_cast<const tuix::LessThan *>(expr->expr());
+      auto left_offset = eval_helper(row, lt->left());
+      auto right_offset = eval_helper(row, lt->right());
       return eval_binary_comparison<tuix::LessThan, std::less>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, lt->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, lt->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_LessThanOrEqual:
     {
       auto le = static_cast<const tuix::LessThanOrEqual *>(expr->expr());
+      auto left_offset = eval_helper(row, le->left());
+      auto right_offset = eval_helper(row, le->right());
       return eval_binary_comparison<tuix::LessThanOrEqual, std::less_equal>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, le->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, le->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_GreaterThan:
     {
       auto gt = static_cast<const tuix::GreaterThan *>(expr->expr());
+      auto left_offset = eval_helper(row, gt->left());
+      auto right_offset = eval_helper(row, gt->right());
       return eval_binary_comparison<tuix::GreaterThan, std::greater>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, gt->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_GreaterThanOrEqual:
     {
       auto ge = static_cast<const tuix::GreaterThanOrEqual *>(expr->expr());
+      auto left_offset = eval_helper(row, ge->left());
+      auto right_offset = eval_helper(row, ge->right());
       return eval_binary_comparison<tuix::GreaterThanOrEqual, std::greater_equal>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ge->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ge->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     case tuix::ExprUnion_EqualTo:
     {
       auto eq = static_cast<const tuix::EqualTo *>(expr->expr());
+      auto left_offset = eval_helper(row, eq->left());
+      auto right_offset = eval_helper(row, eq->right());
       return eval_binary_comparison<tuix::EqualTo, std::equal_to>(
         builder,
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, eq->left())),
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, eq->right())));
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
     }
 
     // String expressions
     case tuix::ExprUnion_Substring:
     {
       auto ss = static_cast<const tuix::Substring *>(expr->expr());
+      auto str_offset = eval_helper(row, ss->str());
+      auto pos_offset = eval_helper(row, ss->pos());
+      auto len_offset = eval_helper(row, ss->len());
       // Note: These temporary pointers will be invalidated when we next write to builder
-      const tuix::Field *str =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->str()));
-      const tuix::Field *pos =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->pos()));
-      const tuix::Field *len =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, ss->len()));
+      const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, str_offset);
+      const tuix::Field *pos = flatbuffers::GetTemporaryPointer(builder, pos_offset);
+      const tuix::Field *len = flatbuffers::GetTemporaryPointer(builder, len_offset);
       if (str->value_type() != tuix::FieldUnion_StringField
           || pos->value_type() != tuix::FieldUnion_IntegerField
           || len->value_type() != tuix::FieldUnion_IntegerField) {
@@ -569,15 +591,15 @@ private:
 
     case tuix::ExprUnion_Contains:
     {
-      auto c = static_cast<const tuix::Contains *>(expr->expr());
-
       // TODO: handle Contains(str, "")
 
+      auto c = static_cast<const tuix::Contains *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
       // Note: These temporary pointers will be invalidated when we next write to builder
-      const tuix::Field *left =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, c->left()));
-      const tuix::Field *right =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, c->right()));
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_StringField
           || right->value_type() != tuix::FieldUnion_StringField) {
@@ -618,13 +640,16 @@ private:
     case tuix::ExprUnion_If:
     {
       auto e = static_cast<const tuix::If *>(expr->expr());
+      auto predicate_offset = eval_helper(row, e->predicate());
+      auto true_value_offset = eval_helper(row, e->true_value());
+      auto false_value_offset = eval_helper(row, e->false_value());
       // Note: These temporary pointers will be invalidated when we next write to builder
       const tuix::Field *predicate =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->predicate()));
+        flatbuffers::GetTemporaryPointer(builder, predicate_offset);
       const tuix::Field *true_value =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->true_value()));
+        flatbuffers::GetTemporaryPointer(builder, true_value_offset);
       const tuix::Field *false_value =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->false_value()));
+        flatbuffers::GetTemporaryPointer(builder, false_value_offset);
       if (predicate->value_type() != tuix::FieldUnion_BooleanField) {
         throw std::runtime_error(
           std::string("tuix::If requires predicate to return Boolean, not ")
@@ -723,9 +748,12 @@ private:
     // Opaque UDFs
     case tuix::ExprUnion_VectorAdd:
     {
-      auto e = static_cast<const tuix::DotProduct *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+      auto e = static_cast<const tuix::VectorAdd *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_ArrayField
           || right->value_type() != tuix::FieldUnion_ArrayField) {
@@ -781,8 +809,11 @@ private:
     case tuix::ExprUnion_VectorMultiply:
     {
       auto e = static_cast<const tuix::VectorMultiply *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_ArrayField
           || right->value_type() != tuix::FieldUnion_DoubleField) {
@@ -830,8 +861,11 @@ private:
     case tuix::ExprUnion_DotProduct:
     {
       auto e = static_cast<const tuix::DotProduct *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_ArrayField
           || right->value_type() != tuix::FieldUnion_ArrayField) {
@@ -878,8 +912,11 @@ private:
     case tuix::ExprUnion_ClosestPoint:
     {
       auto e = static_cast<const tuix::ClosestPoint *>(expr->expr());
-      auto left = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->left()));
-      auto right = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, e->right()));
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      auto left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      auto right = flatbuffers::GetTemporaryPointer(builder, right_offset);
 
       if (left->value_type() != tuix::FieldUnion_ArrayField
           || right->value_type() != tuix::FieldUnion_ArrayField) {
@@ -1006,26 +1043,31 @@ public:
         break;
       }
 
-      const tuix::Field *a_eval_tmp = sort_order_evaluators[i]->eval(a);
-      const tuix::Field *a_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(a_eval_tmp, builder));
-      const tuix::Field *b_eval_tmp = sort_order_evaluators[i]->eval(b);
-      const tuix::Field *b_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(b_eval_tmp, builder));
+      // Evaluate the field of comparison for rows a and b. Because the first evaluation returns a
+      // temporary pointer that is invalidated by the second evaluation, we must copy the result of
+      // the first evaluation before performing the second evaluation. For simplicity, we then
+      // maintain offsets into builder rather than pointers, because offsets will not be invalidated
+      // by further operations.
+      auto a_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(a), builder);
+      auto b_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(b), builder);
 
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
             builder,
             eval_binary_comparison<tuix::LessThan, std::less>(
-              builder, a_eval, b_eval))
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, a_eval_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, b_eval_offset)))
           ->value())->value();
       bool b_less_than_a =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
             builder,
             eval_binary_comparison<tuix::LessThan, std::less>(
-              builder, b_eval, a_eval))
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, b_eval_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, a_eval_offset)))
           ->value())->value();
 
       if (a_less_than_b) {
@@ -1090,18 +1132,18 @@ public:
     builder.Clear();
     for (uint32_t i = 0; i < row1_evaluators.size(); i++) {
       const tuix::Field *row1_eval_tmp = row1_evaluators[i]->eval(row1);
-      const tuix::Field *row1_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(row1_eval_tmp, builder));
+      auto row1_eval_offset = flatbuffers_copy(row1_eval_tmp, builder);
       const tuix::Field *row2_eval_tmp = row2_evaluators[i]->eval(row2);
-      const tuix::Field *row2_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(row2_eval_tmp, builder));
+      auto row2_eval_offset = flatbuffers_copy(row2_eval_tmp, builder);
 
       bool row1_equals_row2 =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
             builder,
             eval_binary_comparison<tuix::EqualTo, std::equal_to>(
-              builder, row1_eval, row2_eval))
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset)))
           ->value())->value();
 
       if (!row1_equals_row2) {
@@ -1257,18 +1299,18 @@ public:
     builder.Clear();
     for (auto it = grouping_evaluators.begin(); it != grouping_evaluators.end(); ++it) {
       const tuix::Field *row1_eval_tmp = (*it)->eval(row1);
-      const tuix::Field *row1_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(row1_eval_tmp, builder));
+      auto row1_eval_offset = flatbuffers_copy(row1_eval_tmp, builder);
       const tuix::Field *row2_eval_tmp = (*it)->eval(row2);
-      const tuix::Field *row2_eval = flatbuffers::GetTemporaryPointer<tuix::Field>(
-        builder, flatbuffers_copy(row2_eval_tmp, builder));
+      auto row2_eval_offset = flatbuffers_copy(row2_eval_tmp, builder);
 
       bool row1_equals_row2 =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
             builder,
             eval_binary_comparison<tuix::EqualTo, std::equal_to>(
-              builder, row1_eval, row2_eval))
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset)))
           ->value())->value();
 
       if (!row1_equals_row2) {
