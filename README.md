@@ -83,6 +83,13 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     ```sh
     ${SPARK_HOME}/bin/spark-shell --jars ${OPAQUE_HOME}/target/scala-2.11/opaque_2.11-0.1.jar
     ```
+    
+    Alternatively, to run Opaque queries locally for development rather than on a cluster:
+    
+    ```sh
+    cd ${OPAQUE_HOME}
+    JVM_OPTS="-Xmx4G" build/sbt console
+    ```
 
 3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
 
