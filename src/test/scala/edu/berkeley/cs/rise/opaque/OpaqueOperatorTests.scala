@@ -577,6 +577,22 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.groupBy().agg(vectorsum($"v")).collect
   }
 
+  testAgainstSpark("create array") { securityLevel =>
+    val data: Seq[(Double, Double)] = Seq(
+      (1.0, 2.0),
+      (3.0, 4.0))
+    val schema = StructType(Seq(
+      StructField("x1", DoubleType),
+      StructField("x2", DoubleType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(array($"x1", $"x2").as("x")).collect
+  }
+
   testAgainstSpark("least squares") { securityLevel =>
     LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
   }

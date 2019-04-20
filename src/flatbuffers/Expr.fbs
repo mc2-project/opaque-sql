@@ -31,6 +31,7 @@ union ExprUnion {
     DotProduct,
     Exp,
     ClosestPoint,
+    CreateArray,
 }
 
 table Expr {
@@ -143,6 +144,11 @@ table Year {
 // Math expressions
 table Exp {
     child:Expr;
+}
+
+// Complex type creation
+table CreateArray {
+    children:[Expr];
 }
 
 // Opaque UDFs

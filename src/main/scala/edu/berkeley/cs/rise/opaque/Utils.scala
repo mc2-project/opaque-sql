@@ -57,6 +57,8 @@ import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
+import org.apache.spark.sql.catalyst.expressions.CaseWhen
+import org.apache.spark.sql.catalyst.expressions.CreateArray
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.Not
 import org.apache.spark.sql.catalyst.expressions.Or
@@ -890,6 +892,13 @@ object Utils extends Logging {
             tuix.If.createIf(
               builder, predOffset, trueOffset, falseOffset))
 
+        case (CaseWhen(Seq((predicate, trueValue)), falseValue), Seq(predOffset, trueOffset, falseOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.If,
+            tuix.If.createIf(
+              builder, predOffset, trueOffset, falseOffset))
+
         // Null expressions
         case (IsNull(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
@@ -931,6 +940,17 @@ object Utils extends Logging {
             tuix.ExprUnion.Exp,
             tuix.Exp.createExp(
               builder, childOffset))
+
+        // Complex type creation
+        case (ca @ CreateArray(children), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.CreateArray,
+            tuix.CreateArray.createCreateArray(
+              builder,
+              tuix.CreateArray.createChildrenVector(
+                builder,
+                childrenOffsets.toArray)))
 
         // Opaque UDFs
         case (VectorAdd(left, right), Seq(leftOffset, rightOffset)) =>
