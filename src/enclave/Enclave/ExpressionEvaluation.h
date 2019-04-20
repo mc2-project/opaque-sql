@@ -804,6 +804,23 @@ private:
         result_is_null);
     }
 
+    // Complex type creation
+    case tuix::ExprUnion_CreateArray:
+    {
+      auto e = expr->expr_as_CreateArray();
+
+      std::vector<flatbuffers::Offset<tuix::Field>> children_offsets;
+      for (auto child_expr : *e->children()) {
+        children_offsets.push_back(eval_helper(row, child_expr));
+      }
+
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_ArrayField,
+        tuix::CreateArrayFieldDirect(builder, &children_offsets).Union(),
+        false);
+    }
+
     // Opaque UDFs
     case tuix::ExprUnion_VectorAdd:
     {
