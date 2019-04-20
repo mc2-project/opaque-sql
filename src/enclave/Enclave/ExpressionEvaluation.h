@@ -270,6 +270,65 @@ private:
       {
         return flatbuffers_cast<tuix::DateField, Date>(cast, value, builder, result_is_null);
       }
+      case tuix::FieldUnion_StringField:
+      {
+        auto sf = value->value_as_StringField();
+        std::string s(sf->value()->begin(), sf->value()->begin() + sf->length());
+        switch (cast->target_type()) {
+        case tuix::ColType_IntegerType:
+        {
+          uint32_t result = 0;
+          if (!result_is_null) {
+            result = std::stol(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_IntegerField,
+            tuix::CreateIntegerField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_LongType:
+        {
+          uint64_t result = 0;
+          if (!result_is_null) {
+            result = std::stoll(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_LongField,
+            tuix::CreateLongField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_FloatType:
+        {
+          float result = 0;
+          if (!result_is_null) {
+            result = std::stof(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_FloatField,
+            tuix::CreateFloatField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_DoubleType:
+        {
+          double result = 0;
+          if (!result_is_null) {
+            result = std::stod(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, result).Union(),
+            result_is_null);
+        }
+        default:
+          throw std::runtime_error(
+            std::string("Can't cast String to ")
+            + std::string(tuix::EnumNameColType(cast->target_type())));
+        }
+      }
       case tuix::FieldUnion_ArrayField:
       {
         if (cast->target_type() != tuix::ColType_StringType) {
