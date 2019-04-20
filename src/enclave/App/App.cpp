@@ -321,8 +321,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
-    JNIEnv *env, jobject obj,
-    jlong eid) {
+  JNIEnv *env, jobject obj,
+  jlong eid) {
 
   (void)env;
   (void)obj;
@@ -388,9 +388,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2(
-    JNIEnv *env, jobject obj,
-    jlong eid,
-    jbyteArray msg2_input) {
+  JNIEnv *env, jobject obj,
+  jlong eid,
+  jbyteArray msg2_input) {
 
   (void)env;
   (void)obj;
@@ -458,9 +458,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
-    JNIEnv *env, jobject obj,
-    jlong eid,
-    jbyteArray att_result_input) {
+  JNIEnv *env, jobject obj,
+  jlong eid,
+  jbyteArray att_result_input) {
 
   (void)env;
   (void)obj;
@@ -575,15 +575,19 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Project",
-            ecall_project(
-              eid,
-              project_list_ptr, project_list_length,
-              input_rows_ptr, input_rows_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("Project: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Project",
+              ecall_project(
+                eid,
+                project_list_ptr, project_list_length,
+                input_rows_ptr, input_rows_length,
+                &output_rows, &output_rows_length));
+  }
 
   env->ReleaseByteArrayElements(project_list, (jbyte *) project_list_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
@@ -607,15 +611,19 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Filter",
-            ecall_filter(
-              eid,
-              condition_ptr, condition_length,
-              input_rows_ptr, input_rows_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("Filter: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Filter",
+              ecall_filter(
+                eid,
+                condition_ptr, condition_length,
+                input_rows_ptr, input_rows_length,
+                &output_rows, &output_rows_length));
+  }
 
   env->ReleaseByteArrayElements(condition, (jbyte *) condition_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
@@ -633,21 +641,25 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   uint32_t plength = (uint32_t) env->GetArrayLength(plaintext);
   jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(plaintext, &if_copy);
+  uint8_t *plaintext_ptr = (uint8_t *) env->GetByteArrayElements(plaintext, &if_copy);
 
-  uint8_t *plaintext_ptr = (uint8_t *) ptr;
+  uint8_t *ciphertext_copy = nullptr;
+  jsize clength = 0;
 
-  const jsize clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+  if (plaintext_ptr == nullptr) {
+    ocall_throw("Encrypt: JNI failed to get input byte array.");
+  } else {
+    clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+    ciphertext_copy = new uint8_t[clength];
+
+    sgx_check_quiet(
+      "Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
+  }
+
   jbyteArray ciphertext = env->NewByteArray(clength);
-
-  uint8_t *ciphertext_copy = new uint8_t[clength];
-
-  sgx_check_quiet(
-    "Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
-
   env->SetByteArrayRegion(ciphertext, 0, clength, (jbyte *) ciphertext_copy);
 
-  env->ReleaseByteArrayElements(plaintext, ptr, 0);
+  env->ReleaseByteArrayElements(plaintext, (jbyte *) plaintext_ptr, 0);
 
   delete[] ciphertext_copy;
 
@@ -663,14 +675,18 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
     env->GetByteArrayElements(input_rows, &if_copy));
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Sample",
-            ecall_sample(
-              eid,
-              input_rows_ptr, input_rows_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("Sample: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Sample",
+              ecall_sample(
+                eid,
+                input_rows_ptr, input_rows_length,
+                &output_rows, &output_rows_length));
+  }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
@@ -696,16 +712,20 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
     env->GetByteArrayElements(input_rows, &if_copy));
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Find Range Bounds",
-            ecall_find_range_bounds(
-              eid,
-              sort_order_ptr, sort_order_length,
-              num_partitions,
-              input_rows_ptr, input_rows_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("FindRangeBounds: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Find Range Bounds",
+              ecall_find_range_bounds(
+                eid,
+                sort_order_ptr, sort_order_length,
+                num_partitions,
+                input_rows_ptr, input_rows_length,
+                &output_rows, &output_rows_length));
+  }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, reinterpret_cast<jbyte *>(output_rows));
@@ -740,14 +760,18 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   uint8_t **output_partitions = new uint8_t *[num_partitions];
   size_t *output_partition_lengths = new size_t[num_partitions];
 
-  sgx_check("Partition For Sort",
-            ecall_partition_for_sort(
-              eid,
-              sort_order_ptr, sort_order_length,
-              num_partitions,
-              input_rows_ptr, input_rows_length,
-              boundary_rows_ptr, boundary_rows_length,
-              output_partitions, output_partition_lengths));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("PartitionForSort: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Partition For Sort",
+              ecall_partition_for_sort(
+                eid,
+                sort_order_ptr, sort_order_length,
+                num_partitions,
+                input_rows_ptr, input_rows_length,
+                boundary_rows_ptr, boundary_rows_length,
+                output_partitions, output_partition_lengths));
+  }
 
   env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
   env->ReleaseByteArrayElements(input_rows, reinterpret_cast<jbyte *>(input_rows_ptr), 0);
@@ -781,14 +805,18 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
     env->GetByteArrayElements(input_rows, &if_copy));
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("External non-oblivious sort",
-            ecall_external_sort(eid,
-                                sort_order_ptr, sort_order_length,
-                                input_rows_ptr, input_rows_length,
-                                &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("ExternalSort: JNI failed to get input byte array.");
+  } else {
+    sgx_check("External non-oblivious sort",
+              ecall_external_sort(eid,
+                                  sort_order_ptr, sort_order_length,
+                                  input_rows_ptr, input_rows_length,
+                                  &output_rows, &output_rows_length));
+  }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, reinterpret_cast<jbyte *>(output_rows));
@@ -813,15 +841,19 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Scan Collect Last Primary",
-            ecall_scan_collect_last_primary(
-              eid,
-              join_expr_ptr, join_expr_length,
-              input_rows_ptr, input_rows_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("ScanCollectLastPrimary: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Scan Collect Last Primary",
+              ecall_scan_collect_last_primary(
+                eid,
+                join_expr_ptr, join_expr_length,
+                input_rows_ptr, input_rows_length,
+                &output_rows, &output_rows_length));
+  }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
@@ -850,16 +882,20 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   uint32_t join_row_length = (uint32_t) env->GetArrayLength(join_row);
   uint8_t *join_row_ptr = (uint8_t *) env->GetByteArrayElements(join_row, &if_copy);
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Non-oblivious SortMergeJoin",
-            ecall_non_oblivious_sort_merge_join(
-              eid,
-              join_expr_ptr, join_expr_length,
-              input_rows_ptr, input_rows_length,
-              join_row_ptr, join_row_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Non-oblivious SortMergeJoin",
+              ecall_non_oblivious_sort_merge_join(
+                eid,
+                join_expr_ptr, join_expr_length,
+                input_rows_ptr, input_rows_length,
+                join_row_ptr, join_row_length,
+                &output_rows, &output_rows_length));
+  }
   
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
@@ -885,23 +921,27 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-  uint8_t *first_row;
-  size_t first_row_length;
+  uint8_t *first_row = nullptr;
+  size_t first_row_length = 0;
 
-  uint8_t *last_group;
-  size_t last_group_length;
+  uint8_t *last_group = nullptr;
+  size_t last_group_length = 0;
 
-  uint8_t *last_row;
-  size_t last_row_length;
+  uint8_t *last_row = nullptr;
+  size_t last_row_length = 0;
 
-  sgx_check("Non-Oblivious Aggregate Step 1",
-            ecall_non_oblivious_aggregate_step1(
-              eid,
-              agg_op_ptr, agg_op_length,
-              input_rows_ptr, input_rows_length,
-              &first_row, &first_row_length,
-              &last_group, &last_group_length,
-              &last_row, &last_row_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Non-Oblivious Aggregate Step 1",
+              ecall_non_oblivious_aggregate_step1(
+                eid,
+                agg_op_ptr, agg_op_length,
+                input_rows_ptr, input_rows_length,
+                &first_row, &first_row_length,
+                &last_group, &last_group_length,
+                &last_row, &last_row_length));
+  }
 
   jbyteArray first_row_array = env->NewByteArray(first_row_length);
   env->SetByteArrayRegion(first_row_array, 0, first_row_length, (jbyte *) first_row);
@@ -958,18 +998,22 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
   uint8_t *prev_partition_last_row_ptr =
     (uint8_t *) env->GetByteArrayElements(prev_partition_last_row, &if_copy);
 
-  uint8_t *output_rows;
-  size_t output_rows_length;
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
 
-  sgx_check("Non-Oblivious Aggregate Step 2",
-            ecall_non_oblivious_aggregate_step2(
-              eid,
-              agg_op_ptr, agg_op_length,
-              input_rows_ptr, input_rows_length,
-              next_partition_first_row_ptr, next_partition_first_row_length,
-              prev_partition_last_group_ptr, prev_partition_last_group_length,
-              prev_partition_last_row_ptr, prev_partition_last_row_length,
-              &output_rows, &output_rows_length));
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("NonObliviousAggregateStep2: JNI failed to get input byte array.");
+  } else {
+    sgx_check("Non-Oblivious Aggregate Step 2",
+              ecall_non_oblivious_aggregate_step2(
+                eid,
+                agg_op_ptr, agg_op_length,
+                input_rows_ptr, input_rows_length,
+                next_partition_first_row_ptr, next_partition_first_row_length,
+                prev_partition_last_group_ptr, prev_partition_last_group_length,
+                prev_partition_last_row_ptr, prev_partition_last_row_length,
+                &output_rows, &output_rows_length));
+  }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
