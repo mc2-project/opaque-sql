@@ -68,9 +68,6 @@
 static sgx_ra_context_t context = INT_MAX;
 JavaVM* jvm;
 
-/* Global EID shared by multiple threads */
-sgx_enclave_id_t global_eid = 0;
-
 typedef struct _sgx_errlist_t {
   sgx_status_t err;
   const char *msg;
@@ -265,7 +262,6 @@ void ocall_throw(const char *message) {
 
 JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave(
   JNIEnv *env, jobject obj, jstring library_path) {
-  (void)env;
   (void)obj;
 
   env->GetJavaVM(&jvm);
@@ -284,106 +280,31 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
-  JNIEnv *env, jobject obj) {
-
-  (void)env;
+  JNIEnv *env, jobject obj, jlong eid) {
   (void)obj;
 
-  // in the first step of the remote attestation, generate message 1 to send to the client
-  int ret = 0;
-
-  // Preparation for remote attestation by configuring extended epid group id
-  // This is Intel's group signature scheme for trusted hardware
-  // It keeps the machine anonymous while allowing the client to use a single public verification key to verify
+  sgx_status_t status;
+  sgx_check("Initialize Remote Attestation",
+            ecall_enclave_init_ra(eid, &status, &context));
+  sgx_check_quiet("Initialize Remote Attestation", status);
 
   uint32_t extended_epid_group_id = 0;
-  ret = sgx_get_extended_epid_group_id(&extended_epid_group_id);
-  if (SGX_SUCCESS != (sgx_status_t)ret) {
-    fprintf(stdout, "\nError, call sgx_get_extended_epid_group_id fail [%s].", __FUNCTION__);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  }
-
-#ifdef DEBUG
-  fprintf(stdout, "\nCall sgx_get_extended_epid_group_id success.");
-#endif
-
-  // The ISV application sends msg0 to the SP.
-  // The ISV decides whether to support this extended epid group id.
-#ifdef DEBUG
-  fprintf(stdout, "\nSending msg0 to remote attestation service provider.\n");
-#endif
-
+  sgx_check("Get Extended EPID Group ID",
+            sgx_get_extended_epid_group_id(&extended_epid_group_id));
   jbyteArray array_ret = env->NewByteArray(sizeof(uint32_t));
   env->SetByteArrayRegion(array_ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
-
   return array_ret;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
-  JNIEnv *env, jobject obj,
-  jlong eid) {
-
-  (void)env;
+  JNIEnv *env, jobject obj, jlong eid) {
   (void)obj;
-  (void)eid;
 
-  // Remote attestation will be initiated when the ISV server challenges the ISV
-  // app or if the ISV app detects it doesn't have the credentials
-  // (shared secret) from a previous attestation required for secure
-  // communication with the server.
-
-  int ret = 0;
-  int enclave_lost_retry_time = 2;
-  sgx_status_t status;
-
-  // Ideally, this check would be around the full attestation flow.
-  do {
-    ret = ecall_enclave_init_ra(eid,
-                                &status,
-                                false,
-                                &context);
-  } while (SGX_ERROR_ENCLAVE_LOST == ret && enclave_lost_retry_time--);
-
-  if (status != SGX_SUCCESS) {
-    printf("[RemoteAttestation1] enclave_init_ra's status is %u\n", (uint32_t) status);
-    std::exit(1);
-  }
-
-  uint8_t *msg1 = (uint8_t *) malloc(sizeof(sgx_ra_msg1_t));
-
-#ifdef DEBUG
-  printf("[RemoteAttestation1] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
-#endif
-
-  ret = sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, (sgx_ra_msg1_t*) msg1);
-
-  if(SGX_SUCCESS != ret) {
-    ret = -1;
-    fprintf(stdout, "\nError, call sgx_ra_get_msg1 fail [%s].", __FUNCTION__);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  } else {
-#ifdef DEBUG
-    fprintf(stdout, "\nCall sgx_ra_get_msg1 success.\n");
-    fprintf(stdout, "\nMSG1 body generated -\n");
-    PRINT_BYTE_ARRAY(stdout, msg1, sizeof(sgx_ra_msg1_t));
-#endif
-  }
-
-  // The ISV application sends msg1 to the SP to get msg2,
-  // msg2 needs to be freed when no longer needed.
-  // The ISV decides whether to use linkable or unlinkable signatures.
-#ifdef DEBUG
-  fprintf(stdout, "\nSending msg1 to remote attestation service provider."
-          "Expecting msg2 back.\n");
-#endif
-
+  sgx_ra_msg1_t msg1;
+  sgx_check("Get Remote Attestation Message 1",
+            sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, &msg1));
   jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
-  env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), (jbyte *) msg1);
-
-  free(msg1);
-
+  env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), reinterpret_cast<jbyte *>(&msg1));
   return array_ret;
 }
 
@@ -392,14 +313,11 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jlong eid,
   jbyteArray msg2_input) {
 
-  (void)env;
   (void)obj;
 
   int ret = 0;
   //sgx_ra_context_t context = INT_MAX;
 
-  (void)ret;
-  (void)eid;
   // Successfully sent msg1 and received a msg2 back.
   // Time now to check msg2.
 
@@ -462,7 +380,6 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   jlong eid,
   jbyteArray att_result_input) {
 
-  (void)env;
   (void)obj;
 
 #ifdef DEBUG

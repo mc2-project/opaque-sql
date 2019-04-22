@@ -4,7 +4,6 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-//extern const char *key_str;
 extern sgx_aes_gcm_128bit_key_t key_data;
 extern sgx_aes_gcm_128bit_key_t *key;
 

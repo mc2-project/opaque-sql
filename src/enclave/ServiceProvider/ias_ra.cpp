@@ -108,7 +108,6 @@ int ias_verify_attestation_evidence(
     ias_att_report_t* p_attestation_verification_report)
 {
     int ret = 0;
-    lc_ecc_state_handle_t ecc_state = NULL;
 
     //unused parameters
     UNUSED(pse_manifest);
@@ -148,21 +147,13 @@ int ias_verify_attestation_evidence(
     // @TODO: Product signing algorithm still TBD.  May be RSA2048 signing.
     // Generate the Service providers ECCDH key pair.
     do {
-        ret = lc_ecc256_open_context(&ecc_state);
-        if (LC_SUCCESS != ret) {
-            fprintf(stderr, "\nError, cannot get ECC cotext in [%s].",
-                    __FUNCTION__);
-            ret = -1;
-            break;
-        }
         // Sign
         ret = lc_ecdsa_sign( (uint8_t *)&p_attestation_verification_report->
                              info_blob.sample_epid_group_status,
                              sizeof(ias_platform_info_blob_t) - sizeof(sample_ec_sign256_t),
                              (lc_ec256_private_t *)&g_rk_priv_key,
                              (lc_ec256_signature_t *)&p_attestation_verification_report->
-                             info_blob.signature,
-                             ecc_state);
+                             info_blob.signature);
         if (LC_SUCCESS != ret) {
             fprintf(stderr, "\nError, sign ga_gb fail in [%s].", __FUNCTION__);
             ret = SP_INTERNAL_ERROR;
@@ -174,9 +165,6 @@ int ias_verify_attestation_evidence(
                             info_blob.signature.y);
 
     }while (0);
-    if (ecc_state) {
-        lc_ecc256_close_context(ecc_state);
-    }
     p_attestation_verification_report->pse_status = IAS_PSE_OK;
 
     // For now, don't simulate the policy reports.

@@ -69,19 +69,7 @@ sgx_ec256_public_t g_sp_pub_key = {{0}, {0}};
 sgx_ec256_private_t g_sp_priv_key = {{0}};
 
 
-typedef struct _sp_db_item_t
-{
-  lc_ec256_public_t             g_a;
-  lc_ec256_public_t             g_b;
-  lc_ec256_private_t            b;
-  lc_aes_gcm_128bit_key_t       vk_key;   // Shared secret key for the REPORT_DATA
-  lc_aes_gcm_128bit_key_t       mk_key;   // Shared secret key for generating MAC's
-  lc_aes_gcm_128bit_key_t       sk_key;   // Shared secret key for encryption
-  lc_aes_gcm_128bit_key_t       smk_key;  // Used only for SIGMA protocol
-  sample_ps_sec_prop_desc_t     ps_sec_prop;
-} sp_db_item_t;
 static sp_db_item_t g_sp_db;
-
 
 static const sample_extended_epid_group* g_sp_extended_epid_group_id= NULL;
 static bool g_is_sp_registered = false;
@@ -281,7 +269,6 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
   int ret = 0;
   ra_samp_response_header_t* p_msg2_full = NULL;
   sgx_ra_msg2_t *p_msg2 = NULL;
-  lc_ecc_state_handle_t ecc_state = NULL;
   //sgx_status_t ret = SGX_SUCCESS;
   bool derive_ret = false;
 
@@ -321,18 +308,10 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     }
 
     // Generate the Service providers ECCDH key pair.
-    ret = lc_ecc256_open_context(&ecc_state);
-    if(ret != LC_SUCCESS) {
-      fprintf(stderr, "[%s] Error, cannot get the ECC context.\n", __FUNCTION__);
-      ret = -1;
-      break;
-    }
-
     lc_ec256_public_t pub_key = {{0},{0}};
     lc_ec256_private_t priv_key = {{0}};
     ret = lc_ecc256_create_key_pair((lc_ec256_private_t *) &priv_key,
-                                    (lc_ec256_public_t *) &pub_key,
-                                    ecc_state);
+                                    (lc_ec256_public_t *) &pub_key);
     if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, cannot generate key pair.\n", __FUNCTION__);
       ret = SP_INTERNAL_ERROR;
@@ -351,8 +330,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     lc_ec256_dh_shared_t dh_key = {{0}};
     lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
                                    (lc_ec256_public_t *) &p_msg1->g_a,
-                                   (lc_ec256_dh_shared_t *) &dh_key,
-                                   NULL);
+                                   (lc_ec256_dh_shared_t *) &dh_key);
 
     if (ret != LC_SUCCESS) {
       fprintf(stderr, "[%s] Error, compute share key fail.\n", __FUNCTION__);
@@ -463,8 +441,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
     // Sign gb_ga
     ret = lc_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga),
                         (lc_ec256_private_t *)&g_sp_priv_key,
-                        (lc_ec256_signature_t *)&p_msg2->sign_gb_ga,
-                        NULL);
+                        (lc_ec256_signature_t *)&p_msg2->sign_gb_ga);
 
     // printf("[%s] lc_ecdsa_sign   ", __FUNCTION__);
     // print_hex((uint8_t *) p_msg2->sign_gb_ga.x, 32);
@@ -512,10 +489,6 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
   } else {
     // Freed by the network simulator in ra_free_network_response_buffer
     *pp_msg2 = p_msg2_full;
-  }
-
-  if (ecc_state) {
-    lc_ecc256_close_context(ecc_state);
   }
 
 #ifdef DEBUG

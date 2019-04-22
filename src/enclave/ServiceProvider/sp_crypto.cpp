@@ -375,24 +375,8 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
   return LC_SUCCESS;
 }
 
-lc_status_t lc_ecc256_open_context(lc_ecc_state_handle_t* ecc_handle) {
-  (void) ecc_handle;
-  *ecc_handle = NULL;
-  return LC_SUCCESS;
-}
-
-
-lc_status_t lc_ecc256_close_context(lc_ecc_state_handle_t ecc_handle) {
-  (void) ecc_handle;
-  ecc_handle = NULL;
-  return LC_SUCCESS;
-}
-
 lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
-                                      lc_ec256_public_t *p_public,
-                                      lc_ecc_state_handle_t ecc_handle) {
-
-  (void) ecc_handle;
+                                      lc_ec256_public_t *p_public) {
 
   EC_KEY *key = NULL;
   int ret = 0;
@@ -410,10 +394,6 @@ lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
     fprintf(stderr, "[%s] EC key generation failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
   }
-
-#ifdef DEBUG
-  //print_ec_key(key);
-#endif
 
   // convert the key information into sgx crypto library compatible formats
   lc_ssl2sgx(key, p_private, p_public);
@@ -519,13 +499,7 @@ EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {
 
 lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
                                            lc_ec256_public_t *p_public_ga,
-                                           lc_ec256_dh_shared_t *p_shared_key,
-                                           lc_ecc_state_handle_t ecc_handle) {
-
-  (void)p_private_b;
-  (void)p_public_ga;
-  (void)p_shared_key;
-  (void)ecc_handle;
+                                           lc_ec256_dh_shared_t *p_shared_key) {
 
   lc_ec256_dh_shared_t reverse;
 
@@ -564,13 +538,11 @@ void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)
 lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
                           uint32_t data_size,
                           lc_ec256_private_t *p_private,
-                          lc_ec256_signature_t *p_signature,
-                          lc_ecc_state_handle_t ecc_handle) {
+                          lc_ec256_signature_t *p_signature) {
   (void)p_data;
   (void)data_size;
   (void)p_private;
   (void)p_signature;
-  (void)ecc_handle;
 
   EC_KEY *key = get_priv_key(p_private);
   assert(key != NULL);

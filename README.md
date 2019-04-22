@@ -146,6 +146,10 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     // | baz|    5|
     // +----+-----+
     ```
+    
+## Deployment
+
+To use remote attestation in a production environment, follow [Intel's instructions](https://software.intel.com/en-us/articles/code-sample-intel-software-guard-extensions-remote-attestation-end-to-end-example#inpage-nav-4-1) to obtain and register a certificate.
 
 ## Contact
 

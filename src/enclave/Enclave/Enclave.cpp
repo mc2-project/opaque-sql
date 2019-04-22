@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <cassert>
 
+#include <sgx_lfence.h>
+#include <sgx_tkey_exchange.h>
+
 #include "Aggregate.h"
 #include "Crypto.h"
 #include "Filter.h"
@@ -10,7 +13,6 @@
 #include "Project.h"
 #include "Sort.h"
 #include "isv_enclave.h"
-#include "sgx_lfence.h"
 #include "util.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
@@ -221,9 +223,9 @@ void ecall_non_oblivious_aggregate_step2(
   }
 }
 
-sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
+sgx_status_t ecall_enclave_init_ra(sgx_ra_context_t *context) {
   try {
-    return enclave_init_ra(b_pse, p_context);
+    return sgx_ra_init(&g_sp_pub_key, false, context);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
     return SGX_ERROR_UNEXPECTED;

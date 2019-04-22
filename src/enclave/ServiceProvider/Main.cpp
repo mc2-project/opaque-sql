@@ -28,50 +28,69 @@
 
 #include "SP.h"
 #include "service_provider.h"
+#include "ServiceProvider.h"
 
-lc_aes_gcm_128bit_key_t key = "helloworld12312";
+ServiceProvider service_provider("Opaque SP");
 
-// These SP (service provider) calls are supposed to be made in a trusted environment
-// For now we assume that the trusted master executes these calls
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0(JNIEnv *env, jobject obj, jbyteArray msg0_input) {
-  // Master receives EPID information from the enclave
-
-  (void)env;
-  (void)obj;
-
-  //uint32_t msg0_size = (uint32_t) env->GetArrayLength(msg0_input);
-  jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg0_input, &if_copy);
-  uint32_t *extended_epid_group_id = (uint32_t *) ptr;
-
-  sp_ra_proc_msg0_req(*extended_epid_group_id);
+/**
+ * Throw a Java exception with the specified message.
+ *
+ * Important: Note that this function will return to the caller. The exception is only thrown at the
+ * end of the JNI method invocation.
+ */
+void jni_throw(JNIEnv *env, const char *message) {
+  jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
+  env->ThrowNew(exception, message);
 }
 
-// Returns msg2 to the enclave
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg1(JNIEnv *env, jobject obj, jbyteArray msg1_input) {
-
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
+  JNIEnv *env, jobject obj) {
   (void)env;
   (void)obj;
 
-  uint32_t msg1_size = (uint32_t) env->GetArrayLength(msg1_input);
+  std::string private_key_filename(std::getenv("PRIVATE_KEY_PATH"));
+  service_provider.load_private_key(private_key_filename);
+}
+
+
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0(
+  JNIEnv *env, jobject obj, jbyteArray msg0_input) {
+  (void)obj;
+
   jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg1_input, &if_copy);
-  sgx_ra_msg1_t *msg1 = (sgx_ra_msg1_t *) ptr;
+  jbyte *msg0_bytes = env->GetByteArrayElements(msg0_input, &if_copy);
+  uint32_t *extended_epid_group_id = reinterpret_cast<uint32_t *>(msg0_bytes);
 
-  ra_samp_response_header_t *pp_msg2 = NULL;
-  sp_ra_proc_msg1_req(msg1, msg1_size, &pp_msg2);
+  // "The Intel Attestation Service only supports the value of zero for the extended GID."
+  if (extended_epid_group_id != 0) {
+    jni_throw(env, "Remote attestation step 0: Unsupported extended EPID group");
+  }
 
-  jbyteArray array_ret = env->NewByteArray(pp_msg2->size);
-  env->SetByteArrayRegion(array_ret, 0, pp_msg2->size, (jbyte *) pp_msg2->body);
-  assert(pp_msg2->size == sizeof(sgx_ra_msg2_t));
+  env->ReleaseByteArrayElements(msg0_input, msg0_bytes, 0);
+}
 
-  free(pp_msg2);
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg1(
+  JNIEnv *env, jobject obj, jbyteArray msg1_input) {
+  (void)obj;
+
+  jboolean if_copy = false;
+  jbyte *msg1_bytes = env->GetByteArrayElements(msg1_input, &if_copy);
+  sgx_ra_msg1_t *msg1 = reinterpret_cast<sgx_ra_msg1_t *>(msg1_bytes);
+
+  uint32_t msg2_size;
+  std::unique_ptr<sgx_ra_msg2_t> msg2 = service_provider.process_msg1(msg1, &msg2_size);
+
+  jbyteArray array_ret = env->NewByteArray(msg2_size);
+  env->SetByteArrayRegion(array_ret, 0, msg2_size, reinterpret_cast<jbyte *>(msg2.get()));
+
+  env->ReleaseByteArrayElements(msg1_input, msg1_bytes, 0);
 
   return array_ret;
 }
 
 // Returns the attestation result to the enclave
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3(JNIEnv *env, jobject obj, jbyteArray msg3_input) {
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3(
+  JNIEnv *env, jobject obj, jbyteArray msg3_input) {
 
   (void)env;
   (void)obj;
@@ -95,15 +114,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPPro
   free(pp_att_full);
 
   return array_ret;
-}
-
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_LoadKeys(
-    JNIEnv *env, jobject obj) {
-  (void)env;
-  (void)obj;
-
-  const char *private_key_filename = std::getenv("PRIVATE_KEY_PATH");
-  read_secret_key(private_key_filename, NULL);
 }
 
 int main(int argc, char **argv) {

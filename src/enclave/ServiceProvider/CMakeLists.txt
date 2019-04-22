@@ -7,6 +7,7 @@ set(SOURCES
   ecp.cpp
   ias_ra.cpp
   service_provider.cpp
+  ServiceProvider.cpp
   sp_crypto.cpp)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")

@@ -55,6 +55,8 @@
 #include <openssl/ec.h>
 #include <openssl/rand.h>
 
+#include <sgx_tcrypto.h>
+
 #include "common.h"
 
 //#define TEST_EC
@@ -82,27 +84,10 @@ typedef enum lc_status_t {
 #define LC_CMAC_MAC_SIZE               16
 #define LC_AESCTR_KEY_SIZE             16
 
-typedef struct lc_ec256_dh_shared_t
-{
-  uint8_t s[LC_ECP256_KEY_SIZE];
-} lc_ec256_dh_shared_t;
-
-typedef struct lc_ec256_private_t
-{
-    uint8_t r[LC_ECP256_KEY_SIZE];
-} lc_ec256_private_t;
-
-typedef struct lc_ec256_public_t
-{
-    uint8_t gx[LC_ECP256_KEY_SIZE];
-    uint8_t gy[LC_ECP256_KEY_SIZE];
-} lc_ec256_public_t;
-
-typedef struct lc_ec256_signature_t
-{
-    uint32_t x[LC_NISTP_ECP256_KEY_SIZE];
-    uint32_t y[LC_NISTP_ECP256_KEY_SIZE];
-} lc_ec256_signature_t;
+typedef sgx_ec256_dh_shared_t lc_ec256_dh_shared_t;
+typedef sgx_ec256_private_t lc_ec256_private_t;
+typedef sgx_ec256_public_t lc_ec256_public_t;
+typedef sgx_ec256_signature_t lc_ec256_signature_t;
 
 typedef SHA256_CTX* lc_sha_state_handle_t;
 typedef void* lc_cmac_state_handle_t;
@@ -181,43 +166,24 @@ LC_LIBCRYPTO_API lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t 
                                                      lc_cmac_128bit_tag_t *p_mac);
 
 
-/*
-* Elliptic Curve Crytpography - Based on GF(p), 256 bit
-*/
-/* Allocates and initializes ecc context
-* Parameters:
-*	Return: lc_status_t  - LC_SUCCESS or failure as defined LC_Error.h
-*	Output: lc_ecc_state_handle_t ecc_handle - Handle to ECC crypto system  */
-LC_LIBCRYPTO_API lc_status_t lc_ecc256_open_context(lc_ecc_state_handle_t* ecc_handle);
-
-/* Cleans up ecc context
-* Parameters:
-* 	Return: lc_status_t  - LC_SUCCESS or failure as defined LC_Error.h
-*	Output: lc_ecc_state_handle_t ecc_handle - Handle to ECC crypto system  */
-LC_LIBCRYPTO_API lc_status_t lc_ecc256_close_context(lc_ecc_state_handle_t ecc_handle);
-
 /* Populates private/public key pair - caller code allocates memory
 * Parameters:
 *	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
-*	Inputs: lc_ecc_state_handle_t ecc_handle - Handle to ECC crypto system
 *	Outputs: lc_ec256_private_t *p_private - Pointer to the private key
 *			 lc_ec256_public_t *p_public - Pointer to the public key  */
 LC_LIBCRYPTO_API lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
-                                                       lc_ec256_public_t *p_public,
-                                                       lc_ecc_state_handle_t ecc_handle);
+                                                       lc_ec256_public_t *p_public);
 
 /* Computes DH shared key based on private B key (local) and remote public Ga Key
 * Parameters:
 *	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
-*	Inputs: lc_ecc_state_handle_t ecc_handle - Handle to ECC crypto system
 *			lc_ec256_private_t *p_private_b - Pointer to the local private key - LITTLE ENDIAN
 *			lc_ec256_public_t *p_public_ga - Pointer to the remote public key - LITTLE ENDIAN
 *	Output: lc_ec256_dh_shared_t *p_shared_key - Pointer to the shared DH key - LITTLE ENDIAN
 x-coordinate of (privKeyB - pubKeyA) */
 LC_LIBCRYPTO_API lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
                                                             lc_ec256_public_t *p_public_ga,
-                                                            lc_ec256_dh_shared_t *p_shared_key,
-                                                            lc_ecc_state_handle_t ecc_handle);
+                                                            lc_ec256_dh_shared_t *p_shared_key);
 
 
 /* Computes signature for data based on private key
@@ -243,16 +209,14 @@ LC_LIBCRYPTO_API lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *
 *
 * Parameters:
 *   Return: lc_status_t - LC_SUCCESS, success, error code otherwise.
-*   Inputs: lc_ecc_state_handle_t ecc_handle - Handle to the ECC crypto system
-*           lc_ec256_private_t *p_private - Pointer to the private key - LITTLE ENDIAN
+*   Inputs: lc_ec256_private_t *p_private - Pointer to the private key - LITTLE ENDIAN
 *           uint8_t *p_data - Pointer to the data to be signed
 *           uint32_t data_size - Size of the data to be signed
 *   Output: ec256_signature_t *p_signature - Pointer to the signature - LITTLE ENDIAN */
 LC_LIBCRYPTO_API lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
                                         uint32_t data_size,
                                         lc_ec256_private_t *p_private,
-                                        lc_ec256_signature_t *p_signature,
-                                        lc_ecc_state_handle_t ecc_handle);
+                                        lc_ec256_signature_t *p_signature);
 
 /* Allocates and initializes sha256 state
 * Parameters:

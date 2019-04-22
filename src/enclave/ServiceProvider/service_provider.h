@@ -49,6 +49,8 @@
 #include "sp_crypto.h"
 //#include "sample_libcrypto.h"
 
+#include "ServiceProvider.h"
+
 
 #ifdef  __cplusplus
 extern "C" {
@@ -118,12 +120,6 @@ typedef struct sample_ec_pub_t
     uint8_t gx[SAMPLE_ECP_KEY_SIZE];
     uint8_t gy[SAMPLE_ECP_KEY_SIZE];
 } sample_ec_pub_t;
-
-/*fixed length to align with internal structure*/
-typedef struct sample_ps_sec_prop_desc_t
-{
-    uint8_t  sample_ps_sec_prop_desc[256];
-} sample_ps_sec_prop_desc_t;
 
 extern sgx_ec256_public_t g_sp_pub_key;
 extern sgx_ec256_private_t g_sp_priv_key;
