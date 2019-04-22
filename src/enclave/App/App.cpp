@@ -154,30 +154,42 @@ static sgx_errlist_t sgx_errlist[] = {
 };
 
 /* Check error conditions for loading enclave */
-void print_error_message(sgx_status_t ret)
-{
+std::string sgx_error_message(sgx_status_t ret) {
   size_t idx = 0;
-  size_t ttl = sizeof sgx_errlist/sizeof sgx_errlist[0];
+  size_t ttl = sizeof(sgx_errlist) / sizeof(sgx_errlist[0]);
 
   for (idx = 0; idx < ttl; idx++) {
-    if(ret == sgx_errlist[idx].err) {
-      if(NULL != sgx_errlist[idx].sug)
-        printf("Info: %s\n", sgx_errlist[idx].sug);
-      printf("Error: %s\n", sgx_errlist[idx].msg);
-      break;
+    if (ret == sgx_errlist[idx].err) {
+      std::string msg;
+      msg.append("Error: ");
+      msg.append(sgx_errlist[idx].msg);
+      if (NULL != sgx_errlist[idx].sug) {
+        msg.append(" Info: ");
+        msg.append(sgx_errlist[idx].sug);
+      }
+      return msg;
     }
   }
 
-  if (idx == ttl)
-    printf("Error code is 0x%X. Please refer to the \"Intel SGX SDK Developer Reference\" for "
-           "more details.\n", ret);
+  // Format the status code as hex
+  char buf[BUFSIZ] = {'\0'};
+  snprintf(buf, BUFSIZ, "%#04x", ret);
+
+  std::string msg;
+  msg.append("Error code is ");
+  msg.append(buf);
+  msg.append(". Please refer to the \"Intel SGX SDK Developer Reference\" for "
+             "more details.");
+  return msg;
 }
 
-void sgx_check_quiet(const char* message, sgx_status_t ret)
-{
+void sgx_check(const char *description, sgx_status_t ret) {
   if (ret != SGX_SUCCESS) {
-    printf("%s failed\n", message);
-    print_error_message(ret);
+    std::string msg;
+    msg.append(description);
+    msg.append(" failed. ");
+    msg.append(sgx_error_message(ret));
+    ocall_throw(msg.c_str());
   }
 }
 
@@ -202,8 +214,8 @@ public:
 };
 
 #if defined(PERF) || defined(DEBUG)
-#define sgx_check(message, op) do {                     \
-    printf("%s running...\n", message);                 \
+#define sgx_check_and_time(description, op) do {        \
+    printf("%s running...\n", description);             \
     uint64_t t_ = 0;                                    \
     sgx_status_t ret_;                                  \
     {                                                   \
@@ -212,14 +224,13 @@ public:
     }                                                   \
     double t_ms_ = ((double) t_) / 1000;                \
     if (ret_ != SGX_SUCCESS) {                          \
-      printf("%s failed (%f ms)\n", message, t_ms_);    \
-      print_error_message(ret_);                        \
+      sgx_check(description, ret_);                     \
     } else {                                            \
-      printf("%s done (%f ms).\n", message, t_ms_);     \
+      printf("%s done (%f ms).\n", description, t_ms_); \
     }                                                   \
   } while (0)
 #else
-#define sgx_check(message, op) sgx_check_quiet(message, op)
+#define sgx_check_and_time(description, op) sgx_check(description, op)
 #endif
 
 /* OCall functions */
@@ -271,9 +282,9 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   int updated = 0;
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
-  sgx_check("StartEnclave",
-            sgx_create_enclave(
-              library_path_str, SGX_DEBUG_FLAG, &token, &updated, &eid, nullptr));
+  sgx_check_and_time("StartEnclave",
+                     sgx_create_enclave(
+                       library_path_str, SGX_DEBUG_FLAG, &token, &updated, &eid, nullptr));
   env->ReleaseStringUTFChars(library_path, library_path_str);
 
   return eid;
@@ -286,7 +297,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   sgx_status_t status;
   sgx_check("Initialize Remote Attestation",
             ecall_enclave_init_ra(eid, &status, &context));
-  sgx_check_quiet("Initialize Remote Attestation", status);
+  sgx_check("Initialize Remote Attestation", status);
 
   uint32_t extended_epid_group_id = 0;
   sgx_check("Remote Attestation Step 0: Get Extended EPID Group ID",
@@ -312,6 +323,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   JNIEnv *env, jobject obj, jlong eid, jbyteArray msg2_input) {
   (void)obj;
 
+  uint32_t msg2_size = static_cast<uint32_t>(env->GetArrayLength(msg2_input));
   jboolean if_copy = false;
   jbyte *msg2_bytes = env->GetByteArrayElements(msg2_input, &if_copy);
   sgx_ra_msg2_t *msg2 = reinterpret_cast<sgx_ra_msg2_t *>(msg2_bytes);
@@ -325,7 +337,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                              sgx_ra_proc_msg2_trusted,
                              sgx_ra_get_msg3_trusted,
                              msg2,
-                             sizeof(sgx_ra_msg2_t),
+                             msg2_size,
                              &msg3,
                              &msg3_size));
 
@@ -383,12 +395,12 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Project: JNI failed to get input byte array.");
   } else {
-    sgx_check("Project",
-              ecall_project(
-                eid,
-                project_list_ptr, project_list_length,
-                input_rows_ptr, input_rows_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Project",
+                       ecall_project(
+                         eid,
+                         project_list_ptr, project_list_length,
+                         input_rows_ptr, input_rows_length,
+                         &output_rows, &output_rows_length));
   }
 
   env->ReleaseByteArrayElements(project_list, (jbyte *) project_list_ptr, 0);
@@ -419,12 +431,12 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Filter: JNI failed to get input byte array.");
   } else {
-    sgx_check("Filter",
-              ecall_filter(
-                eid,
-                condition_ptr, condition_length,
-                input_rows_ptr, input_rows_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Filter",
+                       ecall_filter(
+                         eid,
+                         condition_ptr, condition_length,
+                         input_rows_ptr, input_rows_length,
+                         &output_rows, &output_rows_length));
   }
 
   env->ReleaseByteArrayElements(condition, (jbyte *) condition_ptr, 0);
@@ -454,8 +466,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
-    sgx_check_quiet(
-      "Encrypt", ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
+    sgx_check("Encrypt",
+              ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
   }
 
   jbyteArray ciphertext = env->NewByteArray(clength);
@@ -483,11 +495,11 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Sample: JNI failed to get input byte array.");
   } else {
-    sgx_check("Sample",
-              ecall_sample(
-                eid,
-                input_rows_ptr, input_rows_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Sample",
+                       ecall_sample(
+                         eid,
+                         input_rows_ptr, input_rows_length,
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -520,13 +532,13 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("FindRangeBounds: JNI failed to get input byte array.");
   } else {
-    sgx_check("Find Range Bounds",
-              ecall_find_range_bounds(
-                eid,
-                sort_order_ptr, sort_order_length,
-                num_partitions,
-                input_rows_ptr, input_rows_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Find Range Bounds",
+                       ecall_find_range_bounds(
+                         eid,
+                         sort_order_ptr, sort_order_length,
+                         num_partitions,
+                         input_rows_ptr, input_rows_length,
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -565,14 +577,14 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   if (input_rows_ptr == nullptr) {
     ocall_throw("PartitionForSort: JNI failed to get input byte array.");
   } else {
-    sgx_check("Partition For Sort",
-              ecall_partition_for_sort(
-                eid,
-                sort_order_ptr, sort_order_length,
-                num_partitions,
-                input_rows_ptr, input_rows_length,
-                boundary_rows_ptr, boundary_rows_length,
-                output_partitions, output_partition_lengths));
+    sgx_check_and_time("Partition For Sort",
+                       ecall_partition_for_sort(
+                         eid,
+                         sort_order_ptr, sort_order_length,
+                         num_partitions,
+                         input_rows_ptr, input_rows_length,
+                         boundary_rows_ptr, boundary_rows_length,
+                         output_partitions, output_partition_lengths));
   }
 
   env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
@@ -613,11 +625,11 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("ExternalSort: JNI failed to get input byte array.");
   } else {
-    sgx_check("External non-oblivious sort",
-              ecall_external_sort(eid,
-                                  sort_order_ptr, sort_order_length,
-                                  input_rows_ptr, input_rows_length,
-                                  &output_rows, &output_rows_length));
+    sgx_check_and_time("External Non-Oblivious Sort",
+                       ecall_external_sort(eid,
+                                           sort_order_ptr, sort_order_length,
+                                           input_rows_ptr, input_rows_length,
+                                           &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -649,12 +661,12 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
   if (input_rows_ptr == nullptr) {
     ocall_throw("ScanCollectLastPrimary: JNI failed to get input byte array.");
   } else {
-    sgx_check("Scan Collect Last Primary",
-              ecall_scan_collect_last_primary(
-                eid,
-                join_expr_ptr, join_expr_length,
-                input_rows_ptr, input_rows_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Scan Collect Last Primary",
+                       ecall_scan_collect_last_primary(
+                         eid,
+                         join_expr_ptr, join_expr_length,
+                         input_rows_ptr, input_rows_length,
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -690,13 +702,13 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
   } else {
-    sgx_check("Non-oblivious SortMergeJoin",
-              ecall_non_oblivious_sort_merge_join(
-                eid,
-                join_expr_ptr, join_expr_length,
-                input_rows_ptr, input_rows_length,
-                join_row_ptr, join_row_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Non-Oblivious Sort-Merge Join",
+                       ecall_non_oblivious_sort_merge_join(
+                         eid,
+                         join_expr_ptr, join_expr_length,
+                         input_rows_ptr, input_rows_length,
+                         join_row_ptr, join_row_length,
+                         &output_rows, &output_rows_length));
   }
   
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -735,14 +747,14 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
   } else {
-    sgx_check("Non-Oblivious Aggregate Step 1",
-              ecall_non_oblivious_aggregate_step1(
-                eid,
-                agg_op_ptr, agg_op_length,
-                input_rows_ptr, input_rows_length,
-                &first_row, &first_row_length,
-                &last_group, &last_group_length,
-                &last_row, &last_row_length));
+    sgx_check_and_time("Non-Oblivious Aggregate Step 1",
+                       ecall_non_oblivious_aggregate_step1(
+                         eid,
+                         agg_op_ptr, agg_op_length,
+                         input_rows_ptr, input_rows_length,
+                         &first_row, &first_row_length,
+                         &last_group, &last_group_length,
+                         &last_row, &last_row_length));
   }
 
   jbyteArray first_row_array = env->NewByteArray(first_row_length);
@@ -806,15 +818,15 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousAggregateStep2: JNI failed to get input byte array.");
   } else {
-    sgx_check("Non-Oblivious Aggregate Step 2",
-              ecall_non_oblivious_aggregate_step2(
-                eid,
-                agg_op_ptr, agg_op_length,
-                input_rows_ptr, input_rows_length,
-                next_partition_first_row_ptr, next_partition_first_row_length,
-                prev_partition_last_group_ptr, prev_partition_last_group_length,
-                prev_partition_last_row_ptr, prev_partition_last_row_length,
-                &output_rows, &output_rows_length));
+    sgx_check_and_time("Non-Oblivious Aggregate Step 2",
+                       ecall_non_oblivious_aggregate_step2(
+                         eid,
+                         agg_op_ptr, agg_op_length,
+                         input_rows_ptr, input_rows_length,
+                         next_partition_first_row_ptr, next_partition_first_row_length,
+                         prev_partition_last_group_ptr, prev_partition_last_group_length,
+                         prev_partition_last_row_ptr, prev_partition_last_row_length,
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);

@@ -227,7 +227,9 @@ sgx_status_t ecall_enclave_init_ra(sgx_ra_context_t *context) {
     return sgx_ra_init(&g_sp_pub_key, false, context);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
-    return SGX_ERROR_UNEXPECTED;
+    // We return success so that the exception just thrown doesn't get overridden by another
+    // exception due to the return code.
+    return SGX_SUCCESS;
   }
 }
 

@@ -25,6 +25,10 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
+    // If we are not running with real SGX hardware, then attestation is expected to fail. For
+    // development, we still want to send the shared secret to the enclaves in this case.
+    val forceAccept = System.getenv("SGX_MODE") != "HW"
+
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
 
     val sp = new SP()
@@ -46,15 +50,20 @@ object RA extends Logging {
       Iterator((i, msg1))
     }.collect.toMap
 
-    val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1))
+    val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
 
     val msg3s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
-      val msg3 = enclave.RemoteAttestation2(eid, msg2s(i))
+      val msg3 =
+        try {
+          enclave.RemoteAttestation2(eid, msg2s(i))
+        } catch {
+          case _: OpaqueException if forceAccept => Array.empty[Byte]
+        }
       Iterator((i, msg3))
     }.collect.toMap
 
-    val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3))
+    val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3, forceAccept)).map(identity)
 
     val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()

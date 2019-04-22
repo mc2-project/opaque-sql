@@ -45,7 +45,16 @@ public:
 
   std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
 
-  std::unique_ptr<ra_msg4_t> process_msg3(sgx_ra_msg3_t *msg3, uint32_t msg3_size);
+  /**
+   * Process attestation message 3 from an enclave and generate message 4 for that enclave. Message
+   * 4 contains the shared secret required for the enclave to decrypt data.
+   *
+   * If force_accept is true, then the attestation result will be ignored and the shared secret will
+   * be sent unconditionally. This is useful for development when running on simulated enclaves,
+   * which are expected to fail attestation.
+   */
+  std::unique_ptr<ra_msg4_t> process_msg3(
+    sgx_ra_msg3_t *msg3, uint32_t msg3_size, bool force_accept, uint32_t *msg4_size);
 
 private:
   sgx_ec256_public_t sp_pub_key;

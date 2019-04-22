@@ -52,11 +52,18 @@ void ServiceProvider::load_private_key(const std::string &filename) {
   }
 
   EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(pkey);
-  assert(ec_key != nullptr);
+  if (!ec_key) {
+    throw std::runtime_error("EVP_PKEY_get1_EC_KEY failed.");
+  }
+
+  const EC_GROUP *group = EC_KEY_get0_group(ec_key);
+  const EC_POINT *point = EC_KEY_get0_public_key(ec_key);
 
   BIGNUM *x_ec = BN_new();
   BIGNUM *y_ec = BN_new();
-  assert(EC_POINT_get_affine_coordinates_GFp(group, point, x_ec, y_ec, nullptr) == 0);
+  if (EC_POINT_get_affine_coordinates_GFp(group, point, x_ec, y_ec, nullptr) == 0) {
+    throw std::runtime_error("EC_POINT_get_affine_coordinates_GFp failed.");
+  }
 
   const BIGNUM *priv_bn = EC_KEY_get0_private_key(ec_key);
 
@@ -190,53 +197,61 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   return msg2;
 }
 
-std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(sgx_ra_msg3_t *msg3, uint32_t msg3_size) {
-  // The following procedure follows Intel's guide:
-  // https://software.intel.com/en-us/articles/code-sample-intel-software-guard-extensions-remote-attestation-end-to-end-example
-  // The quotes below are from this guide.
+std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
+  sgx_ra_msg3_t *msg3, uint32_t msg3_size, bool force_accept, uint32_t *msg4_size) {
+  if (!force_accept) {
+    if (msg3_size < sizeof(sgx_ra_msg3_t)) {
+      throw std::runtime_error("process_msg3: msg3 is invalid (expected sgx_ra_msg3_t).");
+    }
 
-  // "Verify that Ga in msg3 matches Ga in msg1."
-  if (memcmp(&sp_db.g_a, &msg3->g_a, sizeof(lc_ec256_public_t))) {
-    throw std::runtime_error("process_msg3: g_a mismatch");
+    // The following procedure follows Intel's guide:
+    // https://software.intel.com/en-us/articles/code-sample-intel-software-guard-extensions-remote-attestation-end-to-end-example
+    // The quotes below are from this guide.
+
+    // "Verify that Ga in msg3 matches Ga in msg1."
+    if (memcmp(&sp_db.g_a, &msg3->g_a, sizeof(lc_ec256_public_t))) {
+      throw std::runtime_error("process_msg3: g_a mismatch");
+    }
+
+    // "Verify CMAC_SMK(M)."
+    uint32_t mac_size = msg3_size - sizeof(sgx_mac_t);
+    const uint8_t *msg3_cmaced = reinterpret_cast<const uint8_t*>(msg3) + sizeof(sgx_mac_t);
+    lc_cmac_128bit_tag_t mac;
+    lc_check(lc_rijndael128_cmac_msg(&sp_db.smk_key, msg3_cmaced, mac_size, &mac));
+    if (memcmp(&msg3->mac, mac, sizeof(mac))) {
+      throw std::runtime_error("process_msg3: MAC mismatch");
+    }
+
+    // "Verify that the first 32-bytes of the report data match the SHA-256 digest of
+    // (Ga || Gb || VK), where || denotes concatenation. VK is derived by performing an AES-128 CMAC
+    // over the following byte sequence, using the KDK as the key:
+    // 0x01 || "VK" || 0x00 || 0x80 || 0x00
+    lc_sha_state_handle_t sha_handle;
+    lc_sha256_init(&sha_handle);
+    lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.g_a), sizeof(sp_db.g_a), sha_handle);
+    lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.g_b), sizeof(sp_db.g_b), sha_handle);
+    lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.vk_key), sizeof(sp_db.vk_key), sha_handle);
+    lc_sha256_hash_t hash;
+    lc_sha256_get_hash(sha_handle, &hash);
+    if (memcmp(reinterpret_cast<const uint8_t *>(&hash),
+               reinterpret_cast<const uint8_t *>(&msg3->quote),
+               32)) {
+      throw std::runtime_error("process_msg3: report data digest mismatch");
+    }
+
+    // TODO:
+    // "Verify the attestation evidence provided by the client.
+    // Extract the quote from msg3.
+    // Submit the quote to IAS, calling the API function to verify attestation evidence.
+    // Validate the signing certificate received in the report response.
+    // Validate the report signature using the signing certificate.
+    // Extract the attestation status for the enclave.
+    // Examine the enclave identity, security version and product ID.
+    // Decide whether or not to trust the enclave."
   }
-
-  // "Verify CMAC_SMK(M)."
-  uint32_t mac_size = msg3_size - sizeof(sgx_mac_t);
-  const uint8_t *msg3_cmaced = reinterpret_cast<const uint8_t*>(msg3) + sizeof(sgx_mac_t);
-  lc_cmac_128bit_tag_t mac;
-  lc_check(lc_rijndael128_cmac_msg(&sp_db.smk_key, msg3_cmaced, mac_size, &mac));
-  if (memcmp(&msg3->mac, mac, sizeof(mac))) {
-    throw std::runtime_error("process_msg3: MAC mismatch");
-  }
-
-  // "Verify that the first 32-bytes of the report data match the SHA-256 digest of
-  // (Ga || Gb || VK), where || denotes concatenation. VK is derived by performing an AES-128 CMAC
-  // over the following byte sequence, using the KDK as the key:
-  // 0x01 || "VK" || 0x00 || 0x80 || 0x00
-  lc_sha_state_handle_t sha_handle;
-  lc_sha256_init(&sha_handle);
-  lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.g_a), sizeof(sp_db.g_a), sha_handle);
-  lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.g_b), sizeof(sp_db.g_b), sha_handle);
-  lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.vk_key), sizeof(sp_db.vk_key), sha_handle);
-  lc_sha256_hash_t hash;
-  lc_sha256_get_hash(sha_handle, &hash);
-  if (memcmp(reinterpret_cast<const uint8_t *>(&hash),
-             reinterpret_cast<const uint8_t *>(&msg3->quote),
-             32)) {
-    throw std::runtime_error("process_msg3: report data digest mismatch");
-  }
-
-  // TODO:
-  // "Verify the attestation evidence provided by the client.
-  // Extract the quote from msg3.
-  // Submit the quote to IAS, calling the API function to verify attestation evidence.
-  // Validate the signing certificate received in the report response.
-  // Validate the report signature using the signing certificate.
-  // Extract the attestation status for the enclave.
-  // Examine the enclave identity, security version and product ID.
-  // Decide whether or not to trust the enclave."
 
   // Generate msg4, containing the shared secret to be sent to the enclave.
+  *msg4_size = sizeof(ra_msg4_t);
   std::unique_ptr<ra_msg4_t> msg4(new ra_msg4_t);
   uint8_t aes_gcm_iv[LC_AESGCM_IV_SIZE] = {0};
   lc_check(lc_rijndael128GCM_encrypt(&sp_db.sk_key,

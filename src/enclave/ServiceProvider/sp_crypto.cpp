@@ -58,7 +58,7 @@ lc_status_t print_pub_key(lc_ec256_public_t p_public) {
   return LC_SUCCESS;
 }
 
-lc_status_t print_ec_key(EC_KEY *ec_key) {
+void print_ec_key(EC_KEY *ec_key) {
   printf("Print ec_key \n");
 
   BIO *o = BIO_new_fp(stdout, BIO_NOCLOSE);
@@ -87,8 +87,6 @@ lc_status_t print_ec_key(EC_KEY *ec_key) {
   BIO_free_all(o);
   BN_free(x_ec);
   BN_free(y_ec);
-
-  return LC_SUCCESS;
 }
 
 

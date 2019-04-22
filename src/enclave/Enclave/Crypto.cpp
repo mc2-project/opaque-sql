@@ -30,6 +30,7 @@ void set_shared_key(sgx_ra_context_t context, uint8_t *msg4_bytes, uint32_t msg4
   const ra_msg4_t *msg4 = reinterpret_cast<ra_msg4_t *>(msg4_bytes);
 
   sgx_ec_key_128bit_t sk_key;
+  (void)context;
   sgx_check(sgx_ra_get_keys(context, SGX_RA_KEY_SK, &sk_key));
 
   uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = {0};

@@ -257,5 +257,5 @@ LC_LIBCRYPTO_API void lc_sha256_close(
 
 lc_status_t WARN_UNUSED print_priv_key(lc_ec256_private_t p_private);
 lc_status_t WARN_UNUSED print_pub_key(lc_ec256_public_t p_public);
-lc_status_t WARN_UNUSED print_ec_key(EC_KEY *ec_key);
+void print_ec_key(EC_KEY *ec_key);
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public);
