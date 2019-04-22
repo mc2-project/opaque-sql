@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0(
   uint32_t *extended_epid_group_id = reinterpret_cast<uint32_t *>(msg0_bytes);
 
   // "The Intel Attestation Service only supports the value of zero for the extended GID."
-  if (extended_epid_group_id != 0) {
+  if (*extended_epid_group_id != 0) {
     jni_throw(env, "Remote attestation step 0: Unsupported extended EPID group");
   }
 
