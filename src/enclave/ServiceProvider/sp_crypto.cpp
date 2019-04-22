@@ -110,9 +110,9 @@ void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len) {
 }
 
 
-lc_status_t lc_ssl2sgx(EC_KEY *ssl_key,
-                       lc_ec256_private_t *p_private,
-                       lc_ec256_public_t *p_public) {
+void lc_ssl2sgx(EC_KEY *ssl_key,
+                lc_ec256_private_t *p_private,
+                lc_ec256_public_t *p_public) {
 
   EC_GROUP *group = (EC_GROUP *) EC_KEY_get0_group(ssl_key);
   EC_POINT *point = (EC_POINT *) EC_KEY_get0_public_key(ssl_key);
@@ -157,8 +157,6 @@ lc_status_t lc_ssl2sgx(EC_KEY *ssl_key,
   // free BN
   BN_free(x_ec);
   BN_free(y_ec);
-
-  return LC_SUCCESS;
 }
 
 // This is a wrapper around the OpenSSL EVP AES-GCM encryption
@@ -587,85 +585,25 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   return LC_SUCCESS;
 }
 
-lc_status_t lc_sha256_init(lc_sha_state_handle_t* p_sha_handle) {
+void lc_sha256_init(lc_sha_state_handle_t* p_sha_handle) {
   SHA256_CTX *sha256_ctx = new SHA256_CTX;
   SHA256_Init(sha256_ctx);
   *p_sha_handle = sha256_ctx;
-  return LC_SUCCESS;
 }
 
 
 
-lc_status_t lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {
+void lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {
   SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
   SHA256_Update(ctx, p_src, src_len);
-  return LC_SUCCESS;
 }
 
-lc_status_t lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash) {
+void lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash) {
   SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
   SHA256_Final((unsigned char *) p_hash, ctx);
-  return LC_SUCCESS;
 }
 
-lc_status_t lc_sha256_close(lc_sha_state_handle_t sha_handle) {
+void lc_sha256_close(lc_sha_state_handle_t sha_handle) {
   SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
   free(ctx);
-  return LC_SUCCESS;
-}
-
-
-void encrypt(lc_aes_gcm_128bit_key_t *key,
-             uint8_t *plaintext, uint32_t plaintext_length,
-             uint8_t *ciphertext, uint32_t ciphertext_length) {
-
-  // key size is 12 bytes/128 bits
-  // IV size is 12 bytes/96 bits
-  // MAC size is 16 bytes/128 bits
-
-  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-  (void)ciphertext_length;
-
-  uint8_t *iv_ptr = ciphertext;
-  // generate random IV
-  RAND_bytes(iv_ptr, LC_AESGCM_IV_SIZE);
-  lc_aes_gcm_128bit_tag_t *mac_ptr = (lc_aes_gcm_128bit_tag_t *) (ciphertext + LC_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = ciphertext + LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE;
-
-  lc_rijndael128GCM_encrypt(key,
-                            plaintext, plaintext_length,
-                            ciphertext_ptr,
-                            iv_ptr, LC_AESGCM_IV_SIZE,
-                            NULL, 0,
-                            mac_ptr);
-}
-
-
-void decrypt(lc_aes_gcm_128bit_key_t *key,
-             uint8_t *ciphertext, uint32_t ciphertext_length,
-             uint8_t *plaintext, uint32_t plaintext_length) {
-
-  // key size is 12 bytes/128 bits
-  // IV size is 12 bytes/96 bits
-  // MAC size is 16 bytes/128 bits
-
-  // one buffer to store IV (12 bytes) + ciphertext + mac (16 bytes)
-
-  uint32_t plength = ciphertext_length - LC_AESGCM_IV_SIZE - LC_AESGCM_MAC_SIZE;
-  (void)plaintext_length;
-  (void)plength;
-
-  uint8_t *iv_ptr = (uint8_t *) ciphertext;
-  lc_aes_gcm_128bit_tag_t *mac_ptr = (lc_aes_gcm_128bit_tag_t *) (ciphertext + LC_AESGCM_IV_SIZE);
-  uint8_t *ciphertext_ptr = (uint8_t *) (ciphertext + LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE);
-
-  uint8_t tag[LC_AESGCM_MAC_SIZE];
-
-  lc_rijndael128GCM_decrypt(ciphertext_ptr, ciphertext_length,
-                            NULL, 0,
-                            tag, *key, iv_ptr, plaintext);
-
-  if (memcmp(mac_ptr, tag, LC_AESGCM_MAC_SIZE) != 0) {
-    printf("Decrypt: invalid mac\n");
-  }
 }

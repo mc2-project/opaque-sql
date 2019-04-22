@@ -32,6 +32,12 @@ public:
   void load_private_key(const std::string &filename);
 
   /**
+   * Set the symmetric key to send to the enclave. This key is securely sent to the enclaves if
+   * attestation succeeds.
+   */
+  void set_shared_key(const uint8_t *shared_key);
+
+  /**
    * After calling load_private_key, write the corresponding public key as a C++ header file. This
    * file should be compiled into the enclave.
    */
@@ -39,11 +45,16 @@ public:
 
   std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
 
+  std::unique_ptr<ra_msg4_t> process_msg3(sgx_ra_msg3_t *msg3, uint32_t msg3_size);
+
 private:
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
+  uint8_t shared_key[LC_AESGCM_KEY_SIZE];
   sp_db_item_t sp_db;
   std::string spid;
 };
+
+extern ServiceProvider service_provider;
 
 #endif

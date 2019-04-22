@@ -147,9 +147,32 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     // +----+-----+
     ```
     
-## Deployment
+## Remote Attestation
 
-To use remote attestation in a production environment, follow [Intel's instructions](https://software.intel.com/en-us/articles/code-sample-intel-software-guard-extensions-remote-attestation-end-to-end-example#inpage-nav-4-1) to obtain and register a certificate.
+To use remote attestation, do the following:
+
+1. [Generate a self-signed certificate](https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using):
+
+    ```sh
+    cat <<EOF > client.cnf
+    [ ssl_client ]
+    keyUsage = digitalSignature, keyEncipherment, keyCertSign
+    subjectKeyIdentifier=hash
+    authorityKeyIdentifier=keyid,issuer
+    extendedKeyUsage = clientAuth, serverAuth
+    EOF
+
+    openssl genrsa -out client.key 2048
+    openssl req -key client.key -new -out client.req
+    openssl x509 -req -days 365 -in client.req -signkey client.key -out client.crt -extfile client.cnf -extensions ssl_client
+    openssl pkcs12 -export -out client.pfx -inkey client.key -in client.crt
+    
+    # Should print "client.crt: OK"
+    openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
+    ```
+    
+2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding).
+    
 
 ## Contact
 

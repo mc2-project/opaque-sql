@@ -71,6 +71,8 @@ typedef enum lc_status_t {
 
 } lc_status_t;
 
+#define WARN_UNUSED __attribute__((warn_unused_result))
+
 // SHA
 #define LC_SHA256_HASH_SIZE            32
 // ECC
@@ -119,7 +121,7 @@ typedef uint8_t lc_aes_ctr_128bit_key_t[LC_AESCTR_KEY_SIZE];
 
 
 // helper function
-lc_status_t lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private, lc_ec256_public_t *p_public);
+void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private, lc_ec256_public_t *p_public);
 
 void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len);
 void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len);
@@ -143,16 +145,18 @@ ECDSA_SIG *ossl_ecdsa_sign(const unsigned char *dgst, int dgst_len,
 *	Output: uint8_t *p_dst - Pointer to cipher text. Size of buffer should be >= src_len.
 *			lc_aes_gcm_128bit_tag_t *p_out_mac - Pointer to MAC generated from encryption process
 * NOTE: Wrapper is responsible for confirming decryption tag matches encryption tag */
-LC_LIBCRYPTO_API lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
-                                                       const uint8_t *p_src, uint32_t src_len,
-                                                       uint8_t *p_dst,
-                                                       const uint8_t *p_iv, uint32_t iv_len,
-                                                       const uint8_t *p_aad, uint32_t aad_len,
-                                                       lc_aes_gcm_128bit_tag_t *p_out_mac);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_rijndael128GCM_encrypt(
+    const lc_aes_gcm_128bit_key_t *p_key,
+    const uint8_t *p_src, uint32_t src_len,
+    uint8_t *p_dst,
+    const uint8_t *p_iv, uint32_t iv_len,
+    const uint8_t *p_aad, uint32_t aad_len,
+    lc_aes_gcm_128bit_tag_t *p_out_mac);
 
-lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
-                                      int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
-                                      unsigned char *plaintext);
+lc_status_t WARN_UNUSED lc_rijndael128GCM_decrypt(
+    unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
+    int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
+    unsigned char *plaintext) __attribute__((warn_unused_result));
 
 /* Message Authentication - Rijndael 128 CMAC
 * Parameters:
@@ -161,9 +165,10 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_
 *			uint8_t *p_src - Pointer to input stream to be MACd
 *			uint32_t src_len - Length of input stream to be MACd
 *	Output: lc_cmac_gcm_128bit_tag_t *p_mac - Pointer to resultant MAC */
-LC_LIBCRYPTO_API lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
-                                                     const uint8_t *p_src, uint32_t src_len,
-                                                     lc_cmac_128bit_tag_t *p_mac);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_rijndael128_cmac_msg(
+    const lc_cmac_128bit_key_t *p_key,
+    const uint8_t *p_src, uint32_t src_len,
+    lc_cmac_128bit_tag_t *p_mac);
 
 
 /* Populates private/public key pair - caller code allocates memory
@@ -171,8 +176,9 @@ LC_LIBCRYPTO_API lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t 
 *	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
 *	Outputs: lc_ec256_private_t *p_private - Pointer to the private key
 *			 lc_ec256_public_t *p_public - Pointer to the public key  */
-LC_LIBCRYPTO_API lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
-                                                       lc_ec256_public_t *p_public);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_ecc256_create_key_pair(
+    lc_ec256_private_t *p_private,
+    lc_ec256_public_t *p_public);
 
 /* Computes DH shared key based on private B key (local) and remote public Ga Key
 * Parameters:
@@ -181,9 +187,10 @@ LC_LIBCRYPTO_API lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_pri
 *			lc_ec256_public_t *p_public_ga - Pointer to the remote public key - LITTLE ENDIAN
 *	Output: lc_ec256_dh_shared_t *p_shared_key - Pointer to the shared DH key - LITTLE ENDIAN
 x-coordinate of (privKeyB - pubKeyA) */
-LC_LIBCRYPTO_API lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
-                                                            lc_ec256_public_t *p_public_ga,
-                                                            lc_ec256_dh_shared_t *p_shared_key);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_ecc256_compute_shared_dhkey(
+    lc_ec256_private_t *p_private_b,
+    lc_ec256_public_t *p_public_ga,
+    lc_ec256_dh_shared_t *p_shared_key);
 
 
 /* Computes signature for data based on private key
@@ -213,53 +220,42 @@ LC_LIBCRYPTO_API lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *
 *           uint8_t *p_data - Pointer to the data to be signed
 *           uint32_t data_size - Size of the data to be signed
 *   Output: ec256_signature_t *p_signature - Pointer to the signature - LITTLE ENDIAN */
-LC_LIBCRYPTO_API lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
-                                        uint32_t data_size,
-                                        lc_ec256_private_t *p_private,
-                                        lc_ec256_signature_t *p_signature);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_ecdsa_sign(
+    const uint8_t *p_data,
+    uint32_t data_size,
+    lc_ec256_private_t *p_private,
+    lc_ec256_signature_t *p_signature);
 
 /* Allocates and initializes sha256 state
 * Parameters:
-*	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
 *   Output: lc_sha_state_handle_t sha_handle - Handle to the SHA256 state  */
-LC_LIBCRYPTO_API lc_status_t lc_sha256_init(lc_sha_state_handle_t* p_sha_handle);
+LC_LIBCRYPTO_API void lc_sha256_init(
+    lc_sha_state_handle_t* p_sha_handle);
 
 /* Updates sha256 has calculation based on the input message
 * Parameters:
-*   Return: lc_status_t  - LC_SUCCESS or failure.
 *	Input:  lc_sha_state_handle_t sha_handle - Handle to the SHA256 state
 *	        uint8_t *p_src - Pointer to the input stream to be hashed
 *          uint32_t src_len - Length of the input stream to be hashed  */
-LC_LIBCRYPTO_API lc_status_t lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle);
+LC_LIBCRYPTO_API void lc_sha256_update(
+    const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle);
 
 /* Returns Hash calculation
 * Parameters:
 *	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
 *	Input:  lc_sha_state_handle_t sha_handle - Handle to the SHA256 state
 *   Output: lc_sha256_hash_t *p_hash - Resultant hash from operation  */
-LC_LIBCRYPTO_API lc_status_t lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash);
+LC_LIBCRYPTO_API void lc_sha256_get_hash(
+    lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash);
 
 /* Cleans up sha state
 * Parameters:
-*	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.
 *	Input:  lc_sha_state_handle_t sha_handle - Handle to the SHA256 state  */
-LC_LIBCRYPTO_API lc_status_t lc_sha256_close(lc_sha_state_handle_t sha_handle);
+LC_LIBCRYPTO_API void lc_sha256_close(
+    lc_sha_state_handle_t sha_handle);
 
 
-lc_status_t print_priv_key(lc_ec256_private_t p_private);
-lc_status_t print_pub_key(lc_ec256_public_t p_public);
-lc_status_t print_ec_key(EC_KEY *ec_key);
+lc_status_t WARN_UNUSED print_priv_key(lc_ec256_private_t p_private);
+lc_status_t WARN_UNUSED print_pub_key(lc_ec256_public_t p_public);
+lc_status_t WARN_UNUSED print_ec_key(EC_KEY *ec_key);
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public);
-
-
-void encrypt(lc_aes_gcm_128bit_key_t *key,
-             uint8_t *plaintext_ptr, uint32_t plaintext_length,
-             uint8_t *ciphertext_ptr, uint32_t ciphertext_length);
-
-void decrypt(lc_aes_gcm_128bit_key_t *key,
-             uint8_t *ciphertext_ptr, uint32_t ciphertext_length,
-             uint8_t *plaintext_ptr, uint32_t plaintext_length);
-
-void encrypt_attribute(lc_aes_gcm_128bit_key_t *key,
-                       uint8_t **input, uint8_t **output,
-                       uint32_t *actual_size);

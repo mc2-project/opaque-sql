@@ -328,7 +328,7 @@ int sp_ra_proc_msg1_req(sgx_ra_msg1_t *p_msg1,
 
     // Generate the client/SP shared secret
     lc_ec256_dh_shared_t dh_key = {{0}};
-    lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
+    ret = lc_ecc256_compute_shared_dhkey((lc_ec256_private_t *) &priv_key,
                                    (lc_ec256_public_t *) &p_msg1->g_a,
                                    (lc_ec256_dh_shared_t *) &dh_key);
 
@@ -581,39 +581,11 @@ int sp_ra_proc_msg3_req(sgx_ra_msg3_t *p_msg3,
       // Verify the report_data in the Quote matches the expected value.
       // The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
       // The second 32 bytes of report_data are set to zero.
-      ret = lc_sha256_init(&sha_handle);
-      if (ret != LC_SUCCESS) {
-        fprintf(stderr,"\nError, init hash failed in [%s].", __FUNCTION__);
-        err_ret = SP_INTERNAL_ERROR;
-        break;
-      }
-      ret = lc_sha256_update((uint8_t *)&(g_sp_db.g_a), sizeof(g_sp_db.g_a), sha_handle);
-      if (ret != LC_SUCCESS) {
-        fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                __FUNCTION__);
-        err_ret = SP_INTERNAL_ERROR;
-        break;
-      }
-      ret = lc_sha256_update((uint8_t *)&(g_sp_db.g_b), sizeof(g_sp_db.g_b), sha_handle);
-      if (ret != LC_SUCCESS) {
-        fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                __FUNCTION__);
-        err_ret = SP_INTERNAL_ERROR;
-        break;
-      }
-      ret = lc_sha256_update((uint8_t *)&(g_sp_db.vk_key), sizeof(g_sp_db.vk_key), sha_handle);
-      if (ret != LC_SUCCESS) {
-        fprintf(stderr,"\nError, udpate hash failed in [%s].",
-                __FUNCTION__);
-        err_ret = SP_INTERNAL_ERROR;
-        break;
-      }
-      ret = lc_sha256_get_hash(sha_handle, (lc_sha256_hash_t *)&report_data);
-      if (ret != LC_SUCCESS) {
-        fprintf(stderr,"\nError, Get hash failed in [%s].", __FUNCTION__);
-        err_ret = SP_INTERNAL_ERROR;
-        break;
-      }
+      lc_sha256_init(&sha_handle);
+      lc_sha256_update((uint8_t *)&(g_sp_db.g_a), sizeof(g_sp_db.g_a), sha_handle);
+      lc_sha256_update((uint8_t *)&(g_sp_db.g_b), sizeof(g_sp_db.g_b), sha_handle);
+      lc_sha256_update((uint8_t *)&(g_sp_db.vk_key), sizeof(g_sp_db.vk_key), sha_handle);
+      lc_sha256_get_hash(sha_handle, (lc_sha256_hash_t *)&report_data);
       err_ret = memcmp((uint8_t *)&report_data,
                        (uint8_t *)&(p_quote->report_body.report_data),
                        sizeof(report_data));

@@ -217,11 +217,17 @@ object Utils extends Logging {
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
+
+  /**
+   * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
+   * attestation succeeds. For development, we use a hardcoded key. You should change it.
+   */
+  val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+  assert(sharedKey.size == GCM_KEY_LENGTH)
   
   def encrypt(data: Array[Byte]): Array[Byte] = {
     val random = SecureRandom.getInstance("SHA1PRNG")
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
@@ -232,8 +238,7 @@ object Utils extends Logging {
   }
   
   def decrypt(data: Array[Byte]): Array[Byte] = {
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
@@ -255,6 +260,7 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies =
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
+    RA.initRA(sqlContext.sparkContext)
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

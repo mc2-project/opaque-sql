@@ -74,15 +74,9 @@ enclave {
 
     public sgx_status_t ecall_enclave_init_ra([out] sgx_ra_context_t *p_context);
     public void ecall_enclave_ra_close(sgx_ra_context_t context);
-    public sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context,
-                                                    [in,size=message_size] uint8_t* message,
-                                                    size_t message_size,
-                                                    [in,size=mac_size] uint8_t* mac,
-                                                    size_t mac_size);
-    public sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
-                                              [in,size=secret_size] uint8_t* p_secret,
-                                              uint32_t secret_size,
-                                              [in,count=16] uint8_t* gcm_mac);
+    public void ecall_ra_proc_msg4(sgx_ra_context_t context,
+                                   [in,size=msg4_size] uint8_t *msg4,
+                                   uint32_t msg4_size);
   };
 
   untrusted {

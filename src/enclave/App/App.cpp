@@ -289,11 +289,11 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   sgx_check_quiet("Initialize Remote Attestation", status);
 
   uint32_t extended_epid_group_id = 0;
-  sgx_check("Get Extended EPID Group ID",
+  sgx_check("Remote Attestation Step 0: Get Extended EPID Group ID",
             sgx_get_extended_epid_group_id(&extended_epid_group_id));
-  jbyteArray array_ret = env->NewByteArray(sizeof(uint32_t));
-  env->SetByteArrayRegion(array_ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
-  return array_ret;
+  jbyteArray ret = env->NewByteArray(sizeof(uint32_t));
+  env->SetByteArrayRegion(ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
+  return ret;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
@@ -301,7 +301,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   (void)obj;
 
   sgx_ra_msg1_t msg1;
-  sgx_check("Get Remote Attestation Message 1",
+  sgx_check("Remote Attestation Step 1",
             sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, &msg1));
   jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
   env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), reinterpret_cast<jbyte *>(&msg1));
@@ -309,166 +309,51 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2(
-  JNIEnv *env, jobject obj,
-  jlong eid,
-  jbyteArray msg2_input) {
-
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg2_input) {
   (void)obj;
 
-  int ret = 0;
-  //sgx_ra_context_t context = INT_MAX;
-
-  // Successfully sent msg1 and received a msg2 back.
-  // Time now to check msg2.
-
-  //uint32_t input_len = (uint32_t) env->GetArrayLength(msg2_input);
   jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(msg2_input, &if_copy);
-  sgx_ra_msg2_t* p_msg2_body = (sgx_ra_msg2_t*)(ptr);
-
-#ifdef DEBUG
-  printf("Printing p_msg2_body\n");
-  PRINT_BYTE_ARRAY(stdout, p_msg2_body, sizeof(sgx_ra_msg2_t));
-#endif
+  jbyte *msg2_bytes = env->GetByteArrayElements(msg2_input, &if_copy);
+  sgx_ra_msg2_t *msg2 = reinterpret_cast<sgx_ra_msg2_t *>(msg2_bytes);
 
   uint32_t msg3_size = 0;
-  sgx_ra_msg3_t *msg3 = NULL;
+  sgx_ra_msg3_t *msg3 = nullptr;
 
-  // The ISV app now calls uKE sgx_ra_proc_msg2,
-  // The ISV app is responsible for freeing the returned p_msg3!
-#ifdef DEBUG
-  printf("[RemoteAttestation2] context is %u, eid: %u\n", (uint32_t) context, (uint32_t) eid);
-#endif
-  ret = sgx_ra_proc_msg2(context,
-                         eid,
-                         sgx_ra_proc_msg2_trusted,
-                         sgx_ra_get_msg3_trusted,
-                         p_msg2_body,
-                         sizeof(sgx_ra_msg2_t),
-                         &msg3,
-                         &msg3_size);
+  sgx_check("Remote Attestation Step 2",
+            sgx_ra_proc_msg2(context,
+                             eid,
+                             sgx_ra_proc_msg2_trusted,
+                             sgx_ra_get_msg3_trusted,
+                             msg2,
+                             sizeof(sgx_ra_msg2_t),
+                             &msg3,
+                             &msg3_size));
 
-  if (!msg3) {
-    fprintf(stdout, "\nError, call sgx_ra_proc_msg2 fail. msg3 = 0x%p [%s].\n", msg3, __FUNCTION__);
-    print_error_message((sgx_status_t) ret);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  }
-
-  if(SGX_SUCCESS != (sgx_status_t)ret) {
-    fprintf(stdout, "\nError, call sgx_ra_proc_msg2 fail. "
-            "ret = 0x%08x [%s].\n", ret, __FUNCTION__);
-    print_error_message((sgx_status_t) ret);
-    jbyteArray array_ret = env->NewByteArray(0);
-    return array_ret;
-  } else {
-#ifdef DEBUG
-    fprintf(stdout, "\nCall sgx_ra_proc_msg2 success.\n");
-#endif
-  }
-
-  jbyteArray array_ret = env->NewByteArray(msg3_size);
-  env->SetByteArrayRegion(array_ret, 0, msg3_size, (jbyte *) msg3);
-
+  jbyteArray ret = env->NewByteArray(msg3_size);
+  env->SetByteArrayRegion(ret, 0, msg3_size, reinterpret_cast<jbyte *>(msg3));
   free(msg3);
-  return array_ret;
+
+  env->ReleaseByteArrayElements(msg2_input, msg2_bytes, 0);
+
+  return ret;
 }
 
-
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
-  JNIEnv *env, jobject obj,
-  jlong eid,
-  jbyteArray att_result_input) {
-
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {
   (void)obj;
 
-#ifdef DEBUG
-  printf("RemoteAttestation3 called\n");
-#endif
-
-  sgx_status_t status = SGX_SUCCESS;
-  //uint32_t input_len = (uint32_t) env->GetArrayLength(att_result_input);
   jboolean if_copy = false;
-  jbyte *ptr = env->GetByteArrayElements(att_result_input, &if_copy);
+  jbyte *msg4_bytes = env->GetByteArrayElements(msg4_input, &if_copy);
+  uint32_t msg4_size = static_cast<uint32_t>(env->GetArrayLength(msg4_input));
 
-  ra_samp_response_header_t *att_result_full = (ra_samp_response_header_t *)(ptr);
-  sample_ra_att_result_msg_t *att_result = (sample_ra_att_result_msg_t *) att_result_full->body;
+  sgx_check("Remote Attestation Step 3",
+            ecall_ra_proc_msg4(eid,
+                               context,
+                               reinterpret_cast<uint8_t *>(msg4_bytes),
+                               msg4_size));
 
-#ifdef DEBUG
-  printf("[RemoteAttestation3] att_result's size is %u\n", att_result_full->size);
-#endif
+  env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
 
-  // Check the MAC using MK on the attestation result message.
-  // The format of the attestation result message is ISV specific.
-  // This is a simple form for demonstration. In a real product,
-  // the ISV may want to communicate more information.
-  int ret = 0;
-  ret = ecall_verify_att_result_mac(eid,
-                                    &status,
-                                    context,
-                                    (uint8_t*)&att_result->platform_info_blob,
-                                    sizeof(ias_platform_info_blob_t),
-                                    (uint8_t*)&att_result->mac,
-                                    sizeof(sgx_mac_t));
-
-  if((SGX_SUCCESS != ret) || (SGX_SUCCESS != status)) {
-    fprintf(stdout, "\nError: INTEGRITY FAILED - attestation result message MK based cmac failed in [%s], status is %u", __FUNCTION__, (uint32_t) status);
-    return ;
-  }
-
-  bool attestation_passed = true;
-  // Check the attestation result for pass or fail.
-  // Whether attestation passes or fails is a decision made by the ISV Server.
-  // When the ISV server decides to trust the enclave, then it will return success.
-  // When the ISV server decided to not trust the enclave, then it will return failure.
-  if (0 != att_result_full->status[0] || 0 != att_result_full->status[1]) {
-    fprintf(stdout, "\nError, attestation result message MK based cmac "
-            "failed in [%s].", __FUNCTION__);
-    attestation_passed = false;
-  }
-
-  // The attestation result message should contain a field for the Platform
-  // Info Blob (PIB).  The PIB is returned by attestation server in the attestation report.
-  // It is not returned in all cases, but when it is, the ISV app
-  // should pass it to the blob analysis API called sgx_report_attestation_status()
-  // along with the trust decision from the ISV server.
-  // The ISV application will take action based on the update_info.
-  // returned in update_info by the API.
-  // This call is stubbed out for the sample.
-  //
-  // sgx_update_info_bit_t update_info;
-  // ret = sgx_report_attestation_status(
-  //     &p_att_result_msg_body->platform_info_blob,
-  //     attestation_passed ? 0 : 1, &update_info);
-
-  // Get the shared secret sent by the server using SK (if attestation
-  // passed)
-#ifdef DEBUG
-  printf("[RemoteAttestation3] %u\n", attestation_passed);
-#endif
-  if (attestation_passed) {
-    ret = ecall_put_secret_data(eid,
-                                &status,
-                                context,
-                                att_result->secret.payload,
-                                att_result->secret.payload_size,
-                                att_result->secret.payload_tag);
-
-    if((SGX_SUCCESS != ret)  || (SGX_SUCCESS != status)) {
-      fprintf(stdout, "\nError, attestation result message secret "
-              "using SK based AESGCM failed in [%s]. ret = "
-              "0x%0x. status = 0x%0x", __FUNCTION__, ret,
-              status);
-      return ;
-    }
-  }
-
-  fprintf(stdout, "\nSecret successfully received from server.");
-  fprintf(stdout, "\nRemote attestation success!\n");
-
-#ifdef DEBUG
-  fprintf(stdout, "Destroying the key exchange context\n");
-#endif
   ecall_enclave_ra_close(eid, context);
 }
 

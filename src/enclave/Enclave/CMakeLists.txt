@@ -13,7 +13,6 @@ set(SOURCES
   Join.cpp
   Project.cpp
   Sort.cpp
-  isv_enclave.cpp
   sgxaes.cpp
   sgxaes_asm.S
   util.cpp
