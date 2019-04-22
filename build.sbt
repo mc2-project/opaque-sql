@@ -158,7 +158,7 @@ sgxGdbTask := {
   Process(Seq(
     "sgx-gdb", "java"),
     None,
-    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!
+    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!<
 }
 
 fetchFlatbuffersLibTask := {
