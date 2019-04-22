@@ -295,13 +295,13 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   (void)obj;
 
   sgx_status_t status;
-  sgx_check("Initialize Remote Attestation",
-            ecall_enclave_init_ra(eid, &status, &context));
+  sgx_check_and_time("Initialize Remote Attestation",
+                     ecall_enclave_init_ra(eid, &status, &context));
   sgx_check("Initialize Remote Attestation", status);
 
   uint32_t extended_epid_group_id = 0;
-  sgx_check("Remote Attestation Step 0: Get Extended EPID Group ID",
-            sgx_get_extended_epid_group_id(&extended_epid_group_id));
+  sgx_check_and_time("Remote Attestation Step 0: Get Extended EPID Group ID",
+                     sgx_get_extended_epid_group_id(&extended_epid_group_id));
   jbyteArray ret = env->NewByteArray(sizeof(uint32_t));
   env->SetByteArrayRegion(ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
   return ret;
@@ -312,8 +312,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   (void)obj;
 
   sgx_ra_msg1_t msg1;
-  sgx_check("Remote Attestation Step 1",
-            sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, &msg1));
+  sgx_check_and_time("Remote Attestation Step 1",
+                     sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, &msg1));
   jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
   env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), reinterpret_cast<jbyte *>(&msg1));
   return array_ret;
@@ -331,15 +331,18 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint32_t msg3_size = 0;
   sgx_ra_msg3_t *msg3 = nullptr;
 
-  sgx_check("Remote Attestation Step 2",
-            sgx_ra_proc_msg2(context,
-                             eid,
-                             sgx_ra_proc_msg2_trusted,
-                             sgx_ra_get_msg3_trusted,
-                             msg2,
-                             msg2_size,
-                             &msg3,
-                             &msg3_size));
+  printf("Remote attestation step 2 - input msg2:\n");
+  PRINT_BYTE_ARRAY(nullptr, msg2, msg2_size);
+
+  sgx_check_and_time("Remote Attestation Step 2",
+                     sgx_ra_proc_msg2(context,
+                                      eid,
+                                      sgx_ra_proc_msg2_trusted,
+                                      sgx_ra_get_msg3_trusted,
+                                      msg2,
+                                      msg2_size,
+                                      &msg3,
+                                      &msg3_size));
 
   jbyteArray ret = env->NewByteArray(msg3_size);
   env->SetByteArrayRegion(ret, 0, msg3_size, reinterpret_cast<jbyte *>(msg3));
@@ -358,11 +361,11 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   jbyte *msg4_bytes = env->GetByteArrayElements(msg4_input, &if_copy);
   uint32_t msg4_size = static_cast<uint32_t>(env->GetArrayLength(msg4_input));
 
-  sgx_check("Remote Attestation Step 3",
-            ecall_ra_proc_msg4(eid,
-                               context,
-                               reinterpret_cast<uint8_t *>(msg4_bytes),
-                               msg4_size));
+  sgx_check_and_time("Remote Attestation Step 3",
+                     ecall_ra_proc_msg4(eid,
+                                        context,
+                                        reinterpret_cast<uint8_t *>(msg4_bytes),
+                                        msg4_size));
 
   env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
 

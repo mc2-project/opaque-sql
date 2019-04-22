@@ -156,9 +156,7 @@ cleanupCommands in console := "spark.stop()"
 sgxGdbTask := {
   (compile in Test).value
   Process(Seq(
-    "sgx-gdb", "java",
-    "-x",
-    ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
+    "sgx-gdb", "java"),
     None,
     "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!
 }
