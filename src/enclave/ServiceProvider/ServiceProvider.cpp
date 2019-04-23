@@ -247,13 +247,7 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
     IAS_Request req(ias.get(), ias_api_version);
     ias_check(req.sigrl(gid, sig_rl));
   } catch (const std::runtime_error &e) {
-    if (!require_attestation) {
-      printf("[info] Unable to obtain the signature revocation list (SigRL) for the enclave's\n"
-             "EPID GID %u from the Intel Attestation Service. Proceeding with empty SigRL\n"
-             "because attestation is not required.\n"
-             "Set $OPAQUE_REQUIRE_ATTESTATION if this is undesired.\n"
-             "Details:\n    %s\n", gid, e.what());
-    } else {
+    if (require_attestation) {
       throw;
     }
   }
@@ -366,11 +360,7 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
     std::vector<std::string> messages;
     ias_check(req.report(payload, content, messages));
   } catch (const std::runtime_error &e) {
-    if (!require_attestation) {
-      printf("[info] Unable to contact the Intel Attestation Service to verify the enclave, but\n"
-             "attestation is not required. Set $OPAQUE_REQUIRE_ATTESTATION if this is undesired.\n"
-             "Details:\n    %s\n", e.what());
-    } else {
+    if (require_attestation) {
       throw;
     }
   }
@@ -402,10 +392,7 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
       throw std::runtime_error(
         "Enclave not trusted. IAS reports GROUP_OUT_OF_DATE. Update the BIOS.");
     } else {
-      if (!require_attestation) {
-        printf("[info] Enclave failed remote attestation, but attestation is not required. \n"
-               "Set $OPAQUE_REQUIRE_ATTESTATION if this is undesired.\n");
-      } else {
+      if (require_attestation) {
         throw std::runtime_error("Enclave not trusted.");
       }
     }
