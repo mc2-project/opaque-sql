@@ -332,7 +332,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   sgx_ra_msg3_t *msg3 = nullptr;
 
   printf("Remote attestation step 2 - input msg2:\n");
-  PRINT_BYTE_ARRAY(nullptr, msg2, msg2_size);
+  PRINT_BYTE_ARRAY(stdout, msg2, msg2_size);
 
   sgx_check_and_time("Remote Attestation Step 2",
                      sgx_ra_proc_msg2(context,

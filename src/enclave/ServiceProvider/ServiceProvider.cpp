@@ -5,6 +5,7 @@
 #include <sgx_tcrypto.h>
 
 #include "ecp.h"
+#include "ias_ra.h"
 
 #include "ServiceProvider.h"
 
@@ -142,6 +143,11 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   lc_ec256_public_t pub_key;
   lc_check(lc_ecc256_create_key_pair(&priv_key, &pub_key));
 
+  // Save the generated keypair and the client's public ECCDH key for future steps.
+  sp_db.g_a = msg1->g_a;
+  sp_db.g_b = pub_key;
+  sp_db.b = priv_key;
+
   // "Derive the key derivation key (KDK) from Ga and Gb"
   lc_ec256_dh_shared_t dh_key;
   lc_check(lc_ecc256_compute_shared_dhkey(&priv_key, &msg1->g_a, &dh_key));
@@ -226,6 +232,8 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
     // (Ga || Gb || VK), where || denotes concatenation. VK is derived by performing an AES-128 CMAC
     // over the following byte sequence, using the KDK as the key:
     // 0x01 || "VK" || 0x00 || 0x80 || 0x00
+    sample_quote_t *quote = reinterpret_cast<sample_quote_t *>(msg3->quote);
+
     lc_sha_state_handle_t sha_handle;
     lc_sha256_init(&sha_handle);
     lc_sha256_update(reinterpret_cast<const uint8_t *>(&sp_db.g_a), sizeof(sp_db.g_a), sha_handle);
@@ -234,7 +242,7 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
     lc_sha256_hash_t hash;
     lc_sha256_get_hash(sha_handle, &hash);
     if (memcmp(reinterpret_cast<const uint8_t *>(&hash),
-               reinterpret_cast<const uint8_t *>(&msg3->quote),
+               reinterpret_cast<const uint8_t *>(&quote->report_body.report_data),
                32)) {
       throw std::runtime_error("process_msg3: report data digest mismatch");
     }
