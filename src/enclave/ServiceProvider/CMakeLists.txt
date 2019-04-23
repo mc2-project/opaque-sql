@@ -3,15 +3,15 @@ cmake_minimum_required(VERSION 2.8)
 project(OpaqueKeyGen)
 
 set(SOURCES
-  ServiceProviderJNI.cpp
   KeyGen.cpp
-  ecp.cpp
   ServiceProvider.cpp
-  sp_crypto.cpp
-  iasrequest.cpp
+  ServiceProviderJNI.cpp
   agent_wget.cpp
+  base64.c
   crypto.cpp
-  base64.c)
+  ecp.cpp
+  iasrequest.cpp
+  sp_crypto.cpp)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
