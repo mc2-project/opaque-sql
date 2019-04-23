@@ -194,9 +194,6 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
 
-  print_hex((unsigned char *) *p_key, 16);
-  printf("\n");
-
   /* Initialise key and IV */
   ret = EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *) *p_key, p_iv);
   if (ret != 1) {
