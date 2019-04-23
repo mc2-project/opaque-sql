@@ -61,8 +61,6 @@ public:
 private:
   void ensure_ias_connection();
 
-  bool require_attestation;
-
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
@@ -72,6 +70,8 @@ private:
   std::unique_ptr<IAS_Connection> ias;
   bool is_production;
   uint16_t ias_api_version;
+
+  bool require_attestation;
 };
 
 extern ServiceProvider service_provider;
