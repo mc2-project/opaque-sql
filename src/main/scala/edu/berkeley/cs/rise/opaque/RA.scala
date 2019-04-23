@@ -63,6 +63,11 @@ object RA extends Logging {
       Iterator((i, msg3))
     }.collect.toMap
 
+    if (forceAccept) {
+      val failures = msg3s.filter { case (i, msg3) => msg3.isEmpty }.keys
+      logWarning("Ignoring attestation failures on partition(s) " + keys.sorted.mkString(", "))
+    }
+
     val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3, forceAccept)).map(identity)
 
     val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
