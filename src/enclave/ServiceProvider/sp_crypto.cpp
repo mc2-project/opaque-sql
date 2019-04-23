@@ -97,17 +97,6 @@ void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len) {
   }
 }
 
-void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len) {
-  uint32_t actual_len = len / sizeof(uint32_t);
-  for (uint32_t i = 0; i < actual_len; i++) {
-    for (uint32_t j = 0; j < 4; j++) {
-      //*(output+i*4+j) = *(input+(actual_len-i-1)*4+(4-j-1));
-      *(output+i*4+j) = *(input+i*4+4-j-1);
-    }
-  }
-}
-
-
 void lc_ssl2sgx(EC_KEY *ssl_key,
                 lc_ec256_private_t *p_private,
                 lc_ec256_public_t *p_public) {
@@ -231,10 +220,6 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
   ciphertext_len += len;
-
-#ifdef DEBUG
-  printf("[%s] ciphertext_len is %u\n", __FUNCTION__, ciphertext_len);
-#endif
 
   /* Get the tag */
   ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE, (unsigned char *) *p_out_mac);
@@ -540,14 +525,6 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   EC_KEY *key = get_priv_key(p_private);
   assert(key != NULL);
 
-#ifdef DEBUG
-  printf("\n\n[%s]\t", __FUNCTION__);
-  print_hex((uint8_t *) p_data, data_size);
-  printf("data_size: %u\n", data_size);
-  print_ec_key(key);
-  printf("\n");
-#endif
-
   // first, hash the data
   lc_sha_state_handle_t p_sha_handle;
   lc_sha256_hash_t p_hash;
@@ -585,8 +562,6 @@ void lc_sha256_init(lc_sha_state_handle_t* p_sha_handle) {
   SHA256_Init(sha256_ctx);
   *p_sha_handle = sha256_ctx;
 }
-
-
 
 void lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {
   SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;

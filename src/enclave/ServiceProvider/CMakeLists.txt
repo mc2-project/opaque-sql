@@ -6,8 +6,6 @@ set(SOURCES
   ServiceProviderJNI.cpp
   KeyGen.cpp
   ecp.cpp
-  ias_ra.cpp
-  service_provider.cpp
   ServiceProvider.cpp
   sp_crypto.cpp
   iasrequest.cpp

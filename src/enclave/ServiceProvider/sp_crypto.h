@@ -124,12 +124,7 @@ typedef uint8_t lc_aes_ctr_128bit_key_t[LC_AESCTR_KEY_SIZE];
 void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private, lc_ec256_public_t *p_public);
 
 void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len);
-void reverse_endian_by_32(uint8_t *input, uint8_t *output, uint32_t len);
 EC_KEY *get_priv_key(lc_ec256_private_t *p_private);
-
-ECDSA_SIG *ossl_ecdsa_sign(const unsigned char *dgst, int dgst_len,
-                           const BIGNUM *in_kinv, const BIGNUM *in_r,
-                           EC_KEY *eckey);
 
 /* Rijndael AES-GCM
 * Parameters:

@@ -40,6 +40,7 @@
 #include <cstdlib>
 #include <sys/time.h> // struct timeval
 #include <time.h> // gettimeofday
+#include <string>
 
 #include <sgx_eid.h>     /* sgx_enclave_id_t */
 #include <sgx_error.h>       /* sgx_status_t */
@@ -47,7 +48,6 @@
 #include <sgx_ukey_exchange.h>
 
 #include "Enclave_u.h"
-#include "service_provider.h"
 
 #ifndef TRUE
 # define TRUE 1
