@@ -239,16 +239,21 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   derive_key(&dh_key, SAMPLE_DERIVE_KEY_VK, &sp_db.vk_key);
 
   // "Query IAS to obtain the SigRL for the client's Intel EPID GID."
-  ensure_ias_connection();
-  IAS_Request req(ias.get(), ias_api_version);
   string sig_rl;
   uint32_t gid;
   memcpy(reinterpret_cast<uint8_t *>(&gid), &msg1->gid, sizeof(sgx_epid_group_id_t));
-  ias_check(req.sigrl(gid, sig_rl));
-  uint32_t sig_rl_size = sig_rl.length();
+  try {
+    ensure_ias_connection();
+    IAS_Request req(ias.get(), ias_api_version);
+    ias_check(req.sigrl(gid, sig_rl));
+  } catch (const std::runtime_error &e) {
+    printf("[WARN] Failed to obtain the signature revocation list (SigRL) for the enclave's "
+           "EPID GID %u from the Intel Attestation Service. Proceeding with empty SigRL. "
+           "Reason:\n    %s\n", gid, e.what());
+  }
 
   // Allocate msg2 with enough space for the SigRL, which is a flexible array member at the end
-  *msg2_size = sizeof(sgx_ra_msg2_t) + sig_rl_size;
+  *msg2_size = sizeof(sgx_ra_msg2_t) + sig_rl.length();
   std::unique_ptr<sgx_ra_msg2_t> msg2(reinterpret_cast<sgx_ra_msg2_t *>(new uint8_t[*msg2_size]));
 
   // Construct msg2
@@ -282,8 +287,8 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
                                    &mac));
   memcpy(&msg2->mac, &mac, sizeof(sgx_mac_t));
 
-  msg2->sig_rl_size = sig_rl_size;
-  memcpy(&msg2->sig_rl, sig_rl.c_str(), sig_rl_size);
+  msg2->sig_rl_size = sig_rl.size();
+  memcpy(&msg2->sig_rl, sig_rl.c_str(), sig_rl.size());
 
   return msg2;
 }
@@ -340,49 +345,60 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
     throw std::runtime_error("process_msg3: EPID GID mismatch");
   }
 
-
   // Encode the quote as base64
   std::string quote_base64(base64_encode(reinterpret_cast<char *>(quote), quote_size));
 
   // "Submit the quote to IAS, calling the API function to verify attestation evidence."
-  ensure_ias_connection();
-  IAS_Request req(ias.get(), ias_api_version);
-
-  std::map<std::string, std::string> payload;
-  payload.insert(std::make_pair("isvEnclaveQuote", quote_base64));
-
   std::string content;
-  std::vector<std::string> messages;
-  ias_check(req.report(payload, content, messages));
+  try {
+    ensure_ias_connection();
+    IAS_Request req(ias.get(), ias_api_version);
 
-  json::JSON reportObj = json::JSON::Load(content);
+    std::map<std::string, std::string> payload;
+    payload.insert(std::make_pair("isvEnclaveQuote", quote_base64));
 
-  if (!reportObj.hasKey("version")) {
-    throw std::runtime_error("IAS: Report is missing an API version.");
-  }
-
-  unsigned int rversion = (unsigned int)reportObj["version"].ToInt();
-  if (rversion != ias_api_version) {
-    throw std::runtime_error(
-      std::string("IAS: Report version ")
-      + std::to_string(rversion)
-      + std::string(" does not match API version ")
-      + std::to_string(ias_api_version));
-  }
-
-  // "Extract the attestation status for the enclave.
-  // Decide whether or not to trust the enclave."
-  if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("OK") == 0) {
-    // Enclave is trusted
-  } else if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("CONFIGURATION_NEEDED") == 0) {
-    throw std::runtime_error("Enclave not trusted. IAS reports CONFIGURATION_NEEDED. Check the BIOS.");
-  } else if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("GROUP_OUT_OF_DATE") != 0) {
-    throw std::runtime_error("Enclave not trusted. IAS reports GROUP_OUT_OF_DATE. Update the BIOS.");
-  } else {
+    std::vector<std::string> messages;
+    ias_check(req.report(payload, content, messages));
+  } catch (const std::runtime_error &e) {
     if (force_accept) {
-      printf("Simulated enclave failed remote attestation, as expected.\n");
+      printf("[info] Failed to contact the Intel Attestation Service to verify the enclave. "
+             "Proceeding anyway because we are in simulation mode. "
+             "Reason:\n    %s\n", e.what());
     } else {
-      throw std::runtime_error("Enclave not trusted.");
+      throw;
+    }
+  }
+
+  if (!content.empty()) {
+    json::JSON reportObj = json::JSON::Load(content);
+
+    if (!reportObj.hasKey("version")) {
+      throw std::runtime_error("IAS: Report is missing an API version.");
+    }
+
+    unsigned int rversion = (unsigned int)reportObj["version"].ToInt();
+    if (rversion != ias_api_version) {
+      throw std::runtime_error(
+        std::string("IAS: Report version ")
+        + std::to_string(rversion)
+        + std::string(" does not match API version ")
+        + std::to_string(ias_api_version));
+    }
+
+    // "Extract the attestation status for the enclave.
+    // Decide whether or not to trust the enclave."
+    if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("OK") == 0) {
+      // Enclave is trusted
+    } else if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("CONFIGURATION_NEEDED") == 0) {
+      throw std::runtime_error("Enclave not trusted. IAS reports CONFIGURATION_NEEDED. Check the BIOS.");
+    } else if (reportObj["isvEnclaveQuoteStatus"].ToString().compare("GROUP_OUT_OF_DATE") != 0) {
+      throw std::runtime_error("Enclave not trusted. IAS reports GROUP_OUT_OF_DATE. Update the BIOS.");
+    } else {
+      if (force_accept) {
+        printf("[info] Simulated enclave failed remote attestation, as expected.\n");
+      } else {
+        throw std::runtime_error("Enclave not trusted.");
+      }
     }
   }
 

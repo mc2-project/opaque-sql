@@ -27,7 +27,7 @@ object RA extends Logging {
 
     // If we are not running with real SGX hardware, then attestation is expected to fail. For
     // development, we still want to send the shared secret to the enclaves in this case.
-    // val forceAccept = System.getenv("SGX_MODE") != "HW"
+    val forceAccept = System.getenv("SGX_MODE") != "HW"
 
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
 
@@ -58,7 +58,7 @@ object RA extends Logging {
       Iterator((i, msg3))
     }.collect.toMap
 
-    val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3, false)).map(identity)
+    val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3, forceAccept)).map(identity)
 
     val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
