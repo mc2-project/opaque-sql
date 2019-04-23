@@ -28,7 +28,7 @@ class ServiceProvider {
 public:
   ServiceProvider(const std::string &spid, bool is_production)
     : spid(spid), is_production(is_production), ias_api_version(3),
-      require_attestation(!std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
+      require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
