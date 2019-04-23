@@ -27,9 +27,7 @@ typedef struct _sp_db_item_t {
 class ServiceProvider {
 public:
   ServiceProvider(const std::string &spid, bool is_production)
-    : spid(spid), is_production(is_production), ias_api_version(3) {
-    ensure_ias_connection();
-  }
+    : spid(spid), is_production(is_production), ias_api_version(3) {}
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);

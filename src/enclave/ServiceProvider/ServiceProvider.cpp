@@ -138,7 +138,12 @@ void ServiceProvider::export_public_key_code(const std::string &filename) {
 }
 
 void ServiceProvider::ensure_ias_connection() {
-  ias.reset(new IAS_Connection(is_production ? IAS_SERVER_PRODUCTION : IAS_SERVER_DEVELOPMENT, 0));
+  if (this->ias) {
+    return;
+  }
+
+  std::unique_ptr<IAS_Connection> ias(
+    new IAS_Connection(is_production ? IAS_SERVER_PRODUCTION : IAS_SERVER_DEVELOPMENT, 0));
 
   const char *ias_client_cert_file = std::getenv("IAS_CLIENT_CERT_FILE");
   if (!ias_client_cert_file) {
@@ -186,6 +191,10 @@ void ServiceProvider::ensure_ias_connection() {
   ias->cert_store(store);
 
   ias->ca_bundle("/etc/ssl/certs/ca-certificates.crt");
+
+  // Save the created IAS_Connection. We do this last so that any initialization errors do not
+  // result in corrupt state, and a future call to this method will start from scratch.
+  this->ias = std::move(ias);
 }
 
 void ServiceProvider::process_msg0(uint32_t extended_epid_group_id) {
@@ -230,6 +239,7 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   derive_key(&dh_key, SAMPLE_DERIVE_KEY_VK, &sp_db.vk_key);
 
   // "Query IAS to obtain the SigRL for the client's Intel EPID GID."
+  ensure_ias_connection();
   IAS_Request req(ias.get(), ias_api_version);
   string sig_rl;
   uint32_t gid;
@@ -335,6 +345,7 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
   std::string quote_base64(base64_encode(reinterpret_cast<char *>(quote), quote_size));
 
   // "Submit the quote to IAS, calling the API function to verify attestation evidence."
+  ensure_ias_connection();
   IAS_Request req(ias.get(), ias_api_version);
 
   std::map<std::string, std::string> payload;
