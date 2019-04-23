@@ -16,8 +16,6 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is not included.
 
-- The remote attestation code is not complete as it contains sample code from the Intel SDK.
-
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
 
@@ -58,7 +56,7 @@ After downloading the Opaque codebase, build and test it as follows. (Alternativ
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 
-    If running with real SGX hardware, also set `export SGX_MODE=HW` and `export SGX_PRERELEASE=1`.
+    If running with real SGX hardware, also set `export SGX_MODE=HW`.
 
 4. Run the Opaque tests:
 
@@ -147,9 +145,11 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     // +----+-----+
     ```
     
-## Remote Attestation
+## Launch Token and Remote Attestation
 
-To use remote attestation, do the following:
+For development, Opaque launches enclaves in debug mode. To launch enclaves in release mode, use a [Launch Enclave](https://github.com/intel/linux-sgx/blob/master/psw/ae/ref_le/ref_le.md) or contact Intel to obtain a launch token, then pass it to `sgx_create_enclave` in `src/enclave/App/App.cpp`. Additionally, change `-DEDEBUG` to `-UEDEBUG` in `src/enclave/CMakeLists.txt`.
+
+Remote attestation ensures that the workers' SGX enclaves are genuine. To use remote attestation, do the following:
 
 1. [Generate a self-signed certificate](https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using):
 
@@ -171,8 +171,20 @@ To use remote attestation, do the following:
     openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
     ```
     
-2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding).
-    
+2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which should include a certificate.
+
+3. Set the following environment variables:
+
+    ```sh
+    # Require attestation to complete successfully before sending secrets to the worker enclaves.
+    export OPAQUE_REQUIRE_ATTESTATION=1
+
+    export IAS_CLIENT_CERT_FILE=.../client.crt  # from openssl x509 above
+    export IAS_CLIENT_KEY_FILE=.../client.key   # from openssl genrsa above
+    export IAS_REPORT_SIGNING_FILE=...   # Intel-provided certificate from step 2
+    ```
+
+4. Change the value of `Utils.sharedKey` (`src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala`), the shared data encryption key. Opaque will ensure that each enclave passes remote attestation before sending it this key.
 
 ## Contact
 

@@ -15,7 +15,7 @@ extern "C" {
     JNIEnv *, jobject, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3(
-    JNIEnv *, jobject, jbyteArray, jboolean);
+    JNIEnv *, jobject, jbyteArray);
 
 #ifdef __cplusplus
 }

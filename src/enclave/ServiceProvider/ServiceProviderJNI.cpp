@@ -83,7 +83,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPPro
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg3(
-  JNIEnv *env, jobject obj, jbyteArray msg3_input, jboolean force_accept) {
+  JNIEnv *env, jobject obj, jbyteArray msg3_input) {
   (void)obj;
 
   jboolean if_copy = false;
@@ -94,7 +94,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPPro
   uint32_t msg4_size = 0;
   std::unique_ptr<ra_msg4_t> msg4;
   try {
-    msg4 = service_provider.process_msg3(msg3, msg3_size, force_accept, &msg4_size);
+    msg4 = service_provider.process_msg3(msg3, msg3_size, &msg4_size);
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }

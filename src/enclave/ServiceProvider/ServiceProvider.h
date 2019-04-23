@@ -27,7 +27,8 @@ typedef struct _sp_db_item_t {
 class ServiceProvider {
 public:
   ServiceProvider(const std::string &spid, bool is_production)
-    : spid(spid), is_production(is_production), ias_api_version(3) {}
+    : spid(spid), is_production(is_production), ias_api_version(3),
+      require_attestation(!std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
@@ -44,24 +45,23 @@ public:
    */
   void export_public_key_code(const std::string &filename);
 
+  /** Process attestation message 0 from an enclave. */
   void process_msg0(uint32_t extended_epid_group_id);
 
+  /** Process attestation message 1 from an enclave and generate message 2 for that enclave. */
   std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
 
   /**
    * Process attestation message 3 from an enclave and generate message 4 for that enclave. Message
    * 4 contains the shared secret required for the enclave to decrypt data.
-   *
-   * If force_accept is true, then the attestation result will be ignored and the shared secret will
-   * be sent unconditionally. This is useful for development when running on simulated enclaves,
-   * which are expected to fail attestation.
    */
   std::unique_ptr<ra_msg4_t> process_msg3(
-    sgx_ra_msg3_t *msg3, uint32_t msg3_size, bool force_accept, uint32_t *msg4_size);
+    sgx_ra_msg3_t *msg3, uint32_t msg3_size, uint32_t *msg4_size);
 
 private:
-
   void ensure_ias_connection();
+
+  bool require_attestation;
 
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
