@@ -6,14 +6,14 @@
 #include <sgx_key_exchange.h>
 
 #include "sp_crypto.h"
+#include "iasrequest.h"
 
-typedef struct _sample_ps_sec_prop_desc_t
-{
+typedef struct _sample_ps_sec_prop_desc_t {
   uint8_t  sample_ps_sec_prop_desc[256];
 } sample_ps_sec_prop_desc_t;
 
-typedef struct _sp_db_item_t
-{
+typedef struct _sp_db_item_t {
+  sgx_epid_group_id_t           gid;
   lc_ec256_public_t             g_a;
   lc_ec256_public_t             g_b;
   lc_ec256_private_t            b;
@@ -26,7 +26,10 @@ typedef struct _sp_db_item_t
 
 class ServiceProvider {
 public:
-  ServiceProvider(const std::string &spid) : spid(spid) {}
+  ServiceProvider(const std::string &spid, bool is_production)
+    : spid(spid), is_production(is_production), ias_api_version(3) {
+    ensure_ias_connection();
+  }
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
@@ -43,6 +46,8 @@ public:
    */
   void export_public_key_code(const std::string &filename);
 
+  void process_msg0(uint32_t extended_epid_group_id);
+
   std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
 
   /**
@@ -57,11 +62,18 @@ public:
     sgx_ra_msg3_t *msg3, uint32_t msg3_size, bool force_accept, uint32_t *msg4_size);
 
 private:
+
+  void ensure_ias_connection();
+
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
   sp_db_item_t sp_db;
   std::string spid;
+
+  std::unique_ptr<IAS_Connection> ias;
+  bool is_production;
+  uint16_t ias_api_version;
 };
 
 extern ServiceProvider service_provider;

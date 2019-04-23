@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <sgx_tcrypto.h>
 
 #include "define.h"
 

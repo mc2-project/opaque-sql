@@ -95,7 +95,7 @@ managedResourceDirectories in Compile += resourceManaged.value
 // Watch the enclave C++ files
 watchSources ++=
   ((sourceDirectory.value / "enclave") ** (
-    ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+    ("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=

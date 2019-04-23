@@ -16,9 +16,6 @@ in the License.
 */
 
 
-#ifndef _WIN32
-#include "config.h"
-#endif
 #include <string.h>
 #include <stdio.h>
 #include <openssl/rand.h>
@@ -38,11 +35,8 @@ in the License.
 # include "agent_curl.h"
 #endif
 #include "iasrequest.h"
-#include "logfile.h"
 #include "httpparser/response.h"
 #include "base64.h"
-#include "hexutil.h"
-#include "settings.h"
 
 using namespace std;
 using namespace httpparser;
@@ -50,17 +44,47 @@ using namespace httpparser;
 #include <string>
 #include <exception>
 
-extern "C" {
-	extern char verbose;
-	extern char debug;
-};
-
 static string ias_servers[2]= {
     IAS_SERVER_DEVELOPMENT_HOST,
     IAS_SERVER_PRODUCTION_HOST
 };
 
 static string url_decode(string str);
+
+void ias_check(ias_error_t status) {
+	switch (status) {
+	case IAS_QUERY_FAILED:
+		throw std::runtime_error("Could not query IAS.");
+		break;
+	case IAS_BADREQUEST:
+		throw std::runtime_error("IAS: Invalid payload.");
+		break;
+	case IAS_UNAUTHORIZED:
+		throw std::runtime_error("IAS: Failed to authenticate or authorize request");
+		break;
+	case IAS_SERVER_ERR:
+		throw std::runtime_error("An internal error occurred on the IAS server.");
+		break;
+	case IAS_UNAVAILABLE:
+		throw std::runtime_error("IAS: Service is currently not able to process the request. Try again later.");
+		break;
+	case IAS_INTERNAL_ERROR:
+		throw std::runtime_error("IAS: An internal error occurred while processing the IAS response.");
+		break;
+	case IAS_BAD_CERTIFICATE:
+		throw std::runtime_error("IAS: The signing certificate could not be validated.");
+		break;
+	case IAS_BAD_SIGNATURE:
+		throw std::runtime_error("IAS: The report signature could not be validated.");
+		break;
+	default:
+		if ( status >= 100 && status < 600 ) {
+			throw std::runtime_error("IAS: Unexpected HTTP response code.");
+		} else {
+			throw std::runtime_error("IAS: An unknown error occurred.");
+		}
+	}
+}
 
 void ias_list_agents (FILE *fp)
 {
@@ -183,12 +207,6 @@ int IAS_Connection::client_key(const char *file, const char *passwd)
 			(unsigned char) passwd[i]^c_xor[i];
 	}
 
-	if ( debug ) {
-		eprintf("+++ Password:           %s\n", hexstring(passwd, c_pwlen));
-		eprintf("+++ One-time pad:       %s\n", hexstring(c_xor, c_pwlen));
-		eprintf("+++ Encrypted password: %s\n", hexstring(c_key_passwd,
-			c_pwlen));
-	}
 	return 1;
 }
 
@@ -274,7 +292,6 @@ Agent *IAS_Connection::new_agent()
 		// order of preference.
 
 #ifdef AGENT_LIBCURL
-		if ( debug ) eprintf("+++ Trying agent_curl\n");
 		try {
 			newagent= (Agent *) new AgentCurl(this);
 		}
@@ -282,7 +299,6 @@ Agent *IAS_Connection::new_agent()
 #endif
 #ifdef AGENT_WGET
 		if ( newagent == NULL ) {
-			if ( debug ) eprintf("+++ Trying agent_wget\n");
 			try {
 				newagent= (Agent *) new AgentWget(this);
 			}
@@ -325,24 +341,12 @@ ias_error_t IAS_Request::sigrl(uint32_t gid, string &sigrl)
 	url+= "/sigrl/";
 	url+= sgid;
 
-	if ( verbose ) {
-		edividerWithText("IAS sigrl HTTP Request");
-		eprintf("HTTP GET %s\n", url.c_str());
-		edivider();
-	}
-
 	if ( agent->request(url, "", response) ) {
-		if ( verbose ) {
-			edividerWithText("IAS sigrl HTTP Response");
-			eputs(response.inspect().c_str());
-			edivider();
-		}
-
 		if ( response.statusCode == IAS_OK ) {
 			sigrl= response.content_string();
 		} 
 	} else {
-		eprintf("Could not query IAS\n");
+		printf("Could not query IAS\n");
 		return IAS_QUERY_FAILED;
 	}
 
@@ -390,20 +394,9 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 		return IAS_QUERY_FAILED;
 	}
 
-	if ( verbose ) {
-		edividerWithText("IAS report HTTP Request");
-		eprintf("HTTP POST %s\n", url.c_str());
-		edivider();
-	}
-
 	if ( agent->request(url, body, response) ) {
-		if ( verbose ) {
-			edividerWithText("IAS report HTTP Response");
-			eputs(response.inspect().c_str());
-			edivider();
-		}
 	} else {
-		eprintf("Could not query IAS\n");
+		printf("Could not query IAS\n");
 		return IAS_QUERY_FAILED;
 	}
 
@@ -425,7 +418,7 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 
 	certchain= response.headers_as_string("X-IASReport-Signing-Certificate");
 	if ( certchain == "" ) {
-		eprintf("Header X-IASReport-Signing-Certificate not found\n");
+		printf("Header X-IASReport-Signing-Certificate not found\n");
 		return IAS_BAD_CERTIFICATE;
 	}
 
@@ -434,7 +427,7 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 		certchain= url_decode(certchain);
 	}
 	catch (...) {
-		eprintf("invalid URL encoding in header X-IASReport-Signing-Certificate\n");
+		printf("invalid URL encoding in header X-IASReport-Signing-Certificate\n");
 		return IAS_BAD_CERTIFICATE;
 	}
 
@@ -449,15 +442,8 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 		cend= certchain.find("-----BEGIN", cstart+1);
 		len= ( (cend == string::npos) ? certchain.length() : cend )-cstart;
 
-		if ( verbose ) {
-			edividerWithText("Certficate");
-			eputs(certchain.substr(cstart, len).c_str());
-			eprintf("\n");
-			edivider();
-		}
-
 		if ( ! cert_load(&cert, certchain.substr(cstart, len).c_str()) ) {
-			crypto_perror("cert_load");
+			printf("crypto error: cert_load");
 			return IAS_BAD_CERTIFICATE;
 		}
 
@@ -466,7 +452,6 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 	}
 
 	count= certvec.size();
-	if ( debug ) eprintf( "+++ Found %lu certificates in chain\n", count);
 
 	certar= (X509**) malloc(sizeof(X509 *)*(count+1));
 	if ( certar == 0 ) {
@@ -480,7 +465,7 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 
 	stack= cert_stack_build(certar);
 	if ( stack == NULL ) {
-		crypto_perror("cert_stack_build");
+		printf("crypto error: cert_stack_build");
 		return IAS_INTERNAL_ERROR;
 	}
 
@@ -489,36 +474,27 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 	rv= cert_verify(this->conn()->cert_store(), stack);
 
 	if ( ! rv ) {
-		crypto_perror("cert_stack_build");
-		eprintf("certificate verification failure\n");
+		printf("crypto error: cert_stack_build");
+		printf("certificate verification failure\n");
 		status= IAS_BAD_CERTIFICATE;
 		goto cleanup;
 	} else {
-		if ( debug ) eprintf("+++ certificate chain verified\n", rv);
 	}
 
 	// The signing cert is valid, so extract and verify the signature
 
 	sigstr= response.headers_as_string("X-IASReport-Signature");
 	if ( sigstr == "" ) {
-		eprintf("Header X-IASReport-Signature not found\n");
+		printf("Header X-IASReport-Signature not found\n");
 		status= IAS_BAD_SIGNATURE;
 		goto cleanup;
 	}
 
 	sig= (unsigned char *) base64_decode(sigstr.c_str(), &sigsz);
 	if ( sig == NULL ) {
-		eprintf("Could not decode signature\n");
+		printf("Could not decode signature\n");
 		status= IAS_BAD_SIGNATURE;
 		goto cleanup;
-	}
-
-	if ( verbose ) {
-		edividerWithText("Report Signature");
-		print_hexstring(stderr, sig, sigsz);
-		if ( fplog != NULL ) print_hexstring(fplog, sig, sigsz);
-		eprintf( "\n");
-		edivider();
 	}
 
 	sign_cert= certvec[0]; /* The first cert in the list */
@@ -529,10 +505,9 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 	 * verify the signature.
 	 */
 
-	if ( debug ) eprintf("+++ Extracting public key from signing cert\n");
 	pkey= X509_get_pubkey(sign_cert);
 	if ( pkey == NULL ) {
-		eprintf("Could not extract public key from certificate\n");
+		printf("Could not extract public key from certificate\n");
 		free(sig);
 		status= IAS_INTERNAL_ERROR;
 		goto cleanup;
@@ -540,29 +515,18 @@ ias_error_t IAS_Request::report(map<string,string> &payload, string &content,
 
 	content= response.content_string();
 
-	if ( debug ) {
-		eprintf("+++ Verifying signature over report body\n");
-		edividerWithText("Report");
-		eputs(content.c_str());
-		eprintf("\n");
-		edivider();
-		eprintf("Content-length: %lu bytes\n", response.content_string().length());
-		edivider();
-	}
-
 	if ( ! sha256_verify((const unsigned char *) content.c_str(),
-		content.length(), sig, sigsz, pkey, &rv) ) {
+		content.length(), sig, sigsz) ) {
 
 		free(sig);
-		crypto_perror("sha256_verify");
-		eprintf("Could not validate signature\n");
+		printf("crypto error: sha256_verify");
+		printf("Could not validate signature\n");
 		status= IAS_BAD_SIGNATURE;
 	} else {
 		if ( rv ) {
-			if ( verbose ) eprintf("+++ Signature verified\n");
 			status= IAS_OK;
 		} else {
-			eprintf("Invalid report signature\n");
+			printf("Invalid report signature\n");
 			status= IAS_BAD_SIGNATURE;
 		}
 	}

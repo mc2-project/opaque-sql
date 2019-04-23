@@ -9,7 +9,11 @@ set(SOURCES
   ias_ra.cpp
   service_provider.cpp
   ServiceProvider.cpp
-  sp_crypto.cpp)
+  sp_crypto.cpp
+  iasrequest.cpp
+  agent_wget.cpp
+  crypto.cpp
+  base64.c)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")

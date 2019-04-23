@@ -22,7 +22,6 @@ in the License.
 #include <inttypes.h>
 #include <openssl/x509.h>
 #include "agent.h"
-#include "settings.h"
 
 using namespace std;
 
@@ -74,6 +73,8 @@ typedef uint32_t ias_error_t;
 #define IAS_INTERNAL_ERROR		1000
 #define IAS_BAD_CERTIFICATE		1001
 #define IAS_BAD_SIGNATURE		1002
+
+void ias_check(ias_error_t ret);
 
 void ias_list_agents (FILE *fp);
 
@@ -139,7 +140,7 @@ class IAS_Request {
 	string url;
 
 public:
-	IAS_Request(IAS_Connection *conn_in, uint16_t version= IAS_API_DEF_VERSION);
+	IAS_Request(IAS_Connection *conn_in, uint16_t version);
 	~IAS_Request();
 
 	IAS_Connection *conn() { return r_conn; }
