@@ -30,40 +30,44 @@ object RA extends Logging {
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
     val sp = new SP()
-    sp.Init(Utils.sharedKey, intelCert)
 
-    val epids = rdd.mapPartitions { _ =>
-      val (enclave, eid) = Utils.initEnclave()
-      val epid = enclave.RemoteAttestation0(eid)
-      Iterator(epid)
-    }.collect
+    // Retry attestation a few times in case of transient failures
+    Utils.retry(3) {
+      sp.Init(Utils.sharedKey, intelCert)
 
-    for (epid <- epids) {
-      sp.SPProcMsg0(epid)
+      val epids = rdd.mapPartitions { _ =>
+        val (enclave, eid) = Utils.initEnclave()
+        val epid = enclave.RemoteAttestation0(eid)
+        Iterator(epid)
+      }.collect
+
+      for (epid <- epids) {
+        sp.SPProcMsg0(epid)
+      }
+
+      val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+        val (enclave, eid) = Utils.initEnclave()
+        val msg1 = enclave.RemoteAttestation1(eid)
+        Iterator((i, msg1))
+      }.collect.toMap
+
+      val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
+
+      val msg3s = rdd.mapPartitionsWithIndex { (i, _) =>
+        val (enclave, eid) = Utils.initEnclave()
+        val msg3 = enclave.RemoteAttestation2(eid, msg2s(i))
+        Iterator((i, msg3))
+      }.collect.toMap
+
+      val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3)).map(identity)
+
+      val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
+        val (enclave, eid) = Utils.initEnclave()
+        enclave.RemoteAttestation3(eid, msg4s(i))
+        Iterator((i, true))
+      }.collect.toMap
+
+      assert(statuses.keySet == msg4s.keySet)
     }
-
-    val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      val msg1 = enclave.RemoteAttestation1(eid)
-      Iterator((i, msg1))
-    }.collect.toMap
-
-    val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
-
-    val msg3s = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      val msg3 = enclave.RemoteAttestation2(eid, msg2s(i))
-      Iterator((i, msg3))
-    }.collect.toMap
-
-    val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3)).map(identity)
-
-    val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      enclave.RemoteAttestation3(eid, msg4s(i))
-      Iterator((i, true))
-    }.collect.toMap
-
-    assert(statuses.keySet == msg4s.keySet)
   }
 }

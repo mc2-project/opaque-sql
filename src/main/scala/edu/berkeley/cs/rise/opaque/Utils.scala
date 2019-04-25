@@ -127,6 +127,21 @@ object Utils extends Logging {
     }
   }
 
+  /**
+   * Retry `fn`, which may throw an OpaqueException, up to n times.
+   *
+   * From https://stackoverflow.com/a/7931459.
+   */
+  @annotation.tailrec
+  def retry[T](n: Int)(fn: => T): T = {
+    import scala.util.{Try, Success, Failure}
+    Try { fn  } match {
+      case Success(x) => x
+      case Failure(e: OpaqueException) if n > 1 => retry(n - 1)(fn)
+      case Failure(e) => throw e
+    }
+  }
+
   private def jsonSerialize(x: Any): String = (x: @unchecked) match {
     case x: Int => x.toString
     case x: Double => x.toString
