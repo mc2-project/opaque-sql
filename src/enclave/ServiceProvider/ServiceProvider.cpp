@@ -13,7 +13,17 @@
 
 #include "ServiceProvider.h"
 
-ServiceProvider service_provider("Opaque SP", false);
+// Your 16-byte Service Provider ID (SPID), assigned by Intel.
+const uint8_t spid[] = {0xA4,0x62,0x09,0x2E,0x1B,0x59,0x26,0xDF,0x44,0x69,0xD5,0x61,0xE2,0x54,0xB0,0x1E};
+
+// The EPID security policy you chose (linkable -> true, unlinkable -> false).
+const bool linkable_signature = false;
+
+ServiceProvider service_provider(
+  std::string(reinterpret_cast<const char *>(spid), sizeof(spid)),
+  linkable_signature,
+  // Whether to use the production IAS URL rather than the testing URL.
+  false);
 
 void lc_check(lc_status_t ret) {
   if (ret != LC_SUCCESS) {
@@ -137,7 +147,7 @@ void ServiceProvider::export_public_key_code(const std::string &filename) {
   file.close();
 }
 
-void ServiceProvider::ensure_ias_connection() {
+void ServiceProvider::ensure_ias_connection(const std::string &ias_report_signing_ca_file) {
   if (this->ias) {
     return;
   }
@@ -173,16 +183,9 @@ void ServiceProvider::ensure_ias_connection() {
 
   ias->agent("wget");
 
-  const char *ias_report_signing_ca_file = std::getenv("IAS_REPORT_SIGNING_CA_FILE");
-  if (!ias_report_signing_ca_file) {
-    throw std::runtime_error(
-      "Set $IAS_REPORT_SIGNING_CA_FILE to the Intel IAS SGX Report Signing CA file. "
-      "You are sent this certificate when you apply for access to SGX Developer Services at "
-      "http://software.intel.com/sgx.");
-  }
   X509 *signing_ca;
-  if (!cert_load_file(&signing_ca, ias_report_signing_ca_file)) {
-    throw std::runtime_error("Could not load $IAS_REPORT_SIGNING_CA_FILE.");
+  if (!cert_load_file(&signing_ca, ias_report_signing_ca_file.c_str())) {
+    throw std::runtime_error(std::string("Could not load ") + ias_report_signing_ca_file);
   }
   X509_STORE *store = cert_init_ca(signing_ca);
   if (!store) {
@@ -243,7 +246,9 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   uint32_t gid;
   memcpy(reinterpret_cast<uint8_t *>(&gid), &msg1->gid, sizeof(sgx_epid_group_id_t));
   try {
-    ensure_ias_connection();
+    if (!ias) {
+      throw std::runtime_error("process_msg1 called before ensure_ias_connection");
+    }
     IAS_Request req(ias.get(), ias_api_version);
     ias_check(req.sigrl(gid, sig_rl));
   } catch (const std::runtime_error &e) {
@@ -262,7 +267,8 @@ std::unique_ptr<sgx_ra_msg2_t> ServiceProvider::process_msg1(
   // "Determine the quote type that should be requested from the client (0x0 for unlinkable, and 0x1
   // for linkable). Note that this is a service provider policy decision, and the SPID must be
   // associated with the correct quote type."
-  msg2->quote_type = 0x0;
+  msg2->quote_type =
+    linkable_signature ? SAMPLE_QUOTE_LINKABLE_SIGNATURE : SAMPLE_QUOTE_UNLINKABLE_SIGNATURE;
   // "Set the KDF_ID. Normally this is 0x1."
   msg2->kdf_id = 0x1;
 
@@ -351,7 +357,9 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
   // "Submit the quote to IAS, calling the API function to verify attestation evidence."
   std::string content;
   try {
-    ensure_ias_connection();
+    if (!ias) {
+      throw std::runtime_error("process_msg3 called before ensure_ias_connection");
+    }
     IAS_Request req(ias.get(), ias_api_version);
 
     std::map<std::string, std::string> payload;

@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.SecureRandom
@@ -184,6 +185,20 @@ object Utils extends Logging {
       case ex: Exception => throw new UnsatisfiedLinkError(
         "Error while extracting native library: " + ex)
     }
+    extractedPath.toAbsolutePath.toString
+  }
+
+  def findResource(resourceName: String): String = {
+    import java.nio.file.{Files, Path}
+    val tmp: Path = Files.createTempDirectory("jni-")
+    val resourcePath: String = s"/$resourceName"
+    val resourceStream = Option(getClass.getResourceAsStream(resourcePath)) match {
+      case Some(s) => s
+      case None => throw new FileNotFoundException(
+        s"Resource $resourcePath cannot be found on the classpath.")
+    }
+    val extractedPath = tmp.resolve(resourceName)
+    Files.copy(resourceStream, extractedPath)
     extractedPath.toAbsolutePath.toString
   }
 

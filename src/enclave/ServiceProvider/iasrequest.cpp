@@ -53,6 +53,8 @@ static string url_decode(string str);
 
 void ias_check(ias_error_t status) {
 	switch (status) {
+	case IAS_OK:
+		break;
 	case IAS_QUERY_FAILED:
 		throw std::runtime_error("Could not query IAS.");
 		break;
@@ -60,7 +62,10 @@ void ias_check(ias_error_t status) {
 		throw std::runtime_error("IAS: Invalid payload.");
 		break;
 	case IAS_UNAUTHORIZED:
-		throw std::runtime_error("IAS: Failed to authenticate or authorize request");
+		throw std::runtime_error("IAS: Failed to authenticate or authorize request.");
+		break;
+	case IAS_NOT_FOUND:
+		throw std::runtime_error("IAS: Not found.");
 		break;
 	case IAS_SERVER_ERR:
 		throw std::runtime_error("An internal error occurred on the IAS server.");

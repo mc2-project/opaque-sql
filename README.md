@@ -165,13 +165,14 @@ Remote attestation ensures that the workers' SGX enclaves are genuine. To use re
     openssl genrsa -out client.key 2048
     openssl req -key client.key -new -out client.req
     openssl x509 -req -days 365 -in client.req -signkey client.key -out client.crt -extfile client.cnf -extensions ssl_client
-    openssl pkcs12 -export -out client.pfx -inkey client.key -in client.crt
     
     # Should print "client.crt: OK"
     openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
     ```
     
-2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which should include a certificate.
+2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which may take several days.
+
+3. The response should include a SPID (a 16-byte hex string) and a reminder of which EPID security policy you chose (linkable or unlinkable). Place those values into `src/enclave/ServiceProvider/ServiceProvider.cpp`.
 
 3. Set the following environment variables:
 
@@ -181,7 +182,6 @@ Remote attestation ensures that the workers' SGX enclaves are genuine. To use re
 
     export IAS_CLIENT_CERT_FILE=.../client.crt  # from openssl x509 above
     export IAS_CLIENT_KEY_FILE=.../client.key   # from openssl genrsa above
-    export IAS_REPORT_SIGNING_FILE=...   # Intel-provided certificate from step 2
     ```
 
 4. Change the value of `Utils.sharedKey` (`src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala`), the shared data encryption key. Opaque will ensure that each enclave passes remote attestation before sending it this key.

@@ -26,9 +26,9 @@ typedef struct _sp_db_item_t {
 
 class ServiceProvider {
 public:
-  ServiceProvider(const std::string &spid, bool is_production)
-    : spid(spid), is_production(is_production), ias_api_version(3),
-      require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
+  ServiceProvider(const std::string &spid, bool is_production, bool linkable_signature)
+    : spid(spid), is_production(is_production), linkable_signature(linkable_signature),
+      ias_api_version(3), require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
@@ -45,22 +45,29 @@ public:
    */
   void export_public_key_code(const std::string &filename);
 
+  /** Connect to the Intel attestation service. */
+  void ensure_ias_connection(const std::string &ias_report_signing_ca_file);
+
   /** Process attestation message 0 from an enclave. */
   void process_msg0(uint32_t extended_epid_group_id);
 
-  /** Process attestation message 1 from an enclave and generate message 2 for that enclave. */
+  /**
+   * Process attestation message 1 from an enclave and generate message 2 for that enclave.
+   *
+   * You must call `ensure_ias_connection` before calling this method.
+   */
   std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
 
   /**
    * Process attestation message 3 from an enclave and generate message 4 for that enclave. Message
    * 4 contains the shared secret required for the enclave to decrypt data.
+   *
+   * You must call `ensure_ias_connection` before calling this method.
    */
   std::unique_ptr<ra_msg4_t> process_msg3(
     sgx_ra_msg3_t *msg3, uint32_t msg3_size, uint32_t *msg4_size);
 
 private:
-  void ensure_ias_connection();
-
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
@@ -69,6 +76,7 @@ private:
 
   std::unique_ptr<IAS_Connection> ias;
   bool is_production;
+  bool linkable_signature;
   uint16_t ias_api_version;
 
   bool require_attestation;

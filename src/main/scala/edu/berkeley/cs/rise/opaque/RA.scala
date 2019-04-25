@@ -27,8 +27,10 @@ object RA extends Logging {
 
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
 
+    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
+
     val sp = new SP()
-    sp.LoadKeys(Utils.sharedKey)
+    sp.Init(Utils.sharedKey, intelCert)
 
     val epids = rdd.mapPartitions { _ =>
       val (enclave, eid) = Utils.initEnclave()
