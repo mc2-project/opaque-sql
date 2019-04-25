@@ -36,7 +36,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
     }
     service_provider.load_private_key(private_key_path);
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
-    service_provider.ensure_ias_connection(std::string(intel_cert_str, intel_cert_len));
+    service_provider.connect_to_ias(std::string(intel_cert_str, intel_cert_len));
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }

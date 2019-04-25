@@ -147,7 +147,17 @@ void ServiceProvider::export_public_key_code(const std::string &filename) {
   file.close();
 }
 
-void ServiceProvider::ensure_ias_connection(const std::string &ias_report_signing_ca_file) {
+void ServiceProvider::connect_to_ias(const std::string &ias_report_signing_ca_file) {
+  try {
+    connect_to_ias_helper(ias_report_signing_ca_file);
+  } catch (const std::runtime_error &e) {
+    if (require_attestation) {
+      throw;
+    }
+  }
+}
+
+void ServiceProvider::connect_to_ias_helper(const std::string &ias_report_signing_ca_file) {
   if (this->ias) {
     return;
   }

@@ -46,7 +46,7 @@ public:
   void export_public_key_code(const std::string &filename);
 
   /** Connect to the Intel attestation service. */
-  void ensure_ias_connection(const std::string &ias_report_signing_ca_file);
+  void connect_to_ias(const std::string &ias_report_signing_ca_file);
 
   /** Process attestation message 0 from an enclave. */
   void process_msg0(uint32_t extended_epid_group_id);
@@ -68,6 +68,8 @@ public:
     sgx_ra_msg3_t *msg3, uint32_t msg3_size, uint32_t *msg4_size);
 
 private:
+  void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);
+
   sgx_ec256_public_t sp_pub_key;
   sgx_ec256_private_t sp_priv_key;
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
