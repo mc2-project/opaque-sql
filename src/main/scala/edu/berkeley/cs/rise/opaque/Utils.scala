@@ -137,7 +137,7 @@ object Utils extends Logging {
     import scala.util.{Try, Success, Failure}
     Try { fn  } match {
       case Success(x) => x
-      case Failure(e: OpaqueException) if n > 1 => retry(n - 1)(fn)
+      case Failure(e) if n > 1 => retry(n - 1)(fn)
       case Failure(e) => throw e
     }
   }
