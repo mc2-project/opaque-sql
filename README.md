@@ -12,7 +12,7 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 - Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
-- Not all Spark SQL operations are supported. UDFs are currently not supported.
+- Not all Spark SQL operations are supported. UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is not included.
 
@@ -145,6 +145,38 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     // +----+-----+
     ```
     
+## User-Defined Functions (UDFs)
+
+To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque's serialized row representation.
+
+For example, suppose we wish to implement a UDF called `dot`, which computes the dot product of two double arrays (`Array[Double]`). We [define it in Scala](src/main/scala/edu/berkeley/cs/rise/opaque/expressions/DotProduct.scala) in terms of the Breeze linear algebra library's implementation. We can then use it in a DataFrame query, such as [logistic regression](src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/LogisticRegression.scala).
+
+Now we can port this UDF to Opaque as follows:
+
+1. Define a corresponding expression using Opaque's expression serialization format by adding the following to [Expr.fbs](src/flatbuffers/Expr.fbs), which indicates that a DotProduct expression takes two inputs (the two double arrays):
+
+    ```protobuf
+    table DotProduct {
+        left:Expr;
+        right:Expr;
+    }
+    ```
+
+    In the same file, add `DotProduct` to the list of expressions in `ExprUnion`.
+
+2. Implement the serialization logic from the Scala `DotProduct` UDF to the Opaque expression that we just defined. In [`Utils.flatbuffersSerializeExpression`](src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala), add a case for `DotProduct` as follows:
+
+    ```scala
+    case (DotProduct(left, right), Seq(leftOffset, rightOffset)) =>
+      tuix.Expr.createExpr(
+        builder,
+        tuix.ExprUnion.DotProduct,
+        tuix.DotProduct.createDotProduct(
+          builder, leftOffset, rightOffset))
+    ```
+
+3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
+
 ## Launch Token and Remote Attestation
 
 For development, Opaque launches enclaves in debug mode. To launch enclaves in release mode, use a [Launch Enclave](https://github.com/intel/linux-sgx/blob/master/psw/ae/ref_le/ref_le.md) or contact Intel to obtain a launch token, then pass it to `sgx_create_enclave` in `src/enclave/App/App.cpp`. Additionally, change `-DEDEBUG` to `-UEDEBUG` in `src/enclave/CMakeLists.txt`.
