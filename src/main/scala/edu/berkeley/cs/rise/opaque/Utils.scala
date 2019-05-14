@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.SecureRandom
@@ -126,6 +127,21 @@ object Utils extends Logging {
     }
   }
 
+  /**
+   * Retry `fn`, which may throw an OpaqueException, up to n times.
+   *
+   * From https://stackoverflow.com/a/7931459.
+   */
+  @annotation.tailrec
+  def retry[T](n: Int)(fn: => T): T = {
+    import scala.util.{Try, Success, Failure}
+    Try { fn  } match {
+      case Success(x) => x
+      case Failure(e) if n > 1 => retry(n - 1)(fn)
+      case Failure(e) => throw e
+    }
+  }
+
   private def jsonSerialize(x: Any): String = (x: @unchecked) match {
     case x: Int => x.toString
     case x: Double => x.toString
@@ -187,6 +203,20 @@ object Utils extends Logging {
     extractedPath.toAbsolutePath.toString
   }
 
+  def findResource(resourceName: String): String = {
+    import java.nio.file.{Files, Path}
+    val tmp: Path = Files.createTempDirectory("jni-")
+    val resourcePath: String = s"/$resourceName"
+    val resourceStream = Option(getClass.getResourceAsStream(resourcePath)) match {
+      case Some(s) => s
+      case None => throw new FileNotFoundException(
+        s"Resource $resourcePath cannot be found on the classpath.")
+    }
+    val extractedPath = tmp.resolve(resourceName)
+    Files.copy(resourceStream, extractedPath)
+    extractedPath.toAbsolutePath.toString
+  }
+
   def createTempDir(): File = {
     val dir = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID.toString)
     dir.mkdirs()
@@ -217,11 +247,17 @@ object Utils extends Logging {
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
+
+  /**
+   * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
+   * attestation succeeds. For development, we use a hardcoded key. You should change it.
+   */
+  val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+  assert(sharedKey.size == GCM_KEY_LENGTH)
   
   def encrypt(data: Array[Byte]): Array[Byte] = {
     val random = SecureRandom.getInstance("SHA1PRNG")
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
@@ -232,8 +268,7 @@ object Utils extends Logging {
   }
   
   def decrypt(data: Array[Byte]): Array[Byte] = {
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
@@ -255,6 +290,7 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies =
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
+    RA.initRA(sqlContext.sparkContext)
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

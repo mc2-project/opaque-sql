@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <sgx_tcrypto.h>
 
 #include "define.h"
 
@@ -65,5 +66,10 @@ inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len)
   printf("0x%x ", array[i]);
   printf("\n}\n");
 }
+
+typedef struct ra_msg4_t {
+  uint8_t shared_key_mac[SGX_AESGCM_MAC_SIZE];
+  uint8_t shared_key_ciphertext[SGX_AESGCM_KEY_SIZE];
+} ra_msg4_t;
 
 #endif // COMMON_H
