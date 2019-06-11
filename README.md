@@ -56,7 +56,9 @@ After downloading the Opaque codebase, build and test it as follows. (Alternativ
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 
-    If running with real SGX hardware, also set `export SGX_MODE=HW`.
+    By default, Opaque runs in simulation mode, which does not require the machine to have real SGX hardware.
+    This is useful if you want to test out Opaque's functionality locally.
+    However, if you are running Opaque with real SGX hardware, then please also set `export SGX_MODE=HW`.
 
 4. Run the Opaque tests:
 
