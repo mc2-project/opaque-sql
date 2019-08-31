@@ -4,16 +4,16 @@ project(OpaqueEnclaveTrusted)
 
 set(SOURCES
   Aggregate.cpp
+  ColumnSort.cpp
   Crypto.cpp
   Enclave.cpp
   Filter.cpp
   Flatbuffers.cpp
+  FlatbuffersReaders.cpp
+  FlatbuffersWriters.cpp
   Join.cpp
-  ObliviousSort.cpp
   Project.cpp
   Sort.cpp
-  ColumnSort.cpp
-  isv_enclave.cpp
   sgxaes.cpp
   sgxaes_asm.S
   util.cpp
@@ -50,10 +50,12 @@ find_library(TCRYPTO_LIB sgx_tcrypto)
 find_library(SERVICE_LIB sgx_tservice)
 find_library(SERVICE_SIM_LIB sgx_tservice_sim)
 
-if(NOT "$ENV{SGX_MODE}" EQUAL "HW")
+if(NOT "$ENV{SGX_MODE}" STREQUAL "HW")
+  message(STATUS "Building for simulated SGX")
   set(Trts_Library_Path "${TRTS_SIM_LIB}")
   set(Service_Library_Path "${SERVICE_SIM_LIB}")
 else()
+  message(STATUS "Building for SGX hardware")
   set(Trts_Library_Path "${TRTS_LIB}")
   set(Service_Library_Path "${SERVICE_LIB}")
 endif()

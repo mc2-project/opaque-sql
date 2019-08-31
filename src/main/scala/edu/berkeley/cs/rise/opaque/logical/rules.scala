@@ -138,10 +138,6 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
               child.asInstanceOf[OpaqueOperator]))
       }
 
-    // For now, just ignore limits. TODO: Implement Opaque operators for these
-    case p @ GlobalLimit(_, child) if isEncrypted(p) => child
-    case p @ LocalLimit(_, child) if isEncrypted(p) => child
-
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
 

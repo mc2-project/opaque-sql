@@ -64,7 +64,12 @@ object OpaqueOperators extends Strategy {
             rightProjSchema.map(_.toAttribute),
             (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
             sorted)
-          EncryptedProjectExec(dropTags(left.output, right.output), joined) :: Nil
+          val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+          val filtered = condition match {
+            case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
+            case None => tagsDropped
+          }
+          filtered :: Nil
         case _ => Nil
       }
 

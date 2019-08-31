@@ -12,11 +12,9 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 - Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
-- Not all Spark SQL operations are supported. UDFs are currently not supported.
+- Not all Spark SQL operations are supported. UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is not included.
-
-- The remote attestation code is not complete as it contains sample code from the Intel SDK.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
@@ -58,7 +56,9 @@ After downloading the Opaque codebase, build and test it as follows. (Alternativ
     export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
     ```
 
-    If running with real SGX hardware, also set `export SGX_MODE=HW` and `export SGX_PRERELEASE=1`.
+    By default, Opaque runs in simulation mode, which does not require the machine to have real SGX hardware.
+    This is useful if you want to test out Opaque's functionality locally.
+    However, if you are running Opaque with real SGX hardware, then please also set `export SGX_MODE=HW`.
 
 4. Run the Opaque tests:
 
@@ -82,6 +82,13 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
 
     ```sh
     ${SPARK_HOME}/bin/spark-shell --jars ${OPAQUE_HOME}/target/scala-2.11/opaque_2.11-0.1.jar
+    ```
+    
+    Alternatively, to run Opaque queries locally for development rather than on a cluster:
+    
+    ```sh
+    cd ${OPAQUE_HOME}
+    JVM_OPTS="-Xmx4G" build/sbt console
     ```
 
 3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
@@ -139,6 +146,79 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
     // | baz|    5|
     // +----+-----+
     ```
+    
+## User-Defined Functions (UDFs)
+
+To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque's serialized row representation.
+
+For example, suppose we wish to implement a UDF called `dot`, which computes the dot product of two double arrays (`Array[Double]`). We [define it in Scala](src/main/scala/edu/berkeley/cs/rise/opaque/expressions/DotProduct.scala) in terms of the Breeze linear algebra library's implementation. We can then use it in a DataFrame query, such as [logistic regression](src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/LogisticRegression.scala).
+
+Now we can port this UDF to Opaque as follows:
+
+1. Define a corresponding expression using Opaque's expression serialization format by adding the following to [Expr.fbs](src/flatbuffers/Expr.fbs), which indicates that a DotProduct expression takes two inputs (the two double arrays):
+
+    ```protobuf
+    table DotProduct {
+        left:Expr;
+        right:Expr;
+    }
+    ```
+
+    In the same file, add `DotProduct` to the list of expressions in `ExprUnion`.
+
+2. Implement the serialization logic from the Scala `DotProduct` UDF to the Opaque expression that we just defined. In [`Utils.flatbuffersSerializeExpression`](src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala), add a case for `DotProduct` as follows:
+
+    ```scala
+    case (DotProduct(left, right), Seq(leftOffset, rightOffset)) =>
+      tuix.Expr.createExpr(
+        builder,
+        tuix.ExprUnion.DotProduct,
+        tuix.DotProduct.createDotProduct(
+          builder, leftOffset, rightOffset))
+    ```
+
+3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
+
+## Launch Token and Remote Attestation
+
+For development, Opaque launches enclaves in debug mode. To launch enclaves in release mode, use a [Launch Enclave](https://github.com/intel/linux-sgx/blob/master/psw/ae/ref_le/ref_le.md) or contact Intel to obtain a launch token, then pass it to `sgx_create_enclave` in `src/enclave/App/App.cpp`. Additionally, change `-DEDEBUG` to `-UEDEBUG` in `src/enclave/CMakeLists.txt`.
+
+Remote attestation ensures that the workers' SGX enclaves are genuine. To use remote attestation, do the following:
+
+1. [Generate a self-signed certificate](https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using):
+
+    ```sh
+    cat <<EOF > client.cnf
+    [ ssl_client ]
+    keyUsage = digitalSignature, keyEncipherment, keyCertSign
+    subjectKeyIdentifier=hash
+    authorityKeyIdentifier=keyid,issuer
+    extendedKeyUsage = clientAuth, serverAuth
+    EOF
+
+    openssl genrsa -out client.key 2048
+    openssl req -key client.key -new -out client.req
+    openssl x509 -req -days 365 -in client.req -signkey client.key -out client.crt -extfile client.cnf -extensions ssl_client
+    
+    # Should print "client.crt: OK"
+    openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
+    ```
+    
+2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which may take several days.
+
+3. The response should include a SPID (a 16-byte hex string) and a reminder of which EPID security policy you chose (linkable or unlinkable). Place those values into `src/enclave/ServiceProvider/ServiceProvider.cpp`.
+
+3. Set the following environment variables:
+
+    ```sh
+    # Require attestation to complete successfully before sending secrets to the worker enclaves.
+    export OPAQUE_REQUIRE_ATTESTATION=1
+
+    export IAS_CLIENT_CERT_FILE=.../client.crt  # from openssl x509 above
+    export IAS_CLIENT_KEY_FILE=.../client.key   # from openssl genrsa above
+    ```
+
+4. Change the value of `Utils.sharedKey` (`src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala`), the shared data encryption key. Opaque will ensure that each enclave passes remote attestation before sending it this key.
 
 ## Contact
 

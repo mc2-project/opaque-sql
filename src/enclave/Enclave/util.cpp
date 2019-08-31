@@ -148,3 +148,15 @@ int secs_to_tm(long long t, struct tm *tm) {
 
   return 0;
 }
+
+void sgx_check(sgx_status_t ret) {
+  if (ret != SGX_SUCCESS) {
+    // Format the status code as hex
+    char buf[BUFSIZ] = {'\0'};
+    snprintf(buf, BUFSIZ, "%#06x", ret);
+
+    throw std::runtime_error(
+      std::string("Enclave error: sgx_status_t ")
+      + std::string(buf));
+  }
+}

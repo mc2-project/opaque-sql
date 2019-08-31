@@ -2,6 +2,20 @@
 
 #include "Flatbuffers.h"
 
+std::string to_string(const tuix::Row *row) {
+  std::string s;
+  flatbuffers::uoffset_t num_fields = row->field_values()->size();
+  s.append("[");
+  for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+    s.append(to_string(row->field_values()->Get(i)));
+    if (i + 1 < num_fields) {
+      s.append(",");
+    }
+  }
+  s.append("]");
+  return s;
+}
+
 std::string to_string(const Date &date) {
   uint64_t seconds_per_day = 60 * 60 * 24L;
   uint64_t secs = date.days_since_epoch * seconds_per_day;
@@ -336,4 +350,15 @@ flatbuffers::Offset<tuix::Field> flatbuffers_copy(
       std::string("flatbuffers_copy tuix::Field: Unknown field type ")
                   + std::to_string(field->value_type()));
   }
+}
+
+flatbuffers::Offset<tuix::Row> flatbuffers_copy_row_as_dummy(
+  const tuix::Row *row, flatbuffers::FlatBufferBuilder& builder, bool force_null) {
+  flatbuffers::uoffset_t num_fields = row->field_values()->size();
+  std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
+  for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
+    field_values[i] = flatbuffers_copy<tuix::Field>(
+      row->field_values()->Get(i), builder, force_null);
+  }
+  return tuix::CreateRowDirect(builder, &field_values, true);
 }

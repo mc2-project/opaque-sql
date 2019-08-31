@@ -1,9 +1,12 @@
 #include "ColumnSort.h"
-#include "Flatbuffers.h"
+
 #include <vector>
 
+#include "ExpressionEvaluation.h"
+#include "FlatbuffersReaders.h"
+#include "FlatbuffersWriters.h"
 
-/* 
+/*
 * Split each partition in half and shift each half "upwards"
 * The top half of each partition goes to the previous partition
 * The bottom half of each partition stays in the same partition
@@ -12,9 +15,8 @@
 void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
               uint32_t partition_idx, uint32_t num_partitions,
               uint8_t **output_row, size_t *output_row_size) {
-
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  ShuffleOutputWriter w;
 
   uint32_t top_destination;
   uint32_t bottom_destination;
@@ -35,13 +37,13 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   bool top_written = false, bottom_written = false;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    w.write(row);
+    w.append(row);
     if (i + 1 == n / 2) {
-      w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
+      w.finish_shuffle_output(top_destination);
       top_written = true;
     }
     if (i == n - 1) {
-      w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+      w.finish_shuffle_output(bottom_destination);
       bottom_written = true;
     }
 
@@ -49,15 +51,13 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
   }
 
   if (!top_written) {
-    w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
+    w.finish_shuffle_output(top_destination);
   }
   if (!bottom_written) {
-    w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+    w.finish_shuffle_output(bottom_destination);
   }
 
-  w.finish(w.write_shuffle_outputs());
-  *output_row = w.output_buffer().release();
-  *output_row_size = w.output_size();
+  w.output_buffer(output_row, output_row_size);
 }
 
 /*
@@ -68,10 +68,10 @@ void shift_up(uint8_t *input_rows, uint32_t input_rows_length,
 * Number of input rows must be even
 */ 
 void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
-              uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, size_t *output_row_size) {
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+                uint32_t partition_idx, uint32_t num_partitions,
+                uint8_t **output_row, size_t *output_row_size) {
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  ShuffleOutputWriter w;
 
   uint32_t top_destination;
   uint32_t bottom_destination;
@@ -90,28 +90,26 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
   bool top_written = false, bottom_written = false;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    w.write(row);
+    w.append(row);
     if (i + 1 == n / 2) {
-      w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
+      w.finish_shuffle_output(top_destination);
       top_written = true;
     }
     if (i == n - 1) {
-      w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+      w.finish_shuffle_output(bottom_destination);
       bottom_written = true;
     }
     i++;
   }
 
   if (!top_written) {
-    w.write_shuffle_output(w.write_encrypted_blocks(), top_destination);
+    w.finish_shuffle_output(top_destination);
   }
   if (!bottom_written) {
-    w.write_shuffle_output(w.write_encrypted_blocks(), bottom_destination);
+    w.finish_shuffle_output(bottom_destination);
   }
 
-  w.finish(w.write_shuffle_outputs());
-  *output_row = w.output_buffer().release();
-  *output_row_size = w.output_size();
+  w.output_buffer(output_row, output_row_size);
 }
 
 /*
@@ -125,36 +123,30 @@ void shift_down(uint8_t *input_rows, uint32_t input_rows_length,
 * Number of input rows must be even
 */
 void transpose(uint8_t *input_rows, uint32_t input_rows_length,
-              uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, size_t *output_row_size) {
-
+               uint32_t partition_idx, uint32_t num_partitions,
+               uint8_t **output_row, size_t *output_row_size) {
   (void)partition_idx;
 
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-
-  std::vector<std::unique_ptr<FlatbuffersRowWriter>> ws;
-
-  for (uint32_t i = 0; i < num_partitions; ++i) {
-    ws.emplace_back(std::unique_ptr<FlatbuffersRowWriter>(new FlatbuffersRowWriter()));
-  }
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  std::vector<RowWriter> ws(num_partitions);
 
   uint32_t i = 0;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
-    ws[i % num_partitions]->write(row);
+    ws[i % num_partitions].append(row);
     i++;
   }
 
-  FlatbuffersRowWriter shuffle_output_writer;
+  ShuffleOutputWriter shuffle_output_writer;
   for (uint32_t j = 0; j < num_partitions; j++) {
-    ws[j]->write_shuffle_output(ws[j]->write_encrypted_blocks(), j);
-    std::unique_ptr<uint8_t, decltype(&ocall_free)> out_buffer = ws[j]->output_buffer();
-    ShuffleOutputReader sor(out_buffer.get(), ws[j]->output_size());
-    shuffle_output_writer.append_shuffle_output(sor.get());
+    UntrustedBufferRef<tuix::EncryptedBlocks> partition = ws[j].output_buffer();
+    RowReader partition_reader(partition.view());
+    while (partition_reader.has_next()) {
+      shuffle_output_writer.append(partition_reader.next());
+    }
+    shuffle_output_writer.finish_shuffle_output(j);
   }
-  shuffle_output_writer.finish(shuffle_output_writer.write_shuffle_outputs());
-  *output_row = shuffle_output_writer.output_buffer().release();
-  *output_row_size = shuffle_output_writer.output_size();
+  shuffle_output_writer.output_buffer(output_row, output_row_size);
 }
 
 
@@ -169,10 +161,10 @@ void transpose(uint8_t *input_rows, uint32_t input_rows_length,
 * Number of input rows must be even
 */
 void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
-              uint32_t partition_idx, uint32_t num_partitions,
-              uint8_t **output_row, size_t *output_row_size) {
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+                 uint32_t partition_idx, uint32_t num_partitions,
+                 uint8_t **output_row, size_t *output_row_size) {
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  ShuffleOutputWriter w;
 
   uint32_t n = r.num_rows();
   assert(n % 2 == 0);
@@ -191,75 +183,62 @@ void untranspose(uint8_t *input_rows, uint32_t input_rows_length,
 
     if (dst_partition_idx != prev_dst_partition_idx) {
       // Rows are going to a different partition
-      w.write_shuffle_output(w.write_encrypted_blocks(), prev_dst_partition_idx);
+      w.finish_shuffle_output(prev_dst_partition_idx);
     }
 
     const tuix::Row *in_row = r.next();
-    w.write(in_row);
+    w.append(in_row);
 
     prev_dst_partition_idx = dst_partition_idx;
     row++;
   }
 
   // Write shuffle output for the last chunk of rows
-  w.write_shuffle_output(w.write_encrypted_blocks(), prev_dst_partition_idx);
+  w.finish_shuffle_output(prev_dst_partition_idx);
 
-  w.finish(w.write_shuffle_outputs());
-  *output_row = w.output_buffer().release();
-  *output_row_size = w.output_size(); 
+  w.output_buffer(output_row, output_row_size);
 }
 
 /*
 * Pad with dummy rows so that each partition has the same number of rows
 */
-void column_sort_pad(uint8_t *input_rows,
-                         uint32_t input_rows_length,
-                         uint32_t rows_per_partition,
-                         uint8_t **output_row,
-                         size_t *output_row_size) {
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+void column_sort_pad(uint8_t *input_rows, uint32_t input_rows_length, uint32_t rows_per_partition,
+                     uint8_t **output_row, size_t *output_row_size) {
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter w;
   uint32_t num_rows = r.num_rows();
 
-  const tuix::Row *row = NULL;
+  const tuix::Row *row = nullptr;
 
   while (r.has_next()) {
     row = r.next();
-    w.write(row);
+    w.append(row);
   }
 
   uint32_t num_dummies = rows_per_partition - num_rows;
   for (uint32_t i = 0; i < num_dummies; i++) {
-    w.write_dummy_row(row);
+    w.append_as_dummy(row);
   } 
 
-  w.finish(w.write_encrypted_blocks());
-  *output_row = w.output_buffer().release();
-  *output_row_size = w.output_size(); 
-
+  w.output_buffer(output_row, output_row_size);
 }
 
 /*
 * Remove all dummy rows that were added during padding from each partition 
 */
-void column_sort_filter(uint8_t *input_rows,
-                         uint32_t input_rows_length,
-                         uint8_t **output_row,
-                         size_t *output_row_size) {
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+void column_sort_filter(uint8_t *input_rows, uint32_t input_rows_length,
+                        uint8_t **output_row, size_t *output_row_size) {
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter w;
 
-  const tuix::Row *row = NULL;
   while (r.has_next()) {
-    row = r.next();
+    const tuix::Row *row = r.next();
     if (!row->is_dummy()) {
-      w.write(row);
+      w.append(row);
     } 
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_row = w.output_buffer().release();
-  *output_row_size = w.output_size(); 
+  w.output_buffer(output_row, output_row_size);
 }
 
 

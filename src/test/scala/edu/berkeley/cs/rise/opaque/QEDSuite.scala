@@ -33,11 +33,6 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     spark.stop()
   }
 
-  ignore("Remote attestation") {
-    val data = for (i <- 0 until 8) yield (i)
-    RA.initRA(spark.sparkContext.parallelize(data, 2))
-  }
-
   test("java encryption/decryption") {
     val data = Array[Byte](0, 1, 2)
     val (enclave, eid) = Utils.initEnclave()

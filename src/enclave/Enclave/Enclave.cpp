@@ -3,14 +3,15 @@
 #include <cstdint>
 #include <cassert>
 
+#include <sgx_lfence.h>
+#include <sgx_tkey_exchange.h>
+
 #include "Aggregate.h"
 #include "Crypto.h"
 #include "Filter.h"
 #include "Join.h"
 #include "Project.h"
 #include "Sort.h"
-#include "isv_enclave.h"
-#include "sgx_lfence.h"
 #include "util.h"
 #include "ColumnSort.h"
 
@@ -222,87 +223,71 @@ void ecall_non_oblivious_aggregate_step2(
   }
 }
 
-void ecall_column_sort(
-                  int round,
-                  uint8_t *sort_order,
-                  uint32_t sort_order_length,
-                  uint8_t *input_rows,
-                  uint32_t input_rows_length,
-                  uint32_t partition_index,
-                  uint32_t r,
-                  uint32_t s,
-                  uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
-    (void)r;
-    uint8_t *sorted_rows;
-    size_t sorted_rows_length;
-    external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows, &sorted_rows_length);
+void ecall_column_sort(int round, uint8_t *sort_order, uint32_t sort_order_length,
+                       uint8_t *input_rows, uint32_t input_rows_length, uint32_t partition_index,
+                       uint32_t r, uint32_t s, uint8_t **output_buffer,
+                       size_t *output_buffer_length) {
+  (void)r;
+  uint8_t *sorted_rows;
+  size_t sorted_rows_length;
+  external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows,
+                &sorted_rows_length);
 
-    if (round == 1) {
-        transpose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
-    } else if (round == 2) {
-        untranspose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
-    } else if (round == 3) {
-        shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
-    } else {
-        shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer, output_buffer_length);
-    }
+  switch (round) {
+    case 1:
+      transpose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer,
+                output_buffer_length);
+      break;
+    case 2:
+      untranspose(sorted_rows, sorted_rows_length, partition_index, s, output_buffer,
+                  output_buffer_length);
+      break;
+    case 3:
+      shift_down(sorted_rows, sorted_rows_length, partition_index, s, output_buffer,
+                 output_buffer_length);
+      break;
+    default:
+      shift_up(sorted_rows, sorted_rows_length, partition_index, s, output_buffer,
+               output_buffer_length);
+      break;
   }
+}
 
-  void ecall_column_sort_pad(
-                  uint8_t *input_rows,
-                  uint32_t input_rows_length,
-                  uint32_t r,
-                  uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
-    column_sort_pad(input_rows, input_rows_length, r, output_buffer, output_buffer_length);
-  }
+void ecall_column_sort_pad(uint8_t *input_rows, uint32_t input_rows_length, uint32_t r,
+                           uint8_t **output_buffer, size_t *output_buffer_length) {
+  column_sort_pad(input_rows, input_rows_length, r, output_buffer, output_buffer_length);
+}
 
-  void ecall_column_sort_filter(
-                  uint8_t *input_rows,
-                  uint32_t input_rows_length,
-                  uint8_t **output_buffer,
-                  size_t *output_buffer_length) {
-    column_sort_filter(input_rows, input_rows_length, output_buffer, output_buffer_length);
-  }
+void ecall_column_sort_filter(uint8_t *input_rows, uint32_t input_rows_length,
+                              uint8_t **output_buffer, size_t *output_buffer_length) {
+  column_sort_filter(input_rows, input_rows_length, output_buffer, output_buffer_length);
+}
 
-sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context) {
+sgx_status_t ecall_enclave_init_ra(sgx_ra_context_t *context) {
   try {
-    return enclave_init_ra(b_pse, p_context);
+    return sgx_ra_init(&g_sp_pub_key, false, context);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
-    return SGX_ERROR_UNEXPECTED;
+    // We return success so that the exception just thrown doesn't get overridden by another
+    // exception due to the return code.
+    return SGX_SUCCESS;
   }
 }
 
 
 void ecall_enclave_ra_close(sgx_ra_context_t context) {
   try {
-    enclave_ra_close(context);
+    sgx_ra_close(context);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
 }
 
-sgx_status_t ecall_verify_att_result_mac(sgx_ra_context_t context, uint8_t* message,
-                                         size_t message_size, uint8_t* mac,
-                                         size_t mac_size) {
+void ecall_ra_proc_msg4(
+  sgx_ra_context_t context, uint8_t *msg4, uint32_t msg4_size) {
   try {
-    return verify_att_result_mac(context, message, message_size, mac, mac_size);
+    set_shared_key(context, msg4, msg4_size);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
-    return SGX_ERROR_UNEXPECTED;
-  }
-}
-
-sgx_status_t ecall_put_secret_data(sgx_ra_context_t context,
-                                   uint8_t* p_secret,
-                                   uint32_t secret_size,
-                                   uint8_t* gcm_mac) {
-  try {
-    return put_secret_data(context, p_secret, secret_size, gcm_mac);
-  } catch (const std::runtime_error &e) {
-    ocall_throw(e.what());
-    return SGX_ERROR_UNEXPECTED;
   }
 }

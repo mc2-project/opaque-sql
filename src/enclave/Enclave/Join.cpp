@@ -1,6 +1,8 @@
 #include "Join.h"
 
 #include "ExpressionEvaluation.h"
+#include "FlatbuffersReaders.h"
+#include "FlatbuffersWriters.h"
 #include "common.h"
 
 void scan_collect_last_primary(
@@ -9,19 +11,33 @@ void scan_collect_last_primary(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter w;
+
+  FlatbuffersTemporaryRow last_primary;
+
+  // Accumulate all primary table rows from the same group as the last primary row into `w`.
+  //
+  // Because our distributed sorting algorithm uses range partitioning over the join keys, all
+  // primary rows belonging to the same group will be colocated in the same partition. (The
+  // corresponding foreign rows may be in the same partition or the next partition.) Therefore it is
+  // sufficient to send primary rows at most one partition forward.
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     if (join_expr_eval.is_primary(row)) {
+      if (!last_primary.get() || !join_expr_eval.is_same_group(last_primary.get(), row)) {
+        w.clear();
+        last_primary.set(row);
+      }
+
+      w.append(row);
+    } else {
       w.clear();
-      w.write(row);
+      last_primary.set(nullptr);
     }
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_length = w.output_size();
+  w.output_buffer(output_rows, output_rows_length);
 }
 
 void non_oblivious_sort_merge_join(
@@ -31,37 +47,56 @@ void non_oblivious_sort_merge_join(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
-  EncryptedBlocksToRowReader r(input_rows, input_rows_length);
-  EncryptedBlocksToRowReader j(join_row, join_row_length);
-  FlatbuffersRowWriter w;
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader j(BufferRefView<tuix::EncryptedBlocks>(join_row, join_row_length));
+  RowWriter w;
 
-  if (j.num_rows() > 1) {
-    throw std::runtime_error(
-      std::string("Incorrect number of join rows passed: expected 0 or 1, got ")
-      + std::to_string(j.num_rows()));
+  RowWriter primary_group;
+  FlatbuffersTemporaryRow last_primary_of_group;
+  while (j.has_next()) {
+    const tuix::Row *row = j.next();
+    primary_group.append(row);
+    last_primary_of_group.set(row);
   }
-
-  FlatbuffersTemporaryRow primary(j.has_next() ? j.next() : nullptr);
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
 
     if (join_expr_eval.is_primary(current)) {
-      if (primary.get() && join_expr_eval.is_same_group(primary.get(), current)) {
-        throw std::runtime_error(
-          "non_oblivious_sort_merge_join - primary table uniqueness constraint violation: "
-          "multiple rows from the primary table had the same join attribute");
+      if (last_primary_of_group.get()
+          && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+        // Add this primary row to the current group
+        primary_group.append(current);
+        last_primary_of_group.set(current);
+      } else {
+        // Advance to a new group
+        primary_group.clear();
+        primary_group.append(current);
+        last_primary_of_group.set(current);
       }
-      // Advance to a new join attribute
-      primary.set(current);
     } else {
-      if (primary.get() != nullptr && join_expr_eval.is_same_group(primary.get(), current)) {
-        w.write(primary.get(), current);
+      // Output the joined rows resulting from this foreign row
+      if (last_primary_of_group.get()
+          && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+        auto primary_group_buffer = primary_group.output_buffer();
+        RowReader primary_group_reader(primary_group_buffer.view());
+        while (primary_group_reader.has_next()) {
+          const tuix::Row *primary = primary_group_reader.next();
+
+          if (!join_expr_eval.is_same_group(primary, current)) {
+            throw std::runtime_error(
+              std::string("Invariant violation: rows of primary_group "
+                          "are not of the same group: ")
+              + to_string(primary)
+              + std::string(" vs ")
+              + to_string(current));
+          }
+
+          w.append(primary, current);
+        }
       }
     }
   }
 
-  w.finish(w.write_encrypted_blocks());
-  *output_rows = w.output_buffer().release();
-  *output_rows_length = w.output_size();
+  w.output_buffer(output_rows, output_rows_length);
 }

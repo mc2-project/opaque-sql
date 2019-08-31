@@ -58,7 +58,7 @@ extern "C" {
     JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray, jint, jint, jint);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
-    JNIEnv *, jobject);
+    JNIEnv *, jobject, jlong);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
     JNIEnv *, jobject, jlong);
@@ -69,15 +69,6 @@ extern "C" {
   JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
     JNIEnv *, jobject, jlong, jbyteArray);
 
-  JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg0(
-    JNIEnv *, jobject, jbyteArray);
-
-  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg1(
-    JNIEnv *, jobject, jbyteArray);
-
-  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_SPProcMsg3(
-    JNIEnv *, jobject, jbyteArray);
-  
 #ifdef __cplusplus
 }
 #endif

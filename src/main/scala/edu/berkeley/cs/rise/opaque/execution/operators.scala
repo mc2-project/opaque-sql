@@ -81,7 +81,7 @@ case class EncryptedLocalTableScanExec(
     // Encrypt each local partition
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
-        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType)))
+        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
 
     // Make an RDD from the encrypted partitions
     sqlContext.sparkContext.parallelize(encryptedPartitions)
@@ -97,7 +97,8 @@ case class EncryptExec(child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
-      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
+      Iterator(Utils.encryptInternalRowsFlatbuffers(
+        rowIter.toSeq, output.map(_.dataType), useEnclave = true))
     }
   }
 }
@@ -111,7 +112,8 @@ case class ObliviousExec(child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
-      Iterator(Utils.encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType)))
+      Iterator(Utils.encryptInternalRowsFlatbuffers(
+        rowIter.toSeq, output.map(_.dataType), useEnclave = true))
     }
   }
 }

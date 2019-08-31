@@ -15,65 +15,44 @@ case class ObliviousSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
-    ObliviousSortExec.NewColumnSort(
+    ObliviousSortExec.columnSort(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
   }
 }
 
 object ObliviousSortExec extends java.io.Serializable {
-
-  val Multiplier = 1
-
-  def CountRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
-    var numRows:Long = 0.toLong
-    for (v <- data) {
-      numRows = numRows + v.numRows
-    }
+  private def countRows(key: Int, data: Iterator[Block]): Iterator[(Int, Long)] = {
+    var numRows: Long = 0L
+    for (v <- data) { numRows += + v.numRows }
     Iterator((key, numRows))
   }
 
-  def ColumnSortPad(data: Block, sort_order: Array[Byte], r: Int, s: Int): Block = {
+  private def columnSortPad(data: Block, sort_order: Array[Byte], r: Int, s: Int): Block = {
     val (enclave, eid) = Utils.initEnclave()
-
-    val ret = enclave.EnclaveColumnSort(eid,
-      sort_order, 0, data.bytes, r, s, 0)
-
+    val ret = enclave.EnclaveColumnSort(eid, sort_order, 0, data.bytes, r, s, 0)
     Block(ret)
   }
 
-  def ColumnSortOp(
-    data: Block,
-    partition_index: Int,
-    sort_order: Array[Byte],
-    round: Int, r: Int, s: Int) : Array[Byte] = {
+  private def columnSortOp(
+    data: Block, partition_index: Int, sort_order: Array[Byte], round: Int, r: Int, s: Int)
+      : Array[Byte] = {
     val (enclave, eid) = Utils.initEnclave()
-    val ret = enclave.EnclaveColumnSort(eid,
-      sort_order, round, data.bytes, r, s, partition_index)
-
-    ret
+    enclave.EnclaveColumnSort(eid, sort_order, round, data.bytes, r, s, partition_index)
   }
 
-  def ExternalSort(
-    data: Block,
-    sort_order: Array[Byte]) : Array[Byte] = {
-
+  private def externalSort(data: Block, sort_order: Array[Byte]): Array[Byte] = {
     val (enclave, eid) = Utils.initEnclave()
-    val ret = enclave.ExternalSort(eid,
-      sort_order, data.bytes)
-
-    ret
+    enclave.ExternalSort(eid, sort_order, data.bytes)
   }
 
-  def ColumnSortFilter(data: Array[Byte], sort_order: Array[Byte], r: Int, s: Int): Block = {
+  private def columnSortFilter(data: Array[Byte], sort_order: Array[Byte], r: Int, s: Int)
+      : Block = {
     val (enclave, eid) = Utils.initEnclave()
-
-    val ret = enclave.EnclaveColumnSort(eid,
-      sort_order, 5, data, r, s, 0)
-
+    val ret = enclave.EnclaveColumnSort(eid, sort_order, 5, data, r, s, 0)
     Block(ret)
   }
 
-  def NewColumnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
+  def columnSort(data: RDD[Block], sort_order: Array[Byte], r_input: Int = 0, s_input: Int = 0)
       : RDD[Block] = {
     // Parse the bytes and split into blocks, one for each destination column
     val NumMachines = data.partitions.length
@@ -86,7 +65,7 @@ object ObliviousSortExec extends java.io.Serializable {
     Utils.ensureCached(data)
 
     val numRows = data
-      .mapPartitionsWithIndex((index, x) => CountRows(index, x)).collect.sortBy(_._1)
+      .mapPartitionsWithIndex((index, x) => countRows(index, x)).collect.sortBy(_._1)
     var len = 0.toLong
 
     for (idx <- 0 until numRows.length) {
@@ -101,7 +80,7 @@ object ObliviousSortExec extends java.io.Serializable {
     var r = r_input
 
     if (r_input == 0 && s_input == 0) {
-      s = NumMachines * NumCores * Multiplier
+      s = NumMachines * NumCores
       r = (math.ceil(len * 1.0 / s)).toInt
     }
 
@@ -115,44 +94,52 @@ object ObliviousSortExec extends java.io.Serializable {
     } else if (r % (2 * s) != 0) {
       r = (r / (2 * s) + 1) * (s * 2)
     }
-    println(r)
+
     // Pad with dummy rows
-    val padded_data = data.map(x => ColumnSortPad(x, sort_order, r, s))
+    val padded_data = data.map(x => columnSortPad(x, sort_order, r, s))
 
     // Oblivious sort, transpose
     val transposed_data = padded_data.mapPartitionsWithIndex {
-      (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 1, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
+      (index, l) => l.map(x => columnSortOp(x, index, sort_order, 1, r, s))
+    }.mapPartitions(blockIter => blockIter.flatMap(block =>
+      Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(
+        pairIter.flatMap(_._2).toSeq)))
 
     // Oblivious sort, untranspose
     val untransposed_data = transposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 2, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
+    }.mapPartitions(blockIter => blockIter.flatMap(block =>
+      Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(
+        pairIter.flatMap(_._2).toSeq)))
 
     // Oblivious sort, shift down
     val shifted_down_data = untransposed_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 3, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
+    }.mapPartitions(blockIter => blockIter.flatMap(block =>
+      Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(
+        pairIter.flatMap(_._2).toSeq)))
 
     // Oblivious sort, shift up
     val shifted_up_data = shifted_down_data.mapPartitionsWithIndex {
       (index, l) => l.map(x => ColumnSortOp(x, index, sort_order, 4, r, s))
-    }.mapPartitions(blockIter => blockIter.flatMap(block => Utils.extractShuffleOutputs(Block(block))))
+    }.mapPartitions(blockIter => blockIter.flatMap(block =>
+      Utils.extractShuffleOutputs(Block(block))))
       .groupByKey()
-      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(pairIter.flatMap(_._2).toSeq)))
+      .mapPartitions(pairIter => Iterator(Utils.concatEncryptedBlocks(
+        pairIter.flatMap(_._2).toSeq)))
 
     // Final oblivious sort
     val sorted_data = shifted_up_data.mapPartitionsWithIndex {
-      (index, l) => l.map(x => ExternalSort(x, sort_order))}
+      (index, l) => l.map(x => externalSort(x, sort_order))}
 
     // Filter out dummy rows
-    val filtered_data = sorted_data.map(x => ColumnSortFilter(x, sort_order, r, s))
+    val filtered_data = sorted_data.map(x => columnSortFilter(x, sort_order, r, s))
 
     filtered_data
   }

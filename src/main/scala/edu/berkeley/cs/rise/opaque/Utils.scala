@@ -18,13 +18,15 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.SecureRandom
 import java.util.UUID
+
 import javax.crypto._
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import java.security.SecureRandom;
 
 import scala.collection.mutable.ArrayBuilder
 
@@ -45,6 +47,7 @@ import org.apache.spark.sql.catalyst.expressions.Contains
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
+import org.apache.spark.sql.catalyst.expressions.Exp
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
@@ -55,12 +58,15 @@ import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.Multiply
+import org.apache.spark.sql.catalyst.expressions.CaseWhen
+import org.apache.spark.sql.catalyst.expressions.CreateArray
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.Not
 import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
@@ -86,6 +92,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
@@ -94,6 +101,11 @@ import org.apache.spark.unsafe.types.UTF8String
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
+import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint
+import edu.berkeley.cs.rise.opaque.expressions.DotProduct
+import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
+import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
+import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 
@@ -112,6 +124,21 @@ object Utils extends Logging {
   def logPerf(message: String): Unit = {
     if (perf) {
       logInfo(message)
+    }
+  }
+
+  /**
+   * Retry `fn`, which may throw an OpaqueException, up to n times.
+   *
+   * From https://stackoverflow.com/a/7931459.
+   */
+  @annotation.tailrec
+  def retry[T](n: Int)(fn: => T): T = {
+    import scala.util.{Try, Success, Failure}
+    Try { fn  } match {
+      case Success(x) => x
+      case Failure(e) if n > 1 => retry(n - 1)(fn)
+      case Failure(e) => throw e
     }
   }
 
@@ -176,6 +203,20 @@ object Utils extends Logging {
     extractedPath.toAbsolutePath.toString
   }
 
+  def findResource(resourceName: String): String = {
+    import java.nio.file.{Files, Path}
+    val tmp: Path = Files.createTempDirectory("jni-")
+    val resourcePath: String = s"/$resourceName"
+    val resourceStream = Option(getClass.getResourceAsStream(resourcePath)) match {
+      case Some(s) => s
+      case None => throw new FileNotFoundException(
+        s"Resource $resourcePath cannot be found on the classpath.")
+    }
+    val extractedPath = tmp.resolve(resourceName)
+    Files.copy(resourceStream, extractedPath)
+    extractedPath.toAbsolutePath.toString
+  }
+
   def createTempDir(): File = {
     val dir = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID.toString)
     dir.mkdirs()
@@ -206,11 +247,17 @@ object Utils extends Logging {
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
+
+  /**
+   * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
+   * attestation succeeds. For development, we use a hardcoded key. You should change it.
+   */
+  val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+  assert(sharedKey.size == GCM_KEY_LENGTH)
   
   def encrypt(data: Array[Byte]): Array[Byte] = {
     val random = SecureRandom.getInstance("SHA1PRNG")
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
@@ -221,8 +268,7 @@ object Utils extends Logging {
   }
   
   def decrypt(data: Array[Byte]): Array[Byte] = {
-    val key = new Array[Byte](GCM_KEY_LENGTH)
-    val cipherKey = new SecretKeySpec(key, "AES")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
@@ -244,6 +290,7 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies =
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
+    RA.initRA(sqlContext.sparkContext)
   }
 
   def concatByteArrays(arrays: Array[Block]): Array[Byte] = {
@@ -311,6 +358,12 @@ object Utils extends Logging {
           builder,
           tuix.FieldUnion.BooleanField,
           tuix.BooleanField.createBooleanField(builder, b),
+          isNull)
+      case (null, BooleanType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.BooleanField,
+          tuix.BooleanField.createBooleanField(builder, false),
           isNull)
       case (x: Int, IntegerType) =>
         tuix.Field.createField(
@@ -595,7 +648,18 @@ object Utils extends Logging {
 
   val MaxBlockSize = 1000
 
-  def encryptInternalRowsFlatbuffers(rows: Seq[InternalRow], types: Seq[DataType]): Block = {
+  /**
+   * Encrypts the given Spark SQL [[InternalRow]]s into a [[Block]] (a serialized
+   * tuix.EncryptedBlocks).
+   *
+   * If `useEnclave` is true, it will attempt to use the local enclave. Otherwise, it will attempt
+   * to use the local encryption key, which is intended to be available only on the driver, not the
+   * workers.
+   */
+  def encryptInternalRowsFlatbuffers(
+      rows: Seq[InternalRow],
+      types: Seq[DataType],
+      useEnclave: Boolean): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
     val encryptedBlockOffsets = ArrayBuilder.make[Int]
@@ -615,8 +679,13 @@ object Utils extends Logging {
       val plaintext = builder.sizedByteArray()
 
       // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
-      val (enclave, eid) = initEnclave()
-      val ciphertext = enclave.Encrypt(eid, plaintext)
+      val ciphertext =
+        if (useEnclave) {
+          val (enclave, eid) = initEnclave()
+          enclave.Encrypt(eid, plaintext)
+        } else {
+          encrypt(plaintext)
+        }
 
       encryptedBlockOffsets += tuix.EncryptedBlock.createEncryptedBlock(
         builder2,
@@ -659,6 +728,13 @@ object Utils extends Logging {
     Block(encryptedBlockBytes)
   }
 
+  /**
+   * Decrypts the given [[Block]] (a serialized tuix.EncryptedBlocks) and returns the rows within as
+   * Spark SQL [[InternalRow]]s.
+   *
+   * This function can only be called from the driver. The decryption key will not be available on
+   * the workers.
+   */
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
     // 4. Extract the serialized tuix.EncryptedBlocks from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
@@ -672,7 +748,6 @@ object Utils extends Logging {
       ciphertextBuf.get(ciphertext)
 
       // 2. Decrypt the row data
-      val (enclave, eid) = initEnclave()
       val plaintext = decrypt(ciphertext)
 
       // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
@@ -728,7 +803,6 @@ object Utils extends Logging {
       (shuffleOutput.destinationPartition.toInt, Block(encryptedBlockBytes))
     }
   }
-
 
   def treeFold[BaseType <: TreeNode[BaseType], B](
     tree: BaseType)(op: (Seq[B], BaseType) => B): B = {
@@ -805,6 +879,17 @@ object Utils extends Logging {
             tuix.Divide.createDivide(
               builder, leftOffset, rightOffset))
 
+        case (UnaryMinus(child), Seq(childOffset)) =>
+          // Implement UnaryMinus(child) as Subtract(Literal(0), child)
+          val zeroOffset = flatbuffersSerializeExpression(
+            builder, Cast(Literal(0), child.dataType), input)
+
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Subtract,
+            tuix.Subtract.createSubtract(
+              builder, zeroOffset, childOffset))
+
         // Predicates
         case (And(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
@@ -878,6 +963,13 @@ object Utils extends Logging {
             tuix.If.createIf(
               builder, predOffset, trueOffset, falseOffset))
 
+        case (CaseWhen(Seq((predicate, trueValue)), falseValue), Seq(predOffset, trueOffset, falseOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.If,
+            tuix.If.createIf(
+              builder, predOffset, trueOffset, falseOffset))
+
         // Null expressions
         case (IsNull(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
@@ -912,6 +1004,53 @@ object Utils extends Logging {
             tuix.Year.createYear(
               builder, childOffset))
 
+        // Math expressions
+        case (Exp(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Exp,
+            tuix.Exp.createExp(
+              builder, childOffset))
+
+        // Complex type creation
+        case (ca @ CreateArray(children), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.CreateArray,
+            tuix.CreateArray.createCreateArray(
+              builder,
+              tuix.CreateArray.createChildrenVector(
+                builder,
+                childrenOffsets.toArray)))
+
+        // Opaque UDFs
+        case (VectorAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorAdd,
+            tuix.VectorAdd.createVectorAdd(
+              builder, leftOffset, rightOffset))
+
+        case (VectorMultiply(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.VectorMultiply,
+            tuix.VectorMultiply.createVectorMultiply(
+              builder, leftOffset, rightOffset))
+
+        case (DotProduct(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DotProduct,
+            tuix.DotProduct.createDotProduct(
+              builder, leftOffset, rightOffset))
+
+        case (ClosestPoint(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.ClosestPoint,
+            tuix.ClosestPoint.createClosestPoint(
+              builder, leftOffset, rightOffset))
       }
     }
   }
@@ -1165,6 +1304,27 @@ object Utils extends Logging {
             Array(
               /* sum = */ flatbuffersSerializeExpression(
                 builder, Add(sum, Cast(child, sumDataType)), concatSchema))),
+          flatbuffersSerializeExpression(
+            builder, sum, aggSchema))
+
+      case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
+        val sum = vs.aggBufferAttributes(0)
+
+        val sumDataType = vs.dataType
+
+        // TODO: support aggregating null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Literal(Array[Double]()), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, VectorAdd(sum, child), concatSchema))),
           flatbuffersSerializeExpression(
             builder, sum, aggSchema))
     }
