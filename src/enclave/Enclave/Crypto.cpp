@@ -14,7 +14,8 @@
  * edu.berkeley.cs.rise.opaque.Utils.sharedKey. It is securely sent to the enclaves if attestation
  * succeeds.
  */
-sgx_aes_gcm_128bit_key_t shared_key = {0};
+//## sgx_aes_gcm_128bit_key_t shared_key = {0};
+unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {'O', 'p', 'a', 'q', 'u', 'e', ' ', 'd', 'e', 'v', 'e', 'l', ' ', 'k', 'e', 'y'}; //###
 
 std::unique_ptr<KeySchedule> ks;
 
