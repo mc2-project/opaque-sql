@@ -61,11 +61,11 @@ object RA extends Logging {
 
       // val msg4s = msg3s.mapValues(msg3 => sp.SPProcMsg3(msg3)).map(identity)
 
-      // val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
-      //   val (enclave, eid) = Utils.initEnclave()
-      //   enclave.RemoteAttestation3(eid, msg4s(i))
-      //   Iterator((i, true))
-      // }.collect.toMap
+      val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
+        val (enclave, eid) = Utils.initEnclave()
+        enclave.RemoteAttestation3(eid, Utils.sharedKey)
+        Iterator((i, true))
+      }.collect.toMap
 
       // assert(statuses.keySet == msg4s.keySet)
     }

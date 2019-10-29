@@ -24,23 +24,25 @@ void initKeySchedule() {
 }
 
 void set_shared_key(sgx_ra_context_t context, uint8_t *msg4_bytes, uint32_t msg4_size) {
-  if (msg4_size != sizeof(ra_msg4_t)) {
+  if (msg4_size <= 0) {
     throw std::runtime_error("Remote attestation step 4: Invalid message size.");
   }
 
-  const ra_msg4_t *msg4 = reinterpret_cast<ra_msg4_t *>(msg4_bytes);
 
-  sgx_ec_key_128bit_t sk_key;
+  // const ra_msg4_t *msg4 = reinterpret_cast<ra_msg4_t *>(msg4_bytes);
+
+  // sgx_ec_key_128bit_t sk_key;
   (void)context;
-  sgx_check(sgx_ra_get_keys(context, SGX_RA_KEY_SK, &sk_key));
+  (void)msg4_bytes;
+  // sgx_check(sgx_ra_get_keys(context, SGX_RA_KEY_SK, &sk_key));
 
-  uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = {0};
-  sgx_check(sgx_rijndael128GCM_decrypt(&sk_key,
-                                       &msg4->shared_key_ciphertext[0], SGX_AESGCM_KEY_SIZE,
-                                       reinterpret_cast<uint8_t *>(shared_key),
-                                       &aes_gcm_iv[0], SGX_AESGCM_IV_SIZE,
-                                       nullptr, 0,
-                                       &msg4->shared_key_mac));
+  // uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = {0};
+  // sgx_check(sgx_rijndael128GCM_decrypt(&sk_key,
+  //                                      &msg4->shared_key_ciphertext[0], SGX_AESGCM_KEY_SIZE,
+  //                                      reinterpret_cast<uint8_t *>(shared_key),
+  //                                      &aes_gcm_iv[0], SGX_AESGCM_IV_SIZE,
+  //                                      nullptr, 0,
+  //                                      &msg4->shared_key_mac));
 
   initKeySchedule();
 }
