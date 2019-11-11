@@ -1,7 +1,14 @@
 #ifndef RA_KEY_H
 #define RA_KEY_H
 
-#include <sgx_tcrypto.h>
+#include <stdint.h>
+//#include <sgx_tcrypto.h>
+#define SGX_ECP256_KEY_SIZE             32
+typedef struct _sgx_ec256_public_t
+{
+    uint8_t gx[SGX_ECP256_KEY_SIZE];
+    uint8_t gy[SGX_ECP256_KEY_SIZE];
+} sgx_ec256_public_t;
 
 // This is the public EC key of the SP. The corresponding private EC key is
 // used by the SP to sign data used in the remote attestation SIGMA protocol

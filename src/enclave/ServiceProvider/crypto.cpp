@@ -27,7 +27,7 @@ in the License.
 #include <openssl/x509v3.h>
 #include <string.h>
 #include <stdio.h>
-#include <sgx_key_exchange.h>
+//#include <sgx_key_exchange.h>
 #include "crypto.h"
 #include "sp_crypto.h"
 

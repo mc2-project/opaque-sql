@@ -6,6 +6,7 @@
 #include "ExpressionEvaluation.h"
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
+//#include "rdrand.h"
 
 class MergeItem {
  public:
@@ -142,7 +143,10 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
     const tuix::Row *row = r.next();
 
     uint16_t rand;
-    sgx_read_rand(reinterpret_cast<uint8_t *>(&rand), 2);
+    //sgx_read_rand(reinterpret_cast<uint8_t *>(&rand), 2);
+    //rdrand_get_bytes((uint32_t)2, reinterpret_cast<uint8_t *>(&rand));
+    //TODO: fix this!!!
+    rand = 23;
     if (rand <= sampling_ratio) {
       w.append(row);
     }

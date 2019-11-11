@@ -18,7 +18,7 @@ in the License.
 #ifndef _CRYPTO_INIT_H
 #define _CRYPTO_INIT_H
 
-#include <sgx_key_exchange.h>
+// #include <sgx_key_exchange.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>

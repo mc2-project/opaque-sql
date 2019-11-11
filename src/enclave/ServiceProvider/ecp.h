@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <sgx_tcrypto.h>
+//#include <sgx_tcrypto.h>
 #include "common.h"
 #include "sp_crypto.h"
 

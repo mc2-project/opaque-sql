@@ -22,7 +22,7 @@ std::string to_string(const Date &date) {
   struct tm tm;
   secs_to_tm(secs, &tm);
   char buffer[80];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tm);
+  // strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tm);
   return std::string(buffer);
 }
 
@@ -130,7 +130,7 @@ std::string to_string(const tuix::TimestampField *f) {
   struct tm tm;
   secs_to_tm(secs, &tm);
   char buffer[80];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+ // strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
   return std::string(buffer);
 }
 

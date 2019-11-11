@@ -4,9 +4,9 @@
 enclave {
 
   include "stdbool.h"
-  include "sgx_key_exchange.h"
-  include "sgx_trts.h"
-  from "sgx_tkey_exchange.edl" import *;
+  //include "sgx_key_exchange.h"
+  //include "sgx_trts.h"
+  //from "sgx_tkey_exchange.edl" import *;
 
   trusted {
     public void ecall_project(
@@ -72,9 +72,7 @@ enclave {
       [user_check] uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public sgx_status_t ecall_enclave_init_ra([out] sgx_ra_context_t *p_context);
-    public void ecall_enclave_ra_close(sgx_ra_context_t context);
-    public void ecall_ra_proc_msg4(sgx_ra_context_t context,
+    public void ecall_ra_proc_msg4(
                                    [in,size=msg4_size] uint8_t *msg4,
                                    uint32_t msg4_size);
   };
