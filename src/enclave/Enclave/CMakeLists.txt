@@ -34,7 +34,8 @@ add_custom_command(
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
-set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0 -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/Enclave.lds")
+#set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie,-eenclave_entry -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0 -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/Enclave.lds")
+set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
@@ -85,7 +86,7 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed)
 
 add_custom_command(
-  COMMAND mv  ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed  ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
+  COMMAND mv  ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted.so.signed  ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
 )
