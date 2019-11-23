@@ -14,10 +14,8 @@ void filter(uint8_t *condition, size_t condition_length,
   BufferRefView<tuix::FilterExpr> condition_buf(condition, condition_length);
   condition_buf.verify();
   FlatbuffersExpressionEvaluator condition_eval(condition_buf.root()->condition());
-
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
-
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     const tuix::Field *condition_result = condition_eval.eval(row);

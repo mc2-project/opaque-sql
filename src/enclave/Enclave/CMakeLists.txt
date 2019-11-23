@@ -15,6 +15,7 @@ set(SOURCES
   Sort.cpp
   sgxaes.cpp
   sgxaes_asm.S
+  Random.cpp
   util.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
   ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)

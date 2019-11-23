@@ -1,4 +1,5 @@
 #include "Crypto.h"
+#include "Random.h"
 
 #include <stdexcept>
 // #include <sgx_trts.h>
@@ -45,23 +46,20 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
-  unsigned char hard_coded_iv[SGX_AESGCM_IV_SIZE] = {'O', 'p', 'a', 'q', 'u', 'e','O', 'p', 'a', 'q', 'u', 'e' };
-  //sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);  
-  // TODO: fix this!!!!
-  iv_ptr = reinterpret_cast<uint8_t *>(hard_coded_iv);
+  // oe_get_entropy(iv_ptr, SGX_AESGCM_IV_SIZE);
+  // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
+  mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
-  AesGcm cipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+  AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
 }
-
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
   if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
   }
-
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;

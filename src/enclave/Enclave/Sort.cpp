@@ -1,4 +1,5 @@
 #include "Sort.h"
+#include "Random.h"
 
 #include <algorithm>
 #include <queue>
@@ -7,6 +8,8 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 //#include "rdrand.h"
+
+
 
 class MergeItem {
  public:
@@ -143,10 +146,9 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
     const tuix::Row *row = r.next();
 
     uint16_t rand;
-    //sgx_read_rand(reinterpret_cast<uint8_t *>(&rand), 2);
-    //rdrand_get_bytes((uint32_t)2, reinterpret_cast<uint8_t *>(&rand));
-    //TODO: fix this!!!
-    rand = 23;
+    // sgx_read_rand(reinterpret_cast<uint8_t *>(&rand), 2);
+    // oe_get_entropy(reinterpret_cast<uint8_t *>(&rand), 2);
+    mbedtls_read_rand(reinterpret_cast<unsigned char*>(&rand), 2);
     if (rand <= sampling_ratio) {
       w.append(row);
     }
