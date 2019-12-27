@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#include "KpiCrypto.h"
+#include "mCrypto.h"
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <openenclave/enclave.h>
