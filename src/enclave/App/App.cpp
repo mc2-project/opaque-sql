@@ -493,9 +493,29 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
                     );
   env->ReleaseStringUTFChars(library_path, library_path_str);
   long int enclavePtr = (long int)enclave;
+
   return enclavePtr;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
+  JNIEnv *env, jobject obj, jlong eid) {
+  (void)obj;
+  (void)eid;
+
+  uint8_t* msg1 = NULL;
+  size_t msg1_size = 0;
+
+  oe_check_and_time("Remote Attestation Step 1.2",
+                     ecall_oe_proc_msg1((oe_enclave_t*)eid,
+                                        &msg1,
+                                        &msg1_size));
+
+  // Allocate memory
+  jbyteArray msg1_bytes = env->NewByteArray(msg1_size);
+  env->SetByteArrayRegion(msg1_bytes, 0, msg1_size, reinterpret_cast<jbyte *>(msg1));
+
+  return msg1_bytes;
+}
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {

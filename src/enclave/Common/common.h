@@ -78,4 +78,19 @@ inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len)
 
 typedef uint8_t sgx_aes_gcm_128bit_tag_t[SGX_AESGCM_MAC_SIZE];
 
+
+#define OE_SHA256_HASH_SIZE 32
+#define OE_PUBLIC_KEY_SIZE 512
+#define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
+
+typedef struct oe_msg1_t {
+  uint8_t public_key[OE_PUBLIC_KEY_SIZE];
+  size_t report_size;
+  uint8_t report[];
+} oe_msg1_t;
+
+typedef struct oe_msg2_t {
+  uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+} oe_msg2_t;
+
 #endif // COMMON_H

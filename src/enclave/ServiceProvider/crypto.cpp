@@ -205,3 +205,52 @@ void cert_stack_free (STACK_OF(X509) *chain)
 {
 	sk_X509_free(chain);
 }
+
+EVP_PKEY* buffer_to_public_key(char* input_buffer, int input_buf_size)
+{
+    BIO* bio = BIO_new_mem_buf(input_buffer, input_buf_size);
+    EVP_PKEY *key = EVP_PKEY_new();
+    key = PEM_read_bio_PUBKEY(bio, &key, NULL, NULL);
+    if (key == NULL)
+    {
+        unsigned long ulErr = ERR_get_error();
+        fprintf(stderr, "PEM_read_bio_RSA_PUBKEY() failed with '%s'\n", ERR_reason_error_string(ulErr));
+    }
+
+    BIO_free(bio);
+
+    return key;
+}
+
+int public_encrypt(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len)
+{
+    size_t outlen = 0;
+    const int padding = RSA_PKCS1_PADDING;
+    ENGINE *eng = NULL;
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(key, eng);
+
+    if (EVP_PKEY_encrypt_init(ctx) <= 0)
+	{
+		return -1;
+	}
+	if (EVP_PKEY_CTX_set_rsa_padding(ctx, padding) <= 0)
+	{
+		return -1;
+	}
+    if (EVP_PKEY_encrypt(ctx, NULL, &outlen, data, data_len) <= 0)
+    {
+        return -1;
+    }
+    if (*encrypted_len < outlen)
+    {
+        *encrypted_len = outlen;
+        return 0;
+    }
+
+    if (EVP_PKEY_encrypt(ctx, encrypted, encrypted_len, data, data_len) <= 0)
+    {
+        return -1;
+    }
+
+    return *encrypted_len;
+}

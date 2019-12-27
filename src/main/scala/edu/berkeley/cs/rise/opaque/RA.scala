@@ -35,9 +35,17 @@ object RA extends Logging {
     Utils.retry(3) {
       sp.Init(Utils.sharedKey, intelCert)
 
+      val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+        val (enclave, eid) = Utils.initEnclave()
+        val msg1 = enclave.RemoteAttestation1(eid)
+        Iterator((i, msg1))
+      }.collect.toMap
+
+      val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
+
       val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
-        enclave.RemoteAttestation3(eid, Utils.sharedKey)
+        enclave.RemoteAttestation3(eid, msg2s(i))
         Iterator((i, true))
       }.collect.toMap
 

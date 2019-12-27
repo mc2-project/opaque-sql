@@ -45,6 +45,9 @@ int cert_verify(X509_STORE *store, STACK_OF(X509) *chain);
 STACK_OF(X509) *cert_stack_build(X509 **certs);
 void cert_stack_free(STACK_OF(X509) *chain);
 
+EVP_PKEY* buffer_to_public_key(char* input_buffer, int input_buf_size);
+int public_encrypt(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len);
+
 #ifdef __cplusplus
 };
 #endif

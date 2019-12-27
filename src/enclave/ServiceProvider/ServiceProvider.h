@@ -57,6 +57,7 @@ public:
   //  * You must call `ensure_ias_connection` before calling this method.
   //  */
   // std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
+  std::unique_ptr<oe_msg2_t> process_msg1(oe_msg1_t *msg1, uint32_t *msg2_size);
 
   // /**
   //  * Process attestation message 3 from an enclave and generate message 4 for that enclave. Message

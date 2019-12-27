@@ -14,6 +14,15 @@
 #include "Sort.h"
 #include "util.h"
 
+#include "../Common/common.h"
+#include "../Common/KpiCrypto.h"
+#include <mbedtls/config.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/rsa.h>
+#include <mbedtls/sha256.h>
+
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
 // the ecall (i.e., within these definitions), and are then rethrown as Java exceptions using
@@ -222,11 +231,80 @@ void ecall_non_oblivious_aggregate_step2(
   }
 }
 
+static Crypto g_crypto;
+
 void ecall_ra_proc_msg4(
   uint8_t *msg4, uint32_t msg4_size) {
   try {
-    set_shared_key(msg4, msg4_size);
+    oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
+    uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
+    size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
+    bool ret = g_crypto.decrypt(msg2->shared_key_ciphertext, msg4_size, shared_key_plaintext, &shared_key_plaintext_size);
+    if (!ret)
+    {
+      ocall_throw("shared key decryption failed");
+    }
+
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
+  }
+}
+
+void ecall_oe_proc_msg1(
+  uint8_t **msg1_data, size_t* msg1_data_size) {
+
+  oe_result_t result = OE_FAILURE;
+  uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
+  size_t public_key_size = sizeof(public_key);
+  uint8_t sha256[OE_SHA256_HASH_SIZE];
+  uint8_t* report = NULL;
+  size_t report_size;
+  oe_msg1_t* msg1 = NULL;
+
+  if (msg1_data == NULL || msg1_data_size == NULL)
+  {
+    ocall_throw("Invalid parameter");
+  }
+
+  *msg1_data = NULL;
+  *msg1_data_size = 0;
+
+  g_crypto.retrieve_public_key(public_key);
+
+  if (g_crypto.sha256(public_key, public_key_size, sha256) != 0)
+  {
+    ocall_throw("sha256 failed");
+  }
+
+  // get report
+  result = oe_get_report(
+        OE_REPORT_FLAGS_REMOTE_ATTESTATION,
+        sha256, // Store sha256 in report_data field
+        sizeof(sha256),
+        NULL,
+        0,
+        &report,
+        &report_size);
+  if (result != OE_OK)
+  {
+    ocall_throw("oe_get_report failed");
+  }
+
+  if (report != NULL)
+  {
+    *msg1_data_size = sizeof(oe_msg1_t) + report_size;
+    *msg1_data = (uint8_t*)oe_host_malloc(*msg1_data_size);
+    if (*msg1_data == NULL)
+    {
+        ocall_throw("Out of memory");
+    }
+    msg1 = (oe_msg1_t*)(*msg1_data);
+
+    // Fill oe_msg1_t
+    memcpy_s(msg1->public_key, sizeof(((oe_msg1_t*)0)->public_key), public_key, public_key_size);
+    msg1->report_size = report_size;
+    memcpy_s(msg1->report, report_size, report, report_size);
+    oe_free_report(report);
   }
 }

@@ -16,7 +16,7 @@
  * edu.berkeley.cs.rise.opaque.Utils.sharedKey. It is securely sent to the enclaves if attestation
  * succeeds.
  */
-unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {'O', 'p', 'a', 'q', 'u', 'e', ' ', 'd', 'e', 'v', 'e', 'l', ' ', 'k', 'e', 'y'}; //###
+unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
 std::unique_ptr<KeySchedule> ks;
 
@@ -24,11 +24,11 @@ void initKeySchedule() {
   ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
-void set_shared_key(uint8_t *msg4_bytes, uint32_t msg4_size) {
-  if (msg4_size <= 0) {
+void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
+  if (shared_key_size <= 0) {
     throw std::runtime_error("Remote attestation step 4: Invalid message size.");
   }
-  (void)msg4_bytes;
+  memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
 
   initKeySchedule();
 }

@@ -52,7 +52,10 @@ extern "C" {
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
     JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
-  
+
+  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
+    JNIEnv *, jobject, jlong);
+
   JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
     JNIEnv *, jobject, jlong, jbyteArray);
 

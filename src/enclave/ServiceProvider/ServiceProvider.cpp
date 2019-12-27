@@ -4,12 +4,17 @@
 #include <iomanip>
 //#include <sgx_tcrypto.h>
 
+#include <iostream>
+#include <memory>
+
 #include "ecp.h"
 #include "ias_ra.h"
 #include "iasrequest.h"
 #include "crypto.h"
 #include "base64.h"
 #include "json.hpp"
+
+#include <openenclave/host_verify.h>
 
 #include "ServiceProvider.h"
 
@@ -145,4 +150,49 @@ void ServiceProvider::export_public_key_code(const std::string &filename) {
 
   file << "};\n";
   file.close();
+}
+
+std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
+  oe_msg1_t *msg1, uint32_t *msg2_size) {
+
+  //verify report
+  oe_report_t parsed_report;
+  oe_result_t result = OE_FAILURE;
+  std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
+  int ret;
+
+  unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+  EVP_PKEY* pkey = buffer_to_public_key((char*)msg1->public_key, -1);
+  if (pkey == nullptr) {
+    throw std::runtime_error("buffer_to_public_key failed.");
+  }
+
+  result = oe_verify_remote_report(msg1->report, msg1->report_size, &parsed_report);
+  if (result != OE_OK) {
+    throw std::runtime_error(
+      std::string("oe_verify_remote_report: ")
+      + oe_result_str(result));
+  }
+
+  //TODO - other verification
+
+  // Encrypt shared key
+  ret = public_encrypt(pkey, this->shared_key, LC_AESGCM_KEY_SIZE, encrypted_sharedkey, &encrypted_sharedkey_size);
+  if (ret == 0) {
+    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  }
+  else if (ret < 0) {
+    throw std::runtime_error(std::string("public_encrypt failed"));
+  }
+
+  // Prepare msg2
+  memcpy_s(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+  *msg2_size = sizeof(oe_msg2_t);
+
+  // clean up
+  EVP_PKEY_free(pkey);
+
+  return msg2;
 }

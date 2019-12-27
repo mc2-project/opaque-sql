@@ -17,6 +17,7 @@ set(SOURCES
   sgxaes_asm.S
   Random.cpp
   util.cpp
+  ../Common/KpiCrypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
   ${CMAKE_CURRENT_BINARY_DIR}/key.cpp)
 
