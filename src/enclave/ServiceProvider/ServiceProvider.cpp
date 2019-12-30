@@ -169,7 +169,7 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
     throw std::runtime_error("buffer_to_public_key failed.");
   }
 
-  result = oe_verify_remote_report(msg1->report, msg1->report_size, &parsed_report);
+  result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
   if (result != OE_OK) {
     throw std::runtime_error(
       std::string("oe_verify_remote_report: ")
