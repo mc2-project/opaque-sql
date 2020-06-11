@@ -315,6 +315,15 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   if (parsed_report.identity.security_version < 1) {
     throw std::runtime_error(std::string("identity.security_version checking failed."));
   }
+  
+  // TODO:
+  // "Examine the enclave identity (MRSIGNER), security version and product ID.
+  // Examine the debug attribute and ensure it is not set (in a production environment).
+  // Decide whether or not to trust the enclave and, if provided, the PSE."
+  
+  // TODO:
+  // "Derive the session keys, SK and MK, that should be used to transmit
+  // future messages between the client and server during the session.
 
   // 3) Validate the report data
   //    The report_data has the hash value of the report data
