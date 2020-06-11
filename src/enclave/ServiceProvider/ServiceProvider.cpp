@@ -415,6 +415,15 @@ std::unique_ptr<ra_msg4_t> ServiceProvider::process_msg3(
       }
     }
   }
+  
+  // TODO:
+  // "Examine the enclave identity (MRSIGNER), security version and product ID.
+  // Examine the debug attribute and ensure it is not set (in a production environment).
+  // Decide whether or not to trust the enclave and, if provided, the PSE."
+  
+  // TODO:
+  // "Derive the session keys, SK and MK, that should be used to transmit
+  // future messages between the client and server during the session.
 
   // Generate msg4, containing the shared secret to be sent to the enclave.
   *msg4_size = sizeof(ra_msg4_t);
