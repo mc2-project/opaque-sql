@@ -7,7 +7,7 @@ set(SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
 add_custom_command(
-  COMMAND ${OE_EDGER8R} --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave
+  COMMAND oeedger8r --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
@@ -32,9 +32,9 @@ add_library(enclave_jni SHARED ${SOURCES})
 # endif()
 
 target_include_directories(enclave_jni PRIVATE
-  # Needed for the generated file helloworld_u.h
+# Needed for the generated file helloworld_u.h
   ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(enclave_jni openenclave::oehostapp)
+target_link_libraries(enclave_jni openenclave::oehost openenclave::oehostverify)
 
 install(TARGETS enclave_jni DESTINATION lib)

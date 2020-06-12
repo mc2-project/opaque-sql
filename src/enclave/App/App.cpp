@@ -480,10 +480,10 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   //int updated = 0;
 
   uint32_t flags = 0;
-  const char* sgx_mode_env = std::getenv("SGX_MODE");
-  if (strcmp(sgx_mode_env, "HW") != 0){
-    flags |= OE_ENCLAVE_FLAG_SIMULATE;
-  }
+
+#ifdef SIMULATE
+  flags |= OE_ENCLAVE_FLAG_SIMULATE;
+#endif
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",

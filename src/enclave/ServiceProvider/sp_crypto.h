@@ -85,6 +85,9 @@ typedef enum lc_status_t {
 #define LC_CMAC_KEY_SIZE               16
 #define LC_CMAC_MAC_SIZE               16
 #define LC_AESCTR_KEY_SIZE             16
+// Currently oesign only supports an rsa public key of size 3072 bits
+#define lc_rsa_public_t                (3072/8)
+
 
 // copied from intel sgx sdk tcrypto.h
 #define SGX_ECP256_KEY_SIZE             32

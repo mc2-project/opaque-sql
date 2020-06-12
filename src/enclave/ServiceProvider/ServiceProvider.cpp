@@ -2,7 +2,7 @@
 #include <cassert>
 #include <fstream>
 #include <iomanip>
-//#include <sgx_tcrypto.h>
+#include <iostream>
 
 #include <iostream>
 #include <memory>
@@ -15,6 +15,10 @@
 #include "json.hpp"
 
 #include <openenclave/host_verify.h>
+
+#ifndef SIMULATE
+#include <openenclave/attestation/sgx/report.h>
+#endif
 
 #include "ServiceProvider.h"
 
@@ -53,8 +57,7 @@ void lc_check(lc_status_t ret) {
   }
 }
 
-
-void ServiceProvider::load_private_key(const std::string &filename) {
+void ServiceProvider::load_private_key_ec(const std::string &filename) {
   FILE *private_key_file = fopen(filename.c_str(), "r");
   if (private_key_file == nullptr) {
     throw std::runtime_error(
@@ -124,7 +127,7 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
 }
 
-void ServiceProvider::export_public_key_code(const std::string &filename) {
+void ServiceProvider::export_public_key_code_ec(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
   file << "#include \"key.h\"\n";
@@ -152,6 +155,33 @@ void ServiceProvider::export_public_key_code(const std::string &filename) {
   file.close();
 }
 
+// Copied from https://github.com/openenclave/openenclave/blob/master/samples/attested_tls/common/utility.cpp
+bool verify_mrsigner(char* siging_public_key_buf,
+                     size_t siging_public_key_buf_size,
+                     uint8_t* signer_id_buf,
+                     size_t signer_id_buf_size) {
+  printf("Verify connecting client's identity\n");
+
+  uint8_t signer[OE_SIGNER_ID_SIZE];
+  size_t signer_size = sizeof(signer);
+  if (oe_sgx_get_signer_id_from_public_key(siging_public_key_buf,
+                                           siging_public_key_buf_size,
+                                           signer,
+                                           &signer_size) != OE_OK) {
+      printf("oe_sgx_get_signer_id_from_public_key failed\n");
+      return false;
+    }
+
+  if (memcmp(signer, signer_id_buf, signer_id_buf_size) != 0) {
+      printf("mrsigner is not equal!\n");
+      for (int i = 0; i < (int)signer_id_buf_size; i++) {
+          printf("0x%x - 0x%x\n", (uint8_t)signer[i], (uint8_t)signer_id_buf[i]);
+        }
+      return false;
+    } 
+  return true;
+}
+
 std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
   oe_msg1_t *msg1, uint32_t *msg2_size) {
 
@@ -169,14 +199,48 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
     throw std::runtime_error("buffer_to_public_key failed.");
   }
 
+  bool if_simulate = false;
+#ifdef SIMULATE
+  if_simulate = true;
+#endif
+
+#ifndef SIMULATE
   result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
   if (result != OE_OK) {
     throw std::runtime_error(
-      std::string("oe_verify_remote_report: ")
-      + oe_result_str(result));
+                             std::string("oe_verify_remote_report: ")
+                             + oe_result_str(result));
   }
 
-  //TODO - other verification
+  printf("OE report verified\n");
+
+  // mrsigner verification
+  // 2) validate the enclave identity's signed_id is the hash of the public
+  // signing key that was used to sign an enclave. Check that the enclave was
+  // signed by an trusted entity.
+  
+  // 2a) Read in the public key as a string
+
+  std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
+  public_key_file.append("/public_key.pub");
+
+  std::cout << "public key path is " << public_key_file << std::endl;
+
+  std::ifstream in(public_key_file.c_str());
+  std::string public_key(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+  
+  if (!verify_mrsigner((char*)public_key.c_str(),
+                       public_key.size(),
+                       parsed_report.identity.signer_ida,
+                       sizeof(parsed_report.identity.signer_id))) {
+    throw std::runtime_error(std::string("failed:mrsigner not equal!"));
+  }
+
+  // TODO missing the hash verification step
+
+  // TODO also need to check the hash of the extra report data
+    
+#endif
 
   // Encrypt shared key
   ret = public_encrypt(pkey, this->shared_key, LC_AESGCM_KEY_SIZE, encrypted_sharedkey, &encrypted_sharedkey_size);

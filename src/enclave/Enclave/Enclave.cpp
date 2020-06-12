@@ -251,15 +251,15 @@ void ecall_ra_proc_msg4(
   }
 }
 
-void ecall_oe_proc_msg1(
-  uint8_t **msg1_data, size_t* msg1_data_size) {
+void ecall_oe_proc_msg1(uint8_t **msg1_data,
+                        size_t* msg1_data_size) {
 
   oe_result_t result = OE_FAILURE;
   uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
   size_t public_key_size = sizeof(public_key);
   uint8_t sha256[OE_SHA256_HASH_SIZE];
   uint8_t* report = NULL;
-  size_t report_size;
+  size_t report_size = 0;
   oe_msg1_t* msg1 = NULL;
 
   if (msg1_data == NULL || msg1_data_size == NULL)
@@ -277,34 +277,46 @@ void ecall_oe_proc_msg1(
     ocall_throw("sha256 failed");
   }
 
-  // get report
-  result = oe_get_report(
-        OE_REPORT_FLAGS_REMOTE_ATTESTATION,
-        sha256, // Store sha256 in report_data field
-        sizeof(sha256),
-        NULL,
-        0,
-        &report,
-        &report_size);
-  if (result != OE_OK)
-  {
-    ocall_throw("oe_get_report failed");
-  }
 
-  if (report != NULL)
-  {
+  bool if_simulate = false;
+  
+#ifdef SIMULATE
+  if_simulate = true;
+#endif
+
+  if (!if_simulate) {
+
+    // get report
+    result = oe_get_report(
+                           OE_REPORT_FLAGS_REMOTE_ATTESTATION,
+                           sha256, // Store sha256 in report_data field
+                           sizeof(sha256),
+                           NULL,
+                           0,
+                           &report,
+                           &report_size);
+
+    if (result != OE_OK) {
+      ocall_throw("oe_get_report failed");
+    }
+
+  }
+  
+  if (report != NULL || if_simulate) {
     *msg1_data_size = sizeof(oe_msg1_t) + report_size;
     *msg1_data = (uint8_t*)oe_host_malloc(*msg1_data_size);
-    if (*msg1_data == NULL)
-    {
-        ocall_throw("Out of memory");
+    if (*msg1_data == NULL) {
+      ocall_throw("Out of memory");
     }
     msg1 = (oe_msg1_t*)(*msg1_data);
 
     // Fill oe_msg1_t
     memcpy_s(msg1->public_key, sizeof(((oe_msg1_t*)0)->public_key), public_key, public_key_size);
     msg1->report_size = report_size;
-    memcpy_s(msg1->report, report_size, report, report_size);
+    if (report_size > 0) {
+      memcpy_s(msg1->report, report_size, report, report_size);
+    }
     oe_free_report(report);
   }
+
 }

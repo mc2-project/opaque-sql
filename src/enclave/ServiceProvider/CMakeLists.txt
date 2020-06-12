@@ -24,9 +24,6 @@ add_library(ra_jni SHARED ${SOURCES})
 
 find_library(CRYPTO_LIB crypto)
 find_library(SSL_LIB ssl)
-target_link_libraries(ra_jni "${CRYPTO_LIB}" "${SSL_LIB}" openenclave::oehostapp)
-
-add_executable(keygen ${SOURCES})
-target_link_libraries(keygen "${CRYPTO_LIB}" "${SSL_LIB}" openenclave::oehostapp)
+target_link_libraries(ra_jni "${CRYPTO_LIB}" "${SSL_LIB}" openenclave::oehost openenclave::oehostverify)
 
 install(TARGETS ra_jni DESTINATION lib)

@@ -31,6 +31,8 @@ public:
       ias_api_version(3), require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
   /** Load an OpenSSL private key from the specified file. */
+  void load_private_key_ec(const std::string &filename);
+  void load_private_key_rsa(const std::string &filename);
   void load_private_key(const std::string &filename);
 
   /**
@@ -43,6 +45,8 @@ public:
    * After calling load_private_key, write the corresponding public key as a C++ header file. This
    * file should be compiled into the enclave.
    */
+  void export_public_key_code_ec(const std::string &filename);
+  void export_public_key_code_rsa(const std::string &filename);
   void export_public_key_code(const std::string &filename);
 
   // /** Connect to the Intel attestation service. */
@@ -71,8 +75,9 @@ public:
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);
 
-  sgx_ec256_public_t sp_pub_key;
-  sgx_ec256_private_t sp_priv_key;
+  lc_ec256_public_t sp_pub_key;
+  lc_ec256_private_t sp_priv_key;
+  
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
   //sp_db_item_t sp_db;
   std::string spid;
