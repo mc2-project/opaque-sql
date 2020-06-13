@@ -3,9 +3,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-
-#include <iostream>
 #include <memory>
+#include <streambuf>
 
 #include "ecp.h"
 #include "ias_ra.h"
@@ -14,11 +13,8 @@
 #include "base64.h"
 #include "json.hpp"
 
+#include <openenclave/host.h>
 #include <openenclave/host_verify.h>
-
-#ifndef SIMULATE
-#include <openenclave/attestation/sgx/report.h>
-#endif
 
 #include "ServiceProvider.h"
 
@@ -57,7 +53,7 @@ void lc_check(lc_status_t ret) {
   }
 }
 
-void ServiceProvider::load_private_key_ec(const std::string &filename) {
+void ServiceProvider::load_private_key(const std::string &filename) {
   FILE *private_key_file = fopen(filename.c_str(), "r");
   if (private_key_file == nullptr) {
     throw std::runtime_error(
@@ -127,7 +123,7 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
 }
 
-void ServiceProvider::export_public_key_code_ec(const std::string &filename) {
+void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
   file << "#include \"key.h\"\n";
@@ -155,31 +151,93 @@ void ServiceProvider::export_public_key_code_ec(const std::string &filename) {
   file.close();
 }
 
-// Copied from https://github.com/openenclave/openenclave/blob/master/samples/attested_tls/common/utility.cpp
-bool verify_mrsigner(char* siging_public_key_buf,
-                     size_t siging_public_key_buf_size,
+bool verify_mrsigner(char* signing_public_key_buf,
+                     size_t signing_public_key_buf_size,
                      uint8_t* signer_id_buf,
                      size_t signer_id_buf_size) {
-  printf("Verify connecting client's identity\n");
+  
+  mbedtls_pk_context ctx;
+  mbedtls_pk_type_t pk_type;
+  mbedtls_rsa_context* rsa_ctx = NULL;
+  uint8_t* modulus = NULL;
+  size_t modulus_size = 0;
+  int res = 0;
+  bool ret = false;
+  unsigned char* signer = NULL;
 
-  uint8_t signer[OE_SIGNER_ID_SIZE];
-  size_t signer_size = sizeof(signer);
-  if (oe_sgx_get_signer_id_from_public_key(siging_public_key_buf,
-                                           siging_public_key_buf_size,
-                                           signer,
-                                           &signer_size) != OE_OK) {
-      printf("oe_sgx_get_signer_id_from_public_key failed\n");
-      return false;
-    }
+
+  signer = (unsigned char*)malloc(signer_id_buf_size);
+  if (signer == NULL) {
+    printf("Out of memory\n");
+    goto exit;
+  }
+
+  mbedtls_pk_init(&ctx);
+
+  res = mbedtls_pk_parse_public_key(&ctx,
+                                    (const unsigned char*)signing_public_key_buf,
+                                    signing_public_key_buf_size+1);
+
+  if (res != 0) {
+    printf("mbedtls_pk_parse_public_key failed with %d\n", res);
+    goto exit;
+  }
+
+  pk_type = mbedtls_pk_get_type(&ctx);
+  if (pk_type != MBEDTLS_PK_RSA) {
+    printf("mbedtls_pk_get_type had incorrect type: %d\n", res);
+    goto exit;
+  }
+
+  rsa_ctx = mbedtls_pk_rsa(ctx);
+  modulus_size = mbedtls_rsa_get_len(rsa_ctx);
+  modulus = (uint8_t*)malloc(modulus_size);
+  if (modulus == NULL) {
+    printf("malloc for modulus failed with size %zu:\n", modulus_size);
+    goto exit;
+  }
+
+  res = mbedtls_rsa_export_raw(rsa_ctx, modulus, modulus_size, NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+  if (res != 0) {
+    printf("mbedtls_rsa_export failed with %d\n", res);
+    goto exit;
+  }
+
+  // Reverse the modulus and compute sha256 on it.
+  for (size_t i = 0; i < modulus_size / 2; i++) {
+    uint8_t tmp = modulus[i];
+    modulus[i] = modulus[modulus_size - 1 - i];
+    modulus[modulus_size - 1 - i] = tmp;
+  }
+
+  // Calculate the MRSIGNER value which is the SHA256 hash of the
+  // little endian representation of the public key modulus. This value
+  // is populated by the signer_id sub-field of a parsed oe_report_t's
+  // identity field.
+
+  if (lc_compute_sha256(modulus, modulus_size, signer) != 0) {
+    goto exit;
+  }
 
   if (memcmp(signer, signer_id_buf, signer_id_buf_size) != 0) {
-      printf("mrsigner is not equal!\n");
-      for (int i = 0; i < (int)signer_id_buf_size; i++) {
-          printf("0x%x - 0x%x\n", (uint8_t)signer[i], (uint8_t)signer_id_buf[i]);
-        }
-      return false;
-    } 
-  return true;
+    printf("mrsigner is not equal!\n");
+    for (size_t i = 0; i < signer_id_buf_size; i++) {
+      printf("0x%x - 0x%x\n", (uint8_t)signer[i], (uint8_t)signer_id_buf[i]);
+    }
+    goto exit;
+  }
+
+  ret = true;
+
+ exit:
+  if (signer)
+    free(signer);
+
+  if (modulus != NULL)
+    free(modulus);
+
+  mbedtls_pk_free(&ctx);
+  return ret;
 }
 
 std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
@@ -198,11 +256,6 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
-
-  bool if_simulate = false;
-#ifdef SIMULATE
-  if_simulate = true;
-#endif
 
 #ifndef SIMULATE
   result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
@@ -224,17 +277,26 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
   std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
   public_key_file.append("/public_key.pub");
 
-  std::cout << "public key path is " << public_key_file << std::endl;
+  std::ifstream t(public_key_file.c_str());
+  std::string public_key;
 
-  std::ifstream in(public_key_file.c_str());
-  std::string public_key(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-  
+  t.seekg(0, std::ios::end);
+  size_t public_key_size = t.tellg();
+  public_key.reserve(public_key_size + 1);
+  t.seekg(0, std::ios::beg);
+
+  public_key.assign((std::istreambuf_iterator<char>(t)),
+                    std::istreambuf_iterator<char>());
+  public_key.replace(public_key_size, 1, "\0");
+
   if (!verify_mrsigner((char*)public_key.c_str(),
                        public_key.size(),
-                       parsed_report.identity.signer_ida,
+                       parsed_report.identity.signer_id,
                        sizeof(parsed_report.identity.signer_id))) {
-    throw std::runtime_error(std::string("failed:mrsigner not equal!"));
+    throw std::runtime_error(std::string("failed: mrsigner not equal!"));
   }
+
+  std::cout << "Signer verification passed\n" ;
 
   // TODO missing the hash verification step
 
