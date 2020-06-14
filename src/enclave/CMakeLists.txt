@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.13)
 
 project(OpaqueEnclave)
 
@@ -43,9 +43,15 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -DDEBUG -UNDEBUG -UED
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG -DEDEBUG -UDEBUG")
 set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} -O2 -DNDEBUG -DEDEBUG -UDEBUG -DPERF")
 
-add_custom_command(OUTPUT $ENV{OPAQUE_HOME}/public_key.pub
-DEPENDS $ENV{OPAQUE_HOME}/private_key.pem
-COMMAND openssl rsa -in $ENV{OPAQUE_HOME}/private_key.pem -pubout -out $ENV{OPAQUE_HOME}/public_key.pub)
+message("openssl rsa -in $ENV{OPAQUE_HOME}/private_key.pem -pubout -out $ENV{OPAQUE_HOME}/public_key.pub")
+message("$ENV{OPAQUE_HOME}/public_key.pub")
+
+add_custom_target(run ALL
+    DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)
+
+add_custom_command(
+  COMMAND openssl rsa -in $ENV{OPAQUE_HOME}/private_key.pem -pubout -out $ENV{OPAQUE_HOME}/public_key.pub
+  OUTPUT $ENV{OPAQUE_HOME}/public_key.pub)
 
 add_subdirectory(App)
 add_subdirectory(Enclave)

@@ -55,7 +55,15 @@
 #include <openssl/ec.h>
 #include <openssl/rand.h>
 
-//#include <sgx_tcrypto.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/cipher.h>
+#include <mbedtls/gcm.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/rsa.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/error.h>
 
 #include "common.h"
 
@@ -286,3 +294,5 @@ lc_status_t WARN_UNUSED print_priv_key(lc_ec256_private_t p_private);
 lc_status_t WARN_UNUSED print_pub_key(lc_ec256_public_t p_public);
 void print_ec_key(EC_KEY *ec_key);
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public);
+
+int lc_compute_sha256(const uint8_t* data, size_t data_size, uint8_t sha256[LC_SHA256_HASH_SIZE]);

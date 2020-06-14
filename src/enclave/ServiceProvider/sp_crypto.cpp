@@ -577,3 +577,24 @@ void lc_sha256_close(lc_sha_state_handle_t sha_handle) {
   SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
   free(ctx);
 }
+
+// Taken from https://github.com/mc2-project/mc2-xgboost/blob/466ac95a2d244cab6e43d1049f3243e006372ed6/include/enclave/crypto.h#L209
+int lc_compute_sha256(const uint8_t* data, size_t data_size, uint8_t sha256[LC_SHA256_HASH_SIZE]) {
+  int ret = 0;
+  mbedtls_sha256_context ctx;
+
+#define safe_sha(call) {                        \
+    int ret = (call);                           \
+    if (ret) {                                  \
+      mbedtls_sha256_free(&ctx);                \
+      return -1;                                \
+    }                                           \
+  }
+  mbedtls_sha256_init(&ctx);
+  safe_sha(mbedtls_sha256_starts_ret(&ctx, 0));
+  safe_sha(mbedtls_sha256_update_ret(&ctx, data, data_size));
+  safe_sha(mbedtls_sha256_finish_ret(&ctx, sha256));
+
+  mbedtls_sha256_free(&ctx);
+  return ret;
+}
