@@ -21,6 +21,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 add_library(ra_jni SHARED ${SOURCES})
 
+if ("$ENV{MODE}" STREQUAL "SIMULATE")
+  target_compile_definitions(ra_jni PUBLIC -DSIMULATE)
+endif()
+
 find_library(CRYPTO_LIB crypto)
 find_library(SSL_LIB ssl)
 target_link_libraries(ra_jni "${CRYPTO_LIB}" "${SSL_LIB}" mbedcrypto mbedtls openenclave::oehost openenclave::oehostverify)

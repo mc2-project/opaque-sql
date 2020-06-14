@@ -240,24 +240,31 @@ bool verify_mrsigner(char* signing_public_key_buf,
   return ret;
 }
 
-std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
-  oe_msg1_t *msg1, uint32_t *msg2_size) {
-
-  //verify report
-  oe_report_t parsed_report;
-  oe_result_t result = OE_FAILURE;
-  std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
+std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
+                                                         uint32_t *msg2_size) {
+  
   int ret;
-
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
-
+  std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
+  
   EVP_PKEY* pkey = buffer_to_public_key((char*)msg1->public_key, -1);
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
 
-#ifndef SIMULATE
+
+
+#ifdef SIMULATE
+  std::cout << "Not running remote attestation because executing in simulation mode" << std::endl;
+#else
+  std::cout << "Running in hardware mode, verifying remote attestation\n" ;
+  
+  //verify report
+  oe_report_t parsed_report;
+  oe_result_t result = OE_FAILURE;
+  uint8_t sha256[32];
+  
   result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
   if (result != OE_OK) {
     throw std::runtime_error(
@@ -300,8 +307,26 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(
 
   // TODO missing the hash verification step
 
-  // TODO also need to check the hash of the extra report data
-    
+  // check the enclave's product id and security version
+  if (parsed_report.identity.product_id[0] != 1) {
+    throw std::runtime_error(std::string("identity.product_id checking failed."));
+  }
+
+  if (parsed_report.identity.security_version < 1) {
+    throw std::runtime_error(std::string("identity.security_version checking failed."));
+  }
+
+  // 3) Validate the report data
+  //    The report_data has the hash value of the report data
+  if (lc_compute_sha256(msg1->public_key, sizeof(msg1->public_key), sha256) != 0) {
+    throw std::runtime_error(std::string("hash validation failed."));
+  }
+
+  if (memcmp(parsed_report.report_data, sha256, sizeof(sha256)) != 0) {
+    throw std::runtime_error(std::string("SHA256 mismatch."));
+  }
+  
+  std::cout << "remote attestation succeeded." << std::endl;
 #endif
 
   // Encrypt shared key
