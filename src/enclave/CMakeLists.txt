@@ -26,14 +26,6 @@ else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
 endif()
 
-
-if(NOT "$ENV{SGX_MODE}" STREQUAL "HW")
-  message(STATUS "Building for simulated enclave")
-  add_compile_definitions(SIMULATE)
-else()
-  message(STATUS "Building for hardware enclave")
-endif()
-
 # set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "$ENV{OE_SDK_PATH}/lib") # not clear about this. Ask someone to verify
 # set(OE_ENCLAVE_SIGNER "$ENV{OE_SDK_PATH}/bin/oesign")
 # set(OE_EDGER8R "$ENV{OE_SDK_PATH}/bin/oeedger8r")

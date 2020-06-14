@@ -20,6 +20,10 @@ target_include_directories(enclave_jni PRIVATE
 # Needed for the generated file helloworld_u.h
   ${CMAKE_CURRENT_BINARY_DIR})
 
+if ("$ENV{MODE}" STREQUAL "SIMULATE")
+  target_compile_definitions(enclave_jni PUBLIC -DSIMULATE)
+endif()
+
 target_link_libraries(enclave_jni openenclave::oehost openenclave::oehostverify)
 
 install(TARGETS enclave_jni DESTINATION lib)

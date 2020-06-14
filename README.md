@@ -21,44 +21,30 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 ## Installation
 
-After downloading the Opaque codebase, build and test it as follows. (Alternatively, we offer a [Docker image](docker/) that contains a prebuilt version of Opaque.)
+After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [Intel SGX SDK](https://01.org/intel-software-guard-extensions/downloads):
+1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9 and Ubuntu 18.04.
 
     ```sh
-    # For Ubuntu 16.04 or 18.04:
-    sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
-
-    # For Ubuntu 16.04:
-    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
     # For Ubuntu 18.04:
-    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin
-
-    # Installer will prompt for install path, which can be user-local
-    chmod +x ./sgx_installer.bin
-    ./sgx_installer.bin
-
-    source sgxsdk/environment
+    sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
     ```
 
-2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
-   Note that only the NIST p-256 curve is supported.
+2. On the master, generate a keypair using OpenSSL for remote attestation.
 
     ```sh
-    cd ${OPAQUE_HOME}
-    openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
+    openssl genrsa -out private_key.pem -3 3072
     ```
 
-3. Set the following environment variables:
+3. Change into the Opaque root directory and set the appropriate environment variables for both Opaque and OpenEnclave:
 
     ```sh
-    export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
-    export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
+    source opaqueenv
+    source /opt/openenclave/share/openenclave/openenclaverc
     ```
 
-    By default, Opaque runs in simulation mode, which does not require the machine to have real SGX hardware.
-    This is useful if you want to test out Opaque's functionality locally.
-    However, if you are running Opaque with real SGX hardware, then please also set `export SGX_MODE=HW`.
+    By default, Opaque runs in hardware mode (environment variable `MODE=HARDWARE`).
+    If you do not have a machine with real SGX hardware but still wish to test out Opaque's functionality locally, then set `export MODE=SIMULATE`.
 
 4. Run the Opaque tests:
 

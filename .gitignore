@@ -79,6 +79,7 @@ sql/hive-thriftserver/test_warehouses
 
 # for C++
 /private_key.pem
+/public_key.pub
 hs_err_pid*.log
 
 # Opaque generated data
