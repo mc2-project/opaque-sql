@@ -17,7 +17,7 @@ void jni_throw(JNIEnv *env, const char *message) {
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
-  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert) {
+  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert) {
   (void)env;
   (void)obj;
 
@@ -26,6 +26,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
   //size_t intel_cert_len = static_cast<size_t>(env->GetStringUTFLength(intel_cert));
+  //
+  const char* user_cert_str = env->GetStringUTFChars(user_cert, nullptr);
+  size_t user_cert_len = static_cast<size_t>(env->GetStringUTFLength(user_cert));
 
   try {
     // const char *private_key_path = std::getenv("PRIVATE_KEY_PATH");
@@ -36,6 +39,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
     // }
     // service_provider.load_private_key(private_key_path);
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
+
+    // set user certificate
+    service_provider.set_user_cert(std::string(user_cert_str, user_cert_len));
     //service_provider.connect_to_ias(std::string(intel_cert_str, intel_cert_len));
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
@@ -43,6 +49,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 
   env->ReleaseByteArrayElements(shared_key, shared_key_bytes, 0);
   env->ReleaseStringUTFChars(intel_cert, intel_cert_str);
+  env->ReleaseStringUTFChars(user_cert, user_cert_str);
 }
 
 

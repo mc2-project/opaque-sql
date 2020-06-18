@@ -18,21 +18,50 @@
  */
 unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
-std::unique_ptr<KeySchedule> ks;
+// map username to client key schedule
+std::unordered_map<std::string, std::unique_ptr<KeySchedule>> client_key_schedules;
+std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> client_keys;
 
-void initKeySchedule() {
+// map user name to public key
+// std::unordered_map<std::string, std::vector<uint8_t>> client_public_keys;
+
+// std::unique_ptr<KeySchedule> ks;
+
+void initKeySchedule(char* username) {
+  std::unique_ptr<KeySchedule> ks = client_key_schedule[username];
   ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
-void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
+void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size, char* username) {
   if (shared_key_size <= 0) {
     throw std::runtime_error("Remote attestation step 4: Invalid message size.");
   }
-  memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
+  memcpy_s(client_keys[username], sizeof(client_keys[username]), shared_key_bytes, shared_key_size);
 
-  initKeySchedule();
+  initKeySchedule(username);
 }
 
+void get_client_key(uint8_t* key, char *username) {
+    LOG(DEBUG) << "Getting client key for user: " << username;
+    std::string str(username);
+    auto iter = client_keys.find(str);
+    if (iter == client_keys.end()) {
+        LOG(FATAL) << "No client key for user: " << username;
+    } else {
+        memcpy(key, (uint8_t*) iter->second.data(), CIPHER_KEY_SIZE);
+    }
+}
+
+char* get_client_cert(char *username) {
+    LOG(DEBUG) << "Getting username " << username;
+    std::string str(username);
+    auto iter = client_public_keys.find(str);
+    if (iter == client_public_keys.end()) {
+        LOG(FATAL) << "No certificate for user: " << username;
+    } else {
+        return (char*) iter->second.data();
+    }
+}
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
@@ -50,6 +79,7 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
+  // TODO: should we replace this encryption with the mbedtls encryption
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);

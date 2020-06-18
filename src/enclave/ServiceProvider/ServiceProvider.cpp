@@ -123,6 +123,10 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
 }
 
+void ServiceProvider::set_user_cert(const std::string user_cert) {
+  memcpy((char*) this->user_cert, user_cert.c_str(), user_cert.length() + 1)
+}
+
 void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
@@ -340,6 +344,11 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
 
   // Prepare msg2
   memcpy_s(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+
+  // Copy user certificate to msg2
+  size_t cert_len = strlen(this->user_cert);
+  memcpy(msg2->user_cert, this->user_cert, cert_len);
+  memcpy(msg2->user_cert_len, cert_len, sizeof(cert_len))
   *msg2_size = sizeof(oe_msg2_t);
 
   // clean up

@@ -39,6 +39,8 @@ public:
    */
   void set_shared_key(const uint8_t *shared_key);
 
+  void set_user_cert(std::string user_cert);
+
   /**
    * After calling load_private_key, write the corresponding public key as a C++ header file. This
    * file should be compiled into the enclave.
@@ -75,6 +77,7 @@ private:
   lc_ec256_private_t sp_priv_key;
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
+  const char* user_cert;
   //sp_db_item_t sp_db;
   std::string spid;
 

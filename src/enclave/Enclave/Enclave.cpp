@@ -239,13 +239,47 @@ void ecall_ra_proc_msg4(
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(msg2->shared_key_ciphertext, msg4_size, shared_key_plaintext, &shared_key_plaintext_size);
-    if (!ret)
-    {
+    bool ret = g_crypto.decrypt(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, shared_key_plaintext, &shared_key_plaintext_size);
+
+    if (!ret) {
       ocall_throw("shared key decryption failed");
     }
 
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+    // Get name from certificate
+    // FIXME: nameptr not of set size
+    unsigned char nameptr[50];
+    size_t name_len;
+    int ret;
+    mbedtls_x509_crt user_cert;
+    mbedtls_x509_crt_init(&user_cert);
+    if ((ret = mbedtls_x509_crt_parse(&user_cert, (const unsigned char *) msg2->user_cert,
+                    cert_len)) != 0) {
+        LOG(FATAL) << "verification failed - Could not read user certificate\n"
+            << "mbedtls_x509_crt_parse returned " << ret;
+    }
+
+    mbedtls_x509_name subject_name = user_cert.subject;
+    mbedtls_asn1_buf name = subject_name.val;
+    strcpy((char*) nameptr, (const char*) name.p);
+    name_len = name.len;
+
+    // Store the client's symmetric key
+    std::vector<uint8_t> user_symm_key(shared_key_plaintext, shared_key_plaintext + shared_key_plaintext_size);
+    std::string user_nam(nameptr, nameptr + name_len);
+
+    // Verify client's identity
+    // if (std::find(CLIENT_NAMES.begin(), CLIENT_NAMES.end(), user_nam) == CLIENT_NAMES.end()) {
+    //     LOG(FATAL) << "No such authorized client";
+    // }
+    // client_keys[user_nam] = user_symm_key;
+
+    // Store the client's public key
+    // std::vector<uint8_t> user_public_key(cert, cert + cert_len);
+    // client_public_keys.insert({user_nam, user_public_key});
+
+    // Set shared key for this client
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size, user_nam.c_str());
+
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

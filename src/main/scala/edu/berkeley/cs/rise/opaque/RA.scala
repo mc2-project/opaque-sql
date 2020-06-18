@@ -29,11 +29,14 @@ object RA extends Logging {
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
+    // FIXME: get user1.crt and ensure that userCert is a string
+    val userCert = Utils.findResource("user1.crt")
+
     val sp = new SP()
 
     // Retry attestation a few times in case of transient failures
     Utils.retry(3) {
-      sp.Init(Utils.sharedKey, intelCert)
+      sp.Init(Utils.sharedKey, intelCert, userCert)
 
       val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
