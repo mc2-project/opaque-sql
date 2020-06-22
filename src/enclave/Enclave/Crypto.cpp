@@ -9,6 +9,9 @@
 #include "util.h"
 //#include "rdrand.h"
 
+// Set this number before creating the enclave
+int num_clients = 1;
+
 /**
  * Symmetric key used to encrypt row data. This key is shared among the driver and all enclaves.
  *
@@ -25,10 +28,15 @@ std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> c
 // map user name to public key
 // std::unordered_map<std::string, std::vector<uint8_t>> client_public_keys;
 
-// std::unique_ptr<KeySchedule> ks;
+// TODO: properly set this KeySchedule
+std::unique_ptr<KeySchedule> ks;
 
 void initKeySchedule(char* username) {
-  std::unique_ptr<KeySchedule> ks = client_key_schedule[username];
+  std::unique_ptr<KeySchedule> user_ks = client_key_schedule[username];
+  user_ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
+}
+
+void initKeySchedule() {
   ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
@@ -36,32 +44,43 @@ void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size, char* u
   if (shared_key_size <= 0) {
     throw std::runtime_error("Remote attestation step 4: Invalid message size.");
   }
-  memcpy_s(client_keys[username], sizeof(client_keys[username]), shared_key_bytes, shared_key_size);
 
+  // memcpy_s(client_keys[username], sizeof(client_keys[username]), shared_key_bytes, shared_key_size);
+  client_keys[username] = shared_key_bytes;
   initKeySchedule(username);
+
+  // XOR key shares
+  // FIXME: use different key for xor
+  unsigned char xor_key = shared_key ^ (unsigned char*) shared_key_bytes;
+  memcpy(shared_key, xor_key, SGX_AESGCM_KEY_SIZE);
+
+  // initKeySchedule the shared key if this is the last client
+  if (client_keys.size() == num_clients) {
+      initKeySchedule();
+  }
 }
 
-void get_client_key(uint8_t* key, char *username) {
-    LOG(DEBUG) << "Getting client key for user: " << username;
-    std::string str(username);
-    auto iter = client_keys.find(str);
-    if (iter == client_keys.end()) {
-        LOG(FATAL) << "No client key for user: " << username;
-    } else {
-        memcpy(key, (uint8_t*) iter->second.data(), CIPHER_KEY_SIZE);
-    }
-}
-
-char* get_client_cert(char *username) {
-    LOG(DEBUG) << "Getting username " << username;
-    std::string str(username);
-    auto iter = client_public_keys.find(str);
-    if (iter == client_public_keys.end()) {
-        LOG(FATAL) << "No certificate for user: " << username;
-    } else {
-        return (char*) iter->second.data();
-    }
-}
+// void get_client_key(uint8_t* key, char *username) {
+//     LOG(DEBUG) << "Getting client key for user: " << username;
+//     std::string str(username);
+//     auto iter = client_keys.find(str);
+//     if (iter == client_keys.end()) {
+//         LOG(FATAL) << "No client key for user: " << username;
+//     } else {
+//         memcpy(key, (uint8_t*) iter->second.data(), CIPHER_KEY_SIZE);
+//     }
+// }
+// 
+// char* get_client_cert(char *username) {
+//     LOG(DEBUG) << "Getting username " << username;
+//     std::string str(username);
+//     auto iter = client_public_keys.find(str);
+//     if (iter == client_public_keys.end()) {
+//         LOG(FATAL) << "No certificate for user: " << username;
+//     } else {
+//         return (char*) iter->second.data();
+//     }
+// }
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {

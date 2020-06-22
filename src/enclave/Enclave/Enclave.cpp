@@ -264,7 +264,7 @@ void ecall_ra_proc_msg4(
     name_len = name.len;
 
     // Store the client's symmetric key
-    std::vector<uint8_t> user_symm_key(shared_key_plaintext, shared_key_plaintext + shared_key_plaintext_size);
+    // std::vector<uint8_t> user_symm_key(shared_key_plaintext, shared_key_plaintext + shared_key_plaintext_size);
     std::string user_nam(nameptr, nameptr + name_len);
 
     // Verify client's identity
