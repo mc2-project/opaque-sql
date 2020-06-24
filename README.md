@@ -40,7 +40,7 @@ After downloading the Opaque codebase, build and test it as follows.
     openssl genrsa -out private_key.pem -3 3072
     ```
 
-3. Change into the Opaque root directory and set the appropriate environment variables for both Opaque and OpenEnclave:
+3. Change into the Opaque root directory and edit Opaque's environment variables in `opaqueenv`. Export Opaque and OpenEnclave environment variables via
 
     ```sh
     source opaqueenv
