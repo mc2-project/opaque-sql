@@ -1,4 +1,4 @@
-<img src="https://ucbrise.github.io/opaque/opaque.svg" width="315" alt="Opaque">
+<img src="https://mc2-project.github.io/opaque/opaque.svg" width="315" alt="Opaque">
 
 **Secure Apache Spark SQL**
 
