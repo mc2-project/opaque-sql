@@ -124,7 +124,9 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
 }
 
 void ServiceProvider::set_user_cert(const std::string user_cert) {
-  memcpy((char*) this->user_cert, user_cert.c_str(), user_cert.length() + 1);
+  memcpy(this->user_cert, user_cert.c_str(), user_cert.length() + 1);
+  // this->user_cert = user_cert.c_str();
+  // std::cout << this->user_cert;
 }
 
 void ServiceProvider::set_key_share(const uint8_t *key_share) {
@@ -369,8 +371,10 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
 
   // Copy user certificate to msg2
   size_t cert_len = strlen(this->user_cert);
-  memcpy((char*) msg2->user_cert, this->user_cert, cert_len);
-  msg2->user_cert_len = cert_len;
+  // std::cout << this->user_cert;
+  memcpy(msg2->user_cert, this->user_cert, cert_len);
+  msg2->user_cert_len = cert_len + 1;
+  std::cout << "Certificate length: " << cert_len << std::endl;
   *msg2_size = sizeof(oe_msg2_t);
 
   // clean up

@@ -92,7 +92,7 @@ typedef struct oe_msg1_t {
 typedef struct oe_msg2_t {
   uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   uint8_t key_share_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  const char* user_cert;
+  char user_cert[2000];
   size_t user_cert_len;
 } oe_msg2_t;
 

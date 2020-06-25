@@ -79,7 +79,8 @@ private:
   lc_ec256_private_t sp_priv_key;
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
-  const char* user_cert;
+  // FIXME: make this not a set length
+  char user_cert[2000];
 
   // Key share; xor'ed among all parties to produce one shared key for spark cluster
   uint8_t key_share[LC_AESGCM_KEY_SIZE];

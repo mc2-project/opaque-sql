@@ -30,7 +30,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
   //size_t intel_cert_len = static_cast<size_t>(env->GetStringUTFLength(intel_cert));
   //
   const char* user_cert_str = env->GetStringUTFChars(user_cert, nullptr);
-  size_t user_cert_len = static_cast<size_t>(env->GetStringUTFLength(user_cert));
+  // size_t user_cert_len = static_cast<size_t>(env->GetStringUTFLength(user_cert));
 
   try {
     // const char *private_key_path = std::getenv("PRIVATE_KEY_PATH");
@@ -43,7 +43,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
 
     // set user certificate
-    service_provider.set_user_cert(std::string(user_cert_str, user_cert_len));
+    service_provider.set_user_cert(user_cert_str);
 
     // set key share
     service_provider.set_key_share(reinterpret_cast<uint8_t *>(key_share_bytes));
