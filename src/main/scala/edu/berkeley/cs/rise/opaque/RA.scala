@@ -43,13 +43,14 @@ object RA extends Logging {
 
       val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
 
-      val statuses = rdd.mapPartitionsWithIndex { (i, _) =>
+      rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
          enclave.RemoteAttestation3(eid, msg2s(i))
         Iterator((i, true))
       }.collect.toMap
 
       // TODO: some sort of assert that attestation passed
+
     }
   }
 }
