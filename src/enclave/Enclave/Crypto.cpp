@@ -7,10 +7,12 @@
 
 #include "common.h"
 #include "util.h"
+#include <unordered_map>
+#include <vector>
 //#include "rdrand.h"
 
 // Set this number before creating the enclave
-int num_clients = 1;
+uint8_t num_clients = 1;
 
 /**
  * Symmetric key used to encrypt row data. This key is shared among the driver and all enclaves.
@@ -23,7 +25,8 @@ unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
 // map username to client key schedule
 std::unordered_map<std::string, std::unique_ptr<KeySchedule>> client_key_schedules;
-std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> client_keys;
+std::unordered_map<std::string, std::vector<uint8_t>> client_keys;
+// std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> client_keys;
 
 // map user name to public key
 // std::unordered_map<std::string, std::vector<uint8_t>> client_public_keys;
@@ -32,33 +35,57 @@ std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> c
 std::unique_ptr<KeySchedule> ks;
 
 void initKeySchedule(char* username) {
-  std::unique_ptr<KeySchedule> user_ks = client_key_schedule[username];
-  user_ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
+  std::string user(username);
+  std::unique_ptr<KeySchedule> user_ks; 
+  unsigned char client_key[SGX_AESGCM_KEY_SIZE];
+
+  auto iter = client_keys.find(user);
+  // if (iter == client_keys.end()) {
+  //   ocall_throw("No client key for user: %s", username);
+  // } else {
+  memcpy(client_key, (uint8_t*) iter->second.data(), SGX_AESGCM_KEY_SIZE);
+  // }
+
+  user_ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(client_key), SGX_AESGCM_KEY_SIZE));
+  client_key_schedules[user] = std::move(user_ks);
 }
 
 void initKeySchedule() {
   ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
-void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size, char* username) {
-  if (shared_key_size <= 0) {
-    throw std::runtime_error("Remote attestation step 4: Invalid message size.");
+void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* username) {
+  if (client_key_size <= 0) {
+    throw std::runtime_error("Remote attestation step 2: Invalid client key size");
   }
 
-  // memcpy_s(client_keys[username], sizeof(client_keys[username]), shared_key_bytes, shared_key_size);
-  client_keys[username] = shared_key_bytes;
+  std::vector<uint8_t> user_private_key(client_key_bytes, client_key_bytes + client_key_size);
+  std::string user(username);
+  client_keys[user] = user_private_key;
+
   initKeySchedule(username);
 
-  // XOR key shares
-  // FIXME: use different key for xor
-  unsigned char xor_key = shared_key ^ (unsigned char*) shared_key_bytes;
-  memcpy(shared_key, xor_key, SGX_AESGCM_KEY_SIZE);
-
-  // initKeySchedule the shared key if this is the last client
-  if (client_keys.size() == num_clients) {
-      initKeySchedule();
-  }
 }
+
+void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
+    if (key_share_size <= 0 || key_share_size != SGX_AESGCM_KEY_SIZE) {
+      throw std::runtime_error("Remote attestation step 2: Invalid key share size.");
+    }
+
+    // XOR key shares
+    unsigned char xor_key[SGX_AESGCM_KEY_SIZE];
+    int i;
+    for (i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
+        xor_key[i] = shared_key[i] ^ key_share_bytes[i];
+    }
+    memcpy(shared_key, xor_key, SGX_AESGCM_KEY_SIZE);
+
+    // initKeySchedule the shared key if this is the last client
+    if (client_keys.size() == num_clients) {
+        initKeySchedule();
+    }
+}
+
 
 // void get_client_key(uint8_t* key, char *username) {
 //     LOG(DEBUG) << "Getting client key for user: " << username;

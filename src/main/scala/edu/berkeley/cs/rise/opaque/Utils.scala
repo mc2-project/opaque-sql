@@ -254,7 +254,7 @@ object Utils extends Logging {
    */
   val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
   assert(sharedKey.size == GCM_KEY_LENGTH)
-  
+
   def encrypt(data: Array[Byte]): Array[Byte] = {
     val random = SecureRandom.getInstance("SHA1PRNG")
     val cipherKey = new SecretKeySpec(sharedKey, "AES")

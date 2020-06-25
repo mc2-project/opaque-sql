@@ -23,6 +23,15 @@
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 
+// needed for certificate
+#include <mbedtls/platform.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/pk_internal.h>
+
+
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
 // the ecall (i.e., within these definitions), and are then rethrown as Java exceptions using
@@ -236,6 +245,8 @@ static Crypto g_crypto;
 void ecall_ra_proc_msg4(
   uint8_t *msg4, uint32_t msg4_size) {
   try {
+    uint32_t temp = msg4_size;
+    temp++;
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
@@ -245,17 +256,24 @@ void ecall_ra_proc_msg4(
       ocall_throw("shared key decryption failed");
     }
 
+    uint8_t key_share_plaintext[SGX_AESGCM_KEY_SIZE];
+    size_t key_share_plaintext_size = sizeof(key_share_plaintext);
+    ret = g_crypto.decrypt(msg2->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, key_share_plaintext, &key_share_plaintext_size);
+
+    if (!ret) {
+      ocall_throw("key share decryption failed");
+    }
+
     // Get name from certificate
     // FIXME: nameptr not of set size
     unsigned char nameptr[50];
     size_t name_len;
-    int ret;
+    int res;
     mbedtls_x509_crt user_cert;
     mbedtls_x509_crt_init(&user_cert);
-    if ((ret = mbedtls_x509_crt_parse(&user_cert, (const unsigned char *) msg2->user_cert,
-                    cert_len)) != 0) {
-        LOG(FATAL) << "verification failed - Could not read user certificate\n"
-            << "mbedtls_x509_crt_parse returned " << ret;
+    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char *) msg2->user_cert,
+                    msg2->user_cert_len)) != 0) {
+        ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
     }
 
     mbedtls_x509_name subject_name = user_cert.subject;
@@ -278,7 +296,8 @@ void ecall_ra_proc_msg4(
     // client_public_keys.insert({user_nam, user_public_key});
 
     // Set shared key for this client
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size, user_nam.c_str());
+    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
+    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
 
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());

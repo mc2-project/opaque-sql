@@ -17,12 +17,14 @@ void jni_throw(JNIEnv *env, const char *message) {
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
-  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert) {
+  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share) {
   (void)env;
   (void)obj;
 
   jboolean if_copy = false;
   jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
+
+  jbyte *key_share_bytes = env->GetByteArrayElements(key_share, &if_copy);
 
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
   //size_t intel_cert_len = static_cast<size_t>(env->GetStringUTFLength(intel_cert));
@@ -42,6 +44,9 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 
     // set user certificate
     service_provider.set_user_cert(std::string(user_cert_str, user_cert_len));
+
+    // set key share
+    service_provider.set_key_share(reinterpret_cast<uint8_t *>(key_share_bytes));
     //service_provider.connect_to_ias(std::string(intel_cert_str, intel_cert_len));
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());

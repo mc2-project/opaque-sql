@@ -41,6 +41,8 @@ public:
 
   void set_user_cert(std::string user_cert);
 
+  void set_key_share(const uint8_t *key_share);
+
   /**
    * After calling load_private_key, write the corresponding public key as a C++ header file. This
    * file should be compiled into the enclave.
@@ -78,6 +80,9 @@ private:
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
   const char* user_cert;
+
+  // Key share; xor'ed among all parties to produce one shared key for spark cluster
+  uint8_t key_share[LC_AESGCM_KEY_SIZE];
   //sp_db_item_t sp_db;
   std::string spid;
 

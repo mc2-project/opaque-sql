@@ -124,7 +124,11 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
 }
 
 void ServiceProvider::set_user_cert(const std::string user_cert) {
-  memcpy((char*) this->user_cert, user_cert.c_str(), user_cert.length() + 1)
+  memcpy((char*) this->user_cert, user_cert.c_str(), user_cert.length() + 1);
+}
+
+void ServiceProvider::set_key_share(const uint8_t *key_share) {
+  memcpy(this->key_share, key_share, LC_AESGCM_KEY_SIZE);
 }
 
 void ServiceProvider::export_public_key_code(const std::string &filename) {
@@ -250,6 +254,10 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+  unsigned char encrypted_key_share[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  size_t encrypted_key_share_size = sizeof(encrypted_key_share);
+
   std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
   
   EVP_PKEY* pkey = buffer_to_public_key((char*)msg1->public_key, -1);
@@ -342,13 +350,27 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
+  // Encrypt key share
+  ret = public_encrypt(pkey, this->key_share, LC_AESGCM_KEY_SIZE, encrypted_key_share, &encrypted_key_share_size);
+  if (ret == 0) {
+    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  }
+  else if (ret < 0) {
+    throw std::runtime_error(std::string("public_encrypt failed"));
+  }
+
   // Prepare msg2
+  // Copy over shared key ciphertext
   memcpy_s(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+
+  // Copy over key share ciphertext
+  memcpy_s(msg2->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_key_share, encrypted_key_share_size);
+
 
   // Copy user certificate to msg2
   size_t cert_len = strlen(this->user_cert);
-  memcpy(msg2->user_cert, this->user_cert, cert_len);
-  memcpy(msg2->user_cert_len, cert_len, sizeof(cert_len))
+  memcpy((char*) msg2->user_cert, this->user_cert, cert_len);
+  msg2->user_cert_len = cert_len;
   *msg2_size = sizeof(oe_msg2_t);
 
   // clean up
