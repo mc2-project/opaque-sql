@@ -246,14 +246,12 @@ static Crypto g_crypto;
 void ecall_ra_proc_msg4(
   uint8_t *msg4, uint32_t msg4_size) {
   try {
-    printf("ecall ra proc msg4\n");
     uint32_t temp = msg4_size;
     temp++;
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
     bool ret = g_crypto.decrypt(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, shared_key_plaintext, &shared_key_plaintext_size);
-    printf("shared key decrypted\n");
 
     if (!ret) {
       ocall_throw("shared key decryption failed");
@@ -273,24 +271,14 @@ void ecall_ra_proc_msg4(
     int res;
     mbedtls_x509_crt user_cert;
     mbedtls_x509_crt_init(&user_cert);
-    // std::cout << msg2->user_cert[1322] << std::endl;
-    std::cout << msg2->user_cert_len << std::endl;
-    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len)) != 0) {
-        char tmp[500];
-        mbedtls_strerror(res, tmp, 500);
-        std::cout << tmp;
-        std::cout << "cant read certificate\n";
-        // ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
+    // FIXME: not sure why cert_len needs a +5
+    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len + 5)) != 0) {
+        ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
     }
 
-    printf("Getting info from cert\n");
     mbedtls_x509_name subject_name = user_cert.subject;
-    printf("Got subject name\n");
     mbedtls_asn1_buf name = subject_name.val;
-    printf("Got subjectname val\n");
-    std::cout << (char*) name.p << std::endl;
     strcpy((char*) nameptr, (const char*) name.p);
-    printf("Copied name\n");
     name_len = name.len;
 
     // Store the client's symmetric key
