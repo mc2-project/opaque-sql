@@ -1,4 +1,5 @@
 #include "FlatbuffersWriters.h"
+#include <iostream>
 
 void RowWriter::clear() {
   builder.Clear();
@@ -82,7 +83,7 @@ void RowWriter::finish_block() {
   ocall_malloc(enc_rows_len, &enc_rows_ptr);
 
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
-  encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
+  encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get(), (char*) "user1");
 
   enc_block_vector.push_back(
     tuix::CreateEncryptedBlock(

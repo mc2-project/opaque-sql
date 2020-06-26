@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include <iostream>
 
 using namespace edu::berkeley::cs::rise::opaque;
 
@@ -27,7 +28,6 @@ void filter(uint8_t *condition, size_t condition_length,
     if (condition_result->is_null()) {
       throw std::runtime_error("Filter expression returned null");
     }
-
     bool keep_row = static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     if (keep_row) {
       w.append(row);

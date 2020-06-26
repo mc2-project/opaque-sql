@@ -1,15 +1,14 @@
 #include "FlatbuffersReaders.h"
+#include <iostream>
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
   uint32_t num_rows = encrypted_block->num_rows();
 
   const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
   rows_buf.reset(new uint8_t[rows_len]);
-  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
-          rows_buf.get());
+  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(), rows_buf.get(), (char*) "user1");
   BufferRefView<tuix::Rows> buf(rows_buf.get(), rows_len);
   buf.verify();
-
   rows = buf.root();
   if (rows->rows()->size() != num_rows) {
     throw std::runtime_error(

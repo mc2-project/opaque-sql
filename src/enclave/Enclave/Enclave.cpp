@@ -50,7 +50,8 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
     assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
     (void)cipher_length;
     (void)plaintext_length;
-    encrypt(plaintext, plaintext_length, ciphertext);
+    // FIXME: hardcoded username
+    encrypt(plaintext, plaintext_length, ciphertext, (char*) "user1");
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

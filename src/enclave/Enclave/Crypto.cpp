@@ -110,9 +110,10 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
 // }
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
-             uint8_t *ciphertext) {
+             uint8_t *ciphertext, char* username) {
 
-  if (!ks) {
+  
+  if (!client_key_schedules[std::string(username)]) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
   }
@@ -125,17 +126,24 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
-  // TODO: should we replace this encryption with the mbedtls encryption
-  AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
-  cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
-  memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+  if (username == NULL) {
+      // Encrypt was called in FlatbuffersWriters
+    AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
+    cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
+    memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+  } else {
+      // Encrypt called by client
+    AesGcm cipher(client_key_schedules[std::string(username)].get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
+    cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
+    memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+  }
 }
 
-void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
-  if (!ks) {
-    throw std::runtime_error(
-      "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
-  }
+void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext, char* username) {
+  // if (!ks) {
+    // throw std::runtime_error(
+      // "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
+  // }
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;
@@ -143,10 +151,18 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
 
-  AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-  decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-  if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-    printf("Decrypt: invalid mac\n");
+  if (username == NULL) {
+    AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+    decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+    if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+      printf("User name is null, Decrypt: invalid mac\n");
+    }
+  } else {
+    AesGcm decipher(client_key_schedules[std::string(username)].get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+    decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+    if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+      printf("User name not null, Decrypt: invalid mac\n");
+    }
   }
 }
 
