@@ -77,7 +77,7 @@ case class EncryptedLocalTableScanExec(
     // Encrypt each local partition
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
-        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false, "user1"))
+        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
 
     // Make an RDD from the encrypted partitions
     sqlContext.sparkContext.parallelize(encryptedPartitions)
@@ -90,9 +90,10 @@ case class EncryptExec(child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("EncryptExec woohoo")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
-        rowIter.toSeq, output.map(_.dataType), useEnclave = true, "user1"))
+        rowIter.toSeq, output.map(_.dataType), useEnclave = true))
     }
   }
 }
