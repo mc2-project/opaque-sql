@@ -34,14 +34,14 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size);
  *
  * A random IV will be used.
  */
-void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext, char* username);
+void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext);
 
 /**
  * Decrypt the given ciphertext using AES-GCM with a 128-bit key and write the result to
  * `plaintext`. The encrypted data must be formatted as described in the documentation for
  * `encrypt`.
  */
-void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext, char* username);
+void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext);
 
 /** Calculate how many bytes `encrypt` will write if invoked on plaintext of the given length. */
 uint32_t enc_size(uint32_t plaintext_size);

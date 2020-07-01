@@ -7,7 +7,7 @@ void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_bloc
   const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
   rows_buf.reset(new uint8_t[rows_len]);
   std::cout << "reading flatbuffers\n";
-  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(), rows_buf.get(), (char*) "user1");
+  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(), rows_buf.get());
   BufferRefView<tuix::Rows> buf(rows_buf.get(), rows_len);
   buf.verify();
   rows = buf.root();

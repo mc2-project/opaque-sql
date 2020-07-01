@@ -111,11 +111,11 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
 // }
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
-             uint8_t *ciphertext, char* username) {
+             uint8_t *ciphertext) {
 
   std::cout << "C++ encrypting inside enclave\n";
   
-  if (!client_key_schedules[std::string(username)]) {
+  if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
   }
@@ -128,20 +128,20 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
-  if (username == NULL) {
+  // if (username == NULL) {
     AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
     cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
     memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
     std::cout << "Encrypting with xor shared key\n";
-  } else {
-    AesGcm cipher(client_key_schedules[std::string(username)].get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
-    cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
-    memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-    std::cout << "Encrypting with client key\n";
-  }
+  // } else {
+  //   AesGcm cipher(client_key_schedules[std::string(username)].get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
+  //   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
+  //   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+  //   std::cout << "Encrypting with client key\n";
+  // }
 }
 
-void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext, char* username) {
+void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
   std::cout << "C++ decrypting inside enclave\n";
   // if (!ks) {
     // throw std::runtime_error(
@@ -154,21 +154,30 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
 
-  if (username == NULL) {
+  // if (username == NULL) {
+    // FIXME: change this to possibly use client key
     AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
     decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
     if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-      printf("User name is null, Decrypt: invalid mac\n");
+      // Shared key doesn't work
+      // Perhaps we need to use a client key instead
+      for (auto& keypair : client_key_schedules) {
+        AesGcm decipher(keypair.second.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+        decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+        if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
+            std::cout << "We found the proper key, of user " << keypair.first << std::endl;
+            break;
+        }
+      }
     }
-    std::cout << "Decrypting with xored shared key\n";
-  } else {
-    AesGcm decipher(client_key_schedules[std::string(username)].get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-    decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-    if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-      printf("User name not null, Decrypt: invalid mac\n");
-    }
-    std::cout << "Decrypting with client key\n";
-  }
+  // } else {
+    // AesGcm decipher(client_key_schedules[std::string(username)].get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+    // decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+    // if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+      // printf("User name not null, Decrypt: invalid mac\n");
+    // }
+    // std::cout << "Decrypting with client key\n";
+  // }
 }
 
 uint32_t enc_size(uint32_t plaintext_size) {
