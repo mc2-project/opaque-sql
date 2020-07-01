@@ -73,10 +73,11 @@ case class EncryptedLocalTableScanExec(
         case (start, end) => unsafeRows.slice(start, end).toSeq
       }.toSeq
 
+    println("Operators.scala executeBlocked()")
     // Encrypt each local partition
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
-        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
+        Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false, "user1"))
 
     // Make an RDD from the encrypted partitions
     sqlContext.sparkContext.parallelize(encryptedPartitions)
@@ -91,7 +92,7 @@ case class EncryptExec(child: SparkPlan)
   override def executeBlocked(): RDD[Block] = {
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
-        rowIter.toSeq, output.map(_.dataType), useEnclave = true))
+        rowIter.toSeq, output.map(_.dataType), useEnclave = true, "user1"))
     }
   }
 }
@@ -136,16 +137,20 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeCollect(): Array[InternalRow] = {
+    println("execute collect")
     executeBlocked().collect().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
+    // Internally, executeTake gets an RDD of byte array of n unsafe rows and scans the RDD partitions one by one until n is reached or all partitions were processed.
+    // This method called when decrypting dataframe from file
     if (n == 0) {
       return new Array[InternalRow](0)
     }
 
+    println("Callign execute blocked in execute take")
     val childRDD = executeBlocked()
 
     val buf = new ArrayBuffer[InternalRow]
@@ -167,6 +172,7 @@ trait OpaqueOperatorExec extends SparkPlan {
       }
       numPartsToTry = math.max(0, numPartsToTry)  // guard against negative num of partitions
 
+      println("executeTake")
       val p = partsScanned.until(math.min(partsScanned + numPartsToTry, totalParts).toInt)
       val sc = sqlContext.sparkContext
       val res = sc.runJob(childRDD,

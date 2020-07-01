@@ -247,6 +247,7 @@ static Crypto g_crypto;
 void ecall_ra_proc_msg4(
   uint8_t *msg4, uint32_t msg4_size) {
   try {
+    // FIXME: remove msg4_size
     uint32_t temp = msg4_size;
     temp++;
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
@@ -265,15 +266,19 @@ void ecall_ra_proc_msg4(
       ocall_throw("key share decryption failed");
     }
 
+    // Add verifySignatureFromCertificate from XGBoost
     // Get name from certificate
-    // FIXME: nameptr not of set size
+    // unsigned char* nameptr = (unsigned char*) malloc(sizeof(*nameptr));
     unsigned char nameptr[50];
     size_t name_len;
     int res;
     mbedtls_x509_crt user_cert;
     mbedtls_x509_crt_init(&user_cert);
-    // FIXME: not sure why cert_len needs a +5
-    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len + 5)) != 0) {
+    // FIXME: non deterministic error here
+    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len)) != 0) {
+        char tmp[50];
+        mbedtls_strerror(res, tmp, 50);
+        std::cout << tmp << std::endl;
         ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
     }
 
@@ -299,7 +304,8 @@ void ecall_ra_proc_msg4(
     // Set shared key for this client
     add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
     xor_shared_key(key_share_plaintext, key_share_plaintext_size);
-
+    // FIXME: we'll need to free nameptr eventually
+    // free(nameptr);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

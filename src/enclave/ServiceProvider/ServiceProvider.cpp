@@ -370,12 +370,10 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
 
 
   // Copy user certificate to msg2
-  size_t cert_len = strlen(this->user_cert);
-  // std::cout << this->user_cert;
-  memcpy(msg2->user_cert, this->user_cert, cert_len);
-  msg2->user_cert_len = cert_len + 1;
-  std::cout << "Certificate length: " << cert_len << std::endl;
-  *msg2_size = sizeof(oe_msg2_t);
+  size_t cert_len = strlen(this->user_cert) + 1;
+  memcpy_s(msg2->user_cert, cert_len, this->user_cert, cert_len);
+  msg2->user_cert_len = cert_len;
+  *msg2_size = sizeof(msg2->shared_key_ciphertext) + sizeof(msg2->key_share_ciphertext) + sizeof(msg2->user_cert_len) + sizeof(msg2->user_cert);
 
   // clean up
   EVP_PKEY_free(pkey);

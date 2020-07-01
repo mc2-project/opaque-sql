@@ -253,11 +253,13 @@ object Utils extends Logging {
    * attestation succeeds. For development, we use a hardcoded key. You should change it.
    */
   val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+  val clientKeys = Map("user1" -> sharedKey)
   assert(sharedKey.size == GCM_KEY_LENGTH)
 
-  def encrypt(data: Array[Byte]): Array[Byte] = {
+  def encrypt(data: Array[Byte], key: Array[Byte]): Array[Byte] = {
+    println("Scala cipher encrypt")
     val random = SecureRandom.getInstance("SHA1PRNG")
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
+    val cipherKey = new SecretKeySpec(key, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
@@ -267,8 +269,9 @@ object Utils extends Logging {
     iv ++ cipherText
   }
   
-  def decrypt(data: Array[Byte]): Array[Byte] = {
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
+  def decrypt(data: Array[Byte], key: Array[Byte]): Array[Byte] = {
+    println("Scala cipher decrypt")
+    val cipherKey = new SecretKeySpec(key, "AES")
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
@@ -659,7 +662,8 @@ object Utils extends Logging {
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
-      useEnclave: Boolean): Block = {
+      useEnclave: Boolean,
+      username: String): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
     val encryptedBlockOffsets = ArrayBuilder.make[Int]
@@ -668,7 +672,7 @@ object Utils extends Logging {
     var builder = new FlatBufferBuilder
     var rowsOffsets = ArrayBuilder.make[Int]
 
-    def finishBlock(): Unit = {
+    def finishBlock(encryptionKey: Array[Byte]): Unit = {
       val rowsOffsetsArray = rowsOffsets.result
       builder.finish(
         tuix.Rows.createRows(
@@ -679,12 +683,15 @@ object Utils extends Logging {
       val plaintext = builder.sizedByteArray()
 
       // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
+      println("I'm encrypting!")
       val ciphertext =
         if (useEnclave) {
           val (enclave, eid) = initEnclave()
+          println("Use enclave")
           enclave.Encrypt(eid, plaintext)
         } else {
-          encrypt(plaintext)
+          println("Don't use enclave")
+          encrypt(plaintext, encryptionKey)
         }
 
       encryptedBlockOffsets += tuix.EncryptedBlock.createEncryptedBlock(
@@ -708,11 +715,11 @@ object Utils extends Logging {
         false)
 
       if (builder.offset() > MaxBlockSize) {
-        finishBlock()
+        finishBlock(clientKeys(username))
       }
     }
     if (builder.offset() > 0) {
-      finishBlock()
+      finishBlock(clientKeys(username))
     }
 
     // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
@@ -748,7 +755,8 @@ object Utils extends Logging {
       ciphertextBuf.get(ciphertext)
 
       // 2. Decrypt the row data
-      val plaintext = decrypt(ciphertext)
+      println("I'm decrypting the row data!")
+      val plaintext = decrypt(ciphertext, sharedKey)
 
       // 1. Deserialize the tuix.Rows and return them as Scala InternalRow objects
       val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))

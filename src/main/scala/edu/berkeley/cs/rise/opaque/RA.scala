@@ -29,7 +29,9 @@ object RA extends Logging {
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
-    // FIXME: get user1.crt and ensure that userCert is a string
+    // FIXME: hardcoded path
+    val userCert = scala.io.Source.fromFile("/home/chester/opaque/user1.crt").mkString
+
     // val userCert = """-----BEGIN CERTIFICATE-----
 // MIIDpDCCAgwCFGUiLLjMglw1cxfSRsR2dX8nguLRMA0GCSqGSIb3DQEBCwUAMA8x
 // DTALBgNVBAMMBHJvb3QwHhcNMjAwNTI5MDAzNjQ4WhcNMjAwNjI4MDAzNjQ4WjAQ
@@ -51,9 +53,7 @@ object RA extends Logging {
 // b1qf7h5kGAahpTnO7Cy6OQUf/UxdQNKRo4XYywXk0Ky1DYFlJNXsm7MsqR5sma+b
 // eFtt2qH9wF8sdarKlvgmuaMlbuRIbU3y4dLhwNAzN714tOgudEclKASfwKJ1ix5V
 // 4VtJgb7X/djNCwySOYlO6r8Stc+i0aIj
-// -----END CERTIFICATE-----""" 
-  
-    val userCert = scala.io.Source.fromFile("/home/chester/opaque/user1.crt").mkString
+// -----END CERTIFICATE-----"""
 
     val keyShare: Array[Byte] = "Opaque key share".getBytes("UTF-8")
 
