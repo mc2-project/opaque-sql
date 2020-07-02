@@ -64,6 +64,15 @@ void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* u
   std::string user(username);
   client_keys[user] = user_private_key;
 
+  // Add this for testing purposes
+  // std::cout << "Adding another user private key for test purposes\n";
+  // std::cout << "Client key size " << client_key_size << std::endl;
+  // uint8_t* test_key = (uint8_t*) u8"Opaque deve key2";
+  // std::cout << (char*) test_key << std::endl;
+  // std::vector<uint8_t> test_private_key(test_key, test_key + client_key_size);
+  // client_keys[std::string("user2")] = test_private_key; 
+  // initKeySchedule((char*) "user2");
+
   initKeySchedule(username);
 
 }
@@ -156,20 +165,28 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
 
   // if (username == NULL) {
     // FIXME: change this to possibly use client key
-    AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-    decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-    if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-      // Shared key doesn't work
-      // Perhaps we need to use a client key instead
-      for (auto& keypair : client_key_schedules) {
-        AesGcm decipher(keypair.second.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-        decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-        if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
-            std::cout << "We found the proper key, of user " << keypair.first << std::endl;
-            break;
-        }
+  std::cout << "do we make it here\n";
+  AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+  std::cout << "Initialized decipher\n";
+  decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+  std::cout << "tried shared key\n";
+  if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+    // Shared key doesn't work
+    // Perhaps we need to use a client key instead
+    int success = -1;
+    for (auto& keypair : client_key_schedules) {
+      AesGcm decipher(keypair.second.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
+      decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+      if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
+          std::cout << "We found the proper key, of user " << keypair.first << std::endl;
+          success = 0;
+          break;
       }
     }
+    if (success == -1) {
+        std::cout << "Couldn't decrypt -- proper key unknown\n";
+    }
+  }
   // } else {
     // AesGcm decipher(client_key_schedules[std::string(username)].get(), iv_ptr, SGX_AESGCM_IV_SIZE);
     // decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);

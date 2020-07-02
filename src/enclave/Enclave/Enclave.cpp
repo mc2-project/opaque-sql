@@ -275,9 +275,9 @@ void ecall_ra_proc_msg4(
     mbedtls_x509_crt_init(&user_cert);
     // FIXME: non deterministic error here
     if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len)) != 0) {
-        char tmp[50];
-        mbedtls_strerror(res, tmp, 50);
-        std::cout << tmp << std::endl;
+        // char tmp[50];
+        // mbedtls_strerror(res, tmp, 50);
+        // std::cout << tmp << std::endl;
         ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
     }
 
@@ -303,6 +303,16 @@ void ecall_ra_proc_msg4(
     // Set shared key for this client
     add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
     xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+
+    // This block for testing loading from files encrypted with different keys
+    uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];
+    size_t test_key_plaintext_size = sizeof(test_key_plaintext);
+    ret = g_crypto.decrypt(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, test_key_plaintext, &test_key_plaintext_size);
+    add_client_key(test_key_plaintext, test_key_plaintext_size, (char*) "user2");
+    if (!ret) {
+      ocall_throw("shared key decryption failed");
+    }
+
     // FIXME: we'll need to free nameptr eventually
     // free(nameptr);
   } catch (const std::runtime_error &e) {

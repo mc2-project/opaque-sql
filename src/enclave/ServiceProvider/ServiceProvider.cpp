@@ -123,6 +123,11 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
 }
 
+// This function for testing purposes
+void ServiceProvider::set_test_key(const uint8_t *shared_key) {
+  memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
+}
+
 void ServiceProvider::set_user_cert(const std::string user_cert) {
   memcpy(this->user_cert, user_cert.c_str(), user_cert.length() + 1);
   // this->user_cert = user_cert.c_str();
@@ -360,6 +365,19 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   else if (ret < 0) {
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
+ 
+  // Encrypt test key for testing purposes
+  unsigned char encrypted_test_key[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  size_t encrypted_test_key_size = sizeof(encrypted_test_key);
+  ret = public_encrypt(pkey, this->test_key, LC_AESGCM_KEY_SIZE, encrypted_test_key, &encrypted_test_key_size);
+  if (ret == 0) {
+    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  }
+  else if (ret < 0) {
+    throw std::runtime_error(std::string("public_encrypt failed"));
+  }
+  memcpy_s(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_test_key, encrypted_test_key_size);
+
 
   // Prepare msg2
   // Copy over shared key ciphertext

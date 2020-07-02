@@ -38,6 +38,9 @@ public:
    * attestation succeeds.
    */
   void set_shared_key(const uint8_t *shared_key);
+  
+  // FOR TESTING PURPOSES
+  void set_test_key(const uint8_t *shared_key);
 
   void set_user_cert(std::string user_cert);
 
@@ -79,6 +82,10 @@ private:
   lc_ec256_private_t sp_priv_key;
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
+
+  // FOR TESTING PURPOSES
+  uint8_t test_key[LC_AESGCM_KEY_SIZE];
+
   // FIXME: make this not a set length
   char user_cert[2000];
 

@@ -257,7 +257,7 @@ object Utils extends Logging {
   // val clientKeys:Map[String, Array[Byte]] = Map()
   // assert(sharedKey.size == GCM_KEY_LENGTH)
 
-  def addClientKey(username: String, key: Array[Byte]) : Unit = {
+  def addClientKey(key: Array[Byte]) : Unit = {
     clientKey = key 
     assert(clientKey.size == GCM_KEY_LENGTH)
   }
