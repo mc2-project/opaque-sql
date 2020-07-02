@@ -64,15 +64,6 @@ void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* u
   std::string user(username);
   client_keys[user] = user_private_key;
 
-  // Add this for testing purposes
-  // std::cout << "Adding another user private key for test purposes\n";
-  // std::cout << "Client key size " << client_key_size << std::endl;
-  // uint8_t* test_key = (uint8_t*) u8"Opaque deve key2";
-  // std::cout << (char*) test_key << std::endl;
-  // std::vector<uint8_t> test_private_key(test_key, test_key + client_key_size);
-  // client_keys[std::string("user2")] = test_private_key; 
-  // initKeySchedule((char*) "user2");
-
   initKeySchedule(username);
 
 }
@@ -184,7 +175,7 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
       }
     }
     if (success == -1) {
-        std::cout << "Couldn't decrypt -- proper key unknown\n";
+        throw std::runtime_error("Couldn't decrypt -- proper key unknown\n");
     }
   }
   // } else {

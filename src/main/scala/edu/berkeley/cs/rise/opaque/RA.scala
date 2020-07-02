@@ -44,6 +44,7 @@ object RA extends Logging {
 
     // Retry attestation a few times in case of transient failures
     Utils.retry(3) {
+      // FIXME: remove testKey argument
       sp.Init(Utils.clientKey, intelCert, userCert, keyShare, testKey)
 
       val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>

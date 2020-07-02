@@ -17,6 +17,7 @@ void jni_throw(JNIEnv *env, const char *message) {
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
+  // FIXME: Remove last jbyteArray parameter - it was for testing purposes
   JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share, jbyteArray test_key) {
   (void)env;
   (void)obj;
