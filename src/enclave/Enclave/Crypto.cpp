@@ -27,12 +27,10 @@ unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 // map username to client key schedule
 std::unordered_map<std::string, std::unique_ptr<KeySchedule>> client_key_schedules;
 std::unordered_map<std::string, std::vector<uint8_t>> client_keys;
-// std::unordered_map<std::string, unsigned char shared_key[SGX_AESGCM_KEY_SIZE]> client_keys;
 
 // map user name to public key
 // std::unordered_map<std::string, std::vector<uint8_t>> client_public_keys;
 
-// TODO: properly set this KeySchedule
 std::unique_ptr<KeySchedule> ks;
 
 void initKeySchedule(char* username) {
@@ -128,25 +126,14 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
-  // if (username == NULL) {
-    AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
-    cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
-    memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-    std::cout << "Encrypting with xor shared key\n";
-  // } else {
-  //   AesGcm cipher(client_key_schedules[std::string(username)].get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
-  //   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
-  //   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-  //   std::cout << "Encrypting with client key\n";
-  // }
+  AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
+  cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
+  memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+  std::cout << "Encrypting with xor shared key\n";
 }
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
   std::cout << "C++ decrypting inside enclave\n";
-  // if (!ks) {
-    // throw std::runtime_error(
-      // "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
-  // }
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;
@@ -154,8 +141,6 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
 
-  // if (username == NULL) {
-    // FIXME: change this to possibly use client key
   std::cout << "do we make it here\n";
   AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
   std::cout << "Initialized decipher\n";
@@ -178,14 +163,6 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
         throw std::runtime_error("Couldn't decrypt -- proper key unknown\n");
     }
   }
-  // } else {
-    // AesGcm decipher(client_key_schedules[std::string(username)].get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-    // decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-    // if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
-      // printf("User name not null, Decrypt: invalid mac\n");
-    // }
-    // std::cout << "Decrypting with client key\n";
-  // }
 }
 
 uint32_t enc_size(uint32_t plaintext_size) {

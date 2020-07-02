@@ -267,13 +267,11 @@ void ecall_ra_proc_msg4(
 
     // Add verifySignatureFromCertificate from XGBoost
     // Get name from certificate
-    // unsigned char* nameptr = (unsigned char*) malloc(sizeof(*nameptr));
     unsigned char nameptr[50];
     size_t name_len;
     int res;
     mbedtls_x509_crt user_cert;
     mbedtls_x509_crt_init(&user_cert);
-    // FIXME: non deterministic error here
     if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) msg2->user_cert, msg2->user_cert_len)) != 0) {
         // char tmp[50];
         // mbedtls_strerror(res, tmp, 50);
