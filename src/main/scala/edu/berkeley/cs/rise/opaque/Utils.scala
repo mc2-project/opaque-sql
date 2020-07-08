@@ -234,7 +234,8 @@ object Utils extends Logging {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
-        eid = enclave.StartEnclave(findLibraryAsResource("enclave_trusted_signed"))
+        val path = findLibraryAsResource("enclave_trusted_signed")
+        eid = enclave.StartEnclave(path)
         logInfo("Starting an enclave")
         (enclave, eid)
       } else {

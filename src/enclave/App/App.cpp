@@ -474,7 +474,9 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   JNIEnv *env, jobject obj, jstring library_path) {
   (void)obj;
 
+  printf("Entered function\n");
   env->GetJavaVM(&jvm);
+  printf("passed env->GetJavaVM(&jvm); \n");
 
   oe_enclave_t* enclave = nullptr;
   //int updated = 0;
@@ -482,8 +484,12 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   uint32_t flags = 0;
 
 #ifdef SIMULATE
+  printf("In simulation mode\n");
   flags |= OE_ENCLAVE_FLAG_SIMULATE;
+#else
+  printf("In hardware mode\n");
 #endif
+  
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",
