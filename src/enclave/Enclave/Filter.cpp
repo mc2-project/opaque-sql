@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include <iostream>
 
 using namespace edu::berkeley::cs::rise::opaque;
 
@@ -15,6 +16,8 @@ void filter(uint8_t *condition, size_t condition_length,
   condition_buf.verify();
   FlatbuffersExpressionEvaluator condition_eval(condition_buf.root()->condition());
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  // uint32_t num_rows = r.num_rows();
+  // std::cout << "This RDD has this many rows: " << num_rows << std::endl;
   RowWriter w;
   while (r.has_next()) {
     const tuix::Row *row = r.next();

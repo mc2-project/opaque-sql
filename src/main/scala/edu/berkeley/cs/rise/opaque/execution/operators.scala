@@ -61,6 +61,7 @@ case class EncryptedLocalTableScanExec(
 
   override def executeBlocked(): RDD[Block] = {
     // Locally partition plaintextData using the same logic as ParallelCollectionRDD.slice
+    println("Scala Operator: EncryptedLocalTableScanExec!!!")
     def positions(length: Long, numSlices: Int): Iterator[(Int, Int)] = {
       (0 until numSlices).iterator.map { i =>
         val start = ((i * length) / numSlices).toInt
@@ -89,6 +90,7 @@ case class EncryptExec(child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: EncryptExec")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
         rowIter.toSeq, output.map(_.dataType), useEnclave = true))
@@ -136,6 +138,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeCollect(): Array[InternalRow] = {
+    println("Scala Operator: Collect")
     executeBlocked().collect().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
@@ -195,6 +198,7 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: Encrypted Project Exec")
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => childRDD.map { block =>
@@ -212,6 +216,7 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: Encrypted Filter Exec")
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
       childRDD => childRDD.map { block =>
@@ -234,6 +239,7 @@ case class EncryptedAggregateExec(
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: encrypted Aggregate exec")
     val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
 
     timeOperator(
@@ -281,6 +287,7 @@ case class EncryptedSortMergeJoinExec(
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: Encrypted Sort Merge Join Exec")
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 
@@ -319,6 +326,7 @@ case class EncryptedUnionExec(
     left.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: encrypted union exec")
     var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     Utils.ensureCached(leftRDD)

@@ -52,6 +52,15 @@ uint32_t RowReader::num_rows() {
   return result;
 }
 
+// uint32_t RowReader::rdd_id() {
+//   uint32_t rdd_id = encrypted_blocks->rdd_id();
+//   if (rdd_id) {
+//     return rdd_id;
+//   } else {
+//     return -1;
+//   }
+// }
+
 bool RowReader::has_next() {
   return block_reader.has_next() || block_idx + 1 < encrypted_blocks->blocks()->size();
 }

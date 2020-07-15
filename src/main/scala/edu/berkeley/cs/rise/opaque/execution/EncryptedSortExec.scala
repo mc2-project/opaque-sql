@@ -29,6 +29,7 @@ case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("Scala Operator: Encrypted Sort Exec")
     val orderSer = Utils.serializeSortOrder(order, child.output)
     EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
   }

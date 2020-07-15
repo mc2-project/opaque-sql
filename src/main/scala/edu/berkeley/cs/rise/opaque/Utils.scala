@@ -682,6 +682,7 @@ object Utils extends Logging {
       val ciphertext =
         if (useEnclave) {
           val (enclave, eid) = initEnclave()
+          println("calling enclave encrypt")
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)

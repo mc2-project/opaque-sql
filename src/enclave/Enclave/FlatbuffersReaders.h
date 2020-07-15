@@ -48,6 +48,7 @@ public:
   void reset(const tuix::EncryptedBlocks *encrypted_blocks);
 
   uint32_t num_rows();
+  uint32_t rdd_id();
   bool has_next();
   /** Access the next Row. Invalidates any previously-returned Row pointers. */
   const tuix::Row *next();
