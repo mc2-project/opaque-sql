@@ -128,7 +128,7 @@ exit:
     return ret;
 }
 
-int Crypto::hmac(const uint8_t* data, size_t data_length, uint8_t hmac[32]) {
+int Crypto::hmac(const uint8_t* data, size_t data_length, uint8_t hmac[OE_HMAC_SIZE]) {
   mbedtls_md_context_t ctx;
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
  

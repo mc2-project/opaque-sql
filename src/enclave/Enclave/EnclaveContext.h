@@ -1,22 +1,27 @@
 #include "Enclave_t.h"
-// std::cout << "This RDD has this many rows: " << num_rows << std::endl;
 #include <vector>
 #include <iostream>
 #include "../Common/common.h"
 
-typedef struct enclave_op_t {
+struct LogEntry;
+
+typedef struct LogEntry {
   std::string op;
-  std::string rdd_src;
+  int job_id;
+  std::vector<std::vector<uint8_t>> mac_lst;
+  uint8_t global_mac[OE_HMAC_SIZE];
+  std::vector<LogEntry> log_entries;
   uint8_t input_hash[OE_SHA256_HASH_SIZE];
   uint8_t output_hash[OE_SHA256_HASH_SIZE];
   // uint8_t input_src_partitions[];
-} enclave_op_t;
+} LogEntry;
 
 class EnclaveContext {
   private:
-    std::vector<enclave_op_t> executed_operators;
+    std::vector<LogEntry> executed_operators;
     int operators_ctr;
     unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
+    LogEntry curr_log_entry;
 
     EnclaveContext() {
       operators_ctr = 0;
@@ -42,9 +47,13 @@ class EnclaveContext {
       memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
     }
 
+    void reset_log_entry() {
+      curr_log_entry = {};
+    }
+
     // Log executed operation
     void log_operation(std::string operation, uint8_t* input_hash, uint8_t* output_hash) {
-      enclave_op_t eop;
+      LogEntry eop;
       eop.op = operation;
       memcpy(eop.input_hash, input_hash, OE_SHA256_HASH_SIZE);
       memcpy(eop.output_hash, output_hash, OE_SHA256_HASH_SIZE);
@@ -54,10 +63,15 @@ class EnclaveContext {
    
     // Log executed operation
     void log_operation(std::string operation) {
-      enclave_op_t eop;
+      LogEntry eop;
       eop.op = operation;
       executed_operators.push_back(eop);
       operators_ctr++;
+    }
+
+    void add_mac_to_mac_lst(uint8_t* mac) {
+      std::vector<uint8_t> mac_vector (mac, mac + SGX_AESGCM_MAC_SIZE);
+      curr_log_entry.mac_lst.push_back(mac_vector);
     }
 
     std::vector<std::string> get_executed_plan() {

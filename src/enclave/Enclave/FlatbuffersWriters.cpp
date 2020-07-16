@@ -1,4 +1,5 @@
 #include "FlatbuffersWriters.h"
+#include <iostream>
 
 void RowWriter::clear() {
   builder.Clear();
@@ -54,10 +55,14 @@ UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer() {
 
   UntrustedBufferRef<tuix::EncryptedBlocks> buffer(
     std::move(buf), enc_block_builder.GetSize());
+
+  // TODO: push log entry to untrusted memory here
   return buffer;
 }
 
+// TODO: add log entry to output buffer
 void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length) {
+  // TODO: Reset log entry
   auto result = output_buffer();
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
@@ -84,6 +89,16 @@ void RowWriter::finish_block() {
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
+  // TODO: We only have access to each block's MAC here
+  // MAC is at (sgx_aes_gcm_128bit_tag_t) enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize()
+  sgx_aes_gcm_128bit_tag_t mac[SGX_AESGCM_MAC_SIZE];
+  memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
+
+  // for (int i = 0; i < SGX_AESGCM_MAC_SIZE; i++) {
+  //   std::cout << mac[i];
+  // }
+  // std::cout << std::endl;
+  
   enc_block_vector.push_back(
     tuix::CreateEncryptedBlock(
       enc_block_builder,
