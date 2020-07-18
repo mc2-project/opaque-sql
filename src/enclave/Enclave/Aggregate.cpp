@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include "EnclaveContext.h"
 
 void non_oblivious_aggregate_step1(
   uint8_t *agg_op, size_t agg_op_length,
@@ -38,9 +39,16 @@ void non_oblivious_aggregate_step1(
   }
   last_group_writer.append(agg_op_eval.get_partial_agg());
 
-  first_row_writer.output_buffer(first_row, first_row_length);
-  last_group_writer.output_buffer(last_group, last_group_length);
-  last_row_writer.output_buffer(last_row, last_row_length);
+  std::string ecall = std::string("nonObliviousAggregateStep1");
+
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousAggregateStep1"));
+  first_row_writer.output_buffer(first_row, first_row_length, ecall);
+
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousAggregateStep1"));
+  last_group_writer.output_buffer(last_group, last_group_length, ecall);
+
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousAggregateStep1"));
+  last_row_writer.output_buffer(last_row, last_row_length, ecall);
 }
 
 void non_oblivious_aggregate_step2(
@@ -116,5 +124,6 @@ void non_oblivious_aggregate_step2(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousAggregateStep2"));
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousAggregateStep2"));
 }

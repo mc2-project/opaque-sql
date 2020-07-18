@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include "EnclaveContext.h"
 
 void project(uint8_t *project_list, size_t project_list_length,
              uint8_t *input_rows, size_t input_rows_length,
@@ -32,6 +33,7 @@ void project(uint8_t *project_list, size_t project_list_length,
     }
     w.append(out_fields);
   }
-
-  w.output_buffer(output_rows, output_rows_length);
+  
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("project"));
+  w.output_buffer(output_rows, output_rows_length, std::string("project"));
 }

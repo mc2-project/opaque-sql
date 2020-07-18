@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include "EnclaveContext.h"
 
 void scan_collect_last_primary(
   uint8_t *join_expr, size_t join_expr_length,
@@ -37,7 +38,8 @@ void scan_collect_last_primary(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("scanCollectLastPrimary"));
+  w.output_buffer(output_rows, output_rows_length, std::string("scanCollectLastPrimary"));
 }
 
 void non_oblivious_sort_merge_join(
@@ -78,6 +80,7 @@ void non_oblivious_sort_merge_join(
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+        // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousSortMergeJoin"));
         auto primary_group_buffer = primary_group.output_buffer();
         RowReader primary_group_reader(primary_group_buffer.view());
         while (primary_group_reader.has_next()) {
@@ -98,5 +101,6 @@ void non_oblivious_sort_merge_join(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousSortMergeJoin"));
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
 }

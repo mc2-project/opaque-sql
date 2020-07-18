@@ -40,7 +40,7 @@ public:
   UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer();
 
   /** Expose the stored rows as a buffer. The caller takes ownership of the resulting buffer. */
-  void output_buffer(uint8_t **output_rows, size_t *output_rows_length);
+  void output_buffer(uint8_t **output_rows, size_t *output_rows_length, std::string ecall);
 
   /** Count how many rows have been appended. */
   uint32_t num_rows();
@@ -63,6 +63,14 @@ private:
 
   friend class SortedRunsWriter;
 };
+
+// class LogEntry {
+// public:
+//   LogEntry() : {}
+// 
+// private:
+//   flatbuffers::FlatBufferBuilder builder;
+// }
 
 /** Append-only container for rows wrapped in tuix::SortedRuns. */
 class SortedRunsWriter {

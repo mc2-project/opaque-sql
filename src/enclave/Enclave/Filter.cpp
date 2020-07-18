@@ -5,6 +5,7 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 #include <iostream>
+#include "EnclaveContext.h"
 
 using namespace edu::berkeley::cs::rise::opaque;
 
@@ -37,5 +38,6 @@ void filter(uint8_t *condition, size_t condition_length,
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("filter"));
+  w.output_buffer(output_rows, output_rows_length, std::string("filter"));
 }

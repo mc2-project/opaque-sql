@@ -1,4 +1,5 @@
 #include "FlatbuffersWriters.h"
+#include "EnclaveContext.h"
 #include <iostream>
 
 void RowWriter::clear() {
@@ -56,16 +57,19 @@ UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer() {
   UntrustedBufferRef<tuix::EncryptedBlocks> buffer(
     std::move(buf), enc_block_builder.GetSize());
 
-  // TODO: push log entry to untrusted memory here
   return buffer;
 }
 
 // TODO: add log entry to output buffer
-void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length) {
-  // TODO: Reset log entry
+void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length, std::string ecall) {
+  EnclaveContext::getInstance().set_log_entry_ecall(ecall);
   auto result = output_buffer();
+
+  // output rows is a reference to encrypted blocks in untrusted memory
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
+
+
 }
 
 uint32_t RowWriter::num_rows() {
@@ -89,16 +93,11 @@ void RowWriter::finish_block() {
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
-  // TODO: We only have access to each block's MAC here
-  // MAC is at (sgx_aes_gcm_128bit_tag_t) enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize()
-  sgx_aes_gcm_128bit_tag_t mac[SGX_AESGCM_MAC_SIZE];
+  // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
+  uint8_t mac[SGX_AESGCM_MAC_SIZE];
   memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
+  EnclaveContext::getInstance().add_mac_to_mac_lst(mac);
 
-  // for (int i = 0; i < SGX_AESGCM_MAC_SIZE; i++) {
-  //   std::cout << mac[i];
-  // }
-  // std::cout << std::endl;
-  
   enc_block_vector.push_back(
     tuix::CreateEncryptedBlock(
       enc_block_builder,
@@ -113,11 +112,30 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   if (rows_vector.size() > 0) {
     finish_block();
   }
+
+  // TODO: We should add the log entry chain here
+  std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
+  std::cout << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
+  int job_id = EnclaveContext::getInstance().get_job_id();
+
+  size_t mac_lst_len = EnclaveContext::getInstance().get_mac_lst_len();
+  uint8_t mac_lst[mac_lst_len * SGX_AESGCM_MAC_SIZE];
+  EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
+
+  uint8_t global_mac = EnclaveContext::getInstance().get_global_mac();
+
+  // Some flatbufferes stuff to serialize mac lst and global mac into vectors
+  // Some more flatbuffers stuff to create a Flatbuffers LogEntry object from the above 4 things
+  // Some more flatbuffers stuff to create a LogEntryChain serialization from the above created LogEntry and teh past entries
+
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector);
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
   finished = true;
+
+  // Once we've serialized the log entry, reset it
+  EnclaveContext::getInstance().reset_log_entry();
 
   return result;
 }
@@ -141,6 +159,8 @@ void SortedRunsWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 
 void SortedRunsWriter::finish_run() {
   runs.push_back(container.finish_blocks());
+  // TODO: Reset log entry
+  // EnclaveContext::getInstance().reset_log_entry();
 }
 
 uint32_t SortedRunsWriter::num_runs() {
@@ -161,6 +181,9 @@ UntrustedBufferRef<tuix::SortedRuns> SortedRunsWriter::output_buffer() {
 
   UntrustedBufferRef<tuix::SortedRuns> buffer(
     std::move(buf), container.enc_block_builder.GetSize());
+
+  // TODO do we need to reset log entry here?
+  // EnclaveContext::getInstance().reset_log_entry();
   return buffer;
 }
 

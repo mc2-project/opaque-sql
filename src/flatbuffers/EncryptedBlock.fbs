@@ -11,8 +11,30 @@ table EncryptedBlock {
 
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
+    log:LogEntryChain;
 }
 
 table SortedRuns {
     runs:[EncryptedBlocks];
 }
+
+table LogEntry {
+    op:string;
+    job_id: int;
+    mac_lst:[byte];
+    global_mac:[byte];
+}
+
+table LogEntryChain {
+    curr_entry:LogEntry;
+    past_entries:[LogEntry];
+}
+
+
+/* tuix::CreateLogEntry( */
+  /* builder, */
+  /* ecall, */
+  /* job_id, */
+  /* builder.CreateVector(mac_lst, len), */
+  /* builder.CreateVector(global_mac, OE_HMAC_SIZE) */
+/* ) */

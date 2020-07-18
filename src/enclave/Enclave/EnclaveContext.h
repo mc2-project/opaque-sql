@@ -2,26 +2,32 @@
 #include <vector>
 #include <iostream>
 #include "../Common/common.h"
+#include "../Common/mCrypto.h"
 
 struct LogEntry;
 
 typedef struct LogEntry {
   std::string op;
   int job_id;
-  std::vector<std::vector<uint8_t>> mac_lst;
   uint8_t global_mac[OE_HMAC_SIZE];
-  std::vector<LogEntry> log_entries;
-  uint8_t input_hash[OE_SHA256_HASH_SIZE];
-  uint8_t output_hash[OE_SHA256_HASH_SIZE];
-  // uint8_t input_src_partitions[];
+  uint8_t mac_lst[];
 } LogEntry;
+
+static Crypto mcrypto;
 
 class EnclaveContext {
   private:
-    std::vector<LogEntry> executed_operators;
+    // Vector of log entries outputted during this ecall
+    // After the last output buffer, we will MAC the entire vector
+    std::vector<LogEntry> ecall_log_entries;
     int operators_ctr;
     unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
-    LogEntry curr_log_entry;
+
+    // For this ecall log entry
+    std::string this_ecall;
+    int job_id;
+    std::vector<std::vector<uint8_t>> log_entry_mac_lst;
+    uint8_t global_mac[OE_HMAC_SIZE];
 
     EnclaveContext() {
       operators_ctr = 0;
@@ -48,161 +54,188 @@ class EnclaveContext {
     }
 
     void reset_log_entry() {
-      curr_log_entry = {};
-    }
-
-    // Log executed operation
-    void log_operation(std::string operation, uint8_t* input_hash, uint8_t* output_hash) {
-      LogEntry eop;
-      eop.op = operation;
-      memcpy(eop.input_hash, input_hash, OE_SHA256_HASH_SIZE);
-      memcpy(eop.output_hash, output_hash, OE_SHA256_HASH_SIZE);
-      executed_operators.push_back(eop);
-      operators_ctr++;
-    }
-   
-    // Log executed operation
-    void log_operation(std::string operation) {
-      LogEntry eop;
-      eop.op = operation;
-      executed_operators.push_back(eop);
-      operators_ctr++;
+      // TODO: create LogEntry out of the members and append it to ecall_log_entries
+      // this_ecall = std::string("");
+      int job_id = -1;
+      job_id++; // dummy operation for now
+      log_entry_mac_lst.clear();
+      // global_mac = {0 * OE_HMAC_SIZE};
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
       std::vector<uint8_t> mac_vector (mac, mac + SGX_AESGCM_MAC_SIZE);
-      curr_log_entry.mac_lst.push_back(mac_vector);
+      log_entry_mac_lst.push_back(mac_vector);
     }
 
-    std::vector<std::string> get_executed_plan() {
-      std::vector<std::string> executed_plan_log;
-      bool possible_agg = false;
-      bool possible_sort_merge_join = false;
-      // bool integrity_error = false;
+    void hmac_mac_lst(const uint8_t* ret_mac_lst) {
+      size_t mac_lst_length = log_entry_mac_lst.size() * SGX_AESGCM_MAC_SIZE;
 
-      // The following represent how many steps before the current one the operator was run, zero indexed
-      int last_sample = -1;
-      int last_find_range_bounds = -1;
-      int last_partition_for_sort = -1;
-  
-      for (std::vector<int>::size_type i = 0; i != executed_operators.size(); i++) {
-        std::string op = executed_operators[i].op;
-
-        if (op == std::string("externalSort")) {
-          // External Sort will always be the last ecall for EncryptedSortExec
-          if (last_sample == 2 && last_find_range_bounds == 1 && last_partition_for_sort == 0) {
-            // Enclave just executed the four operators necessary for an encrypted sort exec for multiple partitions
-            last_sample = -1;
-            last_find_range_bounds = -1;
-            last_partition_for_sort = -1;
-            executed_plan_log.push_back(std::string("EncryptedSortExec"));
-          } else if (last_sample != -1 || last_find_range_bounds != -1 || last_partition_for_sort != -1) {
-            // The recent sequence of operators makes no sense
-            // integrity_error = true;
-          } else {
-            executed_plan_log.push_back(std::string("EncryptedSortExec"));
-          }
-          possible_agg = false;
-          possible_sort_merge_join = false;
-        } else if (op == std::string("project")) {
-          executed_plan_log.push_back(std::string("EncryptedProjectExec"));
-
-          // Reset operator tracking
-          possible_agg = false;
-          possible_sort_merge_join = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("filter")) {
-          executed_plan_log.push_back(std::string("EncryptedFilterExec"));
-
-          // Reset operator tracking
-          possible_agg = false;
-          possible_sort_merge_join = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("sample")) {
-          last_sample = 0;
-
-          // Reset operator tracking
-          possible_agg = false;
-          possible_sort_merge_join = false;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("findRangeBounds")) {
-          if (last_sample == 0) {
-            last_sample = 1;
-            last_find_range_bounds = 0;
-          } else {
-            last_sample = -1;
-          }
-
-          // Reset operator tracking
-          possible_agg = false;
-          possible_sort_merge_join = false;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("partitionForSort")) {
-          if (last_sample == 1 && last_find_range_bounds == 0) {
-            last_sample = 2;
-            last_find_range_bounds = 1;
-            last_partition_for_sort = 0;
-          }
-        } else if (op == std::string("nonObliviousAggregateStep1")) {
-          possible_agg = true;
-          possible_sort_merge_join = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("nonObliviousAggregateStep2")) {
-          if (possible_agg) {
-            executed_plan_log.push_back(std::string("EncryptedAggExec"));
-            // Reset possible agg
-            possible_agg = false;
-          } 
-          possible_sort_merge_join = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("scanCollectLastPrimary")) {
-          possible_sort_merge_join = true;
-          possible_agg = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("nonObliviousSortMergeJoin")) {
-          if (possible_sort_merge_join) {
-            executed_plan_log.push_back(std::string("EncryptedSortMergeJoinExec"));
-            // Reset possible sort merge join
-            possible_sort_merge_join = false;
-          }
-          possible_agg = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-        } else if (op == std::string("encrypt")) {
-          executed_plan_log.push_back(std::string("EncryptExec"));
-          possible_sort_merge_join = false;
-          possible_agg = false;
-          last_sample = -1;
-          last_find_range_bounds = -1;
-          last_partition_for_sort = -1;
-          // WHAT TO DO HERE
-        } else {
-          // Unknown operator
-          // integrity_error = true;
-
-        }
+      // Copy all macs to contiguous chunk of memory
+      uint8_t contiguous_mac_lst[mac_lst_length];
+      uint8_t* temp_ptr = contiguous_mac_lst;
+      for (unsigned int i = 0; i < log_entry_mac_lst.size(); i++) {
+        memcpy(temp_ptr, log_entry_mac_lst[i].data(), SGX_AESGCM_MAC_SIZE);
+        temp_ptr += SGX_AESGCM_MAC_SIZE;
       }
-      return executed_plan_log;
+
+      // hmac the contiguous chunk of memory
+      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, global_mac);
+
+      memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
-    void print_executed_operators() {
-      std::vector<std::string> executed_plan = get_executed_plan();
-      std::cout << "\n=== Condensed Executed Plan in Enclave ===" << std::endl;
-      for (std::vector<std::string>::const_iterator i = executed_plan.begin(); i != executed_plan.end(); ++i) {
-        std::cout << *i << std::endl;
-      }
+    size_t get_mac_lst_len() {
+      return log_entry_mac_lst.size();
     }
+
+    uint8_t* get_global_mac() {
+      return global_mac;
+    }
+
+    void set_log_entry_ecall(std::string ecall) {
+      this_ecall = ecall;
+    }
+
+    std::string get_log_entry_ecall() {
+      return this_ecall;
+    }
+
+    int get_job_id() {
+      return job_id;
+    }
+
+    // void append_curr_log_entry() {
+    //   ecall_log_entries.push_back(curr_log_entry);
+    // }
+
+//     std::vector<std::string> get_executed_plan() {
+//       std::vector<std::string> executed_plan_log;
+//       bool possible_agg = false;
+//       bool possible_sort_merge_join = false;
+//       // bool integrity_error = false;
+// 
+//       // The following represent how many steps before the current one the operator was run, zero indexed
+//       int last_sample = -1;
+//       int last_find_range_bounds = -1;
+//       int last_partition_for_sort = -1;
+//   
+//       for (std::vector<int>::size_type i = 0; i != executed_operators.size(); i++) {
+//         std::string op = executed_operators[i].op;
+// 
+//         if (op == std::string("externalSort")) {
+//           // External Sort will always be the last ecall for EncryptedSortExec
+//           if (last_sample == 2 && last_find_range_bounds == 1 && last_partition_for_sort == 0) {
+//             // Enclave just executed the four operators necessary for an encrypted sort exec for multiple partitions
+//             last_sample = -1;
+//             last_find_range_bounds = -1;
+//             last_partition_for_sort = -1;
+//             executed_plan_log.push_back(std::string("EncryptedSortExec"));
+//           } else if (last_sample != -1 || last_find_range_bounds != -1 || last_partition_for_sort != -1) {
+//             // The recent sequence of operators makes no sense
+//             // integrity_error = true;
+//           } else {
+//             executed_plan_log.push_back(std::string("EncryptedSortExec"));
+//           }
+//           possible_agg = false;
+//           possible_sort_merge_join = false;
+//         } else if (op == std::string("project")) {
+//           executed_plan_log.push_back(std::string("EncryptedProjectExec"));
+// 
+//           // Reset operator tracking
+//           possible_agg = false;
+//           possible_sort_merge_join = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("filter")) {
+//           executed_plan_log.push_back(std::string("EncryptedFilterExec"));
+// 
+//           // Reset operator tracking
+//           possible_agg = false;
+//           possible_sort_merge_join = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("sample")) {
+//           last_sample = 0;
+// 
+//           // Reset operator tracking
+//           possible_agg = false;
+//           possible_sort_merge_join = false;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("findRangeBounds")) {
+//           if (last_sample == 0) {
+//             last_sample = 1;
+//             last_find_range_bounds = 0;
+//           } else {
+//             last_sample = -1;
+//           }
+// 
+//           // Reset operator tracking
+//           possible_agg = false;
+//           possible_sort_merge_join = false;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("partitionForSort")) {
+//           if (last_sample == 1 && last_find_range_bounds == 0) {
+//             last_sample = 2;
+//             last_find_range_bounds = 1;
+//             last_partition_for_sort = 0;
+//           }
+//         } else if (op == std::string("nonObliviousAggregateStep1")) {
+//           possible_agg = true;
+//           possible_sort_merge_join = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("nonObliviousAggregateStep2")) {
+//           if (possible_agg) {
+//             executed_plan_log.push_back(std::string("EncryptedAggExec"));
+//             // Reset possible agg
+//             possible_agg = false;
+//           } 
+//           possible_sort_merge_join = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("scanCollectLastPrimary")) {
+//           possible_sort_merge_join = true;
+//           possible_agg = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("nonObliviousSortMergeJoin")) {
+//           if (possible_sort_merge_join) {
+//             executed_plan_log.push_back(std::string("EncryptedSortMergeJoinExec"));
+//             // Reset possible sort merge join
+//             possible_sort_merge_join = false;
+//           }
+//           possible_agg = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else if (op == std::string("encrypt")) {
+//           executed_plan_log.push_back(std::string("EncryptExec"));
+//           possible_sort_merge_join = false;
+//           possible_agg = false;
+//           last_sample = -1;
+//           last_find_range_bounds = -1;
+//           last_partition_for_sort = -1;
+//         } else {
+//           // Unknown operator
+//           // integrity_error = true;
+// 
+//         }
+//       }
+//       return executed_plan_log;
+//     }
+// 
+//     void print_executed_operators() {
+//       std::vector<std::string> executed_plan = get_executed_plan();
+//       std::cout << "\n=== Condensed Executed Plan in Enclave ===" << std::endl;
+//       for (std::vector<std::string>::const_iterator i = executed_plan.begin(); i != executed_plan.end(); ++i) {
+//         std::cout << *i << std::endl;
+//       }
+//     }
 };
 
