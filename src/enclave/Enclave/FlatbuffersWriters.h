@@ -59,6 +59,9 @@ private:
   flatbuffers::FlatBufferBuilder enc_block_builder;
   std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;
 
+  flatbuffers::FlatBufferBuilder log_entry_builder;
+  flatbuffers::FlatBufferBuilder log_entry_chain_builder;
+
   bool finished;
 
   friend class SortedRunsWriter;
