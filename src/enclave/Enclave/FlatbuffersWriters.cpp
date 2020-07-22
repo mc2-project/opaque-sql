@@ -126,14 +126,18 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   }
 
   std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
-  std::cout << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
+  std::cout << "Finishing the Encrypted Blocks for ecall: " << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
   int job_id = EnclaveContext::getInstance().get_job_id();
 
   size_t mac_lst_len = EnclaveContext::getInstance().get_mac_lst_len();
   uint8_t mac_lst[mac_lst_len * SGX_AESGCM_MAC_SIZE];
   EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
 
-  uint8_t global_mac = EnclaveContext::getInstance().get_global_mac();
+  int eid = EnclaveContext::getInstance().get_eid();
+
+  uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
+
+  std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
 
   // Some flatbufferes stuff to serialize mac lst and global mac into vectors
   // auto mac_lst_serialized = log_entry_builder.CreateVector(mac_lst);
@@ -141,10 +145,13 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   // Some more flatbuffers stuff to create a Flatbuffers LogEntry object from the above 4 things
   // Retrieve the offset of the root
   auto log_entry_serialized = tuix::CreateLogEntry(log_entry_builder, 
-      log_entry_builder.CreateString(ecall),
+      log_entry_builder.CreateString(curr_ecall),
       job_id,
-      log_entry_builder.CreateVector(mac_lst, mac_lst_len  SGX_AESGCM_SIZE),
-      log_entry_builder.CreateVector(global_mac, SGX_AESGCM_SIZE));
+      eid,
+      mac_lst_len,
+      log_entry_builder.CreateVector(mac_lst, mac_lst_len * SGX_AESGCM_MAC_SIZE),
+      log_entry_builder.CreateVector(global_mac, SGX_AESGCM_MAC_SIZE));
+
   
   log_entry_builder.Finish(log_entry_serialized);
   // TODO: push the log entry to untrusted memory
@@ -152,7 +159,10 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   ocall_malloc(log_entry_builder.GetSize(), &serialized_log_entry_ptr);
 
   std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry(serialized_log_entry_ptr, &ocall_free);
+
   memcpy(log_entry.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
+
+  curr_log_entry_vector.push_back(log_entry.get())
   // log_entry.get() now contains pointer to serialized log_entry in untrusted memory
   
   // TODO: Retrieve all input log entries
@@ -162,7 +172,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   // TODO: hmac the serialized log entry chains?
   // auto enc_block_vector_offset = enc_block_builder.CreateVector(enc_block_vector, enc_block_vector.size());
   // auto result = tuix::CreateEncryptedBlocks(enc_block_builder, enc_block_vector_offset);
-  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector); // TODO: Comment out this line in favor of the above two
+  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, NULL); // TODO: Comment out this line in favor of the above two
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 

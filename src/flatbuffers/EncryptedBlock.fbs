@@ -20,14 +20,18 @@ table SortedRuns {
 
 table LogEntry {
     op:string;
-    job_id: int;
-    mac_lst:[byte];
-    global_mac:[byte];
+    eid:int;
+    job_id:int;
+    num_macs:uint;
+    mac_lst:[ubyte];
+    global_mac:[ubyte];
 }
 
 table LogEntryChain {
-    curr_entry:LogEntry;
+    curr_entries:[LogEntry];
     past_entries:[LogEntry];
+    // HMAC of curr_entry
+    // TODO: Separate the input_log_entry for each LogEntryChain->curr_entries() and verify hash over each input log entry
 }
 
 

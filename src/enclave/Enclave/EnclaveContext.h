@@ -8,6 +8,7 @@ struct LogEntry;
 
 typedef struct LogEntry {
   std::string op;
+  int eid;
   int job_id;
   uint8_t global_mac[OE_HMAC_SIZE];
   uint8_t mac_lst[];
@@ -28,6 +29,10 @@ class EnclaveContext {
     int job_id;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
+
+    std::vector<std::vector<uint8_t>> input_log_entry_mac_lst;
+
+    int eid = 3;
 
     EnclaveContext() {
       operators_ctr = 0;
@@ -60,6 +65,18 @@ class EnclaveContext {
       job_id++; // dummy operation for now
       log_entry_mac_lst.clear();
       // global_mac = {0 * OE_HMAC_SIZE};
+    }
+
+    void append_past_log_entries(std::string op, int eid, int job_id) {
+      LogEntry le;
+      le.op = op;
+      le.eid = eid;
+      le.job_id = job_id;
+      ecall_log_entries.push_back(le);
+    }
+
+    void get_eid() {
+      return eid;
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {

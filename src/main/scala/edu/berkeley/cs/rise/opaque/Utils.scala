@@ -717,12 +717,14 @@ object Utils extends Logging {
     }
 
     // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
+    // TODO: Create NULL log entry chain objects here
     builder2.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
         tuix.EncryptedBlocks.createBlocksVector(
           builder2,
-          encryptedBlockOffsets.result)))
+          encryptedBlockOffsets.result),
+        0))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
@@ -1297,6 +1299,7 @@ object Utils extends Logging {
   }
 
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
+    // TODO: modify this such that LogEntries get stored as a list in an EncryptedBlocks object
     val allBlocks = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
@@ -1313,7 +1316,7 @@ object Utils extends Logging {
             builder,
             encryptedBlock.numRows,
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
-        }.toArray)))
+        }.toArray), 0))
     Block(builder.sizedByteArray())
   }
 
@@ -1321,7 +1324,7 @@ object Utils extends Logging {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
-        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty)))
+        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 0))
     Block(builder.sizedByteArray())
   }
 }
