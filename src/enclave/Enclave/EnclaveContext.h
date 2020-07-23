@@ -10,8 +10,8 @@ typedef struct LogEntry {
   std::string op;
   int eid;
   int job_id;
-  uint8_t global_mac[OE_HMAC_SIZE];
-  uint8_t mac_lst[];
+  // uint8_t global_mac[OE_HMAC_SIZE];
+  // uint8_t mac_lst[];
 } LogEntry;
 
 static Crypto mcrypto;
@@ -30,7 +30,7 @@ class EnclaveContext {
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
 
-    std::vector<std::vector<uint8_t>> input_log_entry_mac_lst;
+    // std::vector<std::vector<uint8_t>> input_log_entry_mac_lst;
 
     int eid = 3;
 
@@ -67,7 +67,7 @@ class EnclaveContext {
       // global_mac = {0 * OE_HMAC_SIZE};
     }
 
-    void append_past_log_entries(std::string op, int eid, int job_id) {
+    void append_past_log_entry(std::string op, int eid, int job_id) {
       LogEntry le;
       le.op = op;
       le.eid = eid;
@@ -75,7 +75,11 @@ class EnclaveContext {
       ecall_log_entries.push_back(le);
     }
 
-    void get_eid() {
+    std::vector<LogEntry> get_ecall_log_entries() {
+      return ecall_log_entries;
+    }
+
+    int get_eid() {
       return eid;
     }
 

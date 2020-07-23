@@ -99,6 +99,7 @@ void RowWriter::finish_block() {
 
   // Encrypt the serialized rows and push the ciphertext to untrusted memory
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
+  // TODO: create a temporary buffer that stores serialized rows inside enclave, then copy these rows to enc_rows.get()
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
   // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
@@ -137,42 +138,121 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
 
   uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
 
-  std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
 
   // Some flatbufferes stuff to serialize mac lst and global mac into vectors
   // auto mac_lst_serialized = log_entry_builder.CreateVector(mac_lst);
   // auto global_mac_serialized = log_entry_builder.CreateVector(global_mac);
   // Some more flatbuffers stuff to create a Flatbuffers LogEntry object from the above 4 things
   // Retrieve the offset of the root
-  auto log_entry_serialized = tuix::CreateLogEntry(log_entry_builder, 
-      log_entry_builder.CreateString(curr_ecall),
+  
+  // uint8_t* untrusted_curr_log_entry_buffer = nullptr;
+  // ocall_malloc(log_entry_builder.GetSize(), &untrusted_curr_log_entry_buffer);
+  // std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry_ptr(untrusted_curr_log_entry_buffer, &ocall_free);
+  // memcpy(log_entry_ptr.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
+  // auto log_entry_serialized = tuix::CreateLogEntry(log_entry_builder, 
+  //     log_entry_builder.CreateString(curr_ecall),
+  //     job_id,
+  //     eid,
+  //     mac_lst_len,
+  //     log_entry_builder.CreateVector(mac_lst, mac_lst_len * SGX_AESGCM_MAC_SIZE),
+  //     log_entry_builder.CreateVector(global_mac, SGX_AESGCM_MAC_SIZE));
+  // 
+  // log_entry_builder.Finish(log_entry_serialized);
+
+  // uint8_t* untrusted_curr_ecall_str = nullptr;
+  // ocall_malloc(curr_ecall.length(), &untrusted_curr_ecall_str);
+  // std::unique_ptr<uint8_t, decltype(&ocall_free)> ecall_str(untrusted_curr_ecall_str, &ocall_free);
+  // memcpy(ecall_str.get(), curr_ecall.c_str(), curr_ecall.length());
+  char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
+
+  // Copy mac list to untrusted memory
+  uint8_t* untrusted_mac_lst = nullptr;
+  ocall_malloc(mac_lst_len * SGX_AESGCM_MAC_SIZE, &untrusted_mac_lst);
+  std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_lst_ptr(untrusted_mac_lst, &ocall_free);
+  memcpy(mac_lst_ptr.get(), mac_lst, mac_lst_len * SGX_AESGCM_MAC_SIZE);
+
+  // Copy global mac to untrusted memory
+  uint8_t* untrusted_global_mac = nullptr;
+  ocall_malloc(SGX_AESGCM_MAC_SIZE, &untrusted_global_mac);
+  std::unique_ptr<uint8_t, decltype(&ocall_free)> global_mac_ptr(untrusted_global_mac, &ocall_free);
+  memcpy(global_mac_ptr.get(), global_mac, SGX_AESGCM_MAC_SIZE);
+
+  // This is an offset into enc block builder
+  auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
+      // enc_block_builder.CreateString(ecall_str.get()),
+      enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
       job_id,
       eid,
       mac_lst_len,
-      log_entry_builder.CreateVector(mac_lst, mac_lst_len * SGX_AESGCM_MAC_SIZE),
-      log_entry_builder.CreateVector(global_mac, SGX_AESGCM_MAC_SIZE));
+      enc_block_builder.CreateVector(mac_lst_ptr.get(), mac_lst_len * SGX_AESGCM_MAC_SIZE),
+      enc_block_builder.CreateVector(global_mac_ptr.get(), SGX_AESGCM_MAC_SIZE));
 
+
+  // uint8_t* untrusted_curr_log_entry_buffer = nullptr;
+  // ocall_malloc(log_entry_builder.GetSize(), &untrusted_curr_log_entry_buffer);
+  // std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry_ptr(untrusted_curr_log_entry_buffer, &ocall_free);
+  // memcpy(log_entry_ptr.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
+  // 
+  // log_entry_builder.Clear();
   
-  log_entry_builder.Finish(log_entry_serialized);
   // TODO: push the log entry to untrusted memory
-  uint8_t* serialized_log_entry_ptr = nullptr;
-  ocall_malloc(log_entry_builder.GetSize(), &serialized_log_entry_ptr);
+  // uint8_t* serialized_log_entry_ptr = nullptr;
+  // ocall_malloc(log_entry_builder.GetSize(), &serialized_log_entry_ptr);
+  // 
+  // std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry(serialized_log_entry_ptr, &ocall_free);
+  // 
+  // memcpy(log_entry.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
 
-  std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry(serialized_log_entry_ptr, &ocall_free);
-
-  memcpy(log_entry.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
-
-  curr_log_entry_vector.push_back(log_entry.get())
-  // log_entry.get() now contains pointer to serialized log_entry in untrusted memory
+  std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
+  curr_log_entry_vector.push_back(log_entry_serialized);
   
-  // TODO: Retrieve all input log entries
-  // TODO: Some more flatbuffers stuff to create a LogEntryChain serialization from the above created LogEntry and teh past entries
+  std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
+  
+  for (LogEntry le : EnclaveContext::getInstance().get_ecall_log_entries()) {
+    // uint8_t* op_str = nullptr;
+    // ocall_malloc(le.op.length(), &op_str);
+    // std::unique_ptr<uint8_t, decltype(&ocall_free)> past_ecall_str(op_str, &ocall_free);
+    // memcpy(past_ecall_str.get(), le.op.c_str(), le.op.length());
 
-  // TODO: Add LogEntryChain to EncryptedBlocks object
+    char* untrusted_ecall_op_str = oe_host_strndup(le.op.c_str(), le.op.length());
+    auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
+        // enc_block_builder.CreateString(past_ecall_str.get()),
+        enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
+        le.job_id,
+        le.eid);
+
+    // uint8_t* untrusted_prev_log_entry_buffer = nullptr;
+    // ocall_malloc(log_entry_builder.GetSize(), &untrusted_prev_log_entry_buffer);
+    // std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry_ptr(untrusted_prev_log_entry_buffer, &ocall_free);
+    // memcpy(log_entry_ptr.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
+    // 
+    // log_entry_builder.Clear();
+
+
+    past_log_entries_vector.push_back(past_log_entry_serialized);
+  }
+
+
+  // auto log_entry_chain_serialized = tuix::CreateLogEntryChain(enc_block_builder, 
+    // enc_block_builder.CreateVector(curr_log_entry_vector, 1),
+    // enc_block_builder.CreateVector(past_log_entries_vector, past_log_entries_vector.size()))
+
+  auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
+  // 
+  // log_entry_builder.Finish(log_entry_chain_serialized);
+  // 
+  // uint8_t* untrusted_log_entry_chain_buffer = nullptr;
+  // ocall_malloc(log_entry_builder.GetSize(), &untrusted_log_entry_chain_buffer);
+  // 
+  // std::unique_ptr<uint8_t, decltype(&ocall_free)> log_entry_chain(untrusted_log_entry_chain_buffer, &ocall_free);
+
+  // Copy the serialized log entry chain to untrusted memory
+  // memcpy(log_entry_chain.get(), log_entry_builder.GetBufferPointer(), log_entry_builder.GetSize());
+
   // TODO: hmac the serialized log entry chains?
   // auto enc_block_vector_offset = enc_block_builder.CreateVector(enc_block_vector, enc_block_vector.size());
-  // auto result = tuix::CreateEncryptedBlocks(enc_block_builder, enc_block_vector_offset);
-  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, NULL); // TODO: Comment out this line in favor of the above two
+  // auto result = tuix::CreateEncryptedBlocks(enc_block_builder, enc_block_vector_offset, log_entry_chain.get());
+  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized); // TODO: Comment out this line in favor of the above two
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
