@@ -61,6 +61,7 @@ void sort_single_encrypted_block(
   const tuix::EncryptedBlock *block,
   FlatbuffersSortOrderEvaluator &sort_eval) {
 
+  debug("Sort Single Encrypted Block called\n");
   EncryptedBlockToRowReader r;
   r.reset(block);
   std::vector<const tuix::Row *> sort_ptrs(r.begin(), r.end());
@@ -86,18 +87,18 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // re-encrypting to a different buffer.
   SortedRunsWriter w;
   {
+    std::cout << "external sort!!\n";
     EncryptedBlocksToEncryptedBlockReader r(
       BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
     uint32_t i = 0;
+    std::cout << "instantiated reader\n";
     for (auto it = r.begin(); it != r.end(); ++it, ++i) {
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
-      // EnclaveContext::getInstance().set_log_entry_ecall(std::string("externalSort"));
       sort_single_encrypted_block(w, *it, sort_eval);
     }
 
     if (w.num_runs() <= 1) {
       // Only 0 or 1 runs, so we are done - no need to merge runs
-      // EnclaveContext::getInstance().set_log_entry_ecall(std::string("externalSort"));
       // We should add the macs and do the global mac here
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, std::string("externalSort"));
       return;
@@ -107,9 +108,9 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // 2. Merge sorted runs. Initially each buffer forms a sorted run. We merge B runs at a time by
   // decrypting an EncryptedBlock from each one, merging them within the enclave using a priority
   // queue, and re-encrypting to a different buffer.
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("externalSort"));
 
   // SortedRunsWriter.output_buffer() call here
+  debug("Merging sorted runs\n");
   auto runs_buf = w.output_buffer();
   SortedRunsReader r(runs_buf.view());
   while (r.num_runs() > 1) {
@@ -122,7 +123,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
         std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
       debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
-      // EnclaveContext::getInstance().set_log_entry_ecall(std::string("externalSort"));
       external_merge(r, run_start, num_runs, w, sort_eval);
     }
 
@@ -132,8 +132,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       r.reset(runs_buf.view());
     } else {
       // Done merging. Return the single remaining sorted run.
-      // TODO: add the macs and do the global mac here
-      // EnclaveContext::getInstance().set_log_entry_ecall(std::string("externalSort"));
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, std::string("externalSort"));
       return;
     }
@@ -165,7 +163,6 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
     }
   }
 
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("sample"));
   w.output_buffer(output_rows, output_rows_length, std::string("sample"));
 }
 
@@ -195,7 +192,6 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
 	}
   }
 
-  EnclaveContext::getInstance().set_log_entry_ecall(std::string("findRangeBounds"));
   w.output_buffer(output_rows, output_rows_length, std::string("findRangeBounds"));
 
   ocall_free(sorted_rows);
@@ -236,7 +232,6 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
       b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition
-      // EnclaveContext::getInstance().set_log_entry_ecall(std::string("partitionForSort"));
       w.output_buffer(
         &output_partition_ptrs[output_partition_idx],
         &output_partition_lengths[output_partition_idx], std::string("partitionForSort"));
@@ -251,7 +246,6 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // partitions, write out enough empty partitions to ensure the expected number of output
   // partitions.
   while (output_partition_idx < num_partitions) {
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("partitionForSort"));
     w.output_buffer(
       &output_partition_ptrs[output_partition_idx],
       &output_partition_lengths[output_partition_idx], std::string("partitionForSort"));

@@ -38,7 +38,6 @@ void scan_collect_last_primary(
     }
   }
 
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("scanCollectLastPrimary"));
   w.output_buffer(output_rows, output_rows_length, std::string("scanCollectLastPrimary"));
 }
 
@@ -80,8 +79,8 @@ void non_oblivious_sort_merge_join(
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousSortMergeJoin"));
-        auto primary_group_buffer = primary_group.output_buffer();
+        auto primary_group_buffer = primary_group.output_buffer(std::string("nonObliviousSortMergeJoin"));
+        std::cout << "reading in priamry group group buffer\n";
         RowReader primary_group_reader(primary_group_buffer.view());
         while (primary_group_reader.has_next()) {
           const tuix::Row *primary = primary_group_reader.next();
@@ -101,6 +100,5 @@ void non_oblivious_sort_merge_join(
     }
   }
 
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("nonObliviousSortMergeJoin"));
   w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
 }

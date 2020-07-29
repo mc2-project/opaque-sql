@@ -52,7 +52,7 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
   auto curr_entries_vec = this->encrypted_blocks->log()->curr_entries();
-  for (uint32_t i = 0; i < this->encrypted_blocks->log()->curr_entries()->size(); i++) {
+  for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
     // Copy over the global mac for this input log entry
@@ -91,40 +91,44 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
     // Add this input log entry to history of log entries
     EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->eid(), input_log_entry->job_id());
   }
+  // std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
+  if (curr_entries_vec->size()) {
+    // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
+    for (auto it = this->encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {
+      size_t ptxt_size = dec_size(it->enc_rows()->size());
+      uint8_t* mac_ptr = (uint8_t*) (it->enc_rows()->data() + SGX_AESGCM_IV_SIZE + ptxt_size);
+      std::vector<uint8_t> cipher_mac (mac_ptr, mac_ptr + SGX_AESGCM_MAC_SIZE); 
 
-  // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
-  for (auto it = this->encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {
-    size_t ptxt_size = dec_size(it->enc_rows()->size());
-    uint8_t* mac_ptr = (uint8_t*) (it->enc_rows()->data() + SGX_AESGCM_IV_SIZE + ptxt_size);
-    std::vector<uint8_t> cipher_mac (mac_ptr, mac_ptr + SGX_AESGCM_MAC_SIZE); 
-
-    // Find this element in partition_mac_lsts;
-    bool mac_in_lst = false;
-    for (uint32_t i = 0; i < partition_mac_lsts.size(); i++) {
-      bool found = false;
-      for (uint32_t j = 0; j < partition_mac_lsts[i].size(); j++) {
-        if (cipher_mac == partition_mac_lsts[i][j]) {
-          partition_mac_lsts[i].erase(partition_mac_lsts[i].begin() + j);
-          found = true;
+      // Find this element in partition_mac_lsts;
+      bool mac_in_lst = false;
+      for (uint32_t i = 0; i < partition_mac_lsts.size(); i++) {
+        bool found = false;
+        for (uint32_t j = 0; j < partition_mac_lsts[i].size(); j++) {
+          if (cipher_mac == partition_mac_lsts[i][j]) {
+            partition_mac_lsts[i].erase(partition_mac_lsts[i].begin() + j);
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          mac_in_lst = true;
+          // std::cout << "Found!\n";
           break;
         }
       }
-      if (found) {
-        mac_in_lst = true;
-        break;
+
+      if (!mac_in_lst) {
+        throw std::runtime_error("Unexpected block given as input to the enclave");
       }
     }
 
-    if (!mac_in_lst) {
-      throw std::runtime_error("Unexpected block given as input to the enclave");
+    // Check that partition_mac_lsts is now empty - we should've found all expected MACs
+    for (std::vector<std::vector<uint8_t>> p_lst : partition_mac_lsts) {
+      if (!p_lst.empty()) {
+        std::runtime_error("Did not receive expected EncryptedBlocks");
+      }
     }
-  }
-
-  // Check that partition_mac_lsts is now empty - we should've found all expected MACs
-  for (std::vector<std::vector<uint8_t>> p_lst : partition_mac_lsts) {
-    if (!p_lst.empty()) {
-      std::runtime_error("Did not receive expected EncryptedBlocks");
-    }
+    // std::cout << "Found all MACs\n";
   }
 
   auto past_entries_vec = this->encrypted_blocks->log()->past_entries();
@@ -148,15 +152,6 @@ uint32_t RowReader::num_rows() {
   }
   return result;
 }
-
-// uint32_t RowReader::rdd_id() {
-//   uint32_t rdd_id = encrypted_blocks->rdd_id();
-//   if (rdd_id) {
-//     return rdd_id;
-//   } else {
-//     return -1;
-//   }
-// }
 
 bool RowReader::has_next() {
   return block_reader.has_next() || block_idx + 1 < encrypted_blocks->blocks()->size();

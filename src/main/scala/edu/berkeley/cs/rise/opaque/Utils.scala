@@ -682,7 +682,6 @@ object Utils extends Logging {
       val ciphertext =
         if (useEnclave) {
           val (enclave, eid) = initEnclave()
-          println("calling enclave encrypt")
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)
@@ -717,14 +716,17 @@ object Utils extends Logging {
     }
 
     // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
-    // TODO: Create NULL log entry chain objects here
+    println("Creating Encrypted Blocks")
     builder2.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
         tuix.EncryptedBlocks.createBlocksVector(
           builder2,
           encryptedBlockOffsets.result),
-        0))
+        tuix.LogEntryChain.createLogEntryChain(builder2,
+          tuix.LogEntryChain.createCurrEntriesVector(builder2, Array.empty),
+          tuix.LogEntryChain.createPastEntriesVector(builder2, Array.empty))
+        ))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
@@ -1299,12 +1301,35 @@ object Utils extends Logging {
   }
 
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
-    // TODO: modify this such that LogEntries get stored as a list in an EncryptedBlocks object
+    // Input: sequence of EncryptedBlocks
+    // This gets a list of all EncryptedBlock
     val allBlocks = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+      // i = 0 to number of EncryptedBlock in an EncryptedBlocks
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
+
+    val allLogEntryChains = for {
+      block <- blocks
+      logEntryChains = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    } yield logEntryChains.log
+
+
+    val allCurrLogEntries = for {
+      logEntryChain <- allLogEntryChains
+      // logEntryChain = tuix.LogEntryChain.getRootAsLogEntryChain(logEntryChainIter) // FIXME
+      if logEntryChain.currEntriesLength > 0 
+    } yield logEntryChain.currEntries(0)
+
+    println(allCurrLogEntries)
+
+    val allPastLogEntries = for {
+      logEntryChain <- allLogEntryChains
+      // logEntryChain = tuix.LogEntryChain.getRootAsLogEntryChain(logEntryChainIter) // FIXME
+      i <- 0 until logEntryChain.pastEntriesLength
+      if logEntryChain.pastEntries(i).macLstLength > 0
+    } yield logEntryChain.pastEntries(i)
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1316,7 +1341,43 @@ object Utils extends Logging {
             builder,
             encryptedBlock.numRows,
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
-        }.toArray), 0))
+        }.toArray), 
+        tuix.LogEntryChain.createLogEntryChain(
+          builder, 
+          tuix.LogEntryChain.createCurrEntriesVector(builder, allCurrLogEntries.map { currLogEntry =>
+            // val ecall_op = new Array[Byte](currLogEntry.op)
+            // currLogEntry.opAsByteBuffer.get(ecall_op)
+            val macLst = new Array[Byte](currLogEntry.macLstLength)
+            currLogEntry.macLstAsByteBuffer.get(macLst)
+            val globalMac = new Array[Byte](currLogEntry.globalMacLength)
+            currLogEntry.globalMacAsByteBuffer.get(globalMac)
+            tuix.LogEntry.createLogEntry(
+              builder,
+              builder.createString(currLogEntry.op),
+              currLogEntry.eid,
+              currLogEntry.jobId,
+              currLogEntry.numMacs,
+              tuix.LogEntry.createMacLstVector(builder, macLst),
+              tuix.LogEntry.createGlobalMacVector(builder, globalMac))
+          }.toArray),
+          tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
+            // val past_ecall_op = new Array[Byte](currLogEntry.op)
+            // currLogEntry.opAsByteBuffer.get(past_ecall_op)
+            val pastMacLst = new Array[Byte](pastLogEntry.macLstLength)
+            pastLogEntry.macLstAsByteBuffer.get(pastMacLst)
+            val pastGlobalMac = new Array[Byte](pastLogEntry.globalMacLength)
+            pastLogEntry.globalMacAsByteBuffer.get(pastGlobalMac)
+            tuix.LogEntry.createLogEntry(
+              builder,
+              builder.createString(pastLogEntry.op),
+              pastLogEntry.eid,
+              pastLogEntry.jobId,
+              pastLogEntry.numMacs,
+              tuix.LogEntry.createMacLstVector(builder, pastMacLst),
+              tuix.LogEntry.createGlobalMacVector(builder, pastGlobalMac))
+          }.toArray)
+        )))
+    println("Concat encrypted blocks called----------------------------")
     Block(builder.sizedByteArray())
   }
 
@@ -1324,7 +1385,11 @@ object Utils extends Logging {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
-        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 0))
+        builder, 
+        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+        tuix.LogEntryChain.createLogEntryChain(builder,
+          tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
+          tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty))))
     Block(builder.sizedByteArray())
   }
 }

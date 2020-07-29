@@ -34,6 +34,5 @@ void project(uint8_t *project_list, size_t project_list_length,
     w.append(out_fields);
   }
   
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("project"));
   w.output_buffer(output_rows, output_rows_length, std::string("project"));
 }

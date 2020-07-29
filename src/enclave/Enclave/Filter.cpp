@@ -12,13 +12,14 @@ using namespace edu::berkeley::cs::rise::opaque;
 void filter(uint8_t *condition, size_t condition_length,
             uint8_t *input_rows, size_t input_rows_length,
             uint8_t **output_rows, size_t *output_rows_length) {
+  std::cout << "Trying to filter\n";
 
   BufferRefView<tuix::FilterExpr> condition_buf(condition, condition_length);
   condition_buf.verify();
   FlatbuffersExpressionEvaluator condition_eval(condition_buf.root()->condition());
+  std::cout << "About to read in encrypted blocks\n";
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
-  // uint32_t num_rows = r.num_rows();
-  // std::cout << "This RDD has this many rows: " << num_rows << std::endl;
+  std::cout << "read encrypted blocks\n";
   RowWriter w;
   while (r.has_next()) {
     const tuix::Row *row = r.next();
@@ -38,6 +39,7 @@ void filter(uint8_t *condition, size_t condition_length,
     }
   }
 
-  // EnclaveContext::getInstance().set_log_entry_ecall(std::string("filter"));
+  std::cout << "About to output buffer\n";
   w.output_buffer(output_rows, output_rows_length, std::string("filter"));
+  std::cout << "Outputed buffer\n";
 }

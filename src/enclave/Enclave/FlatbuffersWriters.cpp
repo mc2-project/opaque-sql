@@ -45,7 +45,9 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
   maybe_finish_block();
 }
 
-UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer() {
+UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
+  EnclaveContext::getInstance().set_log_entry_ecall(ecall);
+
   if (!finished) {
     finish_blocks();
   }
@@ -66,15 +68,12 @@ UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer() {
 }
 
 void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length, std::string ecall) {
-  EnclaveContext::getInstance().set_log_entry_ecall(ecall);
-
   // Get the UntrustedBufferRef
-  auto result = output_buffer();
+  auto result = output_buffer(ecall);
 
   // output rows is a reference to encrypted blocks in untrusted memory
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
-
 }
 
 uint32_t RowWriter::num_rows() {
@@ -99,7 +98,7 @@ void RowWriter::finish_block() {
 
   // Encrypt the serialized rows and push the ciphertext to untrusted memory
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
-  // TODO: create a temporary buffer that stores serialized rows inside enclave, then copy these rows to enc_rows.get()
+  // TODO: create a temporary buffer that stores serialized rows inside enclave, then copy these rows to enc_rows.get() to retrieve MAC
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
   // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
@@ -127,7 +126,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   }
 
   std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
-  std::cout << "Finishing the Encrypted Blocks for ecall: " << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
+  std::cout << "------------Finishing the Encrypted Blocks for ecall: " << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
   int job_id = EnclaveContext::getInstance().get_job_id();
 
   size_t mac_lst_len = EnclaveContext::getInstance().get_mac_lst_len();
@@ -257,6 +256,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   enc_block_vector.clear();
 
   finished = true;
+
+  // bool ok = VerifyEncryptedBlocksBuffer(enc_block_builder.GetBufferPointer(), enc_block_builder.GetSize());
+  // BufferRefView<tuix::EncryptedBlocks> enc_block_buf(enc_block_builder.GetBufferPointer(), enc_block_builder.GetSize());
+  // enc_block_buf.verify();
+  // std::cout << "///// Encrypted Blocks Buffer verified: " << std::endl;
 
   // Once we've serialized the log entry, reset it
   EnclaveContext::getInstance().reset_log_entry();
