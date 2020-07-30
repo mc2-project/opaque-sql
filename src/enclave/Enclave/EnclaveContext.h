@@ -59,12 +59,12 @@ class EnclaveContext {
     }
 
     void reset_log_entry() {
-      // TODO: create LogEntry out of the members and append it to ecall_log_entries
       // this_ecall = std::string("");
       int job_id = -1;
       job_id++; // dummy operation for now
       log_entry_mac_lst.clear();
       // global_mac = {0 * OE_HMAC_SIZE};
+      ecall_log_entries.clear();
     }
 
     void append_past_log_entry(std::string op, int eid, int job_id) {
@@ -105,7 +105,7 @@ class EnclaveContext {
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
-    size_t get_mac_lst_len() {
+    size_t get_num_macs() {
       return log_entry_mac_lst.size();
     }
 
@@ -124,10 +124,6 @@ class EnclaveContext {
     int get_job_id() {
       return job_id;
     }
-
-    // void append_curr_log_entry() {
-    //   ecall_log_entries.push_back(curr_log_entry);
-    // }
 
 //     std::vector<std::string> get_executed_plan() {
 //       std::vector<std::string> executed_plan_log;
