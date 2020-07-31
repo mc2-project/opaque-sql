@@ -87,11 +87,11 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   // re-encrypting to a different buffer.
   SortedRunsWriter w;
   {
-    std::cout << "external sort!!\n";
+    // std::cout << "external sort!!\n";
     EncryptedBlocksToEncryptedBlockReader r(
       BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
     uint32_t i = 0;
-    std::cout << "instantiated reader\n";
+    // std::cout << "instantiated reader\n";
     for (auto it = r.begin(); it != r.end(); ++it, ++i) {
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
       sort_single_encrypted_block(w, *it, sort_eval);

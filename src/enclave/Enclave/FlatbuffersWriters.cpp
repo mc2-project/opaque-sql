@@ -30,7 +30,11 @@ void RowWriter::append(const std::vector<const tuix::Field *> &row_fields) {
   maybe_finish_block();
 }
 
-void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
+void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2, std::string ecall) {
+  // We must set the log entry ecall in this append() function only because this append() function is called only in nonObliviousSortMergeJoin(), which is the only function that outputs buffers not meant for the next task
+  if (ecall != "") {
+    EnclaveContext::getInstance().set_log_entry_ecall(ecall);
+  }
   flatbuffers::uoffset_t num_fields = row1->field_values()->size() + row2->field_values()->size();
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
   flatbuffers::uoffset_t i = 0;
@@ -74,7 +78,6 @@ void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length,
   // output rows is a reference to encrypted blocks in untrusted memory
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
-  std::cout << "Finished ecall\n";
 }
 
 uint32_t RowWriter::num_rows() {
@@ -134,6 +137,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
 
   if (curr_ecall != std::string("NULL")) {
+    // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
     int job_id = EnclaveContext::getInstance().get_job_id();
     size_t num_macs = EnclaveContext::getInstance().get_num_macs();
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];

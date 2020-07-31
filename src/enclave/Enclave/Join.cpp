@@ -77,30 +77,20 @@ void non_oblivious_sort_merge_join(
         // Add this row to the current group
         std::cout << std::endl;
         primary_group.append(current);
-        // std::cout << "same group, appending\n";
-        // Set last primary row of this group
         last_primary_of_group.set(current);
       } else {
         // Advance to a new group
         primary_group.clear();
         primary_group.append(current);
-        // std::cout << "New group, append one\n";
         last_primary_of_group.set(current);
       }
-      // std::cout << "-- PRIMARY\n";
     } else {
       // Current row isn't from primary table
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        // std::cout << "-- FOREIGN\n";
-        // The current row is from foreign table, of same group as last primary row
-        // This is just serializing all primary rows in this group
-        // std::cout << "------END PRIMARY GROUP-------\n";
         auto primary_group_buffer = primary_group.output_buffer(std::string("NULL"));
-        // std::cout << "reading in primary group group buffer\n";
         RowReader primary_group_reader(primary_group_buffer.view());
-        // std::cout << "primary group buffer\n";
         while (primary_group_reader.has_next()) {
           // For each foreign key row, join all primary key rows in same group with it
           const tuix::Row *primary = primary_group_reader.next();
@@ -114,7 +104,7 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
-          w.append(primary, current);
+          w.append(primary, current, std::string("nonObliviousSortMergeJoin"));
         }
       }
     }
