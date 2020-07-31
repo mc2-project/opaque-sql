@@ -78,6 +78,9 @@ void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length,
   // output rows is a reference to encrypted blocks in untrusted memory
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
+
+  // Clear log entry state
+  EnclaveContext::getInstance().reset_log_entry();
 }
 
 uint32_t RowWriter::num_rows() {
@@ -192,7 +195,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   // enc_block_buf.verify();
 
   // Once we've serialized the log entry, reset it
-  EnclaveContext::getInstance().reset_log_entry();
+  // EnclaveContext::getInstance().reset_log_entry();
 
   return result;
 }
