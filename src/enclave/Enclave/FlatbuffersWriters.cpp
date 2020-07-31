@@ -104,9 +104,11 @@ void RowWriter::finish_block() {
 
   // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
   // FIXME: we only want to add the mac if it's not part of the join primary group reader
-  uint8_t mac[SGX_AESGCM_MAC_SIZE];
-  memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
-  EnclaveContext::getInstance().add_mac_to_mac_lst(mac);
+  if (EnclaveContext::getInstance().get_log_entry_ecall() != std::string("NULL")) {
+    uint8_t mac[SGX_AESGCM_MAC_SIZE];
+    memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
+    EnclaveContext::getInstance().add_mac_to_mac_lst(mac);
+  }
 
   // Add the offset to enc_block_vector
   enc_block_vector.push_back(
@@ -127,57 +129,54 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
     finish_block();
   }
 
-  // FIXME: do all this only in output_buffers(x, y, z)??
   std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
-  // if (curr_ecall != std::string("NULL")) 
-  // std::cout << "------------Finishing the Encrypted Blocks for ecall: " << EnclaveContext::getInstance().get_log_entry_ecall() << std::endl;
-
-  int job_id = EnclaveContext::getInstance().get_job_id();
-  size_t num_macs = EnclaveContext::getInstance().get_num_macs();
-  uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
-  EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
-
-  int eid = EnclaveContext::getInstance().get_eid();
-  uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
-  char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
-
-  // Copy mac list to untrusted memory
-  uint8_t* untrusted_mac_lst = nullptr;
-  ocall_malloc(num_macs * SGX_AESGCM_MAC_SIZE, &untrusted_mac_lst);
-  std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_lst_ptr(untrusted_mac_lst, &ocall_free);
-  memcpy(mac_lst_ptr.get(), mac_lst, num_macs * SGX_AESGCM_MAC_SIZE);
-
-  // Copy global mac to untrusted memory
-  uint8_t* untrusted_global_mac = nullptr;
-  ocall_malloc(SGX_AESGCM_MAC_SIZE, &untrusted_global_mac);
-  std::unique_ptr<uint8_t, decltype(&ocall_free)> global_mac_ptr(untrusted_global_mac, &ocall_free);
-  memcpy(global_mac_ptr.get(), global_mac, SGX_AESGCM_MAC_SIZE);
-
-  // This is an offset into enc block builder
-  auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
-      enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
-      eid,
-      job_id,
-      num_macs,
-      enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
-      enc_block_builder.CreateVector(global_mac_ptr.get(), SGX_AESGCM_MAC_SIZE));
-
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
-  curr_log_entry_vector.push_back(log_entry_serialized);
-  
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
-  for (LogEntry le : EnclaveContext::getInstance().get_ecall_log_entries()) {
-    char* untrusted_ecall_op_str = oe_host_strndup(le.op.c_str(), le.op.length());
-    auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
-        enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
-        le.eid,
-        le.job_id);
-    past_log_entries_vector.push_back(past_log_entry_serialized);
-  }
 
+  if (curr_ecall != std::string("NULL")) {
+    int job_id = EnclaveContext::getInstance().get_job_id();
+    size_t num_macs = EnclaveContext::getInstance().get_num_macs();
+    uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
+    EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
+
+    int eid = EnclaveContext::getInstance().get_eid();
+    uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
+    char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
+
+    // Copy mac list to untrusted memory
+    uint8_t* untrusted_mac_lst = nullptr;
+    ocall_malloc(num_macs * SGX_AESGCM_MAC_SIZE, &untrusted_mac_lst);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_lst_ptr(untrusted_mac_lst, &ocall_free);
+    memcpy(mac_lst_ptr.get(), mac_lst, num_macs * SGX_AESGCM_MAC_SIZE);
+
+    // Copy global mac to untrusted memory
+    uint8_t* untrusted_global_mac = nullptr;
+    ocall_malloc(SGX_AESGCM_MAC_SIZE, &untrusted_global_mac);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> global_mac_ptr(untrusted_global_mac, &ocall_free);
+    memcpy(global_mac_ptr.get(), global_mac, SGX_AESGCM_MAC_SIZE);
+
+    // This is an offset into enc block builder
+    auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
+        enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
+        eid,
+        job_id,
+        num_macs,
+        enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
+        enc_block_builder.CreateVector(global_mac_ptr.get(), SGX_AESGCM_MAC_SIZE));
+
+    curr_log_entry_vector.push_back(log_entry_serialized);
+
+    for (LogEntry le : EnclaveContext::getInstance().get_ecall_log_entries()) {
+      char* untrusted_ecall_op_str = oe_host_strndup(le.op.c_str(), le.op.length());
+      auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
+          enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
+          le.eid,
+          le.job_id);
+      past_log_entries_vector.push_back(past_log_entry_serialized);
+    }
+  } 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
-  // If statement up to here
-  // we don't want to add the logging to just the primary group serialization
+
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized);
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
