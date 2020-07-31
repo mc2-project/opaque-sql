@@ -7,8 +7,6 @@ void RowWriter::clear() {
   rows_vector.clear();
   total_num_rows = 0;
   enc_block_builder.Clear();
-  // log_entry_builder.Clear();
-  // log_entry_chain_builder.Clear();
   enc_block_vector.clear();
   finished = false;
 }
@@ -109,7 +107,7 @@ void RowWriter::finish_block() {
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
 
   // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
-  // FIXME: we only want to add the mac if it's not part of the join primary group reader
+  // we only want to add the mac if it's not part of the join primary group reader
   if (EnclaveContext::getInstance().get_log_entry_ecall() != std::string("NULL")) {
     uint8_t mac[SGX_AESGCM_MAC_SIZE];
     memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
@@ -184,18 +182,17 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
   } 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
 
+  // hash the previous log entries
+  // uint8_t log_entry_hash[32]; 
+  // EnclaveContext::getInstance().sha256_hash_ecall_log_entries(log_entry_hash);
+  // std::vector<uint8_t> hash_vector (log_entry_hash, log_entry_hash + 32);
+// 
+  // auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &hash_vector);
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized);
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
   finished = true;
-
-  // bool ok = VerifyEncryptedBlocksBuffer(enc_block_builder.GetBufferPointer(), enc_block_builder.GetSize());
-  // BufferRefView<tuix::EncryptedBlocks> enc_block_buf(enc_block_builder.GetBufferPointer(), enc_block_builder.GetSize());
-  // enc_block_buf.verify();
-
-  // Once we've serialized the log entry, reset it
-  // EnclaveContext::getInstance().reset_log_entry();
 
   return result;
 }
@@ -219,8 +216,6 @@ void SortedRunsWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 
 void SortedRunsWriter::finish_run() {
   runs.push_back(container.finish_blocks());
-  // TODO: Reset log entry
-  // EnclaveContext::getInstance().reset_log_entry();
 }
 
 uint32_t SortedRunsWriter::num_runs() {
@@ -242,8 +237,6 @@ UntrustedBufferRef<tuix::SortedRuns> SortedRunsWriter::output_buffer() {
   UntrustedBufferRef<tuix::SortedRuns> buffer(
     std::move(buf), container.enc_block_builder.GetSize());
 
-  // TODO do we need to reset log entry here?
-  // EnclaveContext::getInstance().reset_log_entry();
   return buffer;
 }
 

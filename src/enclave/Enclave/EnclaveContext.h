@@ -10,16 +10,12 @@ typedef struct LogEntry {
   std::string op;
   int eid;
   int job_id;
-  // uint8_t global_mac[OE_HMAC_SIZE];
-  // uint8_t mac_lst[];
 } LogEntry;
 
 static Crypto mcrypto;
 
 class EnclaveContext {
   private:
-    // Vector of log entries outputted during this ecall
-    // After the last output buffer, we will MAC the entire vector
     std::vector<LogEntry> ecall_log_entries;
     int operators_ctr;
     unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
@@ -29,8 +25,6 @@ class EnclaveContext {
     int job_id;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
-
-    // std::vector<std::vector<uint8_t>> input_log_entry_mac_lst;
 
     int eid = 3;
 
@@ -103,6 +97,10 @@ class EnclaveContext {
       mcrypto.hmac(contiguous_mac_lst, mac_lst_length, global_mac);
 
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
+    }
+
+    void sha256_hash_ecall_log_entries(const uint8_t* ret_hash) {
+      mcrypto.sha256((const uint8_t*) ecall_log_entries.data(), ecall_log_entries.size() * sizeof(LogEntry), (uint8_t*) ret_hash);
     }
 
     size_t get_num_macs() {

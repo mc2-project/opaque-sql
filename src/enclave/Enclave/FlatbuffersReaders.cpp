@@ -112,7 +112,6 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
         }
         if (found) {
           mac_in_lst = true;
-          // std::cout << "Found!\n";
           break;
         }
       }
@@ -128,7 +127,6 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
         std::runtime_error("Did not receive expected EncryptedBlocks");
       }
     }
-    // std::cout << "Found all MACs\n";
   }
 
   auto past_entries_vec = this->encrypted_blocks->log()->past_entries();

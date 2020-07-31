@@ -1387,6 +1387,7 @@ object Utils extends Logging {
         tuix.LogEntryChain.createLogEntryChain(builder,
           tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
           tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty))))
+        // tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 }
