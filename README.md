@@ -4,9 +4,9 @@
 
 [![Build Status](https://travis-ci.org/mc2-project/opaque.svg?branch=openenclave)](https://travis-ci.org/mc2-project/opaque)
 
-Opaque is a package for Apache Spark SQL that enables encryption for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within SGX enclaves.
+Opaque is a package for Apache Spark SQL that enables encryption for DataFrames using the OpenEnclave framework. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within hardware enclaves (such as Intel SGX).
 
-This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
+This project is based on the following NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
 This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). It currently has the following limitations:
 
@@ -14,7 +14,7 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 - Not all Spark SQL operations are supported. UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
-- Computation integrity verification (section 4.2 of the NSDI paper) is not included.
+- Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
@@ -168,47 +168,6 @@ Now we can port this UDF to Opaque as follows:
     ```
 
 3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
-
-## Launch Token and Remote Attestation
-
-For development, Opaque launches enclaves in debug mode. To launch enclaves in release mode, use a [Launch Enclave](https://github.com/intel/linux-sgx/blob/master/psw/ae/ref_le/ref_le.md) or contact Intel to obtain a launch token, then pass it to `sgx_create_enclave` in `src/enclave/App/App.cpp`. Additionally, change `-DEDEBUG` to `-UEDEBUG` in `src/enclave/CMakeLists.txt`.
-
-Remote attestation ensures that the workers' SGX enclaves are genuine. To use remote attestation, do the following:
-
-1. [Generate a self-signed certificate](https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using):
-
-    ```sh
-    cat <<EOF > client.cnf
-    [ ssl_client ]
-    keyUsage = digitalSignature, keyEncipherment, keyCertSign
-    subjectKeyIdentifier=hash
-    authorityKeyIdentifier=keyid,issuer
-    extendedKeyUsage = clientAuth, serverAuth
-    EOF
-
-    openssl genrsa -out client.key 2048
-    openssl req -key client.key -new -out client.req
-    openssl x509 -req -days 365 -in client.req -signkey client.key -out client.crt -extfile client.cnf -extensions ssl_client
-    
-    # Should print "client.crt: OK"
-    openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
-    ```
-    
-2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which may take several days.
-
-3. The response should include a SPID (a 16-byte hex string) and a reminder of which EPID security policy you chose (linkable or unlinkable). Place those values into `src/enclave/ServiceProvider/ServiceProvider.cpp`.
-
-3. Set the following environment variables:
-
-    ```sh
-    # Require attestation to complete successfully before sending secrets to the worker enclaves.
-    export OPAQUE_REQUIRE_ATTESTATION=1
-
-    export IAS_CLIENT_CERT_FILE=.../client.crt  # from openssl x509 above
-    export IAS_CLIENT_KEY_FILE=.../client.key   # from openssl genrsa above
-    ```
-
-4. Change the value of `Utils.sharedKey` (`src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala`), the shared data encryption key. Opaque will ensure that each enclave passes remote attestation before sending it this key.
 
 ## Contact
 
