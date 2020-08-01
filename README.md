@@ -23,7 +23,7 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9 and Ubuntu 18.04.
+1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9.0 (so please install with `open-enclave=0.9.0`) and Ubuntu 18.04.
 
     ```sh
     # For Ubuntu 18.04:
@@ -59,7 +59,7 @@ After downloading the Opaque codebase, build and test it as follows.
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0](https://github.com/apache/spark/releases/tag/v2.4.0) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.0](https://github.com/apache/spark/releases/tag/v3.0.0) is already installed:
 
 1. Package Opaque into a JAR:
 
@@ -71,7 +71,7 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 2.4.0
 2. Launch the Spark shell with Opaque:
 
     ```sh
-    ${SPARK_HOME}/bin/spark-shell --jars ${OPAQUE_HOME}/target/scala-2.11/opaque_2.11-0.1.jar
+    ${SPARK_HOME}/bin/spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
     ```
     
     Alternatively, to run Opaque queries locally for development rather than on a cluster:
