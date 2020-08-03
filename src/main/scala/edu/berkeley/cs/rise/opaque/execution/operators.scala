@@ -145,6 +145,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
+    println("TAKEEEE")
     if (n == 0) {
       return new Array[InternalRow](0)
     }
