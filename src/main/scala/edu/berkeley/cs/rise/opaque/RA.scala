@@ -22,13 +22,14 @@ import org.apache.spark.internal.Logging
 
 import edu.berkeley.cs.rise.opaque.execution.SP
 
+// Helper to handle remote attestation
+// 
+
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
-
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-
     val sp = new SP()
 
     // Retry attestation a few times in case of transient failures
@@ -37,19 +38,17 @@ object RA extends Logging {
 
       val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
-        val msg1 = enclave.RemoteAttestation1(eid)
+        val msg1 = enclave.GenerateReport(eid)
         Iterator((i, msg1))
       }.collect.toMap
 
-      val msg2s = msg1s.mapValues(msg1 => sp.SPProcMsg1(msg1)).map(identity)
+      val msg2s = msg1s.mapValues(msg1 => sp.ProcessEnclaveReport(msg1)).map(identity)
 
       rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
-         enclave.RemoteAttestation3(eid, msg2s(i))
+         enclave.FinishAttestation(eid, msg2s(i))
         Iterator((i, true))
       }.collect.toMap
-
-      // TODO: some sort of assert that attestation passed
 
     }
   }

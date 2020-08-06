@@ -266,7 +266,6 @@ enclaveBuildTask := {
       enclaveSourceDir.getPath), enclaveBuildDir).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val nproc = java.lang.Runtime.getRuntime.availableProcessors
-  val mode = sys.env.get("MODE").get
   val buildResult = Process(Seq("make", "-j" + nproc), enclaveBuildDir).!
   if (buildResult != 0) sys.error("C++ build failed.")
   val installResult = Process(Seq("make", "install"), enclaveBuildDir).!

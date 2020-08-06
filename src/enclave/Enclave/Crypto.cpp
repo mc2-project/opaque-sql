@@ -2,12 +2,10 @@
 #include "Random.h"
 
 #include <stdexcept>
-// #include <sgx_trts.h>
-// #include <sgx_tkey_exchange.h>
 
 #include "common.h"
 #include "util.h"
-//#include "rdrand.h"
+
 
 /**
  * Symmetric key used to encrypt row data. This key is shared among the driver and all enclaves.

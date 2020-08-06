@@ -16,9 +16,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 add_library(enclave_jni SHARED ${SOURCES})
 
-target_include_directories(enclave_jni PRIVATE
-# Needed for the generated file helloworld_u.h
-  ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(enclave_jni PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(enclave_jni PUBLIC -DSIMULATE)

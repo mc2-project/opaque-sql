@@ -38,18 +38,12 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <openenclave/host.h>
+#include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h> // gettimeofday
-#include <string>
 
-//#include <sgx_eid.h>     /* sgx_enclave_id_t */
-//#include <sgx_error.h>       /* sgx_status_t */
-//#include <sgx_uae_service.h>
-//#include <sgx_ukey_exchange.h>
 #include "common.h"
-
-#include <openenclave/host.h>
-
 #include "Enclave_u.h"
 
 #ifndef TRUE
@@ -474,23 +468,15 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   JNIEnv *env, jobject obj, jstring library_path) {
   (void)obj;
 
-  printf("Entered function\n");
   env->GetJavaVM(&jvm);
-  printf("passed env->GetJavaVM(&jvm); \n");
 
   oe_enclave_t* enclave = nullptr;
-  //int updated = 0;
-
   uint32_t flags = 0;
 
 #ifdef SIMULATE
-  printf("In simulation mode\n");
   flags |= OE_ENCLAVE_FLAG_SIMULATE;
-#else
-  printf("In hardware mode\n");
 #endif
   
-
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",
                      oe_create_Enclave_enclave(
@@ -503,7 +489,7 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   return enclavePtr;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
   JNIEnv *env, jobject obj, jlong eid) {
   (void)obj;
   (void)eid;
@@ -511,10 +497,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t* msg1 = NULL;
   size_t msg1_size = 0;
 
-  oe_check_and_time("Remote Attestation Step 1.2",
-                     ecall_oe_proc_msg1((oe_enclave_t*)eid,
-                                        &msg1,
-                                        &msg1_size));
+  oe_check_and_time("Generate enclave report",
+                     ecall_generate_report((oe_enclave_t*)eid,
+                                           &msg1,
+                                           &msg1_size));
 
   // Allocate memory
   jbyteArray msg1_bytes = env->NewByteArray(msg1_size);
@@ -523,7 +509,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   return msg1_bytes;
 }
 
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {
   (void)obj;
 
@@ -531,10 +517,10 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   jbyte *msg4_bytes = env->GetByteArrayElements(msg4_input, &if_copy);
   uint32_t msg4_size = static_cast<uint32_t>(env->GetArrayLength(msg4_input));
 
-  oe_check_and_time("Remote Attestation Step 3",
-                     ecall_ra_proc_msg4((oe_enclave_t*)eid,
-                                        reinterpret_cast<uint8_t *>(msg4_bytes),
-                                        msg4_size));
+  oe_check_and_time("Finish attestation",
+                    ecall_finish_attestation((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(msg4_bytes),
+                                             msg4_size));
 
   env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
 

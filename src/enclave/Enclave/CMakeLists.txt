@@ -59,8 +59,6 @@ add_custom_command(
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed)
 
-# TODO: Use the user-generated private key to sign the enclave code.
-# Currently we use the sample private key from the Intel SGX SDK.
 add_custom_command(
   COMMAND mv ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted.so.signed  ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed

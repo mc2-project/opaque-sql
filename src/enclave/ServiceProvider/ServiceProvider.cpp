@@ -240,8 +240,8 @@ bool verify_mrsigner(char* signing_public_key_buf,
   return ret;
 }
 
-std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
-                                                         uint32_t *msg2_size) {
+std::unique_ptr<oe_msg2_t> ServiceProvider::process_enclave_report(oe_msg1_t *msg1,
+                                                                   uint32_t *msg2_size) {
   
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
@@ -252,8 +252,6 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
-
-
 
 #ifdef SIMULATE
   std::cout << "Not running remote attestation because executing in simulation mode" << std::endl;
@@ -272,7 +270,7 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
                              + oe_result_str(result));
   }
 
-  printf("OE report verified\n");
+  std::cout << "OE report verified\n";
 
   // mrsigner verification
   // 2) validate the enclave identity's signed_id is the hash of the public
@@ -315,18 +313,9 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   if (parsed_report.identity.security_version < 1) {
     throw std::runtime_error(std::string("identity.security_version checking failed."));
   }
-  
-  // TODO:
-  // "Examine the enclave identity (MRSIGNER), security version and product ID.
-  // Examine the debug attribute and ensure it is not set (in a production environment).
-  // Decide whether or not to trust the enclave and, if provided, the PSE."
-  
-  // TODO:
-  // "Derive the session keys, SK and MK, that should be used to transmit
-  // future messages between the client and server during the session.
 
   // 3) Validate the report data
-  //    The report_data has the hash value of the report data
+  //    The report_data has the hash value of the report data, which is the public 
   if (lc_compute_sha256(msg1->public_key, sizeof(msg1->public_key), sha256) != 0) {
     throw std::runtime_error(std::string("hash validation failed."));
   }

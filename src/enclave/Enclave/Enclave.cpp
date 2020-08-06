@@ -233,8 +233,8 @@ void ecall_non_oblivious_aggregate_step2(
 
 static Crypto g_crypto;
 
-void ecall_ra_proc_msg4(
-  uint8_t *msg4, uint32_t msg4_size) {
+void ecall_finish_attestation(uint8_t *msg4,
+                              uint32_t msg4_size) {
   try {
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
@@ -251,8 +251,12 @@ void ecall_ra_proc_msg4(
   }
 }
 
-void ecall_oe_proc_msg1(uint8_t **msg1_data,
-                        size_t* msg1_data_size) {
+
+/* 
+   Enclave generates report, which is then sent back to the service provider
+*/
+void ecall_generate_report(uint8_t **msg1_data,
+                           size_t* msg1_data_size) {
 
   uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
   size_t public_key_size = sizeof(public_key);

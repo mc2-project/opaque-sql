@@ -45,28 +45,10 @@ public:
    */
   void export_public_key_code(const std::string &filename);
 
-  // /** Connect to the Intel attestation service. */
-  // void connect_to_ias(const std::string &ias_report_signing_ca_file);
-
-  // /** Process attestation message 0 from an enclave. */
-  // void process_msg0(uint32_t extended_epid_group_id);
-
-  // /**
-  //  * Process attestation message 1 from an enclave and generate message 2 for that enclave.
-  //  *
-  //  * You must call `ensure_ias_connection` before calling this method.
-  //  */
-  // std::unique_ptr<sgx_ra_msg2_t> process_msg1(sgx_ra_msg1_t *msg1, uint32_t *msg2_size);
-  std::unique_ptr<oe_msg2_t> process_msg1(oe_msg1_t *msg1, uint32_t *msg2_size);
-
-  // /**
-  //  * Process attestation message 3 from an enclave and generate message 4 for that enclave. Message
-  //  * 4 contains the shared secret required for the enclave to decrypt data.
-  //  *
-  //  * You must call `ensure_ias_connection` before calling this method.
-  //  */
-  // std::unique_ptr<ra_msg4_t> process_msg3(
-  //   sgx_ra_msg3_t *msg3, uint32_t msg3_size, uint32_t *msg4_size);
+  /**
+   * Process attestation report from an enclave, verify the report, and send the shared key to the enclave
+   */
+  std::unique_ptr<oe_msg2_t> process_enclave_report(oe_msg1_t *msg1, uint32_t *msg2_size);
 
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);
