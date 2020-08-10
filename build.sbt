@@ -312,6 +312,39 @@ synthTestDataTask := {
         "region.tbl", "supplier.tbl")
     } yield new File(tpchDir, name)
 
+  val tpcdsDir = baseDirectory.value / "data" / "tpcds" / "data"
+  tpcdsDir.mkdirs()
+  val tpcdsDataFiles =
+    for {
+      name <- Seq(
+        "store_sales.dat",
+        "store_returns.dat",
+        "catalog_sales.dat",
+        "catalog_returns.dat",
+        "web_sales.dat",
+        "web_returns.dat",
+        "inventory.dat",
+        "store.dat",
+        "call_center.dat",
+        "catalog_page.dat",
+        "web_site.dat",
+        "web_page.dat",
+        "warehouse.dat",
+        "customer.dat",
+        "customer_address.dat",
+        "customer_demographics.dat",
+        "date_dim..dat",
+        "household.demographics.dat",
+        "item.dat",
+        "income_band.dat",
+        "promotion.dat",
+        "reason.dat",
+        "ship_mode.dat",
+        "time_dim.dat"
+      )
+    } yield new File(tpcdsDir, name)
+
+
   if (!diseaseDataFiles.forall(_.exists)) {
     import sys.process._
     val ret = Seq("data/disease/synth-disease-data").!
@@ -323,4 +356,11 @@ synthTestDataTask := {
     val ret = Seq("data/tpch/synth-tpch-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H test data.")
   }
+
+  if (!tpcdsDataFiles.forall(_.exists)) {
+    import sys.process._
+    val ret = Seq("data/tpcds/synth-tpcds-data").!
+    if (ret != 0) sys.error("Failed to synthesize TPC-DS test data.")
+  }
+
 }
