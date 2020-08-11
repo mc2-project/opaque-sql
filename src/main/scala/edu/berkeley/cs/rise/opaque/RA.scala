@@ -44,12 +44,16 @@ object RA extends Logging {
 
       val msg2s = msg1s.mapValues(msg1 => sp.ProcessEnclaveReport(msg1)).map(identity)
 
-      rdd.mapPartitionsWithIndex { (i, _) =>
+      val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
          enclave.FinishAttestation(eid, msg2s(i))
         Iterator((i, true))
       }.collect.toMap
 
+      for ((_, ret) <- attestationResults) {
+        if (!ret)
+          throw new OpaqueException("Attestation failed")
+      }
     }
   }
 }

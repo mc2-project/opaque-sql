@@ -252,5 +252,7 @@ int public_encrypt(EVP_PKEY* key, unsigned char * data, int data_len, unsigned c
         return -1;
     }
 
+    EVP_PKEY_CTX_free(ctx);
+
     return *encrypted_len;
 }
