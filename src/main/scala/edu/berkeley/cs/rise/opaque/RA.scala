@@ -32,28 +32,25 @@ object RA extends Logging {
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
-    // Retry attestation a few times in case of transient failures
-    Utils.retry(3) {
-      sp.Init(Utils.sharedKey, intelCert)
+    sp.Init(Utils.sharedKey, intelCert)
 
-      val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
-        val (enclave, eid) = Utils.initEnclave()
-        val msg1 = enclave.GenerateReport(eid)
-        Iterator((i, msg1))
-      }.collect.toMap
+    val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+      val (enclave, eid) = Utils.initEnclave()
+      val msg1 = enclave.GenerateReport(eid)
+      Iterator((eid, msg1))
+    }.collect.toMap
 
-      val msg2s = msg1s.mapValues(msg1 => sp.ProcessEnclaveReport(msg1)).map(identity)
+    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
 
-      val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
-        val (enclave, eid) = Utils.initEnclave()
-         enclave.FinishAttestation(eid, msg2s(i))
-        Iterator((i, true))
-      }.collect.toMap
+    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
+      val (enclave, eid) = Utils.initEnclave()
+      enclave.FinishAttestation(eid, msg2s(eid))
+      Iterator((eid, true))
+    }.collect.toMap
 
-      for ((_, ret) <- attestationResults) {
-        if (!ret)
-          throw new OpaqueException("Attestation failed")
-      }
+    for ((_, ret) <- attestationResults) {
+      if (!ret)
+        throw new OpaqueException("Attestation failed")
     }
   }
 }
