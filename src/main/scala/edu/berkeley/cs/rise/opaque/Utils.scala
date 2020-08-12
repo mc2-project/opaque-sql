@@ -108,6 +108,7 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -275,10 +276,6 @@ object Utils extends Logging {
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
     cipher.doFinal(cipherText)
   }
-
-  // def verify(data: Array[Byte]): Boolean = {
-// 
-  // }
 
   var eid = 0L
   var attested : Boolean = false
@@ -751,15 +748,12 @@ object Utils extends Logging {
     // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
     val blockLog = encryptedBlocks.log
-    JobVerificationEngine.addLogEntryChain(blockLog)
 
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
       val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
       val ciphertext = new Array[Byte](ciphertextBuf.remaining)
       ciphertextBuf.get(ciphertext)
-
-      // TODO: Do Job Verification
 
       // 2. Decrypt the row data
       val plaintext = decrypt(ciphertext)
@@ -781,6 +775,17 @@ object Utils extends Logging {
           })
       }
     }).flatten
+  }
+
+  def addBlockForVerification(block: Block): Unit = {
+    val buf = ByteBuffer.wrap(block.bytes)
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    val blockLog = encryptedBlocks.log
+    JobVerificationEngine.addLogEntryChain(blockLog)
+  }
+
+  def verifyJob(): Boolean = {
+    return JobVerificationEngine.verify()
   }
 
   def treeFold[BaseType <: TreeNode[BaseType], B](

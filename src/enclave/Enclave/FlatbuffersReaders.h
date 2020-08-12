@@ -8,6 +8,7 @@
 
 using namespace edu::berkeley::cs::rise::opaque;
 
+void init_log(const tuix::EncryptedBlocks *encrypted_blocks);
 /**
  * A reader for Row objects within an EncryptedBlock object that provides both iterator-based and
  * range-style interfaces.
@@ -94,6 +95,7 @@ public:
   EncryptedBlocksToEncryptedBlockReader(BufferRefView<tuix::EncryptedBlocks> buf) {
     buf.verify();
     encrypted_blocks = buf.root();
+    init_log(encrypted_blocks);
   }
   flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {
     return encrypted_blocks->blocks()->begin();
@@ -105,5 +107,6 @@ public:
 private:
   const tuix::EncryptedBlocks *encrypted_blocks;
 };
+
 
 #endif

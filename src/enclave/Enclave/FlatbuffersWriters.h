@@ -48,7 +48,7 @@ public:
 private:
   void maybe_finish_block();
   void finish_block();
-  flatbuffers::Offset<tuix::EncryptedBlocks> finish_blocks();
+  flatbuffers::Offset<tuix::EncryptedBlocks> finish_blocks(std::string curr_ecall);
 
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
@@ -94,7 +94,7 @@ public:
   /**
    * Wrap all rows written since the last call to this method into a single sorted run.
    */
-  void finish_run();
+  void finish_run(std::string ecall);
 
   /** Count how many runs have been written (i.e., how many times `finish_run` has been called). */
   uint32_t num_runs();

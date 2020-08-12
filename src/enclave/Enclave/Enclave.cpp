@@ -67,13 +67,7 @@ void ecall_project(uint8_t *condition, size_t condition_length,
     project(condition, condition_length,
             input_rows, input_rows_length,
             output_rows, output_rows_length);
-
-    // Log operation for integrity
-    // uint8_t input_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) input_rows, input_rows_length * sizeof(uint8_t), input_hash);
-    // uint8_t output_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) *output_rows, *output_rows_length * sizeof(uint8_t), output_hash);
-    // EnclaveContext::getInstance().log_operation(std::string("project"), input_hash, output_hash);
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -93,12 +87,7 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
-     // Log operation for integrity
-     // uint8_t input_hash[OE_SHA256_HASH_SIZE];
-     // g_crypto.sha256((const uint8_t*) input_rows, input_rows_length * sizeof(uint8_t), input_hash);
-     // uint8_t output_hash[OE_SHA256_HASH_SIZE];
-     // g_crypto.sha256((const uint8_t*) *output_rows, *output_rows_length * sizeof(uint8_t), output_hash);
-    // EnclaveContext::getInstance().log_operation(std::string("filter"), input_hash, output_hash);
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -116,7 +105,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
     debug("Ecall: Sample\n");
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
-   // EnclaveContext::getInstance().log_operation(std::string("sample"));
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -139,7 +128,7 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                       num_partitions,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
-  // EnclaveContext::getInstance().log_operation(std::string("findRangeBounds"));
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -164,7 +153,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                        input_rows, input_rows_length,
                        boundary_rows, boundary_rows_length,
                        output_partitions, output_partition_lengths);
-   // EnclaveContext::getInstance().log_operation(std::string("partitionForSort"));
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -184,12 +173,7 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
                   output_rows, output_rows_length);
-    // Log operation for integrity
-    // uint8_t input_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) input_rows, input_rows_length * sizeof(uint8_t), input_hash);
-    // uint8_t output_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) *output_rows, *output_rows_length * sizeof(uint8_t), output_hash);
-    // EnclaveContext::getInstance().log_operation(std::string("externalSort"), input_hash, output_hash);
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -209,7 +193,7 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
                               output_rows, output_rows_length);
-    // EnclaveContext::getInstance().log_operation(std::string("scanCollectLastPrimary"));
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -233,12 +217,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
                                   join_row, join_row_length,
                                   output_rows, output_rows_length);
 
-    // Log operation for integrity
-    // uint8_t input_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) input_rows, input_rows_length * sizeof(uint8_t), input_hash);
-    // uint8_t output_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) *output_rows, *output_rows_length * sizeof(uint8_t), output_hash);
-    // EnclaveContext::getInstance().log_operation(std::string("nonObliviousSortMergeJoin"), input_hash, output_hash);
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -262,7 +241,7 @@ void ecall_non_oblivious_aggregate_step1(
       first_row, first_row_length,
       last_group, last_group_length,
       last_row, last_row_length);
-    // EnclaveContext::getInstance().log_operation(std::string("nonObliviousAggregateStep1"));
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -292,14 +271,7 @@ void ecall_non_oblivious_aggregate_step2(
       prev_partition_last_row, prev_partition_last_row_length,
       output_rows, output_rows_length);
 
-    // Log operation for integrity
-    // uint8_t input_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) input_rows, input_rows_length * sizeof(uint8_t), input_hash);
-    // uint8_t output_hash[OE_SHA256_HASH_SIZE];
-    // g_crypto.sha256((const uint8_t*) *output_rows, *output_rows_length * sizeof(uint8_t), output_hash);
-
-    // EnclaveContext::getInstance().log_operation(std::string("nonObliviousAggregateStep2"), input_hash, output_hash);
-    // EnclaveContext::getInstance().print_executed_operators();
+    EnclaveContext::getInstance().increment_job_id();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -307,7 +279,7 @@ void ecall_non_oblivious_aggregate_step2(
 
 
 void ecall_ra_proc_msg4(
-  uint8_t *msg4, uint32_t msg4_size) {
+  uint8_t *msg4, uint32_t msg4_size, uint32_t partition_index) {
   try {
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
@@ -319,6 +291,7 @@ void ecall_ra_proc_msg4(
     }
 
     set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+    EnclaveContext::getInstance().set_partition_index(partition_index);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

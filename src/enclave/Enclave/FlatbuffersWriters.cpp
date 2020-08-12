@@ -48,10 +48,11 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2, std::string
 }
 
 UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
-  EnclaveContext::getInstance().set_log_entry_ecall(ecall);
+  // std::cout << "set ecall: " << ecall.c_str() << std::endl;
+  // EnclaveContext::getInstance().set_log_entry_ecall(ecall);
 
-  if (!finished) {
-    finish_blocks();
+  if (!finished) { // This line causes ExternalSort not to call finish_blocks() in first output_buffer()
+    finish_blocks(ecall);
   }
 
   // Allocate enc block builder's buffer size outside enclave
@@ -128,14 +129,16 @@ void RowWriter::finish_block() {
   rows_vector.clear();
 }
 
-flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
+flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string curr_ecall) {
   if (rows_vector.size() > 0) {
     finish_block();
   }
 
-  std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
+  // std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
+
+  std::cout << "Finish blocks curr ecall: " << curr_ecall.c_str() << std::endl;
 
   if (curr_ecall != std::string("NULL")) {
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
@@ -147,6 +150,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks() {
     int eid = EnclaveContext::getInstance().get_eid();
     uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
+    // std::cout << "Current ecall finish blocks : " << untrusted_curr_ecall_str << std::endl;
 
     // Copy mac list to untrusted memory
     uint8_t* untrusted_mac_lst = nullptr;
@@ -214,8 +218,10 @@ void SortedRunsWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
   container.append(row1, row2);
 }
 
-void SortedRunsWriter::finish_run() {
-  runs.push_back(container.finish_blocks());
+void SortedRunsWriter::finish_run(std::string ecall) {
+  std::cout << "Finish run called\n";
+  // EnclaveContext::getInstance().set_log_entry_ecall(ecall);
+  runs.push_back(container.finish_blocks(ecall));
 }
 
 uint32_t SortedRunsWriter::num_runs() {

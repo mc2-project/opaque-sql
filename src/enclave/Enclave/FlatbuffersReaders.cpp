@@ -44,14 +44,29 @@ void RowReader::reset(BufferRefView<tuix::EncryptedBlocks> buf) {
 
 void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
   this->encrypted_blocks = encrypted_blocks;
-  // We should check the MACs here
-  
+  init_log(encrypted_blocks);
+
+  block_idx = 0;
+  init_block_reader();
+}
+
+void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
+  // Add past entries to log first
+  auto past_entries_vec = encrypted_blocks->log()->past_entries();
+  for (uint32_t i = 0; i < encrypted_blocks->log()->past_entries()->size(); i++) {
+    auto entry = past_entries_vec->Get(i);
+    std::string op = entry->op()->str();
+    int eid = entry->eid();
+    int job_id = entry->job_id();
+    EnclaveContext::getInstance().append_past_log_entry(op, eid, job_id);
+  }
+
   // Master list of mac lists of all input partitions
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
   // std::vector<std::vector<uint8_t>> partition_global_macs;
 
   // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
-  auto curr_entries_vec = this->encrypted_blocks->log()->curr_entries();
+  auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
@@ -89,12 +104,14 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
     // partition_global_macs.push_back(global_mac_vector);
     
     // Add this input log entry to history of log entries
+    std::cout << "Appending curr log entry " << input_log_entry->op()->str() << std::endl;
     EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->eid(), input_log_entry->job_id());
   }
-  // std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
-  if (curr_entries_vec->size()) {
+
+  std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
+  if (curr_entries_vec->size() > 0) {
     // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
-    for (auto it = this->encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {
+    for (auto it = encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {
       size_t ptxt_size = dec_size(it->enc_rows()->size());
       uint8_t* mac_ptr = (uint8_t*) (it->enc_rows()->data() + SGX_AESGCM_IV_SIZE + ptxt_size);
       std::vector<uint8_t> cipher_mac (mac_ptr, mac_ptr + SGX_AESGCM_MAC_SIZE); 
@@ -129,17 +146,7 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
     }
   }
 
-  auto past_entries_vec = this->encrypted_blocks->log()->past_entries();
-  for (uint32_t i = 0; i < this->encrypted_blocks->log()->past_entries()->size(); i++) {
-    auto entry = past_entries_vec->Get(i);
-    std::string op = entry->op()->str();
-    int eid = entry->eid();
-    int job_id = entry->job_id();
-    EnclaveContext::getInstance().append_past_log_entry(op, eid, job_id);
-  }
 
-  block_idx = 0;
-  init_block_reader();
 }
 
 uint32_t RowReader::num_rows() {

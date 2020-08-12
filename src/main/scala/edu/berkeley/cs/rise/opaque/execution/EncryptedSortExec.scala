@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque.execution
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
@@ -30,6 +31,7 @@ case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: Encrypted Sort Exec")
+    JobVerificationEngine.addExpectedOperator("EncryptedSortExec")
     val orderSer = Utils.serializeSortOrder(order, child.output)
     EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
   }

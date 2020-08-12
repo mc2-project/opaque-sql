@@ -25,11 +25,13 @@ class EnclaveContext {
     int job_id;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
+    int eid;
 
-    int eid = 3;
 
     EnclaveContext() {
-      operators_ctr = 0;
+      // operators_ctr = 0;
+      job_id = 0;
+      eid = -1;
     }
 
   public:
@@ -53,9 +55,9 @@ class EnclaveContext {
     }
 
     void reset_log_entry() {
-      // this_ecall = std::string("");
-      int job_id = -1;
-      job_id++; // dummy operation for now
+      this_ecall = std::string("");
+      // int job_id = -1;
+      // job_id++; // dummy operation for now
       log_entry_mac_lst.clear();
       // global_mac = {0 * OE_HMAC_SIZE};
       ecall_log_entries.clear();
@@ -75,6 +77,14 @@ class EnclaveContext {
 
     int get_eid() {
       return eid;
+    }
+
+    void set_partition_index(int idx) {
+      eid = idx;
+    }
+
+    void increment_job_id() {
+      job_id++;
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
