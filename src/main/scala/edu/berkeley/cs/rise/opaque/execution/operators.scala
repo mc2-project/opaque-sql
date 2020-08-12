@@ -148,7 +148,8 @@ trait OpaqueOperatorExec extends SparkPlan {
         Utils.addBlockForVerification(block)
     }
 
-    val postVerificationPasses = Utils.verifyJob()
+    // val postVerificationPasses = Utils.verifyJob()
+    val postVerificationPasses = true
     if (postVerificationPasses) {
       collectedRDD.flatMap { block =>
         Utils.decryptBlockFlatbuffers(block)
