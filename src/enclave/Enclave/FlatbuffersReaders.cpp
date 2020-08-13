@@ -104,11 +104,11 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     // partition_global_macs.push_back(global_mac_vector);
     
     // Add this input log entry to history of log entries
-    std::cout << "Appending curr log entry " << input_log_entry->op()->str() << std::endl;
+    // std::cout << "Appending curr log entry " << input_log_entry->op()->str() << std::endl;
     EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->eid(), input_log_entry->job_id());
   }
 
-  std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
+  // std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
   if (curr_entries_vec->size() > 0) {
     // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
     for (auto it = encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {

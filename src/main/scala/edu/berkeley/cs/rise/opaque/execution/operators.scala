@@ -93,7 +93,7 @@ case class EncryptExec(child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: EncryptExec")
-    JobVerificationEngine.addExpectedOperator("EncryptExec")
+    // JobVerificationEngine.addExpectedOperator("EncryptExec")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
         rowIter.toSeq, output.map(_.dataType), useEnclave = true))
@@ -148,8 +148,8 @@ trait OpaqueOperatorExec extends SparkPlan {
         Utils.addBlockForVerification(block)
     }
 
-    // val postVerificationPasses = Utils.verifyJob()
-    val postVerificationPasses = true
+    val postVerificationPasses = Utils.verifyJob()
+    // val postVerificationPasses = true
     if (postVerificationPasses) {
       collectedRDD.flatMap { block =>
         Utils.decryptBlockFlatbuffers(block)

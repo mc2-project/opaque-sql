@@ -36,25 +36,46 @@ object JobVerificationEngine {
     sparkOperators += operator
   }
 
-  def resetExpectedOperators(): Unit = {
+  def resetForNextJob(): Unit = {
     sparkOperators.clear
+    logEntryChains.clear
   }
 
   def verify(): Boolean = {
     // Check that all LogEntryChains have been added to logEntries
     // Piece together the sequence of operations / data movement
     println("Expected sequence of operators: " + sparkOperators)
+    println("Log Entry Chains Length: " + logEntryChains.length)
+    if (sparkOperators.isEmpty) {
+      resetForNextJob()
+      return true
+    }
+
+    // FIXME: properly set num ecalls in job
     var numEcallsInLastPartition = -1
+    var startingEcallIndex = -1
     for (logEntryChain <- logEntryChains) {
       // Check job ID
-      val finalLogEntry = logEntryChain.currEntries(0)
-      val numEcallsInJob = finalLogEntry.jobId + 1
+      val finalLogEntry = logEntryChain.currEntries(logEntryChain.currEntriesLength - 1)
+      var firstLogEntry = None
+      for (i <- 0 until logEntryChain.pastEntriesLength) {
+        val pastEntry = logEntryChain.pastEntries(i)
+        if (pastEntry != Array.empty) {
+          startingEcallindex = pastEntry.jobId
+        }
+      }
+      if (firstLogEntry == None) {
+        startingEcallIndex = logEntryChain.currEntries(0).jobId
+      }
+      val numEcallsInJob = finalLogEntry.jobId + 1 - firstLogEntry.jobId
       if (numEcallsInLastPartition == -1) {
         numEcallsInLastPartition = numEcallsInJob
+        startingEcallIndex = firstLogEntry.jobId
       }
       if (numEcallsInJob != numEcallsInLastPartition) {
         throw new Exception("All partitions did not perform same number of ecalls")
       }
+      // }
     }
 
   
@@ -76,12 +97,15 @@ object JobVerificationEngine {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
         val eid = logEntry.eid
-        val jobId = logEntry.jobId
+        val ecallIndex = logEntry.jobId - startingEcallIndex
+        println("Log Entry Job ID: " + logEntry.jobId)
+        println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
 
-        val row = prev_partition * numEcalls + jobId 
-        val col = this_partition * numEcalls + jobId + 1
+        val row = prev_partition * numEcalls + ecallIndex 
+        val col = this_partition * numEcalls + ecallIndex + 1
+        println("Row: " + row + "Col: " + col)
 
         executedAdjacencyMatrix(row)(col) = 1
         if (op != prevOp) {
@@ -95,20 +119,23 @@ object JobVerificationEngine {
         val logEntry = logEntryChain.currEntries(i)
         val op = logEntry.op
         val eid = logEntry.eid
-        val jobId = logEntry.jobId
+        val ecallIndex = logEntry.jobId - startingEcallIndex
 
         val prev_partition = eid
 
         println("Prev partition: " + prev_partition)
-        println("Job ID: " + jobId)
+        println("Ecall index: " + ecallIndex)
 
-        val row = prev_partition * numEcalls + jobId 
-        val col = this_partition * numEcalls + jobId + 1
+        val row = prev_partition * numEcalls + ecallIndex 
+        val col = this_partition * numEcalls + ecallIndex + 1
 
         // println("Row: " + row + " Col: " + col)
         executedAdjacencyMatrix(row)(col) = 1
         println("Curr Entry Operation: " + op)
         if (op != prevOp) {
+          if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
+            ecallSeq.append("nonObliviousAggregateStep1")
+          }
           ecallSeq.append(op)
         }
         prevOp = op
@@ -122,33 +149,39 @@ object JobVerificationEngine {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
         expectedEcallSeq.append("externalSort")
       } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
-        expectedEcallSeq.append("sample", "findRangeBounds", "partitionForSort", "externalSort")
+        expectedEcallSeq.append("externalSort", "partitionForSort", "findRangeBounds", "sample")
       } else if (operator == "EncryptedProjectExec") {
         expectedEcallSeq.append("project")
       } else if (operator == "EncryptedFilterExec") {
         expectedEcallSeq.append("filter")
+      // } else if (operator == "EncryptedAggregateExec" && numPartitions == 1) {
+        // // For one partition, all results from nonObliviousAggregateStep1 get thrown out
+        // expectedEcallSeq.append("nonObliviousAggregateStep2")
       } else if (operator == "EncryptedAggregateExec") {
-        expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
+        expectedEcallSeq.append("nonObliviousAggregateStep2", "nonObliviousAggregateStep1")
       } else if (operator == "EncryptedSortMergeJoinExec") {
-        expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
+        expectedEcallSeq.append("nonObliviousSortMergeJoin", "scanCollectLastPrimary")
       } else if (operator == "EncryptExec") {
         expectedEcallSeq.append("encrypt")
       } else {
         throw new Exception("Executed unknown operator") 
       }
     }
+    expectedEcallSeq = expectedEcallSeq.reverse
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       println("Ecall seq") 
       ecallSeq foreach { row => row foreach print; println }
       println("Expected Ecall Seq")
       expectedEcallSeq foreach { row => row foreach print; println }
+      resetForNextJob()
       return false
     }
 
     for (i <- 0 until expectedEcallSeq.length) {
       // i represents the current ecall index
       val operator = expectedEcallSeq(i)
+      println(operator)
       if (operator == "project") {
         for (j <- 0 until numPartitions) {
           expectedAdjacencyMatrix(j * numEcalls + i)(j * numEcalls + i + 1) = 1
@@ -180,21 +213,27 @@ object JobVerificationEngine {
           }
         }
       } else if (operator == "nonObliviousAggregateStep1") {
-        // Blocks sent to prev and next partition
-        for (j <- 0 until numPartitions) {
-          var prev = j - 1
-          var next = j + 1
-          if (j == 0) {
-            prev = 0
-          } 
-          if (j == numPartitions - 1) {
-            next = numPartitions - 1
+        if (numPartitions > 1) {
+          // Blocks sent to prev and next partition
+          for (j <- 0 until numPartitions) {
+            var prev = j - 1
+            var next = j + 1
+            if (j == 0) {
+              prev = 0
+            } 
+            if (j == numPartitions - 1) {
+              next = numPartitions - 1
+            }
+            expectedAdjacencyMatrix(j * numEcalls + i)(prev * numEcalls + i + 1) = 1
+            expectedAdjacencyMatrix(j* numEcalls + i)(next * numEcalls + i + 1) = 1
           }
-          expectedAdjacencyMatrix(j * numEcalls + i)(prev * numEcalls + i + 1) = 1
-          expectedAdjacencyMatrix(j* numEcalls + i)(next * numEcalls + i + 1) = 1
         }
       } else if (operator == "nonObliviousAggregateStep2") {
         for (j <- 0 until numPartitions) {
+          println(i)
+          println("Setting expected Adjacency matrix at")
+          println(j * numEcalls + i)
+          println(0 * numEcalls + i + 1)
           expectedAdjacencyMatrix(j * numEcalls + i)(0 * numEcalls + i + 1) = 1
         }
       } else if (operator == "scanCollectLastPrimary") {
@@ -229,7 +268,7 @@ object JobVerificationEngine {
     //   println("False")
     //   return false
     // }
-    resetExpectedOperators()
+    resetForNextJob()
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
         return false

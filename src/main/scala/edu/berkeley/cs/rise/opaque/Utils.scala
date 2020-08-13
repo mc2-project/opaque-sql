@@ -683,6 +683,7 @@ object Utils extends Logging {
       val ciphertext =
         if (useEnclave) {
           val (enclave, eid) = initEnclave()
+          // println("Encrypting using enclave!")
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)
@@ -742,6 +743,7 @@ object Utils extends Logging {
    * the workers.
    */
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
+    println("Called decryptBlockFlatbuffers")
     // 4. Extract the serialized tuix.EncryptedBlocks from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
 
@@ -749,6 +751,7 @@ object Utils extends Logging {
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
     val blockLog = encryptedBlocks.log
 
+    println("Blocks length: " + encryptedBlocks.blocksLength)
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
       val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer

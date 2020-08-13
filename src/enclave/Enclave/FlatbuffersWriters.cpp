@@ -94,6 +94,7 @@ void RowWriter::maybe_finish_block() {
 }
 
 void RowWriter::finish_block() {
+  std::cout << "Finishing block!!!!!!!!\n";
   // Serialize the rows
   builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
   size_t enc_rows_len = enc_size(builder.GetSize());
@@ -138,7 +139,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
 
-  std::cout << "Finish blocks curr ecall: " << curr_ecall.c_str() << std::endl;
+  // std::cout << "Finish blocks curr ecall: " << curr_ecall.c_str() << std::endl;
 
   if (curr_ecall != std::string("NULL")) {
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
@@ -219,7 +220,7 @@ void SortedRunsWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 }
 
 void SortedRunsWriter::finish_run(std::string ecall) {
-  std::cout << "Finish run called\n";
+  // std::cout << "Finish run called\n";
   // EnclaveContext::getInstance().set_log_entry_ecall(ecall);
   runs.push_back(container.finish_blocks(ecall));
 }
