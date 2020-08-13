@@ -51,36 +51,71 @@ object JobVerificationEngine {
       return true
     }
 
+    val numPartitions = logEntryChains.length
+
     // FIXME: properly set num ecalls in job
+    // Count number of ecalls in "past entries" per partition and ensure they're the same
     var numEcallsInLastPartition = -1
-    var startingEcallIndex = -1
+    var startingJobId = -1
+    var lastOpInPastEntry = ""
+    // var startingEcallIndex = -1
     for (logEntryChain <- logEntryChains) {
+      // Iterating through each partition's results
       // Check job ID
-      val finalLogEntry = logEntryChain.currEntries(logEntryChain.currEntriesLength - 1)
-      var firstLogEntry = None
+      // val finalLogEntry = logEntryChain.currEntries(logEntryChain.currEntriesLength - 1)
+      // var firstLogEntry = None
+
+      var numEcallsLoggedInThisPartition = 0
+      var prevOp = ""
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
-          startingEcallindex = pastEntry.jobId
+          if (startingJobId == -1) {
+            startingJobId = pastEntry.jobId
+          }
+          
+          // Count the number of ecalls
+          if (pastEntry.op != prevOp) {
+            numEcallsLoggedInThisPartition += 1
+            prevOp = pastEntry.op
+            if (pastEntry.op == "nonObliviousAggregateStep2" && numPartitions == 1) {
+              // Add an additional ecall for nonObliviousAggregateStep1, as it's not logged when there's only one partition
+              println("Added additional ecall for step1")
+              numEcallsLoggedInThisPartition += 1
+            }
+          }
         }
       }
-      if (firstLogEntry == None) {
-        startingEcallIndex = logEntryChain.currEntries(0).jobId
-      }
-      val numEcallsInJob = finalLogEntry.jobId + 1 - firstLogEntry.jobId
+      lastOpInPastEntry = prevOp
+      // if (firstLogEntry == None) {
+        // startingEcallIndex = logEntryChain.currEntries(0).jobId
+      // }
+      // val numEcallsInJob = finalLogEntry.jobId + 1 - firstLogEntry.jobId
       if (numEcallsInLastPartition == -1) {
-        numEcallsInLastPartition = numEcallsInJob
-        startingEcallIndex = firstLogEntry.jobId
+        // numEcallsInLastPartition = numEcallsInJob
+        numEcallsInLastPartition = numEcallsLoggedInThisPartition
+        // startingEcallIndex = firstLogEntry.jobId
       }
-      if (numEcallsInJob != numEcallsInLastPartition) {
+      if (numEcallsLoggedInThisPartition != numEcallsInLastPartition) {
         throw new Exception("All partitions did not perform same number of ecalls")
       }
       // }
     }
 
+    if (startingJobId == -1) {
+      // No past entries
+      startingJobId = logEntryChains(0).currEntries(0).jobId
+    }
+
   
-    var numEcalls = numEcallsInLastPartition
-    val numPartitions = logEntryChains.length
+    var numEcalls = numEcallsInLastPartition 
+    if (logEntryChains(0).currEntries(0).op == "nonObliviousAggregateStep2" && numPartitions == 1) {
+      // Aggregate Step 1 really messing with us
+      numEcalls += 1
+    }
+    if (logEntryChains(0).currEntries(0).op != lastOpInPastEntry) {
+      numEcalls += 1
+    }
     println("Num Partitions: " + numPartitions)
     println("Num Ecalls: " + numEcalls)
 
@@ -92,20 +127,21 @@ object JobVerificationEngine {
 
     for (logEntryChain <- logEntryChains) {
       var prevOp = ""
-      println("past entries length: " + logEntryChain.pastEntriesLength)
+      // println("past entries length: " + logEntryChain.pastEntriesLength)
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
+        // println("Ecall: " + op)
         val eid = logEntry.eid
-        val ecallIndex = logEntry.jobId - startingEcallIndex
-        println("Log Entry Job ID: " + logEntry.jobId)
-        println("Ecall index: " + ecallIndex)
+        val ecallIndex = logEntry.jobId - startingJobId
+        // println("Log Entry Job ID: " + logEntry.jobId)
+        // println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
 
         val row = prev_partition * numEcalls + ecallIndex 
         val col = this_partition * numEcalls + ecallIndex + 1
-        println("Row: " + row + "Col: " + col)
+        // println("Row: " + row + "Col: " + col)
 
         executedAdjacencyMatrix(row)(col) = 1
         if (op != prevOp) {
@@ -114,22 +150,26 @@ object JobVerificationEngine {
         prevOp = op
       }
 
-      println("Curr entries length: " + logEntryChain.currEntriesLength)
+      // println("Curr entries length: " + logEntryChain.currEntriesLength)
       for (i <- 0 until logEntryChain.currEntriesLength) {
         val logEntry = logEntryChain.currEntries(i)
         val op = logEntry.op
+        // println("Ecall: " + op)
         val eid = logEntry.eid
-        val ecallIndex = logEntry.jobId - startingEcallIndex
+        val ecallIndex = logEntry.jobId - startingJobId
+
+        // println("Log Entry Job ID: " + logEntry.jobId)
+        // println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
 
-        println("Prev partition: " + prev_partition)
-        println("Ecall index: " + ecallIndex)
+        // println("Prev partition: " + prev_partition)
+        // println("Ecall index: " + ecallIndex)
 
         val row = prev_partition * numEcalls + ecallIndex 
         val col = this_partition * numEcalls + ecallIndex + 1
 
-        // println("Row: " + row + " Col: " + col)
+        println("Row: " + row + " Col: " + col)
         executedAdjacencyMatrix(row)(col) = 1
         println("Curr Entry Operation: " + op)
         if (op != prevOp) {

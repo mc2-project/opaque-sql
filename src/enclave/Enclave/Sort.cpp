@@ -53,7 +53,7 @@ void external_merge(
       queue.push(item);
     }
   }
-  w.finish_run(std::string(""));
+  w.finish_run(std::string("externalSort"));
 }
 
 void sort_single_encrypted_block(
@@ -94,13 +94,14 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
     // std::cout << "instantiated reader\n";
     for (auto it = r.begin(); it != r.end(); ++it, ++i) {
       debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
+      // std::cout << "Sorting single encrypted block\n";
       sort_single_encrypted_block(w, *it, sort_eval);
     }
 
     if (w.num_runs() <= 1) {
       // Only 0 or 1 runs, so we are done - no need to merge runs
       // We should add the macs and do the global mac here
-      std::cout << "external sort output buffer\n";
+      // std::cout << "external sort output buffer\n";
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, std::string("externalSort"));
       return;
     }
