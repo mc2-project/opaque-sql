@@ -88,7 +88,7 @@ enclave {
      * Allocate memory outside of the enclave and return the pointer in `ret`.
      *
      * Before dereferencing the resulting pointer, the caller must check whether it is actually
-     * outside the enclave using `sgx_is_outside_enclave()`. Otherwise, an attacker could cause the
+     * outside the enclave using `oe_is_outside_enclave()`. Otherwise, an attacker could cause the
      * enclave to perform unexpected operations on its own memory. The function `ocall_malloc()`
      * wraps this function with such a bounds check and most callers should use that function
      * instead.
