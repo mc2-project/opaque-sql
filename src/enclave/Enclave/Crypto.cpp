@@ -1,9 +1,8 @@
-#include "Crypto.h"
-#include "Random.h"
-
 #include <stdexcept>
 
 #include "common.h"
+#include "Crypto.h"
+#include "Random.h"
 #include "util.h"
 
 
