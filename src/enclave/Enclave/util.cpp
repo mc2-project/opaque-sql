@@ -36,10 +36,6 @@ std::string string_format(const std::string &fmt, ...) {
     }
 }
 
-void exit1(int exit_code) {
-  ocall_exit(exit_code);
-}
-
 void ocall_malloc(size_t size, uint8_t **ret) {
   // unsafe_ocall_malloc(size, ret);
   // Guard against overwriting enclave memory
