@@ -60,6 +60,10 @@ class EnclaveContext {
       // job_id++; // dummy operation for now
       log_entry_mac_lst.clear();
       // global_mac = {0 * OE_HMAC_SIZE};
+      // ecall_log_entries.clear();
+    }
+
+    void reset_past_log_entries() {
       ecall_log_entries.clear();
     }
 
@@ -83,8 +87,9 @@ class EnclaveContext {
       eid = idx;
     }
 
-    void increment_job_id() {
+    void finish_ecall() {
       job_id++;
+      ecall_log_entries.clear();
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {

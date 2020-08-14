@@ -62,6 +62,8 @@ object LeastSquares {
           sum("b1").as("b1sum"),
           sum("b2").as("b2sum"))
 
+      println(df.explain)
+
       Utils.force(df)
 
       df

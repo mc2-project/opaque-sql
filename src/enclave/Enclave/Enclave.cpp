@@ -40,6 +40,7 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   // sgx_lfence();
 
   try {
+    // debug("Ecall: Encrypt\n");
     // IV (12 bytes) + ciphertext + mac (16 bytes)
     assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
     (void)cipher_length;
@@ -48,7 +49,7 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
     // RowWriter w;
 
     encrypt(plaintext, plaintext_length, ciphertext);
-    // EnclaveContext::getInstance().increment_job_id();
+    // EnclaveContext::getInstance().finish_ecall();
 
     // FIXME: Do we even care about this operation? This is an encrypt exec call that likely doesn't fit into executed plan
   } catch (const std::runtime_error &e) {
@@ -70,7 +71,7 @@ void ecall_project(uint8_t *condition, size_t condition_length,
     project(condition, condition_length,
             input_rows, input_rows_length,
             output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -90,7 +91,7 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -108,7 +109,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
     debug("Ecall: Sample\n");
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -131,7 +132,7 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                       num_partitions,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -156,7 +157,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                        input_rows, input_rows_length,
                        boundary_rows, boundary_rows_length,
                        output_partitions, output_partition_lengths);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -176,7 +177,7 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
                   output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -196,7 +197,7 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
                               output_rows, output_rows_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -220,7 +221,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
                                   join_row, join_row_length,
                                   output_rows, output_rows_length);
 
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -244,7 +245,7 @@ void ecall_non_oblivious_aggregate_step1(
       first_row, first_row_length,
       last_group, last_group_length,
       last_row, last_row_length);
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -274,7 +275,7 @@ void ecall_non_oblivious_aggregate_step2(
       prev_partition_last_row, prev_partition_last_row_length,
       output_rows, output_rows_length);
 
-    EnclaveContext::getInstance().increment_job_id();
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

@@ -77,6 +77,7 @@ case class EncryptedLocalTableScanExec(
       }.toSeq
 
     // Encrypt each local partition
+    println("Encrypting partitions--------------")
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
         Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
@@ -144,11 +145,14 @@ trait OpaqueOperatorExec extends SparkPlan {
     println("Scala Operator: Collect")
 
     val collectedRDD = executeBlocked().collect()
+    println("Collected RDD")
     collectedRDD.map { block =>
         Utils.addBlockForVerification(block)
     }
+    println("Added blocks for verification")
 
     val postVerificationPasses = Utils.verifyJob()
+    JobVerificationEngine.resetForNextJob()
     // val postVerificationPasses = true
     if (postVerificationPasses) {
       collectedRDD.flatMap { block =>
@@ -219,6 +223,7 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => childRDD.map { block =>
+        Utils.examineBlock(block)
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Project(eid, projectListSer, block.bytes))
       }
@@ -273,9 +278,16 @@ case class EncryptedAggregateExec(
       }.collect.unzip3
 
       // Send first row to previous partition and last group to next partition
-      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
-      val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
-      val shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
+      // FIXME: only create this empty block with log for one partition case?
+      val firstRowDrop = firstRows(0)
+      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock(firstRowDrop)
+
+      val lastGroupDrop = lastGroups.last
+      val shiftedLastGroups = Utils.emptyBlock(lastGroupDrop) +: lastGroups.dropRight(1)
+
+      val lastRowDrop = lastRows.last
+      val shiftedLastRows = Utils.emptyBlock(lastRowDrop) +: lastRows.dropRight(1)
+
       val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
       val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)

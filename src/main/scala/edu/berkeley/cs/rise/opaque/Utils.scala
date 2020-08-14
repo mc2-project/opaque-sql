@@ -735,6 +735,23 @@ object Utils extends Logging {
     Block(encryptedBlockBytes)
   }
 
+
+  def examineBlock(block: Block): Unit = {
+    val buf = ByteBuffer.wrap(block.bytes)
+
+    // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    val blockLog = encryptedBlocks.log
+    // println("Blocks length: " + encryptedBlocks.blocksLength)
+
+    // println("Blocks log's length: " + blockLog.pastEntriesLength)
+    for (i <- 0 until blockLog.pastEntriesLength) {
+      val pastEntry = blockLog.pastEntries(i)
+      // println("JOB ID FOR THIS PAST LOG ENTRY:" + pastEntry.jobId)
+    }
+
+
+  }
   /**
    * Decrypts the given [[Block]] (a serialized tuix.EncryptedBlocks) and returns the rows within as
    * Spark SQL [[InternalRow]]s.
@@ -1395,6 +1412,7 @@ object Utils extends Logging {
     Block(builder.sizedByteArray())
   }
 
+  // FIXME: create empty block inside enclave?
   def emptyBlock: Block = {
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1404,7 +1422,48 @@ object Utils extends Logging {
         tuix.LogEntryChain.createLogEntryChain(builder,
           tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
           tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty))))
-        // tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
+    Block(builder.sizedByteArray())
+  }
+
+  def emptyBlock(block: Block): Block = {
+    val builder = new FlatBufferBuilder
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    val pastLogEntries = for {
+      i <- 0 until encryptedBlocks.log.pastEntriesLength
+    } yield encryptedBlocks.log.pastEntries(i)
+
+    val currLogEntry = encryptedBlocks.log.currEntries(0)
+
+    val logEntries = pastLogEntries :+ currLogEntry
+    println("=========Empty Block Log Entries Length" + logEntries.length)
+
+    builder.finish(
+      tuix.EncryptedBlocks.createEncryptedBlocks(
+        builder, 
+        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+        tuix.LogEntryChain.createLogEntryChain(builder,
+          tuix.LogEntryChain.createCurrEntriesVector(builder, 
+            Array.empty),
+            // Array(tuix.LogEntry.createLogEntry(
+              // builder,
+              // builder.createString(currLogEntry.op),
+              // currLogEntry.eid,
+              // currLogEntry.jobId,
+              // 0,
+              // tuix.LogEntry.createMacLstVector(builder, Array.empty),
+              // tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
+              // ))),
+        tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
+          tuix.LogEntry.createLogEntry(
+            builder,
+            builder.createString(logEntry.op),
+            logEntry.eid,
+            logEntry.jobId,
+            0,
+            tuix.LogEntry.createMacLstVector(builder, Array.empty),
+            tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
+        )}.toArray)
+      )))
     Block(builder.sizedByteArray())
   }
 }

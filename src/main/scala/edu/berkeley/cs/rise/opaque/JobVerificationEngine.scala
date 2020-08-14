@@ -145,23 +145,23 @@ object JobVerificationEngine {
     for (logEntryChain <- logEntryChains) {
       var prevOp = ""
       var prevJobId = -1
-      // println("past entries length: " + logEntryChain.pastEntriesLength)
+      println("past entries length: " + logEntryChain.pastEntriesLength)
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
-        // println("Ecall: " + op)
+        println("Logged Ecall: " + op)
         val eid = logEntry.eid
         val jobId = logEntry.jobId
-        // println("Log Entry Job ID: " + logEntry.jobId)
+        println("Log Entry Job ID: " + logEntry.jobId)
         // println("starting job id: " + startingJobId)
         val ecallIndex = logEntry.jobId - startingJobId
 
         ecallSeq(ecallIndex) = op
-        if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
-          ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
-        } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
-          ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
-        }
+        // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
+        //   ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
+        // } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
+        //   ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
+        // }
         // println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
@@ -187,11 +187,11 @@ object JobVerificationEngine {
         val ecallIndex = logEntry.jobId - startingJobId
         ecallSeq(ecallIndex) = op
         // println("Ecall Index: " + ecallIndex)
-        if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
-          ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
-        } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
-          ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
-        }
+        // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
+        //   ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
+        // } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
+        //   ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
+        // }
 
         // println("Log Entry Job ID: " + logEntry.jobId)
         // println("Ecall index: " + ecallIndex)
@@ -246,7 +246,7 @@ object JobVerificationEngine {
       ecallSeq foreach { row => row foreach print; println }
       println("Expected Ecall Seq")
       expectedEcallSeq foreach { row => row foreach print; println }
-      resetForNextJob()
+      // resetForNextJob()
       return false
     }
 
@@ -285,21 +285,21 @@ object JobVerificationEngine {
           }
         }
       } else if (operator == "nonObliviousAggregateStep1") {
-        if (numPartitions > 1) {
-          // Blocks sent to prev and next partition
-          for (j <- 0 until numPartitions) {
-            var prev = j - 1
-            var next = j + 1
-            if (j == 0) {
-              prev = 0
-            } 
-            if (j == numPartitions - 1) {
-              next = numPartitions - 1
-            }
-            expectedAdjacencyMatrix(j * numEcalls + i)(prev * numEcalls + i + 1) = 1
-            expectedAdjacencyMatrix(j* numEcalls + i)(next * numEcalls + i + 1) = 1
+        // if (numPartitions > 1) {
+        // Blocks sent to prev and next partition
+        for (j <- 0 until numPartitions) {
+          var prev = j - 1
+          var next = j + 1
+          if (j == 0) {
+            prev = 0
+          } 
+          if (j == numPartitions - 1) {
+            next = numPartitions - 1
           }
+          expectedAdjacencyMatrix(j * numEcalls + i)(prev * numEcalls + i + 1) = 1
+          expectedAdjacencyMatrix(j* numEcalls + i)(next * numEcalls + i + 1) = 1
         }
+        // }
       } else if (operator == "nonObliviousAggregateStep2") {
         for (j <- 0 until numPartitions) {
           println(i)
@@ -346,7 +346,7 @@ object JobVerificationEngine {
     //   println("False")
     //   return false
     // }
-    resetForNextJob()
+    // resetForNextJob()
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
         return false
