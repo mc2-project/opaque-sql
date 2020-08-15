@@ -4,8 +4,6 @@
 #include <cstdio>
 
 #include "Enclave_t.h"
-//#include "sgx_lfence.h"
-//#include <openenclave/enclave.h>
 
 int printf(const char *fmt, ...) {
   char buf[BUFSIZ] = {'\0'};
