@@ -593,22 +593,22 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   df.select(array($"x1", $"x2").as("x")).collect
   // }
 
-  testAgainstSpark("least squares") { securityLevel =>
-    LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
-  }
-
-  testAgainstSpark("logistic regression") { securityLevel =>
-    LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
-  }
-  
-  testAgainstSpark("k-means") { securityLevel =>
-    import scala.math.Ordering.Implicits.seqDerivedOrdering
-    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
-  }
-  
-  testAgainstSpark("pagerank") { securityLevel =>
-    PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
-  }
+  // testAgainstSpark("least squares") { securityLevel =>
+    // LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
+  // }
+// 
+  // testAgainstSpark("logistic regression") { securityLevel =>
+    // LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
+  // }
+  // 
+  // testAgainstSpark("k-means") { securityLevel =>
+    // import scala.math.Ordering.Implicits.seqDerivedOrdering
+    // KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  // }
+  // 
+  // testAgainstSpark("pagerank") { securityLevel =>
+    // PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
+  // }
   
   testAgainstSpark("TPC-H 9") { securityLevel =>
     TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
@@ -617,16 +617,16 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   testAgainstSpark("big data 1") { securityLevel =>
     BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
   }
-  
-  testAgainstSpark("big data 2") { securityLevel =>
-    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
-      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-      .sortBy(_._1)
-  }
-  
-  testAgainstSpark("big data 3") { securityLevel =>
-    BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
-  }
+  // 
+  // testAgainstSpark("big data 2") { securityLevel =>
+  //   BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+  //     .sortBy(_._1)
+  // }
+  // 
+  // testAgainstSpark("big data 3") { securityLevel =>
+  //   BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
+  // }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
     data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =

@@ -65,7 +65,7 @@ object BigDataBenchmark {
       "system" -> securityLevel.name,
       "size" -> size) {
       val df = rankingsDF.filter($"pageRank" > 1000)
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
@@ -83,7 +83,7 @@ object BigDataBenchmark {
       val df = uservisitsDF
         .select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
@@ -111,7 +111,7 @@ object BigDataBenchmark {
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .orderBy($"totalRevenue".asc)
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
