@@ -28,6 +28,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.TaskContext
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -248,6 +249,7 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
         JobVerificationEngine.addExpectedOperator("EncryptedFilterExec")
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
+        println(TaskContext.getPartitionId)
         Block(enclave.Filter(eid, conditionSer, block.bytes))
       }
     }

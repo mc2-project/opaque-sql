@@ -60,13 +60,8 @@ object JobVerificationEngine {
     var startingJobIdMap = Map[Int, Int]()
     var partitionId = 0
 
-    // var startingEcallIndex = -1
     for (logEntryChain <- logEntryChains) {
       var startingJobId = -1
-      // Iterating through each partition's results
-      // Check job ID
-      // val finalLogEntry = logEntryChain.currEntries(logEntryChain.currEntriesLength - 1)
-      // var firstLogEntry = None
       var minJobId = 9999999
       var maxJobId = -9999999
 
@@ -110,13 +105,6 @@ object JobVerificationEngine {
     }
 
     var numEcalls = numEcallsInLastPartition 
-    // if ((logEntryChains(0).currEntries(0).op == "nonObliviousAggregateStep2" || logEntryChains(0).currEntries(0).op == "nonObliviousSortMergeJoin") && numPartitions == 1) {
-      // // Aggregate Step 1 really messing with us
-      // numEcalls += 1
-    // }
-    // if (logEntryChains(0).currEntries(0).op != lastOpInPastEntry) {
-      // numEcalls += 1
-    // }
     // println("Num Partitions: " + numPartitions)
     // println("Num Ecalls: " + numEcalls)
 
@@ -177,13 +165,6 @@ object JobVerificationEngine {
         // println("Ecall index: " + ecallIndex)
 
         ecallSeq(ecallIndex) = op
-        // println("Ecall Index: " + ecallIndex)
-        // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
-        //   ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
-        // } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
-        //   ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
-        // }
-
         // println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
@@ -195,16 +176,7 @@ object JobVerificationEngine {
         val row = prev_partition * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
 
-        // println("Row: " + row + " Col: " + col)
         executedAdjacencyMatrix(row)(col) = 1
-        // println("Curr Entry Operation: " + op)
-        // if (jobId != prevJobId) {
-          // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
-            // ecallSeq.append("nonObliviousAggregateStep1")
-          // }
-          // ecallSeq.append(op)
-        // }
-        // prevJobId = jobId
       }
       this_partition += 1
     }
@@ -221,10 +193,8 @@ object JobVerificationEngine {
       } else if (operator == "EncryptedFilterExec") {
         expectedEcallSeq.append("filter")
       } else if (operator == "EncryptedAggregateExec") {
-        // expectedEcallSeq.append("nonObliviousAggregateStep2", "nonObliviousAggregateStep1")
         expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
       } else if (operator == "EncryptedSortMergeJoinExec") {
-        // expectedEcallSeq.append("nonObliviousSortMergeJoin", "scanCollectLastPrimary")
         expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
       } else if (operator == "EncryptExec") {
         expectedEcallSeq.append("encrypt")
@@ -232,7 +202,6 @@ object JobVerificationEngine {
         throw new Exception("Executed unknown operator") 
       }
     }
-    // expectedEcallSeq = expectedEcallSeq.reverse
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       // Below 4 lines for debugging
@@ -240,14 +209,12 @@ object JobVerificationEngine {
       expectedEcallSeq foreach { row => row foreach print; println }
       println("Ecall seq") 
       ecallSeq foreach { row => row foreach print; println }
-      // resetForNextJob()
       return false
     }
 
     for (i <- 0 until expectedEcallSeq.length) {
       // i represents the current ecall index
       val operator = expectedEcallSeq(i)
-      // println(operator)
       if (operator == "project") {
         for (j <- 0 until numPartitions) {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
@@ -294,10 +261,6 @@ object JobVerificationEngine {
         }
       } else if (operator == "nonObliviousAggregateStep2") {
         for (j <- 0 until numPartitions) {
-          // println(i)
-          // println("Setting expected Adjacency matrix at")
-          // println(j * numEcallsPlusOne + i)
-          // println(0 * numEcallsPlusOne + i + 1)
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "scanCollectLastPrimary") {
@@ -324,24 +287,16 @@ object JobVerificationEngine {
     // Retrieve the physical plan from df.explain()
     // Condense the physical plan to match ecall operations
     // Return whether everything checks out
-    // println("Expected Adjacency Matrix: ")
-    // expectedAdjacencyMatrix foreach { row => row foreach print; println }
+    println("Expected Adjacency Matrix: ")
+    expectedAdjacencyMatrix foreach { row => row foreach print; println }
 
-    // println("Executed Adjacency Matrix: ")
-    // executedAdjacencyMatrix foreach { row => row foreach print; println }
+    println("Executed Adjacency Matrix: ")
+    executedAdjacencyMatrix foreach { row => row foreach print; println }
 
-    // if (expectedAdjacencyMatrix sameElements executedAdjacencyMatrix) {
-    //   return true
-    // } else {
-    //   println("False")
-    //   return false
-    // }
-    // resetForNextJob()
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
         return false
       }
-      // println(expectedAdjacencyMatrix(i)(j) + "==" + executedAdjacencyMatrix(i)(j))
     }
     return true
   }

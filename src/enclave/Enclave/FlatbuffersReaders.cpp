@@ -63,7 +63,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   // Master list of mac lists of all input partitions
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
-  // std::vector<std::vector<uint8_t>> partition_global_macs;
 
   // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
   auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
@@ -81,6 +80,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     
     uint8_t computed_hmac[OE_HMAC_SIZE];
     mcrypto.hmac(mac_lst, num_macs * SGX_AESGCM_MAC_SIZE, computed_hmac);
+
     // Check that the global mac is as computed
     if (!std::equal(std::begin(global_mac), std::end(global_mac), std::begin(computed_hmac))) {
       throw std::runtime_error("MAC over Encrypted Block MACs from one partition is invalid");
@@ -99,16 +99,10 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     // Add the macs of this partition to the master list
     partition_mac_lsts.push_back(p_mac_lst);
 
-    // Add global mac of this partition to the master list
-    // std::vector<uint8_t> global_mac_vector (global_mac, global_mac + SGX_AESGCM_MAC_SIZE);
-    // partition_global_macs.push_back(global_mac_vector);
-    
     // Add this input log entry to history of log entries
-    // std::cout << "Appending curr log entry " << input_log_entry->op()->str() << std::endl;
     EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->eid(), input_log_entry->job_id());
   }
 
-  // std::cout << "curr_entries_vec size: " << curr_entries_vec->size() << std::endl;
   if (curr_entries_vec->size() > 0) {
     // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
     for (auto it = encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end(); ++it) {

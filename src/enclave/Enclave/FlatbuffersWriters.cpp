@@ -48,9 +48,6 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2, std::string
 }
 
 UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
-  // std::cout << "set ecall: " << ecall.c_str() << std::endl;
-  // EnclaveContext::getInstance().set_log_entry_ecall(ecall);
-
   if (!finished) { // This line causes ExternalSort not to call finish_blocks() in first output_buffer()
     finish_blocks(ecall);
   }
@@ -94,7 +91,6 @@ void RowWriter::maybe_finish_block() {
 }
 
 void RowWriter::finish_block() {
-  // std::cout << "Finishing block!!!!!!!!\n";
   // Serialize the rows
   builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
   size_t enc_rows_len = enc_size(builder.GetSize());
@@ -135,12 +131,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     finish_block();
   }
 
-  // std::string curr_ecall = EnclaveContext::getInstance().get_log_entry_ecall();
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
-
-  // std::cout << "Finish blocks curr ecall: " << curr_ecall.c_str() << std::endl;
-  // std::cout << "Current ecall job Id: " << EnclaveContext::getInstance().get_job_id() << std::endl;
 
   if (curr_ecall != std::string("NULL")) {
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
@@ -152,7 +144,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int eid = EnclaveContext::getInstance().get_eid();
     uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
-    // std::cout << "Current ecall finish blocks : " << untrusted_curr_ecall_str << std::endl;
 
     // Copy mac list to untrusted memory
     uint8_t* untrusted_mac_lst = nullptr;
@@ -179,7 +170,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     for (LogEntry le : EnclaveContext::getInstance().get_ecall_log_entries()) {
       char* untrusted_ecall_op_str = oe_host_strndup(le.op.c_str(), le.op.length());
-      // std::cout << "Adding ecall to log entry: " << untrusted_ecall_op_str << std::endl;
       auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
           enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
           le.eid,
@@ -188,13 +178,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     }
   } 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
-
-  // hash the previous log entries
-  // uint8_t log_entry_hash[32]; 
-  // EnclaveContext::getInstance().sha256_hash_ecall_log_entries(log_entry_hash);
-  // std::vector<uint8_t> hash_vector (log_entry_hash, log_entry_hash + 32);
-// 
-  // auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &hash_vector);
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized);
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
@@ -222,8 +205,6 @@ void SortedRunsWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 }
 
 void SortedRunsWriter::finish_run(std::string ecall) {
-  // std::cout << "Finish run called\n";
-  // EnclaveContext::getInstance().set_log_entry_ecall(ecall);
   runs.push_back(container.finish_blocks(ecall));
 }
 
