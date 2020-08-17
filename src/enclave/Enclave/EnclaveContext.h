@@ -1,6 +1,7 @@
 #include "Enclave_t.h"
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
 
@@ -23,16 +24,19 @@ class EnclaveContext {
 
     // For this ecall log entry
     std::string this_ecall;
-    int job_id;
+    // int job_id;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
     int eid;
     int pid;
 
+    // Map of job ID for partition
+    std::unordered_map<int, int> pid_jobid;
+
 
     EnclaveContext() {
       // operators_ctr = 0;
-      job_id = 0;
+      // job_id = 0;
       eid = -1;
       pid = -1;
     }
@@ -84,7 +88,8 @@ class EnclaveContext {
     }
 
     int get_eid() {
-      return eid;
+      // return eid;
+      return pid;
     }
 
     void set_partition_index(int idx) {
@@ -96,7 +101,13 @@ class EnclaveContext {
     }
 
     void finish_ecall() {
-      job_id++;
+      // Increment the job id of this pid
+      if (pid_jobid.find(pid) != pid_jobid.end()) {
+        pid_jobid[pid]++;
+      } else {
+        pid_jobid[pid] = 0;
+      }
+      // job_id++;
       ecall_log_entries.clear();
       pid = -1;
     }
@@ -144,7 +155,7 @@ class EnclaveContext {
     }
 
     int get_job_id() {
-      return job_id;
+      return pid_jobid[pid];
     }
 
 //     std::vector<std::string> get_executed_plan() {
