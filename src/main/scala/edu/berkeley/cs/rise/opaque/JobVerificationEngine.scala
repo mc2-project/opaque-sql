@@ -203,9 +203,9 @@ object JobVerificationEngine {
         val row = prev_partition * numEcalls + ecallIndex 
         val col = this_partition * numEcalls + ecallIndex + 1
 
-        println("Row: " + row + " Col: " + col)
+        // println("Row: " + row + " Col: " + col)
         executedAdjacencyMatrix(row)(col) = 1
-        println("Curr Entry Operation: " + op)
+        // println("Curr Entry Operation: " + op)
         // if (jobId != prevJobId) {
           // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
             // ecallSeq.append("nonObliviousAggregateStep1")
@@ -229,16 +229,18 @@ object JobVerificationEngine {
       } else if (operator == "EncryptedFilterExec") {
         expectedEcallSeq.append("filter")
       } else if (operator == "EncryptedAggregateExec") {
-        expectedEcallSeq.append("nonObliviousAggregateStep2", "nonObliviousAggregateStep1")
+        // expectedEcallSeq.append("nonObliviousAggregateStep2", "nonObliviousAggregateStep1")
+        expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
       } else if (operator == "EncryptedSortMergeJoinExec") {
-        expectedEcallSeq.append("nonObliviousSortMergeJoin", "scanCollectLastPrimary")
+        // expectedEcallSeq.append("nonObliviousSortMergeJoin", "scanCollectLastPrimary")
+        expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
       } else if (operator == "EncryptExec") {
         expectedEcallSeq.append("encrypt")
       } else {
         throw new Exception("Executed unknown operator") 
       }
     }
-    expectedEcallSeq = expectedEcallSeq.reverse
+    // expectedEcallSeq = expectedEcallSeq.reverse
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       // Below 4 lines for debugging

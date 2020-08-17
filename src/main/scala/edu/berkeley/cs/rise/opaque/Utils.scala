@@ -1352,15 +1352,16 @@ object Utils extends Logging {
 
     val allCurrLogEntries = for {
       logEntryChain <- allLogEntryChains
-      if logEntryChain.currEntriesLength > 0 
-    } yield logEntryChain.currEntries(0)
+      i <- 0 until logEntryChain.currEntriesLength
+      // if logEntryChain.currEntriesLength > 0 
+    } yield logEntryChain.currEntries(i)
 
     // println(allCurrLogEntries)
 
     val allPastLogEntries = for {
       logEntryChain <- allLogEntryChains
       i <- 0 until logEntryChain.pastEntriesLength
-      if logEntryChain.pastEntries(i).macLstLength > 0
+      // if logEntryChain.pastEntries(i).macLstLength > 0
     } yield logEntryChain.pastEntries(i)
 
     val builder = new FlatBufferBuilder
@@ -1395,18 +1396,20 @@ object Utils extends Logging {
           tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
             // val past_ecall_op = new Array[Byte](currLogEntry.op)
             // currLogEntry.opAsByteBuffer.get(past_ecall_op)
-            val pastMacLst = new Array[Byte](pastLogEntry.macLstLength)
-            pastLogEntry.macLstAsByteBuffer.get(pastMacLst)
-            val pastGlobalMac = new Array[Byte](pastLogEntry.globalMacLength)
-            pastLogEntry.globalMacAsByteBuffer.get(pastGlobalMac)
+            // val pastMacLst = new Array[Byte](pastLogEntry.macLstLength)
+            // pastLogEntry.macLstAsByteBuffer.get(pastMacLst)
+            // val pastGlobalMac = new Array[Byte](pastLogEntry.globalMacLength)
+            // pastLogEntry.globalMacAsByteBuffer.get(pastGlobalMac)
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(pastLogEntry.op),
               pastLogEntry.eid,
               pastLogEntry.jobId,
               pastLogEntry.numMacs,
-              tuix.LogEntry.createMacLstVector(builder, pastMacLst),
-              tuix.LogEntry.createGlobalMacVector(builder, pastGlobalMac))
+              // tuix.LogEntry.createMacLstVector(builder, pastMacLst),
+              tuix.LogEntry.createMacLstVector(builder, Array.empty),
+              // tuix.LogEntry.createGlobalMacVector(builder, pastGlobalMac))
+              tuix.LogEntry.createGlobalMacVector(builder, Array.empty))
           }.toArray)
         )))
     Block(builder.sizedByteArray())

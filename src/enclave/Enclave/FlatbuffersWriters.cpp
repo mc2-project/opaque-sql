@@ -140,6 +140,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
 
   // std::cout << "Finish blocks curr ecall: " << curr_ecall.c_str() << std::endl;
+  // std::cout << "Current ecall job Id: " << EnclaveContext::getInstance().get_job_id() << std::endl;
 
   if (curr_ecall != std::string("NULL")) {
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin

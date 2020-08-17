@@ -190,7 +190,6 @@ object TPCH {
              ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
                .as("amount"))
            .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
-     println(df.explain)
      df
    }
 }

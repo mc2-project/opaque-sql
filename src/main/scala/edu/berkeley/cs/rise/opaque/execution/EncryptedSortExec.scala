@@ -31,7 +31,6 @@ case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: Encrypted Sort Exec")
-    JobVerificationEngine.addExpectedOperator("EncryptedSortExec")
     val orderSer = Utils.serializeSortOrder(order, child.output)
     EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
   }
@@ -44,6 +43,7 @@ object EncryptedSortExec {
     Utils.ensureCached(childRDD)
     time("force child of EncryptedSort") { childRDD.count }
     // RA.initRA(childRDD)
+    JobVerificationEngine.addExpectedOperator("EncryptedSortExec")
 
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length

@@ -58,7 +58,7 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val rankingsDF = Utils.ensureCached(rankings(spark, securityLevel, size, numPartitions))
-    Utils.time("load rankings") { Utils.force(rankingsDF) }
+    // Utils.time("load rankings") { Utils.force(rankingsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 1",
@@ -74,7 +74,7 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
-    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    // Utils.time("load uservisits") { Utils.force(uservisitsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 2",
@@ -92,9 +92,9 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
-    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    // Utils.time("load uservisits") { Utils.force(uservisitsDF) }
     val rankingsDF = Utils.ensureCached(rankings(spark, securityLevel, size, numPartitions))
-    Utils.time("load rankings") { Utils.force(rankingsDF) }
+    // Utils.time("load rankings") { Utils.force(rankingsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 3",
