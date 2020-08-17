@@ -592,11 +592,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   
     df.select(array($"x1", $"x2").as("x")).collect
   }
-
+  
   testAgainstSpark("least squares") { securityLevel =>
     LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
   }
-
+  
   testAgainstSpark("logistic regression") { securityLevel =>
     LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
   }
@@ -648,25 +648,25 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
 }
 
 // class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
-//   override val spark = SparkSession.builder()
-//     .master("local[1]")
-//     .appName("QEDSuite")
-//     .config("spark.sql.shuffle.partitions", 3)
-//     .getOrCreate()
+  // override val spark = SparkSession.builder()
+    // .master("local[1]")
+    // .appName("QEDSuite")
+    // .config("spark.sql.shuffle.partitions", 3)
+    // .getOrCreate()
 // 
-//   override def numPartitions: Int = 3
+  // override def numPartitions: Int = 3
 // 
-//   import testImplicits._
+  // import testImplicits._
 // 
-//   def makePartitionedDF[
-//       A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-//       data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
-//     : DataFrame = {
-//     securityLevel.applyTo(
-//       spark.createDataFrame(
-//         spark.sparkContext.makeRDD(data, numPartitions))
-//         .toDF(columnNames: _*))
-//   }
+  // def makePartitionedDF[
+      // A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+      // data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
+    // : DataFrame = {
+    // securityLevel.applyTo(
+      // spark.createDataFrame(
+        // spark.sparkContext.makeRDD(data, numPartitions))
+        // .toDF(columnNames: _*))
+  // }
 
   // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
     // val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
