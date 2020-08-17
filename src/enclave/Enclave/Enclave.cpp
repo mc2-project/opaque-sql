@@ -23,6 +23,7 @@
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 #include "EnclaveContext.h"
+#include <iostream>
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -59,13 +60,15 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 // Output to this partition
 void ecall_project(uint8_t *condition, size_t condition_length,
                    uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t **output_rows, size_t *output_rows_length) {
+                   uint8_t **output_rows, size_t *output_rows_length,
+                   int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Project\n");
+    EnclaveContext::getInstance().set_pid(pid);
     project(condition, condition_length,
             input_rows, input_rows_length,
             output_rows, output_rows_length);
@@ -79,17 +82,21 @@ void ecall_project(uint8_t *condition, size_t condition_length,
 // Output to this partition
 void ecall_filter(uint8_t *condition, size_t condition_length,
                   uint8_t *input_rows, size_t input_rows_length,
-                  uint8_t **output_rows, size_t *output_rows_length) {
+                  uint8_t **output_rows, size_t *output_rows_length,
+                  int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Filter\n");
+    std::cout << "begin ecall\n";
+    EnclaveContext::getInstance().set_pid(pid);
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
+    std::cout << "end ecall\n";
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -98,13 +105,15 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
 // Input from this partition
 // Output to 1 partition (likely not this partition)
 void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
-                  uint8_t **output_rows, size_t *output_rows_length) {
+                  uint8_t **output_rows, size_t *output_rows_length,
+                  int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Sample\n");
+    EnclaveContext::getInstance().set_pid(pid);
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
@@ -119,13 +128,15 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
 void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                              uint32_t num_partitions,
                              uint8_t *input_rows, size_t input_rows_length,
-                             uint8_t **output_rows, size_t *output_rows_length) {
+                             uint8_t **output_rows, size_t *output_rows_length,
+                             int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Find Range Bounds\n");
+    EnclaveContext::getInstance().set_pid(pid);
     find_range_bounds(sort_order, sort_order_length,
                       num_partitions,
                       input_rows, input_rows_length,
@@ -142,7 +153,8 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                               uint32_t num_partitions,
                               uint8_t *input_rows, size_t input_rows_length,
                               uint8_t *boundary_rows, size_t boundary_rows_length,
-                              uint8_t **output_partitions, size_t *output_partition_lengths) {
+                              uint8_t **output_partitions, size_t *output_partition_lengths,
+                              int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // assert(sgx_is_outside_enclave(boundary_rows, boundary_rows_length) == 1);
@@ -150,6 +162,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
 
   try {
     debug("Ecall: Partition for Sort\n");
+    EnclaveContext::getInstance().set_pid(pid);
     partition_for_sort(sort_order, sort_order_length,
                        num_partitions,
                        input_rows, input_rows_length,
@@ -165,13 +178,15 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
 // output stays in partition
 void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
                          uint8_t *input_rows, size_t input_rows_length,
-                         uint8_t **output_rows, size_t *output_rows_length) {
+                         uint8_t **output_rows, size_t *output_rows_length,
+                         int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: External Sort\n");
+    EnclaveContext::getInstance().set_pid(pid);
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
                   output_rows, output_rows_length);
@@ -185,13 +200,15 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
 // 1-1 shuffle
 void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length,
                                      uint8_t *input_rows, size_t input_rows_length,
-                                     uint8_t **output_rows, size_t *output_rows_length) {
+                                     uint8_t **output_rows, size_t *output_rows_length,
+                                     int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Scan Collect Last Primary\n");
+    EnclaveContext::getInstance().set_pid(pid);
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
                               output_rows, output_rows_length);
@@ -206,7 +223,8 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
 void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
                                          uint8_t *input_rows, size_t input_rows_length,
                                          uint8_t *join_row, size_t join_row_length,
-                                         uint8_t **output_rows, size_t *output_rows_length) {
+                                         uint8_t **output_rows, size_t *output_rows_length,
+                                         int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // assert(sgx_is_outside_enclave(join_row, join_row_length) == 1);
@@ -214,6 +232,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
 
   try {
     debug("Ecall: Non Oblivious Sort Merge Join\n");
+    EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_sort_merge_join(join_expr, join_expr_length,
                                   input_rows, input_rows_length,
                                   join_row, join_row_length,
@@ -230,13 +249,15 @@ void ecall_non_oblivious_aggregate_step1(
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **first_row, size_t *first_row_length,
   uint8_t **last_group, size_t *last_group_length,
-  uint8_t **last_row, size_t *last_row_length) {
+  uint8_t **last_row, size_t *last_row_length,
+  int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // sgx_lfence();
 
   try {
     debug("Ecall: Non Oblivious Aggregate Step 1\n");
+    EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_aggregate_step1(
       agg_op, agg_op_length,
       input_rows, input_rows_length,
@@ -255,7 +276,8 @@ void ecall_non_oblivious_aggregate_step2(
   uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
   uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
   uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
-  uint8_t **output_rows, size_t *output_rows_length) {
+  uint8_t **output_rows, size_t *output_rows_length,
+  int pid) {
   // Guard against operating on arbitrary enclave memory
   // assert(sgx_is_outside_enclave(input_rows, input_rows_length) == 1);
   // assert(sgx_is_outside_enclave(next_partition_first_row, next_partition_first_row_length) == 1);
@@ -265,6 +287,7 @@ void ecall_non_oblivious_aggregate_step2(
 
   try {
     debug("Ecall: Non Oblivious Aggregate Step 2\n");
+    EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_aggregate_step2(
       agg_op, agg_op_length,
       input_rows, input_rows_length,

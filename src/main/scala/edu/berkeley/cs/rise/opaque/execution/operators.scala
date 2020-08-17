@@ -228,7 +228,7 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
         childRDD.map { block =>
         // Utils.examineBlock(block)
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.Project(eid, projectListSer, block.bytes))
+        Block(enclave.Project(eid, projectListSer, block.bytes, TaskContext.getPartitionId))
       }
     }
   }
@@ -250,7 +250,7 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         println(TaskContext.getPartitionId)
-        Block(enclave.Filter(eid, conditionSer, block.bytes))
+        Block(enclave.Filter(eid, conditionSer, block.bytes, TaskContext.getPartitionId))
       }
     }
   }
@@ -280,7 +280,7 @@ case class EncryptedAggregateExec(
       val (firstRows, lastGroups, lastRows) = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         val (firstRow, lastGroup, lastRow) = enclave.NonObliviousAggregateStep1(
-          eid, aggExprSer, block.bytes)
+          eid, aggExprSer, block.bytes, TaskContext.getPartitionId)
         (Block(firstRow), Block(lastGroup), Block(lastRow))
       }.collect.unzip3
 
@@ -307,7 +307,7 @@ case class EncryptedAggregateExec(
             Iterator(Block(enclave.NonObliviousAggregateStep2(
               eid, aggExprSer, block.bytes,
               nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes,
-              prevPartitionLastRow.bytes)))
+              prevPartitionLastRow.bytes, TaskContext.getPartitionId)))
         }
       }
     }
@@ -337,7 +337,7 @@ case class EncryptedSortMergeJoinExec(
       JobVerificationEngine.addExpectedOperator("EncryptedSortMergeJoinExec")
       val lastPrimaryRows = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
+        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes, TaskContext.getPartitionId))
       }.collect
       val lastLastPrimaryRow = lastPrimaryRows.last
       val shifted = Utils.emptyBlock(lastLastPrimaryRow) +: lastPrimaryRows.dropRight(1)
@@ -350,7 +350,7 @@ case class EncryptedSortMergeJoinExec(
           case (Seq(block), Seq(joinRow)) =>
             val (enclave, eid) = Utils.initEnclave()
             Iterator(Block(enclave.NonObliviousSortMergeJoin(
-              eid, joinExprSer, block.bytes, joinRow.bytes)))
+              eid, joinExprSer, block.bytes, joinRow.bytes, TaskContext.getPartitionId)))
         }
       }
     }

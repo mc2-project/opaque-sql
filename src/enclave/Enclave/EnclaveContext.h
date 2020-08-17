@@ -10,6 +10,7 @@ typedef struct LogEntry {
   std::string op;
   int eid;
   int job_id;
+  int pid;
 } LogEntry;
 
 static Crypto mcrypto;
@@ -26,12 +27,14 @@ class EnclaveContext {
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
     uint8_t global_mac[OE_HMAC_SIZE];
     int eid;
+    int pid;
 
 
     EnclaveContext() {
       // operators_ctr = 0;
       job_id = 0;
       eid = -1;
+      pid = -1;
     }
 
   public:
@@ -72,6 +75,7 @@ class EnclaveContext {
       le.op = op;
       le.eid = eid;
       le.job_id = job_id;
+      // le.pid = pid;
       ecall_log_entries.push_back(le);
     }
 
@@ -87,9 +91,14 @@ class EnclaveContext {
       eid = idx;
     }
 
+    void set_pid(int id) {
+      pid = id;
+    }
+
     void finish_ecall() {
       job_id++;
       ecall_log_entries.clear();
+      pid = -1;
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
