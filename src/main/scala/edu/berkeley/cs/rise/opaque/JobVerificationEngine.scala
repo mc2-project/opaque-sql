@@ -54,20 +54,27 @@ object JobVerificationEngine {
     val numPartitions = logEntryChains.length
 
     // Count number of ecalls in "past entries" per partition and ensure they're the same
-    var numEcallsInLastPartition = -1
+    var numEcallsInFirstPartition = -1
     var lastOpInPastEntry = ""
   
     var startingJobIdMap = Map[Int, Int]()
     var partitionId = 0
+
+    var findRangeBoundsJobIds = ArrayBuffer[Int]()
+
 
     for (logEntryChain <- logEntryChains) {
       var startingJobId = -1
       var minJobId = 9999999
       var maxJobId = -9999999
 
+      // var numExpectedFindRangeBoundsEcalls = 0
+
       var numEcallsLoggedInThisPartition = 0
-      var prevOp = ""
-      // println("new partition")
+
+      // We expect the same number of FindRangeBounds as PartitionForSorts
+
+      println("===================new partition")
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
@@ -77,7 +84,12 @@ object JobVerificationEngine {
           if (pastEntry.jobId > maxJobId) {
             maxJobId = pastEntry.jobId
           }
-          // println("Ecall: " + pastEntry.op)
+          if (partitionId == 0 && pastEntry.op == "findRangeBounds" && !findRangeBoundsJobIds.contains(pastEntry.jobId)) {
+            // numExpectedFindRangeBoundsEcalls += 1
+            findRangeBoundsJobIds.append(pastEntry.jobId)
+          }
+          // println(partitionForSortJobIds)
+          println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
@@ -92,19 +104,20 @@ object JobVerificationEngine {
       startingJobId = minJobId
       // println("Starting job id: " + startingJobId)
 
-      if (numEcallsInLastPartition == -1) {
-        numEcallsInLastPartition = numEcallsLoggedInThisPartition
+      if (numEcallsInFirstPartition == -1) {
+        numEcallsInFirstPartition = numEcallsLoggedInThisPartition
       }
-      if (numEcallsLoggedInThisPartition != numEcallsInLastPartition) {
-        // println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
-        // println("last partition num ecalls: " + numEcallsInLastPartition)
+      println("findRangeBounds calls: " + findRangeBoundsJobIds.length)
+      if (partitionId > 0 && numEcallsInFirstPartition - findRangeBoundsJobIds.length != numEcallsLoggedInThisPartition) {
+        println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
+        println("last partition num ecalls: " + numEcallsInFirstPartition)
         throw new Exception("All partitions did not perform same number of ecalls")
       }
       startingJobIdMap(partitionId) = startingJobId
       partitionId += 1
     }
 
-    var numEcalls = numEcallsInLastPartition 
+    var numEcalls = numEcallsInFirstPartition 
     // println("Num Partitions: " + numPartitions)
     // println("Num Ecalls: " + numEcalls)
 
@@ -187,7 +200,7 @@ object JobVerificationEngine {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
         expectedEcallSeq.append("externalSort")
       } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
-        expectedEcallSeq.append("externalSort", "partitionForSort", "findRangeBounds", "sample")
+        expectedEcallSeq.append("sample", "findRangeBounds", "partitionForSort", "externalSort")
       } else if (operator == "EncryptedProjectExec") {
         expectedEcallSeq.append("project")
       } else if (operator == "EncryptedFilterExec") {

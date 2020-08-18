@@ -100,8 +100,6 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
 
     if (w.num_runs() <= 1) {
       // Only 0 or 1 runs, so we are done - no need to merge runs
-      // We should add the macs and do the global mac here
-      // std::cout << "external sort output buffer\n";
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, std::string("externalSort"));
       return;
     }
