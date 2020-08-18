@@ -10,6 +10,7 @@ struct LogEntry;
 typedef struct LogEntry {
   std::string op;
   int eid;
+  int rcv_eid;
   int job_id;
   int pid;
 } LogEntry;
@@ -74,12 +75,12 @@ class EnclaveContext {
       ecall_log_entries.clear();
     }
 
-    void append_past_log_entry(std::string op, int eid, int job_id) {
+    void append_past_log_entry(std::string op, int eid, int rcv_eid, int job_id) {
       LogEntry le;
       le.op = op;
       le.eid = eid;
+      le.rcv_eid = rcv_eid;
       le.job_id = job_id;
-      // le.pid = pid;
       ecall_log_entries.push_back(le);
     }
 

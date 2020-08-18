@@ -22,6 +22,7 @@ table SortedRuns {
 table LogEntry {
     op:string;
     eid:int;
+    rcv_eid:int;
     job_id:int;
     num_macs:uint;
     mac_lst:[ubyte];

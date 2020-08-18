@@ -164,6 +164,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
         enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
         eid,
+        -1, // -1 for not yet set rcv_eid
         job_id,
         num_macs,
         enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
@@ -176,6 +177,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
       auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
           enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
           le.eid,
+          le.rcv_eid,
           le.job_id);
       past_log_entries_vector.push_back(past_log_entry_serialized);
     }
