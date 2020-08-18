@@ -84,12 +84,12 @@ object JobVerificationEngine {
           if (pastEntry.jobId > maxJobId) {
             maxJobId = pastEntry.jobId
           }
-          if (partitionId == 0 && pastEntry.op == "findRangeBounds" && !findRangeBoundsJobIds.contains(pastEntry.jobId)) {
-            // numExpectedFindRangeBoundsEcalls += 1
-            findRangeBoundsJobIds.append(pastEntry.jobId)
-          }
+          // if (partitionId == 0 && pastEntry.op == "findRangeBounds" && !findRangeBoundsJobIds.contains(pastEntry.jobId)) {
+          //   // numExpectedFindRangeBoundsEcalls += 1
+          //   findRangeBoundsJobIds.append(pastEntry.jobId)
+          // }
           // println(partitionForSortJobIds)
-          println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
+          // println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
@@ -107,8 +107,9 @@ object JobVerificationEngine {
       if (numEcallsInFirstPartition == -1) {
         numEcallsInFirstPartition = numEcallsLoggedInThisPartition
       }
-      println("findRangeBounds calls: " + findRangeBoundsJobIds.length)
-      if (partitionId > 0 && numEcallsInFirstPartition - findRangeBoundsJobIds.length != numEcallsLoggedInThisPartition) {
+      // println("findRangeBounds calls: " + findRangeBoundsJobIds.length)
+      // if (partitionId > 0 && numEcallsInFirstPartition - findRangeBoundsJobIds.length != numEcallsLoggedInThisPartition) {
+      if (numEcallsInFirstPartition != numEcallsLoggedInThisPartition) {
         println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
         println("last partition num ecalls: " + numEcallsInFirstPartition)
         throw new Exception("All partitions did not perform same number of ecalls")

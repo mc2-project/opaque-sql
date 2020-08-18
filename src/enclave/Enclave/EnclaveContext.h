@@ -158,6 +158,10 @@ class EnclaveContext {
       return pid_jobid[pid];
     }
 
+    void increment_job_id() {
+      pid_jobid[pid]++;
+    }
+
 //     std::vector<std::string> get_executed_plan() {
 //       std::vector<std::string> executed_plan_log;
 //       bool possible_agg = false;

@@ -163,6 +163,9 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   try {
     debug("Ecall: Partition for Sort\n");
     EnclaveContext::getInstance().set_pid(pid);
+    if (pid > 0) {
+      EnclaveContext::getInstance().increment_job_id();
+    }
     partition_for_sort(sort_order, sort_order_length,
                        num_partitions,
                        input_rows, input_rows_length,

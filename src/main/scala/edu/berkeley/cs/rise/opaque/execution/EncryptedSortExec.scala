@@ -70,7 +70,7 @@ object EncryptedSortExec {
             // Parallelize has only one worker perform this FindRangeBounds
             childRDD.context.parallelize(Array(sampled.bytes), 1).map { sampledBytes =>
               val (enclave, eid) = Utils.initEnclave()
-              println("Partition ID: " + TaskContext.getPartitionId)
+              println("FindRangeBoounds Partition ID: " + TaskContext.getPartitionId)
               enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes, TaskContext.getPartitionId)
             }.collect.head
           }
