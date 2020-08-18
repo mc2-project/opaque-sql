@@ -48,7 +48,7 @@ public:
   /**
    * Process attestation report from an enclave, verify the report, and send the shared key to the enclave
    */
-  std::unique_ptr<oe_msg2_t> process_enclave_report(oe_msg1_t *msg1, uint32_t *msg2_size);
+  std::unique_ptr<oe_shared_key_msg_t> process_enclave_report(oe_report_msg_t *report_msg, uint32_t *shared_key_msg_size);
 
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);

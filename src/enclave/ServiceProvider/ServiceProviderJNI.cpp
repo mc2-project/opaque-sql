@@ -37,25 +37,25 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_ProcessEnclaveReport(
-  JNIEnv *env, jobject obj, jbyteArray msg1_input) {
+  JNIEnv *env, jobject obj, jbyteArray report_msg_input) {
   (void)obj;
 
   jboolean if_copy = false;
-  jbyte *msg1_bytes = env->GetByteArrayElements(msg1_input, &if_copy);
-  oe_msg1_t *msg1 = reinterpret_cast<oe_msg1_t *>(msg1_bytes);
+  jbyte *report_msg_bytes = env->GetByteArrayElements(report_msg_input, &if_copy);
+  oe_report_msg_t *report_msg = reinterpret_cast<oe_report_msg_t *>(report_msg_bytes);
 
-  uint32_t msg2_size = 0;
-  std::unique_ptr<oe_msg2_t> msg2;
+  uint32_t shared_key_msg_size = 0;
+  std::unique_ptr<oe_shared_key_msg_t> shared_key_msg;
   try {
-    msg2 = service_provider.process_enclave_report(msg1, &msg2_size);
+    shared_key_msg = service_provider.process_enclave_report(report_msg, &shared_key_msg_size);
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }
 
-  jbyteArray array_ret = env->NewByteArray(msg2_size);
-  env->SetByteArrayRegion(array_ret, 0, msg2_size, reinterpret_cast<jbyte *>(msg2.get()));
+  jbyteArray array_ret = env->NewByteArray(shared_key_msg_size);
+  env->SetByteArrayRegion(array_ret, 0, shared_key_msg_size, reinterpret_cast<jbyte *>(shared_key_msg.get()));
 
-  env->ReleaseByteArrayElements(msg1_input, msg1_bytes, 0);
+  env->ReleaseByteArrayElements(report_msg_input, report_msg_bytes, 0);
 
   return array_ret;
 }

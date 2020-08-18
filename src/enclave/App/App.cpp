@@ -213,35 +213,35 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   (void)obj;
   (void)eid;
 
-  uint8_t* msg1 = NULL;
-  size_t msg1_size = 0;
+  uint8_t* report_msg = NULL;
+  size_t report_msg_size = 0;
 
   oe_check_and_time("Generate enclave report",
                      ecall_generate_report((oe_enclave_t*)eid,
-                                           &msg1,
-                                           &msg1_size));
+                                           &report_msg,
+                                           &report_msg_size));
 
   // Allocate memory
-  jbyteArray msg1_bytes = env->NewByteArray(msg1_size);
-  env->SetByteArrayRegion(msg1_bytes, 0, msg1_size, reinterpret_cast<jbyte *>(msg1));
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
 
-  return msg1_bytes;
+  return report_msg_bytes;
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
   (void)obj;
 
   jboolean if_copy = false;
-  jbyte *msg4_bytes = env->GetByteArrayElements(msg4_input, &if_copy);
-  uint32_t msg4_size = static_cast<uint32_t>(env->GetArrayLength(msg4_input));
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
 
   oe_check_and_time("Finish attestation",
                     ecall_finish_attestation((oe_enclave_t*)eid,
-                                             reinterpret_cast<uint8_t *>(msg4_bytes),
-                                             msg4_size));
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size));
 
-  env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
+  env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 
 }
 

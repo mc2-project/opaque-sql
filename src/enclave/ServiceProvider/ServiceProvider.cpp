@@ -240,15 +240,15 @@ bool verify_mrsigner(char* signing_public_key_buf,
   return ret;
 }
 
-std::unique_ptr<oe_msg2_t> ServiceProvider::process_enclave_report(oe_msg1_t *msg1,
-                                                                   uint32_t *msg2_size) {
+std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
+                                                                             uint32_t *shared_key_msg_size) {
   
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
-  std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
+  std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
   
-  EVP_PKEY* pkey = buffer_to_public_key((char*)msg1->public_key, -1);
+  EVP_PKEY* pkey = buffer_to_public_key((char*)report_msg->public_key, -1);
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
@@ -263,7 +263,7 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_enclave_report(oe_msg1_t *ms
   oe_result_t result = OE_FAILURE;
   uint8_t sha256[32];
   
-  result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
+  result = oe_verify_remote_report(report_msg->report, report_msg->report_size, NULL, 0, &parsed_report);
   if (result != OE_OK) {
     throw std::runtime_error(
                              std::string("oe_verify_remote_report: ")
@@ -316,7 +316,7 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_enclave_report(oe_msg1_t *ms
 
   // 3) Validate the report data
   //    The report_data has the hash value of the report data, which is the public 
-  if (lc_compute_sha256(msg1->public_key, sizeof(msg1->public_key), sha256) != 0) {
+  if (lc_compute_sha256(report_msg->public_key, sizeof(report_msg->public_key), sha256) != 0) {
     throw std::runtime_error(std::string("hash validation failed."));
   }
 
@@ -336,12 +336,12 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_enclave_report(oe_msg1_t *ms
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
-  // Prepare msg2
-  memcpy_s(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
-  *msg2_size = sizeof(oe_msg2_t);
+  // Prepare shared_key_msg
+  memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+  *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
 
   // clean up
   EVP_PKEY_free(pkey);
 
-  return msg2;
+  return shared_key_msg;
 }

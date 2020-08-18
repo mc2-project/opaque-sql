@@ -233,15 +233,14 @@ void ecall_non_oblivious_aggregate_step2(
 
 static Crypto g_crypto;
 
-void ecall_finish_attestation(uint8_t *msg4,
-                              uint32_t msg4_size) {
+void ecall_finish_attestation(uint8_t *shared_key_msg_input,
+                              uint32_t shared_key_msg_size) {
   try {
-    oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
+    oe_shared_key_msg_t* shared_key_msg = (oe_shared_key_msg_t*) shared_key_msg_input;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(msg2->shared_key_ciphertext, msg4_size, shared_key_plaintext, &shared_key_plaintext_size);
-    if (!ret)
-    {
+    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size, shared_key_plaintext, &shared_key_plaintext_size);
+    if (!ret) {
       ocall_throw("shared key decryption failed");
     }
 
@@ -255,23 +254,23 @@ void ecall_finish_attestation(uint8_t *msg4,
 /* 
    Enclave generates report, which is then sent back to the service provider
 */
-void ecall_generate_report(uint8_t **msg1_data,
-                           size_t* msg1_data_size) {
+void ecall_generate_report(uint8_t **report_msg_data,
+                           size_t* report_msg_data_size) {
 
   uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
   size_t public_key_size = sizeof(public_key);
   uint8_t sha256[OE_SHA256_HASH_SIZE];
   uint8_t* report = NULL;
   size_t report_size = 0;
-  oe_msg1_t* msg1 = NULL;
+  oe_report_msg_t* report_msg = NULL;
 
-  if (msg1_data == NULL || msg1_data_size == NULL)
+  if (report_msg_data == NULL || report_msg_data_size == NULL)
   {
     ocall_throw("Invalid parameter");
   }
 
-  *msg1_data = NULL;
-  *msg1_data_size = 0;
+  *report_msg_data = NULL;
+  *report_msg_data_size = 0;
 
   g_crypto.retrieve_public_key(public_key);
 
@@ -281,7 +280,7 @@ void ecall_generate_report(uint8_t **msg1_data,
   }
 
 #ifndef SIMULATE
-  // get report
+  // Get OE report
   oe_result_t result = oe_get_report(OE_REPORT_FLAGS_REMOTE_ATTESTATION,
                                      sha256, // Store sha256 in report_data field
                                      sizeof(sha256),
@@ -302,18 +301,18 @@ void ecall_generate_report(uint8_t **msg1_data,
   }
 #endif
     
-  *msg1_data_size = sizeof(oe_msg1_t) + report_size;
-  *msg1_data = (uint8_t*)oe_host_malloc(*msg1_data_size);
-  if (*msg1_data == NULL) {
+  *report_msg_data_size = sizeof(oe_report_msg_t) + report_size;
+  *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
+  if (*report_msg_data == NULL) {
     ocall_throw("Out of memory");
   }
-  msg1 = (oe_msg1_t*)(*msg1_data);
+  report_msg = (oe_report_msg_t*)(*report_msg_data);
 
-  // Fill oe_msg1_t
-  memcpy_s(msg1->public_key, sizeof(((oe_msg1_t*)0)->public_key), public_key, public_key_size);
-  msg1->report_size = report_size;
+  // Fill oe_report_msg_t
+  memcpy_s(report_msg->public_key, sizeof(((oe_report_msg_t*)0)->public_key), public_key, public_key_size);
+  report_msg->report_size = report_size;
   if (report_size > 0) {
-    memcpy_s(msg1->report, report_size, report, report_size);
+    memcpy_s(report_msg->report, report_size, report, report_size);
   }
   oe_free_report(report);
 
