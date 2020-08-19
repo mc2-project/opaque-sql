@@ -67,7 +67,7 @@ void ecall_project(uint8_t *condition, size_t condition_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: Project\n");
+    debug("Partition %i Ecall: Project\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     project(condition, condition_length,
             input_rows, input_rows_length,
@@ -89,14 +89,12 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: Filter\n");
-    std::cout << "begin ecall\n";
+    debug("Partition %i Ecall: Filter\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
-    std::cout << "end ecall\n";
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -112,7 +110,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: Sample\n");
+    debug("Partition %i Ecall: Sample\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
@@ -135,7 +133,7 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: Find Range Bounds\n");
+    debug("Partition %i Ecall: Find Range Bounds\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     find_range_bounds(sort_order, sort_order_length,
                       num_partitions,
@@ -161,7 +159,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: Partition for Sort\n");
+    debug("Partition %i Ecall: Partition for Sort\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     if (pid > 0) {
       EnclaveContext::getInstance().increment_job_id();
@@ -188,7 +186,7 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
   // sgx_lfence();
 
   try {
-    debug("Ecall: External Sort\n");
+    debug("Partition %i Ecall: External Sort\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
@@ -210,7 +208,7 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
   // sgx_lfence();
 
   try {
-    debug("Ecall: Scan Collect Last Primary\n");
+    debug("Partition %i Ecall: Scan Collect Last Primary\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
@@ -234,7 +232,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   // sgx_lfence();
 
   try {
-    debug("Ecall: Non Oblivious Sort Merge Join\n");
+    debug("Partition %i Ecall: Non Oblivious Sort Merge Join\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_sort_merge_join(join_expr, join_expr_length,
                                   input_rows, input_rows_length,
@@ -259,7 +257,7 @@ void ecall_non_oblivious_aggregate_step1(
   // sgx_lfence();
 
   try {
-    debug("Ecall: Non Oblivious Aggregate Step 1\n");
+    debug("Partition %i Ecall: Non Oblivious Aggregate Step 1\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_aggregate_step1(
       agg_op, agg_op_length,
@@ -289,7 +287,7 @@ void ecall_non_oblivious_aggregate_step2(
   // sgx_lfence();
 
   try {
-    debug("Ecall: Non Oblivious Aggregate Step 2\n");
+    debug("Partition %i Ecall: Non Oblivious Aggregate Step 2\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
     non_oblivious_aggregate_step2(
       agg_op, agg_op_length,

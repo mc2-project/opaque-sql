@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
+import scala.collection.mutable.Set
 import java.util.Arrays
 
 
@@ -54,13 +55,17 @@ object JobVerificationEngine {
     val numPartitions = logEntryChains.length
 
     // Count number of ecalls in "past entries" per partition and ensure they're the same
-    var numEcallsInFirstPartition = -1
+    // var numEcallsInFirstPartition = -1
     var lastOpInPastEntry = ""
   
     var startingJobIdMap = Map[Int, Int]()
     var partitionId = 0
 
     var findRangeBoundsJobIds = ArrayBuffer[Int]()
+    var perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
+    for (i <- 0 until numPartitions) {
+      perPartitionJobIds(i) = Set[Int]()
+    } 
 
 
     for (logEntryChain <- logEntryChains) {
@@ -78,44 +83,71 @@ object JobVerificationEngine {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
-          if (pastEntry.jobId < minJobId) {
-            minJobId = pastEntry.jobId
-          }
-          if (pastEntry.jobId > maxJobId) {
-            maxJobId = pastEntry.jobId
-          }
+          // if (pastEntry.jobId < minJobId) {
+          //   minJobId = pastEntry.jobId
+          // }
+          // if (pastEntry.jobId > maxJobId) {
+          //   maxJobId = pastEntry.jobId
+          // }
           // if (partitionId == 0 && pastEntry.op == "findRangeBounds" && !findRangeBoundsJobIds.contains(pastEntry.jobId)) {
           //   // numExpectedFindRangeBoundsEcalls += 1
           //   findRangeBoundsJobIds.append(pastEntry.jobId)
           // }
           // println(partitionForSortJobIds)
-          println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
+          // println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
+         
+          val partitionOfOperation = pastEntry.eid
+          perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
-      if (latestJobId < minJobId) {
-        minJobId = latestJobId
-      }
-      if (latestJobId > maxJobId) {
-        maxJobId = latestJobId
-      }
+      val partitionOfLastOperation = logEntryChain.currEntries(0).eid
+      // println("Latest job ID: " + latestJobId)
+      // println("Latest ecall: " + logEntryChain.currEntries(0).op)
+      // if (latestJobId < minJobId) {
+      //   minJobId = latestJobId
+      // }
+      // if (latestJobId > maxJobId) {
+      //   maxJobId = latestJobId
+      // }
       // println("Ecall: " + logEntryChain.currEntries(0).op)
-      numEcallsLoggedInThisPartition = maxJobId - minJobId + 1
-      startingJobId = minJobId
+      // numEcallsLoggedInThisPartition = maxJobId - minJobId + 1
+      // startingJobId = minJobId
       // println("Starting job id: " + startingJobId)
+      
+      perPartitionJobIds(partitionOfLastOperation).add(latestJobId)
 
+      // if (numEcallsInFirstPartition == -1) {
+      //   numEcallsInFirstPartition = numEcallsLoggedInThisPartition
+      // }
+      // println("MIN JOB ID " + minJobId)
+      // println("MAX JOB ID " + maxJobId)
+      // if (numEcallsInFirstPartition != numEcallsLoggedInThisPartition) {
+      //   println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
+      //   println("last partition num ecalls: " + numEcallsInFirstPartition)
+      //   throw new Exception("All partitions did not perform same number of ecalls")
+      // }
+      // startingJobIdMap(partitionId) = startingJobId
+      // partitionId += 1
+    }
+
+    var numEcallsInFirstPartition = -1
+
+    for (i <- 0 until perPartitionJobIds.length) {
+      val partition = perPartitionJobIds(i)
+      val maxJobId = partition.max
+      val minJobId = partition.min
+      val numEcalls = maxJobId - minJobId + 1
       if (numEcallsInFirstPartition == -1) {
-        numEcallsInFirstPartition = numEcallsLoggedInThisPartition
+        numEcallsInFirstPartition = numEcalls
       }
-      println("MIN JOB ID " + minJobId)
-      println("MAX JOB ID " + maxJobId)
-      if (numEcallsInFirstPartition != numEcallsLoggedInThisPartition) {
-        println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
+
+      if (numEcalls != numEcallsInFirstPartition) {
+        println("This partition num ecalls: " + numEcalls)
         println("last partition num ecalls: " + numEcallsInFirstPartition)
         throw new Exception("All partitions did not perform same number of ecalls")
       }
-      startingJobIdMap(partitionId) = startingJobId
-      partitionId += 1
+      startingJobIdMap(i) = minJobId
     }
 
     var numEcalls = numEcallsInFirstPartition 
@@ -147,11 +179,11 @@ object JobVerificationEngine {
 
         ecallSeq(ecallIndex) = op
 
-        val prev_partition = eid
+        // val prev_partition = eid
         // println("Prev partition: " + prev_partition)
         // println("This partition: " + this_partition)
 
-        val row = prev_partition * (numEcallsPlusOne) + ecallIndex 
+        val row = eid * (numEcallsPlusOne) + ecallIndex 
         val col = rcvEid * (numEcallsPlusOne) + ecallIndex + 1
         // println("Row: " + row + "Col: " + col)
 
@@ -178,14 +210,13 @@ object JobVerificationEngine {
         ecallSeq(ecallIndex) = op
         // println("Ecall index: " + ecallIndex)
 
-        val prev_partition = eid
+        // val prev_partition = eid
 
         // println("Prev partition: " + prev_partition)
         // println("This partition: " + this_partition)
         // println("Prev partition: " + prev_partition)
 
-        // TODO: CHECK FOR BUG HERE WITH AGGREGATE
-        val row = prev_partition * (numEcallsPlusOne) + ecallIndex 
+        val row = eid * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
 
         executedAdjacencyMatrix(row)(col) = 1
@@ -242,7 +273,6 @@ object JobVerificationEngine {
       } else if (operator == "sample") {
         for (j <- 0 until numPartitions) {
           // All EncryptedBlocks resulting from sample go to one worker
-          // FIXME: which partition?
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "findRangeBounds") {

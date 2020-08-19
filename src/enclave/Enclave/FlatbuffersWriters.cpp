@@ -170,6 +170,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
         enc_block_builder.CreateVector(global_mac_ptr.get(), SGX_AESGCM_MAC_SIZE));
 
+    std::cout << "Writing log entry for job id: " << job_id << std::endl;
     curr_log_entry_vector.push_back(log_entry_serialized);
 
     for (LogEntry le : EnclaveContext::getInstance().get_ecall_log_entries()) {
