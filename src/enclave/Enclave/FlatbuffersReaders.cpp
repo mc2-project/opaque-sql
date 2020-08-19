@@ -58,6 +58,9 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     std::string op = entry->op()->str();
     int eid = entry->eid();
     int rcv_eid = entry->rcv_eid();
+    if (rcv_eid == -1) { // Received by EID hasn't been set yet
+      rcv_eid = EnclaveContext::getInstance().get_eid();
+    }
     int job_id = entry->job_id();
     EnclaveContext::getInstance().append_past_log_entry(op, eid, rcv_eid, job_id);
   }

@@ -138,25 +138,21 @@ object JobVerificationEngine {
         val op = logEntry.op
         // println("Logged Ecall: " + op)
         val eid = logEntry.eid
+        // println("EID: " + eid)
         val jobId = logEntry.jobId
+        val rcvEid = logEntry.rcvEid
         // println("Log Entry Job ID: " + logEntry.jobId)
         // println("starting job id: " + startingJobId)
-        val ecallIndex = logEntry.jobId - startingJobIdMap(this_partition)
+        val ecallIndex = logEntry.jobId - startingJobIdMap(rcvEid)
 
         ecallSeq(ecallIndex) = op
-        // if (op == "nonObliviousAggregateStep2" && numPartitions == 1) {
-        //   ecallSeq(ecallIndex - 1) = "nonObliviousAggregateStep1"
-        // } else if (op == "nonObliviousSortMergeJoin" && numPartitions == 1) {
-        //   ecallSeq(ecallIndex - 1) = "scanCollectLastPrimary"
-        // }
-        // println("Ecall index: " + ecallIndex)
 
         val prev_partition = eid
         // println("Prev partition: " + prev_partition)
         // println("This partition: " + this_partition)
 
         val row = prev_partition * (numEcallsPlusOne) + ecallIndex 
-        val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
+        val col = rcvEid * (numEcallsPlusOne) + ecallIndex + 1
         // println("Row: " + row + "Col: " + col)
 
         executedAdjacencyMatrix(row)(col) = 1
@@ -173,6 +169,7 @@ object JobVerificationEngine {
         // println("Ecall: " + op)
         val eid = logEntry.eid
         val jobId = logEntry.jobId
+        // val this_partition = logEntry.rcvEid
         val ecallIndex = jobId - startingJobIdMap(this_partition)
         // println("Log Entry Job ID: " + logEntry.jobId)
         // println("Starting JOb ID: " + startingJobId)
@@ -187,6 +184,7 @@ object JobVerificationEngine {
         // println("This partition: " + this_partition)
         // println("Prev partition: " + prev_partition)
 
+        // TODO: CHECK FOR BUG HERE WITH AGGREGATE
         val row = prev_partition * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
 
@@ -275,7 +273,7 @@ object JobVerificationEngine {
         }
       } else if (operator == "nonObliviousAggregateStep2") {
         for (j <- 0 until numPartitions) {
-          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "scanCollectLastPrimary") {
           // Blocks sent to next partition

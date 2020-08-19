@@ -1440,7 +1440,6 @@ object Utils extends Logging {
     val currLogEntry = encryptedBlocks.log.currEntries(0)
 
     val logEntries = pastLogEntries :+ currLogEntry
-    println("=========Empty Block Log Entries Length" + logEntries.length)
 
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(

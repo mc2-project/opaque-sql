@@ -286,14 +286,23 @@ case class EncryptedAggregateExec(
 
       // Send first row to previous partition and last group to next partition
       // FIXME: only create this empty block with log for one partition case?
-      val firstRowDrop = firstRows(0)
-      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock(firstRowDrop)
+      var shiftedFirstRows = Array[Block]()
+      var shiftedLastGroups = Array[Block]()
+      var shiftedLastRows = Array[Block]()
+      if (childRDD.getNumPartitions > 1) {
+        val firstRowDrop = firstRows(0)
+        shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock(firstRowDrop)
 
-      val lastGroupDrop = lastGroups.last
-      val shiftedLastGroups = Utils.emptyBlock(lastGroupDrop) +: lastGroups.dropRight(1)
+        val lastGroupDrop = lastGroups.last
+        shiftedLastGroups = Utils.emptyBlock(lastGroupDrop) +: lastGroups.dropRight(1)
 
-      val lastRowDrop = lastRows.last
-      val shiftedLastRows = Utils.emptyBlock(lastRowDrop) +: lastRows.dropRight(1)
+        val lastRowDrop = lastRows.last
+        shiftedLastRows = Utils.emptyBlock(lastRowDrop) +: lastRows.dropRight(1)
+      } else {
+        shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
+        shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
+        shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
+      }
 
       val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
