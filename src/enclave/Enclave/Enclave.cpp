@@ -3,9 +3,6 @@
 #include <cstdint>
 #include <cassert>
 
-// #include <sgx_lfence.h>
-// #include <sgx_tkey_exchange.h>
-
 #include "Aggregate.h"
 #include "Crypto.h"
 #include "Filter.h"

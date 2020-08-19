@@ -23,13 +23,12 @@ void initKeySchedule() {
 
 void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
   if (shared_key_size <= 0) {
-    throw std::runtime_error("Remote attestation step 4: Invalid message size.");
+    throw std::runtime_error("Attempting to set a shared key with invalid key size.");
   }
   memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
 
   initKeySchedule();
 }
-
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
@@ -43,8 +42,6 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
-  // oe_get_entropy(iv_ptr, SGX_AESGCM_IV_SIZE);
-  // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);

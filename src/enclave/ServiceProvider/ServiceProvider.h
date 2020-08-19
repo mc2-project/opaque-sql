@@ -3,26 +3,9 @@
 
 #include <string>
 #include <memory>
-//#include <sgx_key_exchange.h>
 
 #include "sp_crypto.h"
 #include "iasrequest.h"
-
-// typedef struct _sample_ps_sec_prop_desc_t {
-//   uint8_t  sample_ps_sec_prop_desc[256];
-// } sample_ps_sec_prop_desc_t;
-
-// typedef struct _sp_db_item_t {
-//   sgx_epid_group_id_t           gid;
-//   lc_ec256_public_t             g_a;
-//   lc_ec256_public_t             g_b;
-//   lc_ec256_private_t            b;
-//   lc_aes_gcm_128bit_key_t       vk_key;   // Shared secret key for the REPORT_DATA
-//   lc_aes_gcm_128bit_key_t       mk_key;   // Shared secret key for generating MAC's
-//   lc_aes_gcm_128bit_key_t       sk_key;   // Shared secret key for encryption
-//   lc_aes_gcm_128bit_key_t       smk_key;  // Used only for SIGMA protocol
-//   sample_ps_sec_prop_desc_t     ps_sec_prop;
-// } sp_db_item_t;
 
 class ServiceProvider {
 public:
@@ -57,7 +40,6 @@ private:
   lc_ec256_private_t sp_priv_key;
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
-  //sp_db_item_t sp_db;
   std::string spid;
 
   std::unique_ptr<IAS_Connection> ias;

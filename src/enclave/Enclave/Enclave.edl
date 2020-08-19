@@ -4,9 +4,6 @@
 enclave {
 
   include "stdbool.h"
-  //include "sgx_key_exchange.h"
-  //include "sgx_trts.h"
-  //from "sgx_tkey_exchange.edl" import *;
 
   trusted {
     public void ecall_project(
