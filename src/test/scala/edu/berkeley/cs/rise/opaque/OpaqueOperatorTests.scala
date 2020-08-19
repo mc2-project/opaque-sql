@@ -314,14 +314,14 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     case 2 => "C"
   }
   
-  testAgainstSpark("aggregate average") { securityLevel =>
-    val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
-    val words = makeDF(data, securityLevel, "id", "category", "price")
-  
-    words.groupBy("category").agg(avg("price").as("avgPrice"))
-      .collect.sortBy { case Row(category: String, _) => category }
-  }
-  
+  // testAgainstSpark("aggregate average") { securityLevel =>
+  //   val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
+  //   val words = makeDF(data, securityLevel, "id", "category", "price")
+  // 
+  //   words.groupBy("category").agg(avg("price").as("avgPrice"))
+  //     .collect.sortBy { case Row(category: String, _) => category }
+  // }
+  // 
   // testAgainstSpark("aggregate count") { securityLevel =>
   //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
   //   val words = makeDF(data, securityLevel, "id", "category", "price")
@@ -497,87 +497,87 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   }
   // }
   // 
-  // testOpaqueOnly("cast error") { securityLevel =>
-  //   val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
-  //   val schema = StructType(Seq(
-  //     StructField("CalendarIntervalType", CalendarIntervalType),
-  //     StructField("NullType", NullType)))
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  //   // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
-  //   // StringType
-  //   val e = intercept[SparkException] {
-  //     withLoggingOff {
-  //       df.select($"CalendarIntervalType".cast(StringType)).collect
-  //     }
-  //   }
-  //   assert(e.getCause.isInstanceOf[OpaqueException])
-  // }
-  // 
-  // testAgainstSpark("exp") { securityLevel =>
-  //   val data: Seq[(Double, Double)] = Seq(
-  //     (2.0, 3.0))
-  //   val schema = StructType(Seq(
-  //     StructField("x", DoubleType),
-  //     StructField("y", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(exp($"y")).collect
-  // }
-  // 
-  // testAgainstSpark("vector multiply") { securityLevel =>
-  //   val data: Seq[(Array[Double], Double)] = Seq(
-  //     (Array[Double](1.0, 1.0, 1.0), 3.0))
-  //   val schema = StructType(Seq(
-  //     StructField("v", DataTypes.createArrayType(DoubleType)),
-  //     StructField("c", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(vectormultiply($"v", $"c")).collect
-  // }
-  // 
-  // testAgainstSpark("dot product") { securityLevel =>
-  //   val data: Seq[(Array[Double], Array[Double])] = Seq(
-  //     (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
-  //   val schema = StructType(Seq(
-  //     StructField("v1", DataTypes.createArrayType(DoubleType)),
-  //     StructField("v2", DataTypes.createArrayType(DoubleType))))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(dot($"v1", $"v2")).collect
-  // }
-  // 
-  // testAgainstSpark("vector sum") { securityLevel =>
-  //   val data: Seq[(Array[Double], Double)] = Seq(
-  //     (Array[Double](1.0, 2.0, 3.0), 4.0),
-  //     (Array[Double](5.0, 7.0, 7.0), 8.0))
-  //   val schema = StructType(Seq(
-  //     StructField("v", DataTypes.createArrayType(DoubleType)),
-  //     StructField("c", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   val vectorsum = new VectorSum
-  //   df.groupBy().agg(vectorsum($"v")).collect
-  // }
-  // 
+  testOpaqueOnly("cast error") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+    // StringType
+    val e = intercept[SparkException] {
+      withLoggingOff {
+        df.select($"CalendarIntervalType".cast(StringType)).collect
+      }
+    }
+    assert(e.getCause.isInstanceOf[OpaqueException])
+  }
+  
+  testAgainstSpark("exp") { securityLevel =>
+    val data: Seq[(Double, Double)] = Seq(
+      (2.0, 3.0))
+    val schema = StructType(Seq(
+      StructField("x", DoubleType),
+      StructField("y", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(exp($"y")).collect
+  }
+  
+  testAgainstSpark("vector multiply") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), 3.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(vectormultiply($"v", $"c")).collect
+  }
+  
+  testAgainstSpark("dot product") { securityLevel =>
+    val data: Seq[(Array[Double], Array[Double])] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
+    val schema = StructType(Seq(
+      StructField("v1", DataTypes.createArrayType(DoubleType)),
+      StructField("v2", DataTypes.createArrayType(DoubleType))))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(dot($"v1", $"v2")).collect
+  }
+  
+  testAgainstSpark("vector sum") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 2.0, 3.0), 4.0),
+      (Array[Double](5.0, 7.0, 7.0), 8.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    val vectorsum = new VectorSum
+    df.groupBy().agg(vectorsum($"v")).collect
+  }
+  
   // testAgainstSpark("create array") { securityLevel =>
   //   val data: Seq[(Double, Double)] = Seq(
   //     (1.0, 2.0),

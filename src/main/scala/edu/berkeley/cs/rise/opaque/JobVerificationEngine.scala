@@ -89,7 +89,7 @@ object JobVerificationEngine {
           //   findRangeBoundsJobIds.append(pastEntry.jobId)
           // }
           // println(partitionForSortJobIds)
-          // println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
+          println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
@@ -107,8 +107,8 @@ object JobVerificationEngine {
       if (numEcallsInFirstPartition == -1) {
         numEcallsInFirstPartition = numEcallsLoggedInThisPartition
       }
-      // println("findRangeBounds calls: " + findRangeBoundsJobIds.length)
-      // if (partitionId > 0 && numEcallsInFirstPartition - findRangeBoundsJobIds.length != numEcallsLoggedInThisPartition) {
+      println("MIN JOB ID " + minJobId)
+      println("MAX JOB ID " + maxJobId)
       if (numEcallsInFirstPartition != numEcallsLoggedInThisPartition) {
         println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
         println("last partition num ecalls: " + numEcallsInFirstPartition)
@@ -262,14 +262,16 @@ object JobVerificationEngine {
         for (j <- 0 until numPartitions) {
           var prev = j - 1
           var next = j + 1
-          if (j == 0) {
-            prev = 0
+          if (j > 0) {
+            // prev = 0
+            // Send block to prev partition
+            expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
           } 
-          if (j == numPartitions - 1) {
-            next = numPartitions - 1
+          if (j < numPartitions - 1) {
+            // next = numPartitions - 1
+            // Send block to next partition
+            expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
           }
-          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
-          expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "nonObliviousAggregateStep2") {
         for (j <- 0 until numPartitions) {

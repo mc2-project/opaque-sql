@@ -289,7 +289,7 @@ case class EncryptedAggregateExec(
       var shiftedFirstRows = Array[Block]()
       var shiftedLastGroups = Array[Block]()
       var shiftedLastRows = Array[Block]()
-      if (childRDD.getNumPartitions > 1) {
+      if (childRDD.getNumPartitions == 1) {
         val firstRowDrop = firstRows(0)
         shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock(firstRowDrop)
 
