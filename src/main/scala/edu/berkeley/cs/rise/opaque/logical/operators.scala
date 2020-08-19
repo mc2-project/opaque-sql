@@ -40,7 +40,7 @@ trait OpaqueOperator extends LogicalPlan {
    * Every encrypted operator relies on its input having a specific set of columns, so we override
    * references to include all inputs to prevent Catalyst from dropping any input columns.
    */
-  override lazy val references: AttributeSet = inputSet
+  override def references: AttributeSet = inputSet
 }
 
 case class Encrypt(child: LogicalPlan)

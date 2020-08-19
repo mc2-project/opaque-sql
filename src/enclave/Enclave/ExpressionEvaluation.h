@@ -151,13 +151,6 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
         static_cast<const tuix::DoubleField *>(right->value())->value());
       break;
     }
-    case tuix::FieldUnion_DateField:
-    {
-      result = Operation<int32_t>()(
-        static_cast<const tuix::DateField *>(left->value())->value(),
-        static_cast<const tuix::DateField *>(right->value())->value());
-      break;
-    }
     case tuix::FieldUnion_StringField:
     {
       auto field1 = static_cast<const tuix::StringField *>(left->value());

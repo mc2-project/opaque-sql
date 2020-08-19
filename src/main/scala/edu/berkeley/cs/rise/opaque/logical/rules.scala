@@ -73,7 +73,7 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Join(left, right, joinType, condition, _) if isEncrypted(p) =>
+    case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
