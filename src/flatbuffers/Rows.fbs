@@ -61,6 +61,7 @@ table ByteField {
 
 table CalendarIntervalField {
     months:int;
+    days:int;
     microseconds:long;
 }
 
