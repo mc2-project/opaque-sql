@@ -79,7 +79,7 @@ object JobVerificationEngine {
 
       // We expect the same number of FindRangeBounds as PartitionForSorts
 
-      println("===================new partition")
+      // println("===================new partition")
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
@@ -289,18 +289,23 @@ object JobVerificationEngine {
         }
       } else if (operator == "nonObliviousAggregateStep1") {
         // Blocks sent to prev and next partition
-        for (j <- 0 until numPartitions) {
-          var prev = j - 1
-          var next = j + 1
-          if (j > 0) {
-            // prev = 0
-            // Send block to prev partition
-            expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
-          } 
-          if (j < numPartitions - 1) {
-            // next = numPartitions - 1
-            // Send block to next partition
-            expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
+        if (numPartitions == 1) {
+          expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+          expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+        } else {
+          for (j <- 0 until numPartitions) {
+            var prev = j - 1
+            var next = j + 1
+            if (j > 0) {
+              // prev = 0
+              // Send block to prev partition
+              expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
+            } 
+            if (j < numPartitions - 1) {
+              // next = numPartitions - 1
+              // Send block to next partition
+              expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
+            }
           }
         }
       } else if (operator == "nonObliviousAggregateStep2") {
@@ -310,11 +315,11 @@ object JobVerificationEngine {
       } else if (operator == "scanCollectLastPrimary") {
           // Blocks sent to next partition
         for (j <- 0 until numPartitions) {
-          var next = j + 1
-          if (j == numPartitions - 1) {
-            next = numPartitions - 1
+          if (j < numPartitions - 1) {
+            // next = numPartitions - 1
+            var next = j + 1
+            expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
           }
-          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "nonObliviousSortMergeJoin") {
         for (j <- 0 until numPartitions) {
@@ -331,14 +336,14 @@ object JobVerificationEngine {
     // Retrieve the physical plan from df.explain()
     // Condense the physical plan to match ecall operations
     // Return whether everything checks out
-    println("Expected Adjacency Matrix: ")
-    expectedAdjacencyMatrix foreach { row => row foreach print; println }
-
-    println("Executed Adjacency Matrix: ")
-    executedAdjacencyMatrix foreach { row => row foreach print; println }
 
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
+        println("Expected Adjacency Matrix: ")
+        expectedAdjacencyMatrix foreach { row => row foreach print; println }
+
+        println("Executed Adjacency Matrix: ")
+        executedAdjacencyMatrix foreach { row => row foreach print; println }
         return false
       }
     }

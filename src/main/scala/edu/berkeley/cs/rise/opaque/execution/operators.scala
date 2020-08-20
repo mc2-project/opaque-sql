@@ -348,8 +348,14 @@ case class EncryptedSortMergeJoinExec(
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes, TaskContext.getPartitionId))
       }.collect
-      val lastLastPrimaryRow = lastPrimaryRows.last
-      val shifted = Utils.emptyBlock(lastLastPrimaryRow) +: lastPrimaryRows.dropRight(1)
+
+      var shifted = Array[Block]()
+      if (childRDD.getNumPartitions == 1) {
+        val lastLastPrimaryRow = lastPrimaryRows.last
+        shifted = Utils.emptyBlock(lastLastPrimaryRow) +: lastPrimaryRows.dropRight(1)
+      } else {
+        shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+      }
       assert(shifted.size == childRDD.partitions.length)
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)

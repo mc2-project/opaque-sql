@@ -74,6 +74,7 @@ void ecall_project(uint8_t *condition, size_t condition_length,
             output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -96,6 +97,7 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
            output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -116,6 +118,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
            output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -141,6 +144,7 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                       output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -171,6 +175,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                        output_partitions, output_partition_lengths);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -193,6 +198,7 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
                   output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -215,6 +221,7 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
                               output_rows, output_rows_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -241,6 +248,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
 
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -267,6 +275,7 @@ void ecall_non_oblivious_aggregate_step1(
       last_row, last_row_length);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -299,6 +308,7 @@ void ecall_non_oblivious_aggregate_step2(
 
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }

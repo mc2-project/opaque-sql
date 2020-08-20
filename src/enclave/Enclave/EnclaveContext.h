@@ -104,8 +104,8 @@ class EnclaveContext {
     void finish_ecall() {
       // Increment the job id of this pid
       if (pid_jobid.find(pid) != pid_jobid.end()) {
-        std::cout << "increment job id for partition " << pid << std::endl;
-        std::cout << "Previous job id: " << pid_jobid[pid] << std::endl;
+        // std::cout << "increment job id for partition " << pid << std::endl;
+        // std::cout << "Previous job id: " << pid_jobid[pid] << std::endl;
         pid_jobid[pid]++;
       } else {
         pid_jobid[pid] = 0;

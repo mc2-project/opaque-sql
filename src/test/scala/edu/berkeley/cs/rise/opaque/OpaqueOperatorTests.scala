@@ -232,28 +232,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //     "a", "b")
   //   df1.union(df2).collect.toSet
   // }
-  
-  testOpaqueOnly("cache") { securityLevel =>
-    def numCached(ds: Dataset[_]): Int =
-      ds.queryExecution.executedPlan.collect {
-        case cached: EncryptedBlockRDDScanExec
-            if cached.rdd.getStorageLevel != StorageLevel.NONE =>
-          cached
-      }.size
-  
-    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-    val df = makeDF(data, securityLevel, "a", "b").cache()
-  
-    val agg = df.groupBy($"a").agg(sum("b"))
-    println(agg.explain)
-  
-    assert(numCached(agg) === 1)
-  
-    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
-    df.unpersist()
-  }
-  
+  // 
+  // testOpaqueOnly("cache") { securityLevel =>
+  //   def numCached(ds: Dataset[_]): Int =
+  //     ds.queryExecution.executedPlan.collect {
+  //       case cached: EncryptedBlockRDDScanExec
+  //           if cached.rdd.getStorageLevel != StorageLevel.NONE =>
+  //         cached
+  //     }.size
+  // 
+  //   val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+  //   val df = makeDF(data, securityLevel, "a", "b").cache()
+  // 
+  //   val agg = df.groupBy($"a").agg(sum("b"))
+  //   println(agg.explain)
+  // 
+  //   assert(numCached(agg) === 1)
+  // 
+  //   val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+  //   assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+  //   df.unpersist()
+  // }
+  // 
   // testAgainstSpark("sort") { securityLevel =>
   //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
   //   val df = makeDF(data, securityLevel, "str", "x")
@@ -283,31 +283,33 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   val df = makeDF(data, securityLevel, "x", "y")
   //   df.sort($"x", $"y").collect
   // }
-  // 
-  // testAgainstSpark("join") { securityLevel =>
-  //   val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
-  //   val p = makeDF(p_data, securityLevel, "id", "pk", "x")
-  //   val f = makeDF(f_data, securityLevel, "id", "fk", "x")
-  //   p.join(f, $"pk" === $"fk").collect.toSet
-  // }
-  // 
-  // testAgainstSpark("join on column 1") { securityLevel =>
-  //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-  //   val p = makeDF(p_data, securityLevel, "pk", "x")
-  //   val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-  //   p.join(f, $"pk" === $"fk").collect.toSet
-  // }
-  // 
-  // testAgainstSpark("non-foreign-key join") { securityLevel =>
-  //   val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
-  //   val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
-  //   val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
-  //   p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
-  // }
-  // 
+  
+  testAgainstSpark("join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "pk", "x")
+    val f = makeDF(f_data, securityLevel, "id", "fk", "x")
+    p.join(f, $"pk" === $"fk").collect.toSet
+    // println(joined.explain)
+    // joined.collect.toSet
+  }
+  
+  testAgainstSpark("join on column 1") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = makeDF(p_data, securityLevel, "pk", "x")
+    val f = makeDF(f_data, securityLevel, "fk", "x", "y")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
+  
+  testAgainstSpark("non-foreign-key join") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+  
   def abc(i: Int): String = (i % 3) match {
     case 0 => "A"
     case 1 => "B"
@@ -497,87 +499,87 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   }
   // }
   // 
-  testOpaqueOnly("cast error") { securityLevel =>
-    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
-    val schema = StructType(Seq(
-      StructField("CalendarIntervalType", CalendarIntervalType),
-      StructField("NullType", NullType)))
-    val df = securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
-    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
-    // StringType
-    val e = intercept[SparkException] {
-      withLoggingOff {
-        df.select($"CalendarIntervalType".cast(StringType)).collect
-      }
-    }
-    assert(e.getCause.isInstanceOf[OpaqueException])
-  }
-  
-  testAgainstSpark("exp") { securityLevel =>
-    val data: Seq[(Double, Double)] = Seq(
-      (2.0, 3.0))
-    val schema = StructType(Seq(
-      StructField("x", DoubleType),
-      StructField("y", DoubleType)))
-  
-    val df = securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
-  
-    df.select(exp($"y")).collect
-  }
-  
-  testAgainstSpark("vector multiply") { securityLevel =>
-    val data: Seq[(Array[Double], Double)] = Seq(
-      (Array[Double](1.0, 1.0, 1.0), 3.0))
-    val schema = StructType(Seq(
-      StructField("v", DataTypes.createArrayType(DoubleType)),
-      StructField("c", DoubleType)))
-  
-    val df = securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
-  
-    df.select(vectormultiply($"v", $"c")).collect
-  }
-  
-  testAgainstSpark("dot product") { securityLevel =>
-    val data: Seq[(Array[Double], Array[Double])] = Seq(
-      (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
-    val schema = StructType(Seq(
-      StructField("v1", DataTypes.createArrayType(DoubleType)),
-      StructField("v2", DataTypes.createArrayType(DoubleType))))
-  
-    val df = securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
-  
-    df.select(dot($"v1", $"v2")).collect
-  }
-  
-  testAgainstSpark("vector sum") { securityLevel =>
-    val data: Seq[(Array[Double], Double)] = Seq(
-      (Array[Double](1.0, 2.0, 3.0), 4.0),
-      (Array[Double](5.0, 7.0, 7.0), 8.0))
-    val schema = StructType(Seq(
-      StructField("v", DataTypes.createArrayType(DoubleType)),
-      StructField("c", DoubleType)))
-  
-    val df = securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
-  
-    val vectorsum = new VectorSum
-    df.groupBy().agg(vectorsum($"v")).collect
-  }
-  
+  // testOpaqueOnly("cast error") { securityLevel =>
+  //   val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+  //   val schema = StructType(Seq(
+  //     StructField("CalendarIntervalType", CalendarIntervalType),
+  //     StructField("NullType", NullType)))
+  //   val df = securityLevel.applyTo(
+  //     spark.createDataFrame(
+  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+  //       schema))
+  //   // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+  //   // StringType
+  //   val e = intercept[SparkException] {
+  //     withLoggingOff {
+  //       df.select($"CalendarIntervalType".cast(StringType)).collect
+  //     }
+  //   }
+  //   assert(e.getCause.isInstanceOf[OpaqueException])
+  // }
+  // 
+  // testAgainstSpark("exp") { securityLevel =>
+  //   val data: Seq[(Double, Double)] = Seq(
+  //     (2.0, 3.0))
+  //   val schema = StructType(Seq(
+  //     StructField("x", DoubleType),
+  //     StructField("y", DoubleType)))
+  // 
+  //   val df = securityLevel.applyTo(
+  //     spark.createDataFrame(
+  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+  //       schema))
+  // 
+  //   df.select(exp($"y")).collect
+  // }
+  // 
+  // testAgainstSpark("vector multiply") { securityLevel =>
+  //   val data: Seq[(Array[Double], Double)] = Seq(
+  //     (Array[Double](1.0, 1.0, 1.0), 3.0))
+  //   val schema = StructType(Seq(
+  //     StructField("v", DataTypes.createArrayType(DoubleType)),
+  //     StructField("c", DoubleType)))
+  // 
+  //   val df = securityLevel.applyTo(
+  //     spark.createDataFrame(
+  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+  //       schema))
+  // 
+  //   df.select(vectormultiply($"v", $"c")).collect
+  // }
+  // 
+  // testAgainstSpark("dot product") { securityLevel =>
+  //   val data: Seq[(Array[Double], Array[Double])] = Seq(
+  //     (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
+  //   val schema = StructType(Seq(
+  //     StructField("v1", DataTypes.createArrayType(DoubleType)),
+  //     StructField("v2", DataTypes.createArrayType(DoubleType))))
+  // 
+  //   val df = securityLevel.applyTo(
+  //     spark.createDataFrame(
+  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+  //       schema))
+  // 
+  //   df.select(dot($"v1", $"v2")).collect
+  // }
+  // 
+  // testAgainstSpark("vector sum") { securityLevel =>
+  //   val data: Seq[(Array[Double], Double)] = Seq(
+  //     (Array[Double](1.0, 2.0, 3.0), 4.0),
+  //     (Array[Double](5.0, 7.0, 7.0), 8.0))
+  //   val schema = StructType(Seq(
+  //     StructField("v", DataTypes.createArrayType(DoubleType)),
+  //     StructField("c", DoubleType)))
+  // 
+  //   val df = securityLevel.applyTo(
+  //     spark.createDataFrame(
+  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+  //       schema))
+  // 
+  //   val vectorsum = new VectorSum
+  //   df.groupBy().agg(vectorsum($"v")).collect
+  // }
+  // 
   // testAgainstSpark("create array") { securityLevel =>
   //   val data: Seq[(Double, Double)] = Seq(
   //     (1.0, 2.0),
@@ -670,22 +672,22 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
   }
 
   // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
-    // val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-    // val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-    // val p = makeDF(p_data, securityLevel, "pk", "x")
-    // val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
-    // p.join(f, $"pk" === $"fk").collect.toSet
+  //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+  //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+  //   val p = makeDF(p_data, securityLevel, "pk", "x")
+  //   val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
+  //   p.join(f, $"pk" === $"fk").collect.toSet
   // }
   // 
   // testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
-    // // This test is intended to ensure that primary groups are never split across multiple
-    // // partitions, which would break our implementation of non-foreign-key join.
+  //   // This test is intended to ensure that primary groups are never split across multiple
+  //   // partitions, which would break our implementation of non-foreign-key join.
   // 
-    // val p_data = for (i <- 1 to 128) yield (i, 1)
-    // val f_data = for (i <- 1 to 128) yield (i, 1)
-    // val p = makeDF(p_data, securityLevel, "id", "join_col_1")
-    // val f = makeDF(f_data, securityLevel, "id", "join_col_2")
-    // p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  //   val p_data = for (i <- 1 to 128) yield (i, 1)
+  //   val f_data = for (i <- 1 to 128) yield (i, 1)
+  //   val p = makeDF(p_data, securityLevel, "id", "join_col_1")
+  //   val f = makeDF(f_data, securityLevel, "id", "join_col_2")
+  //   p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
   // }
-// 
+
 }
