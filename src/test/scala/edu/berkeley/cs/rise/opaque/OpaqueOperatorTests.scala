@@ -604,28 +604,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
   // }
   // 
-  // testAgainstSpark("k-means") { securityLevel =>
-  //   import scala.math.Ordering.Implicits.seqDerivedOrdering
-  //   KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
-  // }
-  // 
-  // testAgainstSpark("pagerank") { securityLevel =>
-  //   PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
-  // }
-  // 
-  // testAgainstSpark("TPC-H 9") { securityLevel =>
-  //   TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
-  // }
-  // 
-  // testAgainstSpark("big data 1") { securityLevel =>
-  //   BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
-  // }
-  // 
-  // testAgainstSpark("big data 2") { securityLevel =>
-  //   BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
-  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-  //     .sortBy(_._1)
-  // }
+  testAgainstSpark("k-means") { securityLevel =>
+    import scala.math.Ordering.Implicits.seqDerivedOrdering
+    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+  
+  testAgainstSpark("pagerank") { securityLevel =>
+    PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
+  }
+  
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  }
+  
+  testAgainstSpark("big data 1") { securityLevel =>
+    BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
+  }
+  
+  testAgainstSpark("big data 2") { securityLevel =>
+    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+      .sortBy(_._1)
+  }
   
   testAgainstSpark("big data 3") { securityLevel =>
     BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
@@ -640,24 +640,24 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
 }
 
-// class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
-//   override val spark = SparkSession.builder()
-//     .master("local[1]")
-//     .appName("QEDSuite")
-//     .config("spark.sql.shuffle.partitions", 1)
-//     .getOrCreate()
-// 
-//   override def numPartitions: Int = 1
-// }
+class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
+  override val spark = SparkSession.builder()
+    .master("local[1]")
+    .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", 1)
+    .getOrCreate()
+
+  override def numPartitions: Int = 1
+}
 
 class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")
-    .config("spark.sql.shuffle.partitions", 2)
+    .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
-  override def numPartitions: Int = 2
+  override def numPartitions: Int = 3
 
   import testImplicits._
 
