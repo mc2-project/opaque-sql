@@ -253,383 +253,381 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
     df.unpersist()
   }
-  // 
-  // testAgainstSpark("sort") { securityLevel =>
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
-  //   val df = makeDF(data, securityLevel, "str", "x")
-  //   df.sort($"x").collect
-  // }
-  // 
-  // testAgainstSpark("sort zero elements") { securityLevel =>
-  //   val data = Seq.empty[(String, Int)]
-  //   val df = makeDF(data, securityLevel, "str", "x")
-  //   df.sort($"x").collect
-  // }
-  // 
-  // testAgainstSpark("sort by float") { securityLevel =>
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
-  //   val df = makeDF(data, securityLevel, "str", "x")
-  //   df.sort($"x").collect
-  // }
-  // 
-  // testAgainstSpark("sort by string") { securityLevel =>
-  //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
-  //   val df = makeDF(data, securityLevel, "str", "x")
-  //   df.sort($"str").collect
-  // }
-  // 
-  // testAgainstSpark("sort by 2 columns") { securityLevel =>
-  //   val data = Random.shuffle((0 until 256).map(x => (x / 16, x)).toSeq)
-  //   val df = makeDF(data, securityLevel, "x", "y")
-  //   df.sort($"x", $"y").collect
-  // }
-  // 
-  // testAgainstSpark("join") { securityLevel =>
-  //   val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
-  //   val p = makeDF(p_data, securityLevel, "id", "pk", "x")
-  //   val f = makeDF(f_data, securityLevel, "id", "fk", "x")
-  //   p.join(f, $"pk" === $"fk").collect.toSet
-  //   // println(joined.explain)
-  //   // joined.collect.toSet
-  // }
-  // 
-  // testAgainstSpark("join on column 1") { securityLevel =>
-  //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-  //   val p = makeDF(p_data, securityLevel, "pk", "x")
-  //   val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-  //   p.join(f, $"pk" === $"fk").collect.toSet
-  // }
-  // 
-  // testAgainstSpark("non-foreign-key join") { securityLevel =>
-  //   val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
-  //   val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
-  //   val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
-  //   p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
-  // }
-  // 
-  // def abc(i: Int): String = (i % 3) match {
-  //   case 0 => "A"
-  //   case 1 => "B"
-  //   case 2 => "C"
-  // }
-  // 
-  // testAgainstSpark("aggregate average") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(avg("price").as("avgPrice"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate count") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(count("category").as("itemsInCategory"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate first") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(first("category").as("firstInCategory"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate last") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(last("category").as("lastInCategory"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate max") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(max("price").as("maxPrice"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate min") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "category", "price")
-  // 
-  //   words.groupBy("category").agg(min("price").as("minPrice"))
-  //     .collect.sortBy { case Row(category: String, _) => category }
-  // }
-  // 
-  // testAgainstSpark("aggregate sum") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "word", "count")
-  // 
-  //   words.groupBy("word").agg(sum("count").as("totalCount"))
-  //     .collect.sortBy { case Row(word: String, _) => word }
-  // }
-  // 
-  // testAgainstSpark("aggregate on multiple columns") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
-  //   val words = makeDF(data, securityLevel, "str", "x", "y")
-  // 
-  //   words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
-  //     .collect.sortBy { case Row(str: String, _, _) => str }
-  // }
-  // 
-  // testAgainstSpark("global aggregate") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val words = makeDF(data, securityLevel, "id", "word", "count")
-  //   words.agg(sum("count").as("totalCount")).collect
-  // }
-  // 
-  // testAgainstSpark("contains") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield(i.toString, abc(i))
-  //   val df = makeDF(data, securityLevel, "word", "abc")
-  //   df.filter($"word".contains(lit("1"))).collect
-  // }
-  // 
-  // testAgainstSpark("year") { securityLevel =>
-  //   val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
-  //   val df = makeDF(data, securityLevel, "id", "date")
-  //   df.select(year($"date")).collect
-  // }
-  // 
-  // testOpaqueOnly("save and load with explicit schema") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val df = makeDF(data, securityLevel, "id", "word", "count")
-  //   val path = Utils.createTempDir()
-  //   path.delete()
-  //   df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-  //   try {
-  //     val df2 = spark.read
-  //       .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
-  //       .schema(df.schema)
-  //       .load(path.toString)
-  //     assert(df.collect.toSet === df2.collect.toSet)
-  //     assert(df.groupBy("word").agg(sum("count")).collect.toSet
-  //       === df2.groupBy("word").agg(sum("count")).collect.toSet)
-  //   } finally {
-  //     Utils.deleteRecursively(path)
-  //   }
-  // }
-  // 
-  // testOpaqueOnly("save and load without schema") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val df = makeDF(data, securityLevel, "id", "word", "count")
-  //   val path = Utils.createTempDir()
-  //   path.delete()
-  //   df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-  //   try {
-  //     val df2 = spark.read
-  //       .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
-  //       .load(path.toString)
-  //     assert(df.collect.toSet === df2.collect.toSet)
-  //     assert(df.groupBy("word").agg(sum("count")).collect.toSet
-  //       === df2.groupBy("word").agg(sum("count")).collect.toSet)
-  //   } finally {
-  //     Utils.deleteRecursively(path)
-  //   }
-  // }
-  // 
-  // testOpaqueOnly("load from SQL with explicit schema") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val df = makeDF(data, securityLevel, "id", "word", "count")
-  //   val path = Utils.createTempDir()
-  //   path.delete()
-  //   df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-  // 
-  //   try {
-  //     spark.sql(s"""
-  //       |CREATE TEMPORARY VIEW df2
-  //       |(${df.schema.toDDL})
-  //       |USING edu.berkeley.cs.rise.opaque.EncryptedSource
-  //       |OPTIONS (
-  //       |  path "${path}"
-  //       |)""".stripMargin)
-  //     val df2 = spark.sql(s"""
-  //       |SELECT * FROM df2
-  //       |""".stripMargin)
-  // 
-  //     assert(df.collect.toSet === df2.collect.toSet)
-  //   } finally {
-  //     spark.catalog.dropTempView("df2")
-  //     Utils.deleteRecursively(path)
-  //   }
-  // }
-  // 
-  // testOpaqueOnly("load from SQL without schema") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-  //   val df = makeDF(data, securityLevel, "id", "word", "count")
-  //   val path = Utils.createTempDir()
-  //   path.delete()
-  //   df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-  // 
-  //   try {
-  //     spark.sql(s"""
-  //       |CREATE TEMPORARY VIEW df2
-  //       |USING edu.berkeley.cs.rise.opaque.EncryptedSource
-  //       |OPTIONS (
-  //       |  path "${path}"
-  //       |)""".stripMargin)
-  //     val df2 = spark.sql(s"""
-  //       |SELECT * FROM df2
-  //       |""".stripMargin)
-  // 
-  //     assert(df.collect.toSet === df2.collect.toSet)
-  //   } finally {
-  //     spark.catalog.dropTempView("df2")
-  //     Utils.deleteRecursively(path)
-  //   }
-  // }
-  // 
-  // testAgainstSpark("SQL API") { securityLevel =>
-  //   val df = makeDF(
-  //     (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
-  //     securityLevel,
-  //     "a", "b", "c", "d", "x")
-  //   df.createTempView("df")
-  //   try {
-  //     spark.sql("SELECT * FROM df WHERE x > 10").collect
-  //   } finally {
-  //     spark.catalog.dropTempView("df")
-  //   }
-  // }
-  // 
-  // testOpaqueOnly("cast error") { securityLevel =>
-  //   val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
-  //   val schema = StructType(Seq(
-  //     StructField("CalendarIntervalType", CalendarIntervalType),
-  //     StructField("NullType", NullType)))
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  //   // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
-  //   // StringType
-  //   val e = intercept[SparkException] {
-  //     withLoggingOff {
-  //       df.select($"CalendarIntervalType".cast(StringType)).collect
-  //     }
-  //   }
-  //   assert(e.getCause.isInstanceOf[OpaqueException])
-  // }
-  // 
-  // testAgainstSpark("exp") { securityLevel =>
-  //   val data: Seq[(Double, Double)] = Seq(
-  //     (2.0, 3.0))
-  //   val schema = StructType(Seq(
-  //     StructField("x", DoubleType),
-  //     StructField("y", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(exp($"y")).collect
-  // }
-  // 
-  // testAgainstSpark("vector multiply") { securityLevel =>
-  //   val data: Seq[(Array[Double], Double)] = Seq(
-  //     (Array[Double](1.0, 1.0, 1.0), 3.0))
-  //   val schema = StructType(Seq(
-  //     StructField("v", DataTypes.createArrayType(DoubleType)),
-  //     StructField("c", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(vectormultiply($"v", $"c")).collect
-  // }
-  // 
-  // testAgainstSpark("dot product") { securityLevel =>
-  //   val data: Seq[(Array[Double], Array[Double])] = Seq(
-  //     (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
-  //   val schema = StructType(Seq(
-  //     StructField("v1", DataTypes.createArrayType(DoubleType)),
-  //     StructField("v2", DataTypes.createArrayType(DoubleType))))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(dot($"v1", $"v2")).collect
-  // }
-  // 
-  // testAgainstSpark("vector sum") { securityLevel =>
-  //   val data: Seq[(Array[Double], Double)] = Seq(
-  //     (Array[Double](1.0, 2.0, 3.0), 4.0),
-  //     (Array[Double](5.0, 7.0, 7.0), 8.0))
-  //   val schema = StructType(Seq(
-  //     StructField("v", DataTypes.createArrayType(DoubleType)),
-  //     StructField("c", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   val vectorsum = new VectorSum
-  //   df.groupBy().agg(vectorsum($"v")).collect
-  // }
-  // 
-  // testAgainstSpark("create array") { securityLevel =>
-  //   val data: Seq[(Double, Double)] = Seq(
-  //     (1.0, 2.0),
-  //     (3.0, 4.0))
-  //   val schema = StructType(Seq(
-  //     StructField("x1", DoubleType),
-  //     StructField("x2", DoubleType)))
-  // 
-  //   val df = securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema))
-  // 
-  //   df.select(array($"x1", $"x2").as("x")).collect
-  // }
-  // 
-  // testAgainstSpark("least squares") { securityLevel =>
-  //   LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
-  // }
-  // 
-  // testAgainstSpark("logistic regression") { securityLevel =>
-  //   LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
-  // }
-  // 
-  // testAgainstSpark("k-means") { securityLevel =>
-  //   import scala.math.Ordering.Implicits.seqDerivedOrdering
-  //   KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
-  // }
-  // 
-  // testAgainstSpark("pagerank") { securityLevel =>
-  //   PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
-  // }
-  // 
-  // testAgainstSpark("TPC-H 9") { securityLevel =>
-  //   TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
-  // }
-  // 
-  // testAgainstSpark("big data 1") { securityLevel =>
-  //   BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
-  // }
-  // 
-  // testAgainstSpark("big data 2") { securityLevel =>
-  //   BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
-  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-  //     .sortBy(_._1)
-  // }
-  // 
-  // testAgainstSpark("big data 3") { securityLevel =>
-  //   BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
-  // }
+  
+  testAgainstSpark("sort") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"x").collect
+  }
+  
+  testAgainstSpark("sort zero elements") { securityLevel =>
+    val data = Seq.empty[(String, Int)]
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"x").collect
+  }
+  
+  testAgainstSpark("sort by float") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"x").collect
+  }
+  
+  testAgainstSpark("sort by string") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x.toString, x.toFloat)).toSeq)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.sort($"str").collect
+  }
+  
+  testAgainstSpark("sort by 2 columns") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(x => (x / 16, x)).toSeq)
+    val df = makeDF(data, securityLevel, "x", "y")
+    df.sort($"x", $"y").collect
+  }
+  
+  testAgainstSpark("join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "pk", "x")
+    val f = makeDF(f_data, securityLevel, "id", "fk", "x")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
+  
+  testAgainstSpark("join on column 1") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+    val p = makeDF(p_data, securityLevel, "pk", "x")
+    val f = makeDF(f_data, securityLevel, "fk", "x", "y")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
+  
+  testAgainstSpark("non-foreign-key join") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 - 128) yield (i, (i % 16).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+  
+  def abc(i: Int): String = (i % 3) match {
+    case 0 => "A"
+    case 1 => "B"
+    case 2 => "C"
+  }
+  
+  testAgainstSpark("aggregate average") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(avg("price").as("avgPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate count") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(count("category").as("itemsInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate first") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(first("category").as("firstInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate last") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(last("category").as("lastInCategory"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate max") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(max("price").as("maxPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate min") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "category", "price")
+  
+    words.groupBy("category").agg(min("price").as("minPrice"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+  
+  testAgainstSpark("aggregate sum") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+  
+    words.groupBy("word").agg(sum("count").as("totalCount"))
+      .collect.sortBy { case Row(word: String, _) => word }
+  }
+  
+  testAgainstSpark("aggregate on multiple columns") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
+    val words = makeDF(data, securityLevel, "str", "x", "y")
+  
+    words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
+      .collect.sortBy { case Row(str: String, _, _) => str }
+  }
+  
+  testAgainstSpark("global aggregate") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.agg(sum("count").as("totalCount")).collect
+  }
+  
+  testAgainstSpark("contains") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, abc(i))
+    val df = makeDF(data, securityLevel, "word", "abc")
+    df.filter($"word".contains(lit("1"))).collect
+  }
+  
+  testAgainstSpark("year") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "id", "date")
+    df.select(year($"date")).collect
+  }
+  
+  testOpaqueOnly("save and load with explicit schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    try {
+      val df2 = spark.read
+        .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+        .schema(df.schema)
+        .load(path.toString)
+      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.groupBy("word").agg(sum("count")).collect.toSet
+        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    } finally {
+      Utils.deleteRecursively(path)
+    }
+  }
+  
+  testOpaqueOnly("save and load without schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    try {
+      val df2 = spark.read
+        .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+        .load(path.toString)
+      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.groupBy("word").agg(sum("count")).collect.toSet
+        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+    } finally {
+      Utils.deleteRecursively(path)
+    }
+  }
+  
+  testOpaqueOnly("load from SQL with explicit schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+  
+    try {
+      spark.sql(s"""
+        |CREATE TEMPORARY VIEW df2
+        |(${df.schema.toDDL})
+        |USING edu.berkeley.cs.rise.opaque.EncryptedSource
+        |OPTIONS (
+        |  path "${path}"
+        |)""".stripMargin)
+      val df2 = spark.sql(s"""
+        |SELECT * FROM df2
+        |""".stripMargin)
+  
+      assert(df.collect.toSet === df2.collect.toSet)
+    } finally {
+      spark.catalog.dropTempView("df2")
+      Utils.deleteRecursively(path)
+    }
+  }
+  
+  testOpaqueOnly("load from SQL without schema") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val df = makeDF(data, securityLevel, "id", "word", "count")
+    val path = Utils.createTempDir()
+    path.delete()
+    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+  
+    try {
+      spark.sql(s"""
+        |CREATE TEMPORARY VIEW df2
+        |USING edu.berkeley.cs.rise.opaque.EncryptedSource
+        |OPTIONS (
+        |  path "${path}"
+        |)""".stripMargin)
+      val df2 = spark.sql(s"""
+        |SELECT * FROM df2
+        |""".stripMargin)
+  
+      assert(df.collect.toSet === df2.collect.toSet)
+    } finally {
+      spark.catalog.dropTempView("df2")
+      Utils.deleteRecursively(path)
+    }
+  }
+  
+  testAgainstSpark("SQL API") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.createTempView("df")
+    try {
+      spark.sql("SELECT * FROM df WHERE x > 10").collect
+    } finally {
+      spark.catalog.dropTempView("df")
+    }
+  }
+  
+  testOpaqueOnly("cast error") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
+    // StringType
+    val e = intercept[SparkException] {
+      withLoggingOff {
+        df.select($"CalendarIntervalType".cast(StringType)).collect
+      }
+    }
+    assert(e.getCause.isInstanceOf[OpaqueException])
+  }
+  
+  testAgainstSpark("exp") { securityLevel =>
+    val data: Seq[(Double, Double)] = Seq(
+      (2.0, 3.0))
+    val schema = StructType(Seq(
+      StructField("x", DoubleType),
+      StructField("y", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(exp($"y")).collect
+  }
+  
+  testAgainstSpark("vector multiply") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), 3.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(vectormultiply($"v", $"c")).collect
+  }
+  
+  testAgainstSpark("dot product") { securityLevel =>
+    val data: Seq[(Array[Double], Array[Double])] = Seq(
+      (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
+    val schema = StructType(Seq(
+      StructField("v1", DataTypes.createArrayType(DoubleType)),
+      StructField("v2", DataTypes.createArrayType(DoubleType))))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(dot($"v1", $"v2")).collect
+  }
+  
+  testAgainstSpark("vector sum") { securityLevel =>
+    val data: Seq[(Array[Double], Double)] = Seq(
+      (Array[Double](1.0, 2.0, 3.0), 4.0),
+      (Array[Double](5.0, 7.0, 7.0), 8.0))
+    val schema = StructType(Seq(
+      StructField("v", DataTypes.createArrayType(DoubleType)),
+      StructField("c", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    val vectorsum = new VectorSum
+    df.groupBy().agg(vectorsum($"v")).collect
+  }
+  
+  testAgainstSpark("create array") { securityLevel =>
+    val data: Seq[(Double, Double)] = Seq(
+      (1.0, 2.0),
+      (3.0, 4.0))
+    val schema = StructType(Seq(
+      StructField("x1", DoubleType),
+      StructField("x2", DoubleType)))
+  
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+  
+    df.select(array($"x1", $"x2").as("x")).collect
+  }
+  
+  testAgainstSpark("least squares") { securityLevel =>
+    LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
+  }
+  
+  testAgainstSpark("logistic regression") { securityLevel =>
+    LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
+  }
+  
+  testAgainstSpark("k-means") { securityLevel =>
+    import scala.math.Ordering.Implicits.seqDerivedOrdering
+    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+  
+  testAgainstSpark("pagerank") { securityLevel =>
+    PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
+  }
+  
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  }
+  
+  testAgainstSpark("big data 1") { securityLevel =>
+    BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
+  }
+  
+  testAgainstSpark("big data 2") { securityLevel =>
+    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+      .sortBy(_._1)
+  }
+  
+  testAgainstSpark("big data 3") { securityLevel =>
+    BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
+  }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
     data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =
