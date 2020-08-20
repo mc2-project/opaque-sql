@@ -108,9 +108,9 @@ class EnclaveContext {
       return pid;
     }
 
-    void set_partition_index(int idx) {
-      eid = idx;
-    }
+    // void set_partition_index(int idx) {
+      // eid = idx;
+    // }
 
     void set_pid(int id) {
       pid = id;
@@ -176,9 +176,13 @@ class EnclaveContext {
     }
 
     void increment_job_id() {
-      std::cout << "Increment job id for partition: " << pid << std::endl; 
+      // std::cout << "Increment job id for partition: " << pid << std::endl; 
       pid_jobid[pid]++;
-      std::cout << "new jobId" << pid_jobid[pid] << std::endl;
+      // std::cout << "new jobId" << pid_jobid[pid] << std::endl;
+    }
+
+    void reset_pid_jobid_map() {
+      pid_jobid.clear();
     }
 
 //     std::vector<std::string> get_executed_plan() {

@@ -175,8 +175,8 @@ object JobVerificationEngine {
         val jobId = logEntry.jobId
         val rcvEid = logEntry.rcvEid
         println("Log Entry Job ID: " + logEntry.jobId)
+        println("Starting Index: " + startingJobIdMap(rcvEid))
         println("==============")
-        // println("starting job id: " + startingJobId)
         val ecallIndex = logEntry.jobId - startingJobIdMap(rcvEid)
 
         ecallSeq(ecallIndex) = op

@@ -122,137 +122,137 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  // testAgainstSpark("create DataFrame from sequence") { securityLevel =>
-  //   val data = for (i <- 0 until 5) yield ("foo", i)
-  //   makeDF(data, securityLevel, "word", "count").collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
-  //   val data: Seq[(Array[Byte], Byte)] =
-  //     Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
-  //   makeDF(data, securityLevel, "BinaryType", "ByteType").collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
-  //   val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
-  //   val schema = StructType(Seq(
-  //     StructField("CalendarIntervalType", CalendarIntervalType),
-  //     StructField("NullType", NullType)))
-  // 
-  //   securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-  //       schema)).collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with ShortType + TimestampType") { securityLevel =>
-  //   val data: Seq[(Short, Timestamp)] = Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
-  //   makeDF(data, securityLevel, "ShortType", "TimestampType").collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with ArrayType") { securityLevel =>
-  //   val array: Array[Int] = Array(0, -128, 127, 1)
-  //   val data = Seq(
-  //     (array, "dog"),
-  //     (array, "cat"),
-  //     (array, "ant"))
-  //   val df = makeDF(data, securityLevel, "array", "string")
-  //   df.collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with MapType") { securityLevel =>
-  //   val map: Map[String, Int] = Map("x" -> 24, "y" -> 25, "z" -> 26)
-  //   val data = Seq(
-  //     (map, "dog"),
-  //     (map, "cat"),
-  //     (map, "ant"))
-  //   val df = makeDF(data, securityLevel, "map", "string")
-  //   df.collect
-  // }
-  // 
-  // testAgainstSpark("create DataFrame with nulls for all types") { securityLevel =>
-  //   val schema = StructType(Seq(
-  //     StructField("boolean", BooleanType),
-  //     StructField("integer", IntegerType),
-  //     StructField("long", LongType),
-  //     StructField("float", FloatType),
-  //     StructField("double", DoubleType),
-  //     StructField("date", DateType),
-  //     StructField("binary", BinaryType),
-  //     StructField("byte", ByteType),
-  //     StructField("calendar_interval", CalendarIntervalType),
-  //     StructField("null", NullType),
-  //     StructField("short", ShortType),
-  //     StructField("timestamp", TimestampType),
-  //     StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
-  //     StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
-  //     StructField("string", StringType)))
-  // 
-  //   securityLevel.applyTo(
-  //     spark.createDataFrame(
-  //       spark.sparkContext.makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
-  //       schema)).collect
-  // }
-  // 
-  // testAgainstSpark("filter") { securityLevel =>
-  //   val df = makeDF(
-  //     (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
-  //     securityLevel,
-  //     "a", "b", "c", "d", "x")
-  //   df.filter($"x" > lit(10)).collect
-  // }
-  // 
-  // testAgainstSpark("select") { securityLevel =>
-  //   val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
-  //   val df = makeDF(data, securityLevel, "str", "x")
-  //   df.select($"str").collect
-  // }
-  // 
-  // testAgainstSpark("select with expressions") { securityLevel =>
-  //   val df = makeDF(
-  //     (1 to 20).map(x => (true, "hello world!", 1.0, 2.0f, x)),
-  //     securityLevel,
-  //     "a", "b", "c", "d", "x")
-  //   df.select(
-  //     $"x" + $"x" * $"x" - $"x",
-  //     substring($"b", 5, 20),
-  //     $"x" > $"x",
-  //     $"x" >= $"x",
-  //     $"x" <= $"x").collect.toSet
-  // }
-  // 
-  // testAgainstSpark("union") { securityLevel =>
-  //   val df1 = makeDF(
-  //     (1 to 20).map(x => (x, x.toString)).reverse,
-  //     securityLevel,
-  //     "a", "b")
-  //   val df2 = makeDF(
-  //     (1 to 20).map(x => (x, (x + 1).toString)),
-  //     securityLevel,
-  //     "a", "b")
-  //   df1.union(df2).collect.toSet
-  // }
-  // 
-  // testOpaqueOnly("cache") { securityLevel =>
-  //   def numCached(ds: Dataset[_]): Int =
-  //     ds.queryExecution.executedPlan.collect {
-  //       case cached: EncryptedBlockRDDScanExec
-  //           if cached.rdd.getStorageLevel != StorageLevel.NONE =>
-  //         cached
-  //     }.size
-  // 
-  //   val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-  //   val df = makeDF(data, securityLevel, "a", "b").cache()
-  // 
-  //   val agg = df.groupBy($"a").agg(sum("b"))
-  //   println(agg.explain)
-  // 
-  //   assert(numCached(agg) === 1)
-  // 
-  //   val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-  //   assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
-  //   df.unpersist()
-  // }
+  testAgainstSpark("create DataFrame from sequence") { securityLevel =>
+    val data = for (i <- 0 until 5) yield ("foo", i)
+    makeDF(data, securityLevel, "word", "count").collect
+  }
+  
+  testAgainstSpark("create DataFrame with BinaryType + ByteType") { securityLevel =>
+    val data: Seq[(Array[Byte], Byte)] =
+      Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+    makeDF(data, securityLevel, "BinaryType", "ByteType").collect
+  }
+  
+  testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val schema = StructType(Seq(
+      StructField("CalendarIntervalType", CalendarIntervalType),
+      StructField("NullType", NullType)))
+  
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema)).collect
+  }
+  
+  testAgainstSpark("create DataFrame with ShortType + TimestampType") { securityLevel =>
+    val data: Seq[(Short, Timestamp)] = Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
+    makeDF(data, securityLevel, "ShortType", "TimestampType").collect
+  }
+  
+  testAgainstSpark("create DataFrame with ArrayType") { securityLevel =>
+    val array: Array[Int] = Array(0, -128, 127, 1)
+    val data = Seq(
+      (array, "dog"),
+      (array, "cat"),
+      (array, "ant"))
+    val df = makeDF(data, securityLevel, "array", "string")
+    df.collect
+  }
+  
+  testAgainstSpark("create DataFrame with MapType") { securityLevel =>
+    val map: Map[String, Int] = Map("x" -> 24, "y" -> 25, "z" -> 26)
+    val data = Seq(
+      (map, "dog"),
+      (map, "cat"),
+      (map, "ant"))
+    val df = makeDF(data, securityLevel, "map", "string")
+    df.collect
+  }
+  
+  testAgainstSpark("create DataFrame with nulls for all types") { securityLevel =>
+    val schema = StructType(Seq(
+      StructField("boolean", BooleanType),
+      StructField("integer", IntegerType),
+      StructField("long", LongType),
+      StructField("float", FloatType),
+      StructField("double", DoubleType),
+      StructField("date", DateType),
+      StructField("binary", BinaryType),
+      StructField("byte", ByteType),
+      StructField("calendar_interval", CalendarIntervalType),
+      StructField("null", NullType),
+      StructField("short", ShortType),
+      StructField("timestamp", TimestampType),
+      StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
+      StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
+      StructField("string", StringType)))
+  
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
+        schema)).collect
+  }
+  
+  testAgainstSpark("filter") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.filter($"x" > lit(10)).collect
+  }
+  
+  testAgainstSpark("select") { securityLevel =>
+    val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.select($"str").collect
+  }
+  
+  testAgainstSpark("select with expressions") { securityLevel =>
+    val df = makeDF(
+      (1 to 20).map(x => (true, "hello world!", 1.0, 2.0f, x)),
+      securityLevel,
+      "a", "b", "c", "d", "x")
+    df.select(
+      $"x" + $"x" * $"x" - $"x",
+      substring($"b", 5, 20),
+      $"x" > $"x",
+      $"x" >= $"x",
+      $"x" <= $"x").collect.toSet
+  }
+  
+  testAgainstSpark("union") { securityLevel =>
+    val df1 = makeDF(
+      (1 to 20).map(x => (x, x.toString)).reverse,
+      securityLevel,
+      "a", "b")
+    val df2 = makeDF(
+      (1 to 20).map(x => (x, (x + 1).toString)),
+      securityLevel,
+      "a", "b")
+    df1.union(df2).collect.toSet
+  }
+  
+  testOpaqueOnly("cache") { securityLevel =>
+    def numCached(ds: Dataset[_]): Int =
+      ds.queryExecution.executedPlan.collect {
+        case cached: EncryptedBlockRDDScanExec
+            if cached.rdd.getStorageLevel != StorageLevel.NONE =>
+          cached
+      }.size
+  
+    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+    val df = makeDF(data, securityLevel, "a", "b").cache()
+  
+    val agg = df.groupBy($"a").agg(sum("b"))
+    println(agg.explain)
+  
+    assert(numCached(agg) === 1)
+  
+    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    df.unpersist()
+  }
   // 
   // testAgainstSpark("sort") { securityLevel =>
   //   val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)
@@ -604,32 +604,32 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   //   LogisticRegression.train(spark, securityLevel, 1000, numPartitions)
   // }
   // 
-  testAgainstSpark("k-means") { securityLevel =>
-    import scala.math.Ordering.Implicits.seqDerivedOrdering
-    KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
-  }
-  
-  testAgainstSpark("pagerank") { securityLevel =>
-    PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
-  }
-  
-  testAgainstSpark("TPC-H 9") { securityLevel =>
-    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
-  }
-  
-  testAgainstSpark("big data 1") { securityLevel =>
-    BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
-  }
-  
-  testAgainstSpark("big data 2") { securityLevel =>
-    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
-      .map { case Row(a: String, b: Double) => (a, b.toFloat) }
-      .sortBy(_._1)
-  }
-  
-  testAgainstSpark("big data 3") { securityLevel =>
-    BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
-  }
+  // testAgainstSpark("k-means") { securityLevel =>
+  //   import scala.math.Ordering.Implicits.seqDerivedOrdering
+  //   KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  // }
+  // 
+  // testAgainstSpark("pagerank") { securityLevel =>
+  //   PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
+  // }
+  // 
+  // testAgainstSpark("TPC-H 9") { securityLevel =>
+  //   TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  // }
+  // 
+  // testAgainstSpark("big data 1") { securityLevel =>
+  //   BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
+  // }
+  // 
+  // testAgainstSpark("big data 2") { securityLevel =>
+  //   BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+  //     .map { case Row(a: String, b: Double) => (a, b.toFloat) }
+  //     .sortBy(_._1)
+  // }
+  // 
+  // testAgainstSpark("big data 3") { securityLevel =>
+  //   BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
+  // }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
     data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =
@@ -678,7 +678,7 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
   //   val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
   //   p.join(f, $"pk" === $"fk").collect.toSet
   // }
-  // 
+  
   // testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
   //   // This test is intended to ensure that primary groups are never split across multiple
   //   // partitions, which would break our implementation of non-foreign-key join.

@@ -327,7 +327,9 @@ void ecall_ra_proc_msg4(
     }
 
     set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
-    EnclaveContext::getInstance().set_partition_index(partition_index);
+    EnclaveContext::getInstance().reset_pid_jobid_map();
+    (void) partition_index;
+    // EnclaveContext::getInstance().set_partition_index(partition_index);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
