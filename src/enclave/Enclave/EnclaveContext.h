@@ -1,4 +1,5 @@
 #include "Enclave_t.h"
+#include <unordered_set>
 #include <vector>
 #include <iostream>
 #include <unordered_map>
@@ -7,19 +8,33 @@
 
 struct LogEntry;
 
-typedef struct LogEntry {
+struct LogEntry {
   std::string op;
   int eid;
   int rcv_eid;
   int job_id;
   int pid;
-} LogEntry;
+
+  bool operator==(const LogEntry& le) const
+  { 
+      return (this->op == le.op && this->eid == le.eid && this->rcv_eid == le.rcv_eid && this->job_id == le.job_id && this->pid == le.pid); 
+  }
+}; 
+
+class LogEntryHashFunction { 
+public: 
+    // Example taken from https://www.geeksforgeeks.org/how-to-create-an-unordered_set-of-user-defined-class-or-struct-in-c/ 
+    size_t operator()(const LogEntry& le) const
+    { 
+        return (std::hash<std::string>()(le.op)) ^ (std::hash<int>()(le.eid)) ^ (std::hash<int>()(le.rcv_eid)) ^ (std::hash<int>()(le.job_id)) ^ (std::hash<int>()(le.pid)); 
+    } 
+};
 
 static Crypto mcrypto;
 
 class EnclaveContext {
   private:
-    std::vector<LogEntry> ecall_log_entries;
+    std::unordered_set<LogEntry, LogEntryHashFunction> ecall_log_entries;
     int operators_ctr;
     unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
@@ -36,8 +51,6 @@ class EnclaveContext {
 
 
     EnclaveContext() {
-      // operators_ctr = 0;
-      // job_id = 0;
       eid = -1;
       pid = -1;
     }
@@ -81,11 +94,13 @@ class EnclaveContext {
       le.eid = eid;
       le.rcv_eid = rcv_eid;
       le.job_id = job_id;
-      ecall_log_entries.push_back(le);
+      // std::cout << "Added log entry for ecall " << op << " at partition " << eid << " with job id " << job_id << std::endl;
+      ecall_log_entries.insert(le);
     }
 
     std::vector<LogEntry> get_ecall_log_entries() {
-      return ecall_log_entries;
+      std::vector<LogEntry> ret(ecall_log_entries.begin(), ecall_log_entries.end());
+      return ret;
     }
 
     int get_eid() {
@@ -136,9 +151,9 @@ class EnclaveContext {
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
-    void sha256_hash_ecall_log_entries(const uint8_t* ret_hash) {
-      mcrypto.sha256((const uint8_t*) ecall_log_entries.data(), ecall_log_entries.size() * sizeof(LogEntry), (uint8_t*) ret_hash);
-    }
+    // void sha256_hash_ecall_log_entries(const uint8_t* ret_hash) {
+    //   mcrypto.sha256((const uint8_t*) ecall_log_entries.data(), ecall_log_entries.size() * sizeof(LogEntry), (uint8_t*) ret_hash);
+    // }
 
     size_t get_num_macs() {
       return log_entry_mac_lst.size();

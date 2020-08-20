@@ -53,7 +53,8 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
 void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   // Add past entries to log first
   auto past_entries_vec = encrypted_blocks->log()->past_entries();
-  for (uint32_t i = 0; i < encrypted_blocks->log()->past_entries()->size(); i++) {
+  // std::cout << "Past Entries Length: " << past_entries_vec->size() << std::endl;
+  for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
     auto entry = past_entries_vec->Get(i);
     std::string op = entry->op()->str();
     int eid = entry->eid();

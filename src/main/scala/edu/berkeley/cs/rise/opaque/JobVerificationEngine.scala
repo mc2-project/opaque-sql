@@ -152,7 +152,7 @@ object JobVerificationEngine {
 
     var numEcalls = numEcallsInFirstPartition 
     // println("Num Partitions: " + numPartitions)
-    // println("Num Ecalls: " + numEcalls)
+    println("Num Ecalls: " + numEcalls)
 
     val numEcallsPlusOne = numEcalls + 1
     var executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
@@ -164,16 +164,18 @@ object JobVerificationEngine {
     for (logEntryChain <- logEntryChains) {
       var prevOp = ""
       var prevJobId = -1
+      println("========== NEW LOG ENTRY CHAIN ==============")
       // println("past entries length: " + logEntryChain.pastEntriesLength)
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
-        // println("Logged Ecall: " + op)
+        println("Logged Ecall: " + op)
         val eid = logEntry.eid
-        // println("EID: " + eid)
+        println("EID: " + eid)
         val jobId = logEntry.jobId
         val rcvEid = logEntry.rcvEid
-        // println("Log Entry Job ID: " + logEntry.jobId)
+        println("Log Entry Job ID: " + logEntry.jobId)
+        println("==============")
         // println("starting job id: " + startingJobId)
         val ecallIndex = logEntry.jobId - startingJobIdMap(rcvEid)
 
@@ -239,8 +241,8 @@ object JobVerificationEngine {
         expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
       } else if (operator == "EncryptedSortMergeJoinExec") {
         expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
-      } else if (operator == "EncryptExec") {
-        expectedEcallSeq.append("encrypt")
+      // } else if (operator == "EncryptExec") {
+      //   expectedEcallSeq.append("encrypt")
       } else {
         throw new Exception("Executed unknown operator") 
       }
@@ -313,12 +315,16 @@ object JobVerificationEngine {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "scanCollectLastPrimary") {
-          // Blocks sent to next partition
-        for (j <- 0 until numPartitions) {
-          if (j < numPartitions - 1) {
-            // next = numPartitions - 1
-            var next = j + 1
-            expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
+        // Blocks sent to next partition
+        if (numPartitions == 1) {
+          expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+        } else {
+          for (j <- 0 until numPartitions) {
+            if (j < numPartitions - 1) {
+              // next = numPartitions - 1
+              var next = j + 1
+              expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
+            }
           }
         }
       } else if (operator == "nonObliviousSortMergeJoin") {
