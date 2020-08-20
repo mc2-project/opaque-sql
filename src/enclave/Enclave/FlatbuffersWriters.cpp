@@ -77,8 +77,6 @@ void RowWriter::output_buffer(uint8_t **output_rows, size_t *output_rows_length,
   *output_rows = result.buf.release();
   *output_rows_length = result.len;
 
-  // Clear log entry state
-  EnclaveContext::getInstance().reset_log_entry();
 }
 
 uint32_t RowWriter::num_rows() {
@@ -184,6 +182,9 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
           le.job_id);
       past_log_entries_vector.push_back(past_log_entry_serialized);
     }
+   
+    // Clear log entry state
+    EnclaveContext::getInstance().reset_log_entry();
   } 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized);
