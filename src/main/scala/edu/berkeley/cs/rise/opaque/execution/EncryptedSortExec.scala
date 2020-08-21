@@ -60,7 +60,6 @@ object EncryptedSortExec {
           val sampled = time("non-oblivious sort - Sample") {
             Utils.concatEncryptedBlocks(childRDD.map { block =>
               val (enclave, eid) = Utils.initEnclave()
-              // println("Partition ID: " + TaskContext.getPartitionId)
               val sampledBlock = enclave.Sample(eid, block.bytes, TaskContext.getPartitionId)
               Block(sampledBlock)
             }.collect)
@@ -70,14 +69,12 @@ object EncryptedSortExec {
             // Parallelize has only one worker perform this FindRangeBounds
             childRDD.context.parallelize(Array(sampled.bytes), 1).map { sampledBytes =>
               val (enclave, eid) = Utils.initEnclave()
-              // println("FindRangeBoounds Partition ID: " + TaskContext.getPartitionId)
               enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes, TaskContext.getPartitionId)
             }.collect.head
           }
           // Broadcast the range boundaries and use them to partition the input
           childRDD.flatMap { block =>
             val (enclave, eid) = Utils.initEnclave()
-            // println("Partition ID: " + TaskContext.getPartitionId)
             val partitions = enclave.PartitionForSort(
               eid, orderSer, numPartitions, block.bytes, boundaries, TaskContext.getPartitionId)
             partitions.zipWithIndex.map {
@@ -88,7 +85,6 @@ object EncryptedSortExec {
             .groupByKey(numPartitions).map {
               case (i, blocks) =>
                 val (enclave, eid) = Utils.initEnclave()
-                // println("Partition ID: " + TaskContext.getPartitionId)
                 Block(enclave.ExternalSort(
                   eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes, TaskContext.getPartitionId))
             }

@@ -53,17 +53,16 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
 void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   // Add past entries to log first
   auto past_entries_vec = encrypted_blocks->log()->past_entries();
-  // std::cout << "Past Entries Length: " << past_entries_vec->size() << std::endl;
   for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
     auto entry = past_entries_vec->Get(i);
     std::string op = entry->op()->str();
-    int eid = entry->eid();
+    int snd_eid = entry->snd_eid();
     int rcv_eid = entry->rcv_eid();
     if (rcv_eid == -1) { // Received by EID hasn't been set yet
       rcv_eid = EnclaveContext::getInstance().get_eid();
     }
     int job_id = entry->job_id();
-    EnclaveContext::getInstance().append_past_log_entry(op, eid, rcv_eid, job_id);
+    EnclaveContext::getInstance().append_past_log_entry(op, snd_eid, rcv_eid, job_id);
   }
 
   // Master list of mac lists of all input partitions
@@ -105,7 +104,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     partition_mac_lsts.push_back(p_mac_lst);
 
     // Add this input log entry to history of log entries
-    EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->eid(), EnclaveContext::getInstance().get_eid(), input_log_entry->job_id());
+    EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->snd_eid(), EnclaveContext::getInstance().get_eid(), input_log_entry->job_id());
   }
 
   if (curr_entries_vec->size() > 0) {

@@ -35,7 +35,6 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 object EncryptLocalRelation extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transform {
     case Encrypt(LocalRelation(output, data, false)) =>
-      // println("HELLO ENCRYPTION")
       EncryptedLocalRelation(output, data)
   }
 }

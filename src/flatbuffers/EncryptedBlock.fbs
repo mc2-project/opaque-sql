@@ -21,7 +21,7 @@ table SortedRuns {
 
 table LogEntry {
     op:string;
-    eid:int;
+    snd_eid:int;
     rcv_eid:int;
     job_id:int;
     num_macs:uint;
@@ -34,11 +34,3 @@ table LogEntryChain {
     past_entries:[LogEntry];
 }
 
-
-/* tuix::CreateLogEntry( */
-  /* builder, */
-  /* ecall, */
-  /* job_id, */
-  /* builder.CreateVector(mac_lst, len), */
-  /* builder.CreateVector(global_mac, OE_HMAC_SIZE) */
-/* ) */

@@ -683,7 +683,6 @@ object Utils extends Logging {
       val ciphertext =
         if (useEnclave) {
           val (enclave, eid) = initEnclave()
-          // println("Encrypting using enclave!")
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)
@@ -718,7 +717,6 @@ object Utils extends Logging {
     }
 
     // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
-    // println("Creating Encrypted Blocks")
     builder2.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
@@ -742,12 +740,9 @@ object Utils extends Logging {
     // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
     val blockLog = encryptedBlocks.log
-    // println("Blocks length: " + encryptedBlocks.blocksLength)
 
-    // println("Blocks log's length: " + blockLog.pastEntriesLength)
     for (i <- 0 until blockLog.pastEntriesLength) {
       val pastEntry = blockLog.pastEntries(i)
-      // println("JOB ID FOR THIS PAST LOG ENTRY:" + pastEntry.jobId)
     }
 
 
@@ -760,7 +755,6 @@ object Utils extends Logging {
    * the workers.
    */
   def decryptBlockFlatbuffers(block: Block): Seq[InternalRow] = {
-    // println("Called decryptBlockFlatbuffers")
     // 4. Extract the serialized tuix.EncryptedBlocks from the Scala Block object
     val buf = ByteBuffer.wrap(block.bytes)
 
@@ -768,7 +762,6 @@ object Utils extends Logging {
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
     val blockLog = encryptedBlocks.log
 
-    // println("Blocks length: " + encryptedBlocks.blocksLength)
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
       val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
@@ -1353,15 +1346,11 @@ object Utils extends Logging {
     val allCurrLogEntries = for {
       logEntryChain <- allLogEntryChains
       i <- 0 until logEntryChain.currEntriesLength
-      // if logEntryChain.currEntriesLength > 0 
     } yield logEntryChain.currEntries(i)
-
-    // println(allCurrLogEntries)
 
     val allPastLogEntries = for {
       logEntryChain <- allLogEntryChains
       i <- 0 until logEntryChain.pastEntriesLength
-      // if logEntryChain.pastEntries(i).macLstLength > 0
     } yield logEntryChain.pastEntries(i)
 
     val builder = new FlatBufferBuilder
@@ -1378,8 +1367,6 @@ object Utils extends Logging {
         tuix.LogEntryChain.createLogEntryChain(
           builder, 
           tuix.LogEntryChain.createCurrEntriesVector(builder, allCurrLogEntries.map { currLogEntry =>
-            // val ecall_op = new Array[Byte](currLogEntry.op)
-            // currLogEntry.opAsByteBuffer.get(ecall_op)
             val macLst = new Array[Byte](currLogEntry.macLstLength)
             currLogEntry.macLstAsByteBuffer.get(macLst)
             val globalMac = new Array[Byte](currLogEntry.globalMacLength)
@@ -1387,7 +1374,7 @@ object Utils extends Logging {
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(currLogEntry.op),
-              currLogEntry.eid,
+              currLogEntry.sndEid,
               currLogEntry.rcvEid,
               currLogEntry.jobId,
               currLogEntry.numMacs,
@@ -1395,22 +1382,14 @@ object Utils extends Logging {
               tuix.LogEntry.createGlobalMacVector(builder, globalMac))
           }.toArray),
           tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
-            // val past_ecall_op = new Array[Byte](currLogEntry.op)
-            // currLogEntry.opAsByteBuffer.get(past_ecall_op)
-            // val pastMacLst = new Array[Byte](pastLogEntry.macLstLength)
-            // pastLogEntry.macLstAsByteBuffer.get(pastMacLst)
-            // val pastGlobalMac = new Array[Byte](pastLogEntry.globalMacLength)
-            // pastLogEntry.globalMacAsByteBuffer.get(pastGlobalMac)
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(pastLogEntry.op),
-              pastLogEntry.eid,
+              pastLogEntry.sndEid,
               pastLogEntry.rcvEid,
               pastLogEntry.jobId,
               pastLogEntry.numMacs,
-              // tuix.LogEntry.createMacLstVector(builder, pastMacLst),
               tuix.LogEntry.createMacLstVector(builder, Array.empty),
-              // tuix.LogEntry.createGlobalMacVector(builder, pastGlobalMac))
               tuix.LogEntry.createGlobalMacVector(builder, Array.empty))
           }.toArray)
         )))
@@ -1448,20 +1427,11 @@ object Utils extends Logging {
         tuix.LogEntryChain.createLogEntryChain(builder,
           tuix.LogEntryChain.createCurrEntriesVector(builder, 
             Array.empty),
-            // Array(tuix.LogEntry.createLogEntry(
-              // builder,
-              // builder.createString(currLogEntry.op),
-              // currLogEntry.eid,
-              // currLogEntry.jobId,
-              // 0,
-              // tuix.LogEntry.createMacLstVector(builder, Array.empty),
-              // tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
-              // ))),
         tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
           tuix.LogEntry.createLogEntry(
             builder,
             builder.createString(logEntry.op),
-            logEntry.eid,
+            logEntry.sndEid,
             logEntry.rcvEid,
             logEntry.jobId,
             0,

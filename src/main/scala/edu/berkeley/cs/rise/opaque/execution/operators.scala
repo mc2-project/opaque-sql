@@ -77,7 +77,6 @@ case class EncryptedLocalTableScanExec(
       }.toSeq
 
     // Encrypt each local partition
-    println("Encrypting partitions--------------")
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
         Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
@@ -144,11 +143,9 @@ trait OpaqueOperatorExec extends SparkPlan {
     println("Scala Operator: Collect")
 
     val collectedRDD = executeBlocked().collect()
-    println("Collected RDD")
     collectedRDD.map { block =>
         Utils.addBlockForVerification(block)
     }
-    println("Added blocks for verification")
 
     val postVerificationPasses = Utils.verifyJob()
     JobVerificationEngine.resetForNextJob()
@@ -244,7 +241,6 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
         JobVerificationEngine.addExpectedOperator("EncryptedFilterExec")
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        println(TaskContext.getPartitionId)
         Block(enclave.Filter(eid, conditionSer, block.bytes, TaskContext.getPartitionId))
       }
     }
@@ -279,7 +275,6 @@ case class EncryptedAggregateExec(
       }.collect.unzip3
 
       // Send first row to previous partition and last group to next partition
-      // FIXME: only create this empty block with log for one partition case?
       var shiftedFirstRows = Array[Block]()
       var shiftedLastGroups = Array[Block]()
       var shiftedLastRows = Array[Block]()
