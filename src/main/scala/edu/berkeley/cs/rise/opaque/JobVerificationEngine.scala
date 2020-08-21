@@ -60,12 +60,12 @@ object JobVerificationEngine {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
-          val partitionOfOperation = pastEntry.sndEid
+          val partitionOfOperation = pastEntry.sndPid
           perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
-      val partitionOfLastOperation = logEntryChain.currEntries(0).sndEid
+      val partitionOfLastOperation = logEntryChain.currEntries(0).sndPid
       perPartitionJobIds(partitionOfLastOperation).add(latestJobId)
     }
 
@@ -100,15 +100,15 @@ object JobVerificationEngine {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
-        val sndEid = logEntry.sndEid
+        val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
-        val rcvEid = logEntry.rcvEid
-        val ecallIndex = logEntry.jobId - startingJobIdMap(rcvEid)
+        val rcvPid = logEntry.rcvPid
+        val ecallIndex = logEntry.jobId - startingJobIdMap(rcvPid)
 
         ecallSeq(ecallIndex) = op
 
-        val row = sndEid * (numEcallsPlusOne) + ecallIndex 
-        val col = rcvEid * (numEcallsPlusOne) + ecallIndex + 1
+        val row = sndPid * (numEcallsPlusOne) + ecallIndex 
+        val col = rcvPid * (numEcallsPlusOne) + ecallIndex + 1
 
         executedAdjacencyMatrix(row)(col) = 1
       }
@@ -116,13 +116,13 @@ object JobVerificationEngine {
       for (i <- 0 until logEntryChain.currEntriesLength) {
         val logEntry = logEntryChain.currEntries(i)
         val op = logEntry.op
-        val sndEid = logEntry.sndEid
+        val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val ecallIndex = jobId - startingJobIdMap(this_partition)
 
         ecallSeq(ecallIndex) = op
 
-        val row = sndEid * (numEcallsPlusOne) + ecallIndex 
+        val row = sndPid * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
 
         executedAdjacencyMatrix(row)(col) = 1

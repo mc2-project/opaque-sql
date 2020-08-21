@@ -1374,8 +1374,8 @@ object Utils extends Logging {
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(currLogEntry.op),
-              currLogEntry.sndEid,
-              currLogEntry.rcvEid,
+              currLogEntry.sndPid,
+              currLogEntry.rcvPid,
               currLogEntry.jobId,
               currLogEntry.numMacs,
               tuix.LogEntry.createMacLstVector(builder, macLst),
@@ -1385,8 +1385,8 @@ object Utils extends Logging {
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(pastLogEntry.op),
-              pastLogEntry.sndEid,
-              pastLogEntry.rcvEid,
+              pastLogEntry.sndPid,
+              pastLogEntry.rcvPid,
               pastLogEntry.jobId,
               pastLogEntry.numMacs,
               tuix.LogEntry.createMacLstVector(builder, Array.empty),
@@ -1431,8 +1431,8 @@ object Utils extends Logging {
           tuix.LogEntry.createLogEntry(
             builder,
             builder.createString(logEntry.op),
-            logEntry.sndEid,
-            logEntry.rcvEid,
+            logEntry.sndPid,
+            logEntry.rcvPid,
             logEntry.jobId,
             0,
             tuix.LogEntry.createMacLstVector(builder, Array.empty),

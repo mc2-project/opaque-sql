@@ -135,7 +135,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
     EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
 
-    int eid = EnclaveContext::getInstance().get_eid();
+    int curr_pid = EnclaveContext::getInstance().get_pid();
     uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
 
@@ -154,8 +154,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // This is an offset into enc block builder
     auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
         enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
-        eid,
-        -1, // -1 for not yet set rcv_eid
+        curr_pid,
+        -1, // -1 for not yet set rcv_pid
         job_id,
         num_macs,
         enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
@@ -167,8 +167,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
       char* untrusted_ecall_op_str = oe_host_strndup(le.op.c_str(), le.op.length());
       auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
           enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
-          le.eid,
-          le.rcv_eid,
+          le.snd_pid,
+          le.rcv_pid,
           le.job_id);
       past_log_entries_vector.push_back(past_log_entry_serialized);
     }

@@ -21,8 +21,8 @@ table SortedRuns {
 
 table LogEntry {
     op:string;
-    snd_eid:int;
-    rcv_eid:int;
+    snd_pid:int;
+    rcv_pid:int;
     job_id:int;
     num_macs:uint;
     mac_lst:[ubyte];
