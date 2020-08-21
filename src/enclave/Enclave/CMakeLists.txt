@@ -49,11 +49,6 @@ target_link_libraries(enclave_trusted
                       openenclave::oehostsock
 		              openenclave::oehostresolver)
 
-# Sign enclave
-# add_custom_command(OUTPUT enclave/enclave.signed
-#   DEPENDS enclave enclave/helloworld.conf private.pem
-#   COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave> -c ${CMAKE_SOURCE_DIR}/enclave/helloworld.conf -k private.pem)
-
 add_custom_command(
   COMMAND oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf
