@@ -77,11 +77,7 @@ class EnclaveContext {
 
     void reset_log_entry() {
       this_ecall = std::string("");
-      // int job_id = -1;
-      // job_id++; // dummy operation for now
       log_entry_mac_lst.clear();
-      // global_mac = {0 * OE_HMAC_SIZE};
-      // ecall_log_entries.clear();
     }
 
     void reset_past_log_entries() {
@@ -104,13 +100,8 @@ class EnclaveContext {
     }
 
     int get_eid() {
-      // return eid;
       return pid;
     }
-
-    // void set_partition_index(int idx) {
-      // eid = idx;
-    // }
 
     void set_pid(int id) {
       pid = id;
@@ -119,8 +110,6 @@ class EnclaveContext {
     void finish_ecall() {
       // Increment the job id of this pid
       if (pid_jobid.find(pid) != pid_jobid.end()) {
-        // std::cout << "increment job id for partition " << pid << std::endl;
-        // std::cout << "Previous job id: " << pid_jobid[pid] << std::endl;
         pid_jobid[pid]++;
       } else {
         pid_jobid[pid] = 0;
@@ -151,10 +140,6 @@ class EnclaveContext {
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
-    // void sha256_hash_ecall_log_entries(const uint8_t* ret_hash) {
-    //   mcrypto.sha256((const uint8_t*) ecall_log_entries.data(), ecall_log_entries.size() * sizeof(LogEntry), (uint8_t*) ret_hash);
-    // }
-
     size_t get_num_macs() {
       return log_entry_mac_lst.size();
     }
@@ -176,9 +161,7 @@ class EnclaveContext {
     }
 
     void increment_job_id() {
-      // std::cout << "Increment job id for partition: " << pid << std::endl; 
       pid_jobid[pid]++;
-      // std::cout << "new jobId" << pid_jobid[pid] << std::endl;
     }
 
     void reset_pid_jobid_map() {

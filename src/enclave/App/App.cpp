@@ -518,7 +518,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input, jint partition_index) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {
   (void)obj;
 
   jboolean if_copy = false;
@@ -528,7 +528,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Rem
   oe_check_and_time("Remote Attestation Step 3",
                      ecall_ra_proc_msg4((oe_enclave_t*)eid,
                                         reinterpret_cast<uint8_t *>(msg4_bytes),
-                                        msg4_size, partition_index));
+                                        msg4_size));
 
   env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
 

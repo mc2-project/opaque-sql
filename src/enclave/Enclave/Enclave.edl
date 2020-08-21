@@ -88,8 +88,7 @@ enclave {
 
     public void ecall_ra_proc_msg4(
                                    [in,size=msg4_size] uint8_t *msg4,
-                                   uint32_t msg4_size,
-                                   uint32_t partition_index);
+                                   uint32_t msg4_size);
   };
 
   untrusted {

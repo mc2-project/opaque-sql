@@ -315,7 +315,7 @@ void ecall_non_oblivious_aggregate_step2(
 
 
 void ecall_ra_proc_msg4(
-  uint8_t *msg4, uint32_t msg4_size, uint32_t partition_index) {
+  uint8_t *msg4, uint32_t msg4_size) {
   try {
     oe_msg2_t* msg2 = (oe_msg2_t*)msg4;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
@@ -328,8 +328,6 @@ void ecall_ra_proc_msg4(
 
     set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
     EnclaveContext::getInstance().reset_pid_jobid_map();
-    (void) partition_index;
-    // EnclaveContext::getInstance().set_partition_index(partition_index);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

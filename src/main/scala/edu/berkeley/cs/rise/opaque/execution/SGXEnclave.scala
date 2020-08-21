@@ -52,5 +52,5 @@ class SGXEnclave extends java.io.Serializable {
 
   // Remote attestation, enclave side
   @native def RemoteAttestation1(eid: Long): Array[Byte]
-  @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte], partition_index: Int): Unit
+  @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte]): Unit
 }
