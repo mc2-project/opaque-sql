@@ -64,7 +64,6 @@ case class EncryptedLocalTableScanExec(
   override def executeBlocked(): RDD[Block] = {
     // Locally partition plaintextData using the same logic as ParallelCollectionRDD.slice
     println("Scala Operator: EncryptedLocalTableScanExec")
-    // JobVerficationEngine.addExpectedOperator("EncryptedLocalTableScanExec")
     def positions(length: Long, numSlices: Int): Iterator[(Int, Int)] = {
       (0 until numSlices).iterator.map { i =>
         val start = ((i * length) / numSlices).toInt
@@ -95,7 +94,6 @@ case class EncryptExec(child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: EncryptExec")
-    // JobVerificationEngine.addExpectedOperator("EncryptExec")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
         rowIter.toSeq, output.map(_.dataType), useEnclave = true))
@@ -221,12 +219,10 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: Encrypted Project Exec")
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
-    // println(child)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => 
         JobVerificationEngine.addExpectedOperator("EncryptedProjectExec")
         childRDD.map { block =>
-        // Utils.examineBlock(block)
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Project(eid, projectListSer, block.bytes, TaskContext.getPartitionId))
       }
@@ -242,7 +238,6 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: Encrypted Filter Exec")
-    // JobVerificationEngine.addExpectedOperator("EncryptedFilterExec")
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
       childRDD => 
@@ -269,7 +264,6 @@ case class EncryptedAggregateExec(
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: encrypted Aggregate exec")
-    // JobVerificationEngine.addExpectedOperator("EncryptedAggregateExec")
     val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
 
     timeOperator(
@@ -335,7 +329,6 @@ case class EncryptedSortMergeJoinExec(
 
   override def executeBlocked(): RDD[Block] = {
     println("Scala Operator: Encrypted Sort Merge Join Exec")
-    // JobVerificationEngine.addExpectedOperator("EncryptedSortMergeJoinExec")
     val joinExprSer = Utils.serializeJoinExpression(
       joinType, leftKeys, rightKeys, leftSchema, rightSchema)
 

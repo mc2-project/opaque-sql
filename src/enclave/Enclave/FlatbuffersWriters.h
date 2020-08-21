@@ -34,7 +34,7 @@ public:
   void append(const std::vector<const tuix::Field *> &row_fields);
 
   /** Concatenate the fields of the two given `Row`s and append the resulting single Row. */
-  void append(const tuix::Row *row1, const tuix::Row *row2, std::string ecall="");
+  void append(const tuix::Row *row1, const tuix::Row *row2);
 
   /** Expose the stored rows as a buffer. */
   UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer(std::string ecall);
@@ -58,9 +58,6 @@ private:
   UntrustedMemoryAllocator untrusted_alloc;
   flatbuffers::FlatBufferBuilder enc_block_builder;
   std::vector<flatbuffers::Offset<tuix::EncryptedBlock>> enc_block_vector;
-
-  // flatbuffers::FlatBufferBuilder log_entry_builder;
-  // flatbuffers::FlatBufferBuilder log_entry_chain_builder;
 
   bool finished;
 

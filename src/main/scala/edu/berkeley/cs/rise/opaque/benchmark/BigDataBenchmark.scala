@@ -112,7 +112,6 @@ object BigDataBenchmark {
         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .orderBy($"totalRevenue".asc)
       // Utils.force(df)
-      println(df.explain)
       df
     }
   }

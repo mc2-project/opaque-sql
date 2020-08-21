@@ -43,23 +43,12 @@ object JobVerificationEngine {
   }
 
   def verify(): Boolean = {
-    // Check that all LogEntryChains have been added to logEntries
-    // Piece together the sequence of operations / data movement
-    // println("===================Expected sequence of operators: " + sparkOperators)
-    // println("Log Entry Chains Length: " + logEntryChains.length)
     if (sparkOperators.isEmpty) {
-      resetForNextJob()
       return true
     }
 
     val numPartitions = logEntryChains.length
-
-    // Count number of ecalls in "past entries" per partition and ensure they're the same
-    // var numEcallsInFirstPartition = -1
-    var lastOpInPastEntry = ""
-  
     var startingJobIdMap = Map[Int, Int]()
-    var partitionId = 0
 
     var findRangeBoundsJobIds = ArrayBuffer[Int]()
     var perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
@@ -67,72 +56,21 @@ object JobVerificationEngine {
       perPartitionJobIds(i) = Set[Int]()
     } 
 
-
     for (logEntryChain <- logEntryChains) {
-      var startingJobId = -1
-      var minJobId = 9999999
-      var maxJobId = -9999999
-
-      // var numExpectedFindRangeBoundsEcalls = 0
-
-      var numEcallsLoggedInThisPartition = 0
-
-      // We expect the same number of FindRangeBounds as PartitionForSorts
-
-      // println("===================new partition")
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         if (pastEntry != Array.empty) {
-          // if (pastEntry.jobId < minJobId) {
-          //   minJobId = pastEntry.jobId
-          // }
-          // if (pastEntry.jobId > maxJobId) {
-          //   maxJobId = pastEntry.jobId
-          // }
-          // if (partitionId == 0 && pastEntry.op == "findRangeBounds" && !findRangeBoundsJobIds.contains(pastEntry.jobId)) {
-          //   // numExpectedFindRangeBoundsEcalls += 1
-          //   findRangeBoundsJobIds.append(pastEntry.jobId)
-          // }
-          // println(partitionForSortJobIds)
-          // println("Ecall: " + pastEntry.op + " at " + pastEntry.jobId)
-         
           val partitionOfOperation = pastEntry.eid
           perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
         }
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
       val partitionOfLastOperation = logEntryChain.currEntries(0).eid
-      // println("Latest job ID: " + latestJobId)
-      // println("Latest ecall: " + logEntryChain.currEntries(0).op)
-      // if (latestJobId < minJobId) {
-      //   minJobId = latestJobId
-      // }
-      // if (latestJobId > maxJobId) {
-      //   maxJobId = latestJobId
-      // }
-      // println("Ecall: " + logEntryChain.currEntries(0).op)
-      // numEcallsLoggedInThisPartition = maxJobId - minJobId + 1
-      // startingJobId = minJobId
-      // println("Starting job id: " + startingJobId)
-      
       perPartitionJobIds(partitionOfLastOperation).add(latestJobId)
-
-      // if (numEcallsInFirstPartition == -1) {
-      //   numEcallsInFirstPartition = numEcallsLoggedInThisPartition
-      // }
-      // println("MIN JOB ID " + minJobId)
-      // println("MAX JOB ID " + maxJobId)
-      // if (numEcallsInFirstPartition != numEcallsLoggedInThisPartition) {
-      //   println("This partition num ecalls: " + numEcallsLoggedInThisPartition)
-      //   println("last partition num ecalls: " + numEcallsInFirstPartition)
-      //   throw new Exception("All partitions did not perform same number of ecalls")
-      // }
-      // startingJobIdMap(partitionId) = startingJobId
-      // partitionId += 1
     }
 
+    // Check that each partition performed the same number of ecalls
     var numEcallsInFirstPartition = -1
-
     for (i <- 0 until perPartitionJobIds.length) {
       val partition = perPartitionJobIds(i)
       val maxJobId = partition.max
@@ -151,72 +89,38 @@ object JobVerificationEngine {
     }
 
     var numEcalls = numEcallsInFirstPartition 
-    // println("Num Partitions: " + numPartitions)
-    println("Num Ecalls: " + numEcalls)
-
     val numEcallsPlusOne = numEcalls + 1
+
     var executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
-    // var ecallSeq = ArrayBuffer[String]()
     var ecallSeq = Array.fill[String](numEcalls)("unknown")
 
     var this_partition = 0
 
     for (logEntryChain <- logEntryChains) {
-      var prevOp = ""
-      var prevJobId = -1
-      println("========== NEW LOG ENTRY CHAIN ==============")
-      // println("past entries length: " + logEntryChain.pastEntriesLength)
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
         val op = logEntry.op
-        println("Logged Ecall: " + op)
         val eid = logEntry.eid
-        println("EID: " + eid)
         val jobId = logEntry.jobId
         val rcvEid = logEntry.rcvEid
-        println("Log Entry Job ID: " + logEntry.jobId)
-        println("Starting Index: " + startingJobIdMap(rcvEid))
-        println("==============")
         val ecallIndex = logEntry.jobId - startingJobIdMap(rcvEid)
 
         ecallSeq(ecallIndex) = op
 
-        // val prev_partition = eid
-        // println("Prev partition: " + prev_partition)
-        // println("This partition: " + this_partition)
-
         val row = eid * (numEcallsPlusOne) + ecallIndex 
         val col = rcvEid * (numEcallsPlusOne) + ecallIndex + 1
-        // println("Row: " + row + "Col: " + col)
 
         executedAdjacencyMatrix(row)(col) = 1
-        // if (jobId != prevJobId) {
-          // ecallSeq.append(op)
-        // }
-        // prevJobId = jobId
       }
 
-      // println("Curr entries length: " + logEntryChain.currEntriesLength)
       for (i <- 0 until logEntryChain.currEntriesLength) {
         val logEntry = logEntryChain.currEntries(i)
         val op = logEntry.op
-        // println("Ecall: " + op)
         val eid = logEntry.eid
         val jobId = logEntry.jobId
-        // val this_partition = logEntry.rcvEid
         val ecallIndex = jobId - startingJobIdMap(this_partition)
-        // println("Log Entry Job ID: " + logEntry.jobId)
-        // println("Starting JOb ID: " + startingJobId)
-        // println("Ecall index: " + ecallIndex)
 
         ecallSeq(ecallIndex) = op
-        // println("Ecall index: " + ecallIndex)
-
-        // val prev_partition = eid
-
-        // println("Prev partition: " + prev_partition)
-        // println("This partition: " + this_partition)
-        // println("Prev partition: " + prev_partition)
 
         val row = eid * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
@@ -241,8 +145,6 @@ object JobVerificationEngine {
         expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
       } else if (operator == "EncryptedSortMergeJoinExec") {
         expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
-      // } else if (operator == "EncryptExec") {
-      //   expectedEcallSeq.append("encrypt")
       } else {
         throw new Exception("Executed unknown operator") 
       }
@@ -299,12 +201,10 @@ object JobVerificationEngine {
             var prev = j - 1
             var next = j + 1
             if (j > 0) {
-              // prev = 0
               // Send block to prev partition
               expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
             } 
             if (j < numPartitions - 1) {
-              // next = numPartitions - 1
               // Send block to next partition
               expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
             }
@@ -321,7 +221,6 @@ object JobVerificationEngine {
         } else {
           for (j <- 0 until numPartitions) {
             if (j < numPartitions - 1) {
-              // next = numPartitions - 1
               var next = j + 1
               expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
             }
@@ -335,13 +234,6 @@ object JobVerificationEngine {
         throw new Exception("Job Verification Error creating expected adjacency matrix: operator not supported - " + operator)
       }
     }
-  
-
-
-    
-    // Retrieve the physical plan from df.explain()
-    // Condense the physical plan to match ecall operations
-    // Return whether everything checks out
 
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {

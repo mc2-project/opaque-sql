@@ -28,9 +28,7 @@ void RowWriter::append(const std::vector<const tuix::Field *> &row_fields) {
   maybe_finish_block();
 }
 
-void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2, std::string ecall) {
-  // TODO: remove ecall parameter
-  (void)ecall;
+void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
   flatbuffers::uoffset_t num_fields = row1->field_values()->size() + row2->field_values()->size();
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
   flatbuffers::uoffset_t i = 0;

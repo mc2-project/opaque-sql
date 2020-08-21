@@ -62,14 +62,6 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
-    // std::cout << "CURRENT ROW: ";
-    // for (unsigned int i = 1; i < current->field_values()->size(); i++) {
-      // auto field = current->field_values()->Get(i);
-      // auto field_val = static_cast<const tuix::IntegerField *> (field->value());
-      // auto val = field_val->value();
-      // std::cout << val << " ";
-    // }
-
     if (join_expr_eval.is_primary(current)) {
       // If current row is from primary table
       if (last_primary_of_group.get()
@@ -103,7 +95,7 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
-          w.append(primary, current, std::string("nonObliviousSortMergeJoin"));
+          w.append(primary, current);
         }
       }
     }
