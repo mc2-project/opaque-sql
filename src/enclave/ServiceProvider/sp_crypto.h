@@ -55,7 +55,15 @@
 #include <openssl/ec.h>
 #include <openssl/rand.h>
 
-#include <sgx_tcrypto.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/cipher.h>
+#include <mbedtls/gcm.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/rsa.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/error.h>
 
 #include "common.h"
 
@@ -85,6 +93,36 @@ typedef enum lc_status_t {
 #define LC_CMAC_KEY_SIZE               16
 #define LC_CMAC_MAC_SIZE               16
 #define LC_AESCTR_KEY_SIZE             16
+// Currently oesign only supports an rsa public key of size 3072 bits
+#define lc_rsa_public_t                (3072/8)
+
+
+// copied from intel sgx sdk tcrypto.h
+#define SGX_ECP256_KEY_SIZE             32
+#define SGX_NISTP_ECP256_KEY_SIZE       (SGX_ECP256_KEY_SIZE/sizeof(uint32_t))
+#define SGX_AESGCM_KEY_SIZE             16
+
+typedef struct _sgx_ec256_dh_shared_t
+{
+    uint8_t s[SGX_ECP256_KEY_SIZE];
+} sgx_ec256_dh_shared_t;
+
+typedef struct _sgx_ec256_private_t
+{
+    uint8_t r[SGX_ECP256_KEY_SIZE];
+} sgx_ec256_private_t;
+
+typedef struct _sgx_ec256_public_t
+{
+    uint8_t gx[SGX_ECP256_KEY_SIZE];
+    uint8_t gy[SGX_ECP256_KEY_SIZE];
+} sgx_ec256_public_t;
+
+typedef struct _sgx_ec256_signature_t
+{
+    uint32_t x[SGX_NISTP_ECP256_KEY_SIZE];
+    uint32_t y[SGX_NISTP_ECP256_KEY_SIZE];
+} sgx_ec256_signature_t;
 
 typedef sgx_ec256_dh_shared_t lc_ec256_dh_shared_t;
 typedef sgx_ec256_private_t lc_ec256_private_t;
@@ -102,6 +140,8 @@ typedef uint8_t lc_aes_gcm_128bit_tag_t[LC_AESGCM_MAC_SIZE];
 typedef uint8_t lc_cmac_128bit_key_t[LC_CMAC_KEY_SIZE];
 typedef uint8_t lc_cmac_128bit_tag_t[LC_CMAC_MAC_SIZE];
 typedef uint8_t lc_aes_ctr_128bit_key_t[LC_AESCTR_KEY_SIZE];
+
+typedef uint8_t sgx_aes_gcm_128bit_key_t[SGX_AESGCM_KEY_SIZE];
 
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
@@ -254,3 +294,5 @@ lc_status_t WARN_UNUSED print_priv_key(lc_ec256_private_t p_private);
 lc_status_t WARN_UNUSED print_pub_key(lc_ec256_public_t p_public);
 void print_ec_key(EC_KEY *ec_key);
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public);
+
+int lc_compute_sha256(const uint8_t* data, size_t data_size, uint8_t sha256[LC_SHA256_HASH_SIZE]);

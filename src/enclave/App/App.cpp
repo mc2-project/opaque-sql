@@ -38,16 +38,14 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <openenclave/host.h>
+#include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h> // gettimeofday
-#include <string>
 
-#include <sgx_eid.h>     /* sgx_enclave_id_t */
-#include <sgx_error.h>       /* sgx_status_t */
-#include <sgx_uae_service.h>
-#include <sgx_ukey_exchange.h>
-
+#include "common.h"
 #include "Enclave_u.h"
+#include "Errlist.h"
 
 #ifndef TRUE
 # define TRUE 1
@@ -65,107 +63,21 @@
 # define ENCLAVE_FILENAME "enclave.signed.so"
 #endif
 
-static sgx_ra_context_t context = INT_MAX;
 JavaVM* jvm;
 
-typedef struct _sgx_errlist_t {
-  sgx_status_t err;
-  const char *msg;
-  const char *sug; /* Suggestion */
-} sgx_errlist_t;
-
-/* Error code returned by sgx_create_enclave */
-static sgx_errlist_t sgx_errlist[] = {
-  {
-    SGX_ERROR_UNEXPECTED,
-    "Unexpected error occurred.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_PARAMETER,
-    "Invalid parameter.",
-    NULL
-  },
-  {
-    SGX_ERROR_OUT_OF_MEMORY,
-    "Out of memory.",
-    NULL
-  },
-  {
-    SGX_ERROR_ENCLAVE_LOST,
-    "Power transition occurred.",
-    "Please refer to the sample \"PowerTransition\" for details."
-  },
-  {
-    SGX_ERROR_INVALID_ENCLAVE,
-    "Invalid enclave image.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_ENCLAVE_ID,
-    "Invalid enclave identification.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_SIGNATURE,
-    "Invalid enclave signature.",
-    NULL
-  },
-  {
-    SGX_ERROR_OUT_OF_EPC,
-    "Out of EPC memory.",
-    NULL
-  },
-  {
-    SGX_ERROR_NO_DEVICE,
-    "Invalid SGX device.",
-    "Please make sure SGX module is enabled in the BIOS, and install SGX driver afterwards."
-  },
-  {
-    SGX_ERROR_MEMORY_MAP_CONFLICT,
-    "Memory map conflicted.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_METADATA,
-    "Invalid enclave metadata.",
-    NULL
-  },
-  {
-    SGX_ERROR_DEVICE_BUSY,
-    "SGX device was busy.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_VERSION,
-    "Enclave version was invalid.",
-    NULL
-  },
-  {
-    SGX_ERROR_INVALID_ATTRIBUTE,
-    "Enclave was not authorized.",
-    NULL
-  },
-  {
-    SGX_ERROR_ENCLAVE_FILE_ACCESS,
-    "Can't open enclave file.",
-    NULL
-  },
-};
-
-/* Check error conditions for loading enclave */
-std::string sgx_error_message(sgx_status_t ret) {
+/* Check error conditions for enclave operations */
+std::string oe_error_message(oe_result_t ret) {
   size_t idx = 0;
-  size_t ttl = sizeof(sgx_errlist) / sizeof(sgx_errlist[0]);
+  size_t ttl = sizeof(oe_errlist) / sizeof(oe_errlist[0]);
 
   for (idx = 0; idx < ttl; idx++) {
-    if (ret == sgx_errlist[idx].err) {
+    if (ret == oe_errlist[idx].err) {
       std::string msg;
       msg.append("Error: ");
-      msg.append(sgx_errlist[idx].msg);
-      if (NULL != sgx_errlist[idx].sug) {
+      msg.append(oe_errlist[idx].msg);
+      if (NULL != oe_errlist[idx].sug) {
         msg.append(" Info: ");
-        msg.append(sgx_errlist[idx].sug);
+        msg.append(oe_errlist[idx].sug);
       }
       return msg;
     }
@@ -178,17 +90,17 @@ std::string sgx_error_message(sgx_status_t ret) {
   std::string msg;
   msg.append("Error code is ");
   msg.append(buf);
-  msg.append(". Please refer to the \"Intel SGX SDK Developer Reference\" for "
+  msg.append(". Please refer to the \"OpenEnclave Documentation\" and/or \"Intel SGX SDK Developer Reference\" for "
              "more details.");
   return msg;
 }
 
-void sgx_check(const char *description, sgx_status_t ret) {
-  if (ret != SGX_SUCCESS) {
+void oe_check(const char *description, oe_result_t ret) {
+  if (ret != OE_OK) {
     std::string msg;
     msg.append(description);
     msg.append(" failed. ");
-    msg.append(sgx_error_message(ret));
+    msg.append(oe_error_message(ret));
     ocall_throw(msg.c_str());
   }
 }
@@ -214,23 +126,23 @@ public:
 };
 
 #if defined(PERF) || defined(DEBUG)
-#define sgx_check_and_time(description, op) do {        \
+#define oe_check_and_time(description, op) do {        \
     printf("%s running...\n", description);             \
     uint64_t t_ = 0;                                    \
-    sgx_status_t ret_;                                  \
+    oe_result_t ret_;                                  \
     {                                                   \
       scoped_timer timer_(&t_);                         \
       ret_ = op;                                        \
     }                                                   \
     double t_ms_ = ((double) t_) / 1000;                \
-    if (ret_ != SGX_SUCCESS) {                          \
-      sgx_check(description, ret_);                     \
+    if (ret_ != OE_OK) {                          \
+      oe_check(description, ret_);                     \
     } else {                                            \
       printf("%s done (%f ms).\n", description, t_ms_); \
     }                                                   \
   } while (0)
 #else
-#define sgx_check_and_time(description, op) sgx_check(description, op)
+#define oe_check_and_time(description, op) oe_check(description, op)
 #endif
 
 /* OCall functions */
@@ -277,96 +189,60 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
 
   env->GetJavaVM(&jvm);
 
-  sgx_enclave_id_t eid;
-  sgx_launch_token_t token = {0};
-  int updated = 0;
+  oe_enclave_t* enclave = nullptr;
+  uint32_t flags = 0;
 
+#ifdef SIMULATE
+  flags |= OE_ENCLAVE_FLAG_SIMULATE;
+#endif
+  
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
-  sgx_check_and_time("StartEnclave",
-                     sgx_create_enclave(
-                       library_path_str, SGX_DEBUG_FLAG, &token, &updated, &eid, nullptr));
+  oe_check_and_time("StartEnclave",
+                     oe_create_Enclave_enclave(
+                       library_path_str, OE_ENCLAVE_TYPE_AUTO, flags, nullptr, 0, &enclave
+                      )
+                    );
   env->ReleaseStringUTFChars(library_path, library_path_str);
+  long int enclavePtr = (long int)enclave;
 
-  return eid;
+  return enclavePtr;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation0(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
   JNIEnv *env, jobject obj, jlong eid) {
   (void)obj;
+  (void)eid;
 
-  sgx_status_t status;
-  sgx_check_and_time("Initialize Remote Attestation",
-                     ecall_enclave_init_ra(eid, &status, &context));
-  sgx_check("Initialize Remote Attestation", status);
+  uint8_t* report_msg = NULL;
+  size_t report_msg_size = 0;
 
-  uint32_t extended_epid_group_id = 0;
-  sgx_check_and_time("Remote Attestation Step 0: Get Extended EPID Group ID",
-                     sgx_get_extended_epid_group_id(&extended_epid_group_id));
-  jbyteArray ret = env->NewByteArray(sizeof(uint32_t));
-  env->SetByteArrayRegion(ret, 0, sizeof(uint32_t), (jbyte *) &extended_epid_group_id);
-  return ret;
+  oe_check_and_time("Generate enclave report",
+                     ecall_generate_report((oe_enclave_t*)eid,
+                                           &report_msg,
+                                           &report_msg_size));
+
+  // Allocate memory
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
+
+  return report_msg_bytes;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation1(
-  JNIEnv *env, jobject obj, jlong eid) {
-  (void)obj;
-
-  sgx_ra_msg1_t msg1;
-  sgx_check_and_time("Remote Attestation Step 1",
-                     sgx_ra_get_msg1(context, eid, sgx_ra_get_ga, &msg1));
-  jbyteArray array_ret = env->NewByteArray(sizeof(sgx_ra_msg1_t));
-  env->SetByteArrayRegion(array_ret, 0, sizeof(sgx_ra_msg1_t), reinterpret_cast<jbyte *>(&msg1));
-  return array_ret;
-}
-
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation2(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg2_input) {
-  (void)obj;
-
-  uint32_t msg2_size = static_cast<uint32_t>(env->GetArrayLength(msg2_input));
-  jboolean if_copy = false;
-  jbyte *msg2_bytes = env->GetByteArrayElements(msg2_input, &if_copy);
-  sgx_ra_msg2_t *msg2 = reinterpret_cast<sgx_ra_msg2_t *>(msg2_bytes);
-
-  uint32_t msg3_size = 0;
-  sgx_ra_msg3_t *msg3 = nullptr;
-
-  sgx_check_and_time("Remote Attestation Step 2",
-                     sgx_ra_proc_msg2(context,
-                                      eid,
-                                      sgx_ra_proc_msg2_trusted,
-                                      sgx_ra_get_msg3_trusted,
-                                      msg2,
-                                      msg2_size,
-                                      &msg3,
-                                      &msg3_size));
-
-  jbyteArray ret = env->NewByteArray(msg3_size);
-  env->SetByteArrayRegion(ret, 0, msg3_size, reinterpret_cast<jbyte *>(msg3));
-  free(msg3);
-
-  env->ReleaseByteArrayElements(msg2_input, msg2_bytes, 0);
-
-  return ret;
-}
-
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_RemoteAttestation3(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray msg4_input) {
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
   (void)obj;
 
   jboolean if_copy = false;
-  jbyte *msg4_bytes = env->GetByteArrayElements(msg4_input, &if_copy);
-  uint32_t msg4_size = static_cast<uint32_t>(env->GetArrayLength(msg4_input));
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
 
-  sgx_check_and_time("Remote Attestation Step 3",
-                     ecall_ra_proc_msg4(eid,
-                                        context,
-                                        reinterpret_cast<uint8_t *>(msg4_bytes),
-                                        msg4_size));
+  oe_check_and_time("Finish attestation",
+                    ecall_finish_attestation((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size));
 
-  env->ReleaseByteArrayElements(msg4_input, msg4_bytes, 0);
+  env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 
-  ecall_enclave_ra_close(eid, context);
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
@@ -374,7 +250,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sto
   (void)env;
   (void)obj;
 
-  sgx_check("StopEnclave", sgx_destroy_enclave(eid));
+  oe_check("StopEnclave", oe_terminate_enclave((oe_enclave_t*)eid));
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
@@ -395,9 +271,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Project: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Project",
+    oe_check_and_time("Project",
                        ecall_project(
-                         eid,
+                         (oe_enclave_t*)eid,
                          project_list_ptr, project_list_length,
                          input_rows_ptr, input_rows_length,
                          &output_rows, &output_rows_length));
@@ -431,9 +307,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Filter: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Filter",
+    oe_check_and_time("Filter",
                        ecall_filter(
-                         eid,
+                         (oe_enclave_t*)eid,
                          condition_ptr, condition_length,
                          input_rows_ptr, input_rows_length,
                          &output_rows, &output_rows_length));
@@ -466,8 +342,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
     clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
-    sgx_check("Encrypt",
-              ecall_encrypt(eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
+    oe_check("Encrypt",
+              ecall_encrypt((oe_enclave_t*)eid, plaintext_ptr, plength, ciphertext_copy, (uint32_t) clength));
   }
 
   jbyteArray ciphertext = env->NewByteArray(clength);
@@ -495,9 +371,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("Sample: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Sample",
+    oe_check_and_time("Sample",
                        ecall_sample(
-                         eid,
+                         (oe_enclave_t*)eid,
                          input_rows_ptr, input_rows_length,
                          &output_rows, &output_rows_length));
   }
@@ -532,9 +408,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("FindRangeBounds: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Find Range Bounds",
+    oe_check_and_time("Find Range Bounds",
                        ecall_find_range_bounds(
-                         eid,
+                         (oe_enclave_t*)eid,
                          sort_order_ptr, sort_order_length,
                          num_partitions,
                          input_rows_ptr, input_rows_length,
@@ -577,9 +453,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   if (input_rows_ptr == nullptr) {
     ocall_throw("PartitionForSort: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Partition For Sort",
+    oe_check_and_time("Partition For Sort",
                        ecall_partition_for_sort(
-                         eid,
+                         (oe_enclave_t*)eid,
                          sort_order_ptr, sort_order_length,
                          num_partitions,
                          input_rows_ptr, input_rows_length,
@@ -625,8 +501,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (input_rows_ptr == nullptr) {
     ocall_throw("ExternalSort: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("External Non-Oblivious Sort",
-                       ecall_external_sort(eid,
+    oe_check_and_time("External Non-Oblivious Sort",
+                       ecall_external_sort((oe_enclave_t*)eid,
                                            sort_order_ptr, sort_order_length,
                                            input_rows_ptr, input_rows_length,
                                            &output_rows, &output_rows_length));
@@ -661,9 +537,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
   if (input_rows_ptr == nullptr) {
     ocall_throw("ScanCollectLastPrimary: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Scan Collect Last Primary",
+    oe_check_and_time("Scan Collect Last Primary",
                        ecall_scan_collect_last_primary(
-                         eid,
+                         (oe_enclave_t*)eid,
                          join_expr_ptr, join_expr_length,
                          input_rows_ptr, input_rows_length,
                          &output_rows, &output_rows_length));
@@ -702,9 +578,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Non-Oblivious Sort-Merge Join",
+    oe_check_and_time("Non-Oblivious Sort-Merge Join",
                        ecall_non_oblivious_sort_merge_join(
-                         eid,
+                         (oe_enclave_t*)eid,
                          join_expr_ptr, join_expr_length,
                          input_rows_ptr, input_rows_length,
                          join_row_ptr, join_row_length,
@@ -747,9 +623,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Non-Oblivious Aggregate Step 1",
+    oe_check_and_time("Non-Oblivious Aggregate Step 1",
                        ecall_non_oblivious_aggregate_step1(
-                         eid,
+                         (oe_enclave_t*)eid,
                          agg_op_ptr, agg_op_length,
                          input_rows_ptr, input_rows_length,
                          &first_row, &first_row_length,
@@ -818,9 +694,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousAggregateStep2: JNI failed to get input byte array.");
   } else {
-    sgx_check_and_time("Non-Oblivious Aggregate Step 2",
+    oe_check_and_time("Non-Oblivious Aggregate Step 2",
                        ecall_non_oblivious_aggregate_step2(
-                         eid,
+                         (oe_enclave_t*)eid,
                          agg_op_ptr, agg_op_length,
                          input_rows_ptr, input_rows_length,
                          next_partition_first_row_ptr, next_partition_first_row_length,

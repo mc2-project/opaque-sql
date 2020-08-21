@@ -4,9 +4,6 @@
 enclave {
 
   include "stdbool.h"
-  include "sgx_key_exchange.h"
-  include "sgx_trts.h"
-  from "sgx_tkey_exchange.edl" import *;
 
   trusted {
     public void ecall_project(
@@ -72,11 +69,13 @@ enclave {
       [user_check] uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public sgx_status_t ecall_enclave_init_ra([out] sgx_ra_context_t *p_context);
-    public void ecall_enclave_ra_close(sgx_ra_context_t context);
-    public void ecall_ra_proc_msg4(sgx_ra_context_t context,
-                                   [in,size=msg4_size] uint8_t *msg4,
-                                   uint32_t msg4_size);
+    public void ecall_generate_report(
+      [out] uint8_t** msg1,
+      [out] size_t* msg1_size);
+
+    public void ecall_finish_attestation(
+      [in,size=msg4_size] uint8_t *msg4,
+      uint32_t msg4_size);
   };
 
   untrusted {
@@ -86,7 +85,7 @@ enclave {
      * Allocate memory outside of the enclave and return the pointer in `ret`.
      *
      * Before dereferencing the resulting pointer, the caller must check whether it is actually
-     * outside the enclave using `sgx_is_outside_enclave()`. Otherwise, an attacker could cause the
+     * outside the enclave using `oe_is_outside_enclave()`. Otherwise, an attacker could cause the
      * enclave to perform unexpected operations on its own memory. The function `ocall_malloc()`
      * wraps this function with such a bounds check and most callers should use that function
      * instead.

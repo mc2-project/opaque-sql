@@ -2,11 +2,11 @@
 
 **Secure Apache Spark SQL**
 
-[![Build Status](https://travis-ci.org/ucbrise/opaque.svg?branch=master)](https://travis-ci.org/ucbrise/opaque)
+[![Build Status](https://travis-ci.org/mc2-project/opaque.svg?branch=master)](https://travis-ci.org/mc2-project/opaque)
 
-Opaque is a package for Apache Spark SQL that enables encryption for DataFrames using Intel SGX trusted hardware. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within SGX enclaves.
+Opaque is a package for Apache Spark SQL that enables encryption for DataFrames using the OpenEnclave framework. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within hardware enclaves (such as Intel SGX).
 
-This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
+This project is based on the following NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
 This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). It currently has the following limitations:
 
@@ -14,51 +14,41 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 - Not all Spark SQL operations are supported. UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
-- Computation integrity verification (section 4.2 of the NSDI paper) is not included.
+- Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 [Opaque: An Oblivious and Encrypted Distributed Analytics Platform](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf). NSDI 2017, March 2017.
 
 ## Installation
 
-After downloading the Opaque codebase, build and test it as follows. (Alternatively, we offer a [Docker image](docker/) that contains a prebuilt version of Opaque.)
+After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [Intel SGX SDK](https://01.org/intel-software-guard-extensions/downloads):
+1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9.0 (so please install with `open-enclave=0.9.0`) and Ubuntu 18.04.
 
     ```sh
-    # For Ubuntu 16.04 or 18.04:
-    sudo apt install wget build-essential openjdk-8-jdk python cmake libssl-dev
-
-    # For Ubuntu 16.04:
-    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin
     # For Ubuntu 18.04:
-    wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin
-
-    # Installer will prompt for install path, which can be user-local
-    chmod +x ./sgx_installer.bin
-    ./sgx_installer.bin
-
-    source sgxsdk/environment
+    sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
+    
+    # Install a newer version of CMake (>= 3.13)
+    wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
+    sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
     ```
 
-2. On the master, generate a keypair using OpenSSL for remote attestation. The public key will be automatically hardcoded into the enclave code.
-   Note that only the NIST p-256 curve is supported.
+2. On the master, generate a keypair using OpenSSL for remote attestation.
 
     ```sh
-    cd ${OPAQUE_HOME}
-    openssl ecparam -name prime256v1 -genkey -noout -out private_key.pem
+    openssl genrsa -out private_key.pem -3 3072
     ```
 
-3. Set the following environment variables:
+3. Change into the Opaque root directory and edit Opaque's environment variables in `opaqueenv` if desired. Export Opaque and OpenEnclave environment variables via
 
     ```sh
-    export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data
-    export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
+    source opaqueenv
+    source /opt/openenclave/share/openenclave/openenclaverc
     ```
 
-    By default, Opaque runs in simulation mode, which does not require the machine to have real SGX hardware.
-    This is useful if you want to test out Opaque's functionality locally.
-    However, if you are running Opaque with real SGX hardware, then please also set `export SGX_MODE=HW`.
+    By default, Opaque runs in hardware mode (environment variable `MODE=HARDWARE`).
+    If you do not have a machine with a hardware enclave but still wish to test out Opaque's functionality locally, then set `export MODE=SIMULATE`.
 
 4. Run the Opaque tests:
 
@@ -178,47 +168,6 @@ Now we can port this UDF to Opaque as follows:
     ```
 
 3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
-
-## Launch Token and Remote Attestation
-
-For development, Opaque launches enclaves in debug mode. To launch enclaves in release mode, use a [Launch Enclave](https://github.com/intel/linux-sgx/blob/master/psw/ae/ref_le/ref_le.md) or contact Intel to obtain a launch token, then pass it to `sgx_create_enclave` in `src/enclave/App/App.cpp`. Additionally, change `-DEDEBUG` to `-UEDEBUG` in `src/enclave/CMakeLists.txt`.
-
-Remote attestation ensures that the workers' SGX enclaves are genuine. To use remote attestation, do the following:
-
-1. [Generate a self-signed certificate](https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using):
-
-    ```sh
-    cat <<EOF > client.cnf
-    [ ssl_client ]
-    keyUsage = digitalSignature, keyEncipherment, keyCertSign
-    subjectKeyIdentifier=hash
-    authorityKeyIdentifier=keyid,issuer
-    extendedKeyUsage = clientAuth, serverAuth
-    EOF
-
-    openssl genrsa -out client.key 2048
-    openssl req -key client.key -new -out client.req
-    openssl x509 -req -days 365 -in client.req -signkey client.key -out client.crt -extfile client.cnf -extensions ssl_client
-    
-    # Should print "client.crt: OK"
-    openssl verify -x509_strict -purpose sslclient -CAfile client.crt client.crt
-    ```
-    
-2. Upload the certificate to the [Intel SGX Development Services Access Request form](https://software.intel.com/en-us/form/sgx-onboarding) and wait for a response from Intel, which may take several days.
-
-3. The response should include a SPID (a 16-byte hex string) and a reminder of which EPID security policy you chose (linkable or unlinkable). Place those values into `src/enclave/ServiceProvider/ServiceProvider.cpp`.
-
-3. Set the following environment variables:
-
-    ```sh
-    # Require attestation to complete successfully before sending secrets to the worker enclaves.
-    export OPAQUE_REQUIRE_ATTESTATION=1
-
-    export IAS_CLIENT_CERT_FILE=.../client.crt  # from openssl x509 above
-    export IAS_CLIENT_KEY_FILE=.../client.key   # from openssl genrsa above
-    ```
-
-4. Change the value of `Utils.sharedKey` (`src/main/scala/edu/berkeley/cs/rise/opaque/Utils.scala`), the shared data encryption key. Opaque will ensure that each enclave passes remote attestation before sending it this key.
 
 ## Contact
 
