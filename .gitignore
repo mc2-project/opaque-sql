@@ -88,6 +88,8 @@ hs_err_pid*.log
 /data/disease/*.csv
 /data/tpch/tpch-dbgen
 /data/tpch/sf_small/*.tbl
+/data/tpcds/data/*.dat
+/data/tpcds/tpcds-kit
 
 # For CMake
 Makefile
