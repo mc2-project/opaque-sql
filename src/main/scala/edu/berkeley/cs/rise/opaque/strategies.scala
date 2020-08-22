@@ -77,6 +77,9 @@ object OpaqueOperators extends Strategy {
     case EncryptedUnion(left, right) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
 
+    case EncryptedGlobalLimit(limit, child) =>
+      EncryptedGlobalLimit(limit, planLater(child)) :: Nil
+
     case Encrypt(child) =>
       EncryptExec(planLater(child)) :: Nil
 

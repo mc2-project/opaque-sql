@@ -127,3 +127,9 @@ case class EncryptedUnion(
 
   override def output: Seq[Attribute] = left.output
 }
+
+case class EncryptedLimit(limit: Int, child: OpaqueOperator)
+    extends UnaryNode with OpaqueOperator {
+
+  override def output: Seq[Attribute] = child.output
+}
