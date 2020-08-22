@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu
+
+cd "$(dirname $0)"
+
+rm -rf tpcds-kit
+git clone https://github.com/databricks/tpcds-kit.git
+cd tpcds-kit/tools
+make -j$(nproc) OS=LINUX
+mkdir -p $SPARKSGX_DATA_DIR/tpcds/data/
+./dsdgen -SCALE 1 -DELIMITER , -DIR $SPARKSGX_DATA_DIR/tpcds/data/ -FORCE
+chmod u+r $SPARKSGX_DATA_DIR/tpcds/data/*.dat
