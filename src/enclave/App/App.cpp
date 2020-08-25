@@ -720,3 +720,99 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
 
   return ret;
 }
+
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
+  JNIEnv *env, jobject obj, jlon eid, jbyteArray input_rows) {
+  
+    uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+    uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+    uint8_t *output_rows = nullptr;
+    size_t output_rows_length = 0;
+
+    if (input_rows_ptr == nullptr) {
+      ocall_throw("CountRowsPerPartition: JNI failed to get input byte array.");
+    } else {
+      oe_check_and_time("CountRowsPerPartition",
+                        ecall_count_rows_per_partition((oe_enclave_t *) eid,
+                                                       input_rows_ptr,
+                                                       input_rows_length,
+                                                       &output_rows,
+                                                       &output_rows_length));
+    }
+
+    jbyteArray ret = env->NewByteArray(output_rows_length);
+    env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+    free(output_rows);
+
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  return ret;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
+  
+    uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+    uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+    uint8_t *output_rows = nullptr;
+    size_t output_rows_length = 0;
+
+    if (input_rows_ptr == nullptr) {
+      ocall_throw("ComputeNumRowsPerPartition: JNI failed to get input byte array.");
+    } else {
+      oe_check_and_time("ComputeNumRowsPerPartition",
+                        ecall_compute_num_rows_per_partition((oe_enclave_t *) eid,
+                                                             (uint32_t) limit,
+                                                             input_rows_ptr,
+                                                             input_rows_length,
+                                                             &output_rows,
+                                                             &output_rows_length));
+    }
+
+    jbyteArray ret = env->NewByteArray(output_rows_length);
+    env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+    free(output_rows);
+
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  return ret;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray limit_rows, jbyteArray input_rows) {
+  
+    uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+    uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+    uint32_t limit_rows_length = (uint32_t) env->GetArrayLength(limit_rows);
+    uint8_t *limit_rows_ptr = (uint8_t *) env->GetByteArrayElements(limit_rows, &if_copy);
+
+    uint8_t *output_rows = nullptr;
+    size_t output_rows_length = 0;
+
+    if (input_rows_ptr == nullptr) {
+      ocall_throw("LimitReturnRows: JNI failed to get input byte array.");
+    } else {
+      oe_check_and_time("LimitReturnRows",
+                        ecall_limit_return_rows((oe_enclave_t *) eid,
+                                                limit_rows_ptr,
+                                                limit_rows_length,
+                                                input_rows_ptr,
+                                                input_rows_length,
+                                                &output_rows,
+                                                &output_rows_length));
+    }
+
+    jbyteArray ret = env->NewByteArray(output_rows_length);
+    env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+    free(output_rows);
+
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  return ret;
+}

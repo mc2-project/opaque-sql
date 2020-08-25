@@ -228,6 +228,49 @@ void ecall_non_oblivious_aggregate_step2(
   }
 }
 
+void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_length,
+                                    uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    count_rows_per_partition(input_rows, input_rows_length,
+                             output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_compute_num_rows_per_partition(uint32_t limit,
+                                          uint8_t *input_rows, size_t input_rows_length,
+                                          uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    compute_num_rows_per_partition(limit,
+                                   input_rows, input_rows_length,
+                                   output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_limit_return_rows(uint8_t *limt_rows, size_t limit_rows_length,
+                             uint8_t *input_rows, size_t input_rows_length,
+                             uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    compute_num_rows_per_partition(limit_rows, limt_rows_length,
+                                   input_rows, input_rows_length,
+                                   output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
 static Crypto g_crypto;
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input,

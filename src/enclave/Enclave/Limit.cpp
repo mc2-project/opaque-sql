@@ -27,9 +27,9 @@ void count_rows_per_partition(uint8_t input_rows, size_t input_rows_length,
 }
 
 // Based on the limit, calculate the number of rows to return for each partition
-void compute_num_rows_per_partitions(uint32_t limit,
-                                     uint8_t input_rows, size_t input_rows_length,
-                                     uint8_t **output_rows, size_t *output_rows_length) {
+void compute_num_rows_per_partition(uint32_t limit,
+                                    uint8_t input_rows, size_t input_rows_length,
+                                    uint8_t **output_rows, size_t *output_rows_length) {
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
@@ -56,18 +56,24 @@ void compute_num_rows_per_partitions(uint32_t limit,
   w.output_buffer(output_rows, output_rows_length);
 }
 
-void limit_return_rows(uint32_t num_rows,
+void limit_return_rows(uint8_t limit_rows, size_t limit_rows_length,
                        uint8_t input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
+  RowReader r_limit(BufferRefView<tuix::EncryptedBlocks>(limit_rows, limit_rows_length));
+  auto limit_row = r_limit.next();
+  auto num_rows = limit_row[0]->value();
+
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
-
-  uint32_t current_num_rows = 0;
   
-  while (r.has_next() && current_num_rows < num_rows) {
-    const tuix::Row *row = r.next();
-    w.append(row);
-    ++current_num_rows;
+  if (num_rows > 0) {
+    uint32_t current_num_rows = 0;
+  
+    while (r.has_next() && current_num_rows < num_rows) {
+      const tuix::Row *row = r.next();
+      w.append(row);
+      ++current_num_rows;
+    }
   }
   w.output_buffer(output_rows, output_rows_length);
 }
