@@ -22,6 +22,7 @@ import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.IntegerLiteral
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
@@ -77,8 +78,8 @@ object OpaqueOperators extends Strategy {
     case EncryptedUnion(left, right) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
 
-    case EncryptedGlobalLimit(limit, child) =>
-      EncryptedGlobalLimit(limit, planLater(child)) :: Nil
+    case EncryptedGlobalLimit(IntegerLiteral(limit), child) =>
+      EncryptedGlobalLimitExec(limit, planLater(child)) :: Nil
 
     case Encrypt(child) =>
       EncryptExec(planLater(child)) :: Nil

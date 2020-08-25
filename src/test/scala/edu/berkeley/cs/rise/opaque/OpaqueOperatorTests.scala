@@ -122,6 +122,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  testAgainstSpark("TPC-H 9 with limit") { securityLevel =>
+    TPCH.tpch9Limit(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  }
+
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect

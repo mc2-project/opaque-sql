@@ -7,6 +7,7 @@
 #include "Crypto.h"
 #include "Filter.h"
 #include "Join.h"
+#include "Limit.h"
 #include "Project.h"
 #include "Sort.h"
 #include "util.h"
@@ -256,16 +257,17 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   }
 }
 
-void ecall_limit_return_rows(uint8_t *limt_rows, size_t limit_rows_length,
+void ecall_limit_return_rows(uint8_t *limit_rows, size_t limit_rows_length,
                              uint8_t *input_rows, size_t input_rows_length,
                              uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(limit_rows, limit_rows_length) == 1);
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    compute_num_rows_per_partition(limit_rows, limt_rows_length,
-                                   input_rows, input_rows_length,
-                                   output_rows, output_rows_length);
+    limit_return_rows(limit_rows, limit_rows_length,
+                      input_rows, input_rows_length,
+                      output_rows, output_rows_length);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

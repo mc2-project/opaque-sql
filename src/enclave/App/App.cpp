@@ -723,7 +723,10 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
-  JNIEnv *env, jobject obj, jlon eid, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
+
+    (void)obj;
+    jboolean if_copy;
   
     uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
     uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
@@ -754,6 +757,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
   JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
+
+    (void)obj;
+    jboolean if_copy;
   
     uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
     uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
@@ -785,6 +791,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray limit_rows, jbyteArray input_rows) {
+
+    (void)obj;
+    jboolean if_copy;
   
     uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
     uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);

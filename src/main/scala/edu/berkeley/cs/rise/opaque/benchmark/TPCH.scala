@@ -150,7 +150,7 @@ object TPCH {
       val ordersDF = orders(sqlContext, securityLevel, size, numPartitions)
       val nationDF = nation(sqlContext, securityLevel, size, numPartitions)
       (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
-   }
+  }
 
    /** TPC-H query 9 - Product Type Profit Measure Query */
    def tpch9(
@@ -193,4 +193,15 @@ object TPCH {
 
      df
    }
+
+  def tpch9Limit(
+    sqlContext: SQLContext,
+    securityLevel: SecurityLevel,
+    size: String,
+    numPartitions: Int,
+    quantityThreshold: Option[Int] = None) : DataFrame = {
+    import sqlContext.implicits._
+    val df = tpch9(sqlContext, securityLevel, size, numPartitions, quantityThreshold).limit(2)
+    df
+  }
 }
