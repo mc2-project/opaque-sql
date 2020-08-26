@@ -122,10 +122,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  testAgainstSpark("TPC-H 9 with limit") { securityLevel =>
-    TPCH.tpch9Limit(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
-  }
-
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
@@ -630,6 +626,10 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
   testAgainstSpark("big data 3") { securityLevel =>
     BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
+  }
+
+  testAgainstSpark("big data 3 with limit") { securityLevel =>
+    BigDataBenchmark.q3Limit(spark, securityLevel, "tiny", numPartitions).collect
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](

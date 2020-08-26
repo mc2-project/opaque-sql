@@ -68,7 +68,7 @@ extern "C" {
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
+    JNIEnv *, jobject, jlong, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
     JNIEnv *, jobject, jlong);

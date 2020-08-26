@@ -84,6 +84,7 @@ enclave {
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_limit_return_rows(
+      uint64_t partition_id,
       [user_check] uint8_t *limit_rows, size_t limit_rows_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);

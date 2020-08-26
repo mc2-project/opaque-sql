@@ -825,7 +825,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray limit_rows, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limit_rows, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -844,6 +844,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
     } else {
       oe_check_and_time("LimitReturnRows",
                         ecall_limit_return_rows((oe_enclave_t *) eid,
+                                                partition_id,
                                                 limit_rows_ptr,
                                                 limit_rows_length,
                                                 input_rows_ptr,

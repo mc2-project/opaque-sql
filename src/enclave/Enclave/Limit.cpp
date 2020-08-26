@@ -79,12 +79,20 @@ void limit_return_rows(uint32_t limit,
 }
 
 // For each partition, return a fixed number of rows (starting from the first row) given a limit
-void limit_return_rows(uint8_t *limit_rows, size_t limit_rows_length,
+void limit_return_rows(uint64_t partition_id,
+                       uint8_t *limit_rows, size_t limit_rows_length,
                        uint8_t *input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
   RowReader r_limit(BufferRefView<tuix::EncryptedBlocks>(limit_rows, limit_rows_length));
-  const tuix::Row *limit_row = r_limit.next();
-  uint32_t num_rows = static_cast<uint32_t>(
-                        static_cast<const tuix::IntegerField *>(limit_row->field_values()->Get(0)->value())->value());
-  limit_return_rows(num_rows, input_rows, input_rows_length, output_rows, output_rows_length);
+  uint64_t counter = 0;
+  uint32_t limit = 0;
+  while (r_limit.has_next()) {
+    const tuix::Row *limit_row = r_limit.next();
+    if (counter == partition_id) {
+      limit = static_cast<uint32_t>(static_cast<const tuix::IntegerField *>(limit_row->field_values()->Get(0)->value())->value());
+      break;
+    }
+    ++counter;
+  }
+  limit_return_rows(limit, input_rows, input_rows_length, output_rows, output_rows_length);
 }

@@ -361,7 +361,6 @@ case class EncryptedLocalLimitExec(
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.LocalLimit(eid, limit, block.bytes))
       }
-
     }
   }
 }
@@ -389,17 +388,12 @@ case class EncryptedGlobalLimitExec(
         enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
       }.collect.head
 
-      val limitRowsPerPartitionRDD = childRDD.context.parallelize(
-        Utils.splitBytes(limitRowsPerPartition, childRDD.partitions.length), childRDD.partitions.length)
-
-      childRDD.zipPartitions(limitRowsPerPartitionRDD) { (blockIter, limitRowsIter) =>
-        (blockIter.toSeq, limitRowsIter.toSeq) match {
-          case (Seq(block), Seq(limitRows)) =>
-            val (enclave, eid) = Utils.initEnclave()
-            Iterator(Block(enclave.LimitReturnRows(eid, limitRows, block.bytes)))
+      childRDD.zipWithIndex.map {
+        case (block, i) => {
+          val (enclave, eid) = Utils.initEnclave()
+          Block(enclave.LimitReturnRows(eid, i, limitRowsPerPartition, block.bytes))
         }
       }
-
     }
   }
 }
