@@ -98,9 +98,11 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
 
-    case p @ GlobalLimit(limitExpr, child) if isEncrypted(p) => {
+    case p @ LocalLimit(limitExpr, child) if isEncrypted(p) =>
+      EncryptedLocalLimit(limitExpr, child.asInstanceOf[OpaqueOperator])
+
+    case p @ GlobalLimit(limitExpr, child) if isEncrypted(p) =>
       EncryptedGlobalLimit(limitExpr, child.asInstanceOf[OpaqueOperator])
-    }
 
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(

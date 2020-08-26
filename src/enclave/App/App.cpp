@@ -789,6 +789,41 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
 }
 
 JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
+
+    (void)obj;
+    jboolean if_copy;
+  
+    uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+    uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
+    uint8_t *output_rows = nullptr;
+    size_t output_rows_length = 0;
+
+    if (input_rows_ptr == nullptr) {
+      ocall_throw("LocalLimit: JNI failed to get input byte array.");
+    } else {
+      oe_check_and_time("LocalLimit",
+                        ecall_local_limit((oe_enclave_t *) eid,
+                                          limit,
+                                          input_rows_ptr,
+                                          input_rows_length,
+                                          &output_rows,
+                                          &output_rows_length));
+    }
+
+    jbyteArray ret = env->NewByteArray(output_rows_length);
+    env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+    free(output_rows);
+
+    env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+
+  return ret;
+}
+
+
+JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray limit_rows, jbyteArray input_rows) {
 

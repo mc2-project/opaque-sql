@@ -345,6 +345,28 @@ case class EncryptedUnionExec(
   }
 }
 
+case class EncryptedLocalLimitExec(
+    limit: Int,
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+  import Utils.time
+
+  override def output: Seq[Attribute] =
+    child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>
+
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.LocalLimit(eid, limit, block.bytes))
+      }
+
+    }
+  }
+}
+
+
 case class EncryptedGlobalLimitExec(
     limit: Int,
     child: SparkPlan)
@@ -355,7 +377,7 @@ case class EncryptedGlobalLimitExec(
     child.output
 
   override def executeBlocked(): RDD[Block] = {
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLimitExec") { childRDD =>
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>
 
       val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()

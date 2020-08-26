@@ -257,6 +257,21 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   }
 }
 
+void ecall_local_limit(uint32_t limit,
+                       uint8_t *input_rows, size_t input_rows_length,
+                       uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    limit_return_rows(limit,
+                      input_rows, input_rows_length,
+                      output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
 void ecall_limit_return_rows(uint8_t *limit_rows, size_t limit_rows_length,
                              uint8_t *input_rows, size_t input_rows_length,
                              uint8_t **output_rows, size_t *output_rows_length) {

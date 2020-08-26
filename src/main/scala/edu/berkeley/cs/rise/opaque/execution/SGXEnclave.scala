@@ -54,6 +54,8 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long, inputRows: Array[Byte]): Array[Byte]
   @native def ComputeNumRowsPerPartition(
     eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
+  @native def LocalLimit(
+    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
   @native def LimitReturnRows(
     eid: Long, limitRows: Array[Byte], inputRows: Array[Byte]): Array[Byte]
 
