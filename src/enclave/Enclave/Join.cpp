@@ -5,7 +5,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
-#include "EnclaveContext.h"
+// #include "EnclaveContext.h"
 
 void scan_collect_last_primary(
   uint8_t *join_expr, size_t join_expr_length,

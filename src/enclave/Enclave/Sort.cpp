@@ -9,7 +9,7 @@
 #include "FlatbuffersWriters.h"
 //#include "rdrand.h"
 
-#include "EnclaveContext.h"
+// #include "EnclaveContext.h"
 
 
 class MergeItem {

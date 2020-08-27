@@ -1,7 +1,6 @@
 #include "FlatbuffersReaders.h"
 #include "../Common/mCrypto.h"
 #include "../Common/common.h"
-#include "EnclaveContext.h"
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
   uint32_t num_rows = encrypted_block->num_rows();
@@ -75,7 +74,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     past_log_entries.push_back(le);
   }
 
-  verify_log(encrypted_blocks, past_log_entries);
+  // verify_log(encrypted_blocks, past_log_entries);
 
   // Master list of mac lists of all input partitions
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
@@ -162,41 +161,40 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   }
 }
 
-verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
-  uint8_t expected_hash[32];
-  memcpy(expected_hash, encrypted_blocks->log_hash()->data(), 32);
-
-  auto curr_log_entry = encrypted_blocks->log()->curr_entries()->Get(0);
-  std::string curr_ecall = curr_log_entry->op()->str();
-  int snd_pid = curr_log_entry()->snd_pid();
-  int rcv_pid = -1;
-  int job_id = curr_log_entry()->job_id();
-  int num_macs = curr_log_entry()->num_macs();
-
-  uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
-  memcpy(global_mac, curr_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
-
-  int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
-  uint8_t to_hash[num_bytes_to_hash];
-  memcpy(to_hash, global_mac, OE_HMAC_SIZE);
-  memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
-  *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = curr_pid;
-  *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = (int) -1;
-  *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
-  *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
-  memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
-
-  // Hash the data
-  uint8_t actual_hash[32];
-  mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
-
-  for (int i = 0; i < 32; i++) {
-    if (expected_hash[i] != actual_hash[i]) {
-      throw std::runtime_error("Hash did not match");
-    }
-  }
-
-}
+// void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
+//   uint8_t expected_hash[32];
+//   memcpy(expected_hash, encrypted_blocks->log_hash()->data(), 32);
+// 
+//   auto curr_log_entry = encrypted_blocks->log()->curr_entries()->Get(0);
+//   std::string curr_ecall = curr_log_entry->op()->str();
+//   int snd_pid = curr_log_entry->snd_pid();
+//   int rcv_pid = -1;
+//   int job_id = curr_log_entry->job_id();
+//   int num_macs = curr_log_entry->num_macs();
+// 
+//   uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
+//   memcpy(global_mac, curr_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
+// 
+//   int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
+//   uint8_t to_hash[num_bytes_to_hash];
+//   memcpy(to_hash, global_mac, OE_HMAC_SIZE);
+//   memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
+//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = snd_pid;
+//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = rcv_pid;
+//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
+//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
+//   memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
+// 
+//   // Hash the data
+//   uint8_t actual_hash[32];
+//   mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
+// 
+//   for (int i = 0; i < 32; i++) {
+//     if (expected_hash[i] != actual_hash[i]) {
+//       throw std::runtime_error("Hash did not match");
+//     }
+//   }
+// }
 
 uint32_t RowReader::num_rows() {
   uint32_t result = 0;

@@ -1,5 +1,6 @@
 #define FLATBUFFERS_DEBUG_VERIFICATION_FAILURE
 #include "Flatbuffers.h"
+#include "EnclaveContext.h"
 #include <iostream>
 
 #ifndef FLATBUFFERS_READERS_H
@@ -9,6 +10,7 @@
 using namespace edu::berkeley::cs::rise::opaque;
 
 void init_log(const tuix::EncryptedBlocks *encrypted_blocks);
+void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries);
 /**
  * A reader for Row objects within an EncryptedBlock object that provides both iterator-based and
  * range-style interfaces.

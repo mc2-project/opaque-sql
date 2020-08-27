@@ -4,7 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
-#include "EnclaveContext.h"
+// #include "EnclaveContext.h"
 
 void non_oblivious_aggregate_step1(
   uint8_t *agg_op, size_t agg_op_length,

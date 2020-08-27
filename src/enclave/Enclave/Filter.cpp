@@ -5,7 +5,7 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 #include <iostream>
-#include "EnclaveContext.h"
+// #include "EnclaveContext.h"
 
 using namespace edu::berkeley::cs::rise::opaque;
 
