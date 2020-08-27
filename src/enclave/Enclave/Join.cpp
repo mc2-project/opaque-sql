@@ -1,4 +1,5 @@
 #include "Join.h"
+#include <iostream>
 
 #include "ExpressionEvaluation.h"
 #include "FlatbuffersReaders.h"
@@ -63,6 +64,7 @@ void non_oblivious_sort_merge_join(
   while (r.has_next()) {
     const tuix::Row *current = r.next();
     if (join_expr_eval.is_primary(current)) {
+      EnclaveContext::getInstance().set_append_mac(false);
       // If current row is from primary table
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
@@ -80,6 +82,7 @@ void non_oblivious_sort_merge_join(
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+        EnclaveContext::getInstance().set_append_mac(false);
         auto primary_group_buffer = primary_group.output_buffer(std::string("NULL"));
         RowReader primary_group_reader(primary_group_buffer.view());
         while (primary_group_reader.has_next()) {
@@ -95,11 +98,13 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
+          EnclaveContext::getInstance().set_append_mac(true);
           w.append(primary, current);
         }
       }
     }
   }
 
+  EnclaveContext::getInstance().set_append_mac(true);
   w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
 }

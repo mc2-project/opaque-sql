@@ -134,6 +134,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
           if (cipher_mac == partition_mac_lsts[i][j]) {
             partition_mac_lsts[i].erase(partition_mac_lsts[i].begin() + j);
             found = true;
+            // std::cout << "Found one mac!\n";
             break;
           }
         }
@@ -146,6 +147,10 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
       if (!mac_in_lst) {
         throw std::runtime_error("Unexpected block given as input to the enclave");
       }
+    }
+
+    for (uint32_t i = 0; i < partition_mac_lsts.size(); i++) {
+      // std::cout << "Num Macs left in this Partition: " << partition_mac_lsts[i].size() << std::endl;
     }
 
     // Check that partition_mac_lsts is now empty - we should've found all expected MACs
