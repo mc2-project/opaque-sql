@@ -100,7 +100,7 @@ void RowWriter::finish_block() {
 
   // Add each EncryptedBlock's MAC to the log entry so that next partition can check it
   // we only want to add the mac if it's not part of the join primary group reader
-  if (EnclaveContext::getInstance().get_log_entry_ecall() != std::string("NULL")) {
+  if (EnclaveContext::getInstance().to_append_mac()) {
     uint8_t mac[SGX_AESGCM_MAC_SIZE];
     memcpy(mac, enc_rows.get() + SGX_AESGCM_IV_SIZE + builder.GetSize(), SGX_AESGCM_MAC_SIZE);
     EnclaveContext::getInstance().add_mac_to_mac_lst(mac);
@@ -132,11 +132,13 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
     int job_id = EnclaveContext::getInstance().get_job_id();
     size_t num_macs = EnclaveContext::getInstance().get_num_macs();
+    // std::cout << "Num macs: " << num_macs << std::endl;
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
-    EnclaveContext::getInstance().hmac_mac_lst(mac_lst);
+    uint8_t global_mac[OE_HMAC_SIZE];
+    EnclaveContext::getInstance().hmac_mac_lst(mac_lst, global_mac);
 
     int curr_pid = EnclaveContext::getInstance().get_pid();
-    uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
+    // uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
 
     // Copy mac list to untrusted memory

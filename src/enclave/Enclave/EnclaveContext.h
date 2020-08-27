@@ -41,8 +41,17 @@ class EnclaveContext {
     // For this ecall log entry
     std::string this_ecall;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
-    uint8_t global_mac[OE_HMAC_SIZE];
+
+    std::string curr_row_writer;
+    // Special vectors of nonObliviousAggregateStep1
+    std::vector<std::vector<uint8_t>> first_row_log_entry_mac_lst;
+    std::vector<std::vector<uint8_t>> last_group_log_entry_mac_lst;
+    std::vector<std::vector<uint8_t>> last_row_log_entry_mac_lst;
+
+
+    // uint8_t global_mac[OE_HMAC_SIZE];
     int pid;
+    bool append_mac;
 
     // Map of job ID for partition
     std::unordered_map<int, int> pid_jobid;
@@ -50,6 +59,7 @@ class EnclaveContext {
 
     EnclaveContext() {
       pid = -1;
+      append_mac = true;
     }
 
   public:
@@ -72,6 +82,14 @@ class EnclaveContext {
       memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
     }
 
+    void set_curr_row_writer(std::string row_writer) {
+      curr_row_writer = row_writer;
+    }
+    // 
+    // std::string get_curr_row_writer() {
+    //   return curr_row_writer;
+    // }
+
     void reset_log_entry() {
       this_ecall = std::string("");
       log_entry_mac_lst.clear();
@@ -79,6 +97,14 @@ class EnclaveContext {
 
     void reset_past_log_entries() {
       ecall_log_entries.clear();
+    }
+
+    void set_append_mac(bool to_append) {
+      append_mac = to_append;
+    }
+
+    bool to_append_mac() {
+      return append_mac;
     }
 
     void append_past_log_entry(std::string op, int snd_pid, int rcv_pid, int job_id) {
@@ -112,36 +138,65 @@ class EnclaveContext {
       }
       ecall_log_entries.clear();
       pid = -1;
+
+      curr_row_writer = std::string("");
+
+      first_row_log_entry_mac_lst.clear();
+      last_group_log_entry_mac_lst.clear();
+      last_row_log_entry_mac_lst.clear();
+      // log_entry_mac_lst.clear();
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
       std::vector<uint8_t> mac_vector (mac, mac + SGX_AESGCM_MAC_SIZE);
-      log_entry_mac_lst.push_back(mac_vector);
+      if (curr_row_writer == std::string("first_row")) {
+        first_row_log_entry_mac_lst.push_back(mac_vector);
+      } else if (curr_row_writer == std::string("last_group")) {
+        last_group_log_entry_mac_lst.push_back(mac_vector);
+      } else if (curr_row_writer == std::string("last_row")) {
+        last_row_log_entry_mac_lst.push_back(mac_vector);
+      } else {
+        log_entry_mac_lst.push_back(mac_vector);
+      }
     }
 
-    void hmac_mac_lst(const uint8_t* ret_mac_lst) {
-      size_t mac_lst_length = log_entry_mac_lst.size() * SGX_AESGCM_MAC_SIZE;
+    void hmac_mac_lst(const uint8_t* ret_mac_lst, const uint8_t* global_mac) {
+      std::vector<std::vector<uint8_t>> chosen_mac_lst;
+      if (curr_row_writer == std::string("first_row")) {
+        chosen_mac_lst = first_row_log_entry_mac_lst;
+      } else if (curr_row_writer == std::string("last_group")) {
+        chosen_mac_lst = last_group_log_entry_mac_lst;
+      } else if (curr_row_writer == std::string("last_row")) {
+        chosen_mac_lst = last_row_log_entry_mac_lst;
+      } else {
+        chosen_mac_lst = log_entry_mac_lst;
+      }
+
+      size_t mac_lst_length = chosen_mac_lst.size() * SGX_AESGCM_MAC_SIZE;
 
       // Copy all macs to contiguous chunk of memory
       uint8_t contiguous_mac_lst[mac_lst_length];
       uint8_t* temp_ptr = contiguous_mac_lst;
-      for (unsigned int i = 0; i < log_entry_mac_lst.size(); i++) {
-        memcpy(temp_ptr, log_entry_mac_lst[i].data(), SGX_AESGCM_MAC_SIZE);
+      for (unsigned int i = 0; i < chosen_mac_lst.size(); i++) {
+        memcpy(temp_ptr, chosen_mac_lst[i].data(), SGX_AESGCM_MAC_SIZE);
         temp_ptr += SGX_AESGCM_MAC_SIZE;
       }
 
       // hmac the contiguous chunk of memory
-      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, global_mac);
-
+      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) global_mac);
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
     size_t get_num_macs() {
-      return log_entry_mac_lst.size();
-    }
-
-    uint8_t* get_global_mac() {
-      return global_mac;
+      if (curr_row_writer == std::string("first_row")) {
+        return first_row_log_entry_mac_lst.size();
+      } else if (curr_row_writer == std::string("last_group")) {
+        return last_group_log_entry_mac_lst.size();
+      } else if (curr_row_writer == std::string("last_row")) {
+        return last_row_log_entry_mac_lst.size();
+      } else {
+        return log_entry_mac_lst.size();
+      }
     }
 
     void set_log_entry_ecall(std::string ecall) {

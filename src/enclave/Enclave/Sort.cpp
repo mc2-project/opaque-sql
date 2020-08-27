@@ -173,6 +173,7 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   uint8_t *sorted_rows;
   size_t sorted_rows_length;
 
+  EnclaveContext::getInstance().set_append_mac(false);
   // Passing in NULL as the curr_ecall means that the resulting blocks in sorted_rows won't have any log metadata associated with it
   external_sort(sort_order, sort_order_length,
                 input_rows, input_rows_length,
@@ -180,6 +181,7 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                 std::string("NULL"));
 
   // Split them into one range per partition
+  EnclaveContext::getInstance().set_append_mac(true);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(sorted_rows, sorted_rows_length));
   RowWriter w;
   uint32_t num_rows_per_part = r.num_rows() / num_partitions;
@@ -207,6 +209,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // Sort the input rows
   uint8_t *sorted_rows;
   size_t sorted_rows_length;
+  EnclaveContext::getInstance().set_append_mac(false);
   external_sort(sort_order, sort_order_length,
                 input_rows, input_rows_length,
                 &sorted_rows, &sorted_rows_length,
@@ -227,6 +230,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // nullptr if we are in the last range
   FlatbuffersTemporaryRow b_upper(b.has_next() ? b.next() : nullptr);
 
+  EnclaveContext::getInstance().set_append_mac(true);
   while (r.has_next()) {
     const tuix::Row *row = r.next();
 

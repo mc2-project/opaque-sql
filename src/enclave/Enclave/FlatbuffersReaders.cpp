@@ -122,6 +122,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
           if (cipher_mac == partition_mac_lsts[i][j]) {
             partition_mac_lsts[i].erase(partition_mac_lsts[i].begin() + j);
             found = true;
+            // std::cout << "Found one mac!\n";
             break;
           }
         }
@@ -136,10 +137,14 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
       }
     }
 
+    for (uint32_t i = 0; i < partition_mac_lsts.size(); i++) {
+      // std::cout << "Num Macs left in this Partition: " << partition_mac_lsts[i].size() << std::endl;
+    }
+
     // Check that partition_mac_lsts is now empty - we should've found all expected MACs
     for (std::vector<std::vector<uint8_t>> p_lst : partition_mac_lsts) {
       if (!p_lst.empty()) {
-        std::runtime_error("Did not receive expected EncryptedBlocks");
+        throw std::runtime_error("Did not receive expected EncryptedBlocks");
       }
     }
   }
