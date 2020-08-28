@@ -15,7 +15,6 @@ void non_oblivious_aggregate_step1(
 
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
-  // FIXME: mac lst per row writer
   RowWriter first_row_writer;
   RowWriter last_group_writer;
   RowWriter last_row_writer;

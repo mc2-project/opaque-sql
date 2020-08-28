@@ -52,6 +52,7 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
 void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   // Add past entries to log first
   std::vector<LogEntry> past_log_entries;
+  auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
   auto past_entries_vec = encrypted_blocks->log()->past_entries();
 
   for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
@@ -74,13 +75,15 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     past_log_entries.push_back(le);
   }
 
-  // verify_log(encrypted_blocks, past_log_entries);
+  if (curr_entries_vec->size() > 0) {
+    verify_log(encrypted_blocks, past_log_entries);
+  }
 
   // Master list of mac lists of all input partitions
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
 
   // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
-  auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
+  // auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
@@ -148,10 +151,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
       }
     }
 
-    for (uint32_t i = 0; i < partition_mac_lsts.size(); i++) {
-      // std::cout << "Num Macs left in this Partition: " << partition_mac_lsts[i].size() << std::endl;
-    }
-
     // Check that partition_mac_lsts is now empty - we should've found all expected MACs
     for (std::vector<std::vector<uint8_t>> p_lst : partition_mac_lsts) {
       if (!p_lst.empty()) {
@@ -161,40 +160,56 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   }
 }
 
-// void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
-//   uint8_t expected_hash[32];
-//   memcpy(expected_hash, encrypted_blocks->log_hash()->data(), 32);
-// 
-//   auto curr_log_entry = encrypted_blocks->log()->curr_entries()->Get(0);
-//   std::string curr_ecall = curr_log_entry->op()->str();
-//   int snd_pid = curr_log_entry->snd_pid();
-//   int rcv_pid = -1;
-//   int job_id = curr_log_entry->job_id();
-//   int num_macs = curr_log_entry->num_macs();
-// 
-//   uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
-//   memcpy(global_mac, curr_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
-// 
-//   int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
-//   uint8_t to_hash[num_bytes_to_hash];
-//   memcpy(to_hash, global_mac, OE_HMAC_SIZE);
-//   memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
-//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = snd_pid;
-//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = rcv_pid;
-//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
-//   *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
-//   memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
-// 
-//   // Hash the data
-//   uint8_t actual_hash[32];
-//   mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
-// 
-//   for (int i = 0; i < 32; i++) {
-//     if (expected_hash[i] != actual_hash[i]) {
-//       throw std::runtime_error("Hash did not match");
-//     }
-//   }
-// }
+void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
+  std::cout << "Verifying log\n";
+  std::cout << "past log etnries size: " << past_log_entries.size() << std::endl;
+  uint8_t expected_hash[32];
+  memcpy(expected_hash, encrypted_blocks->log_hash()->data(), 32);
+
+  std::cout << "retrieved expected hash\n";
+
+  auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
+  if (curr_entries_vec->size() > 0) {
+    // TODO: figure out how concatenation will work
+    auto curr_log_entry = curr_entries_vec->Get(0);
+    std::cout << "got curr log entry\n";
+    std::string curr_ecall = curr_log_entry->op()->str();
+    std::cout << "curr eacall\n";
+    int snd_pid = curr_log_entry->snd_pid();
+    std::cout << "snd pid\n";
+    int rcv_pid = -1;
+    int job_id = curr_log_entry->job_id();
+    std::cout << "job id\n";
+    int num_macs = curr_log_entry->num_macs();
+
+    std::cout << "Retrieved attributes from log entry\n";
+
+    uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
+    memcpy(global_mac, curr_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
+
+    int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
+    uint8_t to_hash[num_bytes_to_hash];
+    memcpy(to_hash, global_mac, OE_HMAC_SIZE);
+    memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = snd_pid;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = rcv_pid;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
+    memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
+
+    // Hash the data
+    std::cout << "About to hash data\n";
+    uint8_t actual_hash[32];
+    mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
+
+    std::cout << "Hashed data\n";
+    for (int i = 0; i < 32; i++) {
+      if (expected_hash[i] != actual_hash[i]) {
+        throw std::runtime_error("Hash did not match");
+      }
+    }
+  }
+}
 
 uint32_t RowReader::num_rows() {
   uint32_t result = 0;

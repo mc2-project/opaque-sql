@@ -54,7 +54,8 @@ void external_merge(
       queue.push(item);
     }
   }
-  w.finish_run(curr_ecall);
+  (void) curr_ecall;
+  w.finish_run(std::string("NULL"));
 }
 
 void sort_single_encrypted_block(
@@ -77,7 +78,8 @@ void sort_single_encrypted_block(
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.append(*it);
   }
-  w.finish_run(curr_ecall);
+  (void) curr_ecall;
+  w.finish_run(std::string("NULL"));
 }
 
 void external_sort(uint8_t *sort_order, size_t sort_order_length,
@@ -131,6 +133,7 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
       r.reset(runs_buf.view());
     } else {
       // Done merging. Return the single remaining sorted run.
+      std::cout << "Outputtig buffer\n";
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, curr_ecall);
       return;
     }

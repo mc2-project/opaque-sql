@@ -12,7 +12,7 @@ table EncryptedBlock {
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
-    /* log_hash:[LogEntryChainHash];  */
+    log_hash:[LogEntryChainHash]; 
 }
 
 table SortedRuns {

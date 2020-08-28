@@ -44,6 +44,7 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 }
 
 UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
+  std::cout << "Finished? " << finished << std::endl;
   if (!finished) { // This line causes ExternalSort not to call finish_blocks() in first output_buffer()
     finish_blocks(ecall);
   }
@@ -121,6 +122,7 @@ void RowWriter::finish_block() {
 }
 
 flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string curr_ecall) {
+  std::cout << "called finish blocks\n";
   if (rows_vector.size() > 0) {
     finish_block();
   }
@@ -134,6 +136,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   
 
   if (curr_ecall != std::string("NULL")) {
+    std::cout << "Wrting out lob entry\n";
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
     int job_id = EnclaveContext::getInstance().get_job_id();
     size_t num_macs = EnclaveContext::getInstance().get_num_macs();
@@ -184,19 +187,19 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
    
     // TODO: hash this all the log entries
     // We will hash over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || past log entries
-    // int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
-    // uint8_t to_hash[num_bytes_to_hash];
-    // memcpy(to_hash, global_mac, OE_HMAC_SIZE);
-    // memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
-    // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = curr_pid;
-    // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = (int) -1;
-    // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
-    // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
-    // memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
+    int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
+    uint8_t to_hash[num_bytes_to_hash];
+    memcpy(to_hash, global_mac, OE_HMAC_SIZE);
+    memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1) = curr_pid;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = (int) -1;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
+    *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
+    memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
 
     // Hash the data
-    uint8_t hash[32] = {0};
-    // mcrypto.sha256(to_hash, num_bytes_to_hash, hash);
+    uint8_t hash[32];
+    mcrypto.sha256(to_hash, num_bytes_to_hash, hash);
 
     // Copy the hash to untrusted memory
     uint8_t* untrusted_hash = nullptr;
@@ -211,16 +214,15 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     // Clear log entry state
     EnclaveContext::getInstance().reset_log_entry();
+    finished = true;
   } 
 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
-  // auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &log_entry_chain_hash_vector);
-  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized);
+  auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &log_entry_chain_hash_vector);
   // auto result = tuix::CreateEncryptedBlocks(enc_block_builder, enc_block_builder.CreateVector(enc_block_vector, enc_block_vector.size()), log_entry_chain_serialized, enc_block_builder.CreateVector(hash_ptr.get(), 32));
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
-  finished = true;
 
   return result;
 }

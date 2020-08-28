@@ -726,9 +726,8 @@ object Utils extends Logging {
           encryptedBlockOffsets.result),
         tuix.LogEntryChain.createLogEntryChain(builder2,
           tuix.LogEntryChain.createCurrEntriesVector(builder2, Array.empty),
-          tuix.LogEntryChain.createPastEntriesVector(builder2, Array.empty))
-        // tuix.LogEntryChainHash.createLogEntryChainHash(builder2,
-        //   tuix.LogEntryChainHash.createHashVector(builder2, Array.empty))
+          tuix.LogEntryChain.createPastEntriesVector(builder2, Array.empty)),
+        tuix.EncryptedBlocks.createLogHashVector(builder2, Array.empty)
         ))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
@@ -1344,12 +1343,12 @@ object Utils extends Logging {
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
 
-    // val allLogHashes = for {
-    //   block <- blocks
-    //   encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-    //   // i = 0 to number of EncryptedBlock in an EncryptedBlocks
-    //   i <- 0 until encryptedBlocks.logHashLength
-    // } yield encryptedBlocks.logHash(i)
+    val allLogHashes = for {
+      block <- blocks
+      encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+      // i = 0 to number of EncryptedBlock in an EncryptedBlocks
+      i <- 0 until encryptedBlocks.logHashLength
+    } yield encryptedBlocks.logHash(i)
 
     val allLogEntryChains = for {
       block <- blocks
@@ -1407,12 +1406,12 @@ object Utils extends Logging {
               tuix.LogEntry.createMacLstVector(builder, Array.empty),
               tuix.LogEntry.createGlobalMacVector(builder, Array.empty))
           }.toArray)
-        )
-      // tuix.EncryptedBlocks.createLogHashVector(builder, allLogHashes.map { logHash =>
-      //     val hash = new Array[Byte](logHash.hashLength)
-      //     logHash.hashAsByteBuffer.get(hash)
-      //     tuix.LogEntryChainHash.createLogEntryChainHash(builder, tuix.LogEntryChainHash.createHashVector(builder, hash))
-      //   }.toArray)
+        ),
+      tuix.EncryptedBlocks.createLogHashVector(builder, allLogHashes.map { logHash =>
+          val hash = new Array[Byte](logHash.hashLength)
+          logHash.hashAsByteBuffer.get(hash)
+          tuix.LogEntryChainHash.createLogEntryChainHash(builder, tuix.LogEntryChainHash.createHashVector(builder, hash))
+        }.toArray)
       ))
     Block(builder.sizedByteArray())
   }
@@ -1426,8 +1425,8 @@ object Utils extends Logging {
         tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
         tuix.LogEntryChain.createLogEntryChain(builder,
           tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
-          tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty))))
-        // tuix.EncryptedBlocks.createLogHashVector(builder, Array.empty)))
+          tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty)),
+        tuix.EncryptedBlocks.createLogHashVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 
@@ -1459,8 +1458,8 @@ object Utils extends Logging {
             0,
             tuix.LogEntry.createMacLstVector(builder, Array.empty),
             tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
-        )}.toArray))))
-      // tuix.EncryptedBlocks.createLogHashVector(builder, Array.empty)))
+        )}.toArray)),
+      tuix.EncryptedBlocks.createLogHashVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 }
