@@ -187,7 +187,16 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
    
     // TODO: hash this all the log entries
     // We will hash over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || past log entries
-    int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_log_entries.size() * sizeof(LogEntry);
+    // 
+    int past_ecalls_lengths = 0;
+    for (size_t i = 0; i < past_log_entries.size(); i++) {
+      auto past_log_entry = past_log_entries[i];
+      std::string ecall = past_log_entry.op;
+      past_ecalls_lengths += ecall.length() + 1;
+    }
+    int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
+
+    int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
     uint8_t to_hash[num_bytes_to_hash];
     memcpy(to_hash, global_mac, OE_HMAC_SIZE);
     memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
@@ -195,7 +204,24 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = (int) -1;
     *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
     *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
-    memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
+    // memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
+    // Copy over data from past log entries
+    uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t);
+    for (size_t i = 0; i < past_log_entries.size(); i++) {
+      auto past_log_entry = past_log_entries[i];
+      std::string ecall = past_log_entry.op;
+      int snd_pid = past_log_entry.snd_pid;
+      int rcv_pid = past_log_entry.rcv_pid;
+      int job_id = past_log_entry.job_id;
+      
+      int num_bytes = ecall.length() + 1 + 3 * sizeof(int);
+
+      memcpy(tmp_ptr, ecall.c_str(), ecall.length() + 1);
+      *(tmp_ptr + ecall.length() + 1) = snd_pid;
+      *(tmp_ptr + ecall.length() + 1 + sizeof(int)) = rcv_pid;
+      *(tmp_ptr + ecall.length() + 1 + 2 * sizeof(int)) = job_id;
+      tmp_ptr += num_bytes;
+    }
 
     // Hash the data
     uint8_t hash[32];
@@ -214,7 +240,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     // Clear log entry state
     EnclaveContext::getInstance().reset_log_entry();
-    finished = true;
   } 
 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector);
@@ -223,6 +248,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
+  finished = true;
 
   return result;
 }

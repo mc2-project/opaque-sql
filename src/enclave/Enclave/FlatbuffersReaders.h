@@ -48,10 +48,10 @@ private:
 class RowReader {
 public:
   RowReader(BufferRefView<tuix::EncryptedBlocks> buf);
-  RowReader(const tuix::EncryptedBlocks *encrypted_blocks);
+  RowReader(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init=true);
 
   void reset(BufferRefView<tuix::EncryptedBlocks> buf);
-  void reset(const tuix::EncryptedBlocks *encrypted_blocks);
+  void reset(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init=true);
 
   uint32_t num_rows();
   bool has_next();
@@ -74,9 +74,9 @@ private:
  */
 class SortedRunsReader {
 public:
-  SortedRunsReader(BufferRefView<tuix::SortedRuns> buf);
+  SortedRunsReader(BufferRefView<tuix::SortedRuns> buf, bool log_init=true);
 
-  void reset(BufferRefView<tuix::SortedRuns> buf);
+  void reset(BufferRefView<tuix::SortedRuns> buf, bool log_init=true);
 
   uint32_t num_runs();
   bool run_has_next(uint32_t run_idx);

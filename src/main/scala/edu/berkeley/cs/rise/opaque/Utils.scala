@@ -1333,6 +1333,35 @@ object Utils extends Logging {
     MessageDigest.getInstance("SHA-256").digest(message)
   }
 
+  def hashConcatenatedBlocks(currLogEntries: Seq[tuix.LogEntry], pastLogEntries: Seq[tuix.LogEntry]): Array[Byte] = {
+    println("Hashing concatenated blocks")
+    val concatenatedCurrLogEntries = currLogEntries.map { logEntry => 
+      val globalMac = new Array[Byte](logEntry.globalMacLength)
+      logEntry.globalMacAsByteBuffer.get(globalMac)
+      val currEcall = logEntry.op
+      val sndPid = logEntry.sndPid
+      val rcvPid = logEntry.rcvPid
+      val jobId = logEntry.jobId
+      val numMacs = logEntry.numMacs
+      val intFieldsAsBytes = Array[Byte](sndPid.toByte, rcvPid.toByte, jobId.toByte, numMacs.toByte)
+      globalMac ++ currEcall.getBytes ++ intFieldsAsBytes
+    }.flatten.toArray
+
+    val concatenatedPastLogEntries = pastLogEntries.map { logEntry =>
+      val currEcall = logEntry.op
+      val sndPid = logEntry.sndPid
+      val rcvPid = logEntry.rcvPid
+      val jobId = logEntry.jobId
+      val intFieldsAsBytes = Array[Byte](sndPid.toByte, rcvPid.toByte, jobId.toByte)
+      // val intFieldsAsBytes = Array[Byte](jobId.toByte, rcvPid.toByte, sndPid.toByte)
+      // intFieldsAsBytes ++ currEcall.getBytes 
+      currEcall.getBytes ++ intFieldsAsBytes
+    }.flatten.toArray 
+
+    val toHash = concatenatedCurrLogEntries ++ concatenatedPastLogEntries
+    sha256(toHash)
+  }
+
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
     // Input: sequence of EncryptedBlocks
     // This gets a list of all EncryptedBlock
@@ -1343,6 +1372,7 @@ object Utils extends Logging {
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
 
+    // We likely don't need this as we're just gonna hash everything ourselves (at the trusted driver)
     val allLogHashes = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
@@ -1408,8 +1438,9 @@ object Utils extends Logging {
           }.toArray)
         ),
       tuix.EncryptedBlocks.createLogHashVector(builder, allLogHashes.map { logHash =>
-          val hash = new Array[Byte](logHash.hashLength)
-          logHash.hashAsByteBuffer.get(hash)
+          val hash = hashConcatenatedBlocks(allCurrLogEntries, allPastLogEntries)
+          // val hash = new Array[Byte](logHash.hashLength)
+          // logHash.hashAsByteBuffer.get(hash)
           tuix.LogEntryChainHash.createLogEntryChainHash(builder, tuix.LogEntryChainHash.createHashVector(builder, hash))
         }.toArray)
       ))

@@ -54,8 +54,8 @@ void external_merge(
       queue.push(item);
     }
   }
-  (void) curr_ecall;
-  w.finish_run(std::string("NULL"));
+  // (void) curr_ecall;
+  w.finish_run(curr_ecall);
 }
 
 void sort_single_encrypted_block(
@@ -78,8 +78,8 @@ void sort_single_encrypted_block(
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.append(*it);
   }
-  (void) curr_ecall;
-  w.finish_run(std::string("NULL"));
+  // (void) curr_ecall;
+  w.finish_run(curr_ecall);
 }
 
 void external_sort(uint8_t *sort_order, size_t sort_order_length,
@@ -114,7 +114,7 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
 
   debug("Merging sorted runs\n");
   auto runs_buf = w.output_buffer();
-  SortedRunsReader r(runs_buf.view());
+  SortedRunsReader r(runs_buf.view(), false);
   while (r.num_runs() > 1) {
     debug("external_sort: Merging %d runs, up to %d at a time\n",
          r.num_runs(), MAX_NUM_STREAMS);
@@ -123,17 +123,16 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
     for (uint32_t run_start = 0; run_start < r.num_runs(); run_start += MAX_NUM_STREAMS) {
       uint32_t num_runs =
         std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
-      // debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
+      debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
       external_merge(r, run_start, num_runs, w, sort_eval, curr_ecall);
     }
 
     if (w.num_runs() > 1) {
       runs_buf = w.output_buffer();
-      r.reset(runs_buf.view());
+      r.reset(runs_buf.view(), false);
     } else {
       // Done merging. Return the single remaining sorted run.
-      std::cout << "Outputtig buffer\n";
       w.as_row_writer()->output_buffer(output_rows, output_rows_length, curr_ecall);
       return;
     }

@@ -13,11 +13,12 @@ struct LogEntry {
   int snd_pid;
   int rcv_pid;
   int job_id;
-  int pid;
+  // int pid;
 
   bool operator==(const LogEntry& le) const
   { 
-      return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id && this->pid == le.pid); 
+      // return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id && this->pid == le.pid); 
+      return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id); 
   }
 }; 
 
@@ -26,7 +27,7 @@ public:
     // Example taken from https://www.geeksforgeeks.org/how-to-create-an-unordered_set-of-user-defined-class-or-struct-in-c/ 
     size_t operator()(const LogEntry& le) const
     { 
-        return (std::hash<std::string>()(le.op)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)) ^ (std::hash<int>()(le.pid)); 
+        return (std::hash<std::string>()(le.op)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)); 
     } 
 };
 
