@@ -1,6 +1,7 @@
 #include "FlatbuffersWriters.h"
 #include "EnclaveContext.h"
 #include <iostream>
+#include <iomanip>
 
 void RowWriter::clear() {
   builder.Clear();
@@ -187,7 +188,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     }
 
     num_past_log_entries.push_back(past_log_entries.size());
-    std::cout << "There are " << past_log_entries.size() << " past entries in this EncryptedBlocks\n";
+    // std::cout << "There are " << past_log_entries.size() << " past entries in this EncryptedBlocks\n";
    
     // TODO: hash this all the log entries
     // We will hash over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || past log entries
@@ -212,6 +213,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
     memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
 
+    std::cout << curr_ecall.c_str() << std::endl;
+    std::cout << "curr pid: " << curr_pid << std::endl;
+    std::cout << "job id: " << job_id << std::endl;
+    std::cout << "num macs: " << num_macs << std::endl;
+
     // // Copy over data from past log entries
     // uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t);
     // for (size_t i = 0; i < past_log_entries.size(); i++) {
@@ -233,6 +239,18 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // Hash the data
     uint8_t hash[32];
     mcrypto.sha256(to_hash, num_bytes_to_hash, hash);
+    // std::cout << "Hash: " << hash << std::endl;
+    // std::cout << "hash!\n";
+    // char buffer [66];
+    // buffer[64] = 0;
+    // for (int j = 0; j < 32; j++)
+      // std::cout << std::hex << std::setfill('0') << std::setw(2) << hash[j] << " ";
+    // std::cout << std::endl;
+    //
+    for (int j = 0; j < 32; j++) {
+      std::cout << int(hash[j]) << " ";
+    }
+    std::cout << std::endl;
 
     // Copy the hash to untrusted memory
     uint8_t* untrusted_hash = nullptr;

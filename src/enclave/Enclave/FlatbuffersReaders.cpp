@@ -29,23 +29,19 @@ void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_bloc
 }
 
 RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) {
-  std::cout << "rowreader buffer ref encrypted blocks buf\n";
   reset(buf);
 }
 
 RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init) {
-  std::cout << "rowreader encrypted blocks\n";
   reset(encrypted_blocks, log_init);
 }
 
 void RowReader::reset(BufferRefView<tuix::EncryptedBlocks> buf) {
-  std::cout << "rowreader reset bufferref buf\n";
   buf.verify();
   reset(buf.root());
 }
 
 void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init) {
-  std::cout << "row reader reset encrypted blocks\n";
   this->encrypted_blocks = encrypted_blocks;
   if (log_init) {
     init_log(encrypted_blocks);
@@ -230,7 +226,12 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
       *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
 
-      // Move the pointer forward to copy over next curr log entry
+      std::cout << curr_ecall.c_str() << std::endl;
+      std::cout << "curr pid: " << snd_pid << std::endl;
+      std::cout << "job id: " << job_id << std::endl;
+      std::cout << "num macs: " << num_macs << std::endl;
+
+      // Move the pointer forward 
       tmp_ptr += OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t);
 
       std::cout << "Copying this many bytes to tmp ptr for hash: " << num_past_entries_vec->Get(i) << std::endl;
@@ -245,8 +246,10 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       memcpy(expected_hash, encrypted_blocks->log_hash()->Get(i)->hash()->data(), 32);
 
       // std::cout << "Hashed data\n";
-      for (int i = 0; i < 32; i++) {
-        if (expected_hash[i] != actual_hash[i]) {
+      for (int j = 0; j < 32; i++) {
+        std::cout << "expected: " << (int) expected_hash[j];
+        std::cout << "received: " << (int) actual_hash[j] << std::endl;
+        if (expected_hash[j] != actual_hash[j]) {
           throw std::runtime_error("Hash did not match");
         }
       }

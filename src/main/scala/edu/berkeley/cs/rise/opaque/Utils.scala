@@ -30,6 +30,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 import scala.collection.mutable.ArrayBuilder
+import scala.collection.mutable.ArrayBuffer
 
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.internal.Logging
@@ -1373,18 +1374,29 @@ object Utils extends Logging {
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
 
-    // We likely don't need this as we're just gonna hash everything ourselves (at the trusted driver)
     val allLogHashes = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
       // i = 0 to number of EncryptedBlock in an EncryptedBlocks
       i <- 0 until encryptedBlocks.logHashLength
+      // hash = new Array[Byte](encryptedBlocks.logHash(i).hashLength)
+      // encryptedBlocks.logHash(i).hashAsByteBuffer.get(hash)
     } yield encryptedBlocks.logHash(i)
+
+    // val allLogHashes = new ArrayBuffer[Array[Byte]]()
+    // for (block <- blocks) {
+    //   val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    //   for (i <- 0 until encryptedBlocks.logHashLength) {
+    //     val hash = new Array[Byte](encryptedBlocks.logHash(i).hashLength)
+    //     encryptedBlocks.logHash(i).hashAsByteBuffer.get(hash)
+    //     allLogHashes.append(hash)
+    //   }
+    // } 
 
     val allLogEntryChains = for {
       block <- blocks
-      logEntryChains = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-    } yield logEntryChains.log
+      encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    } yield encryptedBlocks.log
 
 
     val allCurrLogEntries = for {
@@ -1402,6 +1414,7 @@ object Utils extends Logging {
     } yield logEntryChain.numPastEntries(0)
 
     println(numPastEntriesList)
+    println(allLogHashes.toArray)
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1449,6 +1462,12 @@ object Utils extends Logging {
           println("Hash length: " + logHash.hashLength)
           val hash = new Array[Byte](logHash.hashLength)
           logHash.hashAsByteBuffer.get(hash)
+          // println(ByteBuffer.wrap(hash).getInt)
+          for (i <- 0 until logHash.hashLength) {
+            print(hash(i).toInt)
+            print(" ")
+          }
+          println("")
           tuix.LogEntryChainHash.createLogEntryChainHash(builder, tuix.LogEntryChainHash.createHashVector(builder, hash))
         }.toArray)
       ))
