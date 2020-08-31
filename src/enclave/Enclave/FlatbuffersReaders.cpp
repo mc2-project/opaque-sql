@@ -94,7 +94,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     memcpy(global_mac, input_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
 
     // Copy over the mac_lst
-    uint32_t num_macs = input_log_entry->num_macs();
+    int num_macs = input_log_entry->num_macs();
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
     memcpy(mac_lst, input_log_entry->mac_lst()->data(), num_macs * SGX_AESGCM_MAC_SIZE);
     
@@ -110,7 +110,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
     // the mac list of one input log entry (from one partition) in vector form
     std::vector<std::vector<uint8_t>> p_mac_lst;
-    for (uint32_t i = 0; i < num_macs; i++) {
+    for (int i = 0; i < num_macs; i++) {
       std::vector<uint8_t> a_mac (tmp_ptr, tmp_ptr + SGX_AESGCM_MAC_SIZE);
       p_mac_lst.push_back(a_mac);
       tmp_ptr += SGX_AESGCM_MAC_SIZE;
@@ -163,10 +163,10 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 }
 
 void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
-  std::cout << "Verifying log\n";
-  std::cout << "past log etnries size: " << past_log_entries.size() << std::endl;
-
-  std::cout << "retrieved expected hash\n";
+  // std::cout << "Verifying log\n";
+  // std::cout << "past log etnries size: " << past_log_entries.size() << std::endl;
+  // 
+  // std::cout << "retrieved expected hash\n";
 
   auto num_past_entries_vec = encrypted_blocks->log()->num_past_entries();
 
@@ -205,37 +205,61 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       int job_id = curr_log_entry->job_id();
       // std::cout << "job id\n";
       int num_macs = curr_log_entry->num_macs();
-      uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
-      memcpy(global_mac, curr_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
+      uint8_t global_mac[OE_HMAC_SIZE];
+      memcpy(global_mac, curr_log_entry->global_mac()->data(), OE_HMAC_SIZE);
 
-      int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + sizeof(LogEntry) * num_past_entries_vec->Get(i);  
+      // int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + sizeof(LogEntry) * num_past_entries_vec->Get(i);  
+      int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + sizeof(LogEntry) * num_past_entries_vec->Get(i);  
 
       uint8_t to_hash[num_bytes_to_hash];
-      std::cout << "expecting to hash this many bytes " << num_bytes_to_hash << std::endl;
-      uint8_t* tmp_ptr = to_hash;
+      // std::cout << "expecting to hash this many bytes " << num_bytes_to_hash << std::endl;
+      // std::cout << "hmac size: " << OE_HMAC_SIZE << " int size: " << sizeof(int) << " size_t size: " << sizeof(size_t);
+      // std::cout << "curr ecall length: " << curr_ecall.length() << std::endl;
+      // uint8_t* tmp_ptr = to_hash;
       // std::cout << "got curr log entry\n";
       // std::cout << "curr eacall\n";
 
       // std::cout << "Retrieved attributes from log entry\n";
 
 
-      memcpy(tmp_ptr, global_mac, OE_HMAC_SIZE);
-      memcpy(tmp_ptr + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length() + 1);
-      *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1) = snd_pid;
-      *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1 + sizeof(int)) = rcv_pid;
-      *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1 + 2 * sizeof(int)) = job_id;
-      *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int)) = num_macs;
+      // memcpy(tmp_ptr, global_mac, OE_HMAC_SIZE);
+      // memcpy(tmp_ptr + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
+      // *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length()) = snd_pid;
+      // *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int)) = rcv_pid;
+      // *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int)) = job_id;
+      // *(tmp_ptr + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int)) = num_macs;
+      memcpy(to_hash, global_mac, OE_HMAC_SIZE);
+      memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length()) = snd_pid;
+      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length(), &snd_pid, sizeof(int));
+      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
+      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
+      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int)) = (int) rcv_pid;
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int)) = job_id;
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int)) = num_macs;
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int)) = (int) rcv_pid;
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int)) = job_id;
+      // *(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int)) = num_macs;
 
-      std::cout << curr_ecall.c_str() << std::endl;
-      std::cout << "curr pid: " << snd_pid << std::endl;
-      std::cout << "job id: " << job_id << std::endl;
-      std::cout << "num macs: " << num_macs << std::endl;
+
+      // std::cout << "Received HMAC: ==========" << std::endl;
+      // for (int k = 0; k < OE_HMAC_SIZE; k++) {
+      //   std::cout << (int) global_mac[k] << " ";
+      // }
+      // std::cout << std::endl;
+      // std::cout << curr_ecall.c_str() << std::endl;
+      // std::cout << "curr pid: " << snd_pid << std::endl;
+      // std::cout << "rcv pid: " << rcv_pid << std::endl; 
+      // std::cout << "job id: " << job_id << std::endl;
+      // std::cout << "num macs: " << num_macs << std::endl;
 
       // Move the pointer forward 
-      tmp_ptr += OE_HMAC_SIZE + curr_ecall.length() + 1 + 3 * sizeof(int) + sizeof(size_t);
+      // tmp_ptr += OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
 
-      std::cout << "Copying this many bytes to tmp ptr for hash: " << num_past_entries_vec->Get(i) << std::endl;
-      memcpy(tmp_ptr, past_log_entries.data() + num_past_entries_expected * sizeof(LogEntry), num_past_entries_vec->Get(i) * sizeof(LogEntry));
+      // std::cout << "Copying this many bytes to tmp ptr for hash: " << num_past_entries_vec->Get(i) << std::endl;
+      // memcpy(tmp_ptr, past_log_entries.data() + num_past_entries_expected * sizeof(LogEntry), num_past_entries_vec->Get(i) * sizeof(LogEntry));
+      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), past_log_entries.data() + num_past_entries_expected * sizeof(LogEntry), num_past_entries_vec->Get(i) * sizeof(LogEntry));
 
       // Hash the data
       // std::cout << "About to hash data\n";
@@ -245,13 +269,30 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       uint8_t expected_hash[32];
       memcpy(expected_hash, encrypted_blocks->log_hash()->Get(i)->hash()->data(), 32);
 
+      std::cout << "Output of to hash\n";
+      for (int j = 0; j < num_bytes_to_hash; j++) {
+        std::cout << int(to_hash[j]) << " ";
+      }
+      std::cout << std::endl;
+      
+      std::cout << "Actual hash: " << std::endl;
+      for (int j = 0; j < 32; j++) {
+        std::cout << int(actual_hash[j]) << " ";
+      }
+      
+      std::cout << std::endl;
       // std::cout << "Hashed data\n";
-      for (int j = 0; j < 32; i++) {
-        std::cout << "expected: " << (int) expected_hash[j];
-        std::cout << "received: " << (int) actual_hash[j] << std::endl;
-        if (expected_hash[j] != actual_hash[j]) {
-          throw std::runtime_error("Hash did not match");
-        }
+      // for (int j = 0; j < 32; i++) {
+      //   // std::cout << "expected: " << (int) expected_hash[j];
+      //   // std::cout << "received: " << (int) actual_hash[j] << std::endl;
+      //   if (expected_hash[j] != actual_hash[j]) {
+      //     std::cout << "expected: " << expected_hash[j];
+      //     std::cout << "received: " << actual_hash[j] << std::endl;
+      //     throw std::runtime_error("Hash did not match");
+      //   }
+      // }
+      if (!std::equal(std::begin(expected_hash), std::end(expected_hash), std::begin(actual_hash))) {
+        throw std::runtime_error("Hash did not match");
       }
       num_past_entries_expected += num_past_entries_vec->Get(i); 
     }

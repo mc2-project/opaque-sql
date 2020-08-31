@@ -24,7 +24,7 @@ table LogEntry {
     snd_pid:int;
     rcv_pid:int;
     job_id:int;
-    num_macs:uint;
+    num_macs:int;
     mac_lst:[ubyte];
     global_mac:[ubyte];
 }
