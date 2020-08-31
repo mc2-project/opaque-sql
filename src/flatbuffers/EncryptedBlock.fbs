@@ -32,6 +32,7 @@ table LogEntry {
 table LogEntryChain {
     curr_entries:[LogEntry];
     past_entries:[LogEntry];
+    num_past_entries:[int];
 }
 
 table LogEntryChainHash {
