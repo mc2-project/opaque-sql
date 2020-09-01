@@ -647,26 +647,26 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   override def numPartitions: Int = 1
 }
 
-// class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
-//   override val spark = SparkSession.builder()
-//     .master("local[1]")
-//     .appName("QEDSuite")
-//     .config("spark.sql.shuffle.partitions", 3)
-//     .getOrCreate()
-// 
-//   override def numPartitions: Int = 3
-// 
-//   import testImplicits._
-// 
-//   def makePartitionedDF[
-//       A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-//       data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
-//     : DataFrame = {
-//     securityLevel.applyTo(
-//       spark.createDataFrame(
-//         spark.sparkContext.makeRDD(data, numPartitions))
-//         .toDF(columnNames: _*))
-//   }
+class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
+  override val spark = SparkSession.builder()
+    .master("local[1]")
+    .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", 3)
+    .getOrCreate()
+
+  override def numPartitions: Int = 3
+
+  import testImplicits._
+
+  def makePartitionedDF[
+      A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+      data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
+    : DataFrame = {
+    securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*))
+  }
 
   // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
   //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
@@ -676,15 +676,15 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   //   p.join(f, $"pk" === $"fk").collect.toSet
   // }
   
-//   testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
-//     // This test is intended to ensure that primary groups are never split across multiple
-//     // partitions, which would break our implementation of non-foreign-key join.
-//   
-//     val p_data = for (i <- 1 to 128) yield (i, 1)
-//     val f_data = for (i <- 1 to 128) yield (i, 1)
-//     val p = makeDF(p_data, securityLevel, "id", "join_col_1")
-//     val f = makeDF(f_data, securityLevel, "id", "join_col_2")
-//     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
-//   }
-// 
-// }
+  testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
+    // This test is intended to ensure that primary groups are never split across multiple
+    // partitions, which would break our implementation of non-foreign-key join.
+  
+    val p_data = for (i <- 1 to 128) yield (i, 1)
+    val f_data = for (i <- 1 to 128) yield (i, 1)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2")
+    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
+}

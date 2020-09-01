@@ -214,11 +214,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // for (int k = 0; k < OE_HMAC_SIZE; k++) {
     //   std::cout << (int) global_mac[k] << " ";
     // }
-    std::cout << std::endl;
-    std::cout << curr_ecall.c_str() << std::endl;
-    std::cout << "curr pid: " << curr_pid << std::endl;
-    std::cout << "job id: " << job_id << std::endl;
-    std::cout << "num macs: " << num_macs << std::endl;
+    // std::cout << std::endl;
+    // std::cout << curr_ecall.c_str() << std::endl;
+    // std::cout << "curr pid: " << curr_pid << std::endl;
+    // std::cout << "job id: " << job_id << std::endl;
+    // std::cout << "num macs: " << num_macs << std::endl;
 
     // // Copy over data from past log entries
     uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
@@ -229,7 +229,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
       int pe_rcv_pid = past_log_entry.rcv_pid;
       int pe_job_id = past_log_entry.job_id;
       
-      std::cout << "snd pid: " << pe_snd_pid << " || pe_rcv_pid: " << pe_rcv_pid << " || pe_job_id: " << pe_job_id << std::endl;
+      // std::cout << "snd pid: " << pe_snd_pid << " || pe_rcv_pid: " << pe_rcv_pid << " || pe_job_id: " << pe_job_id << std::endl;
 
       int bytes_copied = ecall.length() + 3 * sizeof(int);
     
@@ -240,20 +240,22 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
       tmp_ptr += bytes_copied;
     }
-    std::cout << "Expect " << past_log_entries.size() << " past log entries\n";
-
-    std::cout << "Writers: Output of to hash\n";
-    for (int j = 0; j < num_bytes_to_hash; j++) {
-      std::cout << int(to_hash[j]) << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "Expect " << past_log_entries.size() << " past log entries\n";
+// 
+    // std::cout << "Writers: Output of to hash\n";
+    // for (int j = 0; j < num_bytes_to_hash; j++) {
+      // std::cout << int(to_hash[j]) << " ";
+    // }
+    // std::cout << std::endl;
     // Hash the data
     uint8_t hash[32];
     mcrypto.sha256(to_hash, num_bytes_to_hash, hash);
-    for (int j = 0; j < 32; j++) {
-      std::cout << int(hash[j]) << " ";
-    }
-    std::cout << std::endl;
+
+    // Print the hash for debugging purposes
+    // for (int j = 0; j < 32; j++) {
+    //   std::cout << int(hash[j]) << " ";
+    // }
+    // std::cout << std::endl;
 
     // Copy the hash to untrusted memory
     uint8_t* untrusted_hash = nullptr;
