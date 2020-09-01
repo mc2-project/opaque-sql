@@ -13,7 +13,6 @@ struct LogEntry {
   int snd_pid;
   int rcv_pid;
   int job_id;
-  // int pid;
 
   bool operator==(const LogEntry& le) const
   { 
