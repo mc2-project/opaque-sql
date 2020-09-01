@@ -45,7 +45,6 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 }
 
 UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
-  // std::cout << "Finished? " << finished << std::endl;
   if (!finished) { // This line causes ExternalSort not to call finish_blocks() in first output_buffer()
     finish_blocks(ecall);
   }
@@ -138,13 +137,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
     int job_id = EnclaveContext::getInstance().get_job_id();
     int num_macs = static_cast<int>(EnclaveContext::getInstance().get_num_macs());
-    // std::cout << "Num macs: " << num_macs << std::endl;
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
     uint8_t global_mac[OE_HMAC_SIZE];
     EnclaveContext::getInstance().hmac_mac_lst(mac_lst, global_mac);
 
     int curr_pid = EnclaveContext::getInstance().get_pid();
-    // uint8_t* global_mac = EnclaveContext::getInstance().get_global_mac();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
 
     // Copy mac list to untrusted memory
@@ -186,7 +183,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     num_past_log_entries.push_back(past_log_entries.size());
    
     // We will hash over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || past log entries
-    // 
+     
     int past_ecalls_lengths = 0;
     for (size_t i = 0; i < past_log_entries.size(); i++) {
       auto past_log_entry = past_log_entries[i];
@@ -196,9 +193,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
 
     int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
-    // int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + sizeof(LogEntry) * past_log_entries.size();
-    std::cout << "Hashing this many bytes " << num_bytes_to_hash << std::endl;
-    // int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + 1 + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
     uint8_t to_hash[num_bytes_to_hash];
     int rcv_pid = -1;
 
@@ -208,17 +202,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
     memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
     memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
-    // memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), past_log_entries.data(), past_log_entries.size() * sizeof(LogEntry));
-
-    // std::cout << "Sent global hmac: =========" << std::endl;
-    // for (int k = 0; k < OE_HMAC_SIZE; k++) {
-    //   std::cout << (int) global_mac[k] << " ";
-    // }
-    // std::cout << std::endl;
-    // std::cout << curr_ecall.c_str() << std::endl;
-    // std::cout << "curr pid: " << curr_pid << std::endl;
-    // std::cout << "job id: " << job_id << std::endl;
-    // std::cout << "num macs: " << num_macs << std::endl;
 
     // // Copy over data from past log entries
     uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
@@ -229,8 +212,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
       int pe_rcv_pid = past_log_entry.rcv_pid;
       int pe_job_id = past_log_entry.job_id;
       
-      // std::cout << "snd pid: " << pe_snd_pid << " || pe_rcv_pid: " << pe_rcv_pid << " || pe_job_id: " << pe_job_id << std::endl;
-
       int bytes_copied = ecall.length() + 3 * sizeof(int);
     
       memcpy(tmp_ptr, ecall.c_str(), ecall.length());
@@ -240,13 +221,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
       tmp_ptr += bytes_copied;
     }
-    // std::cout << "Expect " << past_log_entries.size() << " past log entries\n";
-// 
-    // std::cout << "Writers: Output of to hash\n";
-    // for (int j = 0; j < num_bytes_to_hash; j++) {
-      // std::cout << int(to_hash[j]) << " ";
-    // }
-    // std::cout << std::endl;
     // Hash the data
     uint8_t hash[32];
     mcrypto.sha256(to_hash, num_bytes_to_hash, hash);
@@ -262,9 +236,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     ocall_malloc(32, &untrusted_hash);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> hash_ptr(untrusted_hash, &ocall_free);
     memcpy(hash_ptr.get(), hash, 32);
-    // log_hash(hash_ptr.get(), hash_ptr.get() + 32);
-    // memcpy(untrusted_hash, hash, 32);
-    // log_hash(untrusted_hash, untrusted_hash + 32);
     auto hash_offset = tuix::CreateLogEntryChainHash(enc_block_builder, enc_block_builder.CreateVector(hash_ptr.get(), 32));
     log_entry_chain_hash_vector.push_back(hash_offset);
 
@@ -274,7 +245,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector, &num_past_log_entries);
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &log_entry_chain_hash_vector);
-  // auto result = tuix::CreateEncryptedBlocks(enc_block_builder, enc_block_builder.CreateVector(enc_block_vector, enc_block_vector.size()), log_entry_chain_serialized, enc_block_builder.CreateVector(hash_ptr.get(), 32));
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 

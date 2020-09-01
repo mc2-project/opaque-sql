@@ -77,7 +77,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     past_log_entries.push_back(le);
   }
 
-  std::cout << "Received " << past_log_entries.size() << " past log entries!\n";
   if (curr_entries_vec->size() > 0) {
     verify_log(encrypted_blocks, past_log_entries);
   }
@@ -86,7 +85,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
 
   // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
-  // auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
@@ -139,7 +137,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
           if (cipher_mac == partition_mac_lsts[i][j]) {
             partition_mac_lsts[i].erase(partition_mac_lsts[i].begin() + j);
             found = true;
-            // std::cout << "Found one mac!\n";
             break;
           }
         }
@@ -164,74 +161,34 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 }
 
 void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
-  // std::cout << "Verifying log\n";
-  // std::cout << "past log etnries size: " << past_log_entries.size() << std::endl;
-  // 
-  // std::cout << "retrieved expected hash\n";
-
   auto num_past_entries_vec = encrypted_blocks->log()->num_past_entries();
 
   auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
   if (curr_entries_vec->size() > 0) {
     int num_curr_entries = curr_entries_vec->size();
-    // std::cout << "There are " << num_curr_entries << " curr entries\n";
-    // int curr_ecalls_lengths = 0;
-    // for (int i = 0; i < num_curr_entries; i++) {
-      // auto curr_log_entry = curr_entries_vec->Get(i);
-      // std::string curr_ecall = curr_log_entry->op()->str();
-      // curr_ecalls_lengths += curr_ecall.length() + 1;
-    // }
-
-    // int past_ecalls_lengths = 0;
-    // for (size_t i = 0; i < past_log_entries.size(); i++) {
-    //   auto past_log_entry = past_log_entries[i];
-    //   std::string ecall = past_log_entry.op;
-    //   past_ecalls_lengths += ecall.length() + 1;
-    // }
-    // 
-    // int curr_entries_num_bytes_minus_ecall_lengths = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t);
-    // int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
-    // int num_bytes_to_hash = curr_entries_num_bytes_minus_ecall_lengths * num_curr_entries + curr_ecalls_lengths + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
-    // int num_bytes_to_hash = curr_entries_num_bytes_minus_ecall_lengths * num_curr_entries + curr_ecalls_lengths + sizeof(LogEntry) * past_log_entries.size();
-
-
-    // num_curr_entries represents how many EncryptedBlocks were concatenated, if any
-    // int num_past_entries_expected = 0;
     int past_entries_seen = 0;
+
     for (int i = 0; i < num_curr_entries; i++) {
-      // std::cout << "Checking curr entry\n";
       auto curr_log_entry = curr_entries_vec->Get(i);
       std::string curr_ecall = curr_log_entry->op()->str();
       int snd_pid = curr_log_entry->snd_pid();
-      // std::cout << "snd pid\n";
       int rcv_pid = -1;
       int job_id = curr_log_entry->job_id();
-      // std::cout << "job id\n";
       int num_macs = curr_log_entry->num_macs();
+
       uint8_t global_mac[OE_HMAC_SIZE];
       memcpy(global_mac, curr_log_entry->global_mac()->data(), OE_HMAC_SIZE);
 
-      // int num_bytes_to_hash = OE_HMAC_SIZE + 3 * sizeof(int) + sizeof(size_t) + curr_ecall.length() + sizeof(LogEntry) * num_past_entries_vec->Get(i);  
-      // std::cout << "Past data size: " << num_past_entries_vec->Get(i) * sizeof(LogEntry) << std::endl;
-      // std::cout << "Log entry size: " << sizeof(LogEntry) << std::endl;
-      // int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + sizeof(LogEntry) * num_past_entries_vec->Get(i);  
-      
-      // std::cout << "Getting past log entry lengths\n";
-      // std::cout << "num past entries vec [i] " << num_past_entries_vec->Get(i) << std::endl;
       int past_ecalls_lengths = 0;
       for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
         auto past_log_entry = past_log_entries[j];
         std::string ecall = past_log_entry.op;
-        // std::cout << "Adding the following ecall: " << ecall.c_str() << std::endl;
         past_ecalls_lengths += ecall.length();
       }
 
       int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
-
       int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
-      // std::cout << "Hashing this many bytes " << num_bytes_to_hash << std::endl;
 
-      // std::cout << "Copying to hash\n";
       uint8_t to_hash[num_bytes_to_hash];
       memcpy(to_hash, global_mac, OE_HMAC_SIZE);
       memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
@@ -242,16 +199,12 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       
       uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
 
-      // std::cout << "past entries seen: " << past_entries_seen << std::endl;
-
       for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
         auto past_log_entry = past_log_entries[j];
         std::string ecall = past_log_entry.op;
         int pe_snd_pid = past_log_entry.snd_pid;
         int pe_rcv_pid = past_log_entry.rcv_pid;
         int pe_job_id = past_log_entry.job_id;
-
-        // std::cout << "snd pid: " << pe_snd_pid << " || pe_rcv_pid: " << pe_rcv_pid << " || pe_job_id: " << pe_job_id << std::endl;
         
         int bytes_copied = ecall.length() + 3 * sizeof(int);
       
@@ -272,13 +225,13 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
 
       // std::cout << "Readers: Output of to hash\n";
       // for (int j = 0; j < num_bytes_to_hash; j++) {
-        // std::cout << int(to_hash[j]) << " ";
+      //   std::cout << int(to_hash[j]) << " ";
       // }
       // std::cout << std::endl;
       // 
       // std::cout << "Actual hash: " << std::endl;
       // for (int j = 0; j < 32; j++) {
-        // std::cout << int(actual_hash[j]) << " ";
+      //   std::cout << int(actual_hash[j]) << " ";
       // }
       // std::cout << std::endl;
 

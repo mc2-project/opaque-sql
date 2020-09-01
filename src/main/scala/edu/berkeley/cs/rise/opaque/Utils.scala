@@ -1370,28 +1370,14 @@ object Utils extends Logging {
     val allBlocks = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-      // i = 0 to number of EncryptedBlock in an EncryptedBlocks
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
 
     val allLogHashes = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-      // i = 0 to number of EncryptedBlock in an EncryptedBlocks
       i <- 0 until encryptedBlocks.logHashLength
-      // hash = new Array[Byte](encryptedBlocks.logHash(i).hashLength)
-      // encryptedBlocks.logHash(i).hashAsByteBuffer.get(hash)
     } yield encryptedBlocks.logHash(i)
-
-    // val allLogHashes = new ArrayBuffer[Array[Byte]]()
-    // for (block <- blocks) {
-    //   val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-    //   for (i <- 0 until encryptedBlocks.logHashLength) {
-    //     val hash = new Array[Byte](encryptedBlocks.logHash(i).hashLength)
-    //     encryptedBlocks.logHash(i).hashAsByteBuffer.get(hash)
-    //     allLogHashes.append(hash)
-    //   }
-    // } 
 
     val allLogEntryChains = for {
       block <- blocks
@@ -1412,9 +1398,6 @@ object Utils extends Logging {
     val numPastEntriesList = for {
       logEntryChain <- allLogEntryChains
     } yield logEntryChain.numPastEntries(0)
-
-    println(numPastEntriesList)
-    println(allLogHashes.toArray)
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1458,16 +1441,8 @@ object Utils extends Logging {
           tuix.LogEntryChain.createNumPastEntriesVector(builder, numPastEntriesList.toArray)
         ),
       tuix.EncryptedBlocks.createLogHashVector(builder, allLogHashes.map { logHash =>
-          // val hash = hashConcatenatedBlocks(allCurrLogEntries, allPastLogEntries)
-          println("Hash length: " + logHash.hashLength)
           val hash = new Array[Byte](logHash.hashLength)
           logHash.hashAsByteBuffer.get(hash)
-          // println(ByteBuffer.wrap(hash).getInt)
-          for (i <- 0 until logHash.hashLength) {
-            print(hash(i).toInt)
-            print(" ")
-          }
-          println("")
           tuix.LogEntryChainHash.createLogEntryChainHash(builder, tuix.LogEntryChainHash.createHashVector(builder, hash))
         }.toArray)
       ))
