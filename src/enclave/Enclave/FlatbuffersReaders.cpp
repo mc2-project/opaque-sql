@@ -59,18 +59,18 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
     auto entry = past_entries_vec->Get(i);
-    std::string op = entry->op()->str();
+    std::string ecall = entry->ecall()->str();
     int snd_pid = entry->snd_pid();
     int rcv_pid = entry->rcv_pid();
     if (rcv_pid == -1) { // Received by PID hasn't been set yet
       rcv_pid = EnclaveContext::getInstance().get_pid();
     }
     int job_id = entry->job_id();
-    EnclaveContext::getInstance().append_past_log_entry(op, snd_pid, rcv_pid, job_id);
+    EnclaveContext::getInstance().append_past_log_entry(ecall, snd_pid, rcv_pid, job_id);
 
     // Initialize log entry object
     LogEntry le;
-    le.op = op;
+    le.ecall = ecall;
     le.snd_pid = snd_pid;
     le.rcv_pid = rcv_pid;
     le.job_id = job_id;
@@ -119,7 +119,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     partition_mac_lsts.push_back(p_mac_lst);
 
     // Add this input log entry to history of log entries
-    EnclaveContext::getInstance().append_past_log_entry(input_log_entry->op()->str(), input_log_entry->snd_pid(), EnclaveContext::getInstance().get_pid(), input_log_entry->job_id());
+    EnclaveContext::getInstance().append_past_log_entry(input_log_entry->ecall()->str(), input_log_entry->snd_pid(), EnclaveContext::getInstance().get_pid(), input_log_entry->job_id());
   }
 
   if (curr_entries_vec->size() > 0) {
@@ -170,7 +170,7 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
 
     for (int i = 0; i < num_curr_entries; i++) {
       auto curr_log_entry = curr_entries_vec->Get(i);
-      std::string curr_ecall = curr_log_entry->op()->str();
+      std::string curr_ecall = curr_log_entry->ecall()->str();
       int snd_pid = curr_log_entry->snd_pid();
       int rcv_pid = -1;
       int job_id = curr_log_entry->job_id();
@@ -182,26 +182,26 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       int past_ecalls_lengths = 0;
       for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
         auto past_log_entry = past_log_entries[j];
-        std::string ecall = past_log_entry.op;
+        std::string ecall = past_log_entry.ecall;
         past_ecalls_lengths += ecall.length();
       }
 
       int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
-      int num_bytes_to_hash = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
+      int num_bytes_to_mac = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
 
-      uint8_t to_hash[num_bytes_to_hash];
-      memcpy(to_hash, global_mac, OE_HMAC_SIZE);
-      memcpy(to_hash + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
-      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length(), &snd_pid, sizeof(int));
-      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
-      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
-      memcpy(to_hash + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
+      uint8_t to_mac[num_bytes_to_mac];
+      memcpy(to_mac, global_mac, OE_HMAC_SIZE);
+      memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
+      memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length(), &snd_pid, sizeof(int));
+      memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
+      memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
+      memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
       
-      uint8_t* tmp_ptr = to_hash + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
+      uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
 
       for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
         auto past_log_entry = past_log_entries[j];
-        std::string ecall = past_log_entry.op;
+        std::string ecall = past_log_entry.ecall;
         int pe_snd_pid = past_log_entry.snd_pid;
         int pe_rcv_pid = past_log_entry.rcv_pid;
         int pe_job_id = past_log_entry.job_id;
@@ -216,63 +216,19 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
         tmp_ptr += bytes_copied;
       }
 
-      // Hash the data
-      uint8_t actual_hash[32];
-      mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
+      // MAC the data
+      uint8_t actual_mac[32];
+      mcrypto.hmac(to_mac, num_bytes_to_mac, actual_mac);
 
-      uint8_t expected_hash[32];
-      memcpy(expected_hash, encrypted_blocks->log_hash()->Get(i)->hash()->data(), 32);
+      uint8_t expected_mac[32];
+      memcpy(expected_mac, encrypted_blocks->log_mac()->Get(i)->mac()->data(), 32);
 
-      // std::cout << "Readers: Output of to hash\n";
-      // for (int j = 0; j < num_bytes_to_hash; j++) {
-      //   std::cout << int(to_hash[j]) << " ";
-      // }
-      // std::cout << std::endl;
-      // 
-      // std::cout << "Actual hash: " << std::endl;
-      // for (int j = 0; j < 32; j++) {
-      //   std::cout << int(actual_hash[j]) << " ";
-      // }
-      // std::cout << std::endl;
-
-      if (!std::equal(std::begin(expected_hash), std::end(expected_hash), std::begin(actual_hash))) {
-        throw std::runtime_error("Hash did not match");
+      if (!std::equal(std::begin(expected_mac), std::end(expected_mac), std::begin(actual_mac))) {
+        throw std::runtime_error("MAC did not match");
       }
-      // num_past_entries_expected += num_past_entries_vec->Get(i); 
       past_entries_seen += num_past_entries_vec->Get(i);
     }
   }
-
-    // for (size_t i = 0; i < past_log_entries.size(); i++) {
-    //   auto past_log_entry = past_log_entries[i];
-    //   std::string ecall = past_log_entry.op;
-    //   int snd_pid = past_log_entry.snd_pid;
-    //   int rcv_pid = past_log_entry.rcv_pid;
-    //   int job_id = past_log_entry.job_id;
-    //   
-    //   int num_bytes = ecall.length() + 1 + 3 * sizeof(int);
-    // 
-    //   memcpy(tmp_ptr, ecall.c_str(), ecall.length() + 1);
-    //   *(tmp_ptr + ecall.length() + 1) = snd_pid;
-    //   *(tmp_ptr + ecall.length() + 1 + sizeof(int)) = rcv_pid;
-    //   *(tmp_ptr + ecall.length() + 1 + 2 * sizeof(int)) = job_id;
-    //   tmp_ptr += num_bytes;
-    // }
-  //   memcpy(tmp_ptr, past_log_entries.data() + num_past_entries_expected * sizeof(LogEntry), num_past_entries_vec[i] * sizeof(LogEntry));
-  // 
-  //   // Hash the data
-  //   // std::cout << "About to hash data\n";
-  //   uint8_t actual_hash[32];
-  //   mcrypto.sha256(to_hash, num_bytes_to_hash, actual_hash);
-  // 
-  //   // std::cout << "Hashed data\n";
-  //   for (int i = 0; i < 32; i++) {
-  //     if (expected_hash[i] != actual_hash[i]) {
-  //       throw std::runtime_error("Hash did not match");
-  //     }
-  //   }
-  //   num_past_entries_expected += num_past_entries_vec[i]; 
-  // }
 }
 
 uint32_t RowReader::num_rows() {

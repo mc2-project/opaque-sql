@@ -99,13 +99,13 @@ object JobVerificationEngine {
     for (logEntryChain <- logEntryChains) {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
-        val op = logEntry.op
+        val ecall = logEntry.ecall
         val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val rcvPid = logEntry.rcvPid
         val ecallIndex = logEntry.jobId - startingJobIdMap(rcvPid)
 
-        ecallSeq(ecallIndex) = op
+        ecallSeq(ecallIndex) = ecall
 
         val row = sndPid * (numEcallsPlusOne) + ecallIndex 
         val col = rcvPid * (numEcallsPlusOne) + ecallIndex + 1
@@ -115,12 +115,12 @@ object JobVerificationEngine {
 
       for (i <- 0 until logEntryChain.currEntriesLength) {
         val logEntry = logEntryChain.currEntries(i)
-        val op = logEntry.op
+        val ecall = logEntry.ecall
         val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val ecallIndex = jobId - startingJobIdMap(this_partition)
 
-        ecallSeq(ecallIndex) = op
+        ecallSeq(ecallIndex) = ecall
 
         val row = sndPid * (numEcallsPlusOne) + ecallIndex 
         val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1

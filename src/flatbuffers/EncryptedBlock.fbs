@@ -12,7 +12,7 @@ table EncryptedBlock {
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
-    log_hash:[LogEntryChainHash]; 
+    log_mac:[LogEntryChainMac]; 
 }
 
 table SortedRuns {
@@ -20,7 +20,7 @@ table SortedRuns {
 }
 
 table LogEntry {
-    op:string;
+    ecall:string;
     snd_pid:int;
     rcv_pid:int;
     job_id:int;
@@ -35,7 +35,7 @@ table LogEntryChain {
     num_past_entries:[int];
 }
 
-table LogEntryChainHash {
-    hash:[ubyte];
+table LogEntryChainMac {
+    mac:[ubyte];
 }
 

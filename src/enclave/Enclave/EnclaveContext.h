@@ -9,7 +9,7 @@
 struct LogEntry;
 
 struct LogEntry {
-  std::string op;
+  std::string ecall;
   int snd_pid;
   int rcv_pid;
   int job_id;
@@ -17,7 +17,7 @@ struct LogEntry {
   bool operator==(const LogEntry& le) const
   { 
       // return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id && this->pid == le.pid); 
-      return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id); 
+      return (this->ecall == le.ecall && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id); 
   }
 }; 
 
@@ -26,7 +26,7 @@ public:
     // Example taken from https://www.geeksforgeeks.org/how-to-create-an-unordered_set-of-user-defined-class-or-struct-in-c/ 
     size_t operator()(const LogEntry& le) const
     { 
-        return (std::hash<std::string>()(le.op)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)); 
+        return (std::hash<std::string>()(le.ecall)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)); 
     } 
 };
 
@@ -107,9 +107,9 @@ class EnclaveContext {
       return append_mac;
     }
 
-    void append_past_log_entry(std::string op, int snd_pid, int rcv_pid, int job_id) {
+    void append_past_log_entry(std::string ecall, int snd_pid, int rcv_pid, int job_id) {
       LogEntry le;
-      le.op = op;
+      le.ecall = ecall;
       le.snd_pid = snd_pid;
       le.rcv_pid = rcv_pid;
       le.job_id = job_id;
