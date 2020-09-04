@@ -85,10 +85,6 @@ class EnclaveContext {
     void set_curr_row_writer(std::string row_writer) {
       curr_row_writer = row_writer;
     }
-    // 
-    // std::string get_curr_row_writer() {
-    //   return curr_row_writer;
-    // }
 
     void reset_log_entry() {
       this_ecall = std::string("");
@@ -144,7 +140,7 @@ class EnclaveContext {
       first_row_log_entry_mac_lst.clear();
       last_group_log_entry_mac_lst.clear();
       last_row_log_entry_mac_lst.clear();
-      // log_entry_mac_lst.clear();
+      log_entry_mac_lst.clear();
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
