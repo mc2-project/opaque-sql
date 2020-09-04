@@ -175,19 +175,20 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       int rcv_pid = -1;
       int job_id = curr_log_entry->job_id();
       int num_macs = curr_log_entry->num_macs();
+      int num_past_entries = num_past_entries_vec->Get(i);
 
       uint8_t global_mac[OE_HMAC_SIZE];
       memcpy(global_mac, curr_log_entry->global_mac()->data(), OE_HMAC_SIZE);
 
       int past_ecalls_lengths = 0;
-      for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
+      for (int j = past_entries_seen; j < past_entries_seen + num_past_entries; j++) {
         auto past_log_entry = past_log_entries[j];
         std::string ecall = past_log_entry.ecall;
         past_ecalls_lengths += ecall.length();
       }
 
       int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
-      int num_bytes_to_mac = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
+      int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
 
       uint8_t to_mac[num_bytes_to_mac];
       memcpy(to_mac, global_mac, OE_HMAC_SIZE);
@@ -196,8 +197,9 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
       memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
       memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
+      memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), &num_past_entries, sizeof(int));
       
-      uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
+      uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 5 * sizeof(int);
 
       for (int j = past_entries_seen; j < past_entries_seen + num_past_entries_vec->Get(i); j++) {
         auto past_log_entry = past_log_entries[j];

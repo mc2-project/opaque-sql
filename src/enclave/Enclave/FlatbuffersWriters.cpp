@@ -182,7 +182,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     num_past_log_entries.push_back(past_log_entries.size());
    
-    // We will MAC over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || past log entries
+    // We will MAC over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs || || num past log entries || past log entries
      
     int past_ecalls_lengths = 0;
     for (size_t i = 0; i < past_log_entries.size(); i++) {
@@ -192,9 +192,10 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     }
     int past_entries_num_bytes_minus_ecall_lengths = 3 * sizeof(int);
 
-    int num_bytes_to_mac = OE_HMAC_SIZE + 4 * sizeof(int) + curr_ecall.length() + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
+    int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() + past_entries_num_bytes_minus_ecall_lengths * past_log_entries.size() + past_ecalls_lengths;
     uint8_t to_mac[num_bytes_to_mac];
     int rcv_pid = -1;
+    int num_past_entries = (int) past_log_entries.size();
 
     memcpy(to_mac, global_mac, OE_HMAC_SIZE);
     memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
@@ -202,9 +203,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
+    memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), &num_past_entries, sizeof(int));
+
 
     // // Copy over data from past log entries
-    uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int);
+    uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 5 * sizeof(int);
     for (size_t i = 0; i < past_log_entries.size(); i++) {
       auto past_log_entry = past_log_entries[i];
       std::string ecall = past_log_entry.ecall;
