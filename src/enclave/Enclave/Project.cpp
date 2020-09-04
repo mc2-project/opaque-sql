@@ -4,7 +4,6 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
-// #include "EnclaveContext.h"
 
 void project(uint8_t *project_list, size_t project_list_length,
              uint8_t *input_rows, size_t input_rows_length,

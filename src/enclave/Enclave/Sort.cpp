@@ -54,7 +54,6 @@ void external_merge(
       queue.push(item);
     }
   }
-  // (void) curr_ecall;
   w.finish_run(curr_ecall);
 }
 
@@ -78,7 +77,6 @@ void sort_single_encrypted_block(
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.append(*it);
   }
-  // (void) curr_ecall;
   w.finish_run(curr_ecall);
 }
 

@@ -1,6 +1,5 @@
 #include "FlatbuffersWriters.h"
 #include "EnclaveContext.h"
-#include <iostream>
 #include <iomanip>
 
 void RowWriter::clear() {
