@@ -1154,6 +1154,8 @@ public:
       auto a_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(a), builder);
       auto b_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(b), builder);
 
+      // We ignore the result's NULL flag and use only its underlying value for the comparison.
+      // eval_binary_comparison() uses this underlying value to pass the desired information.
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
