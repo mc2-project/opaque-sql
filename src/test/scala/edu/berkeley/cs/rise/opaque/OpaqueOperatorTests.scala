@@ -284,7 +284,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("sort with null values") { securityLevel =>
-    val data : Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
       if (x % 3 == 0)
         Tuple1(null.asInstanceOf[Integer])
       else

@@ -102,13 +102,17 @@ flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op(
  *
  * The left and right Fields are the inputs to the binary operation. They may be temporary pointers
  * invalidated by further writes to builder; this function will not read them after invalidating.
+ * 
+ * When either of the values is NULL, this function will return a NULL value, with a boolean underlying 
+ * value that is used for internal functions like sorting. 
+ * The parameter `nulls_first` enables the function to order either by NULLS FIRST or by NULLS LAST.
  */
 template<typename TuixExpr, template<typename T> class Operation>
 flatbuffers::Offset<tuix::Field> eval_binary_comparison(
   flatbuffers::FlatBufferBuilder &builder,
   const tuix::Field *left,
   const tuix::Field *right,
-  bool is_null_asc = true) {
+  bool nulls_first = true) {
 
   if (left->value_type() != right->value_type()) {
     throw std::runtime_error(
@@ -209,14 +213,17 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
   } else {
     // This code block handles comparison when at least one value is NULL.
     // The logic can be summarized as: (note that the != operation implements XOR for boolean values)
-    // If is_null_asc = 1
-    // (x, NULL) = (0, 1) => (1, 0), (NULL, x) => (0, 1), (NULL, NULL) => (0, 0)
     //
-    // If is_null_asc = 0
-    // (x, NULL) = (0, 1) => (0, 1), (NULL, x) => (1, 0), (NULL, NULL) => (1, 1)
+    // If nulls_first = 1
+    // | Input values | is_null() value | Inputs to Operation |
+    // | (x, NULL)    | (0, 1)          | (1, 0)              |
+    // | (NULL, x)    | (1, 0)          | (0, 1)              |
+    // | (NULL, NULL) | (1, 1)          | (0, 0)              |
+    //
+    // A similar table can be derived for when nulls_first is false
     
-    bool left_is_null = left->is_null() != is_null_asc;
-    bool right_is_null = right->is_null() != is_null_asc;
+    bool left_is_null = left->is_null() != nulls_first;
+    bool right_is_null = right->is_null() != nulls_first;
     result = Operation<bool>()(left_is_null, right_is_null);
   }
   // Writing the result invalidates the left and right temporary pointers
