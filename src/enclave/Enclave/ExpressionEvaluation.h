@@ -102,12 +102,17 @@ flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op(
  *
  * The left and right Fields are the inputs to the binary operation. They may be temporary pointers
  * invalidated by further writes to builder; this function will not read them after invalidating.
+ * 
+ * When either of the values is NULL, this function will return a NULL value, with a boolean underlying 
+ * value that is used for internal functions like sorting. 
+ * The parameter `nulls_first` enables the function to order either by NULLS FIRST or by NULLS LAST.
  */
 template<typename TuixExpr, template<typename T> class Operation>
 flatbuffers::Offset<tuix::Field> eval_binary_comparison(
   flatbuffers::FlatBufferBuilder &builder,
   const tuix::Field *left,
-  const tuix::Field *right) {
+  const tuix::Field *right,
+  bool nulls_first = true) {
 
   if (left->value_type() != right->value_type()) {
     throw std::runtime_error(
@@ -205,6 +210,21 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
         + std::string(" on ")
         + std::string(tuix::EnumNameFieldUnion(left->value_type())));
     }
+  } else {
+    // This code block handles comparison when at least one value is NULL.
+    // The logic can be summarized as: (note that the != operation implements XOR for boolean values)
+    //
+    // If nulls_first = 1
+    // | Input values | is_null() value | Inputs to Operation |
+    // | (x, NULL)    | (0, 1)          | (1, 0)              |
+    // | (NULL, x)    | (1, 0)          | (0, 1)              |
+    // | (NULL, NULL) | (1, 1)          | (0, 0)              |
+    //
+    // A similar table can be derived for when nulls_first is false
+    
+    bool left_is_null = left->is_null() != nulls_first;
+    bool right_is_null = right->is_null() != nulls_first;
+    result = Operation<bool>()(left_is_null, right_is_null);
   }
   // Writing the result invalidates the left and right temporary pointers
   return tuix::CreateField(
@@ -1134,6 +1154,8 @@ public:
       auto a_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(a), builder);
       auto b_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(b), builder);
 
+      // We ignore the result's NULL flag and use only its underlying value for the comparison.
+      // eval_binary_comparison() uses this underlying value to pass the desired information.
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
