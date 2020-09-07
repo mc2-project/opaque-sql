@@ -128,12 +128,10 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
   std::vector<int> num_past_log_entries;
-  std::vector<uint8_t> log_hash;
   std::vector<flatbuffers::Offset<tuix::LogEntryChainMac>> log_entry_chain_hash_vector;
   
-
   if (curr_ecall != std::string("NULL")) {
-    // Only write log entry chain if this is the output of an ecall, e.g. not primary group in SortMergeJoin
+    // Only write log entry chain if this is the output of an ecall, i.e. not intermediate output within an ecall
     int job_id = EnclaveContext::getInstance().get_job_id();
     int num_macs = static_cast<int>(EnclaveContext::getInstance().get_num_macs());
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
@@ -196,6 +194,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int rcv_pid = -1;
     int num_past_entries = (int) past_log_entries.size();
 
+    // Copy what we want to mac to contiguous memory
     memcpy(to_mac, global_mac, OE_HMAC_SIZE);
     memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length(), &curr_pid, sizeof(int));
@@ -203,7 +202,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), &num_past_entries, sizeof(int));
-
 
     // // Copy over data from past log entries
     uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 5 * sizeof(int);
@@ -227,7 +225,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     uint8_t hmac[32];
     mcrypto.hmac(to_mac, num_bytes_to_mac, hmac);
 
-    // Copy the hash to untrusted memory
+    // Copy the mac to untrusted memory
     uint8_t* untrusted_mac = nullptr;
     ocall_malloc(32, &untrusted_mac);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_ptr(untrusted_mac, &ocall_free);
@@ -238,7 +236,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // Clear log entry state
     EnclaveContext::getInstance().reset_log_entry();
   } 
-
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, &curr_log_entry_vector, &past_log_entries_vector, &num_past_log_entries);
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, log_entry_chain_serialized, &log_entry_chain_hash_vector);
   enc_block_builder.Finish(result);

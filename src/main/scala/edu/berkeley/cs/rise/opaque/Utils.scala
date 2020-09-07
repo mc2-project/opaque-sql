@@ -1351,7 +1351,6 @@ object Utils extends Logging {
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
     } yield encryptedBlocks.log
 
-
     val allCurrLogEntries = for {
       logEntryChain <- allLogEntryChains
       i <- 0 until logEntryChain.currEntriesLength
@@ -1416,7 +1415,6 @@ object Utils extends Logging {
     Block(builder.sizedByteArray())
   }
 
-  // FIXME: create empty block inside enclave?
   def emptyBlock: Block = {
     val builder = new FlatBufferBuilder
     builder.finish(

@@ -154,7 +154,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     // Check that partition_mac_lsts is now empty - we should've found all expected MACs
     for (std::vector<std::vector<uint8_t>> p_lst : partition_mac_lsts) {
       if (!p_lst.empty()) {
-        throw std::runtime_error("Did not receive expected EncryptedBlocks");
+        throw std::runtime_error("Did not receive expected EncryptedBlock");
       }
     }
   }
@@ -162,8 +162,8 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
 void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEntry> past_log_entries) {
   auto num_past_entries_vec = encrypted_blocks->log()->num_past_entries();
-
   auto curr_entries_vec = encrypted_blocks->log()->curr_entries();
+
   if (curr_entries_vec->size() > 0) {
     int num_curr_entries = curr_entries_vec->size();
     int past_entries_seen = 0;
@@ -191,6 +191,8 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, std::vector<LogEn
       int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() + num_past_entries_vec->Get(i) * past_entries_num_bytes_minus_ecall_lengths + past_ecalls_lengths; 
 
       uint8_t to_mac[num_bytes_to_mac];
+
+      // Copy over received LogEntry metadata to contiguous memory
       memcpy(to_mac, global_mac, OE_HMAC_SIZE);
       memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
       memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length(), &snd_pid, sizeof(int));

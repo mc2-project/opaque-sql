@@ -21,7 +21,6 @@ package edu.berkeley.cs.rise.opaque
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
-import java.util.Arrays
 
 
 object JobVerificationEngine {
@@ -81,8 +80,9 @@ object JobVerificationEngine {
       }
 
       if (numEcalls != numEcallsInFirstPartition) {
-        println("This partition num ecalls: " + numEcalls)
-        println("last partition num ecalls: " + numEcallsInFirstPartition)
+        // Below two lines for debugging
+        // println("This partition num ecalls: " + numEcalls)
+        // println("last partition num ecalls: " + numEcallsInFirstPartition)
         throw new Exception("All partitions did not perform same number of ecalls")
       }
       startingJobIdMap(i) = minJobId
@@ -152,10 +152,10 @@ object JobVerificationEngine {
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       // Below 4 lines for debugging
-      println("Expected Ecall Seq")
-      expectedEcallSeq foreach { row => row foreach print; println }
-      println("Ecall seq") 
-      ecallSeq foreach { row => row foreach print; println }
+      // println("Expected Ecall Seq")
+      // expectedEcallSeq foreach { row => row foreach print; println }
+      // println("Ecall seq") 
+      // ecallSeq foreach { row => row foreach print; println }
       return false
     }
 
@@ -237,11 +237,12 @@ object JobVerificationEngine {
 
     for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
-        println("Expected Adjacency Matrix: ")
-        expectedAdjacencyMatrix foreach { row => row foreach print; println }
-
-        println("Executed Adjacency Matrix: ")
-        executedAdjacencyMatrix foreach { row => row foreach print; println }
+        // These two println for debugging purposes
+        // println("Expected Adjacency Matrix: ")
+        // expectedAdjacencyMatrix foreach { row => row foreach print; println }
+        // 
+        // println("Executed Adjacency Matrix: ")
+        // executedAdjacencyMatrix foreach { row => row foreach print; println }
         return false
       }
     }
