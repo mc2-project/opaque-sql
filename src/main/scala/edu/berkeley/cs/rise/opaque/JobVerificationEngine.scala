@@ -47,10 +47,9 @@ object JobVerificationEngine {
     }
 
     val numPartitions = logEntryChains.length
-    var startingJobIdMap = Map[Int, Int]()
+    val startingJobIdMap = Map[Int, Int]()
 
-    var findRangeBoundsJobIds = ArrayBuffer[Int]()
-    var perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
+    val perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
     for (i <- 0 until numPartitions) {
       perPartitionJobIds(i) = Set[Int]()
     } 
@@ -58,10 +57,8 @@ object JobVerificationEngine {
     for (logEntryChain <- logEntryChains) {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
-        if (pastEntry != Array.empty) {
-          val partitionOfOperation = pastEntry.sndPid
-          perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
-        }
+        val partitionOfOperation = pastEntry.sndPid
+        perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
       }
       val latestJobId = logEntryChain.currEntries(0).jobId
       val partitionOfLastOperation = logEntryChain.currEntries(0).sndPid
@@ -88,11 +85,11 @@ object JobVerificationEngine {
       startingJobIdMap(i) = minJobId
     }
 
-    var numEcalls = numEcallsInFirstPartition 
+    val numEcalls = numEcallsInFirstPartition 
     val numEcallsPlusOne = numEcalls + 1
 
-    var executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
-    var ecallSeq = Array.fill[String](numEcalls)("unknown")
+    val executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
+    val ecallSeq = Array.fill[String](numEcalls)("unknown")
 
     var this_partition = 0
 
@@ -103,7 +100,7 @@ object JobVerificationEngine {
         val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val rcvPid = logEntry.rcvPid
-        val ecallIndex = logEntry.jobId - startingJobIdMap(rcvPid)
+        val ecallIndex = jobId - startingJobIdMap(rcvPid)
 
         ecallSeq(ecallIndex) = ecall
 
@@ -130,8 +127,8 @@ object JobVerificationEngine {
       this_partition += 1
     }
 
-    var expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
-    var expectedEcallSeq = ArrayBuffer[String]()
+    val expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
+    val expectedEcallSeq = ArrayBuffer[String]()
     for (operator <- sparkOperators) {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
         expectedEcallSeq.append("externalSort")
@@ -198,8 +195,8 @@ object JobVerificationEngine {
           expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
         } else {
           for (j <- 0 until numPartitions) {
-            var prev = j - 1
-            var next = j + 1
+            val prev = j - 1
+            val next = j + 1
             if (j > 0) {
               // Send block to prev partition
               expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
@@ -221,7 +218,7 @@ object JobVerificationEngine {
         } else {
           for (j <- 0 until numPartitions) {
             if (j < numPartitions - 1) {
-              var next = j + 1
+              val next = j + 1
               expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
             }
           }
