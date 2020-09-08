@@ -32,7 +32,7 @@ void external_merge(
 
   // Initialize the priority queue with the first row from each run
   for (uint32_t i = run_start; i < run_start + num_runs; i++) {
-    // debug("external_merge: Read first row from run %d\n", i);
+    debug("external_merge: Read first row from run %d\n", i);
     MergeItem item;
     item.v = r.next_from_run(i);
     item.run_idx = i;
