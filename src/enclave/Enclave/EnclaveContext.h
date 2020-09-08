@@ -16,7 +16,6 @@ struct LogEntry {
 
   bool operator==(const LogEntry& le) const
   { 
-      // return (this->op == le.op && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id && this->pid == le.pid); 
       return (this->ecall == le.ecall && this->snd_pid == le.snd_pid && this->rcv_pid == le.rcv_pid && this->job_id == le.job_id); 
   }
 }; 
