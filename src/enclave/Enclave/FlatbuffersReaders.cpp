@@ -266,12 +266,10 @@ void RowReader::init_block_reader() {
 }
 
 SortedRunsReader::SortedRunsReader(BufferRefView<tuix::SortedRuns> buf, bool log_init) {
-  // std::cout << "Creating sorted runs reader\n";
   reset(buf, log_init);
 }
 
 void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf, bool log_init) {
-  // std::cout << "In reset\n";
   buf.verify();
   sorted_runs = buf.root();
   run_readers.clear();

@@ -668,6 +668,7 @@ class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
         .toDF(columnNames: _*))
   }
 
+  // FIXME: add integrity support for ecalls on dataframes with different numbers of partitions
   // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
   //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
   //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)

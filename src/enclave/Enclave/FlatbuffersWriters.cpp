@@ -203,7 +203,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
     memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), &num_past_entries, sizeof(int));
 
-    // // Copy over data from past log entries
+    // Copy over data from past log entries
     uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 5 * sizeof(int);
     for (size_t i = 0; i < past_log_entries.size(); i++) {
       auto past_log_entry = past_log_entries[i];
