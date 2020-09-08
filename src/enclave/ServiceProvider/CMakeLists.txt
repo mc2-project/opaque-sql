@@ -12,9 +12,9 @@ set(SOURCES
   iasrequest.cpp
   sp_crypto.cpp)
 
-link_directories(/opt/openenclave/lib/openenclave/enclave)
-include_directories(/opt/openenclave/include)
-include_directories(/opt/openenclave/include/openenclave/3rdparty)
+link_directories("$ENV{OE_SDK_PATH}/lib/openenclave/enclave")
+include_directories("$ENV{OE_SDK_PATH}/include")
+include_directories("$ENV{OE_SDK_PATH}/include/openenclave/3rdparty")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")

@@ -168,8 +168,7 @@ bool verify_mrsigner(char* signing_public_key_buf,
 
   signer = (unsigned char*)malloc(signer_id_buf_size);
   if (signer == NULL) {
-    printf("Out of memory\n");
-    goto exit;
+    throw std::runtime_error("Out of memory\n");
   }
 
   mbedtls_pk_init(&ctx);
@@ -179,28 +178,28 @@ bool verify_mrsigner(char* signing_public_key_buf,
                                     signing_public_key_buf_size+1);
 
   if (res != 0) {
-    printf("mbedtls_pk_parse_public_key failed with %d\n", res);
-    goto exit;
+    std::string err_str = std::string("mbedtls_pk_parse_public_key failed with ") + std::to_string(res) + std::string("\n");
+    throw std::runtime_error(err_str);
   }
 
   pk_type = mbedtls_pk_get_type(&ctx);
   if (pk_type != MBEDTLS_PK_RSA) {
-    printf("mbedtls_pk_get_type had incorrect type: %d\n", res);
-    goto exit;
+    std::string err_str = std::string("mbedtls_pk_get_type had incorrect type: ") + std::to_string(res) + std::string("\n"); 
+    throw std::runtime_error(err_str);
   }
 
   rsa_ctx = mbedtls_pk_rsa(ctx);
   modulus_size = mbedtls_rsa_get_len(rsa_ctx);
   modulus = (uint8_t*)malloc(modulus_size);
   if (modulus == NULL) {
-    printf("malloc for modulus failed with size %zu:\n", modulus_size);
-    goto exit;
+    std::string err_str = std::string("malloc for modulus failed with size: ") + std::to_string(modulus_size) + std::string("\n");
+    throw std::runtime_error(err_str);
   }
 
   res = mbedtls_rsa_export_raw(rsa_ctx, modulus, modulus_size, NULL, 0, NULL, 0, NULL, 0, NULL, 0);
   if (res != 0) {
-    printf("mbedtls_rsa_export failed with %d\n", res);
-    goto exit;
+    std::string err_str = std::string("mbedtls_rsa_export failed with ") + std::to_string(res) + std::string("\n");
+    throw std::runtime_error(err_str);
   }
 
   // Reverse the modulus and compute sha256 on it.
@@ -216,20 +215,15 @@ bool verify_mrsigner(char* signing_public_key_buf,
   // identity field.
 
   if (lc_compute_sha256(modulus, modulus_size, signer) != 0) {
-    goto exit;
+    throw std::runtime_error("Modulus hash computation failed\n");
   }
 
   if (memcmp(signer, signer_id_buf, signer_id_buf_size) != 0) {
-    printf("mrsigner is not equal!\n");
-    for (size_t i = 0; i < signer_id_buf_size; i++) {
-      printf("0x%x - 0x%x\n", (uint8_t)signer[i], (uint8_t)signer_id_buf[i]);
-    }
-    goto exit;
+    throw std::runtime_error("mrsigner is not equal!\n");
   }
 
   ret = true;
 
- exit:
   if (signer)
     free(signer);
 
@@ -240,39 +234,33 @@ bool verify_mrsigner(char* signing_public_key_buf,
   return ret;
 }
 
-std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
-                                                         uint32_t *msg2_size) {
+std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
+                                                                             uint32_t *shared_key_msg_size) {
   
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
-  std::unique_ptr<oe_msg2_t> msg2(new oe_msg2_t);
+  std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
   
-  EVP_PKEY* pkey = buffer_to_public_key((char*)msg1->public_key, -1);
+  EVP_PKEY* pkey = buffer_to_public_key((char*)report_msg->public_key, -1);
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
 
-
-
 #ifdef SIMULATE
-  std::cout << "Not running remote attestation because executing in simulation mode" << std::endl;
+  std::cerr << "Not running remote attestation because executing in simulation mode" << std::endl;
 #else
-  std::cout << "Running in hardware mode, verifying remote attestation\n" ;
   
   //verify report
   oe_report_t parsed_report;
   oe_result_t result = OE_FAILURE;
   uint8_t sha256[32];
   
-  result = oe_verify_remote_report(msg1->report, msg1->report_size, NULL, 0, &parsed_report);
+  result = oe_verify_remote_report(report_msg->report, report_msg->report_size, NULL, 0, &parsed_report);
   if (result != OE_OK) {
-    throw std::runtime_error(
-                             std::string("oe_verify_remote_report: ")
+    throw std::runtime_error(std::string("oe_verify_remote_report: ")
                              + oe_result_str(result));
   }
-
-  printf("OE report verified\n");
 
   // mrsigner verification
   // 2) validate the enclave identity's signed_id is the hash of the public
@@ -303,8 +291,6 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
     throw std::runtime_error(std::string("failed: mrsigner not equal!"));
   }
 
-  std::cout << "Signer verification passed\n" ;
-
   // TODO missing the hash verification step
 
   // check the enclave's product id and security version
@@ -317,8 +303,8 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
   }
 
   // 3) Validate the report data
-  //    The report_data has the hash value of the report data
-  if (lc_compute_sha256(msg1->public_key, sizeof(msg1->public_key), sha256) != 0) {
+  //    The report_data has the hash value of the report data, which is the public 
+  if (lc_compute_sha256(report_msg->public_key, sizeof(report_msg->public_key), sha256) != 0) {
     throw std::runtime_error(std::string("hash validation failed."));
   }
 
@@ -326,7 +312,6 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
     throw std::runtime_error(std::string("SHA256 mismatch."));
   }
   
-  std::cout << "remote attestation succeeded." << std::endl;
 #endif
 
   // Encrypt shared key
@@ -338,12 +323,12 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
-  // Prepare msg2
-  memcpy_s(msg2->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
-  *msg2_size = sizeof(oe_msg2_t);
+  // Prepare shared_key_msg
+  memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+  *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
 
   // clean up
   EVP_PKEY_free(pkey);
 
-  return msg2;
+  return shared_key_msg;
 }

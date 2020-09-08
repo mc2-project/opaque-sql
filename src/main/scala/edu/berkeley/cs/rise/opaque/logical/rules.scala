@@ -80,7 +80,7 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
       JobVerificationEngine.resetForNextJob()
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
+    case p @ Join(left, right, joinType, condition, _) if isEncrypted(p) =>
       JobVerificationEngine.resetForNextJob()
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)

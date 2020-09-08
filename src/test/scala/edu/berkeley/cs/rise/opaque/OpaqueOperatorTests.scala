@@ -134,7 +134,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
   
   testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
-    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
     val schema = StructType(Seq(
       StructField("CalendarIntervalType", CalendarIntervalType),
       StructField("NullType", NullType)))
@@ -282,7 +282,18 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val df = makeDF(data, securityLevel, "x", "y")
     df.sort($"x", $"y").collect
   }
-  
+
+  testAgainstSpark("sort with null values") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.sort($"x").collect
+  }
+
   testAgainstSpark("join") { securityLevel =>
     val p_data = for (i <- 1 to 16) yield (i, i.toString, i * 10)
     val f_data = for (i <- 1 to 256 - 16) yield (i, (i % 16).toString, i * 10)
@@ -497,7 +508,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
   
   testOpaqueOnly("cast error") { securityLevel =>
-    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 12345), 0.toByte))
+    val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
     val schema = StructType(Seq(
       StructField("CalendarIntervalType", CalendarIntervalType),
       StructField("NullType", NullType)))

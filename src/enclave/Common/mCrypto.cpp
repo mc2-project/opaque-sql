@@ -12,7 +12,6 @@
 
 Crypto::Crypto(): m_initialized(false)
 {
-    // mbedtls_net_init(NULL);
     m_initialized = init_mbedtls();
 }
 

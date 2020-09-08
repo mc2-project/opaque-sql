@@ -371,8 +371,6 @@ case class EncryptedUnionExec(
     Utils.ensureCached(rightRDD)
     time("Force right child of EncryptedUnionExec") { rightRDD.count }
 
-    // RA.initRA(leftRDD)
-
     val num_left_partitions = leftRDD.getNumPartitions
     val num_right_partitions = rightRDD.getNumPartitions
     if (num_left_partitions != num_right_partitions) {

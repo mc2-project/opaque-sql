@@ -237,7 +237,8 @@ object Utils extends Logging {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
-        eid = enclave.StartEnclave(findLibraryAsResource("enclave_trusted_signed"))
+        val path = findLibraryAsResource("enclave_trusted_signed")
+        eid = enclave.StartEnclave(path)
         logInfo("Starting an enclave")
         (enclave, eid)
       } else {
@@ -461,17 +462,18 @@ object Utils extends Logging {
           isNull)
       case (x: CalendarInterval, CalendarIntervalType) =>
         val months = x.months
+        val days = x.days
         val microseconds = x.microseconds
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.CalendarIntervalField,
-          tuix.CalendarIntervalField.createCalendarIntervalField(builder, months, microseconds),
+          tuix.CalendarIntervalField.createCalendarIntervalField(builder, months, days, microseconds),
           isNull)
       case (null, CalendarIntervalType) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.CalendarIntervalField,
-          tuix.CalendarIntervalField.createCalendarIntervalField(builder, 0, 0L),
+          tuix.CalendarIntervalField.createCalendarIntervalField(builder, 0, 0, 0L),
           isNull)
       case (x: Byte, NullType) =>
         tuix.Field.createField(
@@ -616,8 +618,9 @@ object Utils extends Logging {
           val calendarIntervalField =
             f.value(new tuix.CalendarIntervalField).asInstanceOf[tuix.CalendarIntervalField]
           val months = calendarIntervalField.months
+          val days = calendarIntervalField.days
           val microseconds = calendarIntervalField.microseconds
-          new CalendarInterval(months, microseconds)
+          new CalendarInterval(months, days, microseconds)
         case tuix.FieldUnion.NullField =>
           f.value(new tuix.NullField).asInstanceOf[tuix.NullField].value
         case tuix.FieldUnion.ShortField =>
@@ -1014,7 +1017,7 @@ object Utils extends Logging {
               builder, childOffset))
 
         // Complex type creation
-        case (ca @ CreateArray(children), childrenOffsets) =>
+        case (ca @ CreateArray(children, false), childrenOffsets) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.CreateArray,

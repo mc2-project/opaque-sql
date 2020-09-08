@@ -4,19 +4,19 @@
 #ifndef OE_SAMPLES_ATTESTATION_ENC_CRYPTO_H
 #define OE_SAMPLES_ATTESTATION_ENC_CRYPTO_H
 
-//#include <openenclave/enclave.h>
 // Includes for mbedtls shipped with oe.
 // Also add the following libraries to your linker command line:
 // -loeenclave -lmbedcrypto -lmbedtls -lmbedx509
+// Sample code reference: https://github.com/openenclave/openenclave/blob/master/samples/remote_attestation/common/crypto.h
+
+#include "common.h"
+
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
-
-#include "common.h"
-//#define PUBLIC_KEY_SIZE 512
 
 class Crypto
 {
