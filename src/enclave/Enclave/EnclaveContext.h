@@ -1,7 +1,7 @@
 #include "Enclave_t.h"
 #include <unordered_set>
 #include <vector>
-#include <iostream>
+#include <string>
 #include <unordered_map>
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
@@ -48,8 +48,6 @@ class EnclaveContext {
     std::vector<std::vector<uint8_t>> last_group_log_entry_mac_lst;
     std::vector<std::vector<uint8_t>> last_row_log_entry_mac_lst;
 
-
-    // uint8_t global_mac[OE_HMAC_SIZE];
     int pid;
     bool append_mac;
 
