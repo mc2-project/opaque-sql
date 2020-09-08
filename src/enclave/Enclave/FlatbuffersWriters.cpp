@@ -1,6 +1,5 @@
 #include "FlatbuffersWriters.h"
 #include "EnclaveContext.h"
-#include <iomanip>
 
 void RowWriter::clear() {
   builder.Clear();
@@ -44,7 +43,7 @@ void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
 }
 
 UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string ecall) {
-  if (!finished) { // This line causes ExternalSort not to call finish_blocks() in first output_buffer()
+  if (!finished) { 
     finish_blocks(ecall);
   }
 

@@ -4,7 +4,6 @@
 #include "Crypto.h"
 #include "Random.h"
 #include "util.h"
-//#include "rdrand.h"
 #include "EnclaveContext.h"
 
 
@@ -20,7 +19,8 @@ unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 std::unique_ptr<KeySchedule> ks;
 
 void initKeySchedule() {
-  ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(EnclaveContext::getInstance().get_shared_key()), SGX_AESGCM_KEY_SIZE));
+  // ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(EnclaveContext::getInstance().get_shared_key()), SGX_AESGCM_KEY_SIZE));
+  ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
 void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {

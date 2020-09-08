@@ -64,14 +64,6 @@ private:
   friend class SortedRunsWriter;
 };
 
-// class LogEntry {
-// public:
-//   LogEntry() : {}
-// 
-// private:
-//   flatbuffers::FlatBufferBuilder builder;
-// }
-
 /** Append-only container for rows wrapped in tuix::SortedRuns. */
 class SortedRunsWriter {
 public:

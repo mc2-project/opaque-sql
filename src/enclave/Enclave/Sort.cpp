@@ -7,9 +7,6 @@
 #include "ExpressionEvaluation.h"
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
-//#include "rdrand.h"
-
-// #include "EnclaveContext.h"
 
 
 class MergeItem {

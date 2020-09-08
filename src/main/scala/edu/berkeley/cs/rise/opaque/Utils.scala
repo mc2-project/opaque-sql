@@ -23,14 +23,12 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.SecureRandom
 import java.util.UUID
-import java.security.MessageDigest
 
 import javax.crypto._
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 import scala.collection.mutable.ArrayBuilder
-import scala.collection.mutable.ArrayBuffer
 
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.internal.Logging
@@ -110,7 +108,7 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
-import edu.berkeley.cs.rise.opaque.JobVerificationEngine
+// import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -534,8 +532,8 @@ object Utils extends Logging {
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
       case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
-        var keys = new ArrayBuilder.ofInt()
-        var values = new ArrayBuilder.ofInt()
+        val keys = new ArrayBuilder.ofInt()
+        val values = new ArrayBuilder.ofInt()
         for (i <- 0 until x.numElements) {
           keys += flatbuffersCreateField(
             builder, x.keyArray.get(i, keyType), keyType, isNull)
@@ -740,20 +738,6 @@ object Utils extends Logging {
     Block(encryptedBlockBytes)
   }
 
-
-  def examineBlock(block: Block): Unit = {
-    val buf = ByteBuffer.wrap(block.bytes)
-
-    // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
-    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
-    val blockLog = encryptedBlocks.log
-
-    for (i <- 0 until blockLog.pastEntriesLength) {
-      val pastEntry = blockLog.pastEntries(i)
-    }
-
-
-  }
   /**
    * Decrypts the given [[Block]] (a serialized tuix.EncryptedBlocks) and returns the rows within as
    * Spark SQL [[InternalRow]]s.
@@ -767,7 +751,6 @@ object Utils extends Logging {
 
     // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
-    val blockLog = encryptedBlocks.log
 
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
@@ -1313,8 +1296,6 @@ object Utils extends Logging {
 
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
-
-        val sumDataType = vs.dataType
 
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(

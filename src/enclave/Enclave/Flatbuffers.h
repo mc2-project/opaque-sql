@@ -1,5 +1,4 @@
 // -*- c-basic-offset: 2; fill-column: 100 -*-
-#define FLATBUFFERS_DEBUG_VERIFICATION_FAILURE
 
 #include <algorithm>
 #include <time.h>

@@ -1,10 +1,8 @@
-#define FLATBUFFERS_DEBUG_VERIFICATION_FAILURE
 #include "Flatbuffers.h"
 #include "EnclaveContext.h"
 
 #ifndef FLATBUFFERS_READERS_H
 #define FLATBUFFERS_READERS_H
-
 
 using namespace edu::berkeley::cs::rise::opaque;
 
