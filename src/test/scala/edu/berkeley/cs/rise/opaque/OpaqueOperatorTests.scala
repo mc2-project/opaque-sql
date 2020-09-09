@@ -202,6 +202,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"x" > lit(10)).collect
   }
 
+  testAgainstSpark("filter with NULLs") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.filter($"x" > lit(10)).collect.toSet
+  }
+
   testAgainstSpark("select") { securityLevel =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val df = makeDF(data, securityLevel, "str", "x")
