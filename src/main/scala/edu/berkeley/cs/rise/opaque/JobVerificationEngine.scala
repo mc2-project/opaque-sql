@@ -230,8 +230,8 @@ object JobVerificationEngine {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
       } else {
-        throw new Exception("Job Verification Error creating expected adjacency matrix: 
-          operator not supported - " + operator)
+        throw new Exception("Job Verification Error creating expected adjacency matrix: "
+          + "operator not supported - " + operator)
       }
     }
 
