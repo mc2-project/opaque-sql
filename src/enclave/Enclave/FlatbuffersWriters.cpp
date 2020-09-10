@@ -95,6 +95,7 @@ void RowWriter::finish_block() {
 
   // Encrypt the serialized rows and push the ciphertext to untrusted memory
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
+
   // TODO: create a temporary buffer that stores serialized rows inside enclave, 
   // then copy these rows to enc_rows.get() to retrieve MAC
   encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
@@ -192,7 +193,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     //  * string curr_ecall of size curr_ecall.length()
     //  * global_mac of size OE_HMAC_SIZE
     //  * 5 ints
-    // 1 past log entry contains
+    // 1 past log entry contains:
     //  * string ecall of size ecall.length()
     //  * 3 ints
     int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() * sizeof(char) 
