@@ -26,7 +26,8 @@ void filter(uint8_t *condition, size_t condition_length,
     }
 
     // If condition_result is NULL, then always return false
-    bool keep_row = static_cast<const tuix::BooleanField *>(condition_result->value())->value() & !condition_result->is_null();
+    bool keep_row = !condition_result->is_null() &&
+      static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     if (keep_row) {
       w.append(row);
     }
