@@ -88,7 +88,8 @@ object JobVerificationEngine {
     val numEcalls = numEcallsInFirstPartition 
     val numEcallsPlusOne = numEcalls + 1
 
-    val executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
+    val executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), 
+      numPartitions * (numEcalls + 1))
     val ecallSeq = Array.fill[String](numEcalls)("unknown")
 
     var this_partition = 0
@@ -127,7 +128,8 @@ object JobVerificationEngine {
       this_partition += 1
     }
 
-    val expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), numPartitions * (numEcalls + 1))
+    val expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), 
+      numPartitions * (numEcalls + 1))
     val expectedEcallSeq = ArrayBuffer[String]()
     for (operator <- sparkOperators) {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
@@ -228,11 +230,13 @@ object JobVerificationEngine {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
       } else {
-        throw new Exception("Job Verification Error creating expected adjacency matrix: operator not supported - " + operator)
+        throw new Exception("Job Verification Error creating expected adjacency matrix: 
+          operator not supported - " + operator)
       }
     }
 
-    for (i <- 0 until numPartitions * (numEcalls + 1); j <- 0 until numPartitions * (numEcalls + 1)) {
+    for (i <- 0 until numPartitions * (numEcalls + 1); 
+         j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
         // These two println for debugging purposes
         // println("Expected Adjacency Matrix: ")

@@ -310,7 +310,8 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
     oe_shared_key_msg_t* shared_key_msg = (oe_shared_key_msg_t*) shared_key_msg_input;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size, shared_key_plaintext, &shared_key_plaintext_size);
+    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size, 
+        shared_key_plaintext, &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
     }
@@ -380,7 +381,8 @@ void ecall_generate_report(uint8_t **report_msg_data,
   report_msg = (oe_report_msg_t*)(*report_msg_data);
 
   // Fill oe_report_msg_t
-  memcpy_s(report_msg->public_key, sizeof(((oe_report_msg_t*)0)->public_key), public_key, public_key_size);
+  memcpy_s(report_msg->public_key, sizeof(((oe_report_msg_t*)0)->public_key), 
+      public_key, public_key_size);
   report_msg->report_size = report_size;
   if (report_size > 0) {
     memcpy_s(report_msg->report, report_size, report, report_size);
