@@ -391,7 +391,7 @@ case class EncryptedGlobalLimitExec(
       childRDD.zipWithIndex.map {
         case (block, i) => {
           val (enclave, eid) = Utils.initEnclave()
-          Block(enclave.LimitReturnRows(eid, i, limitRowsPerPartition, block.bytes))
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
         }
       }
     }

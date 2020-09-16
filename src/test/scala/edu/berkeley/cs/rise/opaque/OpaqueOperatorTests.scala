@@ -593,6 +593,19 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(array($"x1", $"x2").as("x")).collect
   }
 
+  testAgainstSpark("limit") { securityLevel =>
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
+    //val words = makeDF(data, securityLevel, "id", "word")
+    val schema = StructType(Seq(
+      StructField("id", IntegerType),
+      StructField("word", StringType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    df.sort($"id").limit(5).collect.toSet
+  }
+
   testAgainstSpark("least squares") { securityLevel =>
     LeastSquares.query(spark, securityLevel, "tiny", numPartitions).collect
   }
@@ -626,10 +639,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
   testAgainstSpark("big data 3") { securityLevel =>
     BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
-  }
-
-  testAgainstSpark("big data 3 with limit") { securityLevel =>
-    BigDataBenchmark.q3Limit(spark, securityLevel, "tiny", numPartitions).collect
   }
 
   def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
