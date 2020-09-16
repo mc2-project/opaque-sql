@@ -80,7 +80,7 @@ void limit_return_rows(uint32_t limit,
 
 // For each partition, return a fixed number of rows (starting from the first row) given a limit
 void limit_return_rows(uint64_t partition_id,
-                       uint8_t *limit_rows, size_t limit_rows_length,
+                       uint8_t *limits, size_t limits_length,
                        uint8_t *input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
   RowReader r_limit(BufferRefView<tuix::EncryptedBlocks>(limit_rows, limit_rows_length));

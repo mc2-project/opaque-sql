@@ -383,7 +383,7 @@ case class EncryptedGlobalLimitExec(
         Block(enclave.CountRowsPerPartition(eid, block.bytes))
       }.collect)
 
-      val limitRowsPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
+      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
         val (enclave, eid) = Utils.initEnclave()
         enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
       }.collect.head
