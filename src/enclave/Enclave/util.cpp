@@ -4,7 +4,6 @@
 #include <cstdio>
 
 #include "Enclave_t.h"
-#include "sgx_lfence.h"
 
 int printf(const char *fmt, ...) {
   char buf[BUFSIZ] = {'\0'};
@@ -35,16 +34,11 @@ std::string string_format(const std::string &fmt, ...) {
     }
 }
 
-void exit(int exit_code) {
-  ocall_exit(exit_code);
-}
-
 void ocall_malloc(size_t size, uint8_t **ret) {
-  unsafe_ocall_malloc(size, ret);
-
   // Guard against overwriting enclave memory
-  assert(sgx_is_outside_enclave(*ret, size) == 1);
-  sgx_lfence();
+  assert(oe_is_outside_enclave(*ret, size) == 1);
+  __builtin_ia32_lfence();
+ *ret = (uint8_t*)oe_host_malloc(size);
 }
 
 void print_bytes(uint8_t *ptr, uint32_t len) {

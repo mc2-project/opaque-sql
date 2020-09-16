@@ -1,0 +1,5 @@
+export OPAQUE_HOME=$(pwd)
+export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data/
+export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
+export MODE=HARDWARE
+export OE_SDK_PATH=/opt/openenclave/

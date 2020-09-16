@@ -4,11 +4,11 @@ version := "0.1"
 
 organization := "edu.berkeley.cs.amplab"
 
-scalaVersion := "2.11.12"
+scalaVersion := "2.12.10"
 
 spName := "amplab/opaque"
 
-sparkVersion := "2.4.0"
+sparkVersion := "3.0.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
@@ -92,10 +92,17 @@ resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
 // Add the managed resource directory to the resource classpath so we can find libraries at runtime
 managedResourceDirectories in Compile += resourceManaged.value
 
+val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
+  "fetchIntelAttestationReportSigningCACert",
+  "Fetches and decompresses the Intel IAS SGX Report Signing CA file, required for "
+    + "remote attestation.")
+
+resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
+
 // Watch the enclave C++ files
 watchSources ++=
   ((sourceDirectory.value / "enclave") ** (
-    ("*.cpp" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+    ("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
@@ -160,7 +167,7 @@ sgxGdbTask := {
     "-x",
     ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
     None,
-    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!
+    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!<
 }
 
 fetchFlatbuffersLibTask := {
@@ -276,6 +283,17 @@ copyEnclaveLibrariesToResourcesTask := {
     resource
   }
   resources
+}
+
+fetchIntelAttestationReportSigningCACertTask := {
+  val cert = resourceManaged.value / "AttestationReportSigningCACert.pem"
+  if (!cert.exists) {
+    streams.value.log.info(s"Fetching Intel Attestation report signing CA certificate")
+    val certUrl = new java.net.URL(
+      s"https://software.intel.com/sites/default/files/managed/7b/de/RK_PUB.zip")
+    IO.unzipURL(certUrl, cert.getParentFile)
+  }
+  Seq(cert)
 }
 
 synthTestDataTask := {

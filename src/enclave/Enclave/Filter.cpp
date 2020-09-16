@@ -14,10 +14,8 @@ void filter(uint8_t *condition, size_t condition_length,
   BufferRefView<tuix::FilterExpr> condition_buf(condition, condition_length);
   condition_buf.verify();
   FlatbuffersExpressionEvaluator condition_eval(condition_buf.root()->condition());
-
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
-
   while (r.has_next()) {
     const tuix::Row *row = r.next();
     const tuix::Field *condition_result = condition_eval.eval(row);
@@ -26,11 +24,10 @@ void filter(uint8_t *condition, size_t condition_length,
         std::string("Filter expression expected to return BooleanField, instead returned ")
         + std::string(tuix::EnumNameFieldUnion(condition_result->value_type())));
     }
-    if (condition_result->is_null()) {
-      throw std::runtime_error("Filter expression returned null");
-    }
 
-    bool keep_row = static_cast<const tuix::BooleanField *>(condition_result->value())->value();
+    // If condition_result is NULL, then always return false
+    bool keep_row = !condition_result->is_null() &&
+      static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     if (keep_row) {
       w.append(row);
     }

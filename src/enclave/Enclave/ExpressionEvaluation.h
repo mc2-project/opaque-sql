@@ -102,12 +102,17 @@ flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op(
  *
  * The left and right Fields are the inputs to the binary operation. They may be temporary pointers
  * invalidated by further writes to builder; this function will not read them after invalidating.
+ * 
+ * When either of the values is NULL, this function will return a NULL value, with a boolean underlying 
+ * value that is used for internal functions like sorting. 
+ * The parameter `nulls_first` enables the function to order either by NULLS FIRST or by NULLS LAST.
  */
 template<typename TuixExpr, template<typename T> class Operation>
 flatbuffers::Offset<tuix::Field> eval_binary_comparison(
   flatbuffers::FlatBufferBuilder &builder,
   const tuix::Field *left,
-  const tuix::Field *right) {
+  const tuix::Field *right,
+  bool nulls_first = true) {
 
   if (left->value_type() != right->value_type()) {
     throw std::runtime_error(
@@ -149,6 +154,13 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
       result = Operation<double>()(
         static_cast<const tuix::DoubleField *>(left->value())->value(),
         static_cast<const tuix::DoubleField *>(right->value())->value());
+      break;
+    }
+    case tuix::FieldUnion_DateField:
+    {
+      result = Operation<int32_t>()(
+        static_cast<const tuix::DateField *>(left->value())->value(),
+        static_cast<const tuix::DateField *>(right->value())->value());
       break;
     }
     case tuix::FieldUnion_StringField:
@@ -198,6 +210,21 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
         + std::string(" on ")
         + std::string(tuix::EnumNameFieldUnion(left->value_type())));
     }
+  } else {
+    // This code block handles comparison when at least one value is NULL.
+    // The logic can be summarized as: (note that the != operation implements XOR for boolean values)
+    //
+    // If nulls_first = 1
+    // | Input values | is_null() value | Inputs to Operation |
+    // | (x, NULL)    | (0, 1)          | (1, 0)              |
+    // | (NULL, x)    | (1, 0)          | (0, 1)              |
+    // | (NULL, NULL) | (1, 1)          | (0, 0)              |
+    //
+    // A similar table can be derived for when nulls_first is false
+    
+    bool left_is_null = left->is_null() != nulls_first;
+    bool right_is_null = right->is_null() != nulls_first;
+    result = Operation<bool>()(left_is_null, right_is_null);
   }
   // Writing the result invalidates the left and right temporary pointers
   return tuix::CreateField(
@@ -269,6 +296,65 @@ private:
       case tuix::FieldUnion_DateField:
       {
         return flatbuffers_cast<tuix::DateField, Date>(cast, value, builder, result_is_null);
+      }
+      case tuix::FieldUnion_StringField:
+      {
+        auto sf = value->value_as_StringField();
+        std::string s(sf->value()->begin(), sf->value()->begin() + sf->length());
+        switch (cast->target_type()) {
+        case tuix::ColType_IntegerType:
+        {
+          uint32_t result = 0;
+          if (!result_is_null) {
+            result = std::stol(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_IntegerField,
+            tuix::CreateIntegerField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_LongType:
+        {
+          uint64_t result = 0;
+          if (!result_is_null) {
+            result = std::stoll(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_LongField,
+            tuix::CreateLongField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_FloatType:
+        {
+          float result = 0;
+          if (!result_is_null) {
+            result = std::stof(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_FloatField,
+            tuix::CreateFloatField(builder, result).Union(),
+            result_is_null);
+        }
+        case tuix::ColType_DoubleType:
+        {
+          double result = 0;
+          if (!result_is_null) {
+            result = std::stod(s);
+          }
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, result).Union(),
+            result_is_null);
+        }
+        default:
+          throw std::runtime_error(
+            std::string("Can't cast String to ")
+            + std::string(tuix::EnumNameColType(cast->target_type())));
+        }
       }
       case tuix::FieldUnion_ArrayField:
       {
@@ -745,6 +831,23 @@ private:
         result_is_null);
     }
 
+    // Complex type creation
+    case tuix::ExprUnion_CreateArray:
+    {
+      auto e = expr->expr_as_CreateArray();
+
+      std::vector<flatbuffers::Offset<tuix::Field>> children_offsets;
+      for (auto child_expr : *e->children()) {
+        children_offsets.push_back(eval_helper(row, child_expr));
+      }
+
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_ArrayField,
+        tuix::CreateArrayFieldDirect(builder, &children_offsets).Union(),
+        false);
+    }
+
     // Opaque UDFs
     case tuix::ExprUnion_VectorAdd:
     {
@@ -1051,6 +1154,8 @@ public:
       auto a_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(a), builder);
       auto b_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(b), builder);
 
+      // We ignore the result's NULL flag and use only its underlying value for the comparison.
+      // eval_binary_comparison() uses this underlying value to pass the desired information.
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(

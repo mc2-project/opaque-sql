@@ -1,4 +1,5 @@
 #include "Sort.h"
+#include "Random.h"
 
 #include <algorithm>
 #include <queue>
@@ -142,7 +143,7 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
     const tuix::Row *row = r.next();
 
     uint16_t rand;
-    sgx_read_rand(reinterpret_cast<uint8_t *>(&rand), 2);
+    mbedtls_read_rand(reinterpret_cast<unsigned char*>(&rand), 2);
     if (rand <= sampling_ratio) {
       w.append(row);
     }

@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.logical.Join
+import org.apache.spark.sql.catalyst.plans.logical.JoinHint
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
 
@@ -45,8 +46,8 @@ object OpaqueOperators extends Strategy {
       EncryptedSortExec(order, planLater(child)) :: Nil
 
     case EncryptedJoin(left, right, joinType, condition) =>
-      Join(left, right, joinType, condition) match {
-        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
+      Join(left, right, joinType, condition, JoinHint.NONE) match {
+        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _, _) =>
           val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
           val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
           val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
@@ -61,7 +62,12 @@ object OpaqueOperators extends Strategy {
             rightProjSchema.map(_.toAttribute),
             (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
             sorted)
-          EncryptedProjectExec(dropTags(left.output, right.output), joined) :: Nil
+          val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+          val filtered = condition match {
+            case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
+            case None => tagsDropped
+          }
+          filtered :: Nil
         case _ => Nil
       }
 
