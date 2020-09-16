@@ -53,6 +53,23 @@ extern "C" {
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
     JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
 
+  JNIEXPORT jbyteArray JNICALL
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
+    JNIEnv *, jobject, jlong, jbyteArray);
+
+
+  JNIEXPORT jbyteArray JNICALL
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
+    JNIEnv *, jobject, jlong, jint, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
+    JNIEnv *, jobject, jlong, jint, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
+    JNIEnv *, jobject, jlong, jlong, jbyteArray, jbyteArray);
+
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
     JNIEnv *, jobject, jlong);
 
