@@ -115,12 +115,4 @@ object BigDataBenchmark {
       df
     }
   }
-
-  def q3Limit(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame = {
-    import spark.implicits._
-    val df = q3(spark, securityLevel, size, numPartitions)
-    df.limit(2)
-  }
-
 }

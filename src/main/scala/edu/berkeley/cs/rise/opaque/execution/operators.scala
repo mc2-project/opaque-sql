@@ -365,7 +365,6 @@ case class EncryptedLocalLimitExec(
   }
 }
 
-
 case class EncryptedGlobalLimitExec(
     limit: Int,
     child: SparkPlan)

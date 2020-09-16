@@ -44,9 +44,8 @@ void compute_num_rows_per_partition(uint32_t limit,
                           static_cast<const tuix::IntegerField *>(row->field_values()->Get(0)->value())->value());
     if (current_num_rows >= limit) {
       num_rows = 0;
-    }
-    else if (current_num_rows + num_rows >= limit) {
-      num_rows = current_num_rows - limit;
+    } else if (current_num_rows + num_rows >= limit) {
+      num_rows = limit - current_num_rows;
     }
     output[0] = flatbuffers::GetTemporaryPointer(
       builder,

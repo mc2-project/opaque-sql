@@ -57,7 +57,7 @@ class SGXEnclave extends java.io.Serializable {
   @native def LocalLimit(
     eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
   @native def LimitReturnRows(
-    eid: Long, partitionID: Long, limitRows: Array[Byte], inputRows: Array[Byte]): Array[Byte]
+    eid: Long, partitionID: Long, limits: Array[Byte], inputRows: Array[Byte]): Array[Byte]
 
   // Remote attestation, enclave side
   @native def GenerateReport(eid: Long): Array[Byte]

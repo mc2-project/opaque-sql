@@ -825,7 +825,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limit_rows, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -833,8 +833,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
     uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
     uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
-    uint32_t limit_rows_length = (uint32_t) env->GetArrayLength(limit_rows);
-    uint8_t *limit_rows_ptr = (uint8_t *) env->GetByteArrayElements(limit_rows, &if_copy);
+    uint32_t limits_length = (uint32_t) env->GetArrayLength(limits);
+    uint8_t *limits_ptr = (uint8_t *) env->GetByteArrayElements(limits, &if_copy);
 
     uint8_t *output_rows = nullptr;
     size_t output_rows_length = 0;
@@ -845,8 +845,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
       oe_check_and_time("LimitReturnRows",
                         ecall_limit_return_rows((oe_enclave_t *) eid,
                                                 partition_id,
-                                                limit_rows_ptr,
-                                                limit_rows_length,
+                                                limits_ptr,
+                                                limits_length,
                                                 input_rows_ptr,
                                                 input_rows_length,
                                                 &output_rows,
