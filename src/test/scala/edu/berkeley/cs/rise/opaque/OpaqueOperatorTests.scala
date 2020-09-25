@@ -411,6 +411,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("between") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, i)
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"count".between(50, 150)).collect
+  }
+
   testAgainstSpark("year") { securityLevel =>
     val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
     val df = makeDF(data, securityLevel, "id", "date")
