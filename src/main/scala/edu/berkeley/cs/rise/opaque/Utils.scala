@@ -939,13 +939,6 @@ object Utils extends Logging {
               builder, predOffset, trueOffset, falseOffset))
 
         case (CaseWhen(branches, elseValue), childrenOffsets) =>
-          println("HERE")
-          println(branches)
-          println(elseValue)
-          println(childrenOffsets)
-          println(branches.getClass)
-          println(elseValue.getClass)
-          println(childrenOffsets.getClass)
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.CaseWhen,
