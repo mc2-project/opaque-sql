@@ -722,6 +722,58 @@ private:
       }
     }
 
+    case tuix::ExprUnion_Upper:
+    {
+      auto n = static_cast<const tuix::Upper *>(expr->expr());
+      auto child_offset = eval_helper(row, n->child());
+      const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, child_offset);
+
+      if (str->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Upper requires str String, not ")
+          + std::string("str ")
+          + std::string(tuix::EnumNameFieldUnion(str->value_type())));
+      }
+
+      // Obtain the input as a string
+      bool result_is_null = str->is_null();
+
+      if (!result_is_null) {
+
+        auto str_field = static_cast<const tuix::StringField *>(str->value());
+
+        std::vector<uint8_t> str_vec(
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(0)),
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(str_field->length())));
+
+        std::string lower(str_vec.begin(), str_vec.end());
+
+        // Turn lower into uppercase and revert to vector
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::toupper);
+        std::vector<uint8_t> result(lower.begin(), lower.end());
+
+        // Writing the result
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, str_field->length()).Union(),
+          result_is_null);
+      } else {
+
+        // Creation is failing with null pointer. Trivially create empty string
+        std::string empty("\0");
+        std::vector<uint8_t> result(empty.begin(), empty.end());
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, 0).Union(),
+          result_is_null);
+      }
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {

@@ -67,6 +67,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
+import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
@@ -1012,6 +1013,13 @@ object Utils extends Logging {
             tuix.ExprUnion.DotProduct,
             tuix.DotProduct.createDotProduct(
               builder, leftOffset, rightOffset))
+
+        case (Upper(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Upper,
+            tuix.Upper.createUpper(
+              builder, childOffset))   
 
         case (ClosestPoint(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
