@@ -24,6 +24,7 @@ union ExprUnion {
     Add,
     Subtract,
     If,
+    CaseWhen,
     Cast,
     Year,
     VectorAdd,
@@ -134,6 +135,10 @@ table If {
     predicate:Expr;
     true_value:Expr;
     false_value:Expr;
+}
+
+table CaseWhen {
+    children:[Expr];
 }
 
 // Date expressions

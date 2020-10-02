@@ -742,6 +742,45 @@ private:
       }
     }
 
+    case tuix::ExprUnion_CaseWhen:
+    {
+      auto e = expr->expr_as_CaseWhen();
+      size_t num_children = e->children()->size();
+
+      // Evaluate to the first value whose predicate is true.
+      // Short circuit on the earliest branch possible.
+      for (size_t i = 0; i < num_children - 1; i += 2) {
+        auto predicate_offset = eval_helper(row, (*e->children())[i]);
+        auto true_value_offset = eval_helper(row, (*e->children())[i+1]);
+        const tuix::Field *predicate =
+          flatbuffers::GetTemporaryPointer(builder, predicate_offset);
+        const tuix::Field *true_value =
+          flatbuffers::GetTemporaryPointer(builder, true_value_offset);
+        if (predicate->value_type() != tuix::FieldUnion_BooleanField) {
+          throw std::runtime_error(
+            std::string("tuix::CaseWhen requires predicate to return Boolean, not ")
+            + std::string(tuix::EnumNameFieldUnion(predicate->value_type())));
+        }
+        if (!predicate->is_null()) {
+          bool pred_val = static_cast<const tuix::BooleanField *>(predicate->value())->value();
+          if (pred_val) {
+            return GetOffset<tuix::Field>(builder, true_value);
+          }
+        }
+      }
+
+      // Getting here means that none of the predicates are true.
+      // Return the else value if it exists, or NULL if it doesn't.
+      if (num_children % 2 == 1) {
+        auto else_value_offset = eval_helper(row, (*e->children())[num_children-1]);
+        const tuix::Field *else_value =
+          flatbuffers::GetTemporaryPointer(builder, else_value_offset);
+        return GetOffset<tuix::Field>(builder, else_value);
+      }
+
+      return NULL;
+    }
+
     // Null expressions
     case tuix::ExprUnion_IsNull:
     {
