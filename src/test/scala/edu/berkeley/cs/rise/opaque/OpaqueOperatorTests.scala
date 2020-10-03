@@ -395,6 +395,27 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(year($"date")).collect
   }
 
+  testAgainstSpark("case when") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+
+    // 1 branch, else statement present
+    df.select(when(df("word") === "foo", 10).otherwise(30)).collect
+    df.select(when(df("word") === "foo", "hi").otherwise("bye")).collect
+
+    // 1 branch, no else statement
+    df.select(when(df("word") === "foo", 10)).collect
+    df.select(when(df("word") === "foo", "hi")).collect
+
+    // 2 branches, else statement present
+    df.select(when(df("word") === "foo", 10).when(df("word") === "baz", 20).otherwise(30)).collect
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello").otherwise("bye")).collect
+
+    // 2 branches, no else statement
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", 2)).collect
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello")).collect
+  }
+
   testOpaqueOnly("save and load with explicit schema") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
