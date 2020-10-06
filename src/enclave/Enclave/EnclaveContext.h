@@ -9,10 +9,10 @@
 struct LogEntry;
 
 struct LogEntry {
-  std::string ecall;
-  int snd_pid;
-  int rcv_pid;
-  int job_id;
+  std::string ecall; // ecall executed
+  int snd_pid; // partition where ecall was executed
+  int rcv_pid; // partition of subsequent ecall
+  int job_id; // number of ecalls executed in this enclave before this ecall
 
   bool operator==(const LogEntry& le) const
   { 

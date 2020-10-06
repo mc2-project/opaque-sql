@@ -67,7 +67,8 @@ class Crypto
     int sha256(const uint8_t* data, size_t data_size, uint8_t sha256[32]);
 
     /**
-     * Compute the sha256 hash of given data.
+     * Compute the hmac of given data using the client's symmetric key
+     * given to the enclave during attestation.
      */
     int hmac(const uint8_t* data, size_t data_length, uint8_t hmac[32]);
 
