@@ -33,19 +33,19 @@ WORKDIR /root/.sbt/launchers/0.13.17
 RUN curl -L -o /root/.sbt/launchers/0.13.17/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.17/sbt-launch.jar
 
 # Get the Opaque repository
-WORKDIR /root/opaque
+WORKDIR /root
 RUN git clone https://github.com/ucbrise/opaque.git
 
-WORKDIR /root/opaque/opaque
+WORKDIR /root/opaque
 
 # Create private key. Step 2 of Opaque
 RUN openssl genrsa -out private_key.pem -3 3072
 
 # Set env variables
 ENV MODE=SIMULATE
-ENV OPAQUE_HOME=/root/opaque/opaque
-ENV SPARKSGX_DATA_DIR=/root/opaque/opaque/data/
-ENV PRIVATE_KEY_PATH=/root/opaque/opaque/private_key.pem
+ENV OPAQUE_HOME=/root/opaque
+ENV SPARKSGX_DATA_DIR=/root/opaque/data/
+ENV PRIVATE_KEY_PATH=/root/opaque/private_key.pem
 ENV OE_SDK_PATH=/opt/openenclave/
 
 ENV PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/opt/openenclave/share/pkgconfig
