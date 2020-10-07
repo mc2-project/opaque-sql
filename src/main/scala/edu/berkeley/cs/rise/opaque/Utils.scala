@@ -44,6 +44,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+import org.apache.spark.sql.catalyst.expressions.In
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EqualTo
@@ -964,6 +965,13 @@ object Utils extends Logging {
             tuix.ExprUnion.Contains,
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
+
+        case (In(left, right), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.In,
+            tuix.In.createIn(
+              builder, tuix.In.createChildrenVector(builder, childrenOffsets.toArray)))
 
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(

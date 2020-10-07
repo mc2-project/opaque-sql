@@ -389,6 +389,32 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("isin") { securityLevel =>
+    //normal test 1 
+    val ids = Seq((1, 2, 2), (2, 3, 1))
+    val df = makeDF(ids, securityLevel, "x", "y", "id")
+    val c = $"id" isin ($"x", $"y")
+    df.filter(c).collect 
+
+    //normal test 2     
+    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
+    val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
+    val c2 = $"id" isin (1 ,2, 4, 5, 6)
+    df2.filter(c2).collect 
+
+    //string test 
+    val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
+    val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
+    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
+    df3.filter(c3).collect
+
+    //null test  
+    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
+    val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
+    val c4 = $"id" isin (null.asInstanceOf[Int])
+    df4.filter(c4).collect 
+  }
+
   testAgainstSpark("year") { securityLevel =>
     val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
     val df = makeDF(data, securityLevel, "id", "date")

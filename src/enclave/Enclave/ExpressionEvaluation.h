@@ -702,6 +702,42 @@ private:
       }
     }
 
+    case tuix::ExprUnion_In:
+    {
+      auto c = static_cast<const tuix::In *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+      bool result = false;
+
+      if (num_children < 2){
+        throw std::runtime_error(std::string("In can't operate with fewer than 2 args, currently we have")
+          + std::to_string(num_children)); 
+      }
+
+      auto left_offset =  eval_helper(row, (*c->children())[0]);
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      for (size_t i=1; i<num_children; i++){
+        auto right_offset = eval_helper(row, (*c->children())[i]);
+        const tuix::Field *item = flatbuffers::GetTemporaryPointer(builder, right_offset);
+        if (item->value_type() != left->value_type()){
+          throw std::runtime_error(
+          std::string("In can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(item->value_type())));
+        }
+        //TODO why integer field passing the string test 
+        if (static_cast<const tuix::IntegerField *>(item->value())->value() == static_cast<const tuix::IntegerField *>(left->value())->value()){
+          result = true; 
+        }
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        left->is_null());
+
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {
