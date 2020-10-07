@@ -10,10 +10,15 @@ mv Dockerfile_hardware Dockerfile
 docker build --tag opaque:1.0 .
 ```
 
-You can then launch a docker container and test the opaque set up:
+After installing the latest Intel SGX DCAP driver, you can then launch a docker container and test the opaque set up. You may need more memory than the default to pass all of the tests.
 
 ```shell
-docker run --device /dev/sgx:/dev/sgx -it -m 4g -w opaque:1.0 
+apt -y install dkms
+wget https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/distro/ubuntu18.04-server/sgx_linux_x64_driver_1.36.bin -O sgx_linux_x64_driver.bin
+chmod +x sgx_linux_x64_driver.bin
+./sgx_linux_x64_driver.bin
+
+docker run --device /dev/sgx:/dev/sgx -it opaque:1.0 
 
 cd /root/opaque
 source opaqueenv
@@ -43,4 +48,4 @@ docker run -it -m 4g -v $OPAQUE_HOME:/root/opaque -w /home/opaque \
 
 ### Troubleshoot
 
-If docker set up fails, go into the relevant docker file, and make sure that the file is pulling the latest Intel SGX DCAP driver in [step 2](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md) of OpenEnclave.
+If docker set up fails, go to the dockerfile, and make sure that you are pulling the latest Intel SGX DCAP driver in [step 2](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md) of OpenEnclave setup. 
