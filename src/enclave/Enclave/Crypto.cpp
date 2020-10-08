@@ -111,7 +111,7 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
 
-  std::cout << "C++ encrypting inside enclave\n";
+  // std::cout << "C++ encrypting inside enclave\n";
   
   if (!ks) {
     throw std::runtime_error(
@@ -129,11 +129,11 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
-  std::cout << "Encrypting with xor shared key\n";
+  // std::cout << "Encrypting with xor shared key\n";
 }
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
-  std::cout << "C++ decrypting inside enclave\n";
+  // std::cout << "C++ decrypting inside enclave\n";
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;
@@ -141,11 +141,11 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
 
-  std::cout << "do we make it here\n";
+  // std::cout << "do we make it here\n";
   AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-  std::cout << "Initialized decipher\n";
+  // std::cout << "Initialized decipher\n";
   decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-  std::cout << "tried shared key\n";
+  // std::cout << "tried shared key\n";
   if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
     // Shared key doesn't work
     // Perhaps we need to use a client key instead
@@ -154,7 +154,7 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
       AesGcm decipher(keypair.second.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
       decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
       if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
-          std::cout << "We found the proper key, of user " << keypair.first << std::endl;
+          // std::cout << "We found the proper key, of user " << keypair.first << std::endl;
           success = 0;
           break;
       }

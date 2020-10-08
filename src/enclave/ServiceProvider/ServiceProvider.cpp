@@ -124,9 +124,9 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
 }
 
 // This function for testing purposes
-void ServiceProvider::set_test_key(const uint8_t *shared_key) {
-  memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
-}
+// void ServiceProvider::set_test_key(const uint8_t *shared_key) {
+//   memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
+// }
 
 void ServiceProvider::set_user_cert(const std::string user_cert) {
   memcpy(this->user_cert, user_cert.c_str(), user_cert.length() + 1);
