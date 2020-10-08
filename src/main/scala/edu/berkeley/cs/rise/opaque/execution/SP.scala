@@ -23,7 +23,8 @@ import ch.jodersky.jni.nativeLoader
 class SP extends java.io.Serializable {
   // Remote attestation, master side
   // FIXME: remove last testKey argument in Init()
-  @native def Init(sharedKey: Array[Byte], intelCert: String, userCert: String, keyShare: Array[Byte], testKey: Array[Byte]): Unit
+  @native def Init(sharedKey: Array[Byte], intelCert: String, userCert: String, keyShare: Array[Byte]): Unit
+  // @native def Init(sharedKey: Array[Byte], intelCert: String, userCert: String, keyShare: Array[Byte], testKey: Array[Byte]): Unit
   @native def SPProcMsg0(msg0Input: Array[Byte]): Unit
   @native def SPProcMsg1(msg1Input: Array[Byte]): Array[Byte]
   @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]

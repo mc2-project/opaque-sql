@@ -41,7 +41,7 @@ public:
   
   // FOR TESTING PURPOSES
   // FIXME: remove this function
-  void set_test_key(const uint8_t *shared_key);
+  // void set_test_key(const uint8_t *shared_key);
 
   void set_user_cert(std::string user_cert);
 
@@ -86,7 +86,7 @@ private:
 
   // FOR TESTING PURPOSES
   // FIXME: remove this test key
-  uint8_t test_key[LC_AESGCM_KEY_SIZE];
+  // uint8_t test_key[LC_AESGCM_KEY_SIZE];
 
   // FIXME: make this not a set length
   char user_cert[2000];

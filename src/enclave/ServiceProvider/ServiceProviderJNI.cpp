@@ -18,7 +18,8 @@ void jni_throw(JNIEnv *env, const char *message) {
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
   // FIXME: Remove last jbyteArray parameter - it was for testing purposes
-  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share, jbyteArray test_key) {
+  // JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share, jbyteArray test_key) {
+  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share) {
   (void)env;
   (void)obj;
 
@@ -44,8 +45,8 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
 
     // THIS BLOCK FOR TESTING PURPOSES
-    jbyte *test_key_bytes = env->GetByteArrayElements(test_key, &if_copy);
-    service_provider.set_test_key(reinterpret_cast<uint8_t *>(test_key_bytes));
+    // jbyte *test_key_bytes = env->GetByteArrayElements(test_key, &if_copy);
+    // service_provider.set_test_key(reinterpret_cast<uint8_t *>(test_key_bytes));
 
     // set user certificate
     service_provider.set_user_cert(user_cert_str);

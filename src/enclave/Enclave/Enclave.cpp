@@ -304,10 +304,10 @@ void ecall_ra_proc_msg4(
 
     // This block for testing loading from files encrypted with different keys
     // FIXME: remove this block
-    uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];
-    size_t test_key_plaintext_size = sizeof(test_key_plaintext);
-    ret = g_crypto.decrypt(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, test_key_plaintext, &test_key_plaintext_size);
-    add_client_key(test_key_plaintext, test_key_plaintext_size, (char*) "user2");
+    // uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];
+    // size_t test_key_plaintext_size = sizeof(test_key_plaintext);
+    // ret = g_crypto.decrypt(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, test_key_plaintext, &test_key_plaintext_size);
+    // add_client_key(test_key_plaintext, test_key_plaintext_size, (char*) "user2");
     if (!ret) {
       ocall_throw("shared key decryption failed");
     }

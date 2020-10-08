@@ -368,16 +368,16 @@ std::unique_ptr<oe_msg2_t> ServiceProvider::process_msg1(oe_msg1_t *msg1,
  
   // Encrypt test key for testing purposes
   // FIXME: remove this block - it was for testing purposes
-  unsigned char encrypted_test_key[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  size_t encrypted_test_key_size = sizeof(encrypted_test_key);
-  ret = public_encrypt(pkey, this->test_key, LC_AESGCM_KEY_SIZE, encrypted_test_key, &encrypted_test_key_size);
-  if (ret == 0) {
-    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
-  }
-  else if (ret < 0) {
-    throw std::runtime_error(std::string("public_encrypt failed"));
-  }
-  memcpy_s(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_test_key, encrypted_test_key_size);
+  // unsigned char encrypted_test_key[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  // size_t encrypted_test_key_size = sizeof(encrypted_test_key);
+  // ret = public_encrypt(pkey, this->test_key, LC_AESGCM_KEY_SIZE, encrypted_test_key, &encrypted_test_key_size);
+  // if (ret == 0) {
+  //   throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  // }
+  // else if (ret < 0) {
+  //   throw std::runtime_error(std::string("public_encrypt failed"));
+  // }
+  // memcpy_s(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_test_key, encrypted_test_key_size);
   // FIXME: remove up to here
 
   // Prepare msg2

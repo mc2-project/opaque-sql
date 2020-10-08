@@ -6,8 +6,10 @@
 extern "C" {
 #endif
     // FIXME: remove last jbyteArray argument
-  JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
-    JNIEnv *, jobject, jbyteArray, jstring, jstring, jbyteArray, jbyteArray);
+  // JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
+  //   JNIEnv *, jobject, jbyteArray, jstring, jstring, jbyteArray, jbyteArray);
+    JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
+      JNIEnv *, jobject, jbyteArray, jstring, jstring, jbyteArray);
 
   JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_SPProcMsg0(
     JNIEnv *, jobject, jbyteArray);

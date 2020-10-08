@@ -34,7 +34,7 @@ object RA extends Logging {
 
     val keyShare: Array[Byte] = "Opaque key share".getBytes("UTF-8")
     val clientKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
-    val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
+    // val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
     Utils.addClientKey(clientKey)
 
     val GCM_KEY_LENGTH = 16
@@ -45,7 +45,8 @@ object RA extends Logging {
     // Retry attestation a few times in case of transient failures
     Utils.retry(3) {
       // FIXME: remove testKey argument
-      sp.Init(Utils.clientKey, intelCert, userCert, keyShare, testKey)
+      // sp.Init(Utils.clientKey, intelCert, userCert, keyShare, testKey)
+      sp.Init(Utils.clientKey, intelCert, userCert, keyShare)
 
       val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
         val (enclave, eid) = Utils.initEnclave()
