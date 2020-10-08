@@ -73,7 +73,7 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case p @ Sort(order, true, child) if isEncrypted(child) =>
       EncryptedSort(order, child.asInstanceOf[OpaqueOperator])
 
-    case p @ Join(left, right, joinType, condition) if isEncrypted(p) =>
+    case p @ Join(left, right, joinType, condition, _) if isEncrypted(p) =>
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
@@ -97,6 +97,12 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
+
+    case p @ LocalLimit(limitExpr, child) if isEncrypted(p) =>
+      EncryptedLocalLimit(limitExpr, child.asInstanceOf[OpaqueOperator])
+
+    case p @ GlobalLimit(limitExpr, child) if isEncrypted(p) =>
+      EncryptedGlobalLimit(limitExpr, child.asInstanceOf[OpaqueOperator])
 
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(

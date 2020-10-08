@@ -50,7 +50,16 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], nextPartitionFirstRow: Array[Byte],
     prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte]): Array[Byte]
 
+  @native def CountRowsPerPartition(
+    eid: Long, inputRows: Array[Byte]): Array[Byte]
+  @native def ComputeNumRowsPerPartition(
+    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
+  @native def LocalLimit(
+    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
+  @native def LimitReturnRows(
+    eid: Long, partitionID: Long, limits: Array[Byte], inputRows: Array[Byte]): Array[Byte]
+
   // Remote attestation, enclave side
-  @native def RemoteAttestation1(eid: Long): Array[Byte]
-  @native def RemoteAttestation3(eid: Long, attResultInput: Array[Byte]): Unit
+  @native def GenerateReport(eid: Long): Array[Byte]
+  @native def FinishAttestation(eid: Long, attResultInput: Array[Byte]): Unit
 }

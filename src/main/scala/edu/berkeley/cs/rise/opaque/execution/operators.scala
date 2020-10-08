@@ -73,7 +73,6 @@ case class EncryptedLocalTableScanExec(
         case (start, end) => unsafeRows.slice(start, end).toSeq
       }.toSeq
 
-    println("Operators.scala executeBlocked()")
     // Encrypt each local partition
     val encryptedPartitions: Seq[Block] =
       slicedPlaintextData.map(slice =>
@@ -90,7 +89,6 @@ case class EncryptExec(child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    println("EncryptExec woohoo")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
         rowIter.toSeq, output.map(_.dataType), useEnclave = true))
@@ -138,7 +136,6 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeCollect(): Array[InternalRow] = {
-    println("execute collect")
     executeBlocked().collect().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
@@ -151,7 +148,6 @@ trait OpaqueOperatorExec extends SparkPlan {
       return new Array[InternalRow](0)
     }
 
-    println("Callign execute blocked in execute take")
     val childRDD = executeBlocked()
 
     val buf = new ArrayBuffer[InternalRow]
@@ -173,7 +169,6 @@ trait OpaqueOperatorExec extends SparkPlan {
       }
       numPartsToTry = math.max(0, numPartsToTry)  // guard against negative num of partitions
 
-      println("executeTake")
       val p = partsScanned.until(math.min(partsScanned + numPartsToTry, totalParts).toInt)
       val sc = sqlContext.sparkContext
       val res = sc.runJob(childRDD,
@@ -333,8 +328,6 @@ case class EncryptedUnionExec(
     Utils.ensureCached(rightRDD)
     time("Force right child of EncryptedUnionExec") { rightRDD.count }
 
-    // RA.initRA(leftRDD)
-
     val num_left_partitions = leftRDD.getNumPartitions
     val num_right_partitions = rightRDD.getNumPartitions
     if (num_left_partitions != num_right_partitions) {
@@ -351,5 +344,57 @@ case class EncryptedUnionExec(
     Utils.ensureCached(unioned)
     time("EncryptedUnionExec") { unioned.count }
     unioned
+  }
+}
+
+case class EncryptedLocalLimitExec(
+    limit: Int,
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+  import Utils.time
+
+  override def output: Seq[Attribute] =
+    child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>
+
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.LocalLimit(eid, limit, block.bytes))
+      }
+    }
+  }
+}
+
+case class EncryptedGlobalLimitExec(
+    limit: Int,
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+  import Utils.time
+
+  override def output: Seq[Attribute] =
+    child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>
+
+      val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.CountRowsPerPartition(eid, block.bytes))
+      }.collect)
+
+      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
+        val (enclave, eid) = Utils.initEnclave()
+        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
+      }.collect.head
+
+      childRDD.zipWithIndex.map {
+        case (block, i) => {
+          val (enclave, eid) = Utils.initEnclave()
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
+        }
+      }
+    }
   }
 }

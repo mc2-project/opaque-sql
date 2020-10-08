@@ -1,6 +1,4 @@
-//#include <sgx_tcrypto.h>
 #include <sgxaes.h>
-//#include <sgx_key_exchange.h>
 
 #ifndef CRYPTO_H
 #define CRYPTO_H

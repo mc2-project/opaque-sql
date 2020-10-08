@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <ctime>
 #include <string>
-//#include <sgx_error.h>
 
 /*
  * printf:
@@ -41,7 +40,5 @@ int log_2(int value);
 int pow_2(int value);
 
 int secs_to_tm(long long t, struct tm *tm);
-
-//void sgx_check(sgx_status_t ret);
 
 #endif // UTIL_H

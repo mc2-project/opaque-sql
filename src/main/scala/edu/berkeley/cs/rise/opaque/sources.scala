@@ -65,7 +65,6 @@ class EncryptedSource
     mode: SaveMode,
     parameters: Map[String, String],
     data: DataFrame): BaseRelation = {
-    println("Ok i'm in createrelation")
     val blocks: RDD[Block] = data.queryExecution.executedPlan.asInstanceOf[OpaqueOperatorExec]
       .executeBlocked()
 

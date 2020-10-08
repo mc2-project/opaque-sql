@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+// Sample code reference: https://github.com/openenclave/openenclave/blob/master/samples/remote_attestation/common/crypto.cpp
+
 #include "mCrypto.h"
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -11,7 +13,6 @@
 
 Crypto::Crypto(): m_initialized(false)
 {
-    // mbedtls_net_init(NULL);
     m_initialized = init_mbedtls();
 }
 

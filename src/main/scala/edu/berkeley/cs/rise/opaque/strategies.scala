@@ -22,11 +22,13 @@ import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.IntegerLiteral
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.logical.Join
+import org.apache.spark.sql.catalyst.plans.logical.JoinHint
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
 
@@ -45,8 +47,8 @@ object OpaqueOperators extends Strategy {
       EncryptedSortExec(order, planLater(child)) :: Nil
 
     case EncryptedJoin(left, right, joinType, condition) =>
-      Join(left, right, joinType, condition) match {
-        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _) =>
+      Join(left, right, joinType, condition, JoinHint.NONE) match {
+        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _, _) =>
           val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
           val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
           val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
@@ -75,6 +77,12 @@ object OpaqueOperators extends Strategy {
 
     case EncryptedUnion(left, right) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
+
+    case EncryptedLocalLimit(IntegerLiteral(limit), child) =>
+      EncryptedLocalLimitExec(limit, planLater(child)) :: Nil
+
+    case EncryptedGlobalLimit(IntegerLiteral(limit), child) =>
+      EncryptedGlobalLimitExec(limit, planLater(child)) :: Nil
 
     case Encrypt(child) =>
       EncryptExec(planLater(child)) :: Nil

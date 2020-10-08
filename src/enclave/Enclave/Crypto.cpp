@@ -2,10 +2,10 @@
 #include "Random.h"
 
 #include <stdexcept>
-// #include <sgx_trts.h>
-// #include <sgx_tkey_exchange.h>
 
 #include "common.h"
+#include "Crypto.h"
+#include "Random.h"
 #include "util.h"
 #include <unordered_map>
 #include <vector>
@@ -14,6 +14,7 @@
 
 // Set this number before creating the enclave
 uint8_t num_clients = 1;
+
 
 /**
  * Symmetric key used to encrypt row data. This key is shared among the driver and all enclaves.
@@ -50,6 +51,7 @@ void initKeySchedule(char* username) {
 }
 
 void initKeySchedule() {
+  // Use shared key to init key schedule
   ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(shared_key), SGX_AESGCM_KEY_SIZE));
 }
 
@@ -65,6 +67,13 @@ void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* u
   initKeySchedule(username);
 
 }
+
+// void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
+//   if (shared_key_size <= 0) {
+//     throw std::runtime_error("Attempting to set a shared key with invalid key size.");
+//   }
+//   memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
+// }
 
 void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
     if (key_share_size <= 0 || key_share_size != SGX_AESGCM_KEY_SIZE) {
@@ -84,7 +93,6 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
         initKeySchedule();
     }
 }
-
 
 // void get_client_key(uint8_t* key, char *username) {
 //     LOG(DEBUG) << "Getting client key for user: " << username;
@@ -122,8 +130,6 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
   sgx_aes_gcm_128bit_tag_t *mac_ptr =
     (sgx_aes_gcm_128bit_tag_t *) (ciphertext + SGX_AESGCM_IV_SIZE + plaintext_length);
-  // oe_get_entropy(iv_ptr, SGX_AESGCM_IV_SIZE);
-  // sgx_read_rand(iv_ptr, SGX_AESGCM_IV_SIZE);
   mbedtls_read_rand(reinterpret_cast<unsigned char*>(iv_ptr), SGX_AESGCM_IV_SIZE);
 
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
@@ -133,7 +139,10 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
 }
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
-  // std::cout << "C++ decrypting inside enclave\n";
+  if (!ks) {
+    throw std::runtime_error(
+      "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
+  }
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *) ciphertext;
