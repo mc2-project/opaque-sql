@@ -19,6 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
+import java.nio.file.{Files, Paths}
 
 import edu.berkeley.cs.rise.opaque.execution.SP
 
@@ -34,9 +35,16 @@ object RA extends Logging {
     // FIXME: hardcoded path
     val userCert = scala.io.Source.fromFile("/home/chester/opaque/user1.crt").mkString
 
-    val keyShare: Array[Byte] = "Opaque key share".getBytes("UTF-8")
-    val clientKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+    val keySharePath = sys.env("OPAQUE_KEY_SHARE")
+    val clientKeyPath = sys.env("OPAQUE_CLIENT_KEY")
+    
+    val keyShare: Array[Byte] = Files.readAllBytes(Paths.get(keySharePath))
+    val clientKey: Array[Byte] = Files.readAllBytes(Paths.get(clientKeyPath))
+
+    // val keyShare: Array[Byte] = "Opaque key share".getBytes("UTF-8")
+    // val clientKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
     // val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
+    //
     Utils.addClientKey(clientKey)
 
     val sp = new SP()
