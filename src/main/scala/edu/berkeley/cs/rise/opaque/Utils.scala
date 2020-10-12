@@ -938,6 +938,16 @@ object Utils extends Logging {
             tuix.If.createIf(
               builder, predOffset, trueOffset, falseOffset))
 
+        case (CaseWhen(branches, elseValue), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.CaseWhen,
+            tuix.CaseWhen.createCaseWhen(
+              builder,
+              tuix.CaseWhen.createChildrenVector(
+                builder,
+                childrenOffsets.toArray)))
+
         // Null expressions
         case (IsNull(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
