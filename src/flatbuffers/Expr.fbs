@@ -33,6 +33,7 @@ union ExprUnion {
     Exp,
     ClosestPoint,
     CreateArray,
+    Upper
 }
 
 table Expr {
@@ -175,4 +176,8 @@ table DotProduct {
 table ClosestPoint {
     left:Expr;
     right:Expr;
+}
+
+table Upper {
+    child:Expr;
 }

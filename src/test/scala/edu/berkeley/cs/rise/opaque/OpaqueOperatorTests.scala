@@ -202,6 +202,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"x" > lit(10)).collect
   }
 
+  testAgainstSpark("filter with NULLs") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.filter($"x" > lit(10)).collect.toSet
+  }
+
   testAgainstSpark("select") { securityLevel =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toFloat)
     val df = makeDF(data, securityLevel, "str", "x")
@@ -281,6 +292,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = Random.shuffle((0 until 256).map(x => (x / 16, x)).toSeq)
     val df = makeDF(data, securityLevel, "x", "y")
     df.sort($"x", $"y").collect
+  }
+
+  testAgainstSpark("sort with null values") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.sort($"x").collect
   }
 
   testAgainstSpark("join") { securityLevel =>
@@ -387,6 +409,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield(i.toString, abc(i))
     val df = makeDF(data, securityLevel, "word", "abc")
     df.filter($"word".contains(lit("1"))).collect
+  }
+
+  testAgainstSpark("between") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, i)
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"count".between(50, 150)).collect
   }
 
   testAgainstSpark("year") { securityLevel =>
@@ -608,6 +636,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(dot($"v1", $"v2")).collect
   }
 
+  testAgainstSpark("upper") { securityLevel =>
+    val data = Seq(("lower", "upper"), ("lower2", "upper2"))
+    val schema = StructType(Seq(
+      StructField("v1", StringType),
+      StructField("v2", StringType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(upper($"v1")).collect
+  }
+
+  testAgainstSpark("upper with null") { securityLevel =>
+    val data = Seq(("lower", null.asInstanceOf[String]))
+
+    val df = makeDF(data, securityLevel, "v1", "v2")
+
+    df.select(upper($"v2")).collect
+  }
+
   testAgainstSpark("vector sum") { securityLevel =>
     val data: Seq[(Array[Double], Double)] = Seq(
       (Array[Double](1.0, 2.0, 3.0), 4.0),
@@ -639,6 +689,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
         schema))
 
     df.select(array($"x1", $"x2").as("x")).collect
+  }
+
+  testAgainstSpark("limit with fewer returned values") { securityLevel =>
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
+    val schema = StructType(Seq(
+      StructField("id", IntegerType),
+      StructField("word", StringType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    df.sort($"id").limit(5).collect
+  }
+
+  testAgainstSpark("limit with more returned values") { securityLevel =>
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
+    val schema = StructType(Seq(
+      StructField("id", IntegerType),
+      StructField("word", StringType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    df.sort($"id").limit(200).collect
   }
 
   testAgainstSpark("least squares") { securityLevel =>
