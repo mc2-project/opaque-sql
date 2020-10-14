@@ -253,12 +253,9 @@ case class EncryptedAggregateExec(
       }.collect.unzip3
 
       // Send first row to previous partition and last group to next partition
-      var shiftedFirstRows = Array[Block]()
-      var shiftedLastGroups = Array[Block]()
-      var shiftedLastRows = Array[Block]()
-      shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
-      shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
-      shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
+      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
+      val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
+      val shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
 
       val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
@@ -354,54 +351,54 @@ case class EncryptedUnionExec(
   }
 }
 
-case class EncryptedLocalLimitExec(	
-    limit: Int,	
-    child: SparkPlan)	
-  extends UnaryExecNode with OpaqueOperatorExec {	
-  import Utils.time	
+case class EncryptedLocalLimitExec(
+    limit: Int,
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+  import Utils.time
 
-  override def output: Seq[Attribute] =	
-    child.output	
+  override def output: Seq[Attribute] =
+    child.output
 
-  override def executeBlocked(): RDD[Block] = {	
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>	
+  override def executeBlocked(): RDD[Block] = {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>
 
-      childRDD.map { block =>	
-        val (enclave, eid) = Utils.initEnclave()	
-        Block(enclave.LocalLimit(eid, limit, block.bytes))	
-      }	
-    }	
-  }	
-}	
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.LocalLimit(eid, limit, block.bytes))
+      }
+    }
+  }
+}
 
-case class EncryptedGlobalLimitExec(	
-    limit: Int,	
-    child: SparkPlan)	
-  extends UnaryExecNode with OpaqueOperatorExec {	
-  import Utils.time	
+case class EncryptedGlobalLimitExec(
+    limit: Int,
+    child: SparkPlan)
+  extends UnaryExecNode with OpaqueOperatorExec {
+  import Utils.time
 
-  override def output: Seq[Attribute] =	
-    child.output	
+  override def output: Seq[Attribute] =
+    child.output
 
-  override def executeBlocked(): RDD[Block] = {	
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>	
+  override def executeBlocked(): RDD[Block] = {
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>
 
-      val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>	
-        val (enclave, eid) = Utils.initEnclave()	
-        Block(enclave.CountRowsPerPartition(eid, block.bytes))	
-      }.collect)	
+      val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.CountRowsPerPartition(eid, block.bytes))
+      }.collect)
 
-      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>	
-        val (enclave, eid) = Utils.initEnclave()	
-        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)	
-      }.collect.head	
+      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
+        val (enclave, eid) = Utils.initEnclave()
+        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
+      }.collect.head
 
-      childRDD.zipWithIndex.map {	
-        case (block, i) => {	
-          val (enclave, eid) = Utils.initEnclave()	
-          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))	
-        }	
-      }	
-    }	
-  }	
+      childRDD.zipWithIndex.map {
+        case (block, i) => {
+          val (enclave, eid) = Utils.initEnclave()
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
+        }
+      }
+    }
+  }
 }
