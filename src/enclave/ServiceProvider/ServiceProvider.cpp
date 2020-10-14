@@ -367,7 +367,7 @@ std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_
 
   // Prepare shared_key_msg
   memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
-  *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
+  // *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
 
   // Copy over key share ciphertext
   memcpy_s(shared_key_msg->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_key_share, encrypted_key_share_size);

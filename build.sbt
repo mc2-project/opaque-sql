@@ -125,6 +125,11 @@ def sgxGdbCommand = Command.command("sgx-gdb") { state =>
 
 commands += sgxGdbCommand
 
+// Task to encrypt a plaintext serialized dataframe
+lazy val encrypt  = InputKey[Unit]("encrypt", "Encrypt a plaintext serialized dataframe.")
+
+fullRunInputTask(encrypt, Compile, "crypto.Encrypt")
+
 initialCommands in console :=
   """
     |import org.apache.spark.SparkContext
