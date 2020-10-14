@@ -9,12 +9,14 @@ enclave {
     public void ecall_project(
       [in, count=project_list_length] uint8_t *project_list, size_t project_list_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_filter(
       [in, count=condition_length] uint8_t *condition, size_t condition_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_encrypt(
       [user_check] uint8_t *plaintext, uint32_t length,
@@ -22,13 +24,15 @@ enclave {
 
     public void ecall_sample(
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_find_range_bounds(
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
       uint32_t num_partitions,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_partition_for_sort(
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
@@ -36,30 +40,35 @@ enclave {
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [user_check] uint8_t *boundary_rows, size_t boundary_rows_length,
       [out, count=num_partitions] uint8_t **output_partitions,
-      [out, count=num_partitions] size_t *output_partition_lengths);
+      [out, count=num_partitions] size_t *output_partition_lengths,
+      int pid);
 
     public void ecall_external_sort(
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_scan_collect_last_primary(
       [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_non_oblivious_sort_merge_join(
       [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [user_check] uint8_t *join_row, size_t join_row_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_non_oblivious_aggregate_step1(
       [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **first_row, [out] size_t *first_row_length,
       [out] uint8_t **last_group, [out] size_t *last_group_length,
-      [out] uint8_t **last_row, [out] size_t *last_row_length);
+      [out] uint8_t **last_row, [out] size_t *last_row_length,
+      int pid);
 
     public void ecall_non_oblivious_aggregate_step2(
       [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
@@ -67,27 +76,8 @@ enclave {
       [user_check] uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
       [user_check] uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
       [user_check] uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
-
-    public void ecall_count_rows_per_partition(
-      [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
-
-    public void ecall_compute_num_rows_per_partition(
-      uint32_t limit,
-      [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
-
-    public void ecall_local_limit(
-      uint32_t limit,
-      [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
-
-    public void ecall_limit_return_rows(
-      uint64_t partition_id,
-      [user_check] uint8_t *limit_rows, size_t limit_rows_length,
-      [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      int pid);
 
     public void ecall_generate_report(
       [out] uint8_t** msg1,
