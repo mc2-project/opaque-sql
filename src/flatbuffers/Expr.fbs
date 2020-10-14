@@ -24,6 +24,7 @@ union ExprUnion {
     Add,
     Subtract,
     If,
+    CaseWhen,
     Cast,
     Year,
     VectorAdd,
@@ -32,6 +33,7 @@ union ExprUnion {
     Exp,
     ClosestPoint,
     CreateArray,
+    Upper
 }
 
 table Expr {
@@ -136,6 +138,10 @@ table If {
     false_value:Expr;
 }
 
+table CaseWhen {
+    children:[Expr];
+}
+
 // Date expressions
 table Year {
     child:Expr;
@@ -170,4 +176,8 @@ table DotProduct {
 table ClosestPoint {
     left:Expr;
     right:Expr;
+}
+
+table Upper {
+    child:Expr;
 }

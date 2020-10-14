@@ -722,6 +722,58 @@ private:
       }
     }
 
+    case tuix::ExprUnion_Upper:
+    {
+      auto n = static_cast<const tuix::Upper *>(expr->expr());
+      auto child_offset = eval_helper(row, n->child());
+      const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, child_offset);
+
+      if (str->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Upper requires str String, not ")
+          + std::string("str ")
+          + std::string(tuix::EnumNameFieldUnion(str->value_type())));
+      }
+
+      // Obtain the input as a string
+      bool result_is_null = str->is_null();
+
+      if (!result_is_null) {
+
+        auto str_field = static_cast<const tuix::StringField *>(str->value());
+
+        std::vector<uint8_t> str_vec(
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(0)),
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(str_field->length())));
+
+        std::string lower(str_vec.begin(), str_vec.end());
+
+        // Turn lower into uppercase and revert to vector
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::toupper);
+        std::vector<uint8_t> result(lower.begin(), lower.end());
+
+        // Writing the result
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, str_field->length()).Union(),
+          result_is_null);
+      } else {
+
+        // Creation is failing with null pointer. Trivially create empty string
+        std::string empty("\0");
+        std::vector<uint8_t> result(empty.begin(), empty.end());
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, 0).Union(),
+          result_is_null);
+      }
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {
@@ -762,6 +814,65 @@ private:
       }
     }
 
+    case tuix::ExprUnion_CaseWhen:
+    {
+      auto e = expr->expr_as_CaseWhen();
+      size_t num_children = e->children()->size();
+
+      // Evaluate to the first value whose predicate is true.
+      // Short circuit on the earliest branch possible.
+      tuix::FieldUnion result_type = tuix::FieldUnion_NONE;
+      for (size_t i = 0; i < num_children - 1; i += 2) {
+        auto predicate_offset = eval_helper(row, (*e->children())[i]);
+        auto true_value_offset = eval_helper(row, (*e->children())[i+1]);
+        const tuix::Field *predicate =
+          flatbuffers::GetTemporaryPointer(builder, predicate_offset);
+        const tuix::Field *true_value =
+          flatbuffers::GetTemporaryPointer(builder, true_value_offset);
+        if (result_type == tuix::FieldUnion_NONE) {
+          result_type = true_value->value_type();
+        }
+        if (predicate->value_type() != tuix::FieldUnion_BooleanField) {
+          throw std::runtime_error(
+            std::string("tuix::CaseWhen requires predicate to return Boolean, not ")
+            + std::string(tuix::EnumNameFieldUnion(predicate->value_type())));
+        }
+        if (true_value->value_type() != result_type) {
+          throw std::runtime_error(
+            std::string("tuix::CaseWhen requires a uniform data type, but ")
+            + std::string(tuix::EnumNameFieldUnion(true_value->value_type()))
+            + std::string(" != ")
+            + std::string(tuix::EnumNameFieldUnion(result_type)));
+        }
+        if (!predicate->is_null()) {
+          bool pred_val = static_cast<const tuix::BooleanField *>(predicate->value())->value();
+          if (pred_val) {
+            return GetOffset<tuix::Field>(builder, true_value);
+          }
+        }
+      }
+
+      // None of the predicates were true.
+      // Return the else value if it exists, or a null value if it doesn't.
+      if (num_children % 2 == 1) {
+        auto else_value_offset = eval_helper(row, (*e->children())[num_children-1]);
+        const tuix::Field *else_value = flatbuffers::GetTemporaryPointer(builder, else_value_offset);
+        return GetOffset<tuix::Field>(builder, else_value);
+      }
+      // Null strings require special handling...
+      if (result_type == tuix::FieldUnion_StringField) {
+        std::string empty("\0");
+        std::vector<uint8_t> result(empty.begin(), empty.end());
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, 0).Union(),
+          true);
+      }
+      return tuix::CreateField(builder, result_type,
+          tuix::CreateNullField(builder).Union(), true);
+    }
+
     // Null expressions
     case tuix::ExprUnion_IsNull:
     {
@@ -776,6 +887,7 @@ private:
         tuix::CreateBooleanField(builder, result).Union(),
         false);
     }
+
     case tuix::ExprUnion_Year:
     {
       auto e = static_cast<const tuix::Year *>(expr->expr());
