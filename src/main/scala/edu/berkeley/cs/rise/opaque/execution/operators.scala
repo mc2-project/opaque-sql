@@ -138,21 +138,8 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeCollect(): Array[InternalRow] = {
-
-    val collectedRDD = executeBlocked().collect()
-    collectedRDD.map { block =>
-        Utils.addBlockForVerification(block)
-    }
-
-    val postVerificationPasses = Utils.verifyJob()
-    JobVerificationEngine.resetForNextJob()
-    if (postVerificationPasses) {
-      collectedRDD.flatMap { block =>
-        Utils.decryptBlockFlatbuffers(block)
-      }
-    } else {
-      throw new Exception("Post Verification Failed")
-    }
+    executeBlocked().collect().flatMap { block =>	
+      Utils.decryptBlockFlatbuffers(block)
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
@@ -214,7 +201,6 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
       childRDD => 
-        JobVerificationEngine.addExpectedOperator("EncryptedProjectExec")
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Project(eid, projectListSer, block.bytes, TaskContext.getPartitionId))
@@ -233,7 +219,6 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
       childRDD => 
-        JobVerificationEngine.addExpectedOperator("EncryptedFilterExec")
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.Filter(eid, conditionSer, block.bytes, TaskContext.getPartitionId))
@@ -260,7 +245,6 @@ case class EncryptedAggregateExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedAggregateExec") { childRDD =>
 
-      JobVerificationEngine.addExpectedOperator("EncryptedAggregateExec")
       val (firstRows, lastGroups, lastRows) = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         val (firstRow, lastGroup, lastRow) = enclave.NonObliviousAggregateStep1(
@@ -272,20 +256,9 @@ case class EncryptedAggregateExec(
       var shiftedFirstRows = Array[Block]()
       var shiftedLastGroups = Array[Block]()
       var shiftedLastRows = Array[Block]()
-      if (childRDD.getNumPartitions == 1) {
-        val firstRowDrop = firstRows(0)
-        shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock(firstRowDrop)
-
-        val lastGroupDrop = lastGroups.last
-        shiftedLastGroups = Utils.emptyBlock(lastGroupDrop) +: lastGroups.dropRight(1)
-
-        val lastRowDrop = lastRows.last
-        shiftedLastRows = Utils.emptyBlock(lastRowDrop) +: lastRows.dropRight(1)
-      } else {
-        shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
-        shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
-        shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
-      }
+      shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
+      shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
+      shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
 
       val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
@@ -324,19 +297,11 @@ case class EncryptedSortMergeJoinExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
-      JobVerificationEngine.addExpectedOperator("EncryptedSortMergeJoinExec")
       val lastPrimaryRows = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes, TaskContext.getPartitionId))
       }.collect
-
-      var shifted = Array[Block]()
-      if (childRDD.getNumPartitions == 1) {
-        val lastLastPrimaryRow = lastPrimaryRows.last
-        shifted = Utils.emptyBlock(lastLastPrimaryRow) +: lastPrimaryRows.dropRight(1)
-      } else {
-        shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
-      }
+      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
       assert(shifted.size == childRDD.partitions.length)
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)
@@ -387,4 +352,56 @@ case class EncryptedUnionExec(
     time("EncryptedUnionExec") { unioned.count }
     unioned
   }
+}
+
+case class EncryptedLocalLimitExec(	
+    limit: Int,	
+    child: SparkPlan)	
+  extends UnaryExecNode with OpaqueOperatorExec {	
+  import Utils.time	
+
+  override def output: Seq[Attribute] =	
+    child.output	
+
+  override def executeBlocked(): RDD[Block] = {	
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>	
+
+      childRDD.map { block =>	
+        val (enclave, eid) = Utils.initEnclave()	
+        Block(enclave.LocalLimit(eid, limit, block.bytes))	
+      }	
+    }	
+  }	
+}	
+
+case class EncryptedGlobalLimitExec(	
+    limit: Int,	
+    child: SparkPlan)	
+  extends UnaryExecNode with OpaqueOperatorExec {	
+  import Utils.time	
+
+  override def output: Seq[Attribute] =	
+    child.output	
+
+  override def executeBlocked(): RDD[Block] = {	
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>	
+
+      val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>	
+        val (enclave, eid) = Utils.initEnclave()	
+        Block(enclave.CountRowsPerPartition(eid, block.bytes))	
+      }.collect)	
+
+      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>	
+        val (enclave, eid) = Utils.initEnclave()	
+        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)	
+      }.collect.head	
+
+      childRDD.zipWithIndex.map {	
+        case (block, i) => {	
+          val (enclave, eid) = Utils.initEnclave()	
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))	
+        }	
+      }	
+    }	
+  }	
 }
