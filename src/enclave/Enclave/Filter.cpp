@@ -33,5 +33,5 @@ void filter(uint8_t *condition, size_t condition_length,
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("filter"));
 }

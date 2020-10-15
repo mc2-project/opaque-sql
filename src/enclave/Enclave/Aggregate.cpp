@@ -24,10 +24,12 @@ void non_oblivious_aggregate_step1(
     cur.set(r.next());
 
     if (prev.get() == nullptr) {
+      EnclaveContext::getInstance().set_curr_row_writer(std::string("first_row"));
       first_row_writer.append(cur.get());
     }
 
     if (!r.has_next()) {
+      EnclaveContext::getInstance().set_curr_row_writer(std::string("last_row"));
       last_row_writer.append(cur.get());
     }
 
@@ -36,11 +38,20 @@ void non_oblivious_aggregate_step1(
     }
     agg_op_eval.aggregate(cur.get());
   }
+
+  EnclaveContext::getInstance().set_curr_row_writer(std::string("last_group"));
   last_group_writer.append(agg_op_eval.get_partial_agg());
 
-  first_row_writer.output_buffer(first_row, first_row_length);
-  last_group_writer.output_buffer(last_group, last_group_length);
-  last_row_writer.output_buffer(last_row, last_row_length);
+  std::string ecall = std::string("nonObliviousAggregateStep1");
+
+  EnclaveContext::getInstance().set_curr_row_writer(std::string("first_row"));
+  first_row_writer.output_buffer(first_row, first_row_length, ecall);
+
+  EnclaveContext::getInstance().set_curr_row_writer(std::string("last_group"));
+  last_group_writer.output_buffer(last_group, last_group_length, ecall);
+
+  EnclaveContext::getInstance().set_curr_row_writer(std::string("last_row"));
+  last_row_writer.output_buffer(last_row, last_row_length, ecall);
 }
 
 void non_oblivious_aggregate_step2(
@@ -116,5 +127,5 @@ void non_oblivious_aggregate_step2(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousAggregateStep2"));
 }
