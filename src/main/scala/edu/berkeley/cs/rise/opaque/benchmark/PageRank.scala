@@ -42,7 +42,7 @@ object PageRank {
             .filter($"isVertex" === lit(0))
             .select($"src", $"dst", lit(1.0f).as("weight"))
             .repartition(numPartitions)))
-    Utils.time("load edges") { Utils.force(edges) }
+    // Utils.time("load edges") { Utils.force(edges) }
     val vertices =
       Utils.ensureCached(
         securityLevel.applyTo(
@@ -50,7 +50,7 @@ object PageRank {
             .filter($"isVertex" === lit(1))
             .select($"src".as("id"), lit(1.0f).as("rank"))
             .repartition(numPartitions)))
-    Utils.time("load vertices") { Utils.force(vertices) }
+    // Utils.time("load vertices") { Utils.force(vertices) }
     val newV =
       Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
@@ -62,7 +62,7 @@ object PageRank {
             .select($"dst", ($"rank" * $"weight").as("weightedRank"))
             .groupBy("dst").agg(sum("weightedRank").as("totalIncomingRank"))
             .select($"dst", (lit(0.15) + lit(0.85) * $"totalIncomingRank").as("rank"))
-        Utils.force(result)
+        // Utils.force(result)
         result
       }
     newV
