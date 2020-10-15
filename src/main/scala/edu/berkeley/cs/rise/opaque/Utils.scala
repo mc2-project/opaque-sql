@@ -109,6 +109,7 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+// import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -532,8 +533,8 @@ object Utils extends Logging {
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
       case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
-        var keys = new ArrayBuilder.ofInt()
-        var values = new ArrayBuilder.ofInt()
+        val keys = new ArrayBuilder.ofInt()
+        val values = new ArrayBuilder.ofInt()
         for (i <- 0 until x.numElements) {
           keys += flatbuffersCreateField(
             builder, x.keyArray.get(i, keyType), keyType, isNull)
@@ -745,6 +746,7 @@ object Utils extends Logging {
 
     // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
       val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
@@ -771,6 +773,17 @@ object Utils extends Logging {
           })
       }
     }).flatten
+  }
+
+  def addBlockForVerification(block: Block): Unit = {
+    val buf = ByteBuffer.wrap(block.bytes)
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    val blockLog = encryptedBlocks.log
+    JobVerificationEngine.addLogEntryChain(blockLog)
+  }
+
+  def verifyJob(): Boolean = {
+    return JobVerificationEngine.verify()
   }
 
   def treeFold[BaseType <: TreeNode[BaseType], B](
@@ -1296,8 +1309,6 @@ object Utils extends Logging {
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
 
-        val sumDataType = vs.dataType
-
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
@@ -1317,6 +1328,8 @@ object Utils extends Logging {
   }
 
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
+    // Input: sequence of EncryptedBlocks
+    // This gets a list of all EncryptedBlock
     val allBlocks = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
@@ -1333,7 +1346,7 @@ object Utils extends Logging {
             builder,
             encryptedBlock.numRows,
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
-        }.toArray)))
+        }.toArray))) 
     Block(builder.sizedByteArray())
   }
 
@@ -1341,7 +1354,13 @@ object Utils extends Logging {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
-        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty)))
+        builder, 
+        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+        tuix.LogEntryChain.createLogEntryChain(builder,
+          tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
+          tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty),
+          tuix.LogEntryChain.createNumPastEntriesVector(builder, Array.empty)),
+        tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 }

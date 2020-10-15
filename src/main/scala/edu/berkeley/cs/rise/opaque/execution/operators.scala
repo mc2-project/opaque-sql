@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque.execution
 import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
@@ -27,6 +28,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.TaskContext
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -136,8 +138,20 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeCollect(): Array[InternalRow] = {
-    executeBlocked().collect().flatMap { block =>
-      Utils.decryptBlockFlatbuffers(block)
+
+    val collectedRDD = executeBlocked().collect()
+    collectedRDD.map { block =>
+        Utils.addBlockForVerification(block)
+    }
+
+    val postVerificationPasses = Utils.verifyJob()
+    JobVerificationEngine.resetForNextJob()
+    if (postVerificationPasses) {
+      collectedRDD.flatMap { block =>
+        Utils.decryptBlockFlatbuffers(block)
+      }
+    } else {
+      throw new Exception("Post Verification Failed")
     }
   }
 
@@ -172,6 +186,8 @@ trait OpaqueOperatorExec extends SparkPlan {
       val res = sc.runJob(childRDD,
         (it: Iterator[Block]) => if (it.hasNext) Some(it.next()) else None, p)
 
+      // TODO: take currently doesn't do post verification
+      
       res.foreach {
         case Some(block) =>
           buf ++= Utils.decryptBlockFlatbuffers(block)
@@ -197,9 +213,11 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
   override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
-      childRDD => childRDD.map { block =>
+      childRDD => 
+        JobVerificationEngine.addExpectedOperator("EncryptedProjectExec")
+        childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.Project(eid, projectListSer, block.bytes))
+        Block(enclave.Project(eid, projectListSer, block.bytes, TaskContext.getPartitionId))
       }
     }
   }
@@ -214,9 +232,11 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   override def executeBlocked(): RDD[Block] = {
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
-      childRDD => childRDD.map { block =>
+      childRDD => 
+        JobVerificationEngine.addExpectedOperator("EncryptedFilterExec")
+        childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.Filter(eid, conditionSer, block.bytes))
+        Block(enclave.Filter(eid, conditionSer, block.bytes, TaskContext.getPartitionId))
       }
     }
   }
@@ -240,10 +260,11 @@ case class EncryptedAggregateExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedAggregateExec") { childRDD =>
 
+      JobVerificationEngine.addExpectedOperator("EncryptedAggregateExec")
       val (firstRows, lastGroups, lastRows) = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         val (firstRow, lastGroup, lastRow) = enclave.NonObliviousAggregateStep1(
-          eid, aggExprSer, block.bytes)
+          eid, aggExprSer, block.bytes, TaskContext.getPartitionId)
         (Block(firstRow), Block(lastGroup), Block(lastRow))
       }.collect.unzip3
 
@@ -251,6 +272,7 @@ case class EncryptedAggregateExec(
       val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
       val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
       val shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
+
       val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
       assert(shifted.size == childRDD.partitions.length)
       val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
@@ -263,7 +285,7 @@ case class EncryptedAggregateExec(
             Iterator(Block(enclave.NonObliviousAggregateStep2(
               eid, aggExprSer, block.bytes,
               nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes,
-              prevPartitionLastRow.bytes)))
+              prevPartitionLastRow.bytes, TaskContext.getPartitionId)))
         }
       }
     }
@@ -288,11 +310,19 @@ case class EncryptedSortMergeJoinExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
+      JobVerificationEngine.addExpectedOperator("EncryptedSortMergeJoinExec")
       val lastPrimaryRows = childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
+        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes, TaskContext.getPartitionId))
       }.collect
-      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+
+      var shifted = Array[Block]()
+      if (childRDD.getNumPartitions == 1) {
+        val lastLastPrimaryRow = lastPrimaryRows.last
+        shifted = Utils.emptyBlock(lastLastPrimaryRow) +: lastPrimaryRows.dropRight(1)
+      } else {
+        shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+      }
       assert(shifted.size == childRDD.partitions.length)
       val processedJoinRowsRDD =
         sparkContext.parallelize(shifted, childRDD.partitions.length)
@@ -302,7 +332,7 @@ case class EncryptedSortMergeJoinExec(
           case (Seq(block), Seq(joinRow)) =>
             val (enclave, eid) = Utils.initEnclave()
             Iterator(Block(enclave.NonObliviousSortMergeJoin(
-              eid, joinExprSer, block.bytes, joinRow.bytes)))
+              eid, joinExprSer, block.bytes, joinRow.bytes, TaskContext.getPartitionId)))
         }
       }
     }
