@@ -37,14 +37,3 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, uint8_t* global_
   mcrypto.hmac(to_mac, num_bytes_to_mac, ret_hmac);
 
 }
-
-int get_past_ecalls_lengths(std::vector<LogEntry> past_log_entries, int first_le_index, 
-    int last_le_index) {
-  int past_ecalls_lengths = 0;
-  for (int i = first_le_index; i < last_le_index; i++) {
-    auto past_log_entry = past_log_entries[i];
-    std::string ecall = past_log_entry.ecall;
-    past_ecalls_lengths += ecall.length();
-  }
-  return past_ecalls_lengths;
-}
