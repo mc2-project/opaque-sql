@@ -518,7 +518,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
         .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
         .schema(df.schema)
         .load(path.toString)
-      assert(df.collect.toSet === df2.collect.toSet)sr
+      assert(df.collect.toSet === df2.collect.toSet)
       assert(df.groupBy("word").agg(sum("count")).collect.toSet
         === df2.groupBy("word").agg(sum("count")).collect.toSet)
     } finally {

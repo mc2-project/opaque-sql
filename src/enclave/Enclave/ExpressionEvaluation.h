@@ -808,15 +808,6 @@ private:
       uint32_t n = left_field->length();
       uint32_t m = right_field->length();
 
-      std::vector<uint8_t> s(
-        flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), 0),
-        flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), n)
-      );
-      std::vector<uint8_t> pattern(
-        flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), 0),
-        flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), m)
-      );
-
       // DP algorithm for wildcard matching taken from:
       // https://www.geeksforgeeks.org/wildcard-pattern-matching/
       bool result;
@@ -826,15 +817,16 @@ private:
       memset(lookup, false, sizeof(lookup));
       lookup[0][0] = true;
       for (uint32_t j = 1; j <= m; j++) {
-        if (pattern[j - 1] == '%') {
+        if (right_field->value()->Get(j - 1) == '%') {
           lookup[0][j] = lookup[0][j - 1];
         }
       }
       for (uint32_t i = 1; i <= n; i++) {
         for (uint32_t j = 1; j <= m; j++) {
-          if (pattern[j - 1] == '%') {
+          if (right_field->value()->Get(j - 1) == '%') {
             lookup[i][j] = lookup[i][j - 1] || lookup[i - 1][j];
-          } else if (pattern[j - 1] == '_' || s[i - 1] == pattern[j - 1]) {
+          } else if (right_field->value()->Get(j - 1) == '_' || 
+                     left_field->value()->Get(i - 1) == right_field->value()->Get(j - 1)) {
             lookup[i][j] = lookup[i - 1][j - 1];
           } else {
             lookup[i][j] = false;
