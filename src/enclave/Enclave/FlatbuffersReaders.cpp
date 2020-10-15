@@ -1,10 +1,14 @@
 #include "FlatbuffersReaders.h"
+#include "../Common/mCrypto.h"
+#include "../Common/common.h"
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
   uint32_t num_rows = encrypted_block->num_rows();
 
+  // Decrypt encrypted block here
   const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
   rows_buf.reset(new uint8_t[rows_len]);
+  // Decrypt one encrypted block at a time
   decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
           rows_buf.get());
   BufferRefView<tuix::Rows> buf(rows_buf.get(), rows_len);
@@ -28,8 +32,8 @@ RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) {
   reset(buf);
 }
 
-RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks) {
-  reset(encrypted_blocks);
+RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init) {
+  reset(encrypted_blocks, log_init);
 }
 
 void RowReader::reset(BufferRefView<tuix::EncryptedBlocks> buf) {
@@ -37,8 +41,12 @@ void RowReader::reset(BufferRefView<tuix::EncryptedBlocks> buf) {
   reset(buf.root());
 }
 
-void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
+void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init) {
   this->encrypted_blocks = encrypted_blocks;
+  if (log_init) {
+    init_log(encrypted_blocks);
+  }
+
   block_idx = 0;
   init_block_reader();
 }
@@ -73,16 +81,16 @@ void RowReader::init_block_reader() {
   }
 }
 
-SortedRunsReader::SortedRunsReader(BufferRefView<tuix::SortedRuns> buf) {
-  reset(buf);
+SortedRunsReader::SortedRunsReader(BufferRefView<tuix::SortedRuns> buf, bool log_init) {
+  reset(buf, log_init);
 }
 
-void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf) {
+void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf, bool log_init) {
   buf.verify();
   sorted_runs = buf.root();
   run_readers.clear();
   for (auto it = sorted_runs->runs()->begin(); it != sorted_runs->runs()->end(); ++it) {
-    run_readers.push_back(RowReader(*it));
+    run_readers.push_back(RowReader(*it, log_init));
   }
 }
 
