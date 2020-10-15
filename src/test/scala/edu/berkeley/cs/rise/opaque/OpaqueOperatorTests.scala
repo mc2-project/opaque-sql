@@ -471,6 +471,42 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(when(df("word") === "foo", 3).when(df("word") === "baz", 2)).collect
   }
 
+  testAgainstSpark("LIKE - Contains") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%a%")).collect
+  } 
+
+  testAgainstSpark("LIKE - StartsWith") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("ba%")).collect
+  } 
+
+  testAgainstSpark("LIKE - EndsWith") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%ar")).collect
+  }
+
+  testAgainstSpark("LIKE - Empty Pattern") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("")).collect
+  }
+
+  testAgainstSpark("LIKE - Match All") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%")).collect
+  }
+
+  testAgainstSpark("LIKE - Single Wildcard") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("ba_")).collect
+  }
+
   testOpaqueOnly("save and load with explicit schema") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val df = makeDF(data, securityLevel, "id", "word", "count")
@@ -482,7 +518,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
         .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
         .schema(df.schema)
         .load(path.toString)
-      assert(df.collect.toSet === df2.collect.toSet)
+      assert(df.collect.toSet === df2.collect.toSet)sr
       assert(df.groupBy("word").agg(sum("count")).collect.toSet
         === df2.groupBy("word").agg(sum("count")).collect.toSet)
     } finally {

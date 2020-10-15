@@ -774,6 +774,167 @@ private:
       }
     }
 
+    case tuix::ExprUnion_Like:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      // Copy strings into char buffer
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t n = left_field->length();
+      uint32_t m = right_field->length();
+
+      std::vector<uint8_t> s(
+        flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), 0),
+        flatbuffers::VectorIterator<uint8_t, uint8_t>(left_field->value()->Data(), n)
+      );
+      std::vector<uint8_t> pattern(
+        flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), 0),
+        flatbuffers::VectorIterator<uint8_t, uint8_t>(right_field->value()->Data(), m)
+      );
+
+      // DP algorithm for wildcard matching taken from:
+      // https://www.geeksforgeeks.org/wildcard-pattern-matching/
+      bool result;
+      if (m == 0)
+        return (n == 0);
+      bool lookup[n + 1][m + 1];
+      memset(lookup, false, sizeof(lookup));
+      lookup[0][0] = true;
+      for (uint32_t j = 1; j <= m; j++) {
+        if (pattern[j - 1] == '%') {
+          lookup[0][j] = lookup[0][j - 1];
+        }
+      }
+      for (uint32_t i = 1; i <= n; i++) {
+        for (uint32_t j = 1; j <= m; j++) {
+          if (pattern[j - 1] == '%') {
+            lookup[i][j] = lookup[i][j - 1] || lookup[i - 1][j];
+          } else if (pattern[j - 1] == '_' || s[i - 1] == pattern[j - 1]) {
+            lookup[i][j] = lookup[i - 1][j - 1];
+          } else {
+            lookup[i][j] = false;
+          }
+        }
+      }
+      result = lookup[n][m];
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
+    case tuix::ExprUnion_StartsWith:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t pattern_len = right_field->length();
+      bool result = true;
+      for (uint32_t i = 0; i < pattern_len; i++) {
+        result = result && (left_field->value()->Get(i) == right_field->value()->Get(i));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
+    case tuix::ExprUnion_EndsWith:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t str_len = left_field->length();
+      uint32_t pattern_len = right_field->length();
+      bool result = true;
+      for (uint32_t i = 0; i < pattern_len; i++) {
+        uint32_t str_dex = str_len - pattern_len + i;
+        result = result && (left_field->value()->Get(str_dex) == right_field->value()->Get(i));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {
