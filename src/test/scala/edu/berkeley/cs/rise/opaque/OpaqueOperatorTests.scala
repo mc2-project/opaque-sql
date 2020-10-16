@@ -389,6 +389,12 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("concat") { securityLevel =>
+    val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.select(concat(col("str"),lit(","),col("x"))).collect
+  }
+
   testAgainstSpark("isin1") { securityLevel =>
     //normal test 1 
     val ids = Seq((1, 2, 2), (2, 3, 1))

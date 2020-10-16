@@ -738,6 +738,56 @@ private:
 
     }
 
+    case tuix::ExprUnion_Concat:
+    {
+      //implementing this like string concat 
+      auto c = static_cast<const tuix::Concat *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+      //TODO add type checking 
+      size_t total = 0; 
+
+      std::vector<uint8_t> result; 
+
+      for (size_t i =0; i< num_children; i++){
+              auto offset =  eval_helper(row, (*c->children())[i]);
+              const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, offset);
+              if (str->value_type() != tuix::FieldUnion_StringField) {
+                throw std::runtime_error(
+                  std::string("tuix::Concat requires String, not ")
+                  + std::string(tuix::EnumNameFieldUnion(str->value_type())));  
+              }
+              auto str_field = static_cast<const tuix::StringField *>(str->value());
+              int32_t start = 0;
+              int32_t end = str_field ->length(); 
+              total += end; 
+
+              std::vector<uint8_t> stringtoadd(
+              flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                        static_cast<uint32_t>(start)),
+              flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                        static_cast<uint32_t>(end)));
+              result.insert(result.end(), stringtoadd.begin(), stringtoadd.end());
+      }
+      //TODO add null check 
+
+      return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(
+            builder, &result, static_cast<uint32_t>(total)).Union(),
+          false);
+      /*
+      auto array_field = static_cast<const tuix::ArrayField *>(value->value());
+      std::string str = to_string(array_field);
+      std::vector<uint8_t> str_vec(str.begin(), str.end());
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size()).Union(),
+          result_is_null);
+          */
+    }
+
     // Conditional expressions
     case tuix::ExprUnion_If:
     {
