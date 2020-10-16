@@ -472,39 +472,50 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("LIKE - Contains") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%a%")).collect
   } 
 
   testAgainstSpark("LIKE - StartsWith") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("ba%")).collect
   } 
 
   testAgainstSpark("LIKE - EndsWith") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%ar")).collect
   }
 
   testAgainstSpark("LIKE - Empty Pattern") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("")).collect
   }
 
   testAgainstSpark("LIKE - Match All") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%")).collect
   }
 
   testAgainstSpark("LIKE - Single Wildcard") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("ba_")).collect
+  }
+
+  testAgainstSpark("LIKE - SQL API") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.createTempView("df")
+    try {
+      spark.sql(""" SELECT word FROM df WHERE word LIKE '_a_' """).collect
+    } finally {
+      spark.catalog.dropTempView("df")
+    }
   }
 
   testOpaqueOnly("save and load with explicit schema") { securityLevel =>
