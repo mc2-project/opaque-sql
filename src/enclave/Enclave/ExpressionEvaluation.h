@@ -888,6 +888,52 @@ private:
         false);
     }
 
+    // Time expressions
+    case tuix::ExprUnion_DateAdd:
+    {
+      // TODO: handle Contains(str, "")
+
+      auto c = static_cast<const tuix::DateAdd *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+
+      if (left->value_type() != tuix::FieldUnion_DateField
+          || right->value_type() != tuix::FieldUnion_IntegerField) {
+          throw std::runtime_error(
+          std::string("tuix::DateAdd requires date Date, increment Integer, not ")
+          + std::string("date ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", increment ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+        }
+
+      bool result_is_null = left->is_null() || right->is_null();
+
+      if (!result_is_null) {
+        auto left_field = static_cast<const tuix::DateField *>(left->value());
+        auto right_field = static_cast<const tuix::IntegerField *>(right->value());
+
+        uint32_t result = left_field->value() + right_field->value();
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      } else {
+        uint32_t result = 0;
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      }
+    }
+
     case tuix::ExprUnion_Year:
     {
       auto e = static_cast<const tuix::Year *>(expr->expr());
