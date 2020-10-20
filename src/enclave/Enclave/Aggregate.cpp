@@ -5,6 +5,37 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
+
+void aggregate(uint8_t *agg_op, size_t agg_op_length,
+               uint8_t *input_rows, size_t input_rows_length,
+               uint8_t *partial_aggregates, size_t partial_aggregates_length) {
+
+  // First sort all of the local data
+  
+  
+  FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowWriter w;
+
+  FlatbuffersTemporaryRow prev, cur;
+
+  if (!r.has_next()) {
+    // There are no rows in this partition
+    w.append(agg_op_eval.evaluate());
+  }
+
+  while (r.has_next()) {
+    prev.set(cur.get());
+    cur.set(r.next());
+    
+    if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
+      agg_op_eval.reset_group();
+    }
+    agg_op_eval.aggregate(cur.get());
+  }
+  w.output_buffer(output_rows, output_rows_length);
+}
+
 void non_oblivious_aggregate_step1(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
