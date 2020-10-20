@@ -122,19 +122,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  testAgainstSpark("Interval SQL Sanity") { securityLevel =>
-    // val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
-    // val df = makeDF(data, securityLevel, "index", "time")
-
-    val df = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime()))).toDF("index", "time")
-    df.createTempView("IntervalSanity")
-    try {
-      spark.sql("SELECT time + INTERVAL 7 DAY FROM IntervalSanity").collect
-    } finally {
-      spark.catalog.dropTempView("IntervalSanity")
-    }
-  }
-
   testAgainstSpark("Interval SQL") { securityLevel =>
     val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
     val df = makeDF(data, securityLevel, "index", "time")
@@ -146,9 +133,26 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  testAgainstSpark("Date Add Sanity") { securityLevel =>
-    val df = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime()))).toDF("index", "time")
-    df.select(date_add($"time", 3)).collect
+  testAgainstSpark("Interval Week SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Month SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
   }
 
   testAgainstSpark("Date Add") { securityLevel =>

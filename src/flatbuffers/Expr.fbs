@@ -34,7 +34,8 @@ union ExprUnion {
     ClosestPoint,
     CreateArray,
     Upper,
-    DateAdd
+    DateAdd,
+    DateAddInterval
 }
 
 table Expr {
@@ -149,6 +150,11 @@ table Year {
 }
 
 table DateAdd {
+    left:Expr;
+    right:Expr;
+}
+
+table DateAddInterval {
     left:Expr;
     right:Expr;
 }
