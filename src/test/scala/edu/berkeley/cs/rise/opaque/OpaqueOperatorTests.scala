@@ -389,10 +389,20 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
-  testAgainstSpark("concat") { securityLevel =>
+  testAgainstSpark("concatwithstring") { securityLevel =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
     val df = makeDF(data, securityLevel, "str", "x")
     df.select(concat(col("str"),lit(","),col("x"))).collect
+  }
+
+  testAgainstSpark("concatwithotherdatatype") { securityLevel =>
+    // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out 
+    // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
+    // you can't serialize date so that's not supported as well 
+    // opaque doesn't support byte 
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i)
+    val df = makeDF(data, securityLevel, "str", "int")
+    df.select(concat(col("str"),lit(","),col("int"))).collect
   }
 
   testAgainstSpark("isin1") { securityLevel =>
