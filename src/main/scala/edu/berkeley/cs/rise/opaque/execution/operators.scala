@@ -222,6 +222,25 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   }
 }
 
+case class EncryptedPartialAggregateExec(
+  groupingExpressions: Seq[Expression],
+  aggExpressions: Seq[NamedExpression],
+  child: SparkPlan)
+    extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def producedAttributes: AttributeSet =
+    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+
+  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+
+
+  override def executeBlocked(): RDD[Block] = {
+    
+  }
+
+}
+
+
 case class EncryptedAggregateExec(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],

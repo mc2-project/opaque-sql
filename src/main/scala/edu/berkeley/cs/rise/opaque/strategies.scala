@@ -43,8 +43,8 @@ object OpaqueOperators extends Strategy {
     case EncryptedFilter(condition, child) =>
       EncryptedFilterExec(condition, planLater(child)) :: Nil
 
-    case EncryptedSort(order, child) =>
-      EncryptedSortExec(order, planLater(child)) :: Nil
+    case EncryptedSort(order, child, isGlobal) =>
+      EncryptedSortExec(order, planLater(child), isGlobal) :: Nil
 
     case EncryptedJoin(left, right, joinType, condition) =>
       Join(left, right, joinType, condition, JoinHint.NONE) match {
@@ -54,7 +54,7 @@ object OpaqueOperators extends Strategy {
           val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
           val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
           val unioned = EncryptedUnionExec(leftProj, rightProj)
-          val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned)
+          val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned, true)
           val joined = EncryptedSortMergeJoinExec(
             joinType,
             leftKeysProj,

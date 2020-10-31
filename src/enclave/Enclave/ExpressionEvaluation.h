@@ -1582,7 +1582,7 @@ public:
         std::string("Corrupt AggregateOp buffer of length ")
         + std::to_string(len));
     }
-
+    
     const tuix::AggregateOp* agg_op = flatbuffers::GetRoot<tuix::AggregateOp>(buf);
 
     for (auto e : *agg_op->grouping_expressions()) {
@@ -1597,6 +1597,10 @@ public:
     }
 
     reset_group();
+  }
+
+  size_t get_num_groups() {
+    return grouping_evaluators.size();
   }
 
   void reset_group() {

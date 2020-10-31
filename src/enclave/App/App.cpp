@@ -611,6 +611,44 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
 
+  uint8_t *partial_aggregates = nullptr;
+  size_t partial_aggregates_length = 0;
+
+  if (input_rows_ptr == nullptr) {
+    ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
+  } else {
+    oe_check_and_time("Non-Oblivious Partial Aggregate",
+                       ecall_non_oblivious_partial_aggregate(
+                         (oe_enclave_t*)eid,
+                         agg_op_ptr, agg_op_length,
+                         input_rows_ptr, input_rows_length,
+                         &partial_aggregates, &partial_aggregates_length));
+  }
+
+  jbyteArray ret = env->NewByteArray(partial_aggregates_length);
+  env->SetByteArrayRegion(ret, 0, partial_aggregates_length, (jbyte *) partial_aggregates);
+  free(partial_aggregates);
+
+  env->ReleaseByteArrayElements(agg_op, (jbyte *) agg_op_ptr, 0);
+  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
+  
+  return ret;
+}
+
+
+JNIEXPORT jobject JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows) {
+  (void)obj;
+
+  jboolean if_copy;
+
+  uint32_t agg_op_length = (uint32_t) env->GetArrayLength(agg_op);
+  uint8_t *agg_op_ptr = (uint8_t *) env->GetByteArrayElements(agg_op, &if_copy);
+
+  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
+  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+
   uint8_t *first_row = nullptr;
   size_t first_row_length = 0;
 

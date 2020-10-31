@@ -94,7 +94,7 @@ case class EncryptedFilter(condition: Expression, child: OpaqueOperator)
   override def output: Seq[Attribute] = child.output
 }
 
-case class EncryptedSort(order: Seq[SortOrder], child: OpaqueOperator)
+case class EncryptedSort(order: Seq[SortOrder], child: OpaqueOperator, isGloabl: Boolean)
   extends UnaryNode with OpaqueOperator {
   override def output: Seq[Attribute] = child.output
 }

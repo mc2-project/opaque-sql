@@ -23,29 +23,28 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
-case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
+case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan, isGlobal: Boolean)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
-    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
+    EncryptedSortExec.partitionSort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer, isGlobal)
   }
 }
 
 object EncryptedSortExec {
   import Utils.time
 
-  def sort(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
+  def sort(childRDD: RDD[Block], orderSer: Array[Byte], isGlobal: Boolean): RDD[Block] = {
     Utils.ensureCached(childRDD)
     time("force child of EncryptedSort") { childRDD.count }
-    // RA.initRA(childRDD)
 
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length
       val result =
-        if (numPartitions <= 1) {
+        if (numPartitions <= 1 || !isGlobal) {
           childRDD.map { block =>
             val (enclave, eid) = Utils.initEnclave()
             val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)

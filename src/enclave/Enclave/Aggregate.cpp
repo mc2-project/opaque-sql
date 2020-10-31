@@ -6,13 +6,11 @@
 #include "common.h"
 
 
-void aggregate(uint8_t *agg_op, size_t agg_op_length,
-               uint8_t *input_rows, size_t input_rows_length,
-               uint8_t *partial_aggregates, size_t partial_aggregates_length) {
+void non_oblivious_partial_aggregate(
+  uint8_t *agg_op, size_t agg_op_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t *partial_aggregates, size_t partial_aggregates_length) {
 
-  // First sort all of the local data
-  
-  
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
@@ -33,7 +31,7 @@ void aggregate(uint8_t *agg_op, size_t agg_op_length,
     }
     agg_op_eval.aggregate(cur.get());
   }
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(partial_aggregates, partial_aggregates_length);
 }
 
 void non_oblivious_aggregate_step1(

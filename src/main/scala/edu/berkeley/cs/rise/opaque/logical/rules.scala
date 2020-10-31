@@ -86,13 +86,15 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
               groupingExprs, aggExprs,
               EncryptedSort(
                 groupingExprs.map(e => SortOrder(e, Ascending)),
-                child.asInstanceOf[OpaqueOperator])))
+                child.asInstanceOf[OpaqueOperator],
+                true)))
         case None =>
           EncryptedAggregate(
             groupingExprs, aggExprs,
             EncryptedSort(
               groupingExprs.map(e => SortOrder(e, Ascending)),
-              child.asInstanceOf[OpaqueOperator]))
+              child.asInstanceOf[OpaqueOperator],
+              true))
       }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>

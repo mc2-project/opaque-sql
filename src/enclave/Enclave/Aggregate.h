@@ -4,6 +4,11 @@
 #ifndef AGGREGATE_H
 #define AGGREGATE_H
 
+void non_oblivious_partial_aggregate(
+  uint8_t *agg_op, size_t agg_op_length,
+  uint8_t *input_rows, size_t input_rows_length,
+  uint8_t *partial_aggregates, size_t partial_aggregates_length);
+
 void non_oblivious_aggregate_step1(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
