@@ -30,7 +30,7 @@ case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan, isGlobal: 
 
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
-    EncryptedSortExec.partitionSort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer, isGlobal)
+    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer, isGlobal)
   }
 }
 

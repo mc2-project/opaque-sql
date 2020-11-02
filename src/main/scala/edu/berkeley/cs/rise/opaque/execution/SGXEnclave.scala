@@ -44,6 +44,8 @@ class SGXEnclave extends java.io.Serializable {
   @native def NonObliviousSortMergeJoin(
     eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
+  @native def NonObliviousPartialAggregate(
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte])
   @native def NonObliviousAggregateStep1(
     eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte])
   @native def NonObliviousAggregateStep2(

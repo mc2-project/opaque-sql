@@ -599,7 +599,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
 }
 
 JNIEXPORT jobject JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1(
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousPartialAggregate(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows) {
   (void)obj;
 

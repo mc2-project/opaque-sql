@@ -180,10 +180,10 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   }
 }
 
-void ecall_partial_aggregate(
+void ecall_non_oblivious_partial_aggregate(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
-  uint8_t *partial_aggregates, size_t partial_aggregates_length) {
+  uint8_t **partial_aggregates, size_t *partial_aggregates_length) {
   // Guard against operating on arbitrary enclave memory
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();

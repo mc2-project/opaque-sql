@@ -9,7 +9,7 @@
 void non_oblivious_partial_aggregate(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
-  uint8_t *partial_aggregates, size_t partial_aggregates_length) {
+  uint8_t **partial_aggregates, size_t *partial_aggregates_length) {
 
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
@@ -17,20 +17,21 @@ void non_oblivious_partial_aggregate(
 
   FlatbuffersTemporaryRow prev, cur;
 
-  if (!r.has_next()) {
-    // There are no rows in this partition
-    w.append(agg_op_eval.evaluate());
-  }
-
   while (r.has_next()) {
     prev.set(cur.get());
     cur.set(r.next());
     
     if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
+      w.append(agg_op_eval.evaluate());
       agg_op_eval.reset_group();
     }
     agg_op_eval.aggregate(cur.get());
   }
+
+  if (!(agg_op_eval.get_num_groups() > 0 && cur.get() == nullptr)) {
+    w.append(agg_op_eval.evaluate());
+  }
+  
   w.output_buffer(partial_aggregates, partial_aggregates_length);
 }
 

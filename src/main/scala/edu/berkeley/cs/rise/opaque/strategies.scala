@@ -43,8 +43,8 @@ object OpaqueOperators extends Strategy {
     case EncryptedFilter(condition, child) =>
       EncryptedFilterExec(condition, planLater(child)) :: Nil
 
-    case EncryptedSort(order, child, isGlobal) =>
-      EncryptedSortExec(order, planLater(child), isGlobal) :: Nil
+    case EncryptedSort(order, child) =>
+      EncryptedSortExec(order, planLater(child), true) :: Nil
 
     case EncryptedJoin(left, right, joinType, condition) =>
       Join(left, right, joinType, condition, JoinHint.NONE) match {
@@ -72,8 +72,15 @@ object OpaqueOperators extends Strategy {
         case _ => Nil
       }
 
-    case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
-      EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
+    case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) => {
+      val sortExpressions = groupingExpressions.map(e => SortOrder(e, Ascending))
+      EncryptedPartialAggregateExec(
+        groupingExpressions, aggExpressions,
+          EncryptedSortExec(sortExpressions,
+            EncryptedPartialAggregateExec(sortExpressions, aggExpressions, 
+              EncryptedSortExec(sortExpressions, planLater(child), false)
+            ), true)) :: Nil
+    }
 
     case EncryptedUnion(left, right) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil

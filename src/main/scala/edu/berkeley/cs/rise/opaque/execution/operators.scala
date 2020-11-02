@@ -233,13 +233,17 @@ case class EncryptedPartialAggregateExec(
 
   override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
 
-
   override def executeBlocked(): RDD[Block] = {
-    
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
+      childRDD => childRDD.map { block => 
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.NonObliviousPartialAggregate(eid, aggExprSer, block.bytes))
+      }
+    }
   }
 
 }
-
 
 case class EncryptedAggregateExec(
     groupingExpressions: Seq[Expression],
