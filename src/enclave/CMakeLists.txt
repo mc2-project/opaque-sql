@@ -26,10 +26,6 @@ else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
 endif()
 
-# set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "$ENV{OE_SDK_PATH}/lib") # not clear about this. Ask someone to verify
-# set(OE_ENCLAVE_SIGNER "$ENV{OE_SDK_PATH}/bin/oesign")
-# set(OE_EDGER8R "$ENV{OE_SDK_PATH}/bin/oeedger8r")
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -DDEBUG -UNDEBUG -UEDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG -DEDEBUG -UDEBUG")

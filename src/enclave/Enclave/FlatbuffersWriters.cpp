@@ -1,5 +1,4 @@
 #include "FlatbuffersWriters.h"
-#include <iostream>
 
 void RowWriter::clear() {
   builder.Clear();

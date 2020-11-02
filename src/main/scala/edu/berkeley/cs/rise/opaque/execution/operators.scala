@@ -142,8 +142,6 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
-    // Internally, executeTake gets an RDD of byte array of n unsafe rows and scans the RDD partitions one by one until n is reached or all partitions were processed.
-    // This method called when decrypting dataframe from file
     if (n == 0) {
       return new Array[InternalRow](0)
     }

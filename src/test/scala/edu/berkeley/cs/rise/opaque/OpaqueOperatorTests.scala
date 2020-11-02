@@ -438,7 +438,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       assert(df.groupBy("word").agg(sum("count")).collect.toSet
         === df2.groupBy("word").agg(sum("count")).collect.toSet)
     } finally {
-      // Utils.deleteRecursively(path)
+      Utils.deleteRecursively(path)
     }
   }
 

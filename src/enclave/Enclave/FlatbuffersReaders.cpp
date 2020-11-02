@@ -1,5 +1,4 @@
 #include "FlatbuffersReaders.h"
-#include <iostream>
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
   uint32_t num_rows = encrypted_block->num_rows();

@@ -253,10 +253,7 @@ object Utils extends Logging {
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
    * attestation succeeds. For development, we use a hardcoded key. You should change it.
    */
-  // var clientKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
   var clientKey: Array[Byte] = null 
-  // val clientKeys:Map[String, Array[Byte]] = Map()
-  // assert(sharedKey.size == GCM_KEY_LENGTH)
 
   def addClientKey(key: Array[Byte]) : Unit = {
     clientKey = key 

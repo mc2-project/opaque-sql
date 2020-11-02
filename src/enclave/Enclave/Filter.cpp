@@ -4,7 +4,6 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
-#include <iostream>
 
 using namespace edu::berkeley::cs::rise::opaque;
 
