@@ -42,6 +42,7 @@ table AggregateOp {
     grouping_expressions:[Expr];
     // Given multiple input rows from the same group, compute their aggregate.
     aggregate_expressions:[AggregateExpr];
+    result_expressions:[Expr];
 }
 
 // Join

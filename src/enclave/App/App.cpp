@@ -600,7 +600,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
 
 JNIEXPORT jobject JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousPartialAggregate(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows, jboolean isPartial) {
   (void)obj;
 
   jboolean if_copy;
@@ -614,12 +614,14 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousPartialAggrega
   uint8_t *partial_aggregates = nullptr;
   size_t partial_aggregates_length = 0;
 
+  bool is_partial = (bool) isPartial;
+
   if (input_rows_ptr == nullptr) {
     ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Non-Oblivious Partial Aggregate",
                        ecall_non_oblivious_partial_aggregate(
-                         (oe_enclave_t*)eid,
+                         (oe_enclave_t*)eid, is_partial,
                          agg_op_ptr, agg_op_length,
                          input_rows_ptr, input_rows_length,
                          &partial_aggregates, &partial_aggregates_length));

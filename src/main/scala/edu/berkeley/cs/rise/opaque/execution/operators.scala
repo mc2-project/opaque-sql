@@ -23,6 +23,7 @@ import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
@@ -223,26 +224,26 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 }
 
 case class EncryptedPartialAggregateExec(
-  groupingExpressions: Seq[Expression],
-  aggExpressions: Seq[NamedExpression],
+  groupingExpressions: Seq[NamedExpression],
+  aggExpressions: Seq[AggregateExpression],
+  resultExpressions: Seq[NamedExpression],
+  isPartial: Boolean,
   child: SparkPlan)
     extends UnaryExecNode with OpaqueOperatorExec {
 
-  override def producedAttributes: AttributeSet =
-    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
-
-  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+  override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
+    val aggExprSer = Utils.serializeAggOp(
+      groupingExpressions, aggExpressions, resultExpressions, child.output)
+
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
-      childRDD => childRDD.map { block => 
+      childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.NonObliviousPartialAggregate(eid, aggExprSer, block.bytes))
+        Block(enclave.NonObliviousPartialAggregate(eid, aggExprSer, block.bytes, isPartial))
       }
     }
   }
-
 }
 
 case class EncryptedAggregateExec(

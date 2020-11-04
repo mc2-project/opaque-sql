@@ -45,7 +45,7 @@ class SGXEnclave extends java.io.Serializable {
     eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
   @native def NonObliviousPartialAggregate(
-    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte])
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], isPartial: Boolean): (Array[Byte])
   @native def NonObliviousAggregateStep1(
     eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte])
   @native def NonObliviousAggregateStep2(

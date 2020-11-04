@@ -7,9 +7,12 @@
 
 
 void non_oblivious_partial_aggregate(
+  bool is_partial,
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **partial_aggregates, size_t *partial_aggregates_length) {
+
+  (void) is_partial;
 
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));

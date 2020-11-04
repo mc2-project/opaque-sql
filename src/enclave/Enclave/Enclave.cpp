@@ -181,6 +181,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
 }
 
 void ecall_non_oblivious_partial_aggregate(
+  bool is_partial,
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **partial_aggregates, size_t *partial_aggregates_length) {
@@ -189,7 +190,8 @@ void ecall_non_oblivious_partial_aggregate(
   __builtin_ia32_lfence();
 
   try {
-    non_oblivious_partial_aggregate(agg_op, agg_op_length,
+    non_oblivious_partial_aggregate(is_partial,
+                                    agg_op, agg_op_length,
                                     input_rows, input_rows_length,
                                     partial_aggregates, partial_aggregates_length);
     

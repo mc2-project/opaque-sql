@@ -1136,21 +1136,23 @@ object Utils extends Logging {
   }
 
   def serializeAggOp(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
+    groupingExpressions: Seq[NamedExpression],
+    aggExpressions: Seq[AggregateExpression],
+    resultExpressions: Seq[NamedExpression]
     input: Seq[Attribute]): Array[Byte] = {
-    // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
-    // grouping expressions into AggregateExpressions that collect the first seen value.
-    val aggExpressionsWithFirst = aggExpressions.map {
-      case Alias(e: AggregateExpression, _) => e
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
-    }
+    // // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
+    // // grouping expressions into AggregateExpressions that collect the first seen value.
+    // val aggExpressionsWithFirst = aggExpressions.map {
+    //   case Alias(e: AggregateExpression, _) => e
+    //   case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
+    // }
 
-    val aggSchema = aggExpressionsWithFirst.flatMap(_.aggregateFunction.aggBufferAttributes)
+    val aggSchema = aggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
     // For aggregation, we concatenate the current aggregate row with the new input row and run
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
     val concatSchema = aggSchema ++ input
+    
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1161,9 +1163,13 @@ object Utils extends Logging {
           groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
         tuix.AggregateOp.createAggregateExpressionsVector(
           builder,
-          aggExpressionsWithFirst
+          aggExpressions
             .map(e => serializeAggExpression(builder, e, input, aggSchema, concatSchema))
-            .toArray)))
+            .toArray),
+        tuix.AggregateOp.createResultExpressionsVector(
+          builder,
+          resultExpressions.map(e => flatbuffersSerializeExpression(buffer, e, ??)).toArray)
+      ))
     builder.sizedByteArray()
   }
 
