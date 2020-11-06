@@ -170,7 +170,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     curr_log_entry_vector.push_back(log_entry_serialized);
 
-    std::vector<LogEntry> past_log_entries = EnclaveContext::getInstance().get_ecall_log_entries();
+    std::unordered_set<LogEntry> past_log_entries = EnclaveContext::getInstance().get_past_log_entries();
 
     for (LogEntry le : past_log_entries) {
       char* untrusted_ecall_op_str = oe_host_strndup(le.ecall.c_str(), le.ecall.length());
@@ -185,7 +185,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     num_past_log_entries.push_back(past_log_entries.size());
    
     // We will MAC over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs 
-    // || global_mac || num past log entries || past log entries
+    // || num past log entries || past log entries
     int num_past_entries = (int) past_log_entries.size();
     int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, 0, num_past_entries);
 

@@ -109,9 +109,8 @@ class EnclaveContext {
       ecall_log_entries.insert(le);
     }
 
-    std::vector<LogEntry> get_ecall_log_entries() {
-      std::vector<LogEntry> ret(ecall_log_entries.begin(), ecall_log_entries.end());
-      return ret;
+    std::unordered_set<LogEntry> get_past_log_entries() {
+      return ecall_log_entries();
     }
 
     int get_pid() {
