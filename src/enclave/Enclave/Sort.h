@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 #ifndef _SORT_H_
 #define _SORT_H_
@@ -12,7 +13,8 @@
  */
 void external_sort(uint8_t *sort_order, size_t sort_order_length,
                    uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t **output_rows, size_t *output_rows_length);
+                   uint8_t **output_rows, size_t *output_rows_length,
+                   std::string curr_ecall=std::string("externalSort"));
 
 /**
  * For distributed sorting, sample rows from a partition of data so they can be collected to a

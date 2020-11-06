@@ -25,7 +25,6 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
   jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
 
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
-
   try {
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
   } catch (const std::runtime_error &e) {

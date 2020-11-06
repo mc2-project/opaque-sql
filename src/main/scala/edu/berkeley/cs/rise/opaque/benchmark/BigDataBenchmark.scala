@@ -58,14 +58,14 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val rankingsDF = Utils.ensureCached(rankings(spark, securityLevel, size, numPartitions))
-    Utils.time("load rankings") { Utils.force(rankingsDF) }
+    // Utils.time("load rankings") { Utils.force(rankingsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 1",
       "system" -> securityLevel.name,
       "size" -> size) {
       val df = rankingsDF.filter($"pageRank" > 1000)
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
@@ -74,7 +74,7 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
-    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    // Utils.time("load uservisits") { Utils.force(uservisitsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 2",
@@ -83,7 +83,7 @@ object BigDataBenchmark {
       val df = uservisitsDF
         .select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
         .groupBy($"sourceIPSubstr").sum("adRevenue")
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
@@ -92,9 +92,9 @@ object BigDataBenchmark {
     : DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
-    Utils.time("load uservisits") { Utils.force(uservisitsDF) }
+    // Utils.time("load uservisits") { Utils.force(uservisitsDF) }
     val rankingsDF = Utils.ensureCached(rankings(spark, securityLevel, size, numPartitions))
-    Utils.time("load rankings") { Utils.force(rankingsDF) }
+    // Utils.time("load rankings") { Utils.force(rankingsDF) }
     Utils.timeBenchmark(
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 3",
@@ -111,7 +111,7 @@ object BigDataBenchmark {
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))
         .select($"sourceIP", $"totalRevenue", $"avgPageRank")
         .orderBy($"totalRevenue".asc)
-      Utils.force(df)
+      // Utils.force(df)
       df
     }
   }
