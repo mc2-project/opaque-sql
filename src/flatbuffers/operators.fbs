@@ -33,6 +33,7 @@ table SortExpr {
 table AggregateExpr {
     initial_values: [Expr];
     update_exprs: [Expr];
+    merge_exprs: [Expr];
     evaluate_expr: Expr;
 }
 // Supported: Average, Count, First, Last, Max, Min, Sum
@@ -42,7 +43,7 @@ table AggregateOp {
     grouping_expressions:[Expr];
     // Given multiple input rows from the same group, compute their aggregate.
     aggregate_expressions:[AggregateExpr];
-    result_expressions:[Expr];
+    result_expression:[Expr];
 }
 
 // Join

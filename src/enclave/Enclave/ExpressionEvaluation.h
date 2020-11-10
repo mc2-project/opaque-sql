@@ -1561,6 +1561,11 @@ public:
     return result;
   }
 
+  std::vector<const tuix::Field *> merge(const tuix::Row *agg_row) {
+    std::vector<const tuix::Fied *> result;
+    return result;
+  }
+
   const tuix::Field *evaluate(const tuix::Row *agg) {
     return evaluate_evaluator->eval(agg);
   }
@@ -1569,6 +1574,7 @@ private:
   flatbuffers::FlatBufferBuilder builder;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> merge_evaluators;
   std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
 };
 

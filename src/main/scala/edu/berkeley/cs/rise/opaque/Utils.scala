@@ -1138,7 +1138,7 @@ object Utils extends Logging {
   def serializeAggOp(
     groupingExpressions: Seq[NamedExpression],
     aggExpressions: Seq[AggregateExpression],
-    resultExpressions: Seq[NamedExpression]
+    resultExpressions: Seq[NamedExpression],
     input: Seq[Attribute]): Array[Byte] = {
     // // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
     // // grouping expressions into AggregateExpressions that collect the first seen value.
@@ -1152,7 +1152,6 @@ object Utils extends Logging {
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
     val concatSchema = aggSchema ++ input
-    
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1164,12 +1163,8 @@ object Utils extends Logging {
         tuix.AggregateOp.createAggregateExpressionsVector(
           builder,
           aggExpressions
-            .map(e => serializeAggExpression(builder, e, input, aggSchema, concatSchema))
-            .toArray),
-        tuix.AggregateOp.createResultExpressionsVector(
-          builder,
-          resultExpressions.map(e => flatbuffersSerializeExpression(buffer, e, ??)).toArray)
-      ))
+            .map(e => serializeAggExpression(builder, e, concatSchema))
+            .toArray)))
     builder.sizedByteArray()
   }
 
@@ -1201,6 +1196,13 @@ object Utils extends Logging {
                 builder, Add(sum, Cast(child, DoubleType)), concatSchema),
               /* count = */ flatbuffersSerializeExpression(
                 builder, Add(count, Literal(1L)), concatSchema))),
+          tuix.AggregateExpr.createMergeExprsVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Add(sum, Cast(child, DoubleType)), concatSchema),
+              /* count = */ flatbuffersSerializeExpression(
+                builder, Add(count, Cast(child, DoubleType)), concatSchema))),
           flatbuffersSerializeExpression(
             builder, Divide(sum, Cast(count, DoubleType)), aggSchema))
 
