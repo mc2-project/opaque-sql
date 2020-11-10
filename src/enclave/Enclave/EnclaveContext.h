@@ -34,7 +34,6 @@ static Crypto mcrypto;
 class EnclaveContext {
   private:
     // std::unordered_set<LogEntry, LogEntryHashFunction> ecall_log_entries;
-    // int operators_ctr;
     uint8_t shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
     // For this ecall log entry
