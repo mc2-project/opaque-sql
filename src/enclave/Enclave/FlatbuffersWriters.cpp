@@ -1,5 +1,6 @@
 #include "FlatbuffersWriters.h"
 #include "IntegrityUtils.h"
+#include <iostream>
 
 void RowWriter::clear() {
   builder.Clear();
@@ -200,17 +201,17 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
       + 3 * sizeof(int) * past_log_entries.size() + past_ecalls_lengths * sizeof(char);
     uint8_t to_mac[num_bytes_to_mac];
 
-    uint8_t hmac[32];
+    uint8_t hmac[OE_HMAC_SIZE];
     mac_log_entry_chain(num_bytes_to_mac, to_mac, global_mac, curr_ecall, curr_pid, -1, job_id, 
         num_macs, num_past_entries, past_log_entries, 0, num_past_entries, hmac);
 
     // Copy the mac to untrusted memory
     uint8_t* untrusted_mac = nullptr;
-    ocall_malloc(32, &untrusted_mac);
+    ocall_malloc(OE_HMAC_SIZE, &untrusted_mac);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_ptr(untrusted_mac, &ocall_free);
-    memcpy(mac_ptr.get(), hmac, 32);
+    memcpy(mac_ptr.get(), hmac, OE_HMAC_SIZE);
     auto mac_offset = tuix::CreateLogEntryChainMac(enc_block_builder, 
-        enc_block_builder.CreateVector(mac_ptr.get(), 32));
+        enc_block_builder.CreateVector(mac_ptr.get(), OE_HMAC_SIZE));
     log_entry_chain_hash_vector.push_back(mac_offset);
 
     // Clear log entry state

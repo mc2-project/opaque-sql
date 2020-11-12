@@ -176,7 +176,10 @@ class EnclaveContext {
       }
 
       // hmac the contiguous chunk of memory
-      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) global_mac);
+      uint8_t hmac_result[OE_HMAC_SIZE];
+      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) hmac_result);
+      memcpy((uint8_t*) global_mac, hmac_result, OE_HMAC_SIZE);
+
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
