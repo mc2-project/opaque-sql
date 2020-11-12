@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-// Sample code reference: https://github.com/openenclave/openenclave/blob/master/samples/remote_attestation/common/crypto.cpp
-
 #include "mCrypto.h"
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -10,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "EnclaveContext.h"
 
 Crypto::Crypto(): m_initialized(false)
 {
@@ -126,6 +125,37 @@ int Crypto::sha256(const uint8_t* data, size_t data_size, uint8_t sha256[32])
 exit:
     mbedtls_sha256_free(&ctx);
     return ret;
+}
+
+int Crypto::hmac(const uint8_t* data, size_t data_length, uint8_t hmac[OE_HMAC_SIZE]) {
+  mbedtls_md_context_t ctx;
+  mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
+ 
+  int ret = 0; 
+
+  mbedtls_md_init(&ctx);
+  ret = mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 1);
+  if (ret) {
+    throw std::runtime_error("mbedtls_md_setup failed");
+  }
+
+  ret = mbedtls_md_hmac_starts(&ctx, (const unsigned char*) EnclaveContext::getInstance().get_shared_key(), SGX_AESGCM_KEY_SIZE);
+  if (ret) {
+    throw std::runtime_error("mbedtls_md_hmac_starts failed");
+  }
+
+  ret = mbedtls_md_hmac_update(&ctx, (const unsigned char*) data, data_length);
+  if (ret) {
+    throw std::runtime_error("mbedtls_md_hmac_update failed");
+  }
+
+  ret = mbedtls_md_hmac_finish(&ctx, hmac);
+  if (ret) {
+    throw std::runtime_error("mbedtls_md_hmac_finish failed");
+  }
+
+  mbedtls_md_free(&ctx);
+  return ret;
 }
 
 /**

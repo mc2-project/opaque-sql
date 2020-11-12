@@ -10,7 +10,9 @@ set(SOURCES
   Flatbuffers.cpp
   FlatbuffersReaders.cpp
   FlatbuffersWriters.cpp
+  IntegrityUtils.cpp
   Join.cpp
+  Limit.cpp
   Project.cpp
   Sort.cpp
   sgxaes.cpp

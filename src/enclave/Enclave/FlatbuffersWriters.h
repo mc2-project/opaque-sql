@@ -37,10 +37,10 @@ public:
   void append(const tuix::Row *row1, const tuix::Row *row2);
 
   /** Expose the stored rows as a buffer. */
-  UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer();
+  UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer(std::string ecall);
 
   /** Expose the stored rows as a buffer. The caller takes ownership of the resulting buffer. */
-  void output_buffer(uint8_t **output_rows, size_t *output_rows_length);
+  void output_buffer(uint8_t **output_rows, size_t *output_rows_length, std::string ecall);
 
   /** Count how many rows have been appended. */
   uint32_t num_rows();
@@ -48,7 +48,7 @@ public:
 private:
   void maybe_finish_block();
   void finish_block();
-  flatbuffers::Offset<tuix::EncryptedBlocks> finish_blocks();
+  flatbuffers::Offset<tuix::EncryptedBlocks> finish_blocks(std::string curr_ecall);
 
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<tuix::Row>> rows_vector;
@@ -83,7 +83,7 @@ public:
   /**
    * Wrap all rows written since the last call to this method into a single sorted run.
    */
-  void finish_run();
+  void finish_run(std::string ecall);
 
   /** Count how many runs have been written (i.e., how many times `finish_run` has been called). */
   uint32_t num_runs();

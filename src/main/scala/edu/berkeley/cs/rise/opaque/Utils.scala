@@ -46,6 +46,7 @@ import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
+import org.apache.spark.sql.catalyst.expressions.EndsWith
 import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Exp
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -57,6 +58,7 @@ import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.expressions.Like
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.CaseWhen
 import org.apache.spark.sql.catalyst.expressions.CreateArray
@@ -64,9 +66,11 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.Not
 import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
+import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
@@ -108,6 +112,7 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+// import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -531,8 +536,8 @@ object Utils extends Logging {
             tuix.ArrayField.createValueVector(builder, Array.empty)),
           isNull)
       case (x: MapData, MapType(keyType, valueType, valueContainsNull)) =>
-        var keys = new ArrayBuilder.ofInt()
-        var values = new ArrayBuilder.ofInt()
+        val keys = new ArrayBuilder.ofInt()
+        val values = new ArrayBuilder.ofInt()
         for (i <- 0 until x.numElements) {
           keys += flatbuffersCreateField(
             builder, x.keyArray.get(i, keyType), keyType, isNull)
@@ -724,7 +729,13 @@ object Utils extends Logging {
         builder2,
         tuix.EncryptedBlocks.createBlocksVector(
           builder2,
-          encryptedBlockOffsets.result)))
+          encryptedBlockOffsets.result),
+        tuix.LogEntryChain.createLogEntryChain(builder2,
+          tuix.LogEntryChain.createCurrEntriesVector(builder2, Array.empty),
+          tuix.LogEntryChain.createPastEntriesVector(builder2, Array.empty),
+          tuix.LogEntryChain.createNumPastEntriesVector(builder2, Array.empty)),
+        tuix.EncryptedBlocks.createLogMacVector(builder2, Array.empty)
+      ))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
@@ -744,6 +755,7 @@ object Utils extends Logging {
 
     // 3. Deserialize the tuix.EncryptedBlocks to get the encrypted rows
     val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+
     (for (i <- 0 until encryptedBlocks.blocksLength) yield {
       val encryptedBlock = encryptedBlocks.blocks(i)
       val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
@@ -770,6 +782,17 @@ object Utils extends Logging {
           })
       }
     }).flatten
+  }
+
+  def addBlockForVerification(block: Block): Unit = {
+    val buf = ByteBuffer.wrap(block.bytes)
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+    val blockLog = encryptedBlocks.log
+    JobVerificationEngine.addLogEntryChain(blockLog)
+  }
+
+  def verifyJob(): Boolean = {
+    return JobVerificationEngine.verify()
   }
 
   def treeFold[BaseType <: TreeNode[BaseType], B](
@@ -922,6 +945,27 @@ object Utils extends Logging {
             tuix.ExprUnion.Substring,
             tuix.Substring.createSubstring(
               builder, strOffset, posOffset, lenOffset))
+        
+        case (Like(left, right, escapeChar), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Like,
+            tuix.Like.createLike(
+              builder, leftOffset, rightOffset))
+
+        case (StartsWith(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.StartsWith,
+            tuix.StartsWith.createStartsWith(
+              builder, leftOffset, rightOffset))
+
+        case (EndsWith(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.EndsWith,
+            tuix.EndsWith.createEndsWith(
+              builder, leftOffset, rightOffset))
 
         // Conditional expressions
         case (If(predicate, trueValue, falseValue), Seq(predOffset, trueOffset, falseOffset)) =>
@@ -937,6 +981,16 @@ object Utils extends Logging {
             tuix.ExprUnion.If,
             tuix.If.createIf(
               builder, predOffset, trueOffset, falseOffset))
+
+        case (CaseWhen(branches, elseValue), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.CaseWhen,
+            tuix.CaseWhen.createCaseWhen(
+              builder,
+              tuix.CaseWhen.createChildrenVector(
+                builder,
+                childrenOffsets.toArray)))
 
         // Null expressions
         case (IsNull(child), Seq(childOffset)) =>
@@ -1012,6 +1066,13 @@ object Utils extends Logging {
             tuix.ExprUnion.DotProduct,
             tuix.DotProduct.createDotProduct(
               builder, leftOffset, rightOffset))
+
+        case (Upper(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Upper,
+            tuix.Upper.createUpper(
+              builder, childOffset))   
 
         case (ClosestPoint(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
@@ -1278,8 +1339,6 @@ object Utils extends Logging {
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
 
-        val sumDataType = vs.dataType
-
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
@@ -1299,11 +1358,38 @@ object Utils extends Logging {
   }
 
   def concatEncryptedBlocks(blocks: Seq[Block]): Block = {
+    // Input: sequence of EncryptedBlocks
+    // This gets a list of all EncryptedBlock
     val allBlocks = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
       i <- 0 until encryptedBlocks.blocksLength
     } yield encryptedBlocks.blocks(i)
+
+    val allLogMacs = for {
+      block <- blocks
+      encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+      i <- 0 until encryptedBlocks.logMacLength
+    } yield encryptedBlocks.logMac(i)
+
+    val allLogEntryChains = for {
+      block <- blocks
+      encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    } yield encryptedBlocks.log
+
+    val allCurrLogEntries = for {
+      logEntryChain <- allLogEntryChains
+      i <- 0 until logEntryChain.currEntriesLength
+    } yield logEntryChain.currEntries(i)
+
+    val allPastLogEntries = for {
+      logEntryChain <- allLogEntryChains
+      i <- 0 until logEntryChain.pastEntriesLength
+    } yield logEntryChain.pastEntries(i)
+
+    val numPastEntriesList = for {
+      logEntryChain <- allLogEntryChains
+    } yield logEntryChain.numPastEntries(0)
 
     val builder = new FlatBufferBuilder
     builder.finish(
@@ -1315,7 +1401,43 @@ object Utils extends Logging {
             builder,
             encryptedBlock.numRows,
             tuix.EncryptedBlock.createEncRowsVector(builder, encRows))
-        }.toArray)))
+        }.toArray), 
+        tuix.LogEntryChain.createLogEntryChain(
+          builder, 
+          tuix.LogEntryChain.createCurrEntriesVector(builder, allCurrLogEntries.map { currLogEntry =>
+            val macLst = new Array[Byte](currLogEntry.macLstLength)
+            currLogEntry.macLstAsByteBuffer.get(macLst)
+            val globalMac = new Array[Byte](currLogEntry.globalMacLength)
+            currLogEntry.globalMacAsByteBuffer.get(globalMac)
+            tuix.LogEntry.createLogEntry(
+              builder,
+              builder.createString(currLogEntry.ecall),
+              currLogEntry.sndPid,
+              currLogEntry.rcvPid,
+              currLogEntry.jobId,
+              currLogEntry.numMacs,
+              tuix.LogEntry.createMacLstVector(builder, macLst),
+              tuix.LogEntry.createGlobalMacVector(builder, globalMac))
+          }.toArray),
+          tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
+            tuix.LogEntry.createLogEntry(
+              builder,
+              builder.createString(pastLogEntry.ecall),
+              pastLogEntry.sndPid,
+              pastLogEntry.rcvPid,
+              pastLogEntry.jobId,
+              pastLogEntry.numMacs,
+              tuix.LogEntry.createMacLstVector(builder, Array.empty),
+              tuix.LogEntry.createGlobalMacVector(builder, Array.empty))
+          }.toArray),
+          tuix.LogEntryChain.createNumPastEntriesVector(builder, numPastEntriesList.toArray)
+        ),
+      tuix.EncryptedBlocks.createLogMacVector(builder, allLogMacs.map { logMac =>
+          val mac = new Array[Byte](logMac.macLength)
+          logMac.macAsByteBuffer.get(mac)
+          tuix.LogEntryChainMac.createLogEntryChainMac(builder, tuix.LogEntryChainMac.createMacVector(builder, mac))
+        }.toArray)
+      ))
     Block(builder.sizedByteArray())
   }
 
@@ -1323,7 +1445,49 @@ object Utils extends Logging {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
-        builder, tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty)))
+        builder, 
+        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+        tuix.LogEntryChain.createLogEntryChain(builder,
+          tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
+          tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty),
+          tuix.LogEntryChain.createNumPastEntriesVector(builder, Array.empty)),
+        tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
+    Block(builder.sizedByteArray())
+  }
+
+  def emptyBlock(block: Block): Block = {
+    val builder = new FlatBufferBuilder
+    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    val pastLogEntries = for {
+      i <- 0 until encryptedBlocks.log.pastEntriesLength
+    } yield encryptedBlocks.log.pastEntries(i)
+
+    val currLogEntry = encryptedBlocks.log.currEntries(0)
+
+    val logEntries = pastLogEntries :+ currLogEntry
+
+    val numPastEntries = encryptedBlocks.log.numPastEntries(0)
+
+    builder.finish(
+      tuix.EncryptedBlocks.createEncryptedBlocks(
+        builder, 
+        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+        tuix.LogEntryChain.createLogEntryChain(builder,
+          tuix.LogEntryChain.createCurrEntriesVector(builder, 
+            Array.empty),
+        tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
+          tuix.LogEntry.createLogEntry(
+            builder,
+            builder.createString(logEntry.ecall),
+            logEntry.sndPid,
+            logEntry.rcvPid,
+            logEntry.jobId,
+            0,
+            tuix.LogEntry.createMacLstVector(builder, Array.empty),
+            tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
+        )}.toArray),
+        tuix.LogEntryChain.createNumPastEntriesVector(builder, Array(numPastEntries))),
+      tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 }

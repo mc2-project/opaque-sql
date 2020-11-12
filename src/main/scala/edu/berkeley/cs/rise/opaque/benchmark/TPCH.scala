@@ -150,7 +150,7 @@ object TPCH {
       val ordersDF = orders(sqlContext, securityLevel, size, numPartitions)
       val nationDF = nation(sqlContext, securityLevel, size, numPartitions)
       (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
-   }
+  }
 
    /** TPC-H query 9 - Product Type Profit Measure Query */
    def tpch9(
@@ -190,7 +190,6 @@ object TPCH {
              ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
                .as("amount"))
            .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
-
      df
    }
 }

@@ -1,4 +1,5 @@
 #include "Flatbuffers.h"
+#include "IntegrityUtils.h"
 
 #ifndef FLATBUFFERS_READERS_H
 #define FLATBUFFERS_READERS_H
@@ -42,10 +43,10 @@ private:
 class RowReader {
 public:
   RowReader(BufferRefView<tuix::EncryptedBlocks> buf);
-  RowReader(const tuix::EncryptedBlocks *encrypted_blocks);
+  RowReader(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init=true);
 
   void reset(BufferRefView<tuix::EncryptedBlocks> buf);
-  void reset(const tuix::EncryptedBlocks *encrypted_blocks);
+  void reset(const tuix::EncryptedBlocks *encrypted_blocks, bool log_init=true);
 
   uint32_t num_rows();
   bool has_next();
@@ -68,9 +69,9 @@ private:
  */
 class SortedRunsReader {
 public:
-  SortedRunsReader(BufferRefView<tuix::SortedRuns> buf);
+  SortedRunsReader(BufferRefView<tuix::SortedRuns> buf, bool log_init=true);
 
-  void reset(BufferRefView<tuix::SortedRuns> buf);
+  void reset(BufferRefView<tuix::SortedRuns> buf, bool log_init=true);
 
   uint32_t num_runs();
   bool run_has_next(uint32_t run_idx);
@@ -91,6 +92,7 @@ public:
   EncryptedBlocksToEncryptedBlockReader(BufferRefView<tuix::EncryptedBlocks> buf) {
     buf.verify();
     encrypted_blocks = buf.root();
+    init_log(encrypted_blocks);
   }
   flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {
     return encrypted_blocks->blocks()->begin();
@@ -102,5 +104,6 @@ public:
 private:
   const tuix::EncryptedBlocks *encrypted_blocks;
 };
+
 
 #endif
