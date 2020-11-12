@@ -93,7 +93,7 @@ class EnclaveContext {
     void set_append_mac(bool to_append) {
       append_mac = to_append;
     }
-  
+
     bool to_append_mac() {
       return append_mac;
     }
