@@ -85,19 +85,19 @@ class EnclaveContext {
       this_ecall = std::string("");
       log_entry_mac_lst.clear();
     }
-    
+
     void reset_past_log_entries() {
       ecall_log_entries.clear();
     }
-    
+
     void set_append_mac(bool to_append) {
       append_mac = to_append;
     }
-    
+  
     bool to_append_mac() {
       return append_mac;
     }
-    
+
     void append_past_log_entry(std::string ecall, int snd_pid, int rcv_pid, int job_id) {
       LogEntry le;
       le.ecall = ecall;
@@ -111,15 +111,15 @@ class EnclaveContext {
       std::vector<LogEntry> ret(ecall_log_entries.begin(), ecall_log_entries.end());
       return ret;
     }
-    
+
     int get_pid() {
       return pid;
     }
-    
+
     void set_pid(int id) {
       pid = id;
     }
-    
+
     void finish_ecall() {
       // Increment the job id of this pid
       if (pid_jobid.find(pid) != pid_jobid.end()) {
@@ -129,9 +129,9 @@ class EnclaveContext {
       }
       ecall_log_entries.clear();
       pid = -1;
-    
+
       curr_row_writer = std::string("");
-    
+
       first_row_log_entry_mac_lst.clear();
       last_group_log_entry_mac_lst.clear();
       last_row_log_entry_mac_lst.clear();
@@ -162,9 +162,9 @@ class EnclaveContext {
       } else {
         chosen_mac_lst = log_entry_mac_lst;
       }
-    
+
       size_t mac_lst_length = chosen_mac_lst.size() * SGX_AESGCM_MAC_SIZE;
-    
+
       // Copy all macs to contiguous chunk of memory
       uint8_t contiguous_mac_lst[mac_lst_length];
       uint8_t* temp_ptr = contiguous_mac_lst;
@@ -177,7 +177,7 @@ class EnclaveContext {
       mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) global_mac);
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
-    
+
     size_t get_num_macs() {
       if (curr_row_writer == std::string("first_row")) {
         return first_row_log_entry_mac_lst.size();
@@ -189,23 +189,23 @@ class EnclaveContext {
         return log_entry_mac_lst.size();
       }
     }
-    
+
     void set_log_entry_ecall(std::string ecall) {
       this_ecall = ecall;
     }
-    
+
     std::string get_log_entry_ecall() {
       return this_ecall;
     }
-    
+
     int get_job_id() {
       return pid_jobid[pid];
     }
-    
+
     void increment_job_id() {
       pid_jobid[pid]++;
     }
-    
+
     void reset_pid_jobid_map() {
       pid_jobid.clear();
     }
