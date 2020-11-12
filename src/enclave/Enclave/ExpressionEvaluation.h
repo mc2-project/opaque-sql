@@ -270,7 +270,7 @@ private:
 
       // If type is CalendarInterval, manually return a calendar interval field. 
       // Otherwise 'days' disappears in conversion.
-      if (value->value_type() == 10) {
+      if (value->value_type() == tuix::FieldUnion_CalendarIntervalField) {
 
         auto  *interval = value->value_as_CalendarIntervalField();
         uint32_t months = interval->months();
