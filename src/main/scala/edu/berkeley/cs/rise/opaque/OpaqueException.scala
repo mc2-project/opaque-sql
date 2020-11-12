@@ -26,7 +26,6 @@ class OpaqueException(message: String) extends Exception(message) {
 
   def this(cause: Throwable) {
     this(Option(cause).map(_.toString).orNull, cause)
-
   }
 
   def this() {

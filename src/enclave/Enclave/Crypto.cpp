@@ -4,6 +4,7 @@
 #include "Crypto.h"
 #include "Random.h"
 #include "util.h"
+#include "EnclaveContext.h"
 
 
 /**
@@ -26,6 +27,7 @@ void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
     throw std::runtime_error("Attempting to set a shared key with invalid key size.");
   }
   memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
+  EnclaveContext::getInstance().set_shared_key(shared_key_bytes, shared_key_size);
 
   initKeySchedule();
 }

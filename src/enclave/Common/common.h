@@ -74,6 +74,7 @@ typedef uint8_t sgx_aes_gcm_128bit_tag_t[SGX_AESGCM_MAC_SIZE];
 
 
 #define OE_SHA256_HASH_SIZE 32
+#define OE_HMAC_SIZE 32
 #define OE_PUBLIC_KEY_SIZE 512
 #define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
 

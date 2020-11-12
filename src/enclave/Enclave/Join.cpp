@@ -37,7 +37,7 @@ void scan_collect_last_primary(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("scanCollectLastPrimary"));
 }
 
 void non_oblivious_sort_merge_join(
@@ -51,8 +51,8 @@ void non_oblivious_sort_merge_join(
   RowReader j(BufferRefView<tuix::EncryptedBlocks>(join_row, join_row_length));
   RowWriter w;
 
-  RowWriter primary_group;
-  FlatbuffersTemporaryRow last_primary_of_group;
+  RowWriter primary_group; // All rows in this group
+  FlatbuffersTemporaryRow last_primary_of_group; // Last seen row
   while (j.has_next()) {
     const tuix::Row *row = j.next();
     primary_group.append(row);
@@ -61,11 +61,12 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
-
     if (join_expr_eval.is_primary(current)) {
+      EnclaveContext::getInstance().set_append_mac(false);
+      // If current row is from primary table
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        // Add this primary row to the current group
+        // Add this row to the current group
         primary_group.append(current);
         last_primary_of_group.set(current);
       } else {
@@ -75,12 +76,15 @@ void non_oblivious_sort_merge_join(
         last_primary_of_group.set(current);
       }
     } else {
+      // Current row isn't from primary table
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        auto primary_group_buffer = primary_group.output_buffer();
+        EnclaveContext::getInstance().set_append_mac(false);
+        auto primary_group_buffer = primary_group.output_buffer(std::string("NULL"));
         RowReader primary_group_reader(primary_group_buffer.view());
         while (primary_group_reader.has_next()) {
+          // For each foreign key row, join all primary key rows in same group with it
           const tuix::Row *primary = primary_group_reader.next();
 
           if (!join_expr_eval.is_same_group(primary, current)) {
@@ -92,11 +96,13 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
+          EnclaveContext::getInstance().set_append_mac(true);
           w.append(primary, current);
         }
       }
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  EnclaveContext::getInstance().set_append_mac(true);
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
 }
