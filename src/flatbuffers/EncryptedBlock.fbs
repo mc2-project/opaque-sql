@@ -11,8 +11,31 @@ table EncryptedBlock {
 
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
+    log:LogEntryChain;
+    log_mac:[LogEntryChainMac]; 
 }
 
 table SortedRuns {
     runs:[EncryptedBlocks];
 }
+
+table LogEntry {
+    ecall:string;
+    snd_pid:int;
+    rcv_pid:int;
+    job_id:int;
+    num_macs:int;
+    mac_lst:[ubyte];
+    global_mac:[ubyte];
+}
+
+table LogEntryChain {
+    curr_entries:[LogEntry];
+    past_entries:[LogEntry];
+    num_past_entries:[int];
+}
+
+table LogEntryChainMac {
+    mac:[ubyte];
+}
+

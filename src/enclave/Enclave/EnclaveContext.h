@@ -39,17 +39,16 @@ class EnclaveContext {
     // For this ecall log entry
     std::string this_ecall;
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
-    
     std::string curr_row_writer;
     // Special vectors of nonObliviousAggregateStep1
     std::vector<std::vector<uint8_t>> first_row_log_entry_mac_lst;
     std::vector<std::vector<uint8_t>> last_group_log_entry_mac_lst;
     std::vector<std::vector<uint8_t>> last_row_log_entry_mac_lst;
-    
+
     int pid;
     bool append_mac;
-    
-    // // Map of job ID for partition
+
+    // Map of job ID for partition
     std::unordered_map<int, int> pid_jobid;
 
 
@@ -81,7 +80,7 @@ class EnclaveContext {
     void set_curr_row_writer(std::string row_writer) {
       curr_row_writer = row_writer;
     }
-    
+
     void reset_log_entry() {
       this_ecall = std::string("");
       log_entry_mac_lst.clear();
@@ -107,7 +106,7 @@ class EnclaveContext {
       le.job_id = job_id;
       ecall_log_entries.insert(le);
     }
-    
+
     std::vector<LogEntry> get_ecall_log_entries() {
       std::vector<LogEntry> ret(ecall_log_entries.begin(), ecall_log_entries.end());
       return ret;
@@ -138,7 +137,7 @@ class EnclaveContext {
       last_row_log_entry_mac_lst.clear();
       log_entry_mac_lst.clear();
     }
-    
+
     void add_mac_to_mac_lst(uint8_t* mac) {
       std::vector<uint8_t> mac_vector (mac, mac + SGX_AESGCM_MAC_SIZE);
       if (curr_row_writer == std::string("first_row")) {
@@ -151,7 +150,7 @@ class EnclaveContext {
         log_entry_mac_lst.push_back(mac_vector);
       }
     }
-    
+
     void hmac_mac_lst(const uint8_t* ret_mac_lst, const uint8_t* global_mac) {
       std::vector<std::vector<uint8_t>> chosen_mac_lst;
       if (curr_row_writer == std::string("first_row")) {
@@ -173,7 +172,7 @@ class EnclaveContext {
         memcpy(temp_ptr, chosen_mac_lst[i].data(), SGX_AESGCM_MAC_SIZE);
         temp_ptr += SGX_AESGCM_MAC_SIZE;
       }
-    
+
       // hmac the contiguous chunk of memory
       mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) global_mac);
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
