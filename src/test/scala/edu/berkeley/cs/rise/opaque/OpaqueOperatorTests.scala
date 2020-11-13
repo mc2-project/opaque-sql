@@ -389,56 +389,48 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
-  testAgainstSpark("concatwithstring") { securityLevel =>
+  testAgainstSpark("concat with string") { securityLevel =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
     val df = makeDF(data, securityLevel, "str", "x")
     df.select(concat(col("str"),lit(","),col("x"))).collect
   }
 
-  testAgainstSpark("concatwithotherdatatype") { securityLevel =>
+  testAgainstSpark("concat with other datatype") { securityLevel =>
     // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out 
     // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
     // you can't serialize date so that's not supported as well 
     // opaque doesn't support byte 
-    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i)
-    val df = makeDF(data, securityLevel, "str", "int")
-    df.select(concat(col("str"),lit(","),col("int"))).collect
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int])
+    val df = makeDF(data, securityLevel, "str", "int","null")
+    df.select(concat(col("str"),lit(","),col("int"),col("null"))).collect
   }
 
   testAgainstSpark("isin1") { securityLevel =>
-    //normal test 1 
     val ids = Seq((1, 2, 2), (2, 3, 1))
     val df = makeDF(ids, securityLevel, "x", "y", "id")
     val c = $"id" isin ($"x", $"y")
     val result = df.filter(c)
-    //result.explain(true)
     result.collect 
   }
   testAgainstSpark("isin2") { securityLevel =>
-    //normal test 2     
     val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
     val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
     val c2 = $"id" isin (1 ,2, 4, 5, 6)
     val result = df2.filter(c2)
-    //result.explain(true)
     result.collect 
   }
-  testAgainstSpark("isin3") { securityLevel =>
-    //string test 
+  testAgainstSpark("isin with string") { securityLevel =>
     val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
     val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
     val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
     val result = df3.filter(c3)
-    //result.explain(true)
     result.collect
   }
-  testAgainstSpark("isin4") { securityLevel =>
-    //null test  
+  testAgainstSpark("isin with null") { securityLevel =>
     val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
     val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
     val c4 = $"id" isin (null.asInstanceOf[Int])
     val result = df4.filter(c4)
-    //result.explain(true)    
     result.collect 
   }
 
