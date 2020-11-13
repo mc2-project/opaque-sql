@@ -314,7 +314,9 @@ void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_lengt
     EnclaveContext::getInstance().set_pid(pid);
     count_rows_per_partition(input_rows, input_rows_length,
                              output_rows, output_rows_length);
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -332,7 +334,9 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
     compute_num_rows_per_partition(limit,
                                    input_rows, input_rows_length,
                                    output_rows, output_rows_length);
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -350,7 +354,9 @@ void ecall_local_limit(uint32_t limit,
     limit_return_rows(limit,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }
@@ -371,7 +377,9 @@ void ecall_limit_return_rows(uint64_t partition_id,
                       limits, limits_length,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
+    EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
+    EnclaveContext::getInstance().finish_ecall();
     ocall_throw(e.what());
   }
 }

@@ -144,10 +144,9 @@ object JobVerificationEngine {
       } else if (operator == "EncryptedSortMergeJoinExec") {
         expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
       } else if (operator == "EncryptedLocalLimitExec") {
-        // (TODO - Limit Operator PR 100): LocalLimit not implemented
-        // expectedEcallSeq.append("localLimit")
+        expectedEcallSeq.append("limitReturnRows")
       } else if (operator == "EncryptedGlobalLimitExec") {
-        expectedEcallSeq.append("countRowsPerPartition", "limitReturnRows")
+        expectedEcallSeq.append("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
       } else {
         throw new Exception("Executed unknown operator") 
       }
