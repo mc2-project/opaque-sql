@@ -304,11 +304,14 @@ void ecall_non_oblivious_aggregate_step2(
 }
 
 void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_length,
-                                    uint8_t **output_rows, size_t *output_rows_length) {
+                                    uint8_t **output_rows, size_t *output_rows_length,
+                                    int pid) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
+    debug("Partition %i Ecall: Count Rows Per Partition\n", pid);
+    EnclaveContext::getInstance().set_pid(pid);
     count_rows_per_partition(input_rows, input_rows_length,
                              output_rows, output_rows_length);
   } catch (const std::runtime_error &e) {
@@ -318,11 +321,14 @@ void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_lengt
 
 void ecall_compute_num_rows_per_partition(uint32_t limit,
                                           uint8_t *input_rows, size_t input_rows_length,
-                                          uint8_t **output_rows, size_t *output_rows_length) {
+                                          uint8_t **output_rows, size_t *output_rows_length,
+                                          int pid) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
+    debug("Partition %i Ecall: Compute Num Rows Per Partition\n", pid);
+    EnclaveContext::getInstance().set_pid(pid);
     compute_num_rows_per_partition(limit,
                                    input_rows, input_rows_length,
                                    output_rows, output_rows_length);
@@ -333,11 +339,14 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
 
 void ecall_local_limit(uint32_t limit,
                        uint8_t *input_rows, size_t input_rows_length,
-                       uint8_t **output_rows, size_t *output_rows_length) {
+                       uint8_t **output_rows, size_t *output_rows_length,
+                       int pid) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
+    debug("Partition %i Ecall: Local Limit\n", pid);
+    EnclaveContext::getInstance().set_pid(pid);
     limit_return_rows(limit,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
@@ -349,12 +358,15 @@ void ecall_local_limit(uint32_t limit,
 void ecall_limit_return_rows(uint64_t partition_id,
                              uint8_t *limits, size_t limits_length,
                              uint8_t *input_rows, size_t input_rows_length,
-                             uint8_t **output_rows, size_t *output_rows_length) {
+                             uint8_t **output_rows, size_t *output_rows_length,
+                             int pid) {
   assert(oe_is_outside_enclave(limits, limits_length) == 1);
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
+    debug("Partition %i Ecall: Limit Return Rows\n", pid);
+    EnclaveContext::getInstance().set_pid(pid);
     limit_return_rows(partition_id,
                       limits, limits_length,
                       input_rows, input_rows_length,

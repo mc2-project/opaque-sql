@@ -723,7 +723,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows, jint pid) {
 
     (void)obj;
     jboolean if_copy;
@@ -742,7 +742,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
                                                        input_rows_ptr,
                                                        input_rows_length,
                                                        &output_rows,
-                                                       &output_rows_length));
+                                                       &output_rows_length,
+                                                       pid));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -756,7 +757,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
-  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows, jint pid) {
 
     (void)obj;
     jboolean if_copy;
@@ -776,7 +777,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
                                                              input_rows_ptr,
                                                              input_rows_length,
                                                              &output_rows,
-                                                             &output_rows_length));
+                                                             &output_rows_length,
+                                                             pid));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -790,7 +792,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
-  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows, jint pid) {
 
     (void)obj;
     jboolean if_copy;
@@ -810,7 +812,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
                                           input_rows_ptr,
                                           input_rows_length,
                                           &output_rows,
-                                          &output_rows_length));
+                                          &output_rows_length,
+                                          pid));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -825,7 +828,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits, jbyteArray input_rows) {
+  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits, jbyteArray input_rows, jint pid) {
 
     (void)obj;
     jboolean if_copy;
@@ -850,7 +853,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
                                                 input_rows_ptr,
                                                 input_rows_length,
                                                 &output_rows,
-                                                &output_rows_length));
+                                                &output_rows_length,
+                                                pid));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
