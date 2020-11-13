@@ -233,11 +233,19 @@ object JobVerificationEngine {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
       } else if (operator == "countRowsPerPartition") {
-
+        for (j <- 0 until numPartitions) {
+          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
+        }
       } else if (operator == "computeNumRowsPerPartition") {
-
+        for (j <- 0 until numPartitions) {
+          // All EncryptedBlocks resulting from sample go to one worker
+          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+        }
       } else if (operator == "limitReturnRows") {
-
+        // Broadcast from one partition (assumed to be partition 0) to all partitions
+        for (j <- 0 until numPartitions) {
+          expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
+        }
       } else {
         throw new Exception("Job Verification Error creating expected adjacency matrix: "
           + "operator not supported - " + operator)
