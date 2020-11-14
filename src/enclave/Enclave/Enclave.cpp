@@ -373,6 +373,10 @@ void ecall_limit_return_rows(uint64_t partition_id,
   try {
     debug("Partition %i Ecall: Limit Return Rows\n", pid);
     EnclaveContext::getInstance().set_pid(pid);
+    if (pid > 0) {
+      // Handles consistency of job ID since this ecall is parallelized.
+      EnclaveContext::getInstance().increment_job_id();
+    }
     limit_return_rows(partition_id,
                       limits, limits_length,
                       input_rows, input_rows_length,
