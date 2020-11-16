@@ -154,10 +154,10 @@ object JobVerificationEngine {
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       // Below 4 lines for debugging
-      println("===Expected Ecall Seq===")
-      expectedEcallSeq foreach { row => row foreach print; println }
-      println("===Ecall seq===") 
-      ecallSeq foreach { row => row foreach print; println }
+      // println("===Expected Ecall Seq===")
+      // expectedEcallSeq foreach { row => row foreach print; println }
+      // println("===Ecall seq===") 
+      // ecallSeq foreach { row => row foreach print; println }
       return false
     }
 
@@ -256,11 +256,11 @@ object JobVerificationEngine {
          j <- 0 until numPartitions * (numEcalls + 1)) {
       if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
         // These two println for debugging purposes
-        println("Expected Adjacency Matrix: ")
-        expectedAdjacencyMatrix foreach { row => row foreach print; println }
+        // println("Expected Adjacency Matrix: ")
+        // expectedAdjacencyMatrix foreach { row => row foreach print; println }
         
-        println("Executed Adjacency Matrix: ")
-        executedAdjacencyMatrix foreach { row => row foreach print; println }
+        // println("Executed Adjacency Matrix: ")
+        // executedAdjacencyMatrix foreach { row => row foreach print; println }
         return false
       }
     }
