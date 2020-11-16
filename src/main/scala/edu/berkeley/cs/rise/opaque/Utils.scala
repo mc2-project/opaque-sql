@@ -1407,8 +1407,8 @@ object Utils extends Logging {
           tuix.LogEntryChain.createCurrEntriesVector(builder, allCurrLogEntries.map { currLogEntry =>
             val macLst = new Array[Byte](currLogEntry.macLstLength)
             currLogEntry.macLstAsByteBuffer.get(macLst)
-            val globalMac = new Array[Byte](currLogEntry.globalMacLength)
-            currLogEntry.globalMacAsByteBuffer.get(globalMac)
+            val macLstMac = new Array[Byte](currLogEntry.macLstMacLength)
+            currLogEntry.macLstMacAsByteBuffer.get(macLstMac)
             tuix.LogEntry.createLogEntry(
               builder,
               builder.createString(currLogEntry.ecall),
@@ -1417,7 +1417,7 @@ object Utils extends Logging {
               currLogEntry.jobId,
               currLogEntry.numMacs,
               tuix.LogEntry.createMacLstVector(builder, macLst),
-              tuix.LogEntry.createGlobalMacVector(builder, globalMac))
+              tuix.LogEntry.createMacLstMacVector(builder, macLstMac))
           }.toArray),
           tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
             tuix.LogEntry.createLogEntry(
@@ -1428,7 +1428,7 @@ object Utils extends Logging {
               pastLogEntry.jobId,
               pastLogEntry.numMacs,
               tuix.LogEntry.createMacLstVector(builder, Array.empty),
-              tuix.LogEntry.createGlobalMacVector(builder, Array.empty))
+              tuix.LogEntry.createMacLstMacVector(builder, Array.empty))
           }.toArray),
           tuix.LogEntryChain.createNumPastEntriesVector(builder, numPastEntriesList.toArray)
         ),
@@ -1484,7 +1484,7 @@ object Utils extends Logging {
             logEntry.jobId,
             0,
             tuix.LogEntry.createMacLstVector(builder, Array.empty),
-            tuix.LogEntry.createGlobalMacVector(builder, Array.empty)
+            tuix.LogEntry.createMacLstMacVector(builder, Array.empty)
         )}.toArray),
         tuix.LogEntryChain.createNumPastEntriesVector(builder, Array(numPastEntries))),
       tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))

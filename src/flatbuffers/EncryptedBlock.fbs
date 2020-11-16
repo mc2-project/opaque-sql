@@ -26,7 +26,7 @@ table LogEntry {
     job_id:int;
     num_macs:int;
     mac_lst:[ubyte];
-    global_mac:[ubyte];
+    mac_lst_mac:[ubyte];
 }
 
 table LogEntryChain {

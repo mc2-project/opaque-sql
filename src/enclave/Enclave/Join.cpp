@@ -66,7 +66,7 @@ void non_oblivious_sort_merge_join(
       // If current row is from primary table
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        // Add this row to the current group
+        // Add this primary row to the current group
         primary_group.append(current);
         last_primary_of_group.set(current);
       } else {

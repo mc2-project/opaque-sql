@@ -139,8 +139,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int job_id = EnclaveContext::getInstance().get_job_id();
     int num_macs = static_cast<int>(EnclaveContext::getInstance().get_num_macs());
     uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
-    uint8_t global_mac[OE_HMAC_SIZE];
-    EnclaveContext::getInstance().hmac_mac_lst(mac_lst, global_mac);
+    uint8_t mac_lst_mac[OE_HMAC_SIZE];
+    EnclaveContext::getInstance().hmac_mac_lst(mac_lst, mac_lst_mac);
 
     int curr_pid = EnclaveContext::getInstance().get_pid();
     char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
@@ -153,11 +153,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     memcpy(mac_lst_ptr.get(), mac_lst, num_macs * SGX_AESGCM_MAC_SIZE);
 
     // Copy global mac to untrusted memory
-    uint8_t* untrusted_global_mac = nullptr;
-    ocall_malloc(OE_HMAC_SIZE, &untrusted_global_mac);
-    std::unique_ptr<uint8_t, decltype(&ocall_free)> global_mac_ptr(untrusted_global_mac, 
+    uint8_t* untrusted_mac_lst_mac = nullptr;
+    ocall_malloc(OE_HMAC_SIZE, &untrusted_mac_lst_mac);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_lst_mac_ptr(untrusted_mac_lst_mac, 
         &ocall_free);
-    memcpy(global_mac_ptr.get(), global_mac, OE_HMAC_SIZE);
+    memcpy(mac_lst_mac_ptr.get(), mac_lst_mac, OE_HMAC_SIZE);
 
     // This is an offset into enc block builder
     auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
@@ -167,11 +167,11 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         job_id,
         num_macs,
         enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
-        enc_block_builder.CreateVector(global_mac_ptr.get(), OE_HMAC_SIZE));
+        enc_block_builder.CreateVector(mac_lst_mac_ptr.get(), OE_HMAC_SIZE));
 
     curr_log_entry_vector.push_back(log_entry_serialized);
 
-    std::unordered_set<LogEntry> past_log_entries = EnclaveContext::getInstance().get_past_log_entries();
+    std::vector<LogEntry> past_log_entries = EnclaveContext::getInstance().get_past_log_entries();
 
     for (LogEntry le : past_log_entries) {
       char* untrusted_ecall_op_str = oe_host_strndup(le.ecall.c_str(), le.ecall.length());
@@ -185,14 +185,14 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     num_past_log_entries.push_back(past_log_entries.size());
    
-    // We will MAC over global_mac || curr_ecall || snd_pid || rcv_pid || job_id || num_macs 
-    // || global_mac || num past log entries || past log entries
+    // We will MAC over curr_ecall || snd_pid || rcv_pid || job_id || num_macs 
+    // || mac_lst_mac || num past log entries || past log entries
     int num_past_entries = (int) past_log_entries.size();
     int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, 0, num_past_entries);
 
     // curr_log_entry contains:
     //  * string curr_ecall of size curr_ecall.length()
-    //  * global_mac of size OE_HMAC_SIZE
+    //  * mac_lst_mac of size OE_HMAC_SIZE
     //  * 5 ints
     // 1 past log entry contains:
     //  * string ecall of size ecall.length()
@@ -202,7 +202,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     uint8_t to_mac[num_bytes_to_mac];
 
     uint8_t hmac[OE_HMAC_SIZE];
-    mac_log_entry_chain(num_bytes_to_mac, to_mac, global_mac, curr_ecall, curr_pid, -1, job_id, 
+    mac_log_entry_chain(num_bytes_to_mac, to_mac, mac_lst_mac, curr_ecall, curr_pid, -1, job_id, 
         num_macs, num_past_entries, past_log_entries, 0, num_past_entries, hmac);
 
     // Copy the mac to untrusted memory
