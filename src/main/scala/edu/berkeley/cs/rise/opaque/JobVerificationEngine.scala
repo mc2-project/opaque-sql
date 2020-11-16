@@ -77,8 +77,8 @@ object JobVerificationEngine {
 
       if (numEcalls != numEcallsInFirstPartition) {
         // Below two lines for debugging
-        println("This partition num ecalls: " + numEcalls)
-        println("last partition num ecalls: " + numEcallsInFirstPartition)
+        // println("This partition num ecalls: " + numEcalls)
+        // println("last partition num ecalls: " + numEcallsInFirstPartition)
         throw new Exception("All partitions did not perform same number of ecalls")
       }
       startingJobIdMap(i) = minJobId
