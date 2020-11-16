@@ -81,7 +81,7 @@ void non_oblivious_sort_merge_join(
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         EnclaveContext::getInstance().set_append_mac(false);
-        auto primary_group_buffer = primary_group.output_buffer(std::string("NULL"));
+        auto primary_group_buffer = primary_group.output_buffer(std::string(""));
         RowReader primary_group_reader(primary_group_buffer.view());
         while (primary_group_reader.has_next()) {
           // For each foreign key row, join all primary key rows in same group with it

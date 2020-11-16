@@ -133,7 +133,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<int> num_past_log_entries;
   std::vector<flatbuffers::Offset<tuix::LogEntryChainMac>> log_entry_chain_hash_vector;
   
-  if (curr_ecall != std::string("NULL")) {
+  if (curr_ecall != std::string("")) {
     // Only write log entry chain if this is the output of an ecall, 
     // i.e. not intermediate output within an ecall
     int job_id = EnclaveContext::getInstance().get_job_id();
@@ -171,7 +171,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     curr_log_entry_vector.push_back(log_entry_serialized);
 
-    std::vector<LogEntry> past_log_entries = EnclaveContext::getInstance().get_ecall_log_entries();
+    std::unordered_set<LogEntry> past_log_entries = EnclaveContext::getInstance().get_past_log_entries();
 
     for (LogEntry le : past_log_entries) {
       char* untrusted_ecall_op_str = oe_host_strndup(le.ecall.c_str(), le.ecall.length());
