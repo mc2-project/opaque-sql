@@ -53,7 +53,6 @@ object JobVerificationEngine {
     for (i <- 0 until numPartitions) {
       perPartitionJobIds(i) = Set[Int]()
     } 
-
     for (logEntryChain <- logEntryChains) {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
@@ -144,6 +143,10 @@ object JobVerificationEngine {
         expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
       } else if (operator == "EncryptedSortMergeJoinExec") {
         expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
+      } else if (operator == "EncryptedLocalLimitExec") {
+        expectedEcallSeq.append("limitReturnRows")
+      } else if (operator == "EncryptedGlobalLimitExec") {
+        expectedEcallSeq.append("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
       } else {
         throw new Exception("Executed unknown operator") 
       }
@@ -151,9 +154,9 @@ object JobVerificationEngine {
 
     if (!ecallSeq.sameElements(expectedEcallSeq)) {
       // Below 4 lines for debugging
-      // println("Expected Ecall Seq")
+      // println("===Expected Ecall Seq===")
       // expectedEcallSeq foreach { row => row foreach print; println }
-      // println("Ecall seq") 
+      // println("===Ecall seq===") 
       // ecallSeq foreach { row => row foreach print; println }
       return false
     }
@@ -229,6 +232,20 @@ object JobVerificationEngine {
         for (j <- 0 until numPartitions) {
           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
         }
+      } else if (operator == "countRowsPerPartition") {
+        // Send from all partitions to partition 0
+        for (j <- 0 until numPartitions) {
+          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
+        }
+      } else if (operator == "computeNumRowsPerPartition") {
+        // Broadcast from one partition (assumed to be partition 0) to all partitions
+        for (j <- 0 until numPartitions) {
+          expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
+        }
+      } else if (operator == "limitReturnRows") {
+        for (j <- 0 until numPartitions) {
+          expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
+        }
       } else {
         throw new Exception("Job Verification Error creating expected adjacency matrix: "
           + "operator not supported - " + operator)
@@ -241,7 +258,7 @@ object JobVerificationEngine {
         // These two println for debugging purposes
         // println("Expected Adjacency Matrix: ")
         // expectedAdjacencyMatrix foreach { row => row foreach print; println }
-        // 
+        
         // println("Executed Adjacency Matrix: ")
         // executedAdjacencyMatrix foreach { row => row foreach print; println }
         return false

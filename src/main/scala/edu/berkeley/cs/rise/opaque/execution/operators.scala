@@ -401,9 +401,10 @@ case class EncryptedLocalLimitExec(
   override def executeBlocked(): RDD[Block] = {
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") { childRDD =>
 
+      JobVerificationEngine.addExpectedOperator("EncryptedLocalLimitExec")
       childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.LocalLimit(eid, limit, block.bytes))
+        Block(enclave.LocalLimit(eid, limit, block.bytes, TaskContext.getPartitionId))
       }
     }
   }
@@ -421,20 +422,21 @@ case class EncryptedGlobalLimitExec(
   override def executeBlocked(): RDD[Block] = {
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") { childRDD =>
 
+      JobVerificationEngine.addExpectedOperator("EncryptedGlobalLimitExec")
       val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.CountRowsPerPartition(eid, block.bytes))
+        Block(enclave.CountRowsPerPartition(eid, block.bytes, TaskContext.getPartitionId))
       }.collect)
 
       val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
         val (enclave, eid) = Utils.initEnclave()
-        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
+        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList, TaskContext.getPartitionId)
       }.collect.head
 
       childRDD.zipWithIndex.map {
         case (block, i) => {
           val (enclave, eid) = Utils.initEnclave()
-          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes, TaskContext.getPartitionId))
         }
       }
     }
