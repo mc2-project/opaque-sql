@@ -33,13 +33,13 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   // Master list of mac lists of all input partitions
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
 
-  // Check that each input partition's global_mac is indeed a HMAC over the mac_lst
+  // Check that each input partition's mac_lst_mac is indeed a HMAC over the mac_lst
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
     // Copy over the global mac for this input log entry
-    uint8_t global_mac[SGX_AESGCM_MAC_SIZE];
-    memcpy(global_mac, input_log_entry->global_mac()->data(), SGX_AESGCM_MAC_SIZE);
+    uint8_t mac_lst_mac[SGX_AESGCM_MAC_SIZE];
+    memcpy(mac_lst_mac, input_log_entry->mac_lst_mac()->data(), SGX_AESGCM_MAC_SIZE);
 
     // Copy over the mac_lst
     int num_macs = input_log_entry->num_macs();
@@ -50,7 +50,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     mcrypto.hmac(mac_lst, num_macs * SGX_AESGCM_MAC_SIZE, computed_hmac);
 
     // Check that the global mac is as computed
-    if (!std::equal(std::begin(global_mac), std::end(global_mac), std::begin(computed_hmac))) {
+    if (!std::equal(std::begin(mac_lst_mac), std::end(mac_lst_mac), std::begin(computed_hmac))) {
       throw std::runtime_error("MAC over Encrypted Block MACs from one partition is invalid");
     }
     
@@ -132,8 +132,8 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
       int num_macs = curr_log_entry->num_macs();
       int num_past_entries = num_past_entries_vec->Get(i);
 
-      uint8_t global_mac[OE_HMAC_SIZE];
-      memcpy(global_mac, curr_log_entry->global_mac()->data(), OE_HMAC_SIZE);
+      uint8_t mac_lst_mac[OE_HMAC_SIZE];
+      memcpy(mac_lst_mac, curr_log_entry->mac_lst_mac()->data(), OE_HMAC_SIZE);
 
       int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, past_entries_seen, 
           past_entries_seen + num_past_entries); 
@@ -145,7 +145,7 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
 
       // MAC the data
       uint8_t actual_mac[32];
-      mac_log_entry_chain(num_bytes_to_mac, to_mac, global_mac, curr_ecall, snd_pid, rcv_pid, 
+      mac_log_entry_chain(num_bytes_to_mac, to_mac, mac_lst_mac, curr_ecall, snd_pid, rcv_pid, 
           job_id, num_macs, num_past_entries, past_log_entries, past_entries_seen, 
           past_entries_seen + num_past_entries_vec->Get(i), actual_mac);
 
@@ -160,13 +160,13 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
   }
 }
 
-void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, uint8_t* global_mac, 
+void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, uint8_t* mac_lst_mac, 
     std::string curr_ecall, int curr_pid, int rcv_pid, int job_id, int num_macs, 
     int num_past_entries, std::vector<LogEntry> past_log_entries, int first_le_index, 
     int last_le_index, uint8_t* ret_hmac) {
 
   // Copy what we want to mac to contiguous memory
-  memcpy(to_mac, global_mac, OE_HMAC_SIZE);
+  memcpy(to_mac, mac_lst_mac, OE_HMAC_SIZE);
   memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
   memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length(), &curr_pid, sizeof(int));
   memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));

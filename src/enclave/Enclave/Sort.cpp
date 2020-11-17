@@ -169,11 +169,11 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   size_t sorted_rows_length;
 
   EnclaveContext::getInstance().set_append_mac(false);
-  // Passing in NULL as the curr_ecall means that the resulting blocks in sorted_rows won't have any log metadata associated with it
+  // Passing in the empty string as the curr_ecall means that the resulting blocks in sorted_rows won't have any log metadata associated with it
   external_sort(sort_order, sort_order_length,
                 input_rows, input_rows_length,
                 &sorted_rows, &sorted_rows_length,
-                std::string("NULL"));
+                std::string(""));
 
   // Split them into one range per partition
   EnclaveContext::getInstance().set_append_mac(true);
@@ -208,7 +208,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   external_sort(sort_order, sort_order_length,
                 input_rows, input_rows_length,
                 &sorted_rows, &sorted_rows_length,
-                std::string("NULL"));
+                std::string(""));
 
   // Scan through the input rows and copy each to the appropriate output partition specified by the
   // ranges encoded in the given boundary_rows. A range contains all rows greater than or equal to

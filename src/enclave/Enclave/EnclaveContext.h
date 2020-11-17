@@ -109,9 +109,9 @@ class EnclaveContext {
       ecall_log_entries.insert(le);
     }
 
-    std::vector<LogEntry> get_ecall_log_entries() {
-      std::vector<LogEntry> ret(ecall_log_entries.begin(), ecall_log_entries.end());
-      return ret;
+    std::vector<LogEntry> get_past_log_entries() {
+      std::vector<LogEntry> past_log_entries(ecall_log_entries.begin(), ecall_log_entries.end());
+      return past_log_entries;
     }
 
     int get_pid() {
@@ -153,7 +153,7 @@ class EnclaveContext {
       }
     }
 
-    void hmac_mac_lst(const uint8_t* ret_mac_lst, const uint8_t* global_mac) {
+    void hmac_mac_lst(const uint8_t* ret_mac_lst, const uint8_t* mac_lst_mac) {
       std::vector<std::vector<uint8_t>> chosen_mac_lst;
       if (curr_row_writer == std::string("first_row")) {
         chosen_mac_lst = first_row_log_entry_mac_lst;
@@ -176,7 +176,10 @@ class EnclaveContext {
       }
 
       // hmac the contiguous chunk of memory
-      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) global_mac);
+      uint8_t hmac_result[OE_HMAC_SIZE];
+      mcrypto.hmac(contiguous_mac_lst, mac_lst_length, (uint8_t*) hmac_result);
+      memcpy((uint8_t*) mac_lst_mac, hmac_result, OE_HMAC_SIZE);
+
       memcpy((uint8_t*) ret_mac_lst, contiguous_mac_lst, mac_lst_length);
     }
 
