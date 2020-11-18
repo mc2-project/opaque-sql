@@ -13,7 +13,6 @@ union ExprUnion {
     EqualTo,
     Contains,
     In,
-    Concat, 
     Col,
     Literal,
     And,
@@ -122,10 +121,6 @@ table Contains {
 
 // Array expressions
 table In{
-    children:[Expr]; 
-}
-
-table Concat{
     children:[Expr]; 
 }
 
