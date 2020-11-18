@@ -12,7 +12,6 @@ union ExprUnion {
     GreaterThanOrEqual,
     EqualTo,
     Contains,
-    In,
     Concat, 
     Col,
     Literal,

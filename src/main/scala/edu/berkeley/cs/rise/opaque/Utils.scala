@@ -967,13 +967,6 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
-        case (In(left, right), childrenOffsets) =>
-          tuix.Expr.createExpr(
-            builder,
-            tuix.ExprUnion.In,
-            tuix.In.createIn(
-              builder, tuix.In.createChildrenVector(builder, childrenOffsets.toArray)))
-
         case (Concat(child), childrenOffsets) =>
           tuix.Expr.createExpr(
             builder,
