@@ -97,6 +97,14 @@ object OpaqueOperators extends Strategy {
 
     case PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
+
+      // Non-oblivious aggregation steps:
+      // 1. Sort each partition by the grouping expressions
+      // 2. Partial aggregate for each partition
+      // 3. Sort globally by the grouping attributes
+      // 4. Perform a final aggregation (and any projection as necessary)
+      //    based on the grouping attributes and final aggregates
+
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
 
       val groupingAttributes = groupingExpressions.map(_.toAttribute)
@@ -109,13 +117,6 @@ object OpaqueOperators extends Strategy {
 
       val finalAggregateExpressions = aggregateExpressions.map(_.copy(mode = Final))
       val finalAggregateAttributes = finalAggregateExpressions.map(_.resultAttribute)
-
-      // Non-oblivious aggregation steps:
-      // 1. Sort each partition by the grouping expressions
-      // 2. Partial aggregate for each partition
-      // 3. Sort globally by the grouping attributes
-      // 4. Perform a final aggregation (and any projection as necessary)
-      //    based on the grouping attributes and final aggregates
 
       EncryptedPartialAggregateExec(
         groupingAttributes, finalAggregateExpressions, resultExpressions, false,
