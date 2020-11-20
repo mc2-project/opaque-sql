@@ -234,26 +234,7 @@ case class EncryptedPartialAggregateExec(
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = {
-      val groupingAttributes = groupingExpressions.map(_.toAttribute)
-      val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))
-      // val partialAggregateAttributes =
-      //   partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-      val partialResultExpressions =
-        groupingAttributes ++
-          partialAggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
-
-      val finalAggregateExpressions = aggregateExpressions.map(_.copy(mode = Final))
-      val finalAggregateAttributes = finalAggregateExpressions.map(_.resultAttribute)
-
-      if (isPartial)
-        (groupingExpressions, partialAggregateExpressions, partialResultExpressions)
-      else
-        (groupingAttributes, finalAggregateExpressions, resultExpressions)
-    }
-
-    val aggExprSer = Utils.serializeAggOp(gExpr, aExpr, child.output)
-
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, resultExpressions, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()

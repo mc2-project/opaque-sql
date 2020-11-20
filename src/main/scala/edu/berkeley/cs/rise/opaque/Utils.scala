@@ -1139,33 +1139,52 @@ object Utils extends Logging {
     groupingExpressions: Seq[NamedExpression],
     aggExpressions: Seq[AggregateExpression],
     resultExpressions: Seq[NamedExpression],
-    input: Seq[Attribute]): Array[Byte] = {
-    // // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
-    // // grouping expressions into AggregateExpressions that collect the first seen value.
-    // val aggExpressionsWithFirst = aggExpressions.map {
-    //   case Alias(e: AggregateExpression, _) => e
-    //   case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
-    // }
+    input: Seq[Attribute],
+    isPartial: Boolean): Array[Byte] = {
 
-    val aggSchema = aggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-    // For aggregation, we concatenate the current aggregate row with the new input row and run
-    // the update expressions as a projection to obtain a new aggregate row. concatSchema
-    // describes the schema of the temporary concatenated row.
-    val concatSchema = aggSchema ++ input
+    if (isPartial) {
+      val aggSchema = aggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
+      // For aggregation, we concatenate the current aggregate row with the new input row and run
+      // the update expressions as a projection to obtain a new aggregate row. concatSchema
+      // describes the schema of the temporary concatenated row.
+      val concatSchema = aggSchema ++ input
 
-    val builder = new FlatBufferBuilder
-    builder.finish(
-      tuix.AggregateOp.createAggregateOp(
-        builder,
-        tuix.AggregateOp.createGroupingExpressionsVector(
+      val builder = new FlatBufferBuilder
+      builder.finish(
+        tuix.AggregateOp.createAggregateOp(
           builder,
-          groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
-        tuix.AggregateOp.createAggregateExpressionsVector(
+          tuix.AggregateOp.createGroupingExpressionsVector(
+            builder,
+            groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
+          tuix.AggregateOp.createAggregateExpressionsVector(
+            builder,
+            aggExpressions
+              .map(e => serializeAggExpression(builder, e, concatSchema, true))
+              .toArray),
+          tuix.AggregateOp.createResultExpressionsVector(
+            builder,
+            resultExpressions.map(e => flatbuffersSerializeExpression(builder, e, resultExpressions)).toArray)))
+      builder.sizedByteArray()
+
+    } else {
+
+      val builder = new FlatBufferBuilder
+      builder.finish(
+        tuix.AggregateOp.createAggregateOp(
           builder,
-          aggExpressions
-            .map(e => serializeAggExpression(builder, e, concatSchema))
-            .toArray)))
-    builder.sizedByteArray()
+          tuix.AggregateOp.createGroupingExpressionsVector(
+            builder,
+            groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
+          tuix.AggregateOp.createAggregateExpressionsVector(
+            builder,
+            aggExpressions
+              .map(e => serializeAggExpression(builder, e, input, false))
+              .toArray),
+          tuix.AggregateOp.createResultExpressionsVector(
+            builder,
+            resultExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray)))
+      builder.sizedByteArray()
+    }
   }
 
   /**
@@ -1173,8 +1192,12 @@ object Utils extends Logging {
    * tuix.AggregateExpr.
    */
   def serializeAggExpression(
-    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute],
-    aggSchema: Seq[Attribute], concatSchema: Seq[Attribute]): Int = {
+    builder: FlatBufferBuilder,
+    e: AggregateExpression,
+    input: Seq[Attribute],
+    aggSchema: Seq[Attribute],
+    concatSchema: Seq[Attribute],
+    isPartial: Boolean): Int = {
     (e.aggregateFunction: @unchecked) match {
       case avg @ Average(child) =>
         val sum = avg.aggBufferAttributes(0)

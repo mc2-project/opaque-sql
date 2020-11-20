@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
 
-case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan, isGlobal: Boolean)
+case class EncryptedSortExec(order: Seq[SortOrder], isGlobal: Boolean, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
