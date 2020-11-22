@@ -122,6 +122,45 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  testAgainstSpark("Interval SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 DAY FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Week SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Month SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Date Add") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.select(date_add($"time", 3)).collect
+  }
+
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect

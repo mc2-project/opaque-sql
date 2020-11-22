@@ -265,6 +265,25 @@ private:
 
     case tuix::ExprUnion_Literal:
     {
+      auto * literal = static_cast<const tuix::Literal *>(expr->expr());
+      const tuix::Field *value = literal->value();
+
+      // If type is CalendarInterval, manually return a calendar interval field. 
+      // Otherwise 'days' disappears in conversion.
+      if (value->value_type() == tuix::FieldUnion_CalendarIntervalField) {
+
+        auto  *interval = value->value_as_CalendarIntervalField();
+        uint32_t months = interval->months();
+        uint32_t days = interval->days();
+        uint64_t ms = interval->microseconds();
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_CalendarIntervalField,
+          tuix::CreateCalendarIntervalField(builder, months, days, ms).Union(),
+          false);
+      }
+
       return flatbuffers_copy<tuix::Field>(
         static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
     }
@@ -403,6 +422,7 @@ private:
       auto add = static_cast<const tuix::Add *>(expr->expr());
       auto left_offset = eval_helper(row, add->left());
       auto right_offset = eval_helper(row, add->right());
+
       return eval_binary_arithmetic_op<tuix::Add, std::plus>(
         builder,
         flatbuffers::GetTemporaryPointer(builder, left_offset),
@@ -1039,6 +1059,102 @@ private:
         tuix::FieldUnion_BooleanField,
         tuix::CreateBooleanField(builder, result).Union(),
         false);
+    }
+
+    // Time expressions
+    case tuix::ExprUnion_DateAdd:
+    {
+      auto c = static_cast<const tuix::DateAdd *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+
+      if (left->value_type() != tuix::FieldUnion_DateField
+          || right->value_type() != tuix::FieldUnion_IntegerField) {
+          throw std::runtime_error(
+          std::string("tuix::DateAdd requires date Date, increment Integer, not ")
+          + std::string("date ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", increment ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+        }
+
+      bool result_is_null = left->is_null() || right->is_null();
+
+      if (!result_is_null) {
+        auto left_field = static_cast<const tuix::DateField *>(left->value());
+        auto right_field = static_cast<const tuix::IntegerField *>(right->value());
+
+        uint32_t result = left_field->value() + right_field->value();
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      } else {
+        uint32_t result = 0;
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      }
+    }
+
+    case tuix::ExprUnion_DateAddInterval:
+    {
+      auto c = static_cast<const tuix::DateAddInterval *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+
+      if (left->value_type() != tuix::FieldUnion_DateField
+          || right->value_type() != tuix::FieldUnion_CalendarIntervalField) {
+          throw std::runtime_error(
+          std::string("tuix::DateAddInterval requires date Date, interval CalendarIntervalField, not ")
+          + std::string("date ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", interval ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+        }
+
+      bool result_is_null = left->is_null() || right->is_null();
+      uint32_t result = 0;
+
+      if (!result_is_null) {
+
+        auto left_field = static_cast<const tuix::DateField *>(left->value());
+        auto right_field = static_cast<const tuix::CalendarIntervalField *>(right->value());
+
+        //This is an approximation
+        //TODO take into account leap seconds
+        uint64_t date = 86400L*left_field->value();
+        struct tm tm;
+        secs_to_tm(date, &tm);
+        tm.tm_mon += right_field->months();
+        tm.tm_mday += right_field->days();
+        time_t time = std::mktime(&tm);
+        uint32_t result = (time + (right_field->microseconds() / 1000)) / 86400L;
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      } else {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      }
     }
 
     case tuix::ExprUnion_Year:

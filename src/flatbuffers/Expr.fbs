@@ -36,7 +36,9 @@ union ExprUnion {
     Exp,
     ClosestPoint,
     CreateArray,
-    Upper
+    Upper,
+    DateAdd,
+    DateAddInterval
 }
 
 table Expr {
@@ -163,6 +165,16 @@ table CaseWhen {
 // Date expressions
 table Year {
     child:Expr;
+}
+
+table DateAdd {
+    left:Expr;
+    right:Expr;
+}
+
+table DateAddInterval {
+    left:Expr;
+    right:Expr;
 }
 
 // Math expressions
