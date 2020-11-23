@@ -37,24 +37,22 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
-    // Copy over the global mac for this input log entry
-    uint8_t mac_lst_mac[SGX_AESGCM_MAC_SIZE];
-    memcpy(mac_lst_mac, input_log_entry->mac_lst_mac()->data(), SGX_AESGCM_MAC_SIZE);
-
-    // Copy over the mac_lst
+    // Retrieve mac_lst and mac_lst_mac
+    const uint8_t* mac_lst_mac = input_log_entry->mac_lst_mac()->data();
     int num_macs = input_log_entry->num_macs();
-    uint8_t mac_lst[num_macs * SGX_AESGCM_MAC_SIZE];
-    memcpy(mac_lst, input_log_entry->mac_lst()->data(), num_macs * SGX_AESGCM_MAC_SIZE);
+    const uint8_t* mac_lst = input_log_entry->mac_lst()->data();
     
     uint8_t computed_hmac[OE_HMAC_SIZE];
     mcrypto.hmac(mac_lst, num_macs * SGX_AESGCM_MAC_SIZE, computed_hmac);
 
-    // Check that the global mac is as computed
-    if (!std::equal(std::begin(mac_lst_mac), std::end(mac_lst_mac), std::begin(computed_hmac))) {
-      throw std::runtime_error("MAC over Encrypted Block MACs from one partition is invalid");
+    // Check that the mac lst hasn't been tampered with
+    for (int j = 0; j < OE_HMAC_SIZE; j++) {
+        if (mac_lst_mac[j] != computed_hmac[j]) {
+            throw std::runtime_error("MAC over Encrypted Block MACs from one partition is invalid");
+        }
     }
     
-    uint8_t* tmp_ptr = mac_lst;
+    uint8_t* tmp_ptr = (uint8_t*) mac_lst;
 
     // the mac list of one input log entry (from one partition) in vector form
     std::vector<std::vector<uint8_t>> p_mac_lst;
