@@ -131,7 +131,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::LogEntry>> curr_log_entry_vector;
   std::vector<flatbuffers::Offset<tuix::LogEntry>> past_log_entries_vector;
   std::vector<int> num_past_log_entries;
-  std::vector<flatbuffers::Offset<tuix::LogEntryChainMac>> log_entry_chain_hash_vector;
+  std::vector<flatbuffers::Offset<tuix::Mac>> log_entry_chain_hash_vector;
   
   if (curr_ecall != std::string("")) {
     // Only write log entry chain if this is the output of an ecall, 
@@ -210,7 +210,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     ocall_malloc(OE_HMAC_SIZE, &untrusted_mac);
     std::unique_ptr<uint8_t, decltype(&ocall_free)> mac_ptr(untrusted_mac, &ocall_free);
     memcpy(mac_ptr.get(), hmac, OE_HMAC_SIZE);
-    auto mac_offset = tuix::CreateLogEntryChainMac(enc_block_builder, 
+    auto mac_offset = tuix::CreateMac(enc_block_builder, 
         enc_block_builder.CreateVector(mac_ptr.get(), OE_HMAC_SIZE));
     log_entry_chain_hash_vector.push_back(mac_offset);
 
