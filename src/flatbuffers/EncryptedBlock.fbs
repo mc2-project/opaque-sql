@@ -12,7 +12,7 @@ table EncryptedBlock {
 table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
-    log_mac:[LogEntryChainMac]; 
+    log_mac:[Mac]; 
 }
 
 table SortedRuns {
@@ -35,7 +35,7 @@ table LogEntryChain {
     num_past_entries:[int];
 }
 
-table LogEntryChainMac {
+table Mac {
     mac:[ubyte];
 }
 

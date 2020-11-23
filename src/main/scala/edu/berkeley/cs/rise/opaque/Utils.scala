@@ -1435,7 +1435,7 @@ object Utils extends Logging {
       tuix.EncryptedBlocks.createLogMacVector(builder, allLogMacs.map { logMac =>
           val mac = new Array[Byte](logMac.macLength)
           logMac.macAsByteBuffer.get(mac)
-          tuix.LogEntryChainMac.createLogEntryChainMac(builder, tuix.LogEntryChainMac.createMacVector(builder, mac))
+          tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
         }.toArray)
       ))
     Block(builder.sizedByteArray())
