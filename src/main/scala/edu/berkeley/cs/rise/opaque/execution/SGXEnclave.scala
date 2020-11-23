@@ -24,40 +24,40 @@ class SGXEnclave extends java.io.Serializable {
   @native def StartEnclave(libraryPath: String): Long
   @native def StopEnclave(enclaveId: Long): Unit
 
-  @native def Project(eid: Long, projectList: Array[Byte], input: Array[Byte], pid: Int): Array[Byte]
+  @native def Project(eid: Long, projectList: Array[Byte], input: Array[Byte]): Array[Byte]
 
-  @native def Filter(eid: Long, condition: Array[Byte], input: Array[Byte], pid: Int): Array[Byte]
+  @native def Filter(eid: Long, condition: Array[Byte], input: Array[Byte]): Array[Byte]
 
   @native def Encrypt(eid: Long, plaintext: Array[Byte]): Array[Byte]
   @native def Decrypt(eid: Long, ciphertext: Array[Byte]): Array[Byte]
 
-  @native def Sample(eid: Long, input: Array[Byte], pid: Int): Array[Byte]
+  @native def Sample(eid: Long, input: Array[Byte]): Array[Byte]
   @native def FindRangeBounds(
-    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte]): Array[Byte]
   @native def PartitionForSort(
     eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte],
-    boundaries: Array[Byte], pid: Int): Array[Array[Byte]]
-  @native def ExternalSort(eid: Long, order: Array[Byte], input: Array[Byte], pid: Int): Array[Byte]
+    boundaries: Array[Byte]): Array[Array[Byte]]
+  @native def ExternalSort(eid: Long, order: Array[Byte], input: Array[Byte]): Array[Byte]
 
   @native def ScanCollectLastPrimary(
-    eid: Long, joinExpr: Array[Byte], input: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte]): Array[Byte]
   @native def NonObliviousSortMergeJoin(
-    eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, joinExpr: Array[Byte], input: Array[Byte], joinRow: Array[Byte]): Array[Byte]
 
   @native def NonObliviousAggregateStep1(
-    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], pid: Int): (Array[Byte], Array[Byte], Array[Byte])
+    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte])
   @native def NonObliviousAggregateStep2(
     eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], nextPartitionFirstRow: Array[Byte],
-    prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte], pid: Int): Array[Byte]
+    prevPartitionLastGroup: Array[Byte], prevPartitionLastRow: Array[Byte]): Array[Byte]
 
   @native def CountRowsPerPartition(
-    eid: Long, inputRows: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, inputRows: Array[Byte]): Array[Byte]
   @native def ComputeNumRowsPerPartition(
-    eid: Long, limit: Int, inputRows: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
   @native def LocalLimit(
-    eid: Long, limit: Int, inputRows: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
   @native def LimitReturnRows(
-    eid: Long, partitionID: Long, limits: Array[Byte], inputRows: Array[Byte], pid: Int): Array[Byte]
+    eid: Long, partitionID: Long, limits: Array[Byte], inputRows: Array[Byte]): Array[Byte]
 
   // Remote attestation, enclave side
   @native def GenerateReport(eid: Long): Array[Byte]
