@@ -125,12 +125,13 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
     for (int i = 0; i < num_curr_entries; i++) {
       auto curr_log_entry = curr_entries_vec->Get(i);
       std::string curr_ecall = curr_log_entry->ecall()->str();
-      int snd_pid = curr_log_entry->snd_pid();
-      int rcv_pid = -1;
-      int job_id = curr_log_entry->job_id();
+      // int snd_pid = curr_log_entry->snd_pid();
+      // int rcv_pid = -1;
+      // int job_id = curr_log_entry->job_id();
       int num_macs = curr_log_entry->num_macs();
       int num_past_entries = num_past_entries_vec->Get(i);
 
+      // TODO: no need to memcpy this
       uint8_t mac_lst_mac[OE_HMAC_SIZE];
       memcpy(mac_lst_mac, curr_log_entry->mac_lst_mac()->data(), OE_HMAC_SIZE);
 
