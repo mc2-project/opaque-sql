@@ -112,6 +112,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   }
 }
 
+// Check that log entry chain has not been tampered with
 void verify_log(const tuix::EncryptedBlocks *encrypted_blocks, 
     std::vector<LogEntry> past_log_entries) {
   auto num_past_entries_vec = encrypted_blocks->log()->num_past_entries();
