@@ -127,17 +127,18 @@ class EnclaveContext {
       std::map<std::string, int> ecall_id = {
         {"project", 1},
         {"filter", 2},
-        {"findRangeBounds", 3},
-        {"partitionForSort", 4},
-        {"externalSort", 5},
-        {"scanCollectLastPrimary", 6},
-        {"nonObliviousSortMergeJoin", 7},
-        {"nonObliviousAggregateStep1", 8},
-        {"nonObliviousAggregateStep2", 9},
-        {"countRowsPerPartition", 10},
-        {"computeNumRowsPerPartition", 11},
-        {"localLimit", 12},
-        {"limitReturnRows", 13}
+        {"sample", 3},
+        {"findRangeBounds", 4},
+        {"partitionForSort", 5},
+        {"externalSort", 6},
+        {"scanCollectLastPrimary", 7},
+        {"nonObliviousSortMergeJoin", 8},
+        {"nonObliviousAggregateStep1", 9},
+        {"nonObliviousAggregateStep2", 10},
+        {"countRowsPerPartition", 11},
+        {"computeNumRowsPerPartition", 12},
+        {"localLimit", 13},
+        {"limitReturnRows", 14}
       };
       return ecall_id[ecall];
 

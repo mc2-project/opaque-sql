@@ -31,18 +31,19 @@ object JobVerificationEngine {
   val ecallId = Map(
     1 -> "project",
     2 -> "filter",
-    3 -> "findRangeBounds",
-    4 -> "partitionForSort",
-    5 -> "externalSort",
-    6 -> "scanCollectLastPrimary",
-    7 -> "nonObliviousSortMergeJoin",
-    8 -> "nonObliviousAggregateStep1",
-    9 -> "nonObliviousAggregateStep2",
-    10 -> "countRowsPerPartition",
-    11 -> "computeNumRowsPerPartition",
-    12 -> "localLimit",
-    13 -> "limitReturnRows"
-  )
+    3 -> "sample",
+    4 -> "findRangeBounds",
+    5 -> "partitionForSort",
+    6 -> "externalSort",
+    7 -> "scanCollectLastPrimary",
+    8 -> "nonObliviousSortMergeJoin",
+    9 -> "nonObliviousAggregateStep1",
+    10 -> "nonObliviousAggregateStep2",
+    11 -> "countRowsPerPartition",
+    12 -> "computeNumRowsPerPartition",
+    13 -> "localLimit",
+    14 -> "limitReturnRows"
+  ).withDefaultValue("unknown")
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 

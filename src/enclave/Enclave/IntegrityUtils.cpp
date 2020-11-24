@@ -56,7 +56,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
     // the mac list of one input log entry (from one partition) in vector form
     std::vector<std::vector<uint8_t>> p_mac_lst;
-    for (int i = 0; i < num_macs; i++) {
+    for (int j = 0; j < num_macs; j++) {
       std::vector<uint8_t> a_mac (tmp_ptr, tmp_ptr + SGX_AESGCM_MAC_SIZE);
       p_mac_lst.push_back(a_mac);
       tmp_ptr += SGX_AESGCM_MAC_SIZE;
@@ -132,9 +132,6 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
 
       uint8_t mac_lst_mac[OE_HMAC_SIZE];
       memcpy(mac_lst_mac, curr_log_entry->mac_lst_mac()->data(), OE_HMAC_SIZE);
-
-      // int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, past_entries_seen, 
-          // past_entries_seen + num_past_entries); 
 
       int num_bytes_to_mac = OE_HMAC_SIZE + 6 * sizeof(int) + num_past_entries * 4 * sizeof(int); 
 
