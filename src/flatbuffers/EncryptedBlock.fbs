@@ -28,7 +28,7 @@ table LogEntry {
     num_macs:int; // Number of EncryptedBlock's in this EncryptedBlocks - checked during runtime
     mac_lst:[ubyte]; // List of all MACs. one from each EncryptedBlocks - checked during runtime
     mac_lst_mac:[ubyte]; // MAC(mac_lst) - checked during runtime
-    /* input_log_macs:[Mac]; // List of all EncryptedBlocks' log_mac's */
+    /* input_macs:[Mac]; // List of all EncryptedBlocks' all_outputs_mac's */
 }
 
 table LogEntryChain {
@@ -43,8 +43,9 @@ table Mac {
 }
 
 // Contains information about an ecall, which will be pieced together during post verfication to verify the DAG
+// A crumb representing an ecall is created at the next ecall
 table Crumb {
-    input_log_macs:[Mac]; // List of all EncryptedBlocks log_mac's
+    input_macs:[Mac]; // List of all EncryptedBlocks all_outputs_mac's
     all_outputs_mac:Mac; // MAC over all outputs of ecall from which this EncryptedBlocks came from
     ecall:string; // Ecall executed
     log_mac:Mac; // MAC over the LogEntryChain from this EncryptedBlocks
