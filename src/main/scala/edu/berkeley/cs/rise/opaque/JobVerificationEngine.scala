@@ -23,10 +23,26 @@ import scala.collection.mutable.Map
 import scala.collection.mutable.Set
 
 
+
 object JobVerificationEngine {
   // An LogEntryChain object from each partition
   var logEntryChains = ArrayBuffer[tuix.LogEntryChain]()
   var sparkOperators = ArrayBuffer[String]()
+  val ecallId = Map(
+    1 -> "project",
+    2 -> "filter",
+    3 -> "findRangeBounds",
+    4 -> "partitionForSort",
+    5 -> "externalSort",
+    6 -> "scanCollectLastPrimary",
+    7 -> "nonObliviousSortMergeJoin",
+    8 -> "nonObliviousAggregateStep1",
+    9 -> "nonObliviousAggregateStep2",
+    10 -> "countRowsPerPartition",
+    11 -> "computeNumRowsPerPartition",
+    12 -> "localLimit",
+    13 -> "limitReturnRows"
+  )
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 
@@ -96,7 +112,7 @@ object JobVerificationEngine {
     for (logEntryChain <- logEntryChains) {
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val logEntry = logEntryChain.pastEntries(i)
-        val ecall = logEntry.ecall
+        val ecall = ecallId(logEntry.ecall)
         val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val rcvPid = logEntry.rcvPid
@@ -112,7 +128,7 @@ object JobVerificationEngine {
 
       for (i <- 0 until logEntryChain.currEntriesLength) {
         val logEntry = logEntryChain.currEntries(i)
-        val ecall = logEntry.ecall
+        val ecall = ecallId(logEntry.ecall)
         val sndPid = logEntry.sndPid
         val jobId = logEntry.jobId
         val ecallIndex = jobId - startingJobIdMap(this_partition)

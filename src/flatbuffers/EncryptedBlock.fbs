@@ -21,7 +21,7 @@ table SortedRuns {
 }
 
 table LogEntry {
-    ecall:string; // ecall executed
+    ecall:int; // ecall executed
     snd_pid:int; // partition where ecall was executed - to be deprecated
     rcv_pid:int; // partition of subsequent ecall - to be deprecated
     job_id:int; // Number of ecalls executed in this enclave before this ecall - to be deprecated

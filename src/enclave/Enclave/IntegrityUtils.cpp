@@ -8,7 +8,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
     auto entry = past_entries_vec->Get(i);
-    std::string ecall = entry->ecall()->str();
+    int ecall = entry->ecall();
     int snd_pid = entry->snd_pid();
     int rcv_pid = entry->rcv_pid();
     if (rcv_pid == -1) { // Received by PID hasn't been set yet
@@ -67,7 +67,7 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
     // Add this input log entry to history of log entries
     EnclaveContext::getInstance().append_past_log_entry(
-        input_log_entry->ecall()->str(), 
+        input_log_entry->ecall(), 
         input_log_entry->snd_pid(), 
         EnclaveContext::getInstance().get_pid(), 
         input_log_entry->job_id());
@@ -123,7 +123,7 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
 
     for (int i = 0; i < num_curr_entries; i++) {
       auto curr_log_entry = curr_entries_vec->Get(i);
-      std::string curr_ecall = curr_log_entry->ecall()->str();
+      int curr_ecall = curr_log_entry->ecall();
       int snd_pid = curr_log_entry->snd_pid();
       int rcv_pid = -1;
       int job_id = curr_log_entry->job_id();
@@ -133,11 +133,10 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
       uint8_t mac_lst_mac[OE_HMAC_SIZE];
       memcpy(mac_lst_mac, curr_log_entry->mac_lst_mac()->data(), OE_HMAC_SIZE);
 
-      int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, past_entries_seen, 
-          past_entries_seen + num_past_entries); 
+      // int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, past_entries_seen, 
+          // past_entries_seen + num_past_entries); 
 
-      int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() * sizeof(char) 
-        + num_past_entries * 3 * sizeof(int) + past_ecalls_lengths * sizeof(char); 
+      int num_bytes_to_mac = OE_HMAC_SIZE + 6 * sizeof(int) + num_past_entries * 4 * sizeof(int); 
 
       uint8_t to_mac[num_bytes_to_mac];
 
@@ -159,50 +158,47 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
 }
 
 void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, uint8_t* mac_lst_mac, 
-    std::string curr_ecall, int curr_pid, int rcv_pid, int job_id, int num_macs, 
+    int curr_ecall, int curr_pid, int rcv_pid, int job_id, int num_macs, 
     int num_past_entries, std::vector<LogEntry> past_log_entries, int first_le_index, 
     int last_le_index, uint8_t* ret_hmac) {
 
   // Copy what we want to mac to contiguous memory
   memcpy(to_mac, mac_lst_mac, OE_HMAC_SIZE);
-  memcpy(to_mac + OE_HMAC_SIZE, curr_ecall.c_str(), curr_ecall.length());
-  memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length(), &curr_pid, sizeof(int));
-  memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + sizeof(int), &rcv_pid, sizeof(int));
-  memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 2 * sizeof(int), &job_id, sizeof(int));
-  memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 3 * sizeof(int), &num_macs, sizeof(int));
-  memcpy(to_mac + OE_HMAC_SIZE + curr_ecall.length() + 4 * sizeof(int), 
-      &num_past_entries, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE, &curr_ecall, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE + sizeof(int), &curr_pid, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE + 2 * sizeof(int), &rcv_pid, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE + 3 * sizeof(int), &job_id, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE + 4 * sizeof(int), &num_macs, sizeof(int));
+  memcpy(to_mac + OE_HMAC_SIZE + 5 * sizeof(int), &num_past_entries, sizeof(int));
 
   // Copy over data from past log entries
-  uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + curr_ecall.length() + 5 * sizeof(int);
+  uint8_t* tmp_ptr = to_mac + OE_HMAC_SIZE + 6 * sizeof(int);
   for (int i = first_le_index; i < last_le_index; i++) {
     auto past_log_entry = past_log_entries[i];
-    std::string ecall = past_log_entry.ecall;
+    int past_ecall = past_log_entry.ecall;
     int pe_snd_pid = past_log_entry.snd_pid;
     int pe_rcv_pid = past_log_entry.rcv_pid;
     int pe_job_id = past_log_entry.job_id;
     
-    int bytes_copied = ecall.length() + 3 * sizeof(int);
+    memcpy(tmp_ptr, &past_ecall, sizeof(int));
+    memcpy(tmp_ptr + sizeof(int), &pe_snd_pid, sizeof(int));
+    memcpy(tmp_ptr + 2 * sizeof(int), &pe_rcv_pid, sizeof(int));
+    memcpy(tmp_ptr + 3 * sizeof(int), &pe_job_id, sizeof(int));
 
-    memcpy(tmp_ptr, ecall.c_str(), ecall.length());
-    memcpy(tmp_ptr + ecall.length(), &pe_snd_pid, sizeof(int));
-    memcpy(tmp_ptr + ecall.length() + sizeof(int), &pe_rcv_pid, sizeof(int));
-    memcpy(tmp_ptr + ecall.length() + 2 * sizeof(int), &pe_job_id, sizeof(int));
-
-    tmp_ptr += bytes_copied;
+    tmp_ptr += 4 * sizeof(int);
   }
   // MAC the data
   mcrypto.hmac(to_mac, num_bytes_to_mac, ret_hmac);
 
 }
 
-int get_past_ecalls_lengths(std::vector<LogEntry> past_log_entries, int first_le_index, 
-    int last_le_index) {
-  int past_ecalls_lengths = 0;
-  for (int i = first_le_index; i < last_le_index; i++) {
-    auto past_log_entry = past_log_entries[i];
-    std::string ecall = past_log_entry.ecall;
-    past_ecalls_lengths += ecall.length();
-  }
-  return past_ecalls_lengths;
-}
+// int get_past_ecalls_lengths(std::vector<LogEntry> past_log_entries, int first_le_index, 
+//     int last_le_index) {
+//   int past_ecalls_lengths = 0;
+//   for (int i = first_le_index; i < last_le_index; i++) {
+//     auto past_log_entry = past_log_entries[i];
+//     std::string ecall = past_log_entry.ecall;
+//     past_ecalls_lengths += ecall.length();
+//   }
+//   return past_ecalls_lengths;
+// }

@@ -3,13 +3,14 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <map>
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
 
 struct LogEntry;
 
 struct LogEntry {
-  std::string ecall; // ecall executed
+  int ecall; // ecall executed
   int snd_pid; // partition where ecall was executed
   int rcv_pid; // partition of subsequent ecall
   int job_id; // number of ecalls executed in this enclave before this ecall
@@ -25,7 +26,7 @@ public:
     // Example taken from https://www.geeksforgeeks.org/how-to-create-an-unordered_set-of-user-defined-class-or-struct-in-c/ 
     size_t operator()(const LogEntry& le) const
     { 
-        return (std::hash<std::string>()(le.ecall)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)); 
+        return (std::hash<int>()(le.ecall)) ^ (std::hash<int>()(le.snd_pid)) ^ (std::hash<int>()(le.rcv_pid)) ^ (std::hash<int>()(le.job_id)); 
     } 
 };
 
@@ -100,7 +101,7 @@ class EnclaveContext {
       return append_mac;
     }
 
-    void append_past_log_entry(std::string ecall, int snd_pid, int rcv_pid, int job_id) {
+    void append_past_log_entry(int ecall, int snd_pid, int rcv_pid, int job_id) {
       LogEntry le;
       le.ecall = ecall;
       le.snd_pid = snd_pid;
@@ -120,6 +121,26 @@ class EnclaveContext {
 
     void set_pid(int id) {
       pid = id;
+    }
+
+    int get_ecall_id(std::string ecall) {
+      std::map<std::string, int> ecall_id = {
+        {"project", 1},
+        {"filter", 2},
+        {"findRangeBounds", 3},
+        {"partitionForSort", 4},
+        {"externalSort", 5},
+        {"scanCollectLastPrimary", 6},
+        {"nonObliviousSortMergeJoin", 7},
+        {"nonObliviousAggregateStep1", 8},
+        {"nonObliviousAggregateStep2", 9},
+        {"countRowsPerPartition", 10},
+        {"computeNumRowsPerPartition", 11},
+        {"localLimit", 12},
+        {"limitReturnRows", 13}
+      };
+      return ecall_id[ecall];
+
     }
 
     void finish_ecall() {
