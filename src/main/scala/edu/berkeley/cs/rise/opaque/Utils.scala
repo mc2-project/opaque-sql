@@ -1411,7 +1411,7 @@ object Utils extends Logging {
             currLogEntry.macLstMacAsByteBuffer.get(macLstMac)
             tuix.LogEntry.createLogEntry(
               builder,
-              builder.createString(currLogEntry.ecall),
+              currLogEntry.ecall,
               currLogEntry.sndPid,
               currLogEntry.rcvPid,
               currLogEntry.jobId,
@@ -1422,7 +1422,7 @@ object Utils extends Logging {
           tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
             tuix.LogEntry.createLogEntry(
               builder,
-              builder.createString(pastLogEntry.ecall),
+              pastLogEntry.ecall,
               pastLogEntry.sndPid,
               pastLogEntry.rcvPid,
               pastLogEntry.jobId,
@@ -1478,7 +1478,7 @@ object Utils extends Logging {
         tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
           tuix.LogEntry.createLogEntry(
             builder,
-            builder.createString(logEntry.ecall),
+            logEntry.ecall,
             logEntry.sndPid,
             logEntry.rcvPid,
             logEntry.jobId,

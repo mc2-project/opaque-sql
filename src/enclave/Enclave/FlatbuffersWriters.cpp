@@ -143,7 +143,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     EnclaveContext::getInstance().hmac_mac_lst(mac_lst, mac_lst_mac);
 
     int curr_pid = EnclaveContext::getInstance().get_pid();
-    char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
+    // char* untrusted_curr_ecall_str = oe_host_strndup(curr_ecall.c_str(), curr_ecall.length());
+    int curr_ecall_id = EnclaveContext::getInstance().get_ecall_id(curr_ecall);
 
     // Copy mac list to untrusted memory
     uint8_t* untrusted_mac_lst = nullptr;
@@ -161,7 +162,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     // This is an offset into enc block builder
     auto log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
-        enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
+        // enc_block_builder.CreateString(std::string(untrusted_curr_ecall_str)),
+        curr_ecall_id,
         curr_pid,
         -1, // -1 for not yet set rcv_pid
         job_id,
@@ -174,9 +176,9 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     std::vector<LogEntry> past_log_entries = EnclaveContext::getInstance().get_past_log_entries();
 
     for (LogEntry le : past_log_entries) {
-      char* untrusted_ecall_op_str = oe_host_strndup(le.ecall.c_str(), le.ecall.length());
+      // char* untrusted_ecall_op_str = oe_host_strndup(le.ecall.c_str(), le.ecall.length());
       auto past_log_entry_serialized = tuix::CreateLogEntry(enc_block_builder,
-          enc_block_builder.CreateString(std::string(untrusted_ecall_op_str)),
+          le.ecall,
           le.snd_pid,
           le.rcv_pid,
           le.job_id);
@@ -188,21 +190,19 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     // We will MAC over curr_ecall || snd_pid || rcv_pid || job_id || num_macs 
     // || mac_lst_mac || num past log entries || past log entries
     int num_past_entries = (int) past_log_entries.size();
-    int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, 0, num_past_entries);
+    // int past_ecalls_lengths = get_past_ecalls_lengths(past_log_entries, 0, num_past_entries);
 
     // curr_log_entry contains:
     //  * string curr_ecall of size curr_ecall.length()
     //  * mac_lst_mac of size OE_HMAC_SIZE
-    //  * 5 ints
+    //  * 6 ints (ecall, snd_pid, rcv_pid, job_id, num_macs, num_past_entries)
     // 1 past log entry contains:
-    //  * string ecall of size ecall.length()
-    //  * 3 ints
-    int num_bytes_to_mac = OE_HMAC_SIZE + 5 * sizeof(int) + curr_ecall.length() * sizeof(char) 
-      + 3 * sizeof(int) * past_log_entries.size() + past_ecalls_lengths * sizeof(char);
+    //  * 4 ints (ecall, snd_pid, rcv_pid, job_id)
+    int num_bytes_to_mac = OE_HMAC_SIZE + 6 * sizeof(int) + 4 * sizeof(int) * past_log_entries.size();
     uint8_t to_mac[num_bytes_to_mac];
 
     uint8_t hmac[OE_HMAC_SIZE];
-    mac_log_entry_chain(num_bytes_to_mac, to_mac, mac_lst_mac, curr_ecall, curr_pid, -1, job_id, 
+    mac_log_entry_chain(num_bytes_to_mac, to_mac, mac_lst_mac, curr_ecall_id, curr_pid, -1, job_id, 
         num_macs, num_past_entries, past_log_entries, 0, num_past_entries, hmac);
 
     // Copy the mac to untrusted memory
