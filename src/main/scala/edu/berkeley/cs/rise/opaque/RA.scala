@@ -33,7 +33,7 @@ object RA extends Logging {
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
     // FIXME: hardcoded path
-    val userCert = scala.io.Source.fromFile("/home/chester/opaque/user1.crt").mkString
+    val userCert = scala.io.Source.fromFile("/home/opaque/opaque/user1.crt").mkString
 
     val keySharePath = sys.env("OPAQUE_KEY_SHARE")
     val clientKeyPath = sys.env("OPAQUE_CLIENT_KEY")
@@ -51,11 +51,14 @@ object RA extends Logging {
 
     sp.Init(Utils.clientKey, intelCert, userCert, keyShare)
 
+    println("Before generate report")
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+      println("Utils: " + Utils)
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
       Iterator((eid, msg1))
     }.collect.toMap
+    println("After generate report")
 
     val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
 

@@ -18,7 +18,11 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
 import java.io.FileNotFoundException
+import java.io.BufferedReader
+import java.io.BufferedWriter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.SecureRandom
@@ -236,14 +240,27 @@ object Utils extends Logging {
 
   def initEnclave(): (SGXEnclave, Long) = {
     this.synchronized {
-      if (eid == 0L) {
+      val f = new File(eidFile);
+      if (!f.exists()) {
         val enclave = new SGXEnclave()
         val path = findLibraryAsResource("enclave_trusted_signed")
         eid = enclave.StartEnclave(path)
         logInfo("Starting an enclave")
+
+	// Store eid into text file
+	val bw = new BufferedWriter(new FileWriter(f))
+        bw.write(eid.toString)
+        bw.close()
+
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
+        
+	// Read eid from text file
+	val br = new BufferedReader(new FileReader(f))
+        eid = br.readLine().toLong
+	br.close()
+
         (enclave, eid)
       }
     }
@@ -286,6 +303,9 @@ object Utils extends Logging {
   }
 
   var eid = 0L
+
+  // TODO: Remove hard-coded path
+  var eidFile = "/home/opaque/opaque/eidFile.txt"
   var attested : Boolean = false
   var attesting_getepid : Boolean = false
   var attesting_getmsg1 : Boolean = false
