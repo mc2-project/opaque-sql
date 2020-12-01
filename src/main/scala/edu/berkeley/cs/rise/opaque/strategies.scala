@@ -26,7 +26,9 @@ import org.apache.spark.sql.catalyst.expressions.IntegerLiteral
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
+import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.catalyst.plans.logical.JoinHint
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -36,6 +38,21 @@ import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.logical._
 
 object OpaqueOperators extends Strategy {
+
+  def isEncrypted(plan: LogicalPlan): Boolean = {
+    plan.find {
+      case _: OpaqueOperator => true
+      case _ => false
+    }.nonEmpty
+  }
+
+  def isEncrypted(plan: SparkPlan): Boolean = {
+    plan.find {
+      case _: OpaqueOperatorExec => true
+      case _ => false
+    }.nonEmpty
+  }
+
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case EncryptedProject(projectList, child) =>
       EncryptedProjectExec(projectList, planLater(child)) :: Nil
@@ -72,8 +89,19 @@ object OpaqueOperators extends Strategy {
         case _ => Nil
       }
 
-    case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) =>
-      EncryptedAggregateExec(groupingExpressions, aggExpressions, planLater(child)) :: Nil
+    case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
+        if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
+
+      val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression]).map(_.copy(mode = Complete))
+
+      println(s"groupingExpressions: $groupingExpressions")
+      println(s"aggregateExpressions: ${aggregateExpressions.map(_.resultAttribute)}")
+      println(s"resultExpressions: $resultExpressions")
+
+      EncryptedAggregateExec(
+        groupingExpressions, aggregateExpressions,
+        EncryptedSortExec(
+          groupingExpressions.map(e => SortOrder(e, Ascending)), planLater(child))) :: Nil
 
     case EncryptedUnion(left, right) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil

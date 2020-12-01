@@ -24,6 +24,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
@@ -223,15 +224,16 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 }
 
 case class EncryptedAggregateExec(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
+    groupingExpressions: Seq[NamedExpression],
+    aggExpressions: Seq[AggregateExpression],
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
-  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+  override def output: Seq[Attribute] =
+    groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
 
   override def executeBlocked(): RDD[Block] = {
     val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)

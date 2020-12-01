@@ -77,23 +77,23 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
       EncryptedJoin(
         left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator], joinType, condition)
 
-    case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
-      UndoCollapseProject.separateProjectAndAgg(p) match {
-        case Some((projectExprs, aggExprs)) =>
-          EncryptedProject(
-            projectExprs,
-            EncryptedAggregate(
-              groupingExprs, aggExprs,
-              EncryptedSort(
-                groupingExprs.map(e => SortOrder(e, Ascending)),
-                child.asInstanceOf[OpaqueOperator])))
-        case None =>
-          EncryptedAggregate(
-            groupingExprs, aggExprs,
-            EncryptedSort(
-              groupingExprs.map(e => SortOrder(e, Ascending)),
-              child.asInstanceOf[OpaqueOperator]))
-      }
+    // case p @ Aggregate(groupingExprs, aggExprs, child) if isEncrypted(p) =>
+    //   UndoCollapseProject.separateProjectAndAgg(p) match {
+    //     case Some((projectExprs, aggExprs)) =>
+    //       EncryptedProject(
+    //         projectExprs,
+    //         EncryptedAggregate(
+    //           groupingExprs, aggExprs,
+    //           EncryptedSort(
+    //             groupingExprs.map(e => SortOrder(e, Ascending)),
+    //             child.asInstanceOf[OpaqueOperator])))
+    //     case None =>
+    //       EncryptedAggregate(
+    //         groupingExprs, aggExprs,
+    //         EncryptedSort(
+    //           groupingExprs.map(e => SortOrder(e, Ascending)),
+    //           child.asInstanceOf[OpaqueOperator]))
+    //   }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnion(left.asInstanceOf[OpaqueOperator], right.asInstanceOf[OpaqueOperator])
