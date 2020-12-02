@@ -751,7 +751,7 @@ private:
         builder,
         tuix::FieldUnion_BooleanField,
         tuix::CreateBooleanField(builder, result).Union(),
-        result_is_null);
+        result_is_null && (!result));
 
     }
 
