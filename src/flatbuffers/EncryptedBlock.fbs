@@ -21,11 +21,12 @@ table SortedRuns {
 }
 
 table LogEntry {
-    ecall:string; // ecall executed
+    ecall:int; // ecall executed
     num_macs:int; // Number of EncryptedBlock's in this EncryptedBlocks - checked during runtime
     mac_lst:[ubyte]; // List of all MACs. one from each EncryptedBlocks - checked during runtime
     mac_lst_mac:[ubyte]; // MAC(mac_lst) - checked during runtime
-    input_macs:[Mac]; // List of input EncryptedBlocks' all_output_mac's
+    input_macs:[ubyte]; // List of input EncryptedBlocks' all_output_mac's
+    num_input_macs:int; // Number of input_macs
 }
 
 table LogEntryChain {
@@ -41,10 +42,11 @@ table Mac {
 // Contains information about an ecall, which will be pieced together during post verfication to verify the DAG
 // A crumb is created at an ecall for each previous ecall that sent some data to this ecall
 table Crumb {
-    input_macs:[Mac]; // List of EncryptedBlocks all_output_mac's, from LogEntry
-    all_outputs_mac:Mac; // MAC over all outputs of ecall from which this EncryptedBlocks came from
-    ecall:string; // Ecall executed
-    log_mac:Mac; // MAC over the LogEntryChain from this EncryptedBlocks
+    input_macs:[ubyte]; // List of EncryptedBlocks all_output_mac's, from LogEntry
+    num_input_macs:int; // Number of input_macs
+    all_outputs_mac:[ubyte]; // MAC over all outputs of ecall from which this EncryptedBlocks came from, of size OE_HMAC_SIZE
+    ecall:int; // Ecall executed
+    log_mac:[ubyte]; // MAC over the LogEntryChain from this EncryptedBlocks, of size OE_HMAC_SIZE
 }
 
 
