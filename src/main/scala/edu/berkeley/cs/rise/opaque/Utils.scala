@@ -1140,14 +1140,12 @@ object Utils extends Logging {
     groupingExpressions: Seq[NamedExpression],
     aggExpressions: Seq[AggregateExpression],
     input: Seq[Attribute]): Array[Byte] = {
-    // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
-    // grouping expressions into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
       case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
-    val aggSchema = aggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
+    val aggSchema = aggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
     // For aggregation, we concatenate the current aggregate row with the new input row and run
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
