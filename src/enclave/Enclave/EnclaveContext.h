@@ -66,6 +66,12 @@ class EnclaveContext {
     std::unordered_set<Crumb, CrumbHashFunction> crumbs;
     std::vector<std::vector<uint8_t>> input_macs;
     int num_input_macs;
+
+    // Contiguous array of log_macs: log_mac_1 || log_mac_2 || ...
+    // Each of length OE_HMAC_SIZE
+    std::vector<uint8_t> log_macs;
+    int num_log_macs;
+
     unsigned char shared_key[SGX_AESGCM_KEY_SIZE] = {0};
 
     // For this ecall log entry
@@ -156,7 +162,7 @@ class EnclaveContext {
         for (int i = 0; i < input_mac.size(); i++) {
             input_macs.push_back(input_mac[i]);
         }
-        num_input_macs += 1;
+        num_input_macs++;
     }
 
     std::vector<uint8_t> get_input_macs() {
@@ -165,6 +171,21 @@ class EnclaveContext {
 
     int get_num_input_macs() {
         return num_input_macs;
+    }
+
+    void append_log_mac(uint8_t log_mac[OE_HMAC_SIZE]) {
+        for (int i = 0; i < OE_HMAC_SIZE; i++) {
+            log_macs.push_back(log_mac[i]);
+        }
+        num_log_macs++;
+    }
+
+    std::vector<uint8_t> get_log_macs() {
+        return log_macs;
+    }
+
+    int get_num_log_macs() {
+        return num_log_macs;
     }
 
     // int get_pid() {

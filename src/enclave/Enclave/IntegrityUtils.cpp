@@ -215,3 +215,18 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, int curr_ecall, 
 
 }
 
+// Replace dummy all_outputs_mac in output EncryptedBlocks with actual all_outputs_mac
+void complete_encrypted_blocks(const tuix::EncryptedBlocks *encrypted_blocks) {
+    uint8_t all_outputs_mac[32];
+    generate_all_outputs_mac(all_outputs_mac);
+    // Flatbuffers in place mutate?
+    // https://google.github.io/flatbuffers/md__cpp_usage.html
+
+}
+
+void generate_all_outputs_mac(uint8_t all_outputs_mac[32]) {
+    std::vector<uint8_t> log_macs_vector = EnclaveContext::getInstance().get_log_macs();
+    int num_log_macs = EnclaveContext::getInstance().get_num_log_macs();
+    uint8_t* log_macs = log_macs_vector.data();
+    mcrypto.hmac(log_macs, num_log_macs * OE_HMAC_SIZE, all_outputs_mac); 
+}

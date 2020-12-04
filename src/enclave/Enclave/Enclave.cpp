@@ -150,6 +150,8 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                        input_rows, input_rows_length,
                        boundary_rows, boundary_rows_length,
                        output_partitions, output_partition_lengths);
+    // Assert that there are num_partitions log_macs in EnclaveContext
+    // Iterate over &output_partitions[i] for i in num_partitions
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
