@@ -188,14 +188,6 @@ class EnclaveContext {
         return num_log_macs;
     }
 
-    // int get_pid() {
-    //   return pid;
-    // }
-    // 
-    // void set_pid(int id) {
-    //   pid = id;
-    // }
-
     int get_ecall_id(std::string ecall) {
       std::map<std::string, int> ecall_id = {
         {"project", 1},
@@ -214,18 +206,10 @@ class EnclaveContext {
         {"limitReturnRows", 14}
       };
       return ecall_id[ecall];
-
     }
 
     void finish_ecall() {
-      // Increment the job id of this pid
-      // if (pid_jobid.find(pid) != pid_jobid.end()) {
-      //   pid_jobid[pid]++;
-      // } else {
-      //   pid_jobid[pid] = 0;
-      // }
       crumbs.clear();
-      // pid = -1;
 
       curr_row_writer = std::string("");
 
@@ -233,6 +217,11 @@ class EnclaveContext {
       last_group_log_entry_mac_lst.clear();
       last_row_log_entry_mac_lst.clear();
       log_entry_mac_lst.clear();
+
+      log_macs.clear();
+      num_log_macs = 0;
+      input_macs.clear();
+      num_input_macs = 0;
     }
 
     void add_mac_to_mac_lst(uint8_t* mac) {
@@ -297,17 +286,5 @@ class EnclaveContext {
     std::string get_log_entry_ecall() {
       return this_ecall;
     }
-
-    // int get_job_id() {
-    //   return pid_jobid[pid];
-    // }
-    // 
-    // void increment_job_id() {
-    //   pid_jobid[pid]++;
-    // }
-    // 
-    // void reset_pid_jobid_map() {
-    //   pid_jobid.clear();
-    // }
 };
 

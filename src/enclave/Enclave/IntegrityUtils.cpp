@@ -216,12 +216,15 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, int curr_ecall, 
 }
 
 // Replace dummy all_outputs_mac in output EncryptedBlocks with actual all_outputs_mac
-void complete_encrypted_blocks(const tuix::EncryptedBlocks *encrypted_blocks) {
+void complete_encrypted_blocks(const tuix::EncryptedBlocks* encrypted_blocks) {
     uint8_t all_outputs_mac[32];
     generate_all_outputs_mac(all_outputs_mac);
-    // Flatbuffers in place mutate?
-    // https://google.github.io/flatbuffers/md__cpp_usage.html
-
+    // Perform in-place flatbuffers mutation to modify EncryptedBlocks with updated all_outputs_mac
+    auto blocks = tuix::GetMutableEncryptedBlocks(encrypted_blocks);
+    for (int i = 0; i < OE_HMAC_SIZE; i+) {
+        blocks->mutable_all_outputs_mac()->mutable_mac()->Mutate(i, all_outputs_mac[i]);
+    }
+    // TODO: check that buffer was indeed modified
 }
 
 void generate_all_outputs_mac(uint8_t all_outputs_mac[32]) {

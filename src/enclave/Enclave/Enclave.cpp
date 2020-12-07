@@ -21,6 +21,7 @@
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 #include "EnclaveContext.h"
+#include "IntegrityUtils.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -56,10 +57,10 @@ void ecall_project(uint8_t *condition, size_t condition_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     project(condition, condition_length,
             input_rows, input_rows_length,
             output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -77,10 +78,10 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -97,9 +98,9 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -109,7 +110,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
 
 // This call only run on one worker.
 // Input from all partitions
-// Output to all partitions
+// Output to all partitions, all outputs are the same
 void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
                              uint32_t num_partitions,
                              uint8_t *input_rows, size_t input_rows_length,
@@ -119,11 +120,11 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     find_range_bounds(sort_order, sort_order_length,
                       num_partitions,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -144,14 +145,16 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     partition_for_sort(sort_order, sort_order_length,
                        num_partitions,
                        input_rows, input_rows_length,
                        boundary_rows, boundary_rows_length,
                        output_partitions, output_partition_lengths);
     // Assert that there are num_partitions log_macs in EnclaveContext
-    // Iterate over &output_partitions[i] for i in num_partitions
+    // TODO: Iterate over &output_partitions[i] for i in num_partitions
+    for (int i = 0; i < num_partitions; i++) {
+        complete_encrypted_blocks(output_partitions[i]);
+    }
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -169,10 +172,10 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
                   output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -190,10 +193,10 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
                               output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -213,12 +216,11 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     non_oblivious_sort_merge_join(join_expr, join_expr_length,
                                   input_rows, input_rows_length,
                                   join_row, join_row_length,
                                   output_rows, output_rows_length);
-
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -237,13 +239,15 @@ void ecall_non_oblivious_aggregate_step1(
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     non_oblivious_aggregate_step1(
       agg_op, agg_op_length,
       input_rows, input_rows_length,
       first_row, first_row_length,
       last_group, last_group_length,
       last_row, last_row_length);
+    complete_encrypted_blocks(*first_row);
+    complete_encrypted_blocks(*last_group);
+    complete_encrypted_blocks(*last_row);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -266,7 +270,6 @@ void ecall_non_oblivious_aggregate_step2(
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     non_oblivious_aggregate_step2(
       agg_op, agg_op_length,
       input_rows, input_rows_length,
@@ -275,6 +278,7 @@ void ecall_non_oblivious_aggregate_step2(
       prev_partition_last_row, prev_partition_last_row_length,
       output_rows, output_rows_length);
 
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -282,15 +286,17 @@ void ecall_non_oblivious_aggregate_step2(
   }
 }
 
+// Input from this partition
+// Output to first partition
 void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_length,
                                     uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     count_rows_per_partition(input_rows, input_rows_length,
                              output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -298,6 +304,9 @@ void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_lengt
   }
 }
 
+// Input from all partitions
+// Output to all partitions
+// Ecall only run on one partition
 void ecall_compute_num_rows_per_partition(uint32_t limit,
                                           uint8_t *input_rows, size_t input_rows_length,
                                           uint8_t **output_rows, size_t *output_rows_length) {
@@ -305,10 +314,10 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
     compute_num_rows_per_partition(limit,
                                    input_rows, input_rows_length,
                                    output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -316,17 +325,15 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   }
 }
 
-void ecall_local_limit(uint32_t limit,
-                       uint8_t *input_rows, size_t input_rows_length,
+void ecall_local_limit(uint8_t *input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
-    limit_return_rows(limit,
-                      input_rows, input_rows_length,
+    limit_return_rows(input_rows, input_rows_length,
                       output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
@@ -334,8 +341,7 @@ void ecall_local_limit(uint32_t limit,
   }
 }
 
-void ecall_limit_return_rows(uint64_t partition_id,
-                             uint8_t *limits, size_t limits_length,
+void ecall_limit_return_rows(uint8_t *limits, size_t limits_length,
                              uint8_t *input_rows, size_t input_rows_length,
                              uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(limits, limits_length) == 1);
@@ -343,11 +349,10 @@ void ecall_limit_return_rows(uint64_t partition_id,
   __builtin_ia32_lfence();
 
   try {
-    EnclaveContext::getInstance().set_pid(0);
-    limit_return_rows(partition_id,
-                      limits, limits_length,
+    limit_return_rows(limits, limits_length,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();
