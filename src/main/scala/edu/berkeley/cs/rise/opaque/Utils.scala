@@ -1218,8 +1218,14 @@ object Utils extends Logging {
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
+        // COUNT(*) should count NULL values
+        // COUNT(expr) should return the number or rows for which the supplied expressions are non-NULL
 
-        // TODO: support skipping null values
+        val nullableChildren = children.filter(_.nullable)
+        val countExpr = nullableChildren.isEmpty match {
+          case true => Add(count, Literal(1L))
+          case false => If(nullableChildren.map(IsNull).reduce(Or), count, Add(count, Literal(1L)))}
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -1230,7 +1236,7 @@ object Utils extends Logging {
             builder,
             Array(
               /* count = */ flatbuffersSerializeExpression(
-                builder, Add(count, Literal(1L)), concatSchema))),
+                builder, countExpr, concatSchema))),
           flatbuffersSerializeExpression(
             builder, count, aggSchema))
 
@@ -1316,22 +1322,27 @@ object Utils extends Logging {
 
       case s @ Sum(child) =>
         val sum = s.aggBufferAttributes(0)
-
         val sumDataType = s.dataType
+        // If any value is not NULL, return a non-NULL value
+        // If all values are NULL, return NULL
 
-        // TODO: support aggregating null values
+        val sumExpr = child.nullable match {
+          case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, sumDataType), Add(sum, Cast(child, sumDataType))))
+          case false => Add(sum, Cast(child, sumDataType))
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Cast(Literal(0), sumDataType), input))),
+                builder, Literal.create(null, sumDataType), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Add(sum, Cast(child, sumDataType)), concatSchema))),
+                builder, sumExpr, concatSchema))),
           flatbuffersSerializeExpression(
             builder, sum, aggSchema))
 
