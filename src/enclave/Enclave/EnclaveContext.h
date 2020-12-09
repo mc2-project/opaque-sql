@@ -13,6 +13,7 @@ struct Crumb {
   int ecall; // ecall executed
   uint8_t log_mac[OE_HMAC_SIZE]; // LogEntryChain MAC for this output
   uint8_t all_outputs_mac[OE_HMAC_SIZE]; 
+  // FIXME: change this to num_input_log_macs
   int num_input_macs; // Num MACS in the below vector
   std::vector<uint8_t> input_log_macs;
 
@@ -22,8 +23,6 @@ struct Crumb {
       if (this->ecall != c.ecall) {
           return false;
       }
-      bool log_macs_match = true;
-      bool all_outputs_mac_match = true;
 
       // Check whether the log_mac and the all_outputs_mac are the same
       for (int i = 0; i < OE_HMAC_SIZE; i++) {
@@ -41,7 +40,7 @@ struct Crumb {
       }
 
       // Check whether the input_log_macs themselves are the same
-      for (int i = 0; i < this->input_log_macs.size(); i++) {
+      for (uint32_t i = 0; i < this->input_log_macs.size(); i++) {
           if (this->input_log_macs[i] != c.input_log_macs[i]) {
               return false;
           }
@@ -55,7 +54,7 @@ public:
     // Example taken from https://www.geeksforgeeks.org/how-to-create-an-unordered_set-of-user-defined-class-or-struct-in-c/ 
     size_t operator()(const Crumb& c) const
     { 
-        return (std::hash<int>()(c.ecall)) ^ (std::hash<uint8_t*>()(c.log_mac)) ^ (std::hash<uint8_t*>()(c.all_outputs_mac)) ^ (std::hash<int>()(c.num_input_macs)) ^ (std::hash<uint8_t*>()(c.input_log_macs.data())); 
+        return (std::hash<int>()(c.ecall)) ^ (std::hash<uint8_t*>()((uint8_t*) c.log_mac)) ^ (std::hash<uint8_t*>()((uint8_t*) c.all_outputs_mac)) ^ (std::hash<int>()(c.num_input_macs)) ^ (std::hash<uint8_t*>()((uint8_t*) c.input_log_macs.data())); 
     } 
 };
 
@@ -64,7 +63,7 @@ static Crypto mcrypto;
 class EnclaveContext {
   private:
     std::unordered_set<Crumb, CrumbHashFunction> crumbs;
-    std::vector<std::vector<uint8_t>> input_macs;
+    std::vector<uint8_t> input_macs;
     int num_input_macs;
 
     // Contiguous array of log_macs: log_mac_1 || log_mac_2 || ...
@@ -138,16 +137,20 @@ class EnclaveContext {
       return append_mac;
     }
 
-    void append_crumb(int ecall, uint8_t log_mac[OE_HMAC_SIZE], uint8_t all_outputs_mac[OE_HMAC_SIZE], int num_input_macs, std::vector<uint8_t> input_log_macs) {
+    // FIXME: make the arrays here const?
+    void append_crumb(int ecall, const uint8_t log_mac[OE_HMAC_SIZE], const uint8_t all_outputs_mac[OE_HMAC_SIZE], int num_input_macs, std::vector<uint8_t> input_log_macs) {
+      // FIXME: for some reason, compiler thinks the following two arguments are unused
+      (void) log_mac;
+      (void) all_outputs_mac;
       Crumb new_crumb;
 
       new_crumb.ecall = ecall;
       memcpy(new_crumb.log_mac, (const uint8_t*) log_mac, OE_HMAC_SIZE);
-      memcpy(new_crumb.all_outputs_mac, (const uint8_t* all_outputs_mac), OE_HMAC_SIZE);
+      memcpy(new_crumb.all_outputs_mac, (const uint8_t*) all_outputs_mac, OE_HMAC_SIZE);
       new_crumb.num_input_macs = num_input_macs;
 
       // Copy over input_log_macs
-      for (int i = 0; i < input_log_macs.size(); i++) {
+      for (uint32_t i = 0; i < input_log_macs.size(); i++) {
           new_crumb.input_log_macs.push_back(input_log_macs[i]);
       }
       crumbs.insert(new_crumb);
@@ -159,7 +162,7 @@ class EnclaveContext {
     }
 
     void append_input_mac(std::vector<uint8_t> input_mac) {
-        for (int i = 0; i < input_mac.size(); i++) {
+        for (uint32_t i = 0; i < input_mac.size(); i++) {
             input_macs.push_back(input_mac[i]);
         }
         num_input_macs++;

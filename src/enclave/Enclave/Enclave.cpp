@@ -20,7 +20,7 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
-#include "EnclaveContext.h"
+// #include "EnclaveContext.h"
 #include "IntegrityUtils.h"
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
@@ -152,7 +152,7 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
                        output_partitions, output_partition_lengths);
     // Assert that there are num_partitions log_macs in EnclaveContext
     // TODO: Iterate over &output_partitions[i] for i in num_partitions
-    for (int i = 0; i < num_partitions; i++) {
+    for (uint32_t i = 0; i < num_partitions; i++) {
         complete_encrypted_blocks(output_partitions[i]);
     }
     EnclaveContext::getInstance().finish_ecall();
@@ -325,13 +325,15 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   }
 }
 
-void ecall_local_limit(uint8_t *input_rows, size_t input_rows_length,
+void ecall_local_limit(uint32_t limit,
+                       uint8_t *input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    limit_return_rows(input_rows, input_rows_length,
+    limit_return_rows(limit,
+                      input_rows, input_rows_length,
                       output_rows, output_rows_length);
     complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
@@ -341,7 +343,8 @@ void ecall_local_limit(uint8_t *input_rows, size_t input_rows_length,
   }
 }
 
-void ecall_limit_return_rows(uint8_t *limits, size_t limits_length,
+void ecall_limit_return_rows(uint64_t partition_id,
+                             uint8_t *limits, size_t limits_length,
                              uint8_t *input_rows, size_t input_rows_length,
                              uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(limits, limits_length) == 1);
@@ -349,7 +352,8 @@ void ecall_limit_return_rows(uint8_t *limits, size_t limits_length,
   __builtin_ia32_lfence();
 
   try {
-    limit_return_rows(limits, limits_length,
+    limit_return_rows(partition_id,
+                      limits, limits_length,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
     complete_encrypted_blocks(*output_rows);
@@ -375,7 +379,6 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
     }
 
     set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
-    EnclaveContext::getInstance().reset_pid_jobid_map();
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

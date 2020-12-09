@@ -174,7 +174,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         curr_ecall_id,
         num_macs,
         enc_block_builder.CreateVector(mac_lst_ptr.get(), num_macs * SGX_AESGCM_MAC_SIZE),
-        enc_block_builder.CreateVector(mac_lst_mac_ptr.get(), OE_HMAC_SIZE)
+        enc_block_builder.CreateVector(mac_lst_mac_ptr.get(), OE_HMAC_SIZE),
         enc_block_builder.CreateVector(input_macs_ptr.get(), num_input_macs * OE_HMAC_SIZE),
         num_input_macs);
 
@@ -188,9 +188,9 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         int crumb_ecall = crumb.ecall;
 
         // FIXME: do these need to be memcpy'ed
-        std::vector<uint8_t> crumb_input_macs = crumb.input_macs;
+        std::vector<uint8_t> crumb_input_macs = crumb.input_log_macs;
         uint8_t* crumb_all_outputs_mac = crumb.all_outputs_mac;
-        uint8_t* crumb_log_mac = crumb.log_mac
+        uint8_t* crumb_log_mac = crumb.log_mac;
 
         // Copy crumb input macs to untrusted memory
         uint8_t* untrusted_crumb_input_macs = nullptr;
@@ -213,7 +213,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
             &ocall_free);
         memcpy(crumb_log_mac_ptr.get(), crumb_log_mac, OE_HMAC_SIZE);
 
-        auto serialized_crumb = tuix::CreateLogEntry(enc_block_builder,
+        auto serialized_crumb = tuix::CreateCrumb(enc_block_builder,
           enc_block_builder.CreateVector(crumb_input_macs_ptr.get(), crumb_num_input_macs * OE_HMAC_SIZE),
           num_input_macs,
           enc_block_builder.CreateVector(crumb_all_outputs_mac_ptr.get(), OE_HMAC_SIZE),
@@ -239,18 +239,19 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int log_entry_num_bytes_to_mac = 3 * sizeof(int) + OE_HMAC_SIZE + num_input_macs * OE_HMAC_SIZE;
 
     int num_bytes_in_crumbs_list = 0;
-    for (int k = 0; k < crumbs.size(); k++) {
+    for (uint32_t k = 0; k < crumbs.size(); k++) {
         int num_bytes_in_crumb = 2 * sizeof(int) + 2 * OE_HMAC_SIZE + OE_HMAC_SIZE * crumbs[k].num_input_macs; 
-        num_bytes_in_crumbs_list += num_byte_in_crumb;
+        num_bytes_in_crumbs_list += num_bytes_in_crumb;
     } 
 
     // Below, we add sizeof(int) to include the num_past_entries entry that is part of LogEntryChain 
-    int num_bytes_to_mac = log_entry_num_byte_to_mac + num_bytes_in_crumbs_list + sizeof(int);
+    int num_bytes_to_mac = log_entry_num_bytes_to_mac + num_bytes_in_crumbs_list + sizeof(int);
+    // FIXME: VLA
     uint8_t to_mac[num_bytes_to_mac];
 
     uint8_t log_mac[OE_HMAC_SIZE];
-    mac_log_entry_chain(num_bytes_to_mac, to_mac, mac_lst_mac, curr_ecall_id, num_macs, num_input_macs,
-            mac_lst_mac, input_macs, num_past_entries, crumbs, 0, num_past_entries, log_mac); 
+    mac_log_entry_chain(num_bytes_to_mac, to_mac, curr_ecall_id, num_macs, num_input_macs,
+            mac_lst_mac, input_macs, num_crumbs, crumbs, 0, num_crumbs, log_mac); 
 
     // Copy the log_mac to untrusted memory
     uint8_t* untrusted_log_mac = nullptr;
@@ -261,11 +262,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         enc_block_builder.CreateVector(log_mac_ptr.get(), OE_HMAC_SIZE));
     log_mac_vector.push_back(log_mac_offset);
 
-    // TODO: store the log mac in Enclave so that we can later compute all_outputs_mac over it
     EnclaveContext::getInstance().append_log_mac(log_mac);
-
-    // Temporarily store 32 0's as the all_outputs_mac 
-    uint8_t tmp_all_outputs_mac[OE_HMAC_SIZE] = {0};
 
     // Clear log entry state
     EnclaveContext::getInstance().reset_log_entry();

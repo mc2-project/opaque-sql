@@ -20,13 +20,13 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     EnclaveContext::getInstance().append_crumb(crumb_ecall, crumb_log_mac, crumb_all_outputs_mac, crumb_num_input_macs, crumb_vector_input_macs);
 
     // Initialize crumb for LogEntryChain MAC verification
-    Crumb crumb;
-    crumb.ecall = crumb_ecall;
-    crumb.log_mac = crumb_log_mac;
-    crumb.all_outputs_mac = crumb_all_outputs_mac;
-    crumb.num_input_macs = crumb_num_input_macs;
-    crumb.input_log_macs = crumb_vector_input_macs;
-    crumbs.push_back(crumb);
+    Crumb new_crumb;
+    new_crumb.ecall = crumb_ecall;
+    memcpy(new_crumb.log_mac, crumb_log_mac, OE_HMAC_SIZE);
+    memcpy(new_crumb.all_outputs_mac, crumb_all_outputs_mac, OE_HMAC_SIZE);
+    new_crumb.num_input_macs = crumb_num_input_macs;
+    new_crumb.input_log_macs = crumb_vector_input_macs;
+    crumbs.push_back(new_crumb);
   }
 
   if (curr_entries_vec->size() > 0) {
@@ -75,9 +75,9 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     std::vector<uint8_t> vector_prev_input_macs(prev_input_macs, prev_input_macs + num_prev_input_macs * OE_HMAC_SIZE);
 
     // Create new crumb given recently received EncryptedBlocks
-    uint8_t* mac_input = encrypted_blocks->all_outputs_mac()->Get(i)->mac()->data(); 
+    const uint8_t* mac_input = encrypted_blocks->all_outputs_mac()->Get(i)->mac()->data(); 
     EnclaveContext::getInstance().append_crumb(
-        ecall, encrypted_blocks->log_mac()->Get(i)->mac()->data(), 
+        logged_ecall, encrypted_blocks->log_mac()->Get(i)->mac()->data(), 
         mac_input, num_prev_input_macs, vector_prev_input_macs);
 
     std::vector<uint8_t> mac_input_vector(mac_input, mac_input + OE_HMAC_SIZE);
@@ -160,7 +160,7 @@ void verify_log(const tuix::EncryptedBlocks *encrypted_blocks,
       // MAC the data
       uint8_t actual_mac[OE_HMAC_SIZE];
       mac_log_entry_chain(total_bytes_to_mac, to_mac, curr_ecall, num_macs, num_input_macs, 
-              curr_log_entry->mac_lst_mac()->data(), curr_log_entry->input_macs()->data(),
+              (uint8_t*) curr_log_entry->mac_lst_mac()->data(), (uint8_t*) curr_log_entry->input_macs()->data(),
               num_past_entries, crumbs, past_entries_seen,
               past_entries_seen + num_past_entries, actual_mac);
 
@@ -198,13 +198,13 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, int curr_ecall, 
     auto crumb = crumbs[i];
     int past_ecall = crumb.ecall;
     int num_input_macs = crumb.num_input_macs;
-    std::vector<uint8_t> input_macs = crumb.input_macs;
+    std::vector<uint8_t> input_log_macs = crumb.input_log_macs;
     uint8_t* all_outputs_mac = crumb.all_outputs_mac;
     uint8_t* log_mac = crumb.log_mac;
     
     memcpy(tmp_ptr, &past_ecall, sizeof(int));
     memcpy(tmp_ptr + sizeof(int), &num_input_macs, sizeof(int));
-    memcpy(tmp_ptr + 2 * sizeof(int), input_macs.data(), num_input_macs * OE_HMAC_SIZE);
+    memcpy(tmp_ptr + 2 * sizeof(int), input_log_macs.data(), num_input_macs * OE_HMAC_SIZE);
     memcpy(tmp_ptr + 2 * sizeof(int) + num_input_macs * OE_HMAC_SIZE, all_outputs_mac, OE_HMAC_SIZE);
     memcpy(tmp_ptr + 2 * sizeof(int) + (num_input_macs + 1) * OE_HMAC_SIZE, log_mac, OE_HMAC_SIZE);
 
@@ -216,18 +216,20 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, int curr_ecall, 
 }
 
 // Replace dummy all_outputs_mac in output EncryptedBlocks with actual all_outputs_mac
-void complete_encrypted_blocks(const tuix::EncryptedBlocks* encrypted_blocks) {
+void complete_encrypted_blocks(uint8_t* encrypted_blocks) {
     uint8_t all_outputs_mac[32];
     generate_all_outputs_mac(all_outputs_mac);
     // Perform in-place flatbuffers mutation to modify EncryptedBlocks with updated all_outputs_mac
     auto blocks = tuix::GetMutableEncryptedBlocks(encrypted_blocks);
-    for (int i = 0; i < OE_HMAC_SIZE; i+) {
+    for (int i = 0; i < OE_HMAC_SIZE; i++) {
         blocks->mutable_all_outputs_mac()->mutable_mac()->Mutate(i, all_outputs_mac[i]);
     }
     // TODO: check that buffer was indeed modified
 }
 
 void generate_all_outputs_mac(uint8_t all_outputs_mac[32]) {
+    // FIXME: for some reason compiler thinks the parameter is unused
+    (void) all_outputs_mac;
     std::vector<uint8_t> log_macs_vector = EnclaveContext::getInstance().get_log_macs();
     int num_log_macs = EnclaveContext::getInstance().get_num_log_macs();
     uint8_t* log_macs = log_macs_vector.data();
