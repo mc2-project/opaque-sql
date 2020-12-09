@@ -1196,25 +1196,35 @@ object Utils extends Logging {
       case avg @ Average(child) =>
         val sum = avg.aggBufferAttributes(0)
         val count = avg.aggBufferAttributes(1)
+        val dataType = child.dataType
 
-        // TODO: support aggregating null values
+        val sumInitValue = child.nullable match {
+          case true => Literal.create(null, dataType)
+          case false => Cast(Literal(0), dataType)
+        }
+        val sumExpr = child.nullable match {
+          case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, dataType), Add(sum, Cast(child, dataType))))
+          case false => Add(sum, Cast(child, dataType))
+        }
+        val countExpr = If(IsNull(child), count, Add(count, Literal(1L)))
+
         // TODO: support DecimalType to match Spark SQL behavior
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
-              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0.0), input),
+              /* sum = */ flatbuffersSerializeExpression(builder, sumInitValue, input),
               /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Add(sum, Cast(child, DoubleType)), concatSchema),
+                builder, sumExpr, concatSchema),
               /* count = */ flatbuffersSerializeExpression(
-                builder, Add(count, Literal(1L)), concatSchema))),
+                builder, countExpr, concatSchema))),
           flatbuffersSerializeExpression(
-            builder, Divide(sum, Cast(count, DoubleType)), aggSchema))
+            builder, Divide(Cast(sum, DoubleType), Cast(count, DoubleType)), aggSchema))
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
@@ -1326,6 +1336,10 @@ object Utils extends Logging {
         // If any value is not NULL, return a non-NULL value
         // If all values are NULL, return NULL
 
+        val initValue = child.nullable match {
+          case true => Literal.create(null, sumDataType)
+          case false => Cast(Literal(0), sumDataType)
+        }
         val sumExpr = child.nullable match {
           case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, sumDataType), Add(sum, Cast(child, sumDataType))))
           case false => Add(sum, Cast(child, sumDataType))
@@ -1337,7 +1351,7 @@ object Utils extends Logging {
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Literal.create(null, sumDataType), input))),
+                builder, initValue, input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             Array(
