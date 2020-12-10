@@ -132,7 +132,7 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::Crumb>> serialized_crumbs_vector;
   std::vector<int> num_crumbs_vector;
   std::vector<flatbuffers::Offset<tuix::Mac>> log_mac_vector;
-  std::vector<uint8_t> all_outputs_mac_vector;
+  std::vector<flatbuffers::Offset<tuix::Mac>> all_outputs_mac_vector;
   
   if (curr_ecall != std::string("")) {
     // Only write log entry chain if this is the output of an ecall, 
@@ -270,24 +270,20 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, 
       &curr_log_entry_vector, &serialized_crumbs_vector, &num_crumbs_vector);
 
-  // // Temporarily store 32 0's as the all_outputs_mac 
-  // uint8_t dummy_all_outputs_mac[OE_HMAC_SIZE] = {0};
-  // 
-  // // Copy the dummmy all_outputs_mac to untrusted memory
-  // uint8_t* untrusted_dummy_all_outputs_mac = nullptr;
-  // ocall_malloc(OE_HMAC_SIZE, &untrusted_dummy_all_outputs_mac);
-  // std::unique_ptr<uint8_t, decltype(&ocall_free)> dummy_all_outputs_mac_ptr(untrusted_dummy_all_outputs_mac, &ocall_free);
-  // memcpy(dummy_all_outputs_mac_ptr.get(), dummy_all_outputs_mac, OE_HMAC_SIZE);
-  // 
-  // // TODO: does this work? passing in a vector l8ike this
-  // std::vector<uint8_t> all_outputs_mac_vector (dummy_all_outputs_mac_ptr.get(), dummy_all_outputs_mac_ptr.get() + OE_HMAC_SIZE);
+  // Temporarily store 32 0's as the all_outputs_mac 
+  uint8_t dummy_all_outputs_mac[OE_HMAC_SIZE] = {0};
 
-  // auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, 
-  //     log_entry_chain_serialized, &log_mac_vector, &all_outputs_mac_vector);
-  
-  // Don't include all_outputs_mac as we will be modifying it later
+  // Copy the dummmy all_outputs_mac to untrusted memory
+  uint8_t* untrusted_dummy_all_outputs_mac = nullptr;
+  ocall_malloc(OE_HMAC_SIZE, &untrusted_dummy_all_outputs_mac);
+  std::unique_ptr<uint8_t, decltype(&ocall_free)> dummy_all_outputs_mac_ptr(untrusted_dummy_all_outputs_mac, &ocall_free);
+  memcpy(dummy_all_outputs_mac_ptr.get(), dummy_all_outputs_mac, OE_HMAC_SIZE);
+  auto dummy_all_outputs_mac_offset = tuix::CreateMac(enc_block_builder, 
+      enc_block_builder.CreateVector(dummy_all_outputs_mac_ptr.get(), OE_HMAC_SIZE));
+  all_outputs_mac_vector.push_back(dummy_all_outputs_mac_offset);
+
   auto result = tuix::CreateEncryptedBlocksDirect(enc_block_builder, &enc_block_vector, 
-      log_entry_chain_serialized, &log_mac_vector);
+      log_entry_chain_serialized, &log_mac_vector, &all_outputs_mac_vector);
   enc_block_builder.Finish(result);
   enc_block_vector.clear();
 
