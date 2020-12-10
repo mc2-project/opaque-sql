@@ -24,7 +24,7 @@ void count_rows_per_partition(uint8_t *input_rows, size_t input_rows_length,
                       true));
   
   w.append(output);
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("countRowsPerPartition"));
 }
 
 // Based on the limit, calculate the number of rows to return for each partition
@@ -56,7 +56,7 @@ void compute_num_rows_per_partition(uint32_t limit,
     w.append(output);
     current_num_rows += num_rows;
   }
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("computeNumRowsPerPartition"));
 }
 
 void limit_return_rows(uint32_t limit,
@@ -74,7 +74,7 @@ void limit_return_rows(uint32_t limit,
       ++current_num_rows;
     }
   }
-  w.output_buffer(output_rows, output_rows_length);
+  w.output_buffer(output_rows, output_rows_length, std::string("limitReturnRows"));
 }
 
 // For each partition, return a fixed number of rows (starting from the first row) given a limit
