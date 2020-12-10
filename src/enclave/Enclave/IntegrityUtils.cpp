@@ -37,9 +37,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
   std::vector<std::vector<std::vector<uint8_t>>> partition_mac_lsts;
 
   // Check that each input partition's mac_lst_mac is indeed a HMAC over the mac_lst
-  int all_outputs_mac_index = 0;
-  const uint8_t* all_all_outputs_macs = encrypted_blocks->all_outputs_mac()->data();
-
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
     auto input_log_entry = curr_entries_vec->Get(i);
 
@@ -78,17 +75,13 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     std::vector<uint8_t> vector_prev_input_macs(prev_input_macs, prev_input_macs + num_prev_input_macs * OE_HMAC_SIZE);
 
     // Create new crumb given recently received EncryptedBlocks
-    // const uint8_t* mac_input = encrypted_blocks->all_outputs_mac()->Get(i)->mac()->data(); 
-    const uint8_t* mac_input = all_all_outputs_macs + all_outputs_mac_index;
-
+    const uint8_t* mac_input = encrypted_blocks->all_outputs_mac()->Get(i)->mac()->data(); 
     EnclaveContext::getInstance().append_crumb(
         logged_ecall, encrypted_blocks->log_mac()->Get(i)->mac()->data(), 
         mac_input, num_prev_input_macs, vector_prev_input_macs);
 
     std::vector<uint8_t> mac_input_vector(mac_input, mac_input + OE_HMAC_SIZE);
     EnclaveContext::getInstance().append_input_mac(mac_input_vector);
-
-    all_outputs_mac_index += OE_HMAC_SIZE;
 
   }
 
@@ -234,8 +227,7 @@ void complete_encrypted_blocks(uint8_t* encrypted_blocks) {
     // Perform in-place flatbuffers mutation to modify EncryptedBlocks with updated all_outputs_mac
     auto blocks = tuix::GetMutableEncryptedBlocks(encrypted_blocks);
     for (int i = 0; i < OE_HMAC_SIZE; i++) {
-        blocks->mutable_all_outputs_mac()->Mutate(i, host_all_outputs_mac[i]);
-        // dummy_all_outputs_mac->mutable_mac()->Mutate(i, host_all_outputs_mac[i]);
+        auto dummy_all_outputs_mac = blocks->mutable_all_outputs_mac()->Get(0)->mutable_mac()->Mutate(i, host_all_outputs_mac[i]);
     }
     // TODO: check that buffer was indeed modified
 }
