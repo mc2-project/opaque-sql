@@ -44,8 +44,11 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+import org.apache.spark.sql.catalyst.expressions.DateAdd
+import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
+import org.apache.spark.sql.catalyst.expressions.EndsWith
 import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Exp
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -57,6 +60,7 @@ import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.expressions.Like
 import org.apache.spark.sql.catalyst.expressions.Multiply
 import org.apache.spark.sql.catalyst.expressions.CaseWhen
 import org.apache.spark.sql.catalyst.expressions.CreateArray
@@ -64,9 +68,12 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.Not
 import org.apache.spark.sql.catalyst.expressions.Or
 import org.apache.spark.sql.catalyst.expressions.SortOrder
+import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
+import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
@@ -922,6 +929,27 @@ object Utils extends Logging {
             tuix.ExprUnion.Substring,
             tuix.Substring.createSubstring(
               builder, strOffset, posOffset, lenOffset))
+        
+        case (Like(left, right, escapeChar), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Like,
+            tuix.Like.createLike(
+              builder, leftOffset, rightOffset))
+
+        case (StartsWith(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.StartsWith,
+            tuix.StartsWith.createStartsWith(
+              builder, leftOffset, rightOffset))
+
+        case (EndsWith(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.EndsWith,
+            tuix.EndsWith.createEndsWith(
+              builder, leftOffset, rightOffset))
 
         // Conditional expressions
         case (If(predicate, trueValue, falseValue), Seq(predOffset, trueOffset, falseOffset)) =>
@@ -939,13 +967,6 @@ object Utils extends Logging {
               builder, predOffset, trueOffset, falseOffset))
 
         case (CaseWhen(branches, elseValue), childrenOffsets) =>
-          println("HERE")
-          println(branches)
-          println(elseValue)
-          println(childrenOffsets)
-          println(branches.getClass)
-          println(elseValue.getClass)
-          println(childrenOffsets.getClass)
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.CaseWhen,
@@ -982,12 +1003,27 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Year,
             tuix.Year.createYear(
               builder, childOffset))
+
+        case (DateAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAdd,
+            tuix.DateAdd.createDateAdd(
+              builder, leftOffset, rightOffset))
+
+        case (DateAddInterval(left, right, _, _), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAddInterval,
+            tuix.DateAddInterval.createDateAddInterval(
+              builder, leftOffset, rightOffset))
 
         // Math expressions
         case (Exp(child), Seq(childOffset)) =>
@@ -1029,6 +1065,13 @@ object Utils extends Logging {
             tuix.ExprUnion.DotProduct,
             tuix.DotProduct.createDotProduct(
               builder, leftOffset, rightOffset))
+
+        case (Upper(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Upper,
+            tuix.Upper.createUpper(
+              builder, childOffset))   
 
         case (ClosestPoint(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(

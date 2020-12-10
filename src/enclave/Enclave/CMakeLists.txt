@@ -11,6 +11,7 @@ set(SOURCES
   FlatbuffersReaders.cpp
   FlatbuffersWriters.cpp
   Join.cpp
+  Limit.cpp
   Project.cpp
   Sort.cpp
   sgxaes.cpp

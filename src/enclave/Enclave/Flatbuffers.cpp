@@ -167,14 +167,14 @@ std::string to_string(const tuix::MapField *f) {
 
 void print(const tuix::Row *in) {
   flatbuffers::uoffset_t num_fields = in->field_values()->size();
-  printf("[");
+  ocall_print_string("[");
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
     print(in->field_values()->Get(i));
     if (i + 1 < num_fields) {
-      printf(",");
+      ocall_print_string(",");
     }
   }
-  printf("]\n");
+  ocall_print_string("]\n");
 }
 
 void print(const tuix::Field *field) {

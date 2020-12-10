@@ -122,6 +122,45 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  testAgainstSpark("Interval SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 DAY FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Week SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Month SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Date Add") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.select(date_add($"time", 3)).collect
+  }
+
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
@@ -200,6 +239,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       securityLevel,
       "a", "b", "c", "d", "x")
     df.filter($"x" > lit(10)).collect
+  }
+
+  testAgainstSpark("filter with NULLs") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.filter($"x" > lit(10)).collect.toSet
   }
 
   testAgainstSpark("select") { securityLevel =>
@@ -281,6 +331,17 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = Random.shuffle((0 until 256).map(x => (x / 16, x)).toSeq)
     val df = makeDF(data, securityLevel, "x", "y")
     df.sort($"x", $"y").collect
+  }
+
+  testAgainstSpark("sort with null values") { securityLevel =>
+    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
+      if (x % 3 == 0)
+        Tuple1(null.asInstanceOf[Integer])
+      else
+        Tuple1(x.asInstanceOf[Integer])
+    }).toSeq)
+    val df = makeDF(data, securityLevel, "x")
+    df.sort($"x").collect
   }
 
   testAgainstSpark("join") { securityLevel =>
@@ -389,10 +450,111 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("between") { securityLevel =>
+    val data = for (i <- 0 until 256) yield(i.toString, i)
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"count".between(50, 150)).collect
+  }
+
   testAgainstSpark("year") { securityLevel =>
     val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
     val df = makeDF(data, securityLevel, "id", "date")
     df.select(year($"date")).collect
+  }
+
+  testAgainstSpark("case when - 1 branch with else (string)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", "hi").otherwise("bye")).collect
+  }
+
+  testAgainstSpark("case when - 1 branch with else (int)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", 10).otherwise(30)).collect
+  }
+
+  testAgainstSpark("case when - 1 branch without else (string)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", "hi")).collect
+  }
+
+  testAgainstSpark("case when - 1 branch without else (int)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", 10)).collect 
+  }
+
+  testAgainstSpark("case when - 2 branch with else (string)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello").otherwise("bye")).collect
+  }
+
+  testAgainstSpark("case when - 2 branch with else (int)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", 10).when(df("word") === "baz", 20).otherwise(30)).collect
+  }
+
+  testAgainstSpark("case when - 2 branch without else (string)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello")).collect 
+  }
+
+  testAgainstSpark("case when - 2 branch without else (int)") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.select(when(df("word") === "foo", 3).when(df("word") === "baz", 2)).collect
+  }
+
+  testAgainstSpark("LIKE - Contains") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%a%")).collect
+  } 
+
+  testAgainstSpark("LIKE - StartsWith") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("ba%")).collect
+  } 
+
+  testAgainstSpark("LIKE - EndsWith") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%ar")).collect
+  }
+
+  testAgainstSpark("LIKE - Empty Pattern") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("")).collect
+  }
+
+  testAgainstSpark("LIKE - Match All") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("%")).collect
+  }
+
+  testAgainstSpark("LIKE - Single Wildcard") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.filter($"word".like("ba_")).collect
+  }
+
+  testAgainstSpark("LIKE - SQL API") { securityLevel =>
+    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val df = makeDF(data, securityLevel, "word", "count")
+    df.createTempView("df")
+    try {
+      spark.sql(""" SELECT word FROM df WHERE word LIKE '_a_' """).collect
+    } finally {
+      spark.catalog.dropTempView("df")
+    }
   }
 
   testOpaqueOnly("save and load with explicit schema") { securityLevel =>
@@ -560,6 +722,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     df.select(dot($"v1", $"v2")).collect
   }
 
+  testAgainstSpark("upper") { securityLevel =>
+    val data = Seq(("lower", "upper"), ("lower2", "upper2"))
+    val schema = StructType(Seq(
+      StructField("v1", StringType),
+      StructField("v2", StringType)))
+
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+
+    df.select(upper($"v1")).collect
+  }
+
+  testAgainstSpark("upper with null") { securityLevel =>
+    val data = Seq(("lower", null.asInstanceOf[String]))
+
+    val df = makeDF(data, securityLevel, "v1", "v2")
+
+    df.select(upper($"v2")).collect
+  }
+
   testAgainstSpark("vector sum") { securityLevel =>
     val data: Seq[(Array[Double], Double)] = Seq(
       (Array[Double](1.0, 2.0, 3.0), 4.0),
@@ -591,6 +775,30 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
         schema))
 
     df.select(array($"x1", $"x2").as("x")).collect
+  }
+
+  testAgainstSpark("limit with fewer returned values") { securityLevel =>
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
+    val schema = StructType(Seq(
+      StructField("id", IntegerType),
+      StructField("word", StringType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    df.sort($"id").limit(5).collect
+  }
+
+  testAgainstSpark("limit with more returned values") { securityLevel =>
+    val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
+    val schema = StructType(Seq(
+      StructField("id", IntegerType),
+      StructField("word", StringType)))
+    val df = securityLevel.applyTo(
+      spark.createDataFrame(
+        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+        schema))
+    df.sort($"id").limit(200).collect
   }
 
   testAgainstSpark("least squares") { securityLevel =>
