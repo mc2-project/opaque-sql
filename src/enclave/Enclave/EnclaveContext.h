@@ -145,8 +145,8 @@ class EnclaveContext {
       Crumb new_crumb;
 
       new_crumb.ecall = ecall;
-      memcpy(new_crumb.log_mac, (const uint8_t*) log_mac, OE_HMAC_SIZE);
-      memcpy(new_crumb.all_outputs_mac, (const uint8_t*) all_outputs_mac, OE_HMAC_SIZE);
+      memcpy(new_crumb.log_mac, log_mac, OE_HMAC_SIZE);
+      memcpy(new_crumb.all_outputs_mac, all_outputs_mac, OE_HMAC_SIZE);
       new_crumb.num_input_macs = num_input_macs;
 
       // Copy over input_log_macs
@@ -161,6 +161,7 @@ class EnclaveContext {
       return past_crumbs;
     }
 
+    // Add all the all_output_mac's from input EncryptedBlocks to input_macs list
     void append_input_mac(std::vector<uint8_t> input_mac) {
         for (uint32_t i = 0; i < input_mac.size(); i++) {
             input_macs.push_back(input_mac[i]);

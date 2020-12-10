@@ -13,7 +13,9 @@ table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
     log_mac:[Mac]; 
-    all_outputs_mac:[Mac];
+    // all_outputs_mac stored as bytes, in increments of OE_HMAC_SIZE, intead of at tuix::Mac granularity, 
+    // because of GetMutable issue
+    all_outputs_mac:[ubyte];
 }
 
 table SortedRuns {
@@ -49,5 +51,5 @@ table Crumb {
     log_mac:[ubyte]; // MAC over the LogEntryChain from this EncryptedBlocks, of size OE_HMAC_SIZE
 }
 
-
+root_type EncryptedBlocks;
 
