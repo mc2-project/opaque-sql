@@ -270,8 +270,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   auto log_entry_chain_serialized = tuix::CreateLogEntryChainDirect(enc_block_builder, 
       &curr_log_entry_vector, &serialized_crumbs_vector, &num_crumbs_vector);
 
-  // Temporarily store 32 0's as the all_outputs_mac 
-  uint8_t dummy_all_outputs_mac[OE_HMAC_SIZE] = {0};
+  // Create dummy array that isn't default, so that we can modify it using Flatbuffers mutation later
+  uint8_t dummy_all_outputs_mac[OE_HMAC_SIZE] = {1};
 
   // Copy the dummmy all_outputs_mac to untrusted memory
   uint8_t* untrusted_dummy_all_outputs_mac = nullptr;

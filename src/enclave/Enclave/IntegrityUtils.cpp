@@ -221,14 +221,30 @@ void complete_encrypted_blocks(uint8_t* encrypted_blocks) {
     generate_all_outputs_mac(all_outputs_mac);
 
     // Allocate memory outside enclave for the all_outputs_mac
-    uint8_t* host_all_outputs_mac = (uint8_t*) oe_host_malloc(OE_HMAC_SIZE * sizeof(uint8_t));
-    memcpy(host_all_outputs_mac, (const uint8_t*) all_outputs_mac, OE_HMAC_SIZE);
+    // uint8_t* host_all_outputs_mac = (uint8_t*) oe_host_malloc(OE_HMAC_SIZE * sizeof(uint8_t));
+    // memcpy(host_all_outputs_mac, (const uint8_t*) all_outputs_mac, OE_HMAC_SIZE);
+
+    flatbuffers::FlatBufferBuilder all_outputs_mac_builder;
+
+    // Copy generated all_outputs_mac to untrusted memory
+    uint8_t* host_all_outputs_mac = nullptr;
+    ocall_malloc(OE_HMAC_SIZE, &host_all_outputs_mac);
+    std::unique_ptr<uint8_t, decltype(&ocall_free)> host_all_outputs_mac_ptr(host_all_outputs_mac, 
+        &ocall_free);
+    memcpy(host_all_outputs_mac_ptr.get(), (const uint8_t*) all_outputs_mac, OE_HMAC_SIZE);
+
+    // Serialize all_outputs_mac
+    auto all_outputs_mac_offset = tuix::CreateMac(all_outputs_mac_builder, 
+        all_outputs_mac_builder.CreateVector(host_all_outputs_mac_ptr.get(), OE_HMAC_SIZE));
+    all_outputs_mac_builder.Finish(all_outputs_mac_offset);
 
     // Perform in-place flatbuffers mutation to modify EncryptedBlocks with updated all_outputs_mac
     auto blocks = tuix::GetMutableEncryptedBlocks(encrypted_blocks);
-    for (int i = 0; i < OE_HMAC_SIZE; i++) {
-        auto dummy_all_outputs_mac = blocks->mutable_all_outputs_mac()->Get(0)->mutable_mac()->Mutate(i, host_all_outputs_mac[i]);
-    }
+    blocks->mutable_all_outputs_mac()->Mutate(0, all_outputs_mac_offset);
+    // for (int i = 0; i < OE_HMAC_SIZE; i++) {
+    //     // blocks->mutable_all_outputs_mac()->Get(0)->mutable_mac()->Mutate(i, host_all_outputs_mac[i]);
+    //     blocks->mutable_all_outputs_mac()->Mutate(i, "hello");
+    // }
     // TODO: check that buffer was indeed modified
 }
 
