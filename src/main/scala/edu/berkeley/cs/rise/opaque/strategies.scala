@@ -19,19 +19,19 @@ package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Strategy
 import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.IntegerLiteral
+import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.SortOrder
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
-import org.apache.spark.sql.catalyst.plans.logical.Join
-import org.apache.spark.sql.catalyst.plans.logical.JoinHint
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.SparkPlan
 
 import edu.berkeley.cs.rise.opaque.execution._
@@ -54,86 +54,85 @@ object OpaqueOperators extends Strategy {
   }
 
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-    case EncryptedProject(projectList, child) =>
+    case Project(projectList, child) if isEncrypted(child) =>
       EncryptedProjectExec(projectList, planLater(child)) :: Nil
 
-    case EncryptedFilter(condition, child) =>
+    // We don't support null values yet, so there's no point in checking whether the output of an
+    // encrypted operator is null
+    case p @ Filter(And(IsNotNull(_), IsNotNull(_)), child) if isEncrypted(child) =>
+      planLater(child) :: Nil
+    case p @ Filter(IsNotNull(_), child) if isEncrypted(child) =>
+      planLater(child) :: Nil
+
+    case Filter(condition, child) if isEncrypted(child) =>
       EncryptedFilterExec(condition, planLater(child)) :: Nil
 
-    case EncryptedSort(order, child) =>
-      EncryptedSortExec(order, planLater(child), true) :: Nil
+    case Sort(sortExprs, global, child) if isEncrypted(child) =>
+      EncryptedSortExec(sortExprs, planLater(child)) :: Nil
 
-    case EncryptedJoin(left, right, joinType, condition) =>
-      Join(left, right, joinType, condition, JoinHint.NONE) match {
-        case ExtractEquiJoinKeys(_, leftKeys, rightKeys, condition, _, _, _) =>
-          val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
-          val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
-          val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
-          val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
-          val unioned = EncryptedUnionExec(leftProj, rightProj)
-          val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned, true)
-          val joined = EncryptedSortMergeJoinExec(
-            joinType,
-            leftKeysProj,
-            rightKeysProj,
-            leftProjSchema.map(_.toAttribute),
-            rightProjSchema.map(_.toAttribute),
-            (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
-            sorted)
-          val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
-          val filtered = condition match {
-            case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
-            case None => tagsDropped
-          }
-          filtered :: Nil
-        case _ => Nil
+    case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
+      val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
+      val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
+      val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
+      val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
+      val unioned = EncryptedUnionExec(leftProj, rightProj)
+      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned)
+      val joined = EncryptedSortMergeJoinExec(
+        joinType,
+        leftKeysProj,
+        rightKeysProj,
+        leftProjSchema.map(_.toAttribute),
+        rightProjSchema.map(_.toAttribute),
+        (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
+        sorted)
+      val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+      val filtered = condition match {
+        case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
+        case None => tagsDropped
       }
+      filtered :: Nil
 
-    case a @ EncryptedAggregate(groupingExpressions, aggExpressions, child) => {
-      val sortExpressions = groupingExpressions.map(e => SortOrder(e, Ascending))
-      EncryptedAggregateExec(groupingExpressions, aggExpressions,
-        EncryptedSortExec(sortExpressions, planLater(child), true)) :: Nil
-    }
-
-    case PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
+    case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
+      val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression]).map(_.copy(mode = Complete))
 
-      // Non-oblivious aggregation steps:
-      // 1. Sort each partition by the grouping expressions
-      // 2. Partial aggregate for each partition
-      // 3. Sort globally by the grouping attributes
-      // 4. Perform a final aggregation (and any projection as necessary)
-      //    based on the grouping attributes and final aggregates
+      EncryptedProjectExec(resultExpressions,
+        EncryptedAggregateExec(
+          groupingExpressions, aggregateExpressions,
+          EncryptedSortExec(
+            groupingExpressions.map(e => SortOrder(e, Ascending)), planLater(child)))) :: Nil
 
-      val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
-
-      val groupingAttributes = groupingExpressions.map(_.toAttribute)
-      val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))
-      // val partialAggregateAttributes =
-      //   partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-      val partialResultExpressions =
-        groupingAttributes ++
-          partialAggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
-
-      val finalAggregateExpressions = aggregateExpressions.map(_.copy(mode = Final))
-      val finalAggregateAttributes = finalAggregateExpressions.map(_.resultAttribute)
-
-      EncryptedPartialAggregateExec(
-        groupingAttributes, finalAggregateExpressions, resultExpressions, false,
-        EncryptedSortExec(
-          groupingAttributes.map(e => SortOrder(e, Ascending)), true,
-          EncryptedPartialAggregateExec(
-            groupingExpressions, aggregateExpressions, partialResultExpressions, true,
-            EncryptedSortExec(
-              groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))))) :: Nil
-
-    case EncryptedUnion(left, right) =>
+    case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
 
-    case EncryptedLocalLimit(IntegerLiteral(limit), child) =>
+    case ReturnAnswer(rootPlan) => rootPlan match {
+      case Limit(IntegerLiteral(limit), Sort(sortExprs, true, child)) if isEncrypted(child) =>
+      EncryptedGlobalLimitExec(limit,
+        EncryptedLocalLimitExec(limit,
+          EncryptedSortExec(sortExprs, planLater(child)))) :: Nil
+
+      case Limit(IntegerLiteral(limit), Project(projectList, child)) if isEncrypted(child) =>
+        EncryptedGlobalLimitExec(limit,
+          EncryptedLocalLimitExec(limit,
+            EncryptedProjectExec(projectList, planLater(child)))) :: Nil
+
+      case _ => Nil
+    }
+
+    case Limit(IntegerLiteral(limit), Sort(sortExprs, true, child)) if isEncrypted(child) =>
+      EncryptedGlobalLimitExec(limit,
+        EncryptedLocalLimitExec(limit,
+          EncryptedSortExec(sortExprs, planLater(child)))) :: Nil
+
+    case Limit(IntegerLiteral(limit), Project(projectList, child)) if isEncrypted(child) =>
+      EncryptedGlobalLimitExec(limit,
+        EncryptedLocalLimitExec(limit,
+          EncryptedProjectExec(projectList, planLater(child)))) :: Nil
+
+    case LocalLimit(IntegerLiteral(limit), child) if isEncrypted(child) =>
       EncryptedLocalLimitExec(limit, planLater(child)) :: Nil
 
-    case EncryptedGlobalLimit(IntegerLiteral(limit), child) =>
+    case GlobalLimit(IntegerLiteral(limit), child) if isEncrypted(child) =>
       EncryptedGlobalLimitExec(limit, planLater(child)) :: Nil
 
     case Encrypt(child) =>
