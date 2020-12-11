@@ -354,7 +354,8 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
 
     // Set shared key for this client
     add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
-    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+//    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
 
     // This block for testing loading from files encrypted with different keys
     // FIXME: remove this block

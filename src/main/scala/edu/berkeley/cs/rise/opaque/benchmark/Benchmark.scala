@@ -46,12 +46,17 @@ object Benchmark {
     //   if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
 
     // Warmup
-    LogisticRegression.train(spark, Encrypted, 1000, 1)
-    LogisticRegression.train(spark, Encrypted, 1000, 1)
+//    LogisticRegression.train(spark, Encrypted, 1000, 1)
+//    LogisticRegression.train(spark, Encrypted, 1000, 1)
+//
+//    // Run
+//    LogisticRegression.train(spark, Insecure, 100000, 1)
+//    LogisticRegression.train(spark, Encrypted, 100000, 1)
 
-    // Run
-    LogisticRegression.train(spark, Insecure, 100000, 1)
-    LogisticRegression.train(spark, Encrypted, 100000, 1)
+    println("Before read")
+    val read = scala.io.StdIn.readLine()
+    println("Read value: " + read)
+    println("After read")
 
     spark.stop()
   }
