@@ -226,36 +226,41 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 case class EncryptedPartialAggregateExec(
   groupingExpressions: Seq[NamedExpression],
   aggExpressions: Seq[AggregateExpression],
-  resultExpressions: Seq[NamedExpression],
   isPartial: Boolean,
   child: SparkPlan)
     extends UnaryExecNode with OpaqueOperatorExec {
 
-  override def output: Seq[Attribute] = child.output
+  override def output: Seq[Attribute] = isPartial match {
+    case true => groupingExpressions.map(_.toAttribute) ++ aggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
+    case false => groupingExpressions.map(_.toAttribute) ++ aggExpressions.(_.resultAttribute)
+  }
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, resultExpressions, child.output)
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output, isPartial)
+
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.NonObliviousPartialAggregate(eid, aggExprSer, block.bytes, isPartial))
+        Block(enclave.NonObliviousPartialAggregate(eid, aggExprSer, block.bytes))
       }
     }
   }
 }
 
 case class EncryptedAggregateExec(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
+    groupingExpressions: Seq[NamedExpression],
+    aggExpressions: Seq[AggregateExpression],
     child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
-  override def output: Seq[Attribute] = aggExpressions.map(_.toAttribute)
+  override def output: Seq[Attribute] =
+    groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
 
   override def executeBlocked(): RDD[Block] = {
+    println(s"child.output: ${child.output}")
     val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
 
     timeOperator(

@@ -1561,11 +1561,6 @@ public:
     return result;
   }
 
-  std::vector<const tuix::Field *> merge(const tuix::Row *agg_row) {
-    std::vector<const tuix::Fied *> result;
-    return result;
-  }
-
   const tuix::Field *evaluate(const tuix::Row *agg) {
     return evaluate_evaluator->eval(agg);
   }
