@@ -57,6 +57,7 @@ void ecall_project(uint8_t *condition, size_t condition_length,
   __builtin_ia32_lfence();
 
   try {
+  debug("Ecall: Project\n");
     project(condition, condition_length,
             input_rows, input_rows_length,
             output_rows, output_rows_length);
@@ -78,6 +79,7 @@ void ecall_filter(uint8_t *condition, size_t condition_length,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: Filter\n");
     filter(condition, condition_length,
            input_rows, input_rows_length,
            output_rows, output_rows_length);
@@ -98,6 +100,7 @@ void ecall_sample(uint8_t *input_rows, size_t input_rows_length,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: Sample\n");
     sample(input_rows, input_rows_length,
            output_rows, output_rows_length);
     complete_encrypted_blocks(*output_rows);
@@ -120,6 +123,7 @@ void ecall_find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: FindRangeBounds\n");
     find_range_bounds(sort_order, sort_order_length,
                       num_partitions,
                       input_rows, input_rows_length,
@@ -145,13 +149,13 @@ void ecall_partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: PartitionForSort\n");
     partition_for_sort(sort_order, sort_order_length,
                        num_partitions,
                        input_rows, input_rows_length,
                        boundary_rows, boundary_rows_length,
                        output_partitions, output_partition_lengths);
     // Assert that there are num_partitions log_macs in EnclaveContext
-    // TODO: Iterate over &output_partitions[i] for i in num_partitions
     for (uint32_t i = 0; i < num_partitions; i++) {
         complete_encrypted_blocks(output_partitions[i]);
     }
@@ -172,6 +176,7 @@ void ecall_external_sort(uint8_t *sort_order, size_t sort_order_length,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: ExternalSort\n");
     external_sort(sort_order, sort_order_length,
                   input_rows, input_rows_length,
                   output_rows, output_rows_length);
@@ -193,6 +198,7 @@ void ecall_scan_collect_last_primary(uint8_t *join_expr, size_t join_expr_length
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: ScanCollectLastPrimary\n");
     scan_collect_last_primary(join_expr, join_expr_length,
                               input_rows, input_rows_length,
                               output_rows, output_rows_length);
@@ -216,6 +222,7 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: NonObliviousSortMergJoin\n");
     non_oblivious_sort_merge_join(join_expr, join_expr_length,
                                   input_rows, input_rows_length,
                                   join_row, join_row_length,
@@ -239,6 +246,7 @@ void ecall_non_oblivious_aggregate_step1(
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: NonObliviousAggregateStep1\n");
     non_oblivious_aggregate_step1(
       agg_op, agg_op_length,
       input_rows, input_rows_length,
@@ -270,6 +278,7 @@ void ecall_non_oblivious_aggregate_step2(
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: NonObliviousAggregateStep2\n");
     non_oblivious_aggregate_step2(
       agg_op, agg_op_length,
       input_rows, input_rows_length,
@@ -294,6 +303,7 @@ void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_lengt
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: CountRowsPerPartition\n");
     count_rows_per_partition(input_rows, input_rows_length,
                              output_rows, output_rows_length);
     complete_encrypted_blocks(*output_rows);
@@ -314,6 +324,7 @@ void ecall_compute_num_rows_per_partition(uint32_t limit,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: ComputeNumRowsPerPartition\n");
     compute_num_rows_per_partition(limit,
                                    input_rows, input_rows_length,
                                    output_rows, output_rows_length);
@@ -332,6 +343,7 @@ void ecall_local_limit(uint32_t limit,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: LocalLimit\n");
     limit_return_rows(limit,
                       input_rows, input_rows_length,
                       output_rows, output_rows_length);
@@ -352,6 +364,7 @@ void ecall_limit_return_rows(uint64_t partition_id,
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: LimitReturnRows\n");
     limit_return_rows(partition_id,
                       limits, limits_length,
                       input_rows, input_rows_length,

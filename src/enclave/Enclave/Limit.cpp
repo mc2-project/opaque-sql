@@ -1,4 +1,5 @@
 #include "Limit.h"
+#include <iostream>
 
 #include "ExpressionEvaluation.h"
 #include "FlatbuffersReaders.h"
@@ -63,6 +64,7 @@ void limit_return_rows(uint32_t limit,
                        uint8_t *input_rows, size_t input_rows_length,
                        uint8_t **output_rows, size_t *output_rows_length) {
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  std::cout << "read fine" << std::endl;
   RowWriter w;
   
   if (limit > 0) {
@@ -74,6 +76,7 @@ void limit_return_rows(uint32_t limit,
       ++current_num_rows;
     }
   }
+  std::cout << "outputting buffer" << std::endl;
   w.output_buffer(output_rows, output_rows_length, std::string("limitReturnRows"));
 }
 

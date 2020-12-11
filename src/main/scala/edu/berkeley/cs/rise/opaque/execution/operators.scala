@@ -79,7 +79,10 @@ case class EncryptedLocalTableScanExec(
       slicedPlaintextData.map(slice =>
         Utils.encryptInternalRowsFlatbuffers(slice, output.map(_.dataType), useEnclave = false))
 
+    println("each partition ahs been encrypted")
     // Make an RDD from the encrypted partitions
+    sqlContext.sparkContext.parallelize(encryptedPartitions)
+    println("parallelization passed")
     sqlContext.sparkContext.parallelize(encryptedPartitions)
   }
 }
@@ -90,6 +93,7 @@ case class EncryptExec(child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+    println("encrypting operator")
     child.execute().mapPartitions { rowIter =>
       Iterator(Utils.encryptInternalRowsFlatbuffers(
         rowIter.toSeq, output.map(_.dataType), useEnclave = true))
@@ -155,11 +159,14 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
+    println("take")
     if (n == 0) {
       return new Array[InternalRow](0)
     }
 
+    println("executeTake called")
     val childRDD = executeBlocked()
+    println("child rdd done")
 
     val buf = new ArrayBuffer[InternalRow]
     val totalParts = childRDD.partitions.length
@@ -190,6 +197,7 @@ trait OpaqueOperatorExec extends SparkPlan {
       res.foreach {
         case Some(block) =>
           buf ++= Utils.decryptBlockFlatbuffers(block)
+          println("Finished decrypting in show")
         case None =>
       }
 

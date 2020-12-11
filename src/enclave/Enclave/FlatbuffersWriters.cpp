@@ -60,6 +60,8 @@ UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string e
   UntrustedBufferRef<tuix::EncryptedBlocks> buffer(
     std::move(buf), enc_block_builder.GetSize());
 
+  std::cout << "outputted buffer" << std::endl;
+
   return buffer;
 }
 
@@ -133,6 +135,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<int> num_crumbs_vector;
   std::vector<flatbuffers::Offset<tuix::Mac>> log_mac_vector;
   std::vector<flatbuffers::Offset<tuix::Mac>> all_outputs_mac_vector;
+
+  std::cout << "In finish blocks" << std::endl;
   
   if (curr_ecall != std::string("")) {
     // Only write log entry chain if this is the output of an ecall, 
@@ -222,6 +226,8 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
         serialized_crumbs_vector.push_back(serialized_crumb);
     }
+
+    std::cout << "serialized sotred crumbs" << std::endl;
 
     int num_crumbs = (int) serialized_crumbs_vector.size();
     num_crumbs_vector.push_back(num_crumbs);
