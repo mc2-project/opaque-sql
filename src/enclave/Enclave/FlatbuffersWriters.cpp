@@ -60,7 +60,6 @@ UntrustedBufferRef<tuix::EncryptedBlocks> RowWriter::output_buffer(std::string e
   UntrustedBufferRef<tuix::EncryptedBlocks> buffer(
     std::move(buf), enc_block_builder.GetSize());
 
-  std::cout << "outputted buffer" << std::endl;
 
   return buffer;
 }
@@ -136,7 +135,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
   std::vector<flatbuffers::Offset<tuix::Mac>> log_mac_vector;
   // std::vector<flatbuffers::Offset<tuix::Mac>> all_outputs_mac_vector;
 
-  std::cout << "In finish blocks" << std::endl;
   
   if (curr_ecall != std::string("")) {
     // Only write log entry chain if this is the output of an ecall, 
@@ -187,10 +185,10 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
 
     // Serialize stored crumbs
     std::vector<Crumb> crumbs = EnclaveContext::getInstance().get_crumbs();
-    std::cout << "Num crumbs: " << crumbs.size() << std::endl;
+    // std::cout << "Num crumbs: " << crumbs.size() << std::endl;
     for (Crumb crumb : crumbs) {
         int crumb_num_input_macs = crumb.num_input_macs;
-        std::cout << "Writers: CRUMB num input macs: " << crumb_num_input_macs << std::endl;
+        // std::cout << "Writers: CRUMB num input macs: " << crumb_num_input_macs << std::endl;
         int crumb_ecall = crumb.ecall;
 
         // FIXME: do these need to be memcpy'ed
@@ -229,7 +227,6 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
         serialized_crumbs_vector.push_back(serialized_crumb);
     }
 
-    std::cout << "serialized sotred crumbs" << std::endl;
 
     int num_crumbs = (int) serialized_crumbs_vector.size();
     num_crumbs_vector.push_back(num_crumbs);
@@ -256,12 +253,12 @@ flatbuffers::Offset<tuix::EncryptedBlocks> RowWriter::finish_blocks(std::string 
     int num_bytes_to_mac = log_entry_num_bytes_to_mac + total_crumb_bytes + sizeof(int);
     // FIXME: VLA
     uint8_t to_mac[num_bytes_to_mac];
-    std::cout << "log entry num bytes: " << log_entry_num_bytes_to_mac << std::endl;
-    std::cout << "num bytes in crumbs list" << total_crumb_bytes << std::endl;
-    std::cout << "Num bytes to mac writing: " << num_bytes_to_mac << std::endl;
+    // std::cout << "log entry num bytes: " << log_entry_num_bytes_to_mac << std::endl;
+    // std::cout << "num bytes in crumbs list" << total_crumb_bytes << std::endl;
+    // std::cout << "Num bytes to mac writing: " << num_bytes_to_mac << std::endl;
 
     uint8_t log_mac[OE_HMAC_SIZE];
-    std::cout << "Writing out log mac********" << std::endl;
+    // std::cout << "Writing out log mac********" << std::endl;
     mac_log_entry_chain(num_bytes_to_mac, to_mac, curr_ecall_id, num_macs, num_input_macs,
             mac_lst_mac, input_macs, num_crumbs, crumbs, 0, num_crumbs, log_mac); 
 

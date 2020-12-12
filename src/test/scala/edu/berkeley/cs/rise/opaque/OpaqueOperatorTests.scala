@@ -241,38 +241,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (1 to 20).map(x => (x, (x + 1).toString)),
       securityLevel,
       "a", "b")
-    println(df1.union(df2).explain)
     df1.union(df2).collect.toSet
   }
   
-  // testOpaqueOnly("cache") { securityLevel =>
-  //   def numCached(ds: Dataset[_]): Int =
-  //     ds.queryExecution.executedPlan.collect {
-  //       case cached: EncryptedBlockRDDScanExec
-  //           if cached.rdd.getStorageLevel != StorageLevel.NONE =>
-  //         cached
-  //     }.size
-  // 
-  //   val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-  //   val df = makeDF(data, securityLevel, "a", "b").cache()
-  // 
-  //   println("created df!")
-  // 
-  //   val agg = df.groupBy($"a").agg(sum("b"))
-  // 
-  //   println("performed operations")
-  // 
-  //   assert(numCached(agg) === 1)
-  // 
-  //   println("asertion passed")
-  // 
-  //   val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-  //   println("got expected")
-  //   assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
-  //   println("second assertion passed")
-  //   df.unpersist()
-  //   println("Finished!")
-  // }
+  testOpaqueOnly("cache") { securityLevel =>
+    def numCached(ds: Dataset[_]): Int =
+      ds.queryExecution.executedPlan.collect {
+        case cached: EncryptedBlockRDDScanExec
+            if cached.rdd.getStorageLevel != StorageLevel.NONE =>
+          cached
+      }.size
+  
+    val data = List((1, 3), (1, 4), (1, 5), (2, 4))
+    val df = makeDF(data, securityLevel, "a", "b").cache()
+  
+    val agg = df.groupBy($"a").agg(sum("b"))
+  
+    assert(numCached(agg) === 1)
+  
+    val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
+    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    df.unpersist()
+  }
   
   testAgainstSpark("sort") { securityLevel =>
     val data = Random.shuffle((0 until 256).map(x => (x.toString, x)).toSeq)

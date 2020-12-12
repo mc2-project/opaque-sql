@@ -2,7 +2,6 @@
 #include <iostream>
 
 void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
-  std::cout << "Init log" << std::endl;
   // Add past entries to log first
   std::vector<Crumb> crumbs;
   auto curr_entries_vec = encrypted_blocks->log()->curr_entries(); // of type LogEntry
@@ -10,21 +9,16 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   // Store received crumbs
   for (uint32_t i = 0; i < past_entries_vec->size(); i++) {
-  std::cout << "Storing received crumbs" << std::endl;
     auto crumb = past_entries_vec->Get(i);
     int crumb_ecall = crumb->ecall();
     const uint8_t* crumb_log_mac = crumb->log_mac()->data(); 
-    std::cout << "Got crumb log mac" << std::endl;
     const uint8_t* crumb_all_outputs_mac = crumb->all_outputs_mac()->data();
-    std::cout << "Got crumb all outputs mac" << std::endl;
     const uint8_t* crumb_input_macs = crumb->input_macs()->data();
-    std::cout << "Got crumb input macs" << std::endl;
     int crumb_num_input_macs = crumb->num_input_macs();
 
     std::vector<uint8_t> crumb_vector_input_macs(crumb_input_macs, crumb_input_macs + crumb_num_input_macs * OE_HMAC_SIZE);
 
     EnclaveContext::getInstance().append_crumb(crumb_ecall, crumb_log_mac, crumb_all_outputs_mac, crumb_num_input_macs, crumb_vector_input_macs);
-    std::cout << "appended crumb" << std::endl;
 
     // Initialize crumb for LogEntryChain MAC verification
     Crumb new_crumb;
@@ -36,8 +30,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     crumbs.push_back(new_crumb);
   }
 
-  std::cout << "Stored received crums" << std::endl;
-  std::cout << "Num crumbs: " << crumbs.size() << std::endl;
   if (curr_entries_vec->size() > 0) {
     verify_log(encrypted_blocks, crumbs);
   }
@@ -50,20 +42,16 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
 
   // Check that each input partition's mac_lst_mac is indeed a HMAC over the mac_lst
   for (uint32_t i = 0; i < curr_entries_vec->size(); i++) {
-      std::cout << "In for loop" << std::endl;
     auto input_log_entry = curr_entries_vec->Get(i);
 
     // Retrieve mac_lst and mac_lst_mac
     const uint8_t* mac_lst_mac = input_log_entry->mac_lst_mac()->data();
     int num_macs = input_log_entry->num_macs();
     const uint8_t* mac_lst = input_log_entry->mac_lst()->data();
-
-    std::cout << "eserialized from fb" << std::endl;
     
     uint8_t computed_hmac[OE_HMAC_SIZE];
     mcrypto.hmac(mac_lst, num_macs * SGX_AESGCM_MAC_SIZE, computed_hmac);
 
-    std::cout << "hmaced " << std::endl;
     // Check that the mac lst hasn't been tampered with
     for (int j = 0; j < OE_HMAC_SIZE; j++) {
         if (mac_lst_mac[j] != computed_hmac[j]) {
@@ -91,14 +79,14 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     std::vector<uint8_t> vector_prev_input_macs(prev_input_macs, prev_input_macs + num_prev_input_macs * OE_HMAC_SIZE);
 
     // Create new crumb given recently received EncryptedBlocks
-    std::cout << "creating new crumb" << std::endl;
     // const uint8_t* mac_input = encrypted_blocks->all_outputs_mac()->Get(i)->mac()->data(); 
     const uint8_t* mac_input = mac_inputs + all_outputs_mac_index;
-    std::cout << "mac input fetched" << std::endl;
-    for (int j = 0; j < OE_HMAC_SIZE; j++) {
-        std::cout << (int) mac_input[j] << " ";
-    }
-    std::cout << std::endl;
+
+    // The following prints out the received all_outputs_mac
+    // for (int j = 0; j < OE_HMAC_SIZE; j++) {
+    //     std::cout << (int) mac_input[j] << " ";
+    // }
+    // std::cout << std::endl;
     EnclaveContext::getInstance().append_crumb(
         logged_ecall, encrypted_blocks->log_mac()->Get(i)->mac()->data(), 
         mac_input, num_prev_input_macs, vector_prev_input_macs);
@@ -109,8 +97,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
     all_outputs_mac_index += OE_HMAC_SIZE;
 
   }
-
-  std::cout << "mac list mac is good" << std::endl;
 
   if (curr_entries_vec->size() > 0) {
     // Check that the MAC of each input EncryptedBlock was expected, i.e. also sent in the LogEntry
@@ -149,7 +135,6 @@ void init_log(const tuix::EncryptedBlocks *encrypted_blocks) {
       }
     }
   }
-  std::cout << "all blocksis good" << std::endl;
 }
 
 // Check that log entry chain has not been tampered with
@@ -246,11 +231,13 @@ void mac_log_entry_chain(int num_bytes_to_mac, uint8_t* to_mac, int curr_ecall, 
   }
   // std::cout << "maced!" << std::endl;
   // MAC the data
-  std::cout << "Macing log entry chain ===============================" << std::endl;
-  for (int i = 0; i < num_bytes_to_mac; i++) {
-      std::cout << (int) to_mac[i] << " ";
-  }
-  std::cout << std::endl;
+  
+  // The following prints out what is mac'ed over for debugging
+  // std::cout << "Macing log entry chain ===============================" << std::endl;
+  // for (int i = 0; i < num_bytes_to_mac; i++) {
+  //     std::cout << (int) to_mac[i] << " ";
+  // }
+  // std::cout << std::endl;
   mcrypto.hmac(to_mac, num_bytes_to_mac, ret_hmac);
 
 }
@@ -289,11 +276,13 @@ void complete_encrypted_blocks(uint8_t* encrypted_blocks) {
         // blocks->mutable_all_outputs_mac()->Mutate(i, "hello");
     }
     // TODO: check that buffer was indeed modified
-    std::cout << "Generated output mac: -------------------" << std::endl;
-    for (int i = 0; i < OE_HMAC_SIZE; i++) {
-        std::cout << (int) all_outputs_mac[i] << " ";
-    }
-    std::cout << std::endl;
+    
+    // The following prints out the generated all_outputs_mac for this ecall
+    // std::cout << "Generated output mac: -------------------" << std::endl;
+    // for (int i = 0; i < OE_HMAC_SIZE; i++) {
+    //     std::cout << (int) all_outputs_mac[i] << " ";
+    // }
+    // std::cout << std::endl;
 }
 
 void generate_all_outputs_mac(uint8_t all_outputs_mac[32]) {

@@ -724,7 +724,6 @@ object Utils extends Logging {
     }
 
     // 3. Put the tuix.EncryptedBlock objects into a tuix.EncryptedBlocks
-    println("About to add block into blocks")
     builder2.finish(
       tuix.EncryptedBlocks.createEncryptedBlocks(
         builder2,
@@ -741,7 +740,6 @@ object Utils extends Logging {
     val encryptedBlockBytes = builder2.sizedByteArray()
 
     // 4. Wrap the serialized tuix.EncryptedBlocks in a Scala Block object
-    println("done")
     Block(encryptedBlockBytes)
   }
 
