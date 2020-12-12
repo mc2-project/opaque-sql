@@ -13,7 +13,7 @@ table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
     log_mac:[Mac]; 
-    all_outputs_mac:[Mac];
+    all_outputs_mac:[ubyte];
 }
 
 table SortedRuns {

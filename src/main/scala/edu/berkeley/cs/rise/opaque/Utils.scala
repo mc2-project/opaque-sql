@@ -1375,11 +1375,18 @@ object Utils extends Logging {
       i <- 0 until encryptedBlocks.logMacLength
     } yield encryptedBlocks.logMac(i)
 
+    // For tuix::Mac EncryptedBlocks.all_outputs_mac
+    // val allAllOutputsMacs = for {
+    //   block <- blocks
+    //   encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    //   i <- 0 until encryptedBlocks.allOutputsMacLength
+    // } yield encryptedBlocks.allOutputsMac(i)
+
     val allAllOutputsMacs = for {
       block <- blocks
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
       i <- 0 until encryptedBlocks.allOutputsMacLength
-    } yield encryptedBlocks.allOutputsMac(i)
+    } yield encryptedBlocks.allOutputsMac(i).toByte
 
     val allLogEntryChains = for {
       block <- blocks
@@ -1451,11 +1458,12 @@ object Utils extends Logging {
           logMac.macAsByteBuffer.get(mac)
           tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
         }.toArray),
-      tuix.EncryptedBlocks.createAllOutputsMacVector(builder, allAllOutputsMacs.map { allOutputsMac =>
-          val mac = new Array[Byte](allOutputsMac.macLength)
-          allOutputsMac.macAsByteBuffer.get(mac)
-          tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
-        }.toArray)
+      // tuix.EncryptedBlocks.createAllOutputsMacVector(builder, allAllOutputsMacs.map { allOutputsMac =>
+      //     val mac = new Array[Byte](allOutputsMac.macLength)
+      //     allOutputsMac.macAsByteBuffer.get(mac)
+      //     tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
+      //   }.toArray)
+      tuix.EncryptedBlocks.createAllOutputsMacVector(builder, allAllOutputsMacs.toArray)
       ))
     Block(builder.sizedByteArray())
   }
