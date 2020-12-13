@@ -23,7 +23,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.TaskContext
 
 case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
@@ -51,7 +50,7 @@ object EncryptedSortExec {
         if (numPartitions <= 1) {
           childRDD.map { block =>
             val (enclave, eid) = Utils.initEnclave()
-            val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes, TaskContext.getPartitionId)
+            val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)
             Block(sortedRows)
           }
         } else {
@@ -59,7 +58,7 @@ object EncryptedSortExec {
           val sampled = time("non-oblivious sort - Sample") {
             Utils.concatEncryptedBlocks(childRDD.map { block =>
               val (enclave, eid) = Utils.initEnclave()
-              val sampledBlock = enclave.Sample(eid, block.bytes, TaskContext.getPartitionId)
+              val sampledBlock = enclave.Sample(eid, block.bytes)
               Block(sampledBlock)
             }.collect)
           }
@@ -68,14 +67,14 @@ object EncryptedSortExec {
             // Parallelize has only one worker perform this FindRangeBounds
             childRDD.context.parallelize(Array(sampled.bytes), 1).map { sampledBytes =>
               val (enclave, eid) = Utils.initEnclave()
-              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes, TaskContext.getPartitionId)
+              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
             }.collect.head
           }
           // Broadcast the range boundaries and use them to partition the input
           childRDD.flatMap { block =>
             val (enclave, eid) = Utils.initEnclave()
             val partitions = enclave.PartitionForSort(
-              eid, orderSer, numPartitions, block.bytes, boundaries, TaskContext.getPartitionId)
+              eid, orderSer, numPartitions, block.bytes, boundaries)
             partitions.zipWithIndex.map {
               case (partition, i) => (i, Block(partition))
             }
@@ -85,7 +84,7 @@ object EncryptedSortExec {
               case (i, blocks) =>
                 val (enclave, eid) = Utils.initEnclave()
                 Block(enclave.ExternalSort(
-                  eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes, TaskContext.getPartitionId))
+                  eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes))
             }
         }
       Utils.ensureCached(result)

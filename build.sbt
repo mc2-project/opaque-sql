@@ -217,7 +217,7 @@ buildFlatbuffersTask := {
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
-      if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
+      if (Seq(flatc.getPath, "--cpp", "--gen-mutable", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
         || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0) {
         sys.error("Flatbuffers build failed.")
       }

@@ -12,10 +12,10 @@ extern "C" {
     JNIEnv *, jobject, jlong);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     JNIEnv *, jobject, jlong, jbyteArray);
@@ -24,51 +24,51 @@ extern "C" {
     JNIEnv *, jobject, jlong, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
-    JNIEnv *, jobject, jlong, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds(
-    JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray);
 
   JNIEXPORT jobjectArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
-    JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jint, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray);
 
   JNIEXPORT jobject JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
-    JNIEnv *, jobject, jlong, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jbyteArray);
 
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
-    JNIEnv *, jobject, jlong, jint, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jint, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-    JNIEnv *, jobject, jlong, jlong, jbyteArray, jbyteArray, jint);
+    JNIEnv *, jobject, jlong, jlong, jbyteArray, jbyteArray);
 
   JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
     JNIEnv *, jobject, jlong);
