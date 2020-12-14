@@ -20,17 +20,40 @@ package edu.berkeley.cs.rise.opaque
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
+import scala.collection.mutable.Queue
 import scala.collection.mutable.Set
 
-class Crumb(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
+// Wraps Crumb data specific to graph vertices and adds graph methods.
+class JobNode(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
             val num_input_macs: Int = 0,
             val all_outputs_mac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
             val ecall: Int = 0) {
 
-  // Checks if Crumb originates from same partition (?)
+  var outgoingNeighbors: ArrayBuffer[JobNode] = ArrayBuffer[JobNode]()
+  
+  def addOutgoingNeighbor(neighbor: JobNode) = {
+    outgoingNeighbors.append(neighbor)
+  }
+
+  // Run BFS on graph to get ecalls.
+  def getEcalls(): ArrayBuffer[Int] = {
+    val retval = ArrayBuffer[Int]()
+    val queue = Queue[JobNode]()
+    queue.enqueue(this)
+    while (!queue.isEmpty) {
+      val temp = queue.dequeue
+      retval.append(temp.ecall)
+      for (neighbor <- temp.outgoingNeighbors) {
+        queue.enqueue(neighbor)
+      }
+    }
+    return retval
+  }
+
+  // Checks if JobNodeData originates from same partition (?)
   override def equals(that: Any): Boolean = {
     that match {
-      case that: Crumb => {
+      case that: JobNode => {
         input_macs == that.input_macs &&
         num_input_macs == that.num_input_macs &&
         all_outputs_mac == that.all_outputs_mac &&
@@ -42,28 +65,6 @@ class Crumb(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBu
 
   override def hashCode(): Int = {
     input_macs.hashCode ^ all_outputs_mac.hashCode
-  }
-}
-
-class JobNode(var crumb: Crumb) {
-
-  var outgoingNeighbors: ArrayBuffer[JobNode] = ArrayBuffer[JobNode]()
-  
-  def addOutgoingNeighbor(neighbor: JobNode) = {
-    outgoingNeighbors.append(neighbor)
-  }
-
-  override def equals(that: Any): Boolean = {
-    that match {
-      case that: JobNode => {
-        this.crumb == that.crumb
-      }
-      case _ => false
-    }
-  }
-
-  override def hashCode(): Int = {
-    this.crumb.hashCode
   }
 }
 
@@ -106,18 +107,15 @@ object JobVerificationEngine {
       return true
     }
     val OE_HMAC_SIZE = 32    
-    val numPartitions = logEntryChains.length
-
+    val numPartitions = logEntryChains.size
     // Check that each partition performed the same number of ecalls and
-    // initialize crumb set.
+    // initialize node set.
     var numEcallsInFirstPartition = -1
-    val ecallSet = Set[Int]()
-    val crumbSet = Set[Crumb]()
-    val crumbMap = Map[ArrayBuffer[Byte], Crumb]()
-
+    // {all_outputs_mac -> nodeData}
+    val outputsMap = Map[ArrayBuffer[Byte], JobNode]()
     for (logEntryChain <- logEntryChains) {
       val logEntryChainEcalls = Set[Int]()
-      var scanCollectLastPrimaryCalled = false
+      var scanCollectLastPrimaryCalled = false // Not called on first partition
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
         val input_macs = ArrayBuffer[ArrayBuffer[Byte]]()
@@ -131,16 +129,14 @@ object JobVerificationEngine {
         for (j <- 0 until pastEntry.allOutputsMacLength) {
           all_outputs_mac += pastEntry.allOutputsMac(j).toByte
         }
-        val crumb = new Crumb(input_macs, pastEntry.numInputMacs,
+        val jobNode = new JobNode(input_macs, pastEntry.numInputMacs,
                                   all_outputs_mac, pastEntry.ecall)
-        val ecallNum = crumb.ecall
+        val ecallNum = jobNode.ecall
         if (ecallNum == 7) {
           scanCollectLastPrimaryCalled = true
         }
-        ecallSet.add(ecallNum)
         logEntryChainEcalls.add(ecallNum)
-        crumbSet.add(crumb)
-        crumbMap(all_outputs_mac) = crumb
+        outputsMap(all_outputs_mac) = jobNode
       }
       if (numEcallsInFirstPartition == -1) {
         numEcallsInFirstPartition = logEntryChainEcalls.size
@@ -152,45 +148,18 @@ object JobVerificationEngine {
         throw new Exception("All partitions did not perform same number of ecalls")
       }
     }
-    val numEcalls = ecallSet.size
-    val numEcallsPlusOne = numEcalls + 1
-    
-    // ===== testing =====
-    // var crumbTotal = 0
-    // for (logEntryChain <- logEntryChains) {
-    //   crumbTotal += logEntryChain.pastEntriesLength
-    // }
-    // println(crumbTotal)
-    // println(crumbSet.size)
-    // println(crumbMap.size)
-    // println("=====")
-    // ====================
 
-    // array size: numEcalls
-    // map size: numPartitions
-    val executedDAG = Map[Int, Map[Crumb, JobNode]]()
-    var rootNode = new JobNode(new Crumb())
     // Construct executed DAG
-    for (crumb <- crumbSet) {
-      if (!(executedDAG contains crumb.ecall)) {
-        executedDAG(crumb.ecall) = Map[Crumb, JobNode]()
-      }
-      if (!(executedDAG(crumb.ecall) contains crumb)) {
-        executedDAG(crumb.ecall)(crumb) = new JobNode(crumb)
-      }
-    }
-    for (crumb <- crumbSet) {
-      val thisNode = executedDAG(crumb.ecall)(crumb)
-      if (crumb.input_macs == ArrayBuffer[ArrayBuffer[Byte]]()) {
-        // println("Starter partition detected")
+    // by setting parent JobNodes for each node.
+    var rootNode = new JobNode()
+    for (node <- outputsMap.values) {
+      if (node.input_macs == ArrayBuffer[ArrayBuffer[Byte]]()) {
+        rootNode.addOutgoingNeighbor(node)
       } else {
-        // println(ecallId(crumb.ecall))
-        for (i <- 0 until crumb.num_input_macs) {
-          val parentCrumb = crumbMap(crumb.input_macs(i))
-          val parentNode = executedDAG(parentCrumb.ecall)(parentCrumb)
-          parentNode.addOutgoingNeighbor(thisNode)
+        for (i <- 0 until node.num_input_macs) {
+          val parentNode = outputsMap(node.input_macs(i))
+          parentNode.addOutgoingNeighbor(node)
         }
-        // println("===")
       }
     }
 
