@@ -59,11 +59,40 @@ object JobVerificationEngine {
   }
 
   def verify(): Boolean = {
-    // if (sparkOperators.isEmpty) {
-    //   return true
-    // }
-    // 
-    // val numPartitions = logEntryChains.length
+    if (sparkOperators.isEmpty) {
+      return true
+    }
+    val numPartitions = logEntryChains.length
+    // Check that each partition performed the same number of ecalls.
+    var numEcallsInFirstPartition = -1
+    val ecallSet = Set[Int]() 
+    for (logEntryChain <- logEntryChains) {
+      val logEntryChainEcalls = Set[Int]()
+      var scanCollectLastPrimaryCalled = false
+      for (i <- 0 until logEntryChain.pastEntriesLength) {
+        val ecallNum = logEntryChain.pastEntries(i).ecall
+        if (ecallNum == 7) {
+          scanCollectLastPrimaryCalled = true
+        }
+        ecallSet.add(ecallNum)
+        logEntryChainEcalls.add(ecallNum)
+        // print(ecallId(ecallNum))
+        // print(" ")
+      }
+      // println()
+      if (numEcallsInFirstPartition == -1) {
+        numEcallsInFirstPartition = logEntryChainEcalls.size
+      }
+      if ( (numEcallsInFirstPartition != logEntryChainEcalls.size) && 
+           (scanCollectLastPrimaryCalled && 
+            numEcallsInFirstPartition + 1 != logEntryChainEcalls.size)
+         ) {
+        throw new Exception("All partitions did not perform same number of ecalls")
+      }
+    }
+    val numEcalls = ecallSet.size
+    val numEcallsPlusOne = numEcalls + 1
+    return true
     // val startingJobIdMap = Map[Int, Int]()
     // 
     // val perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
@@ -281,6 +310,5 @@ object JobVerificationEngine {
     //     return false
     //   }
     // }
-    return true
   }
 }
