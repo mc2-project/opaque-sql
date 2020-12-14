@@ -22,10 +22,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
 
-class Crumb(val input_macs: ArrayBuffer[ArrayBuffer[Byte]],
-            val num_input_macs: Int,
-            val all_outputs_mac: ArrayBuffer[Byte],
-            val ecall: Int) {
+class Crumb(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
+            val num_input_macs: Int = 0,
+            val all_outputs_mac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
+            val ecall: Int = 0) {
 
   // Checks if Crumb originates from same partition (?)
   override def equals(that: Any): Boolean = {
@@ -168,25 +168,26 @@ object JobVerificationEngine {
 
     // array size: numEcalls
     // map size: numPartitions
-    val executedDAG = Map[Int, Map[Crumb, JobNode]]() 
+    val executedDAG = Map[Int, Map[Crumb, JobNode]]()
+    var rootNode = new JobNode(new Crumb())
     // Construct executed DAG
     for (crumb <- crumbSet) {
       if (!(executedDAG contains crumb.ecall)) {
-        executedDag(crumb.ecall) = Map[Crumb, JobNode]()
+        executedDAG(crumb.ecall) = Map[Crumb, JobNode]()
       }
-      if (!(executedDag(crumb.ecall) contains crumb)) {
-        executedDag(crumb.ecall)(crumb) = JobNode(crumb)
+      if (!(executedDAG(crumb.ecall) contains crumb)) {
+        executedDAG(crumb.ecall)(crumb) = new JobNode(crumb)
       }
     }
     for (crumb <- crumbSet) {
-      thisNode = executedDAG(crumb.ecall)(crumb)
+      val thisNode = executedDAG(crumb.ecall)(crumb)
       if (crumb.input_macs == ArrayBuffer[ArrayBuffer[Byte]]()) {
         // println("Starter partition detected")
       } else {
         // println(ecallId(crumb.ecall))
         for (i <- 0 until crumb.num_input_macs) {
           val parentCrumb = crumbMap(crumb.input_macs(i))
-          val parentNode = executedDAG(crumb.ecall)(crumb)
+          val parentNode = executedDAG(parentCrumb.ecall)(parentCrumb)
           parentNode.addOutgoingNeighbor(thisNode)
         }
         // println("===")
