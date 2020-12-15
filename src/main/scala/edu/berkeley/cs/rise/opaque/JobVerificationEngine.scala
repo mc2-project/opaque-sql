@@ -24,15 +24,20 @@ import scala.collection.mutable.Queue
 import scala.collection.mutable.Set
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
-class JobNode(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
-            val num_input_macs: Int = 0,
-            val all_outputs_mac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
+class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
+            val numInputMacs: Int = 0,
+            val allOutputsMac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
             val ecall: Int = 0) {
 
   var outgoingNeighbors: ArrayBuffer[JobNode] = ArrayBuffer[JobNode]()
-  
+  var logMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]]()
+
   def addOutgoingNeighbor(neighbor: JobNode) = {
-    outgoingNeighbors.append(neighbor)
+    this.outgoingNeighbors.append(neighbor)
+  }
+
+  def addLogMac(logMac: ArrayBuffer[Byte]) = {
+    this.logMacs.append(logMac)
   }
 
   // Run BFS on graph to get ecalls.
@@ -54,9 +59,9 @@ class JobNode(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[Array
   override def equals(that: Any): Boolean = {
     that match {
       case that: JobNode => {
-        input_macs == that.input_macs &&
-        num_input_macs == that.num_input_macs &&
-        all_outputs_mac == that.all_outputs_mac &&
+        inputMacs == that.inputMacs &&
+        numInputMacs == that.numInputMacs &&
+        allOutputsMac == that.allOutputsMac &&
         ecall == that.ecall
       }
       case _ => false
@@ -64,7 +69,7 @@ class JobNode(val input_macs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[Array
   }
 
   override def hashCode(): Int = {
-    input_macs.hashCode ^ all_outputs_mac.hashCode
+    inputMacs.hashCode ^ allOutputsMac.hashCode
   }
 }
 
@@ -111,32 +116,45 @@ object JobVerificationEngine {
     // Check that each partition performed the same number of ecalls and
     // initialize node set.
     var numEcallsInFirstPartition = -1
-    // {all_outputs_mac -> nodeData}
+    // {all_outputs_mac -> jobNode}
     val outputsMap = Map[ArrayBuffer[Byte], JobNode]()
     for (logEntryChain <- logEntryChains) {
       val logEntryChainEcalls = Set[Int]()
       var scanCollectLastPrimaryCalled = false // Not called on first partition
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
-        val input_macs = ArrayBuffer[ArrayBuffer[Byte]]()
+
+        // Copy byte buffers
+        val inputMacs = ArrayBuffer[ArrayBuffer[Byte]]()
+        val logMac = ArrayBuffer[Byte]()
+        val allOutputsMac = ArrayBuffer[Byte]()
         for (j <- 0 until pastEntry.numInputMacs) {
-          input_macs.append(ArrayBuffer[Byte]())
+          inputMacs.append(ArrayBuffer[Byte]())
           for (k <- 0 until OE_HMAC_SIZE) {
-            input_macs(j).append(pastEntry.inputMacs(j * OE_HMAC_SIZE + k).toByte)
+            inputMacs(j).append(pastEntry.inputMacs(j * OE_HMAC_SIZE + k).toByte)
           }
         }
-        val all_outputs_mac = ArrayBuffer[Byte]()
-        for (j <- 0 until pastEntry.allOutputsMacLength) {
-          all_outputs_mac += pastEntry.allOutputsMac(j).toByte
+        for (j <- 0 until pastEntry.logMacLength) {
+          logMac += pastEntry.logMac(i).toByte
         }
-        val jobNode = new JobNode(input_macs, pastEntry.numInputMacs,
-                                  all_outputs_mac, pastEntry.ecall)
+        for (j <- 0 until pastEntry.allOutputsMacLength) {
+          allOutputsMac += pastEntry.allOutputsMac(j).toByte
+        }
+
+        // Create or update job node.
+        if (!(outputsMap contains allOutputsMac)) {
+          outputsMap(allOutputsMac) = new JobNode(inputMacs, pastEntry.numInputMacs,
+                                  allOutputsMac, pastEntry.ecall)
+        }
+        val jobNode = outputsMap(allOutputsMac)
+        jobNode.addLogMac(logMac)
+        
+        // Update ecall set.
         val ecallNum = jobNode.ecall
         if (ecallNum == 7) {
           scanCollectLastPrimaryCalled = true
         }
         logEntryChainEcalls.add(ecallNum)
-        outputsMap(all_outputs_mac) = jobNode
       }
       if (numEcallsInFirstPartition == -1) {
         numEcallsInFirstPartition = logEntryChainEcalls.size
@@ -149,101 +167,26 @@ object JobVerificationEngine {
       }
     }
 
+    // Check allOutputsMac is computed correctly.
+    for (node <- outputsMap.values) {
+      // 
+    }
+
     // Construct executed DAG
     // by setting parent JobNodes for each node.
     var rootNode = new JobNode()
     for (node <- outputsMap.values) {
-      if (node.input_macs == ArrayBuffer[ArrayBuffer[Byte]]()) {
+      if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
         rootNode.addOutgoingNeighbor(node)
       } else {
-        for (i <- 0 until node.num_input_macs) {
-          val parentNode = outputsMap(node.input_macs(i))
+        for (i <- 0 until node.numInputMacs) {
+          val parentNode = outputsMap(node.inputMacs(i))
           parentNode.addOutgoingNeighbor(node)
         }
       }
     }
 
     return true
-    // val startingJobIdMap = Map[Int, Int]()
-    // 
-    // val perPartitionJobIds = Array.ofDim[Set[Int]](numPartitions)
-    // for (i <- 0 until numPartitions) {
-    //   perPartitionJobIds(i) = Set[Int]()
-    // } 
-    // for (logEntryChain <- logEntryChains) {
-    //   for (i <- 0 until logEntryChain.pastEntriesLength) {
-    //     val pastEntry = logEntryChain.pastEntries(i)
-    //     val partitionOfOperation = pastEntry.sndPid
-    //     perPartitionJobIds(partitionOfOperation).add(pastEntry.jobId)
-    //   }
-    //   val latestJobId = logEntryChain.currEntries(0).jobId
-    //   val partitionOfLastOperation = logEntryChain.currEntries(0).sndPid
-    //   perPartitionJobIds(partitionOfLastOperation).add(latestJobId)
-    // }
-    // 
-    // // Check that each partition performed the same number of ecalls
-    // var numEcallsInFirstPartition = -1
-    // for (i <- 0 until perPartitionJobIds.length) {
-    //   val partition = perPartitionJobIds(i)
-    //   val maxJobId = partition.max
-    //   val minJobId = partition.min
-    //   val numEcalls = maxJobId - minJobId + 1
-    //   if (numEcallsInFirstPartition == -1) {
-    //     numEcallsInFirstPartition = numEcalls
-    //   }
-    // 
-    //   if (numEcalls != numEcallsInFirstPartition) {
-    //     // Below two lines for debugging
-    //     // println("This partition num ecalls: " + numEcalls)
-    //     // println("last partition num ecalls: " + numEcallsInFirstPartition)
-    //     throw new Exception("All partitions did not perform same number of ecalls")
-    //   }
-    //   startingJobIdMap(i) = minJobId
-    // }
-    // 
-    // val numEcalls = numEcallsInFirstPartition 
-    // val numEcallsPlusOne = numEcalls + 1
-    // 
-    // val executedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), 
-    //   numPartitions * (numEcalls + 1))
-    // val ecallSeq = Array.fill[String](numEcalls)("unknown")
-    // 
-    // var this_partition = 0
-    // 
-    // for (logEntryChain <- logEntryChains) {
-    //   for (i <- 0 until logEntryChain.pastEntriesLength) {
-    //     val logEntry = logEntryChain.pastEntries(i)
-    //     val ecall = ecallId(logEntry.ecall)
-    //     val sndPid = logEntry.sndPid
-    //     val jobId = logEntry.jobId
-    //     val rcvPid = logEntry.rcvPid
-    //     val ecallIndex = jobId - startingJobIdMap(rcvPid)
-    // 
-    //     ecallSeq(ecallIndex) = ecall
-    // 
-    //     val row = sndPid * (numEcallsPlusOne) + ecallIndex 
-    //     val col = rcvPid * (numEcallsPlusOne) + ecallIndex + 1
-    // 
-    //     executedAdjacencyMatrix(row)(col) = 1
-    //   }
-    // 
-    //   for (i <- 0 until logEntryChain.currEntriesLength) {
-    //     val logEntry = logEntryChain.currEntries(i)
-    //     val ecall = ecallId(logEntry.ecall)
-    //     val sndPid = logEntry.sndPid
-    //     val jobId = logEntry.jobId
-    //     val ecallIndex = jobId - startingJobIdMap(this_partition)
-    // 
-    //     ecallSeq(ecallIndex) = ecall
-    // 
-    //     val row = sndPid * (numEcallsPlusOne) + ecallIndex 
-    //     val col = this_partition * (numEcallsPlusOne) + ecallIndex + 1
-    // 
-    //     executedAdjacencyMatrix(row)(col) = 1
-    //   }
-    //   this_partition += 1
-    // }
-    // 
     // val expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), 
     //   numPartitions * (numEcalls + 1))
     // val expectedEcallSeq = ArrayBuffer[String]()
