@@ -27,10 +27,12 @@ import scala.collection.mutable.Set
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
             val numInputMacs: Int = 0,
             val allOutputsMac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
-            val ecall: Int = 0) {
+            var ecall: Int = 0) {
 
   var outgoingNeighbors: ArrayBuffer[JobNode] = ArrayBuffer[JobNode]()
   var logMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]]()
+  var isSource: Boolean = false
+  var isSink: Boolean = false
 
   def addOutgoingNeighbor(neighbor: JobNode) = {
     this.outgoingNeighbors.append(neighbor)
@@ -40,19 +42,16 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
     this.logMacs.append(logMac)
   }
 
-  // Run BFS on graph to get ecalls.
-  def getEcalls(): ArrayBuffer[Int] = {
-    val retval = ArrayBuffer[Int]()
-    val queue = Queue[JobNode]()
-    queue.enqueue(this)
-    while (!queue.isEmpty) {
-      val temp = queue.dequeue
-      retval.append(temp.ecall)
-      for (neighbor <- temp.outgoingNeighbors) {
-        queue.enqueue(neighbor)
-      }
-    }
-    return retval
+  def setEcall(ecall: Int) = {
+    this.ecall = ecall
+  }
+
+  def setSource() = {
+    this.isSource = true
+  }
+
+  def setSink() = {
+    this.isSink = true
   }
 
   // Checks if JobNodeData originates from same partition (?)
@@ -113,14 +112,10 @@ object JobVerificationEngine {
     }
     val OE_HMAC_SIZE = 32    
     val numPartitions = logEntryChains.size
-    // Check that each partition performed the same number of ecalls and
-    // initialize node set.
-    var numEcallsInFirstPartition = -1
-    // {all_outputs_mac -> jobNode}
+
+    // Set up map from allOutputsMAC --> JobNode.
     val outputsMap = Map[ArrayBuffer[Byte], JobNode]()
     for (logEntryChain <- logEntryChains) {
-      val logEntryChainEcalls = Set[Int]()
-      var scanCollectLastPrimaryCalled = false // Not called on first partition
       for (i <- 0 until logEntryChain.pastEntriesLength) {
         val pastEntry = logEntryChain.pastEntries(i)
 
@@ -148,36 +143,24 @@ object JobVerificationEngine {
         }
         val jobNode = outputsMap(allOutputsMac)
         jobNode.addLogMac(logMac)
-        
-        // Update ecall set.
-        val ecallNum = jobNode.ecall
-        if (ecallNum == 7) {
-          scanCollectLastPrimaryCalled = true
-        }
-        logEntryChainEcalls.add(ecallNum)
-      }
-      if (numEcallsInFirstPartition == -1) {
-        numEcallsInFirstPartition = logEntryChainEcalls.size
-      }
-      if ( (numEcallsInFirstPartition != logEntryChainEcalls.size) && 
-           (scanCollectLastPrimaryCalled && 
-            numEcallsInFirstPartition + 1 != logEntryChainEcalls.size)
-         ) {
-        throw new Exception("All partitions did not perform same number of ecalls")
       }
     }
 
-    // Check allOutputsMac is computed correctly.
+    // For each node, check that allOutputsMac is computed correctly.
     for (node <- outputsMap.values) {
-      // 
+      // assert (node.allOutputsMac == mac(concat(node.logMacs)))
+
+      // Unclear what order to arrange log_macs to get the all_outputs_mac
+      // Doing numEcalls * (numPartitions!) arrangements seems very bad.
+      // See if we can do it more efficiently.
     }
 
-    // Construct executed DAG
-    // by setting parent JobNodes for each node.
-    var rootNode = new JobNode()
+    // Construct executed DAG by setting parent JobNodes for each node.
+    val executedSourceNode = new JobNode()
+    executedSourceNode.setSource
     for (node <- outputsMap.values) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
-        rootNode.addOutgoingNeighbor(node)
+        executedSourceNode.addOutgoingNeighbor(node)
       } else {
         for (i <- 0 until node.numInputMacs) {
           val parentNode = outputsMap(node.inputMacs(i))
@@ -186,143 +169,167 @@ object JobVerificationEngine {
       }
     }
 
+    // Construct expected DAG.
+    val expectedDAG = ArrayBuffer[ArrayBuffer[JobNode]]()
+    val expectedEcalls = ArrayBuffer[Int]()
+    for (operator <- sparkOperators) {
+      if (operator == "EncryptedSortExec" && numPartitions == 1) {
+        // ("externalSort")
+        expectedEcalls.append(6)
+      } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
+        // ("sample", "findRangeBounds", "partitionForSort", "externalSort")
+        expectedEcalls.append(3, 4, 5, 6)
+      } else if (operator == "EncryptedProjectExec") {
+        // ("project")
+        expectedEcalls.append(1)
+      } else if (operator == "EncryptedFilterExec") {
+        // ("filter")
+        expectedEcalls.append(2)
+      } else if (operator == "EncryptedAggregateExec") {
+        // ("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
+        expectedEcalls.append(9, 10)
+      } else if (operator == "EncryptedSortMergeJoinExec") {
+        // ("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
+        expectedEcalls.append(7, 8)
+      } else if (operator == "EncryptedLocalLimitExec") {
+        // ("limitReturnRows")
+        expectedEcalls.append(14)
+      } else if (operator == "EncryptedGlobalLimitExec") {
+        // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
+        expectedEcalls.append(11, 12, 14)
+      } else {
+        throw new Exception("Executed unknown operator") 
+      }
+    }
+
+    // Initialize job nodes.
+    val expectedSourceNode = new JobNode()
+    expectedSourceNode.setSource
+    val expectedSinkNode = new JobNode()
+    expectedSinkNode.setSink
+    for (j <- 0 until numPartitions) {
+      val partitionJobNodes = ArrayBuffer[JobNode]()
+      expectedDAG.append(partitionJobNodes)
+      for (i <- 0 until expectedEcalls.length) {
+        val ecall = expectedEcalls(i)
+        val jobNode = new JobNode()
+        jobNode.setEcall(ecall)
+        partitionJobNodes.append(jobNode)
+        // Connect source node to starting ecall partitions.
+        if (i == 0) {
+          expectedSourceNode.addOutgoingNeighbor(jobNode)
+        }
+        // Connect ending ecall partitions to sink.
+        if (i == expectedEcalls.length - 1) {
+          jobNode.addOutgoingNeighbor(expectedSinkNode)
+        }
+      }
+    }
+    
+    // Set outgoing neighbors for all nodes, except for the ones in the last ecall.
+    for (i <- 0 until expectedEcalls.length - 1) {
+      // i represents the current ecall index
+      val operator = expectedEcalls(i)
+      // project
+      if (operator == 1) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // filter
+      } else if (operator == 2) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // externalSort
+      } else if (operator == 6) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // sample
+      } else if (operator == 3) {
+        for (j <- 0 until numPartitions) {
+          // All EncryptedBlocks resulting from sample go to one worker
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
+        }
+      // findRangeBounds
+      } else if (operator == 4) {
+        // Broadcast from one partition (assumed to be partition 0) to all partitions
+        for (j <- 0 until numPartitions) {
+          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // partitionForSort
+      } else if (operator == 5) {
+        // All to all shuffle
+        for (j <- 0 until numPartitions) {
+          for (k <- 0 until numPartitions) {
+            expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(k)(i + 1))
+          }
+        }
+      // nonObliviousAggregateStep1
+      } else if (operator == 9) {
+        // Blocks sent to prev and next partition
+        if (numPartitions == 1) {
+          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
+          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
+        } else {
+          for (j <- 0 until numPartitions) {
+            val prev = j - 1
+            val next = j + 1
+            if (j > 0) {
+              // Send block to prev partition
+              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(prev)(i + 1))
+            } 
+            if (j < numPartitions - 1) {
+              // Send block to next partition
+              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(next)(i + 1))
+            }
+          }
+        }
+      // nonObliviousAggregateStep2
+      } else if (operator == 10) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // scanCollectLastPrimary
+      } else if (operator == 7) {
+        // Blocks sent to next partition
+        if (numPartitions == 1) {
+          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
+        } else {
+          for (j <- 0 until numPartitions) {
+            if (j < numPartitions - 1) {
+              val next = j + 1
+              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(next)(i + 1))
+            }
+          }
+        }
+      // nonObliviousSortMergeJoin
+      } else if (operator == 8) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // countRowsPerPartition
+      } else if (operator == 11) {
+        // Send from all partitions to partition 0
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
+        }
+      // computeNumRowsPerPartition
+      } else if (operator == 12) {
+        // Broadcast from one partition (assumed to be partition 0) to all partitions
+        for (j <- 0 until numPartitions) {
+          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      // limitReturnRows
+      } else if (operator == 14) {
+        for (j <- 0 until numPartitions) {
+          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
+        }
+      } else {
+        throw new Exception("Job Verification Error creating expected DAG: "
+          + "operator not supported - " + operator)
+      }
+    }
     return true
-    // val expectedAdjacencyMatrix = Array.ofDim[Int](numPartitions * (numEcalls + 1), 
-    //   numPartitions * (numEcalls + 1))
-    // val expectedEcallSeq = ArrayBuffer[String]()
-    // for (operator <- sparkOperators) {
-    //   if (operator == "EncryptedSortExec" && numPartitions == 1) {
-    //     expectedEcallSeq.append("externalSort")
-    //   } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
-    //     expectedEcallSeq.append("sample", "findRangeBounds", "partitionForSort", "externalSort")
-    //   } else if (operator == "EncryptedProjectExec") {
-    //     expectedEcallSeq.append("project")
-    //   } else if (operator == "EncryptedFilterExec") {
-    //     expectedEcallSeq.append("filter")
-    //   } else if (operator == "EncryptedAggregateExec") {
-    //     expectedEcallSeq.append("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
-    //   } else if (operator == "EncryptedSortMergeJoinExec") {
-    //     expectedEcallSeq.append("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
-    //   } else if (operator == "EncryptedLocalLimitExec") {
-    //     expectedEcallSeq.append("limitReturnRows")
-    //   } else if (operator == "EncryptedGlobalLimitExec") {
-    //     expectedEcallSeq.append("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
-    //   } else {
-    //     throw new Exception("Executed unknown operator") 
-    //   }
-    // }
-    // 
-    // if (!ecallSeq.sameElements(expectedEcallSeq)) {
-    //   // Below 4 lines for debugging
-    //   // println("===Expected Ecall Seq===")
-    //   // expectedEcallSeq foreach { row => row foreach print; println }
-    //   // println("===Ecall seq===") 
-    //   // ecallSeq foreach { row => row foreach print; println }
-    //   return false
-    // }
-    // 
-    // for (i <- 0 until expectedEcallSeq.length) {
-    //   // i represents the current ecall index
-    //   val operator = expectedEcallSeq(i)
-    //   if (operator == "project") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "filter") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "externalSort") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "sample") {
-    //     for (j <- 0 until numPartitions) {
-    //       // All EncryptedBlocks resulting from sample go to one worker
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "findRangeBounds") {
-    //     // Broadcast from one partition (assumed to be partition 0) to all partitions
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "partitionForSort") {
-    //     // All to all shuffle
-    //     for (j <- 0 until numPartitions) {
-    //       for (k <- 0 until numPartitions) {
-    //         expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(k * numEcallsPlusOne + i + 1) = 1
-    //       }
-    //     }
-    //   } else if (operator == "nonObliviousAggregateStep1") {
-    //     // Blocks sent to prev and next partition
-    //     if (numPartitions == 1) {
-    //       expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
-    //       expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
-    //     } else {
-    //       for (j <- 0 until numPartitions) {
-    //         val prev = j - 1
-    //         val next = j + 1
-    //         if (j > 0) {
-    //           // Send block to prev partition
-    //           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(prev * numEcallsPlusOne + i + 1) = 1
-    //         } 
-    //         if (j < numPartitions - 1) {
-    //           // Send block to next partition
-    //           expectedAdjacencyMatrix(j* numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
-    //         }
-    //       }
-    //     }
-    //   } else if (operator == "nonObliviousAggregateStep2") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "scanCollectLastPrimary") {
-    //     // Blocks sent to next partition
-    //     if (numPartitions == 1) {
-    //       expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
-    //     } else {
-    //       for (j <- 0 until numPartitions) {
-    //         if (j < numPartitions - 1) {
-    //           val next = j + 1
-    //           expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(next * numEcallsPlusOne + i + 1) = 1
-    //         }
-    //       }
-    //     }
-    //   } else if (operator == "nonObliviousSortMergeJoin") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "countRowsPerPartition") {
-    //     // Send from all partitions to partition 0
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(0 * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "computeNumRowsPerPartition") {
-    //     // Broadcast from one partition (assumed to be partition 0) to all partitions
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(0 * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else if (operator == "limitReturnRows") {
-    //     for (j <- 0 until numPartitions) {
-    //       expectedAdjacencyMatrix(j * numEcallsPlusOne + i)(j * numEcallsPlusOne + i + 1) = 1
-    //     }
-    //   } else {
-    //     throw new Exception("Job Verification Error creating expected adjacency matrix: "
-    //       + "operator not supported - " + operator)
-    //   }
-    // }
-    // 
-    // for (i <- 0 until numPartitions * (numEcalls + 1); 
-    //      j <- 0 until numPartitions * (numEcalls + 1)) {
-    //   if (expectedAdjacencyMatrix(i)(j) != executedAdjacencyMatrix(i)(j)) {
-    //     // These two println for debugging purposes
-    //     // println("Expected Adjacency Matrix: ")
-    //     // expectedAdjacencyMatrix foreach { row => row foreach print; println }
-    //     
-    //     // println("Executed Adjacency Matrix: ")
-    //     // executedAdjacencyMatrix foreach { row => row foreach print; println }
-    //     return false
-    //   }
-    // }
   }
 }
