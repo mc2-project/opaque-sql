@@ -621,7 +621,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousPartialAggrega
   } else {
     oe_check_and_time("Non-Oblivious Partial Aggregate",
                        ecall_non_oblivious_partial_aggregate(
-                         (oe_enclave_t*)eid, is_partial,
+                         (oe_enclave_t*)eid,
+                         is_partial,
                          agg_op_ptr, agg_op_length,
                          input_rows_ptr, input_rows_length,
                          &partial_aggregates, &partial_aggregates_length));

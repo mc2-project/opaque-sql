@@ -1542,7 +1542,12 @@ public:
         std::unique_ptr<FlatbuffersExpressionEvaluator>(
           new FlatbuffersExpressionEvaluator(update_expr)));
     }
-    evaluate_evaluator.reset(new FlatbuffersExpressionEvaluator(expr->evaluate_expr()));
+    for (auto eval_expr : *expr->evaluate_exprs()) {
+      evaluate_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(eval_expr)));
+    }
+    //evaluate_evaluator.reset(new FlatbuffersExpressionEvaluator(expr->evaluate_expr()));
   }
 
   std::vector<const tuix::Field *> initial_values(const tuix::Row *unused) {
@@ -1561,16 +1566,20 @@ public:
     return result;
   }
 
-  const tuix::Field *evaluate(const tuix::Row *agg) {
-    return evaluate_evaluator->eval(agg);
+  std::vector<const tuix::Field *> evaluate(const tuix::Row *agg) {
+    std::vector<const tuix::Field *> result;
+    for (auto&& e : evaluate_evaluators) {
+      result.push_back(e->eval(agg));
+    }
+    return result;
   }
 
 private:
   flatbuffers::FlatBufferBuilder builder;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
-  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> merge_evaluators;
-  std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> evaluate_evaluators;
+  //std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
 };
 
 class FlatbuffersAggOpEvaluator {
@@ -1662,7 +1671,9 @@ public:
     builder.Clear();
     std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
     for (auto&& e : aggregate_evaluators) {
-      output_fields.push_back(flatbuffers_copy<tuix::Field>(e->evaluate(a), builder));
+      for (auto f : e->evaluate(a)) {
+        output_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder));
+      }
     }
     return flatbuffers::GetTemporaryPointer<tuix::Row>(
       builder,

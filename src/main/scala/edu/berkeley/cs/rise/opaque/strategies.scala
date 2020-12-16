@@ -96,34 +96,21 @@ object OpaqueOperators extends Strategy {
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
 
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
-
-      val partialAggExpressions = aggregateExpressions.map(_.copy(mode = Partial))
-      val partialAttributes = partialAggExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-
-      val groupingAttributes = groupingExpressions.map(_.toAttribute)
-      val finalAggExpressions = aggregateExpressions.map(_.copy(mode = Final))
-
-      println(s"groupingExpressions: ${groupingExpressions}")
-      println(s"partialAggExpressions: ${partialAggExpressions}")
-      println(s"partialAttributes: ${partialAttributes}")
-      println(s"groupingAttributes: ${groupingAttributes}")
-      println(s"finalAggExpressions: ${finalAggExpressions}")
-
-      val completeAggExpressions = aggregateExpressions.map(_.copy(mode = Complete))
-
-      EncryptedProjectExec(resultExpressions,
-        EncryptedAggregateExec(
-          groupingExpressions, completeAggExpressions,
-          EncryptedSortExec(
-            groupingExpressions.map(e => SortOrder(e, Ascending)), true, planLater(child)))) :: Nil
+      // val completeAggExpressions = aggregateExpressions.map(_.copy(mode = Complete))
 
       // EncryptedProjectExec(resultExpressions,
-      //   EncryptedPartialAggregateExec(groupingAttributes, finalAggExpressions,
-      //     EncryptedSortExec(groupingAttributes.map(e => SortOrder(e, Ascending)), true,
-      //       EncryptedPartialAggregateExec(
-      //         groupingExpressions, partialAggExpressions,
-      //         EncryptedSortExec(
-      //           groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+      //   EncryptedAggregateExec(
+      //     groupingExpressions, completeAggExpressions,
+      //     EncryptedSortExec(
+      //       groupingExpressions.map(e => SortOrder(e, Ascending)), true, planLater(child)))) :: Nil
+
+      NewEncryptedAggregateExec(
+        groupingExpressions, aggregateExpressions, Final,
+        EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+          NewEncryptedAggregateExec(
+            groupingExpressions, aggregateExpressions, Partial,
+            EncryptedSortExec(
+              groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))))) :: Nil
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil

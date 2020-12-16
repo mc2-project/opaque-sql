@@ -24,6 +24,7 @@ concurrentRestrictions in Global := Seq(
 fork in Test := true
 fork in run := true
 
+testOptions in Test += Tests.Argument("-oDF")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
   "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")

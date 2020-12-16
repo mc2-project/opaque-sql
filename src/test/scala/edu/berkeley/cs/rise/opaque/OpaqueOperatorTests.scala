@@ -335,7 +335,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     case 2 => "C"
   }
 
-  testOpaqueOnly("aggregate average") { securityLevel =>
+  testAgainstSpark("aggregate average") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
