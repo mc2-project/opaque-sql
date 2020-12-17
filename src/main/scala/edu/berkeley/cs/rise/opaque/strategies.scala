@@ -97,13 +97,23 @@ object OpaqueOperators extends Strategy {
 
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
 
-      NewEncryptedAggregateExec(
-        groupingExpressions, aggregateExpressions, Final,
-        EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+      if (groupingExpressions.size == 0) {
+        val (projSchema, tag) = tagForGlobalAggregate(child.output)
+        EncryptedProjectExec(resultExpressions, 
+          NewEncryptedAggregateExec(Seq(tag), aggregateExpressions, Final,
+            EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true,
+              NewEncryptedAggregateExec(Seq(tag), aggregateExpressions, Partial,
+                EncryptedProjectExec(projSchema, planLater(child)))))) :: Nil
+      } else {
+        EncryptedProjectExec(resultExpressions,
           NewEncryptedAggregateExec(
-            groupingExpressions, aggregateExpressions, Partial,
-            EncryptedSortExec(
-              groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))))) :: Nil
+            groupingExpressions, aggregateExpressions, Final,
+            EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+              NewEncryptedAggregateExec(
+                groupingExpressions, aggregateExpressions, Partial,
+                EncryptedSortExec(
+                  groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+      }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
@@ -165,4 +175,10 @@ object OpaqueOperators extends Strategy {
   private def dropTags(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
     leftOutput ++ rightOutput
+
+  private def tagForGlobalAggregate(input: Seq[Attribute])
+      : (Seq[NamedExpression], NamedExpression) = {
+    val tag = Alias(Literal(0), "_tag")()
+    (Seq(tag) ++ input, tag.toAttribute)
+  }
 }

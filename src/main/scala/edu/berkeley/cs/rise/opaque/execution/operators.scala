@@ -255,7 +255,7 @@ case class NewEncryptedAggregateExec(
         (groupingExpressions, aggExpressions.map(_.copy(mode = Complete)))
       }
     }
-    println(s"Mode is ${mode}, grouping ${groupingExprs}, agg ${aggExprs}")
+    //println(s"Mode is ${mode}, grouping ${groupingExprs}, agg ${aggExprs}")
     val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
 
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {

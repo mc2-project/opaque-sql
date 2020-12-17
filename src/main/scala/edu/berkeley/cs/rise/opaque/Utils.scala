@@ -1427,37 +1427,40 @@ object Utils extends Logging {
             builder,
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      // case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
-      //   val sum = vs.aggBufferAttributes(0)
+      case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
+        val sum = vs.aggBufferAttributes(0)
 
-      //   val sumDataType = vs.dataType
+        val sumDataType = vs.dataType
 
-      //   val updateExprsSer = isPartial match {
-      //     case true: Array(
-      //       /* sum = */ flatbuffersSerializeExpression(
-      //         builder, VectorAdd(sum, child), concatSchema))
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val vectorSumUpdateExpr = VectorAdd(sum, child)
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+          case Final => {
+            val vectorSumUpdateExpr = VectorAdd(sum, vs.inputAggBufferAttributes(0))
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+          case Complete => {
+            val vectorSumUpdateExpr = VectorAdd(sum, child)
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+        }
 
-      //     case false: Array(
-      //       /* sum = */ flatbuffersSerializeExpression(
-      //         builder, VectorAdd(sum.left, sum.right), concatSchema))
-      //   }
-
-      //   // TODO: support aggregating null values
-      //   tuix.AggregateExpr.createAggregateExpr(
-      //     builder,
-      //     tuix.AggregateExpr.createInitialValuesVector(
-      //       builder,
-      //       Array(
-      //         /* sum = */ flatbuffersSerializeExpression(
-      //           builder, Literal(Array[Double]()), input))),
-      //     tuix.AggregateExpr.createUpdateExprsVector(
-      //       builder,
-      //       Array(
-      //         /* sum = */ flatbuffersSerializeExpression(
-      //           builder, VectorAdd(sum, child), concatSchema))),
-      //     flatbuffersSerializeExpression(
-      //       builder, sum, aggSchema))
-
+        // TODO: support aggregating null values
+        tuix.AggregateExpr.createAggregateExpr(
+          builder,
+          tuix.AggregateExpr.createInitialValuesVector(
+            builder,
+            Array(
+              /* sum = */ flatbuffersSerializeExpression(
+                builder, Literal(Array[Double]()), input))),
+          tuix.AggregateExpr.createUpdateExprsVector(
+            builder,
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
     }
   }
 
