@@ -20,8 +20,6 @@ package edu.berkeley.cs.rise.opaque
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
-import scala.collection.mutable.Queue
-import scala.collection.mutable.Set
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
@@ -52,6 +50,30 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
 
   def setSink() = {
     this.isSink = true
+  }
+
+  // Compute and return a list of paths from this node to a sink node.
+  def pathsToSink(): ArrayBuffer[List[Seq[Int]]] = {
+    val retval = ArrayBuffer[List[Seq[Int]]]()
+    if (this.isSink) {
+      return retval
+    }
+    // This node is directly before the sink and has exactly one path to it
+    // (the edge from this node to the sink).
+    if (this.outgoingNeighbors.length == 1 && this.outgoingNeighbors(0).isSink) {
+      return ArrayBuffer(List(Seq(this.ecall, 0)))
+    }
+    // Each neighbor has a list of paths to the sink -
+    // For every path that exists, prepend the edge from this node to the neighbor.
+    // Return all paths collected from all neighbors.
+    for (neighbor <- this.outgoingNeighbors) {
+      val pred = Seq(this.ecall, neighbor.ecall)
+      val restPaths = neighbor.pathsToSink()
+      for (restPath <- restPaths) {
+        retval.append(pred +: restPath)
+      }
+    }
+    return retval
   }
 
   // Checks if JobNodeData originates from same partition (?)
@@ -158,6 +180,8 @@ object JobVerificationEngine {
     // Construct executed DAG by setting parent JobNodes for each node.
     val executedSourceNode = new JobNode()
     executedSourceNode.setSource
+    val executedSinkNode = new JobNode()
+    executedSinkNode.setSink
     for (node <- outputsMap.values) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
         executedSourceNode.addOutgoingNeighbor(node)
@@ -166,6 +190,11 @@ object JobVerificationEngine {
           val parentNode = outputsMap(node.inputMacs(i))
           parentNode.addOutgoingNeighbor(node)
         }
+      }
+    }
+    for (node <- outputsMap.values) {
+      if (node.outgoingNeighbors.length == 0) {
+        node.addOutgoingNeighbor(executedSinkNode)
       }
     }
 
@@ -330,6 +359,10 @@ object JobVerificationEngine {
           + "operator not supported - " + operator)
       }
     }
+    val executedPathsToSink = executedSourceNode.pathsToSink
+    val expectedPathsToSink = expectedSourceNode.pathsToSink
+    print("DAGs equal: ")
+    println(executedPathsToSink.toSet == expectedPathsToSink.toSet)
     return true
   }
 }
