@@ -96,13 +96,6 @@ object OpaqueOperators extends Strategy {
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
 
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
-      // val completeAggExpressions = aggregateExpressions.map(_.copy(mode = Complete))
-
-      // EncryptedProjectExec(resultExpressions,
-      //   EncryptedAggregateExec(
-      //     groupingExpressions, completeAggExpressions,
-      //     EncryptedSortExec(
-      //       groupingExpressions.map(e => SortOrder(e, Ascending)), true, planLater(child)))) :: Nil
 
       NewEncryptedAggregateExec(
         groupingExpressions, aggregateExpressions, Final,
