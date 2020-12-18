@@ -717,21 +717,21 @@ private:
               const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, offset);
               if (str->value_type() != tuix::FieldUnion_StringField) {
                 throw std::runtime_error(
-                  std::string("tuix::Concat requires string, not ")
+                  std::string("tuix::Concat requires serializable data types, not ")
                   + std::string(tuix::EnumNameFieldUnion(str->value_type()))
                   + std::string(". You do not need to provide the data as string but the data should be serialized into string before sent to concat"));  
               }
               if (!str->is_null()){
                 // skipping over the null input 
                 auto str_field = static_cast<const tuix::StringField *>(str->value());
-                int32_t start = 0;
-                int32_t end = str_field ->length(); 
+                uint32_t start = 0;
+                uint32_t end = str_field ->length(); 
                 total += end; 
                 std::vector<uint8_t> stringtoadd(
                 flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
-                                                          static_cast<uint32_t>(start)),
+                                                          start),
                 flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
-                                                          static_cast<uint32_t>(end)));
+                                                          end));
                 result.insert(result.end(), stringtoadd.begin(), stringtoadd.end());
               }
 

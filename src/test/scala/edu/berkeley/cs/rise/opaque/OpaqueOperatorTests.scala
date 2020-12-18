@@ -400,9 +400,9 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
     // you can't serialize date so that's not supported as well 
     // opaque doesn't support byte 
-    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int])
-    val df = makeDF(data, securityLevel, "str", "int","null")
-    df.select(concat(col("str"),lit(","),col("int"),col("null"))).collect
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int],"")
+    val df = makeDF(data, securityLevel, "str", "int","null","emptystring")
+    df.select(concat(col("str"),lit(","),col("int"),col("null"),col("emptystring"))).collect
   }
 
   testAgainstSpark("year") { securityLevel =>

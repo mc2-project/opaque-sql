@@ -119,11 +119,6 @@ table Contains {
     right:Expr;
 }
 
-// Array expressions
-table In{
-    children:[Expr]; 
-}
-
 table Concat{
     children:[Expr]; 
 }
