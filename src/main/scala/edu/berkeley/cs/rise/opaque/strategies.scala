@@ -98,19 +98,22 @@ object OpaqueOperators extends Strategy {
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
 
       if (groupingExpressions.size == 0) {
-        val (projSchema, tag) = tagForGlobalAggregate(child.output)
+        val partialAggregate = NewEncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+        val partialOutput = partialAggregate.output
+        val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
+
         EncryptedProjectExec(resultExpressions, 
-          NewEncryptedAggregateExec(Seq(tag), aggregateExpressions, Final,
-            EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true,
-              NewEncryptedAggregateExec(Seq(tag), aggregateExpressions, Partial,
-                EncryptedProjectExec(projSchema, planLater(child)))))) :: Nil
+          NewEncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+            EncryptedProjectExec(partialOutput, 
+              EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
+                EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
       } else {
         EncryptedProjectExec(resultExpressions,
           NewEncryptedAggregateExec(
             groupingExpressions, aggregateExpressions, Final,
             EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
               NewEncryptedAggregateExec(
-                groupingExpressions, aggregateExpressions, Partial,
+                groupingExpressions, aggregateExpressions, Partial, 
                 EncryptedSortExec(
                   groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
       }

@@ -5,7 +5,7 @@
 #define AGGREGATE_H
 
 void non_oblivious_partial_aggregate(
-  bool is_partial,
+  bool is_global,
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **partial_aggregates, size_t *partial_aggregates_length);

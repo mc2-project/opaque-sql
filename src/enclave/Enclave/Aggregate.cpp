@@ -12,13 +12,12 @@ void non_oblivious_partial_aggregate(
   uint8_t *input_rows, size_t input_rows_length,
   uint8_t **partial_aggregates, size_t *partial_aggregates_length) {
 
-  (void) is_partial;
-
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
   FlatbuffersTemporaryRow prev, cur;
+  size_t count = 0;
 
   while (r.has_next()) {
     prev.set(cur.get());
@@ -29,12 +28,16 @@ void non_oblivious_partial_aggregate(
       agg_op_eval.reset_group();
     }
     agg_op_eval.aggregate(cur.get());
+    count += 1;
   }
 
-  if (!(agg_op_eval.get_num_groups() > 0 && cur.get() == nullptr)) {
+  // Skip outputting the final row if the number of input rows is 0 and
+  // 1. It's a grouping aggregation 
+  // 2. It's a global aggregation, the mode is final
+  if (!(count == 0 && (agg_op_eval.get_num_groups() > 0 || (agg_op_eval.get_num_groups() == 0 && !is_partial)))) {
     w.append(agg_op_eval.evaluate());
   }
-  
+
   w.output_buffer(partial_aggregates, partial_aggregates_length);
 }
 
