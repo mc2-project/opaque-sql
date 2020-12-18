@@ -1234,7 +1234,8 @@ object Utils extends Logging {
         val nullableChildren = children.filter(_.nullable)
         val countExpr = nullableChildren.isEmpty match {
           case true => Add(count, Literal(1L))
-          case false => If(nullableChildren.map(IsNull).reduce(Or), count, Add(count, Literal(1L)))}
+          case false => If(nullableChildren.map(IsNull).reduce(Or), count, Add(count, Literal(1L)))
+        }
 
         tuix.AggregateExpr.createAggregateExpr(
           builder,
