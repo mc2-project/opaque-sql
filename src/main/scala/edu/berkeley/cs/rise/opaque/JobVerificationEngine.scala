@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
+import scala.collection.mutable.Set
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
@@ -57,6 +58,9 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
     val retval = ArrayBuffer[List[Seq[Int]]]()
     if (this.isSink) {
       return retval
+    }
+    if (this.outgoingNeighbors.length == 0 && !this.isSink) {
+      throw new Exception("DAG is not well formed - non sink node has 0 outgoing neighbors.")
     }
     // This node is directly before the sink and has exactly one path to it
     // (the edge from this node to the sink).
@@ -115,6 +119,11 @@ object JobVerificationEngine {
     14 -> "limitReturnRows"
   ).withDefaultValue("unknown")
 
+  def pathsEqual(path1: ArrayBuffer[List[Seq[Int]]],
+                path2: ArrayBuffer[List[Seq[Int]]]): Boolean = {
+    return path1.size == path2.size && path1.toSet == path2.toSet
+  }
+
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 
   }
@@ -135,10 +144,30 @@ object JobVerificationEngine {
     val OE_HMAC_SIZE = 32    
     val numPartitions = logEntryChains.size
 
-    // Set up map from allOutputsMAC --> JobNode.
+    // Keep a set of nodes, since right now, the last nodes won't have outputs.
+    val nodeSet = Set[JobNode]()
+    // Set up map from allOutputsMAC --> JobNode.    
     val outputsMap = Map[ArrayBuffer[Byte], JobNode]()
     for (logEntryChain <- logEntryChains) {
+      // Create job node for last ecall.
+      val logEntry = logEntryChain.currEntries(0)
+      val inputMacs = ArrayBuffer[ArrayBuffer[Byte]]()
+      val allOutputsMac = ArrayBuffer[Byte]()
+      // (TODO): add logMac and allOutputsMac to last crumb.
+      for (j <- 0 until logEntry.numInputMacs) {
+        inputMacs.append(ArrayBuffer[Byte]())
+        for (k <- 0 until OE_HMAC_SIZE) {
+          inputMacs(j).append(logEntry.inputMacs(j * OE_HMAC_SIZE + k).toByte)
+        }
+      }
+      val lastJobNode = new JobNode(inputMacs, logEntry.numInputMacs,
+                                    allOutputsMac, logEntry.ecall)
+      nodeSet.add(lastJobNode)
+      // println(lastJobNode.ecall)
+
+      // Create job nodes for all ecalls before last for this partition.
       for (i <- 0 until logEntryChain.pastEntriesLength) {
+
         val pastEntry = logEntryChain.pastEntries(i)
 
         // Copy byte buffers
@@ -165,11 +194,12 @@ object JobVerificationEngine {
         }
         val jobNode = outputsMap(allOutputsMac)
         jobNode.addLogMac(logMac)
+        nodeSet.add(jobNode)
       }
     }
 
     // For each node, check that allOutputsMac is computed correctly.
-    for (node <- outputsMap.values) {
+    for (node <- nodeSet) {
       // assert (node.allOutputsMac == mac(concat(node.logMacs)))
 
       // Unclear what order to arrange log_macs to get the all_outputs_mac
@@ -182,8 +212,10 @@ object JobVerificationEngine {
     executedSourceNode.setSource
     val executedSinkNode = new JobNode()
     executedSinkNode.setSink
-    for (node <- outputsMap.values) {
+    for (node <- nodeSet) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
+        // println("added source node neighbor")
+        // println(node.ecall)
         executedSourceNode.addOutgoingNeighbor(node)
       } else {
         for (i <- 0 until node.numInputMacs) {
@@ -192,8 +224,10 @@ object JobVerificationEngine {
         }
       }
     }
-    for (node <- outputsMap.values) {
+    for (node <- nodeSet) {
       if (node.outgoingNeighbors.length == 0) {
+        // println("added sink node predecessor")
+        // println(node.ecall)
         node.addOutgoingNeighbor(executedSinkNode)
       }
     }
@@ -299,7 +333,6 @@ object JobVerificationEngine {
         // Blocks sent to prev and next partition
         if (numPartitions == 1) {
           expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
-          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
         } else {
           for (j <- 0 until numPartitions) {
             val prev = j - 1
@@ -361,8 +394,18 @@ object JobVerificationEngine {
     }
     val executedPathsToSink = executedSourceNode.pathsToSink
     val expectedPathsToSink = expectedSourceNode.pathsToSink
+    val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
+    if (!arePathsEqual) {
+      println(executedPathsToSink)
+      println(expectedPathsToSink)
+
+      print("Executed DAG source nodes: ")
+      println(executedSourceNode.outgoingNeighbors.length)
+      print("Expected DAG source nodes: ")
+      println(expectedSourceNode.outgoingNeighbors.length)
+    }
     print("DAGs equal: ")
-    println(executedPathsToSink.toSet == expectedPathsToSink.toSet)
+    println(arePathsEqual)
     return true
   }
 }
