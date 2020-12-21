@@ -77,6 +77,7 @@ import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.Average
+import org.apache.spark.sql.catalyst.expressions.aggregate.Complete
 import org.apache.spark.sql.catalyst.expressions.aggregate.Count
 import org.apache.spark.sql.catalyst.expressions.aggregate.Final
 import org.apache.spark.sql.catalyst.expressions.aggregate.First
@@ -1154,17 +1155,15 @@ object Utils extends Logging {
   }
 
   def serializeAggOp(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
+    groupingExpressions: Seq[NamedExpression],
+    aggExpressions: Seq[AggregateExpression],
     input: Seq[Attribute]): Array[Byte] = {
-    // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
-    // grouping expressions into AggregateExpressions that collect the first seen value.
-    val aggExpressionsWithFirst = aggExpressions.map {
-      case Alias(e: AggregateExpression, _) => e
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
+    val aggGroupingExpressions = groupingExpressions.map {
+      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
     }
+    val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
-    val aggSchema = aggExpressionsWithFirst.flatMap(_.aggregateFunction.aggBufferAttributes)
+    val aggSchema = aggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
     // For aggregation, we concatenate the current aggregate row with the new input row and run
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
@@ -1179,7 +1178,7 @@ object Utils extends Logging {
           groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
         tuix.AggregateOp.createAggregateExpressionsVector(
           builder,
-          aggExpressionsWithFirst
+          aggregateExpressions
             .map(e => serializeAggExpression(builder, e, input, aggSchema, concatSchema))
             .toArray)))
     builder.sizedByteArray()
