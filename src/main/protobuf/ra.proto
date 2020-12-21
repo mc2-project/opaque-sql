@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+// The greeting service definition.
+service Greeter {
+  // Sends a greeting
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayConfirm (ConfirmRequest) returns (ConfirmReply) {}
+  rpc GetRA (RARequest) returns (RAReply) {}
+  rpc SendKey (KeyRequest) returns (KeyReply) {}
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
+
+// The response message containing the user's byte information
+message ConfirmRequest {
+  bool success = 1;
+  bytes clientInfo = 2;
+}
+
+// The response message containing the final confirmation
+message ConfirmReply {
+  string message = 1;
+}
+
+// The response message containing the initial RARequest from the client
+message RARequest {
+  string name = 1;
+}
+
+message RAReply {
+  bool success = 1;
+  bytes report = 2;
+}
+
+message KeyRequest {
+  bool nonNull = 1;
+  bytes key = 2;
+}
+
+message KeyReply {
+  bool success = 1;
+}

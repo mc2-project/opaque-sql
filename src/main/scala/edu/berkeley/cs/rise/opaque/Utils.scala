@@ -18,11 +18,7 @@
 package edu.berkeley.cs.rise.opaque
 
 import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
 import java.io.FileNotFoundException
-import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.SecureRandom
@@ -253,6 +249,11 @@ object Utils extends Logging {
       }
     }
   }
+
+  def initServer() : Unit = {
+
+  }
+
 
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
