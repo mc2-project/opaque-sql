@@ -44,6 +44,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+import org.apache.spark.sql.catalyst.expressions.DateAdd
+import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EndsWith
@@ -69,6 +71,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -992,12 +995,27 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Year,
             tuix.Year.createYear(
               builder, childOffset))
+
+        case (DateAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAdd,
+            tuix.DateAdd.createDateAdd(
+              builder, leftOffset, rightOffset))
+
+        case (DateAddInterval(left, right, _, _), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAddInterval,
+            tuix.DateAddInterval.createDateAddInterval(
+              builder, leftOffset, rightOffset))
 
         // Math expressions
         case (Exp(child), Seq(childOffset)) =>
@@ -1176,14 +1194,22 @@ object Utils extends Logging {
       case avg @ Average(child)  =>
         val sum = avg.aggBufferAttributes(0)
         val count = avg.aggBufferAttributes(1)
+        val dataType = child.dataType
 
-        // TODO: support aggregating null values
+        val sumInitValue = child.nullable match {
+          case true => Literal.create(null, dataType)
+          case false => Cast(Literal(0), dataType)
+        }
+
         // TODO: support DecimalType to match Spark SQL behavior
 
         val (updateExprs: Seq[Expression], evaluateExprs: Seq[Expression]) = e.mode match {
           case Partial => {
-            val sumUpdateExpr = Add(sum, Cast(child, DoubleType))
-            val countUpdateExpr = Add(count, Literal(1L))
+            val sumUpdateExpr = child.nullable match {
+              case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, dataType), Add(sum, Cast(child, dataType))))
+                case false => Add(sum, Cast(child, dataType))
+            }
+            val countUpdateExpr = If(IsNull(child), count, Add(count, Literal(1L)))
             (Seq(sumUpdateExpr, countUpdateExpr), Seq(sum, count))
           }
           case Final => {
@@ -1205,7 +1231,7 @@ object Utils extends Logging {
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
-              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0.0), input),
+              /* sum = */ flatbuffersSerializeExpression(builder, sumInitValue, input),
               /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
@@ -1217,10 +1243,16 @@ object Utils extends Logging {
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
+        // COUNT(*) should count NULL values
+        // COUNT(expr) should return the number or rows for which the supplied expressions are non-NULL
 
         val (updateExprs: Seq[Expression], evaluateExprs: Seq[Expression]) = e.mode match {
           case Partial => {
-            val countUpdateExpr = Add(count, Literal(1L))
+            val nullableChildren = children.filter(_.nullable)
+            val countUpdateExpr = nullableChildren.isEmpty match {
+              case true => Add(count, Literal(1L))
+              case false => If(nullableChildren.map(IsNull).reduce(Or), count, Add(count, Literal(1L)))
+             }
             (Seq(countUpdateExpr), Seq(count))
           }
           case Final => {
@@ -1234,7 +1266,6 @@ object Utils extends Logging {
           case _ => 
         }
 
-        // TODO: support skipping null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -1393,17 +1424,25 @@ object Utils extends Logging {
 
       case s @ Sum(child) =>
         val sum = s.aggBufferAttributes(0)
-
         val sumDataType = s.dataType
+        // If any value is not NULL, return a non-NULL value
+        // If all values are NULL, return NULL
 
+        val initValue = child.nullable match {
+          case true => Literal.create(null, sumDataType)
+          case false => Cast(Literal(0), sumDataType)
+        }
         val (updateExprs, evaluateExprs) = e.mode match {
           case Partial => {
-            val sumUpdateExpr = Add(sum, Cast(child, sumDataType))
-              (Seq(sumUpdateExpr), Seq(sum))
+            val sumUpdateExpr = child.nullable match {
+              case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, sumDataType), Add(sum, Cast(child, sumDataType))))
+                case false => Add(sum, Cast(child, sumDataType))
+            }
+            (Seq(sumUpdateExpr), Seq(sum))
           }
           case Final => {
             val sumUpdateExpr = Add(sum, s.inputAggBufferAttributes(0))
-              (Seq(sumUpdateExpr), Seq(sum))
+            (Seq(sumUpdateExpr), Seq(sum))
           }
           case Complete => {
             val sumUpdateExpr = Add(sum, Cast(child, sumDataType))
@@ -1411,14 +1450,13 @@ object Utils extends Logging {
           }
         }
 
-        // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Cast(Literal(0), sumDataType), input))),
+                builder, initValue, input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),

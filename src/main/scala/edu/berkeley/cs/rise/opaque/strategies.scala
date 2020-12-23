@@ -116,6 +116,7 @@ object OpaqueOperators extends Strategy {
               EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
                 EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
       }
+      filtered :: Nil
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
