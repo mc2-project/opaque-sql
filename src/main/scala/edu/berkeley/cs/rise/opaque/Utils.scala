@@ -1132,6 +1132,9 @@ object Utils extends Logging {
     aggExpressions: Seq[AggregateExpression],
     input: Seq[Attribute]): Array[Byte] = {
 
+    // The output of agg operator contains both the grouping columns and the aggregate values.
+    // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
+    // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
       case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
     }
@@ -1142,10 +1145,6 @@ object Utils extends Logging {
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
     val concatSchema = aggSchema ++ input
-
-    // println(s"aggregateExpressions: ${aggregateExpressions}")
-    // println(s"concatSchema: ${concatSchema}")
-    // println(s"aggSchema: ${aggSchema}")
 
     val builder = new FlatBufferBuilder
     builder.finish(

@@ -1547,7 +1547,6 @@ public:
         std::unique_ptr<FlatbuffersExpressionEvaluator>(
           new FlatbuffersExpressionEvaluator(eval_expr)));
     }
-    //evaluate_evaluator.reset(new FlatbuffersExpressionEvaluator(expr->evaluate_expr()));
   }
 
   std::vector<const tuix::Field *> initial_values(const tuix::Row *unused) {
@@ -1579,7 +1578,6 @@ private:
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> evaluate_evaluators;
-  //std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
 };
 
 class FlatbuffersAggOpEvaluator {
@@ -1609,7 +1607,7 @@ public:
     reset_group();
   }
 
-  size_t get_num_groups() {
+  size_t get_num_grouping_keys() {
     return grouping_evaluators.size();
   }
 

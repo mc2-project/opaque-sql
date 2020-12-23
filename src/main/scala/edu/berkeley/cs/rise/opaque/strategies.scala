@@ -111,13 +111,10 @@ object OpaqueOperators extends Strategy {
       } else {
         // Grouping aggregation
         EncryptedProjectExec(resultExpressions,
-          EncryptedAggregateExec(
-            groupingExpressions, aggregateExpressions, Final,
+          EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
             EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
-              EncryptedAggregateExec(
-                groupingExpressions, aggregateExpressions, Partial, 
-                EncryptedSortExec(
-                  groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
+                EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
       }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
