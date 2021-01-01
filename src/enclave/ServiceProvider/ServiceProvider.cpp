@@ -120,7 +120,9 @@ void ServiceProvider::load_private_key(const std::string &filename) {
 }
 
 void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
+//  std::cout << "Enter ServiceProvider.cpp - set_shared_key()" << std::endl;
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
+//  std::cout << "Exit ServiceProvider.cpp - set_shared_key()" << std::endl;
 }
 
 // This function for testing purposes

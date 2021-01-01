@@ -1,5 +1,3 @@
-import scalapb.compiler.Version.{grpcJavaVersion, scalapbVersion, protobufVersion}
-
 name := "opaque"
 
 version := "0.1"
@@ -18,21 +16,15 @@ libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
-// Scalapb dependencies
+// Begin Java gRPC dependencies
 
-PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value / "scalapb"
-)
+libraryDependencies += "io.grpc" % "protoc-gen-grpc-java" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-netty-shaded" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-protobuf" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-stub" % "1.34.1"
+libraryDependencies += "org.apache.tomcat" % "annotations-api" % "6.0.53"
 
-unmanagedResourceDirectories in Compile += (baseDirectory in LocalRootProject).value / "grpc-java/examples/src/main/resources"
-
-libraryDependencies ++= Seq(
-    "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
-    "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-    "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
-)
-
-// End Scalapb dependencies
+// End Java gRPC dependencies
 
 val flatbuffersVersion = "1.7.0"
 
