@@ -1196,31 +1196,34 @@ object Utils extends Logging {
         val count = avg.aggBufferAttributes(1)
         val dataType = child.dataType
 
-        val sumInitValue = child.nullable match {
-          case true => Literal.create(null, dataType)
-          case false => Cast(Literal(0), dataType)
-        }
-
+        val sumInitValue = Literal.default(dataType)
+        val countInitValue = Literal(0L)
         // TODO: support DecimalType to match Spark SQL behavior
 
         val (updateExprs: Seq[Expression], evaluateExprs: Seq[Expression]) = e.mode match {
           case Partial => {
-            val sumUpdateExpr = child.nullable match {
-              case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, dataType), Add(sum, Cast(child, dataType))))
-                case false => Add(sum, Cast(child, dataType))
-            }
+            val sumUpdateExpr = Add(
+              sum,
+              If(IsNull(child),
+                Literal.default(dataType),
+                Cast(child, dataType)))
             val countUpdateExpr = If(IsNull(child), count, Add(count, Literal(1L)))
             (Seq(sumUpdateExpr, countUpdateExpr), Seq(sum, count))
           }
           case Final => {
             val sumUpdateExpr = Add(sum, avg.inputAggBufferAttributes(0))
             val countUpdateExpr = Add(count, avg.inputAggBufferAttributes(1))
-            (Seq(sumUpdateExpr, countUpdateExpr), Seq(Divide(sum, Cast(count, DoubleType))))
+            val evalExpr = If(EqualTo(count, Literal(0L)),
+              Literal.create(null, DoubleType),
+              Divide(Cast(sum, DoubleType), Cast(count, DoubleType)))
+            (Seq(sumUpdateExpr, countUpdateExpr), Seq(evalExpr))
           }
           case Complete => {
-            val sumUpdateExpr = Add(sum, Cast(child, DoubleType))
-            val countUpdateExpr = Add(count, Literal(1L))
-            val evalExpr = Divide(sum, Cast(count, DoubleType))
+            val sumUpdateExpr = Add(
+              sum,
+              If(IsNull(child), Cast(Literal(0), dataType), Cast(child, dataType)))
+            val countUpdateExpr = If(IsNull(child), count, Add(count, Literal(1L)))
+            val evalExpr = Divide(Cast(sum, DoubleType), Cast(count, DoubleType))
             (Seq(sumUpdateExpr, countUpdateExpr), Seq(evalExpr))
           }
           case _ => 
@@ -1232,7 +1235,7 @@ object Utils extends Logging {
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(builder, sumInitValue, input),
-              /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
+              /* count = */ flatbuffersSerializeExpression(builder, countInitValue, input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
@@ -1428,24 +1431,20 @@ object Utils extends Logging {
         // If any value is not NULL, return a non-NULL value
         // If all values are NULL, return NULL
 
-        val initValue = child.nullable match {
-          case true => Literal.create(null, sumDataType)
-          case false => Cast(Literal(0), sumDataType)
-        }
+        val initValue = Literal.create(null, sumDataType)
         val (updateExprs, evaluateExprs) = e.mode match {
           case Partial => {
-            val sumUpdateExpr = child.nullable match {
-              case true => If(IsNull(child), sum, If(IsNull(sum), Cast(child, sumDataType), Add(sum, Cast(child, sumDataType))))
-                case false => Add(sum, Cast(child, sumDataType))
-            }
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), Cast(child, sumDataType))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
             (Seq(sumUpdateExpr), Seq(sum))
           }
           case Final => {
-            val sumUpdateExpr = Add(sum, s.inputAggBufferAttributes(0))
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), s.inputAggBufferAttributes(0))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
             (Seq(sumUpdateExpr), Seq(sum))
           }
           case Complete => {
-            val sumUpdateExpr = Add(sum, Cast(child, sumDataType))
+            val sumUpdateExpr = Add(If(IsNull(sum), Literal.default(sumDataType), sum), Cast(child, sumDataType))
             (Seq(sumUpdateExpr), Seq(sum))
           }
         }
