@@ -6,6 +6,9 @@
 #include <memory>
 #include <streambuf>
 
+//Testing
+#include <cstring>
+
 #include "ecp.h"
 #include "ias_ra.h"
 #include "iasrequest.h"
@@ -253,6 +256,11 @@ bool verify_mrsigner(char* signing_public_key_buf,
 
 std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
                                                                              uint32_t *shared_key_msg_size) {
+
+  // Testing purposes
+  if (memcmp(this->shared_key, this->key_share, sizeof(this->shared_key)) == 0) {
+    std::cout << "Key share and shared key are the same" << std::endl;
+  }
   
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];

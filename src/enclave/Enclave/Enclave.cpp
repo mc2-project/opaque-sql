@@ -357,6 +357,11 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
 //    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
     xor_shared_key(key_share_plaintext, key_share_plaintext_size);
 
+    if (memcmp(shared_key_plaintext, key_share_plaintext, SGX_AESGCM_KEY_SIZE) == 0) {
+      std::cout << "shared key and key share same";
+      std::cout << std::endl;
+    }
+
     // This block for testing loading from files encrypted with different keys
     // FIXME: remove this block
     // uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];

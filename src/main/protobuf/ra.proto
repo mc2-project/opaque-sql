@@ -8,6 +8,7 @@ service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
   rpc GetRA (RARequest) returns (RAReply) {}
   rpc SendKey (KeyRequest) returns (KeyReply) {}
+  rpc SendQuery (QueryRequest) returns (QueryReply) {}
 }
 
 // The request message containing the user's name.
@@ -37,4 +38,16 @@ message KeyRequest {
 
 message KeyReply {
   bool success = 1;
+}
+
+message QueryRequest {
+  bool encryptedCreate = 1;
+  string sqlQuery = 2;
+}
+
+message QueryReply {
+  bool success = 1;
+
+  // The data is returned in rows as strings
+  repeated string data = 2;
 }

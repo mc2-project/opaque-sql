@@ -43,7 +43,6 @@ object OpaqueClient {
     try {
       val user = args.headOption.getOrElse("world")
       client.getRA(user)
-      client.sendTestQuery()
     } finally {
       client.shutdown()
     }
@@ -103,16 +102,5 @@ class OpaqueClient private(
         logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
     }
   }
-
-  def sendTestQuery(): Unit = {
-    val testQuery = "SELECT 1, 2"
-    val request = Ra.QueryRequest.newBuilder()
-      .setSqlQuery(testQuery)
-      .build()
-    val response = blockingStub.sendQuery(request)
-    if (response.getSuccess()) {
-      println(response.getData(0))
-    } 
-  } 
 }
 

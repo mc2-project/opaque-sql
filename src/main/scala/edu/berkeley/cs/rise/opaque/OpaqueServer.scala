@@ -84,6 +84,29 @@ class OpaqueServer(executionContext: ExecutionContext) { self =>
       responseObserver.onCompleted();
     }
 
+    override def sendQuery(req: Ra.QueryRequest, responseObserver: io.grpc.stub.StreamObserver[Ra.QueryReply]) = {
+      var reply = Ra.QueryReply.newBuilder().build(); // placeholder
+      try {
+	// Prepare items for setting data reply
+        val result = spark.sql(req.getSqlQuery())
+        val resultArray = result.collect()
+        val replyBuilder = Ra.QueryReply.newBuilder().setSuccess(true)
+
+	for (row <- resultArray) {
+	  replyBuilder.addData(row.mkString(", "))
+        }
+        reply = replyBuilder.build();
+      } catch {
+        case _ : Throwable => println("Invalid SQL Query")
+        reply = Ra.QueryReply.newBuilder()
+	  .setSuccess(false)
+	  .build()
+      } finally {
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+      }
+    }
+
     override def sendKey(req: Ra.KeyRequest, responseObserver: io.grpc.stub.StreamObserver[Ra.KeyReply]) = {
       if (req.getNonNull()) {
 

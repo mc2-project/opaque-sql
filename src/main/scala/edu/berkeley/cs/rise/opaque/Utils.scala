@@ -271,24 +271,32 @@ object Utils extends Logging {
   }
 
   def encrypt(data: Array[Byte]): Array[Byte] = {
+    println(data)
     val random = SecureRandom.getInstance("SHA1PRNG")
     val cipherKey = new SecretKeySpec(clientKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
+    println(iv)
     random.nextBytes(iv)
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     val cipherText = cipher.doFinal(data)    
+    println(iv ++ cipherText)
     iv ++ cipherText
   }
   
   def decrypt(data: Array[Byte]): Array[Byte] = {
+    println("Enter Utils.scala - decrypt")
+    println(data)
     val cipherKey = new SecretKeySpec(clientKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
+    println(iv)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    cipher.doFinal(cipherText)
+    val ret = cipher.doFinal(cipherText)
+    println("Exit Utils.scala - decrypt")
+    ret
   }
 
   var eid = 0L

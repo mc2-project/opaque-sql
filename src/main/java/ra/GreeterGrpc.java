@@ -123,6 +123,37 @@ public final class GreeterGrpc {
     return getSendKeyMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<ra.Ra.QueryRequest,
+      ra.Ra.QueryReply> getSendQueryMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SendQuery",
+      requestType = ra.Ra.QueryRequest.class,
+      responseType = ra.Ra.QueryReply.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<ra.Ra.QueryRequest,
+      ra.Ra.QueryReply> getSendQueryMethod() {
+    io.grpc.MethodDescriptor<ra.Ra.QueryRequest, ra.Ra.QueryReply> getSendQueryMethod;
+    if ((getSendQueryMethod = GreeterGrpc.getSendQueryMethod) == null) {
+      synchronized (GreeterGrpc.class) {
+        if ((getSendQueryMethod = GreeterGrpc.getSendQueryMethod) == null) {
+          GreeterGrpc.getSendQueryMethod = getSendQueryMethod =
+              io.grpc.MethodDescriptor.<ra.Ra.QueryRequest, ra.Ra.QueryReply>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SendQuery"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  ra.Ra.QueryRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  ra.Ra.QueryReply.getDefaultInstance()))
+              .setSchemaDescriptor(new GreeterMethodDescriptorSupplier("SendQuery"))
+              .build();
+        }
+      }
+    }
+    return getSendQueryMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -185,9 +216,6 @@ public final class GreeterGrpc {
     }
 
     /**
-     * <pre>
-     *  rpc SayConfirm (ConfirmRequest) returns (ConfirmReply) {}
-     * </pre>
      */
     public void getRA(ra.Ra.RARequest request,
         io.grpc.stub.StreamObserver<ra.Ra.RAReply> responseObserver) {
@@ -199,6 +227,13 @@ public final class GreeterGrpc {
     public void sendKey(ra.Ra.KeyRequest request,
         io.grpc.stub.StreamObserver<ra.Ra.KeyReply> responseObserver) {
       asyncUnimplementedUnaryCall(getSendKeyMethod(), responseObserver);
+    }
+
+    /**
+     */
+    public void sendQuery(ra.Ra.QueryRequest request,
+        io.grpc.stub.StreamObserver<ra.Ra.QueryReply> responseObserver) {
+      asyncUnimplementedUnaryCall(getSendQueryMethod(), responseObserver);
     }
 
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
@@ -224,6 +259,13 @@ public final class GreeterGrpc {
                 ra.Ra.KeyRequest,
                 ra.Ra.KeyReply>(
                   this, METHODID_SEND_KEY)))
+          .addMethod(
+            getSendQueryMethod(),
+            asyncUnaryCall(
+              new MethodHandlers<
+                ra.Ra.QueryRequest,
+                ra.Ra.QueryReply>(
+                  this, METHODID_SEND_QUERY)))
           .build();
     }
   }
@@ -257,9 +299,6 @@ public final class GreeterGrpc {
     }
 
     /**
-     * <pre>
-     *  rpc SayConfirm (ConfirmRequest) returns (ConfirmReply) {}
-     * </pre>
      */
     public void getRA(ra.Ra.RARequest request,
         io.grpc.stub.StreamObserver<ra.Ra.RAReply> responseObserver) {
@@ -273,6 +312,14 @@ public final class GreeterGrpc {
         io.grpc.stub.StreamObserver<ra.Ra.KeyReply> responseObserver) {
       asyncUnaryCall(
           getChannel().newCall(getSendKeyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void sendQuery(ra.Ra.QueryRequest request,
+        io.grpc.stub.StreamObserver<ra.Ra.QueryReply> responseObserver) {
+      asyncUnaryCall(
+          getChannel().newCall(getSendQueryMethod(), getCallOptions()), request, responseObserver);
     }
   }
 
@@ -304,9 +351,6 @@ public final class GreeterGrpc {
     }
 
     /**
-     * <pre>
-     *  rpc SayConfirm (ConfirmRequest) returns (ConfirmReply) {}
-     * </pre>
      */
     public ra.Ra.RAReply getRA(ra.Ra.RARequest request) {
       return blockingUnaryCall(
@@ -318,6 +362,13 @@ public final class GreeterGrpc {
     public ra.Ra.KeyReply sendKey(ra.Ra.KeyRequest request) {
       return blockingUnaryCall(
           getChannel(), getSendKeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public ra.Ra.QueryReply sendQuery(ra.Ra.QueryRequest request) {
+      return blockingUnaryCall(
+          getChannel(), getSendQueryMethod(), getCallOptions(), request);
     }
   }
 
@@ -350,9 +401,6 @@ public final class GreeterGrpc {
     }
 
     /**
-     * <pre>
-     *  rpc SayConfirm (ConfirmRequest) returns (ConfirmReply) {}
-     * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<ra.Ra.RAReply> getRA(
         ra.Ra.RARequest request) {
@@ -367,11 +415,20 @@ public final class GreeterGrpc {
       return futureUnaryCall(
           getChannel().newCall(getSendKeyMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<ra.Ra.QueryReply> sendQuery(
+        ra.Ra.QueryRequest request) {
+      return futureUnaryCall(
+          getChannel().newCall(getSendQueryMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_SAY_HELLO = 0;
   private static final int METHODID_GET_RA = 1;
   private static final int METHODID_SEND_KEY = 2;
+  private static final int METHODID_SEND_QUERY = 3;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -401,6 +458,10 @@ public final class GreeterGrpc {
         case METHODID_SEND_KEY:
           serviceImpl.sendKey((ra.Ra.KeyRequest) request,
               (io.grpc.stub.StreamObserver<ra.Ra.KeyReply>) responseObserver);
+          break;
+        case METHODID_SEND_QUERY:
+          serviceImpl.sendQuery((ra.Ra.QueryRequest) request,
+              (io.grpc.stub.StreamObserver<ra.Ra.QueryReply>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -466,6 +527,7 @@ public final class GreeterGrpc {
               .addMethod(getSayHelloMethod())
               .addMethod(getGetRAMethod())
               .addMethod(getSendKeyMethod())
+              .addMethod(getSendQueryMethod())
               .build();
         }
       }

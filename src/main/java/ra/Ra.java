@@ -3357,6 +3357,1422 @@ public final class Ra {
 
   }
 
+  public interface QueryRequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:ra.QueryRequest)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>bool encryptedCreate = 1;</code>
+     * @return The encryptedCreate.
+     */
+    boolean getEncryptedCreate();
+
+    /**
+     * <code>string sqlQuery = 2;</code>
+     * @return The sqlQuery.
+     */
+    java.lang.String getSqlQuery();
+    /**
+     * <code>string sqlQuery = 2;</code>
+     * @return The bytes for sqlQuery.
+     */
+    com.google.protobuf.ByteString
+        getSqlQueryBytes();
+  }
+  /**
+   * Protobuf type {@code ra.QueryRequest}
+   */
+  public static final class QueryRequest extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:ra.QueryRequest)
+      QueryRequestOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use QueryRequest.newBuilder() to construct.
+    private QueryRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private QueryRequest() {
+      sqlQuery_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new QueryRequest();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private QueryRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 8: {
+
+              encryptedCreate_ = input.readBool();
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              sqlQuery_ = s;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return ra.Ra.internal_static_ra_QueryRequest_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return ra.Ra.internal_static_ra_QueryRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              ra.Ra.QueryRequest.class, ra.Ra.QueryRequest.Builder.class);
+    }
+
+    public static final int ENCRYPTEDCREATE_FIELD_NUMBER = 1;
+    private boolean encryptedCreate_;
+    /**
+     * <code>bool encryptedCreate = 1;</code>
+     * @return The encryptedCreate.
+     */
+    @java.lang.Override
+    public boolean getEncryptedCreate() {
+      return encryptedCreate_;
+    }
+
+    public static final int SQLQUERY_FIELD_NUMBER = 2;
+    private volatile java.lang.Object sqlQuery_;
+    /**
+     * <code>string sqlQuery = 2;</code>
+     * @return The sqlQuery.
+     */
+    @java.lang.Override
+    public java.lang.String getSqlQuery() {
+      java.lang.Object ref = sqlQuery_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sqlQuery_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string sqlQuery = 2;</code>
+     * @return The bytes for sqlQuery.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getSqlQueryBytes() {
+      java.lang.Object ref = sqlQuery_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sqlQuery_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (encryptedCreate_ != false) {
+        output.writeBool(1, encryptedCreate_);
+      }
+      if (!getSqlQueryBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, sqlQuery_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (encryptedCreate_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, encryptedCreate_);
+      }
+      if (!getSqlQueryBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, sqlQuery_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof ra.Ra.QueryRequest)) {
+        return super.equals(obj);
+      }
+      ra.Ra.QueryRequest other = (ra.Ra.QueryRequest) obj;
+
+      if (getEncryptedCreate()
+          != other.getEncryptedCreate()) return false;
+      if (!getSqlQuery()
+          .equals(other.getSqlQuery())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + ENCRYPTEDCREATE_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getEncryptedCreate());
+      hash = (37 * hash) + SQLQUERY_FIELD_NUMBER;
+      hash = (53 * hash) + getSqlQuery().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static ra.Ra.QueryRequest parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static ra.Ra.QueryRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(ra.Ra.QueryRequest prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ra.QueryRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:ra.QueryRequest)
+        ra.Ra.QueryRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return ra.Ra.internal_static_ra_QueryRequest_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return ra.Ra.internal_static_ra_QueryRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                ra.Ra.QueryRequest.class, ra.Ra.QueryRequest.Builder.class);
+      }
+
+      // Construct using ra.Ra.QueryRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        encryptedCreate_ = false;
+
+        sqlQuery_ = "";
+
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return ra.Ra.internal_static_ra_QueryRequest_descriptor;
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryRequest getDefaultInstanceForType() {
+        return ra.Ra.QueryRequest.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryRequest build() {
+        ra.Ra.QueryRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryRequest buildPartial() {
+        ra.Ra.QueryRequest result = new ra.Ra.QueryRequest(this);
+        result.encryptedCreate_ = encryptedCreate_;
+        result.sqlQuery_ = sqlQuery_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof ra.Ra.QueryRequest) {
+          return mergeFrom((ra.Ra.QueryRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(ra.Ra.QueryRequest other) {
+        if (other == ra.Ra.QueryRequest.getDefaultInstance()) return this;
+        if (other.getEncryptedCreate() != false) {
+          setEncryptedCreate(other.getEncryptedCreate());
+        }
+        if (!other.getSqlQuery().isEmpty()) {
+          sqlQuery_ = other.sqlQuery_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        ra.Ra.QueryRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (ra.Ra.QueryRequest) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private boolean encryptedCreate_ ;
+      /**
+       * <code>bool encryptedCreate = 1;</code>
+       * @return The encryptedCreate.
+       */
+      @java.lang.Override
+      public boolean getEncryptedCreate() {
+        return encryptedCreate_;
+      }
+      /**
+       * <code>bool encryptedCreate = 1;</code>
+       * @param value The encryptedCreate to set.
+       * @return This builder for chaining.
+       */
+      public Builder setEncryptedCreate(boolean value) {
+        
+        encryptedCreate_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool encryptedCreate = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearEncryptedCreate() {
+        
+        encryptedCreate_ = false;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object sqlQuery_ = "";
+      /**
+       * <code>string sqlQuery = 2;</code>
+       * @return The sqlQuery.
+       */
+      public java.lang.String getSqlQuery() {
+        java.lang.Object ref = sqlQuery_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          sqlQuery_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string sqlQuery = 2;</code>
+       * @return The bytes for sqlQuery.
+       */
+      public com.google.protobuf.ByteString
+          getSqlQueryBytes() {
+        java.lang.Object ref = sqlQuery_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          sqlQuery_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string sqlQuery = 2;</code>
+       * @param value The sqlQuery to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSqlQuery(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        sqlQuery_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sqlQuery = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSqlQuery() {
+        
+        sqlQuery_ = getDefaultInstance().getSqlQuery();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sqlQuery = 2;</code>
+       * @param value The bytes for sqlQuery to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSqlQueryBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        sqlQuery_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:ra.QueryRequest)
+    }
+
+    // @@protoc_insertion_point(class_scope:ra.QueryRequest)
+    private static final ra.Ra.QueryRequest DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new ra.Ra.QueryRequest();
+    }
+
+    public static ra.Ra.QueryRequest getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<QueryRequest>
+        PARSER = new com.google.protobuf.AbstractParser<QueryRequest>() {
+      @java.lang.Override
+      public QueryRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new QueryRequest(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<QueryRequest> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<QueryRequest> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public ra.Ra.QueryRequest getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface QueryReplyOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:ra.QueryReply)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>bool success = 1;</code>
+     * @return The success.
+     */
+    boolean getSuccess();
+
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @return A list containing the data.
+     */
+    java.util.List<java.lang.String>
+        getDataList();
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @return The count of data.
+     */
+    int getDataCount();
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @param index The index of the element to return.
+     * @return The data at the given index.
+     */
+    java.lang.String getData(int index);
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the data at the given index.
+     */
+    com.google.protobuf.ByteString
+        getDataBytes(int index);
+  }
+  /**
+   * Protobuf type {@code ra.QueryReply}
+   */
+  public static final class QueryReply extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:ra.QueryReply)
+      QueryReplyOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use QueryReply.newBuilder() to construct.
+    private QueryReply(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private QueryReply() {
+      data_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new QueryReply();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private QueryReply(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 8: {
+
+              success_ = input.readBool();
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+              if (!((mutable_bitField0_ & 0x00000001) != 0)) {
+                data_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              data_.add(s);
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) != 0)) {
+          data_ = data_.getUnmodifiableView();
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return ra.Ra.internal_static_ra_QueryReply_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return ra.Ra.internal_static_ra_QueryReply_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              ra.Ra.QueryReply.class, ra.Ra.QueryReply.Builder.class);
+    }
+
+    public static final int SUCCESS_FIELD_NUMBER = 1;
+    private boolean success_;
+    /**
+     * <code>bool success = 1;</code>
+     * @return The success.
+     */
+    @java.lang.Override
+    public boolean getSuccess() {
+      return success_;
+    }
+
+    public static final int DATA_FIELD_NUMBER = 2;
+    private com.google.protobuf.LazyStringList data_;
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @return A list containing the data.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getDataList() {
+      return data_;
+    }
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @return The count of data.
+     */
+    public int getDataCount() {
+      return data_.size();
+    }
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @param index The index of the element to return.
+     * @return The data at the given index.
+     */
+    public java.lang.String getData(int index) {
+      return data_.get(index);
+    }
+    /**
+     * <pre>
+     * The data is returned in rows as strings
+     * </pre>
+     *
+     * <code>repeated string data = 2;</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the data at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getDataBytes(int index) {
+      return data_.getByteString(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (success_ != false) {
+        output.writeBool(1, success_);
+      }
+      for (int i = 0; i < data_.size(); i++) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, data_.getRaw(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (success_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, success_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < data_.size(); i++) {
+          dataSize += computeStringSizeNoTag(data_.getRaw(i));
+        }
+        size += dataSize;
+        size += 1 * getDataList().size();
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof ra.Ra.QueryReply)) {
+        return super.equals(obj);
+      }
+      ra.Ra.QueryReply other = (ra.Ra.QueryReply) obj;
+
+      if (getSuccess()
+          != other.getSuccess()) return false;
+      if (!getDataList()
+          .equals(other.getDataList())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + SUCCESS_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getSuccess());
+      if (getDataCount() > 0) {
+        hash = (37 * hash) + DATA_FIELD_NUMBER;
+        hash = (53 * hash) + getDataList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static ra.Ra.QueryReply parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryReply parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ra.Ra.QueryReply parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static ra.Ra.QueryReply parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryReply parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static ra.Ra.QueryReply parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(ra.Ra.QueryReply prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ra.QueryReply}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:ra.QueryReply)
+        ra.Ra.QueryReplyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return ra.Ra.internal_static_ra_QueryReply_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return ra.Ra.internal_static_ra_QueryReply_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                ra.Ra.QueryReply.class, ra.Ra.QueryReply.Builder.class);
+      }
+
+      // Construct using ra.Ra.QueryReply.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        success_ = false;
+
+        data_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return ra.Ra.internal_static_ra_QueryReply_descriptor;
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryReply getDefaultInstanceForType() {
+        return ra.Ra.QueryReply.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryReply build() {
+        ra.Ra.QueryReply result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public ra.Ra.QueryReply buildPartial() {
+        ra.Ra.QueryReply result = new ra.Ra.QueryReply(this);
+        int from_bitField0_ = bitField0_;
+        result.success_ = success_;
+        if (((bitField0_ & 0x00000001) != 0)) {
+          data_ = data_.getUnmodifiableView();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.data_ = data_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof ra.Ra.QueryReply) {
+          return mergeFrom((ra.Ra.QueryReply)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(ra.Ra.QueryReply other) {
+        if (other == ra.Ra.QueryReply.getDefaultInstance()) return this;
+        if (other.getSuccess() != false) {
+          setSuccess(other.getSuccess());
+        }
+        if (!other.data_.isEmpty()) {
+          if (data_.isEmpty()) {
+            data_ = other.data_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureDataIsMutable();
+            data_.addAll(other.data_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        ra.Ra.QueryReply parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (ra.Ra.QueryReply) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private boolean success_ ;
+      /**
+       * <code>bool success = 1;</code>
+       * @return The success.
+       */
+      @java.lang.Override
+      public boolean getSuccess() {
+        return success_;
+      }
+      /**
+       * <code>bool success = 1;</code>
+       * @param value The success to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSuccess(boolean value) {
+        
+        success_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool success = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSuccess() {
+        
+        success_ = false;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.LazyStringList data_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureDataIsMutable() {
+        if (!((bitField0_ & 0x00000001) != 0)) {
+          data_ = new com.google.protobuf.LazyStringArrayList(data_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @return A list containing the data.
+       */
+      public com.google.protobuf.ProtocolStringList
+          getDataList() {
+        return data_.getUnmodifiableView();
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @return The count of data.
+       */
+      public int getDataCount() {
+        return data_.size();
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param index The index of the element to return.
+       * @return The data at the given index.
+       */
+      public java.lang.String getData(int index) {
+        return data_.get(index);
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param index The index of the value to return.
+       * @return The bytes of the data at the given index.
+       */
+      public com.google.protobuf.ByteString
+          getDataBytes(int index) {
+        return data_.getByteString(index);
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param index The index to set the value at.
+       * @param value The data to set.
+       * @return This builder for chaining.
+       */
+      public Builder setData(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDataIsMutable();
+        data_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param value The data to add.
+       * @return This builder for chaining.
+       */
+      public Builder addData(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDataIsMutable();
+        data_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param values The data to add.
+       * @return This builder for chaining.
+       */
+      public Builder addAllData(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureDataIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, data_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearData() {
+        data_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * The data is returned in rows as strings
+       * </pre>
+       *
+       * <code>repeated string data = 2;</code>
+       * @param value The bytes of the data to add.
+       * @return This builder for chaining.
+       */
+      public Builder addDataBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        ensureDataIsMutable();
+        data_.add(value);
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:ra.QueryReply)
+    }
+
+    // @@protoc_insertion_point(class_scope:ra.QueryReply)
+    private static final ra.Ra.QueryReply DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new ra.Ra.QueryReply();
+    }
+
+    public static ra.Ra.QueryReply getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<QueryReply>
+        PARSER = new com.google.protobuf.AbstractParser<QueryReply>() {
+      @java.lang.Override
+      public QueryReply parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new QueryReply(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<QueryReply> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<QueryReply> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public ra.Ra.QueryReply getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_ra_HelloRequest_descriptor;
   private static final 
@@ -3387,6 +4803,16 @@ public final class Ra {
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_ra_KeyReply_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_ra_QueryRequest_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_ra_QueryRequest_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_ra_QueryReply_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_ra_QueryReply_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -3401,11 +4827,15 @@ public final class Ra {
       "message\030\001 \001(\t\"\031\n\tRARequest\022\014\n\004name\030\001 \001(\t" +
       "\"*\n\007RAReply\022\017\n\007success\030\001 \001(\010\022\016\n\006report\030\002" +
       " \001(\014\"*\n\nKeyRequest\022\017\n\007nonNull\030\001 \001(\010\022\013\n\003k" +
-      "ey\030\002 \001(\014\"\033\n\010KeyReply\022\017\n\007success\030\001 \001(\0102\213\001" +
-      "\n\007Greeter\022.\n\010SayHello\022\020.ra.HelloRequest\032" +
-      "\016.ra.HelloReply\"\000\022%\n\005GetRA\022\r.ra.RAReques" +
-      "t\032\013.ra.RAReply\"\000\022)\n\007SendKey\022\016.ra.KeyRequ" +
-      "est\032\014.ra.KeyReply\"\000b\006proto3"
+      "ey\030\002 \001(\014\"\033\n\010KeyReply\022\017\n\007success\030\001 \001(\010\"9\n" +
+      "\014QueryRequest\022\027\n\017encryptedCreate\030\001 \001(\010\022\020" +
+      "\n\010sqlQuery\030\002 \001(\t\"+\n\nQueryReply\022\017\n\007succes" +
+      "s\030\001 \001(\010\022\014\n\004data\030\002 \003(\t2\274\001\n\007Greeter\022.\n\010Say" +
+      "Hello\022\020.ra.HelloRequest\032\016.ra.HelloReply\"" +
+      "\000\022%\n\005GetRA\022\r.ra.RARequest\032\013.ra.RAReply\"\000" +
+      "\022)\n\007SendKey\022\016.ra.KeyRequest\032\014.ra.KeyRepl" +
+      "y\"\000\022/\n\tSendQuery\022\020.ra.QueryRequest\032\016.ra." +
+      "QueryReply\"\000b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3447,6 +4877,18 @@ public final class Ra {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ra_KeyReply_descriptor,
         new java.lang.String[] { "Success", });
+    internal_static_ra_QueryRequest_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_ra_QueryRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_ra_QueryRequest_descriptor,
+        new java.lang.String[] { "EncryptedCreate", "SqlQuery", });
+    internal_static_ra_QueryReply_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_ra_QueryReply_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_ra_QueryReply_descriptor,
+        new java.lang.String[] { "Success", "Data", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

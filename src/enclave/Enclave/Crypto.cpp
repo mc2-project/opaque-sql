@@ -55,7 +55,7 @@ void initKeySchedule() {
 }
 
 void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* username) {
-  if (client_key_size <= 0) {
+  if (client_key_size <= 0 || client_key_size != SGX_AESGCM_KEY_SIZE) {
     throw std::runtime_error("Add client key failed: Invalid client key size");
   }
 
@@ -87,10 +87,25 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
     for (i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
         xor_key[i] = shared_key[i] ^ key_share_bytes[i];
     }
-    memcpy(shared_key, xor_key, SGX_AESGCM_KEY_SIZE);
+
+    for(uint32_t i = 0; i < SGX_AESGCM_KEY_SIZE; i++ )
+    {
+      printf("%c", xor_key[i]);
+    }
+    printf("\n");
+
+    for(uint32_t i = 0; i < key_share_size; i++ )
+    {
+      printf("%c", key_share_bytes[i]);
+    }
+    printf("\n");
+
+//    memcpy(shared_key, xor_key, SGX_AESGCM_KEY_SIZE);
+    memcpy_s(shared_key, sizeof(shared_key), key_share_bytes, key_share_size);
 
     // initKeySchedule the shared key if this is the last client
     if (client_keys.size() == num_clients) {
+        std::cout << "XOR shared key - init" << std::endl;
         initKeySchedule();
     }
 }
@@ -120,6 +135,8 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
 
+//  std::cout << "Enter Enclave/Crypto.cpp - encrypt() "  << std::endl;
+
   if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
@@ -134,9 +151,20 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+
+//  for(uint32_t i = 0; i < SGX_AESGCM_MAC_SIZE; i++ )
+//  {
+//    printf("%c", cipher.tag().t[i]);
+//  }
+//  printf("\n");
+//
+//  std::cout << "Exit Enclave/Crypto.cpp - encrypt()" << std::endl;
 }
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
+
+  std::cout << "Enter Enclave/Crypto.cpp - decrypt() " << std::endl;
+
   if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
@@ -150,7 +178,16 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
 
   AesGcm decipher(ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
   decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
+
+//  for(uint32_t i = 0; i < SGX_AESGCM_MAC_SIZE; i++ )
+//  {
+//    printf("%c", decipher.tag().t[i]);
+//  }
+//  printf("\n");
   if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) != 0) {
+
+    std::cout << "shared key doesn't work" << std::endl;
+
     // Shared key doesn't work
     // Perhaps we need to use a client key instead
     int success = -1;
@@ -167,6 +204,14 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
         throw std::runtime_error("Couldn't decrypt -- proper key unknown\n");
     }
   }
+
+//  printf("%u\n", plaintext_length);
+//  for(uint32_t i = 0; i < plaintext_length; i++ )
+//  {
+//    printf("%c", plaintext[i]);
+//  }
+//  printf("\n");
+  std::cout << "Exit Enclave/Crypto.cpp - decrypt()" << std::endl;
 }
 
 uint32_t enc_size(uint32_t plaintext_size) {
