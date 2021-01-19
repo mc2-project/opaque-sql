@@ -353,14 +353,11 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
     // client_public_keys.insert({user_nam, user_public_key});
 
     // Set shared key for this client
-    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
-//    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
-    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+//    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
+//    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
 
-    if (memcmp(shared_key_plaintext, key_share_plaintext, SGX_AESGCM_KEY_SIZE) == 0) {
-      std::cout << "shared key and key share same";
-      std::cout << std::endl;
-    }
+    // Currently just setting the shared key to be hard_coded in prepration for new key generation code
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
 
     // This block for testing loading from files encrypted with different keys
     // FIXME: remove this block

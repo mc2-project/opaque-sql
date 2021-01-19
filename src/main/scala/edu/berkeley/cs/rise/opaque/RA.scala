@@ -51,14 +51,11 @@ object RA extends Logging {
 
     sp.Init(testKey, intelCert, userCert, testKey)
 
-//    println("Before generate report")
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
-//      println("Utils: " + Utils)
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
       Iterator((eid, msg1))
     }.collect.toMap
-//    println("After generate report")
 
     val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
 

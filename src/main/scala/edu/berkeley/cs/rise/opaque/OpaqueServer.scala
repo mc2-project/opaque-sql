@@ -12,6 +12,8 @@ import ra.GreeterGrpc
 import scala.concurrent.{ExecutionContext, Future}
 import org.apache.spark.sql.SparkSession
 
+import implicits._
+
 /**
  * [[https://github.com/grpc/grpc-java/blob/v0.15.0/examples/src/main/java/io/grpc/examples/helloworld/HelloWorldServer.java]]
  */
@@ -40,12 +42,22 @@ class OpaqueServer(executionContext: ExecutionContext) { self =>
       .getOrCreate()
     Utils.initSQLContext(spark.sqlContext)
 
+    // Create spark.sql table for testing purposes
+    val data = for (i <- 0 until 256) yield (i, i*2, 1)
+    val df = spark.createDataFrame(data).toDF("first", "second", "third")
+    val dfEncrypted = df.encrypted
+    dfEncrypted.createTempView("Test")
+
+    // Create rpc Server and make it listen
     server = ServerBuilder.forPort(OpaqueServer.port).addService(new GreeterImpl()).build.start
     OpaqueServer.logger.info("Server started, listening on " + OpaqueServer.port)
     sys.addShutdownHook {
       System.err.println("*** shutting down gRPC server since JVM is shutting down")
       self.stop()
       System.err.println("*** server shut down")
+      
+      // Drop test table
+      spark.catalog.dropTempView("Test")
     }
   }
 
@@ -85,7 +97,7 @@ class OpaqueServer(executionContext: ExecutionContext) { self =>
     }
 
     override def sendQuery(req: Ra.QueryRequest, responseObserver: io.grpc.stub.StreamObserver[Ra.QueryReply]) = {
-      var reply = Ra.QueryReply.newBuilder().build(); // placeholder
+      var reply = Ra.QueryReply.newBuilder().build();
       try {
 	// Prepare items for setting data reply
         val result = spark.sql(req.getSqlQuery())

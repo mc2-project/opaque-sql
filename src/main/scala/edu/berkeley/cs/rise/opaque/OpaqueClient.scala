@@ -27,13 +27,9 @@ object OpaqueClient {
 
     Utils.addClientKey(clientKey)
 
-    println("Before SP create")
     val sp = new SP()
-    println("After SP create")
 
-    println("Before SP init")
     sp.Init(Utils.clientKey, intelCert, userCert, keyShare)
-    println("After SP init")
 
     new OpaqueClient(channel, blockingStub, sp)
   }
@@ -105,13 +101,15 @@ class OpaqueClient private(
   }
 
   def sendTestQuery(): Unit = {
-    val testQuery = "SELECT 1, 2"
+    val testQuery = "SELECT * from Test"
     val request = Ra.QueryRequest.newBuilder()
       .setSqlQuery(testQuery)
       .build()
     val response = blockingStub.sendQuery(request)
     if (response.getSuccess()) {
-      println(response.getData(0))
+      println(response.getDataCount()) // Should be 256
+      println(response.getData(0)) // Should be 0, 0, 1
+      println(response.getData(1)) // Should be 1, 2, 1
     } 
   } 
 }

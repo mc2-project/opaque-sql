@@ -225,7 +225,6 @@ EVP_PKEY* buffer_to_public_key(char* input_buffer, int input_buf_size)
 
 int public_encrypt(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len)
 {
-    std::cout << "Enter ServiceProvider/crypto.cpp - public_encrypt()" << std::endl;
     size_t outlen = 0;
     const int padding = RSA_PKCS1_PADDING;
     ENGINE *eng = NULL;
@@ -255,8 +254,6 @@ int public_encrypt(EVP_PKEY* key, unsigned char * data, int data_len, unsigned c
     }
 
     EVP_PKEY_CTX_free(ctx);
-
-    std::cout << "Enter ServiceProvider/crypto.cpp - public_encrypt()" << std::endl;
 
     return *encrypted_len;
 }
