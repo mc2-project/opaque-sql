@@ -122,6 +122,69 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
+  /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
+    * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
+    * Set nullable property of column.
+    * @param cn is the column name to change
+    * @param nullable is the flag to set, such that the column is  either nullable or not
+    */
+  object ExtraDFOperations {
+    implicit class AlternateDF(df : DataFrame) {
+      def setNullableStateOfColumn(cn: String, nullable: Boolean) : DataFrame = {
+        // get schema
+        val schema = df.schema
+        // modify [[StructField] with name `cn`
+        val newSchema = StructType(schema.map {
+          case StructField( c, t, _, m) if c.equals(cn) => StructField( c, t, nullable = nullable, m)
+          case y: StructField => y
+        })
+        // apply new schema
+        df.sqlContext.createDataFrame( df.rdd, newSchema )
+      }
+    }
+  }
+
+  import ExtraDFOperations._
+
+  testAgainstSpark("Interval SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 DAY FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Week SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Month SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Date Add") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.select(date_add($"time", 3)).collect
+  }
+
   testAgainstSpark("create DataFrame from sequence") { securityLevel =>
     val data = for (i <- 0 until 5) yield ("foo", i)
     makeDF(data, securityLevel, "word", "count").collect
@@ -336,17 +399,28 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("aggregate average") { securityLevel =>
-    val data = for (i <- 0 until 256) yield (i, abc(i), i.toDouble)
+    val data = (0 until 256).map{ i =>
+      if (i % 3 == 0 || (i + 1) % 6 == 0)
+        (i, abc(i), None)
+      else
+        (i, abc(i), Some(i.toDouble))
+    }.toSeq
     val words = makeDF(data, securityLevel, "id", "category", "price")
+    words.setNullableStateOfColumn("price", true)
 
-    words.groupBy("category").agg(avg("price").as("avgPrice"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    val result = words.groupBy("category").agg(avg("price").as("avgPrice"))
+    result.collect.sortBy { case Row(category: String, _) => category }
   }
 
   testAgainstSpark("aggregate count") { securityLevel =>
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val data = (0 until 256).map{ i =>
+      if (i % 3 == 0 || (i + 1) % 6 == 0)
+        (i, abc(i), None)
+      else 
+        (i, abc(i), Some(i))
+    }.toSeq
     val words = makeDF(data, securityLevel, "id", "category", "price")
-
+    words.setNullableStateOfColumn("price", true)
     words.groupBy("category").agg(count("category").as("itemsInCategory"))
       .collect.sortBy { case Row(category: String, _) => category }
   }
@@ -384,8 +458,15 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("aggregate sum") { securityLevel =>
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val data = (0 until 256).map{ i =>
+      if (i % 3 == 0 || i % 4 == 0)
+        (i, abc(i), None)
+      else
+        (i, abc(i), Some(i.toDouble))
+    }.toSeq
+
     val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.setNullableStateOfColumn("count", true)
 
     words.groupBy("word").agg(sum("count").as("totalCount"))
       .collect.sortBy { case Row(word: String, _) => word }
