@@ -23,6 +23,7 @@ import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.JoinType
@@ -224,49 +225,44 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 }
 
 case class EncryptedAggregateExec(
-    groupingExpressions: Seq[NamedExpression],
-    aggExpressions: Seq[AggregateExpression],
-    child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
+  groupingExpressions: Seq[NamedExpression],
+  aggExpressions: Seq[AggregateExpression],
+  mode: AggregateMode,
+  child: SparkPlan)
+    extends UnaryExecNode with OpaqueOperatorExec {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
-  override def output: Seq[Attribute] =
-    groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
+  override def output: Seq[Attribute] = mode match {
+    case Partial => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.copy(mode = Partial)).flatMap(_.aggregateFunction.inputAggBufferAttributes)
+    case Final => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
+    case Complete => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
+  }
 
   override def executeBlocked(): RDD[Block] = {
-    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggExpressions, child.output)
 
-    timeOperator(
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedAggregateExec") { childRDD =>
+    val (groupingExprs, aggExprs) = mode match {
+      case Partial => {
+        val partialAggExpressions = aggExpressions.map(_.copy(mode = Partial))
+        (groupingExpressions, partialAggExpressions)
+      }
+      case Final => {
+        val finalGroupingExpressions = groupingExpressions.map(_.toAttribute)
+        val finalAggExpressions = aggExpressions.map(_.copy(mode = Final))
+        (finalGroupingExpressions, finalAggExpressions)
+      }
+      case Complete => {
+        (groupingExpressions, aggExpressions.map(_.copy(mode = Complete)))
+      }
+    }
 
-      val (firstRows, lastGroups, lastRows) = childRDD.map { block =>
+    val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
+
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
+      childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        val (firstRow, lastGroup, lastRow) = enclave.NonObliviousAggregateStep1(
-          eid, aggExprSer, block.bytes)
-        (Block(firstRow), Block(lastGroup), Block(lastRow))
-      }.collect.unzip3
-
-      // Send first row to previous partition and last group to next partition
-      val shiftedFirstRows = firstRows.drop(1) :+ Utils.emptyBlock
-      val shiftedLastGroups = Utils.emptyBlock +: lastGroups.dropRight(1)
-      val shiftedLastRows = Utils.emptyBlock +: lastRows.dropRight(1)
-      val shifted = (shiftedFirstRows, shiftedLastGroups, shiftedLastRows).zipped.toSeq
-      assert(shifted.size == childRDD.partitions.length)
-      val shiftedRDD = sparkContext.parallelize(shifted, childRDD.partitions.length)
-
-      childRDD.zipPartitions(shiftedRDD) { (blockIter, boundaryIter) =>
-        (blockIter.toSeq, boundaryIter.toSeq) match {
-          case (Seq(block), Seq(Tuple3(
-            nextPartitionFirstRow, prevPartitionLastGroup, prevPartitionLastRow))) =>
-            val (enclave, eid) = Utils.initEnclave()
-            Iterator(Block(enclave.NonObliviousAggregateStep2(
-              eid, aggExprSer, block.bytes,
-              nextPartitionFirstRow.bytes, prevPartitionLastGroup.bytes,
-              prevPartitionLastRow.bytes)))
-        }
+        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial)))
       }
     }
   }

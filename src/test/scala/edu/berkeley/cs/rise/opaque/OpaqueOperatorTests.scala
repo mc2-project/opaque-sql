@@ -408,8 +408,8 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val words = makeDF(data, securityLevel, "id", "category", "price")
     words.setNullableStateOfColumn("price", true)
 
-    val result = words.groupBy("category").agg(avg("price").as("avgPrice"))
-    result.collect.sortBy { case Row(category: String, _) => category }
+    val df = words.groupBy("category").agg(avg("price").as("avgPrice"))
+    df.collect.sortBy { case Row(category: String, _) => category }
   }
 
   testAgainstSpark("aggregate count") { securityLevel =>
@@ -480,10 +480,34 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       .collect.sortBy { case Row(str: String, _, _) => str }
   }
 
+  testAgainstSpark("skewed aggregate sum") { securityLevel =>
+    val data = Random.shuffle((0 until 256).map(i => {
+        (i, abc(123), 1)
+    }).toSeq)
+
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.groupBy("word").agg(sum("count").as("totalCount"))
+      .collect.sortBy { case Row(word: String, _) => word }
+  }
+
+  testAgainstSpark("grouping aggregate with 0 rows") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.filter($"id" < lit(0)).groupBy("word").agg(sum("count"))
+      .collect.sortBy { case Row(word: String, _) => word }
+  }
+
   testAgainstSpark("global aggregate") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     words.agg(sum("count").as("totalCount")).collect
+  }
+
+  testAgainstSpark("global aggregate with 0 rows") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val result = words.filter($"id" < lit(0)).agg(count("*")).as("totalCount")
+    result.collect
   }
 
   testAgainstSpark("contains") { securityLevel =>

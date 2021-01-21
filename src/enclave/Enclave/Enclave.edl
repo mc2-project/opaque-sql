@@ -54,20 +54,11 @@ enclave {
       [user_check] uint8_t *join_row, size_t join_row_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public void ecall_non_oblivious_aggregate_step1(
+    public void ecall_non_oblivious_aggregate(
       [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [out] uint8_t **first_row, [out] size_t *first_row_length,
-      [out] uint8_t **last_group, [out] size_t *last_group_length,
-      [out] uint8_t **last_row, [out] size_t *last_row_length);
-
-    public void ecall_non_oblivious_aggregate_step2(
-      [in, count=agg_op_length] uint8_t *agg_op, size_t agg_op_length,
-      [user_check] uint8_t *input_rows, size_t input_rows_length,
-      [user_check] uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
-      [user_check] uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
-      [user_check] uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
-      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length,
+      bool is_partial);
 
     public void ecall_count_rows_per_partition(
       [user_check] uint8_t *input_rows, size_t input_rows_length,
