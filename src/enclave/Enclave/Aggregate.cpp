@@ -11,8 +11,6 @@ void non_oblivious_aggregate(
   uint8_t **output_rows, size_t *output_rows_length,
   bool is_partial) {
 
-  (void) is_partial;
-
   FlatbuffersAggOpEvaluator agg_op_eval(agg_op, agg_op_length);
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
