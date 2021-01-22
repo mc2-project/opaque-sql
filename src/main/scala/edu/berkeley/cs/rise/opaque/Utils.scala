@@ -245,11 +245,6 @@ object Utils extends Logging {
     }
   }
 
-  def initServer() : Unit = {
-
-  }
-
-
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16

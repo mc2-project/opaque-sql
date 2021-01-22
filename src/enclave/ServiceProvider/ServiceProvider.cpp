@@ -132,11 +132,6 @@ void ServiceProvider::set_key_share(const uint8_t *key_share) {
   memcpy(this->key_share, key_share, LC_AESGCM_KEY_SIZE);
 }
 
-// This function for testing purposes
-// void ServiceProvider::set_test_key(const uint8_t *shared_key) {
-//   memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
-// }
-
 void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
