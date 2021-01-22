@@ -68,7 +68,7 @@ object OpaqueOperators extends Strategy {
       EncryptedFilterExec(condition, planLater(child)) :: Nil
 
     case Sort(sortExprs, global, child) if isEncrypted(child) =>
-      EncryptedSortExec(sortExprs, planLater(child)) :: Nil
+      EncryptedSortExec(sortExprs, global, planLater(child)) :: Nil
 
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
       val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
@@ -76,7 +76,7 @@ object OpaqueOperators extends Strategy {
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
       val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
-      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), unioned)
+      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), true, unioned)
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
@@ -94,13 +94,28 @@ object OpaqueOperators extends Strategy {
 
     case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
-      val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression]).map(_.copy(mode = Complete))
 
-      EncryptedProjectExec(resultExpressions,
-        EncryptedAggregateExec(
-          groupingExpressions, aggregateExpressions,
-          EncryptedSortExec(
-            groupingExpressions.map(e => SortOrder(e, Ascending)), planLater(child)))) :: Nil
+      val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
+
+      if (groupingExpressions.size == 0) {
+        // Global aggregation
+        val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+        val partialOutput = partialAggregate.output
+        val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
+
+        EncryptedProjectExec(resultExpressions, 
+          EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+            EncryptedProjectExec(partialOutput, 
+              EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
+                EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
+      } else {
+        // Grouping aggregation
+        EncryptedProjectExec(resultExpressions,
+          EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
+            EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
+                EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+      }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
@@ -109,7 +124,7 @@ object OpaqueOperators extends Strategy {
       case Limit(IntegerLiteral(limit), Sort(sortExprs, true, child)) if isEncrypted(child) =>
       EncryptedGlobalLimitExec(limit,
         EncryptedLocalLimitExec(limit,
-          EncryptedSortExec(sortExprs, planLater(child)))) :: Nil
+          EncryptedSortExec(sortExprs, true, planLater(child)))) :: Nil
 
       case Limit(IntegerLiteral(limit), Project(projectList, child)) if isEncrypted(child) =>
         EncryptedGlobalLimitExec(limit,
@@ -122,7 +137,7 @@ object OpaqueOperators extends Strategy {
     case Limit(IntegerLiteral(limit), Sort(sortExprs, true, child)) if isEncrypted(child) =>
       EncryptedGlobalLimitExec(limit,
         EncryptedLocalLimitExec(limit,
-          EncryptedSortExec(sortExprs, planLater(child)))) :: Nil
+          EncryptedSortExec(sortExprs, true, planLater(child)))) :: Nil
 
     case Limit(IntegerLiteral(limit), Project(projectList, child)) if isEncrypted(child) =>
       EncryptedGlobalLimitExec(limit,
@@ -162,4 +177,10 @@ object OpaqueOperators extends Strategy {
   private def dropTags(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
     leftOutput ++ rightOutput
+
+  private def tagForGlobalAggregate(input: Seq[Attribute])
+      : (Seq[NamedExpression], NamedExpression) = {
+    val tag = Alias(Literal(0), "_tag")()
+    (Seq(tag) ++ input, tag.toAttribute)
+  }
 }

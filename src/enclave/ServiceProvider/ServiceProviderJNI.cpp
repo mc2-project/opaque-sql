@@ -25,6 +25,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 //  std::cout << "Enter JNI.cpp SP_INIT" << std::endl;
 
 //  std::cout << "Begin void variables" << std::endl;
+
   (void)env;
   (void)obj;
 //  std::cout << "After void variables" << std::endl;
