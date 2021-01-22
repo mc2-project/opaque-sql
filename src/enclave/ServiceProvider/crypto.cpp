@@ -30,6 +30,8 @@ in the License.
 #include "crypto.h"
 #include "sp_crypto.h"
 
+#include <iostream>
+
 static enum _error_type {
 	e_none,
 	e_crypto,

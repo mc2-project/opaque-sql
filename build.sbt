@@ -16,6 +16,16 @@ libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
+// Begin Java gRPC dependencies
+
+libraryDependencies += "io.grpc" % "protoc-gen-grpc-java" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-netty-shaded" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-protobuf" % "1.34.1"
+libraryDependencies += "io.grpc" % "grpc-stub" % "1.34.1"
+libraryDependencies += "org.apache.tomcat" % "annotations-api" % "6.0.53"
+
+// End Java gRPC dependencies
+
 val flatbuffersVersion = "1.7.0"
 
 concurrentRestrictions in Global := Seq(

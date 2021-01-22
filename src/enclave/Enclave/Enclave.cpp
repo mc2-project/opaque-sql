@@ -324,8 +324,11 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
     // client_public_keys.insert({user_nam, user_public_key});
 
     // Set shared key for this client
-    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
-    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+//    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
+//    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+
+    // Currently just setting the shared key to be hard_coded in prepration for new key generation code
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
 
     // This block for testing loading from files encrypted with different keys
     // FIXME: remove this block
@@ -346,6 +349,8 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input,
 */
 void ecall_generate_report(uint8_t **report_msg_data,
                            size_t* report_msg_data_size) {
+
+//  std::cout << "enter ecall generate report" << std::endl;
 
   uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
   size_t public_key_size = sizeof(public_key);

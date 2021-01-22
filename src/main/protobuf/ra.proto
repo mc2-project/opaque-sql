@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package ra;
+
+// The greeting service definition.
+service Greeter {
+  // Sends a greeting
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc GetRA (RARequest) returns (RAReply) {}
+  rpc SendKey (KeyRequest) returns (KeyReply) {}
+  rpc SendQuery (QueryRequest) returns (QueryReply) {}
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
+
+// The response message containing the initial RARequest from the client
+message RARequest {
+  string name = 1;
+}
+
+message RAReply {
+  bool success = 1;
+  bytes report = 2;
+}
+
+message KeyRequest {
+  bool nonNull = 1;
+  bytes key = 2;
+}
+
+message KeyReply {
+  bool success = 1;
+}
+
+message QueryRequest {
+  bool encryptedCreate = 1;
+  string sqlQuery = 2;
+}
+
+message QueryReply {
+  bool success = 1;
+
+  // The data is returned in rows as strings
+  repeated string data = 2;
+}

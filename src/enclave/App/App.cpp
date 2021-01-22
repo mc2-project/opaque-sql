@@ -42,6 +42,7 @@
 #include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h> // gettimeofday
+#include <iostream> // for debugging
 
 #include "common.h"
 #include "Enclave_u.h"
@@ -196,6 +197,10 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   flags |= OE_ENCLAVE_FLAG_SIMULATE;
 #endif
   
+
+  // Debug - remove later
+  flags |= OE_ENCLAVE_FLAG_DEBUG;
+
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",
                      oe_create_Enclave_enclave(
@@ -216,10 +221,12 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t* report_msg = NULL;
   size_t report_msg_size = 0;
 
+//  std::cout << "Before ecall generate report" << std::endl;
   oe_check_and_time("Generate enclave report",
                      ecall_generate_report((oe_enclave_t*)eid,
                                            &report_msg,
                                            &report_msg_size));
+//  std::cout << "After ecall generate report" << std::endl;
 
   // Allocate memory
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);

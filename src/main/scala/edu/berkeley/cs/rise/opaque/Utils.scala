@@ -236,6 +236,7 @@ object Utils extends Logging {
         val path = findLibraryAsResource("enclave_trusted_signed")
         eid = enclave.StartEnclave(path)
         logInfo("Starting an enclave")
+
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
@@ -243,6 +244,11 @@ object Utils extends Logging {
       }
     }
   }
+
+  def initServer() : Unit = {
+
+  }
+
 
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
@@ -277,7 +283,8 @@ object Utils extends Logging {
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    cipher.doFinal(cipherText)
+    val ret = cipher.doFinal(cipherText)
+    ret
   }
 
   var eid = 0L

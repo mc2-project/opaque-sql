@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <iostream>
 
 #include "ServiceProvider.h"
 
@@ -20,16 +21,28 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
   // FIXME: Remove last jbyteArray parameter - it was for testing purposes
   // JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share, jbyteArray test_key) {
   JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert, jstring user_cert, jbyteArray key_share) {
+
+//  std::cout << "Enter JNI.cpp SP_INIT" << std::endl;
+
+//  std::cout << "Begin void variables" << std::endl;
+
   (void)env;
   (void)obj;
+//  std::cout << "After void variables" << std::endl;
 
   jboolean if_copy = false;
 
+//  std::cout << "Begin env get variables" << std::endl;
   jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
+//  std::cout << "ENV 1" << std::endl;
   jbyte *key_share_bytes = env->GetByteArrayElements(key_share, &if_copy);
+//  std::cout << "ENV 2" << std::endl;
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
+//  std::cout << "ENV 3" << std::endl;
   const char* user_cert_str = env->GetStringUTFChars(user_cert, nullptr);
+//  std::cout << "After env get variables" << std::endl;
 
+//  std::cout << "Begin try statement" << std::endl;
   try {
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
 
@@ -45,10 +58,13 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }
+//  std::cout << "End try statement" << std::endl;
 
   env->ReleaseByteArrayElements(shared_key, shared_key_bytes, 0);
   env->ReleaseStringUTFChars(intel_cert, intel_cert_str);
   env->ReleaseStringUTFChars(user_cert, user_cert_str);
+
+//  std::cout << "Exit JNI.cpp - SP_INIT" << std::endl;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_ProcessEnclaveReport(
