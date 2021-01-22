@@ -42,7 +42,6 @@
 #include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h> // gettimeofday
-#include <iostream> // for debugging
 
 #include "common.h"
 #include "Enclave_u.h"
@@ -221,12 +220,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   uint8_t* report_msg = NULL;
   size_t report_msg_size = 0;
 
-//  std::cout << "Before ecall generate report" << std::endl;
   oe_check_and_time("Generate enclave report",
                      ecall_generate_report((oe_enclave_t*)eid,
                                            &report_msg,
                                            &report_msg_size));
-//  std::cout << "After ecall generate report" << std::endl;
 
   // Allocate memory
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
