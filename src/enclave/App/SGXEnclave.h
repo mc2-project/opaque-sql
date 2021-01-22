@@ -46,12 +46,8 @@ extern "C" {
     JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray);
 
   JNIEXPORT jobject JNICALL
-  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray);
-
-  JNIEXPORT jbyteArray JNICALL
-  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
-    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
+  Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
+    JNIEnv *, jobject, jlong, jbyteArray, jbyteArray, jboolean);
 
   JNIEXPORT jbyteArray JNICALL
   Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
