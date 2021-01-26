@@ -150,8 +150,25 @@ object TPCH {
     sqlContext: SQLContext,
     securityLevel: SecurityLevel,
     size: String,
-    numPartitions: Int,
-    quantityThreshold: Option[Int] = None) : Unit = {
+    numPartitions: Int) : Unit = {
+
+    queryNumber match {
+      case 9 => {
+        part(sqlContext, securityLevel, size, numPartitions)
+        supplier(sqlContext, securityLevel, size, numPartitions)
+        lineitem(sqlContext, securityLevel, size, numPartitions)
+        partsupp(sqlContext, securityLevel, size, numPartitions)
+        orders(sqlContext, securityLevel, size, numPartitions)
+        nation(sqlContext, securityLevel, size, numPartitions)
+      }
+    }
+  }
+
+  def clearTables() = {
+    tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
+
+    for (tableName <- tableNames) {
+      spark.sql(s"""DROP TABLE IF EXISTS default.${tableName}""".stripMargin)
   }
 
   def tpch(
@@ -161,7 +178,7 @@ object TPCH {
     size: String,
     numPartitions: Int) : DataFrame = {
 
-    loadTables(queryNumber, sqlContext, securityLevel, size, numPartitions, quantityThreshold)
+    loadTables(queryNumber, sqlContext, securityLevel, size, numPartitions)
     val df = performQuery()
     clearTables()
     df
