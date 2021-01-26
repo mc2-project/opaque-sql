@@ -23,13 +23,10 @@ import scala.io.Source
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.catalyst.util.fileToString
-import org.apache.spark.sql.catalyst.util.resourceToString
 
 object TPCH {
   def part(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -49,8 +46,7 @@ object TPCH {
        .createOrReplaceTempView("part")
 
   def supplier(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -68,8 +64,7 @@ object TPCH {
        .createOrReplaceTempView("supplier")
 
   def lineitem(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -96,8 +91,7 @@ object TPCH {
       .createOrReplaceTempView("lineitem")
 
   def partsupp(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -113,8 +107,7 @@ object TPCH {
       .createOrReplaceTempView("partsupp")
 
   def orders(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -134,8 +127,7 @@ object TPCH {
       .createOrReplaceTempView("orders")
 
   def nation(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : Unit =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -154,7 +146,7 @@ object TPCH {
     sqlContext: SQLContext,
     securityLevel: SecurityLevel,
     size: String,
-    numPartitions: Int) : Unit = {
+    numPartitions: Int) = {
 
     queryNumber match {
       case 9 => {
@@ -168,7 +160,7 @@ object TPCH {
     }
   }
 
-  def clearTables(sqlContext: SQLContext) : Unit = {
+  def clearTables(sqlContext: SQLContext) = {
     val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
 
     for (tableName <- tableNames) {
