@@ -25,7 +25,7 @@ import org.apache.spark.sql.SQLContext
 object TPCH {
   def part(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -42,10 +42,11 @@ object TPCH {
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/part.tbl")
        .repartition(numPartitions))
+       .createOrReplaceTempView("part")
 
   def supplier(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -60,10 +61,11 @@ object TPCH {
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/supplier.tbl")
        .repartition(numPartitions))
+       .createOrReplaceTempView("supplier")
 
   def lineitem(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -86,11 +88,12 @@ object TPCH {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/lineitem.tbl")
-       .repartition(numPartitions))
+      .repartition(numPartitions))
+      .createOrReplaceTempView("lineitem")
 
   def partsupp(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -103,10 +106,11 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/partsupp.tbl")
       .repartition(numPartitions))
+      .createOrReplaceTempView("partsupp")
 
   def orders(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -123,10 +127,11 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/orders.tbl")
       .repartition(numPartitions))
+      .createOrReplaceTempView("orders")
 
   def nation(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-      : DataFrame =
+      : Unit =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -138,6 +143,7 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
       .repartition(numPartitions))
+      .createOrReplaceTempView("nation")
 
 
   private def tpch9EncryptedDFs(
