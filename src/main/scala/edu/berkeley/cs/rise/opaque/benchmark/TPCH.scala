@@ -21,6 +21,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.catalyst.util.resourceToString
 
 object TPCH {
   def part(
@@ -172,6 +173,14 @@ object TPCH {
     }
   }
 
+  def performQuery(queryNumber: Int, sqlContext: SQLContext) : DataFrame = {
+    val queryLocation = "../../../../../../../../test/resources/tpch/"
+    val sqlStr = resourceToString(queryLocation + s"q$queryNumber.sql",
+      classLoader = Thread.currentThread().getContextClassLoader)
+
+    sqlContext.sparkSession.sql(sqlStr)
+  }
+
   def tpch(
     queryNumber: Int,
     sqlContext: SQLContext,
@@ -180,8 +189,9 @@ object TPCH {
     numPartitions: Int) : DataFrame = {
 
     loadTables(queryNumber, sqlContext, securityLevel, size, numPartitions)
-    val df = performQuery()
-    clearTables()
+    val df = performQuery(queryNumber, sqlContext)
+    clearTables(sqlContext)
+
     df
   }
 }
