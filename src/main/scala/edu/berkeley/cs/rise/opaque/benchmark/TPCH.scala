@@ -18,11 +18,13 @@
 package edu.berkeley.cs.rise.opaque.benchmark
 
 import java.io.File
+import scala.io.Source
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.util.fileToString
+import org.apache.spark.sql.catalyst.util.resourceToString
 
 object TPCH {
   def part(
@@ -176,8 +178,7 @@ object TPCH {
 
   def performQuery(queryNumber: Int, sqlContext: SQLContext) : DataFrame = {
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
-    val sqlStr = fileToString(new File(Thread.currentThread().getContextClassLoader
-      .getResource(queryLocation + s"q$queryNumber.sql").getFile))
+    val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
 
     sqlContext.sparkSession.sql(sqlStr)
   }
