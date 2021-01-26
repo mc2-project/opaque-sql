@@ -145,58 +145,25 @@ object TPCH {
       .repartition(numPartitions))
       .createOrReplaceTempView("nation")
 
-
-  private def tpch9EncryptedDFs(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-       : (DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame) = {
-      val partDF = part(sqlContext, securityLevel, size, numPartitions)
-      val supplierDF = supplier(sqlContext, securityLevel, size, numPartitions)
-      val lineitemDF = lineitem(sqlContext, securityLevel, size, numPartitions)
-      val partsuppDF = partsupp(sqlContext, securityLevel, size, numPartitions)
-      val ordersDF = orders(sqlContext, securityLevel, size, numPartitions)
-      val nationDF = nation(sqlContext, securityLevel, size, numPartitions)
-      (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF)
+  def loadTables(
+    queryNumber: Int,
+    sqlContext: SQLContext,
+    securityLevel: SecurityLevel,
+    size: String,
+    numPartitions: Int,
+    quantityThreshold: Option[Int] = None) : Unit = {
   }
 
-   /** TPC-H query 9 - Product Type Profit Measure Query */
-   def tpch9(
-       sqlContext: SQLContext,
-       securityLevel: SecurityLevel,
-       size: String,
-       numPartitions: Int,
-       quantityThreshold: Option[Int] = None) : DataFrame = {
-     import sqlContext.implicits._
-     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
-       tpch9EncryptedDFs(sqlContext, securityLevel, size, numPartitions)
+  def tpch(
+    queryNumber: Int,
+    sqlContext: SQLContext,
+    securityLevel: SecurityLevel,
+    size: String,
+    numPartitions: Int) : DataFrame = {
 
-     val df =
-       ordersDF.select($"o_orderkey", year($"o_orderdate").as("o_year")) // 6. orders
-         .join(
-           (nationDF// 4. nation
-             .join(
-               supplierDF // 3. supplier
-                 .join(
-                   partDF // 1. part
-                     .filter($"p_name".contains("maroon"))
-                     .select($"p_partkey")
-                     .join(partsuppDF, $"p_partkey" === $"ps_partkey"), // 2. partsupp
-                   $"ps_suppkey" === $"s_suppkey"),
-               $"s_nationkey" === $"n_nationkey"))
-               .join(
-                 // 5. lineitem
-                 quantityThreshold match {
-                   case Some(q) => lineitemDF.filter($"l_quantity" > lit(q))
-                   case None => lineitemDF
-                 },
-                 $"s_suppkey" === $"l_suppkey" && $"p_partkey" === $"l_partkey"),
-             $"l_orderkey" === $"o_orderkey")
-           .select(
-             $"n_name",
-             $"o_year",
-             ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
-               .as("amount"))
-           .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
-
-     df
-   }
+    loadTables(queryNumber, sqlContext, securityLevel, size, numPartitions, quantityThreshold)
+    val df = performQuery()
+    clearTables()
+    df
+  }
 }

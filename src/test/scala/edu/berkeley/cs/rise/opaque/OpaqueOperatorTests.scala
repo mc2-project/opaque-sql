@@ -885,7 +885,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
   }
 
   testAgainstSpark("TPC-H 9") { securityLevel =>
-    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+    TPCH.tpch(9, spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
   }
 
   testAgainstSpark("big data 1") { securityLevel =>
