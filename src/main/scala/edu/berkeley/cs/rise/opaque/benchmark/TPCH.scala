@@ -164,11 +164,12 @@ object TPCH {
     }
   }
 
-  def clearTables() = {
-    tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
+  def clearTables(sqlContext: SQLContext) : Unit = {
+    val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
 
     for (tableName <- tableNames) {
-      spark.sql(s"""DROP TABLE IF EXISTS default.${tableName}""".stripMargin)
+      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${tableName}""".stripMargin)
+    }
   }
 
   def tpch(
