@@ -31,6 +31,10 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   testAgainstSpark("TPC-H 9") { securityLevel =>
     tpch.query(9, securityLevel, spark.sqlContext).collect.toSet
   }
+
+  testAgainstSpark("TPC-H 11") { securityLevel =>
+    tpch.query(11, securityLevel, spark.sqlContext).collect.toSet
+  }
 }
 
 class TPCHSinglePartitionSuite extends TPCHTests {

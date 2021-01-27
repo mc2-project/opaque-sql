@@ -148,8 +148,8 @@ class TPCH(
   val size: String,
   val numPartitions: Int,
 
-  val mapDF: Map[String, DataFrame],
-  val encryptedMapDF: Map[String, DataFrame],
+  val nameToDF: Map[String, DataFrame],
+  val nameToEncryptedDF: Map[String, DataFrame],
 ) {
 
   val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
@@ -180,10 +180,10 @@ class TPCH(
 
   def ensureCached() = {
     for (name <- tableNames) {
-      mapDF.get(name).foreach(df =>
+      nameToDF.get(name).foreach(df =>
         Utils.ensureCached(df)
       )
-      encryptedMapDF.get(name).foreach(df =>
+      nameToEncryptedDF.get(name).foreach(df =>
         Utils.ensureCached(df)
       )
     }
@@ -195,12 +195,12 @@ class TPCH(
 
     securityLevel match {
       case Insecure => {
-        for ((name, df) <- mapDF) {
+        for ((name, df) <- nameToDF) {
           df.createOrReplaceTempView(name)
         }
       }
       case Encrypted => {
-        for ((name, df) <- encryptedMapDF) {
+        for ((name, df) <- nameToEncryptedDF) {
           df.createOrReplaceTempView(name)
         }
       }
