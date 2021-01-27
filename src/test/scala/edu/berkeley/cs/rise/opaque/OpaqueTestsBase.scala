@@ -30,7 +30,7 @@ import org.scalatest.FunSuite
 import edu.berkeley.cs.rise.opaque.benchmark._
 import org.scalatest.BeforeAndAfterAll
 
-trait TestUtils extends FunSuite with BeforeAndAfterAll { self =>
+trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
 
   def spark: SparkSession
   def numPartitions: Int

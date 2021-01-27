@@ -22,7 +22,7 @@ import org.apache.spark.sql.SparkSession
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 
-trait TPCHTests extends TestUtils { self => 
+trait TPCHTests extends OpaqueTestsBase { self => 
 
   testAgainstSpark("TPC-H 9") { securityLevel =>
     TPCH.tpch(9, spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet

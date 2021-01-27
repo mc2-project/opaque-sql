@@ -39,7 +39,7 @@ import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
-trait OpaqueOperatorTests extends TestUtils { self =>
+trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
     protected object testImplicits extends SQLImplicits {
       protected override def _sqlContext: SQLContext = self.spark.sqlContext
