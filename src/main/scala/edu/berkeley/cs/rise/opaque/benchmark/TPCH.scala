@@ -138,32 +138,33 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
       .repartition(numPartitions))
-      .createOrReplaceTempView("nation")
+      .createOrReplaceTempView("nation " + securityLevel.name)
 
   def loadTables(
-    queryNumber: Int,
     sqlContext: SQLContext,
-    securityLevel: SecurityLevel,
     size: String,
     numPartitions: Int) = {
 
-    queryNumber match {
-      case 9 => {
-        part(sqlContext, securityLevel, size, numPartitions)
-        supplier(sqlContext, securityLevel, size, numPartitions)
-        lineitem(sqlContext, securityLevel, size, numPartitions)
-        partsupp(sqlContext, securityLevel, size, numPartitions)
-        orders(sqlContext, securityLevel, size, numPartitions)
-        nation(sqlContext, securityLevel, size, numPartitions)
-      }
-    }
+      part(sqlContext, Insecure, size, numPartitions)
+      supplier(sqlContext, Insecure, size, numPartitions)
+      lineitem(sqlContext, Insecure, size, numPartitions)
+      partsupp(sqlContext, Insecure, size, numPartitions)
+      orders(sqlContext, Insecure, size, numPartitions)
+      nation(sqlContext, Insecure, size, numPartitions)
+
+      part(sqlContext, Encrypted, size, numPartitions)
+      supplier(sqlContext, Encrypted, size, numPartitions)
+      lineitem(sqlContext, Encrypted, size, numPartitions)
+      partsupp(sqlContext, Encrypted, size, numPartitions)
+      orders(sqlContext, Encrypted, size, numPartitions)
+      nation(sqlContext, Encrypted, size, numPartitions)
   }
 
   def clearTables(sqlContext: SQLContext) = {
-    val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
+    val partialNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
 
-    for (tableName <- tableNames) {
-      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${tableName}""".stripMargin)
+    for (partialName <- partialNames) {
+      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${partialName}""".stripMargin)
     }
   }
 
@@ -181,7 +182,6 @@ object TPCH {
     size: String,
     numPartitions: Int) : DataFrame = {
 
-    loadTables(queryNumber, sqlContext, securityLevel, size, numPartitions)
     val df = performQuery(queryNumber, sqlContext)
     clearTables(sqlContext)
 

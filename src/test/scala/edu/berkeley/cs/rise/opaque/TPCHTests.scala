@@ -24,11 +24,22 @@ import edu.berkeley.cs.rise.opaque.benchmark._
 
 trait TPCHTests extends OpaqueTestsBase { self => 
 
-  testAgainstSpark("TPC-H 9") { securityLevel =>
-    TPCH.tpch(9, spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
+  def size = "sf_small"
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    TPCH.loadTables(spark.sqlContext, size, numPartitions);
   }
 
-  class TCPHSinglePartitionSuite extends OpaqueOperatorTests {
+  override def afterAll(): Unit = {
+    super.beforeAll()
+  }
+
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    TPCH.tpch(9, spark.sqlContext, securityLevel, size, numPartitions).collect.toSet
+  }
+
+  class TPCHSinglePartitionSuite extends TPCHTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")
@@ -38,7 +49,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   override def numPartitions: Int = 1
   }
 
-  class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
+  class TPCHMultiplePartitionSuite extends TPCHTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")

@@ -808,9 +808,11 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
   }
 
+  /*
   testAgainstSpark("TPC-H 9") { securityLevel =>
     TPCH.tpch(9, spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
   }
+  */
 
   testAgainstSpark("big data 1") { securityLevel =>
     BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
