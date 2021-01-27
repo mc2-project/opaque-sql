@@ -32,9 +32,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
-import org.scalactic.TolerantNumerics
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -42,27 +39,12 @@ import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
-trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll with TestUtils { self =>
+trait OpaqueOperatorTests extends TestUtils { self =>
 
-  def spark: SparkSession
-  def numPartitions: Int
-
-  protected object testImplicits extends SQLImplicits {
-    protected override def _sqlContext: SQLContext = self.spark.sqlContext
-  }
-  import testImplicits._
-
-  override def beforeAll(): Unit = {
-    Utils.initSQLContext(spark.sqlContext)
-  }
-
-  override def afterAll(): Unit = {
-    spark.stop()
-  }
-
-  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
-  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
-  implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
+    protected object testImplicits extends SQLImplicits {
+      protected override def _sqlContext: SQLContext = self.spark.sqlContext
+    }
+    import testImplicits._
 
     /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
     * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
@@ -853,7 +835,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll with TestUtils
 
 }
 
-class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
+class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")
@@ -863,7 +845,7 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   override def numPartitions: Int = 1
 }
 
-class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
+class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
     .appName("QEDSuite")

@@ -22,12 +22,30 @@ import scala.collection.mutable
 
 import org.apache.log4j.Level
 import org.apache.log4j.LogManager
+import org.apache.spark.sql.SparkSession
+import org.scalactic.TolerantNumerics
 import org.scalactic.Equality
 import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
+import org.scalatest.BeforeAndAfterAll
 
-trait TestUtils extends FunSuite {
+trait TestUtils extends FunSuite with BeforeAndAfterAll { self =>
+
+  def spark: SparkSession
+  def numPartitions: Int
+
+  override def beforeAll(): Unit = {
+    Utils.initSQLContext(spark.sqlContext)
+  }
+
+  override def afterAll(): Unit = {
+    spark.stop()
+  }
+
+  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
+  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
+
   def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
     new Equality[Array[A]] {
       def areEqual(a: Array[A], b: Any): Boolean = {
