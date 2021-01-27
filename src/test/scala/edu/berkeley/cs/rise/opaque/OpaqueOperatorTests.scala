@@ -19,11 +19,8 @@ package edu.berkeley.cs.rise.opaque
 
 import java.sql.Timestamp
 
-import scala.collection.mutable
 import scala.util.Random
 
-import org.apache.log4j.Level
-import org.apache.log4j.LogManager
 import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
@@ -35,7 +32,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
-import org.scalactic.Equality
 import org.scalactic.TolerantNumerics
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
@@ -46,7 +42,8 @@ import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
-trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
+trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll with TestUtils { self =>
+
   def spark: SparkSession
   def numPartitions: Int
 
@@ -63,66 +60,11 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     spark.stop()
   }
 
-  private def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
-    new Equality[Array[A]] {
-      def areEqual(a: Array[A], b: Any): Boolean = {
-        b match {
-          case b: Array[_] =>
-            (a.length == b.length
-              && a.zip(b).forall {
-                case (x, y) => implicitly[Equality[A]].areEqual(x, y)
-              })
-          case _ => false
-        }
-      }
-      override def toString: String = s"TolerantArrayEquality"
-    }
-  }
-
   // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
   implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
   implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
 
-  def testAgainstSpark[A : Equality](name: String)(f: SecurityLevel => A): Unit = {
-    test(name + " - encrypted") {
-      // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
-      // using the numeric tolerance specified above
-      assert(f(Encrypted) === f(Insecure))
-    }
-  }
-
-  def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - encrypted") {
-      f(Encrypted)
-    }
-  }
-
-  def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - Spark") {
-      f(Insecure)
-    }
-  }
-
-  def withLoggingOff[A](f: () => A): A = {
-    val sparkLoggers = Seq(
-      "org.apache.spark",
-      "org.apache.spark.executor.Executor",
-      "org.apache.spark.scheduler.TaskSetManager")
-    val logLevels = new mutable.HashMap[String, Level]
-    for (l <- sparkLoggers) {
-      logLevels(l) = LogManager.getLogger(l).getLevel
-      LogManager.getLogger(l).setLevel(Level.OFF)
-    }
-    try {
-      f()
-    } finally {
-      for (l <- sparkLoggers) {
-        LogManager.getLogger(l).setLevel(logLevels(l))
-      }
-    }
-  }
-
-  /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
+    /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
     * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
     * Set nullable property of column.
     * @param cn is the column name to change

@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
-import java.io.File
 import scala.io.Source
 
 import org.apache.spark.sql.DataFrame
