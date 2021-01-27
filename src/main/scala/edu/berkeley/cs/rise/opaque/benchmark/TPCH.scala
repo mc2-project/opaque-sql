@@ -138,7 +138,7 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
       .repartition(numPartitions))
-      .createOrReplaceTempView("nation " + securityLevel.name)
+      .createOrReplaceTempView("nation")
 
   def loadTables(
     sqlContext: SQLContext,

@@ -38,24 +38,24 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   testAgainstSpark("TPC-H 9") { securityLevel =>
     TPCH.tpch(9, spark.sqlContext, securityLevel, size, numPartitions).collect.toSet
   }
+}
 
-  class TPCHSinglePartitionSuite extends TPCHTests {
-  override val spark = SparkSession.builder()
-    .master("local[1]")
-    .appName("QEDSuite")
-    .config("spark.sql.shuffle.partitions", 1)
-    .getOrCreate()
+class TPCHSinglePartitionSuite extends TPCHTests {
+override val spark = SparkSession.builder()
+  .master("local[1]")
+  .appName("QEDSuite")
+  .config("spark.sql.shuffle.partitions", 1)
+  .getOrCreate()
 
-  override def numPartitions: Int = 1
-  }
+override def numPartitions: Int = 1
+}
 
-  class TPCHMultiplePartitionSuite extends TPCHTests {
-  override val spark = SparkSession.builder()
-    .master("local[1]")
-    .appName("QEDSuite")
-    .config("spark.sql.shuffle.partitions", 3)
-    .getOrCreate()
+class TPCHMultiplePartitionSuite extends TPCHTests {
+override val spark = SparkSession.builder()
+  .master("local[1]")
+  .appName("QEDSuite")
+  .config("spark.sql.shuffle.partitions", 3)
+  .getOrCreate()
 
-  override def numPartitions: Int = 3
-  }
+override def numPartitions: Int = 3
 }
