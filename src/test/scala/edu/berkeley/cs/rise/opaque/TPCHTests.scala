@@ -28,6 +28,11 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   def size = "sf_small"
   def tpch: TPCH
 
+  override def beforeAll(): Unit = {
+    super.beforeAll();
+    tpch.ensureCached();
+  }
+
   testAgainstSpark("TPC-H 6") { securityLevel =>
     tpch.query(6, securityLevel, spark.sqlContext).collect.toSet
   }

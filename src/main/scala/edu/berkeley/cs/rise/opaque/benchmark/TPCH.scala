@@ -174,6 +174,20 @@ object TPCHDataFrames {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/customer.tbl")
       .repartition(numPartitions))
+
+  def generateMap(
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : Map[String, DataFrame] = {
+    Map("part" -> TPCHDataFrames.part(sqlContext, securityLevel, size, numPartitions),
+    "supplier" -> TPCHDataFrames.supplier(sqlContext, securityLevel, size, numPartitions),
+    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, securityLevel, size, numPartitions),
+    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, securityLevel, size, numPartitions),
+    "orders" -> TPCHDataFrames.orders(sqlContext, securityLevel, size, numPartitions),
+    "nation" -> TPCHDataFrames.nation(sqlContext, securityLevel, size, numPartitions),
+    "region" -> TPCHDataFrames.region(sqlContext, securityLevel, size, numPartitions),
+    "customer" -> TPCHDataFrames.customer(sqlContext, securityLevel, size, numPartitions)
+    ),
+  }
 }
 
 class TPCH(
@@ -185,7 +199,7 @@ class TPCH(
   val nameToEncryptedDF: Map[String, DataFrame],
 ) {
 
-  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
+  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
 
   def this(
     sqlContext: SQLContext,
@@ -193,22 +207,8 @@ class TPCH(
     numPartitions: Int,
   ) = {
     this(sqlContext, size, numPartitions, 
-
-    Map("part" -> TPCHDataFrames.part(sqlContext, Insecure, size, numPartitions),
-    "supplier" -> TPCHDataFrames.supplier(sqlContext, Insecure, size, numPartitions),
-    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, Insecure, size, numPartitions),
-    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, Insecure, size, numPartitions),
-    "orders" -> TPCHDataFrames.orders(sqlContext, Insecure, size, numPartitions),
-    "nation" -> TPCHDataFrames.nation(sqlContext, Insecure, size, numPartitions)),
-
-    Map("part" -> TPCHDataFrames.part(sqlContext, Encrypted, size, numPartitions),
-    "supplier" -> TPCHDataFrames.supplier(sqlContext, Encrypted, size, numPartitions),
-    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, Encrypted, size, numPartitions),
-    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, Encrypted, size, numPartitions),
-    "orders" -> TPCHDataFrames.orders(sqlContext, Encrypted, size, numPartitions),
-    "nation" -> TPCHDataFrames.nation(sqlContext, Encrypted, size, numPartitions)),
-    )
-    ensureCached()
+        TPCHDataFrames.generateMap(sqlContext, Insecure, size, numPartitions),
+        TPCHDataFrames.generateMap(sqlContext, Encrypted, size, numPartitions))
   }
 
   def ensureCached() = {
@@ -222,10 +222,7 @@ class TPCH(
     }
   }
 
-  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext) : DataFrame = {
-    val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
-    val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
-
+  def setupViews(securityLevel: SecurityLevel) = {
     securityLevel match {
       case Insecure => {
         for ((name, df) <- nameToDF) {
@@ -238,6 +235,13 @@ class TPCH(
         }
       }
     }
+  }
+
+  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext) : DataFrame = {
+    setupViews(securityLevel)
+
+    val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
+    val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
 
     sqlContext.sparkSession.sql(sqlStr)
   }
