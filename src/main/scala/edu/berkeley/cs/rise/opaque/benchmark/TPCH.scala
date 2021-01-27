@@ -23,9 +23,10 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
 
-object TPCH {
+object TPCHTables {
   def part(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -42,10 +43,10 @@ object TPCH {
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/part.tbl")
        .repartition(numPartitions))
-       .createOrReplaceTempView("part")
 
   def supplier(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
@@ -60,10 +61,10 @@ object TPCH {
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/supplier.tbl")
        .repartition(numPartitions))
-       .createOrReplaceTempView("supplier")
 
   def lineitem(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -86,11 +87,11 @@ object TPCH {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/lineitem.tbl")
-      .repartition(numPartitions))
-      .createOrReplaceTempView("lineitem")
+       .repartition(numPartitions))
 
   def partsupp(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -103,10 +104,10 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/partsupp.tbl")
       .repartition(numPartitions))
-      .createOrReplaceTempView("partsupp")
 
   def orders(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -123,10 +124,10 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/orders.tbl")
       .repartition(numPartitions))
-      .createOrReplaceTempView("orders")
 
   def nation(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int) =
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
     securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
@@ -138,33 +139,31 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
       .repartition(numPartitions))
-      .createOrReplaceTempView("nation")
+}
 
-  def loadTables(
+class TPCH(
+  val sqlContext: SQLContext,
+  val size: String,
+  val numPartitions: Int,
+
+  val nationDF: DataFrame
+) {
+
+  def this(
     sqlContext: SQLContext,
     size: String,
-    numPartitions: Int) = {
+    numPartitions: Int,
+  ) = {
+    this(sqlContext, size, numPartitions, 
 
-      part(sqlContext, Insecure, size, numPartitions)
-      supplier(sqlContext, Insecure, size, numPartitions)
-      lineitem(sqlContext, Insecure, size, numPartitions)
-      partsupp(sqlContext, Insecure, size, numPartitions)
-      orders(sqlContext, Insecure, size, numPartitions)
-      nation(sqlContext, Insecure, size, numPartitions)
-
-      part(sqlContext, Encrypted, size, numPartitions)
-      supplier(sqlContext, Encrypted, size, numPartitions)
-      lineitem(sqlContext, Encrypted, size, numPartitions)
-      partsupp(sqlContext, Encrypted, size, numPartitions)
-      orders(sqlContext, Encrypted, size, numPartitions)
-      nation(sqlContext, Encrypted, size, numPartitions)
+    TPCHTables.part(sqlContext, Insecure, size, numPartitions))
   }
 
   def clearTables(sqlContext: SQLContext) = {
-    val partialNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
+    val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
 
-    for (partialName <- partialNames) {
-      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${partialName}""".stripMargin)
+    for (name <- tableNames) {
+      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${name}""".stripMargin)
     }
   }
 

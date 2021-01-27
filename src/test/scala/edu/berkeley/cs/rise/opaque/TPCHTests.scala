@@ -21,14 +21,16 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.SparkSession
 
 import edu.berkeley.cs.rise.opaque.benchmark._
+import edu.berkeley.cs.rise.opaque.benchmark.TPCH
 
 trait TPCHTests extends OpaqueTestsBase { self => 
+
+  def tpch: TPCH
 
   def size = "sf_small"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    TPCH.loadTables(spark.sqlContext, size, numPartitions);
   }
 
   override def afterAll(): Unit = {
@@ -36,26 +38,28 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("TPC-H 9") { securityLevel =>
-    TPCH.tpch(9, spark.sqlContext, securityLevel, size, numPartitions).collect.toSet
+    tpch.tpch(9, spark.sqlContext, securityLevel, size, numPartitions).collect.toSet
   }
 }
 
 class TPCHSinglePartitionSuite extends TPCHTests {
-override val spark = SparkSession.builder()
-  .master("local[1]")
-  .appName("QEDSuite")
-  .config("spark.sql.shuffle.partitions", 1)
-  .getOrCreate()
+  override def numPartitions: Int = 1
+  override val spark = SparkSession.builder()
+    .master("local[1]")
+    .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .getOrCreate()
 
-override def numPartitions: Int = 1
+  override def tpch = new TPCH(spark.sqlContext, size, numPartitions)
 }
 
 class TPCHMultiplePartitionSuite extends TPCHTests {
-override val spark = SparkSession.builder()
-  .master("local[1]")
-  .appName("QEDSuite")
-  .config("spark.sql.shuffle.partitions", 3)
-  .getOrCreate()
+  override def numPartitions: Int = 3
+  override val spark = SparkSession.builder()
+    .master("local[1]")
+    .appName("QEDSuite")
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .getOrCreate()
 
-override def numPartitions: Int = 3
+  override def tpch = new TPCH(spark.sqlContext, size, numPartitions)
 }
