@@ -25,20 +25,11 @@ import edu.berkeley.cs.rise.opaque.benchmark.TPCH
 
 trait TPCHTests extends OpaqueTestsBase { self => 
 
+  def size = "sf_small"
   def tpch: TPCH
 
-  def size = "sf_small"
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-  }
-
-  override def afterAll(): Unit = {
-    super.beforeAll()
-  }
-
   testAgainstSpark("TPC-H 9") { securityLevel =>
-    tpch.tpch(9, spark.sqlContext, securityLevel, size, numPartitions).collect.toSet
+    tpch.query(9, securityLevel, spark.sqlContext).collect.toSet
   }
 }
 

@@ -23,7 +23,9 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
 
-object TPCHTables {
+import edu.berkeley.cs.rise.opaque.Utils
+
+object TPCHDataFrames {
   def part(
       sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
       : DataFrame =
@@ -146,8 +148,11 @@ class TPCH(
   val size: String,
   val numPartitions: Int,
 
-  val nationDF: DataFrame
+  val mapDF: Map[String, DataFrame],
+  val encryptedMapDF: Map[String, DataFrame],
 ) {
+
+  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
 
   def this(
     sqlContext: SQLContext,
@@ -156,34 +161,51 @@ class TPCH(
   ) = {
     this(sqlContext, size, numPartitions, 
 
-    TPCHTables.part(sqlContext, Insecure, size, numPartitions))
+    Map("part" -> TPCHDataFrames.part(sqlContext, Insecure, size, numPartitions),
+    "supplier" -> TPCHDataFrames.supplier(sqlContext, Insecure, size, numPartitions),
+    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, Insecure, size, numPartitions),
+    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, Insecure, size, numPartitions),
+    "orders" -> TPCHDataFrames.orders(sqlContext, Insecure, size, numPartitions),
+    "nation" -> TPCHDataFrames.nation(sqlContext, Insecure, size, numPartitions)),
+
+    Map("part" -> TPCHDataFrames.part(sqlContext, Encrypted, size, numPartitions),
+    "supplier" -> TPCHDataFrames.supplier(sqlContext, Encrypted, size, numPartitions),
+    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, Encrypted, size, numPartitions),
+    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, Encrypted, size, numPartitions),
+    "orders" -> TPCHDataFrames.orders(sqlContext, Encrypted, size, numPartitions),
+    "nation" -> TPCHDataFrames.nation(sqlContext, Encrypted, size, numPartitions)),
+    )
+    ensureCached()
   }
 
-  def clearTables(sqlContext: SQLContext) = {
-    val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation")
-
+  def ensureCached() = {
     for (name <- tableNames) {
-      sqlContext.sql(s"""DROP TABLE IF EXISTS default.${name}""".stripMargin)
+      mapDF.get(name).foreach(df =>
+        Utils.ensureCached(df)
+      )
+      encryptedMapDF.get(name).foreach(df =>
+        Utils.ensureCached(df)
+      )
     }
   }
 
-  def performQuery(queryNumber: Int, sqlContext: SQLContext) : DataFrame = {
+  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext) : DataFrame = {
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
     val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
 
+    securityLevel match {
+      case Insecure => {
+        for ((name, df) <- mapDF) {
+          df.createOrReplaceTempView(name)
+        }
+      }
+      case Encrypted => {
+        for ((name, df) <- encryptedMapDF) {
+          df.createOrReplaceTempView(name)
+        }
+      }
+    }
+
     sqlContext.sparkSession.sql(sqlStr)
-  }
-
-  def tpch(
-    queryNumber: Int,
-    sqlContext: SQLContext,
-    securityLevel: SecurityLevel,
-    size: String,
-    numPartitions: Int) : DataFrame = {
-
-    val df = performQuery(queryNumber, sqlContext)
-    clearTables(sqlContext)
-
-    df
   }
 }
