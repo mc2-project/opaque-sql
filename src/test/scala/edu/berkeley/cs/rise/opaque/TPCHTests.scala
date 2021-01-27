@@ -28,12 +28,12 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   def size = "sf_small"
   def tpch: TPCH
 
-  testAgainstSpark("TPC-H 9") { securityLevel =>
-    tpch.query(9, securityLevel, spark.sqlContext).collect.toSet
+  testAgainstSpark("TPC-H 6") { securityLevel =>
+    tpch.query(6, securityLevel, spark.sqlContext).collect.toSet
   }
 
-  testAgainstSpark("TPC-H 11") { securityLevel =>
-    tpch.query(11, securityLevel, spark.sqlContext).collect.toSet
+  testAgainstSpark("TPC-H 9") { securityLevel =>
+    tpch.query(9, securityLevel, spark.sqlContext).collect.toSet
   }
 }
 
