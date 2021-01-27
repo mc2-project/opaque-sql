@@ -141,6 +141,39 @@ object TPCHDataFrames {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
       .repartition(numPartitions))
+
+  def region(
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
+    securityLevel.applyTo(
+      sqlContext.read.schema(
+      StructType(Seq(
+        StructField("r_regionkey", IntegerType),
+        StructField("r_name", StringType),
+        StructField("r_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"${Benchmark.dataDir}/tpch/$size/region.tbl")
+      .repartition(numPartitions))
+
+  def customer(
+      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      : DataFrame =
+    securityLevel.applyTo(
+      sqlContext.read.schema(
+      StructType(Seq(
+        StructField("c_custkey", IntegerType),
+        StructField("c_name", StringType),
+        StructField("c_address", StringType),
+        StructField("c_nationkey", IntegerType),
+        StructField("c_phone", StringType),
+        StructField("c_accbal", FloatType),
+        StructField("c_mktsegment", StringType),
+        StructField("c_comment", StringType))))
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"${Benchmark.dataDir}/tpch/$size/customer.tbl")
+      .repartition(numPartitions))
 }
 
 class TPCH(
