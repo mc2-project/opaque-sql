@@ -25,7 +25,10 @@ import org.apache.spark.sql.SQLContext
 
 import edu.berkeley.cs.rise.opaque.Utils
 
-object TPCHDataFrames {
+object TPCH {
+
+  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
+
   def part(
       sqlContext: SQLContext, size: String)
       : DataFrame =
@@ -162,33 +165,30 @@ object TPCHDataFrames {
   def generateMap(
       sqlContext: SQLContext, size: String)
       : Map[String, DataFrame] = {
-    Map("part" -> TPCHDataFrames.part(sqlContext, size),
-    "supplier" -> TPCHDataFrames.supplier(sqlContext, size),
-    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, size),
-    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, size),
-    "orders" -> TPCHDataFrames.orders(sqlContext, size),
-    "nation" -> TPCHDataFrames.nation(sqlContext, size),
-    "region" -> TPCHDataFrames.region(sqlContext, size),
-    "customer" -> TPCHDataFrames.customer(sqlContext, size)
+    Map("part" -> part(sqlContext, size),
+    "supplier" -> supplier(sqlContext, size),
+    "lineitem" -> lineitem(sqlContext, size),
+    "partsupp" -> partsupp(sqlContext, size),
+    "orders" -> orders(sqlContext, size),
+    "nation" -> nation(sqlContext, size),
+    "region" -> region(sqlContext, size),
+    "customer" -> customer(sqlContext, size)
     ),
+  }
+
+  def apply(sqlContext: SQLContext, size: String) : TPCH = {
+    val tpch = new TPCH(sqlContext, size)
+    tpch.tableNames = tableNames
+    tpch.nameToDF = generateMap(sqlContext, size)
+    tpch.ensureCached()
+    tpch
   }
 }
 
-class TPCH(
-  val sqlContext: SQLContext,
-  val size: String,
+class TPCH(val sqlContext: SQLContext, val size: String) {
 
-  val nameToDF: Map[String, DataFrame],
-) {
-
-  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
-
-  def this(
-    sqlContext: SQLContext,
-    size: String,
-  ) = {
-    this(sqlContext, size, TPCHDataFrames.generateMap(sqlContext, size))
-  }
+  var tableNames : Seq[String] = Seq()
+  var nameToDF : Map[String, DataFrame] = Map()
 
   def ensureCached() = {
     for (name <- tableNames) {
