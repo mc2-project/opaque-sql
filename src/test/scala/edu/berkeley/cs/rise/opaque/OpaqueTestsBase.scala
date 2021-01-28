@@ -26,9 +26,10 @@ import org.apache.spark.sql.SparkSession
 import org.scalactic.TolerantNumerics
 import org.scalactic.Equality
 import org.scalatest.FunSuite
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.Tag
 
 import edu.berkeley.cs.rise.opaque.benchmark._
-import org.scalatest.BeforeAndAfterAll
 
 trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
 
@@ -62,8 +63,9 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  def testAgainstSpark[A : Equality](name: String)(f: SecurityLevel => A): Unit = {
-    test(name + " - encrypted") {
+  def testAgainstSpark[A : Equality](name: String, testFunc: (String, Tag*) => ((=> Any) => Unit) = test)
+      (f: SecurityLevel => A): Unit = {
+    testFunc(name + " - encrypted") {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified above
       assert(f(Encrypted) === f(Insecure))
