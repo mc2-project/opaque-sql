@@ -155,7 +155,7 @@ object TPCH {
         StructField("c_address", StringType),
         StructField("c_nationkey", IntegerType),
         StructField("c_phone", StringType),
-        StructField("c_accbal", FloatType),
+        StructField("c_acctbal", FloatType),
         StructField("c_mktsegment", StringType),
         StructField("c_comment", StringType))))
       .format("csv")
