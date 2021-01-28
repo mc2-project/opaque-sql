@@ -27,9 +27,8 @@ import edu.berkeley.cs.rise.opaque.Utils
 
 object TPCHDataFrames {
   def part(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
          StructField("p_partkey", IntegerType),
@@ -44,12 +43,10 @@ object TPCHDataFrames {
        .format("csv")
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/part.tbl")
-       .repartition(numPartitions))
 
   def supplier(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
        StructType(Seq(
          StructField("s_suppkey", IntegerType),
@@ -62,12 +59,10 @@ object TPCHDataFrames {
        .format("csv")
        .option("delimiter", "|")
        .load(s"${Benchmark.dataDir}/tpch/$size/supplier.tbl")
-       .repartition(numPartitions))
 
   def lineitem(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("l_orderkey", IntegerType),
@@ -89,12 +84,10 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/lineitem.tbl")
-       .repartition(numPartitions))
 
   def partsupp(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("ps_partkey", IntegerType),
@@ -105,12 +98,10 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/partsupp.tbl")
-      .repartition(numPartitions))
 
   def orders(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("o_orderkey", IntegerType),
@@ -125,12 +116,10 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/orders.tbl")
-      .repartition(numPartitions))
 
   def nation(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("n_nationkey", IntegerType),
@@ -140,12 +129,10 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
-      .repartition(numPartitions))
 
   def region(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("r_regionkey", IntegerType),
@@ -154,12 +141,10 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/region.tbl")
-      .repartition(numPartitions))
 
   def customer(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : DataFrame =
-    securityLevel.applyTo(
       sqlContext.read.schema(
       StructType(Seq(
         StructField("c_custkey", IntegerType),
@@ -173,19 +158,18 @@ object TPCHDataFrames {
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/customer.tbl")
-      .repartition(numPartitions))
 
   def generateMap(
-      sqlContext: SQLContext, securityLevel: SecurityLevel, size: String, numPartitions: Int)
+      sqlContext: SQLContext, size: String)
       : Map[String, DataFrame] = {
-    Map("part" -> TPCHDataFrames.part(sqlContext, securityLevel, size, numPartitions),
-    "supplier" -> TPCHDataFrames.supplier(sqlContext, securityLevel, size, numPartitions),
-    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, securityLevel, size, numPartitions),
-    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, securityLevel, size, numPartitions),
-    "orders" -> TPCHDataFrames.orders(sqlContext, securityLevel, size, numPartitions),
-    "nation" -> TPCHDataFrames.nation(sqlContext, securityLevel, size, numPartitions),
-    "region" -> TPCHDataFrames.region(sqlContext, securityLevel, size, numPartitions),
-    "customer" -> TPCHDataFrames.customer(sqlContext, securityLevel, size, numPartitions)
+    Map("part" -> TPCHDataFrames.part(sqlContext, size),
+    "supplier" -> TPCHDataFrames.supplier(sqlContext, size),
+    "lineitem" -> TPCHDataFrames.lineitem(sqlContext, size),
+    "partsupp" -> TPCHDataFrames.partsupp(sqlContext, size),
+    "orders" -> TPCHDataFrames.orders(sqlContext, size),
+    "nation" -> TPCHDataFrames.nation(sqlContext, size),
+    "region" -> TPCHDataFrames.region(sqlContext, size),
+    "customer" -> TPCHDataFrames.customer(sqlContext, size)
     ),
   }
 }
@@ -193,10 +177,8 @@ object TPCHDataFrames {
 class TPCH(
   val sqlContext: SQLContext,
   val size: String,
-  val numPartitions: Int,
 
   val nameToDF: Map[String, DataFrame],
-  val nameToEncryptedDF: Map[String, DataFrame],
 ) {
 
   val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
@@ -204,41 +186,27 @@ class TPCH(
   def this(
     sqlContext: SQLContext,
     size: String,
-    numPartitions: Int,
   ) = {
-    this(sqlContext, size, numPartitions, 
-        TPCHDataFrames.generateMap(sqlContext, Insecure, size, numPartitions),
-        TPCHDataFrames.generateMap(sqlContext, Encrypted, size, numPartitions))
+    this(sqlContext, size, TPCHDataFrames.generateMap(sqlContext, size))
   }
 
   def ensureCached() = {
     for (name <- tableNames) {
-      nameToDF.get(name).foreach(df =>
+      nameToDF.get(name).foreach(df => {
         Utils.ensureCached(df)
-      )
-      nameToEncryptedDF.get(name).foreach(df =>
-        Utils.ensureCached(df)
-      )
+        Utils.ensureCached(Encrypted.applyTo(df))
+      })
     }
   }
 
-  def setupViews(securityLevel: SecurityLevel) = {
-    securityLevel match {
-      case Insecure => {
-        for ((name, df) <- nameToDF) {
-          df.createOrReplaceTempView(name)
-        }
-      }
-      case Encrypted => {
-        for ((name, df) <- nameToEncryptedDF) {
-          df.createOrReplaceTempView(name)
-        }
-      }
+  def setupViews(securityLevel: SecurityLevel, numPartitions: Int) = {
+    for ((name, df) <- nameToDF) {
+      securityLevel.applyTo(df.repartition(numPartitions)).createOrReplaceTempView(name)
     }
   }
 
-  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext) : DataFrame = {
-    setupViews(securityLevel)
+  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : DataFrame = {
+    setupViews(securityLevel, numPartitions)
 
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
     val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
