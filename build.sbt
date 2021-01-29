@@ -12,7 +12,7 @@ sparkVersion := "3.0.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
-libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
+libraryDependencies += "org.scalanlp" %% "breeze" % "1.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
