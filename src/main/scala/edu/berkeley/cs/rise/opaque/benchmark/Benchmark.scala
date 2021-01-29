@@ -29,6 +29,11 @@ import org.apache.spark.sql.SparkSession
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
  */
 object Benchmark {
+
+  val spark = SparkSession.builder()
+    .appName("Benchmark")
+    .getOrCreate()
+
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
       throw new Exception("Set SPARKSGX_DATA_DIR")
@@ -36,15 +41,7 @@ object Benchmark {
     System.getenv("SPARKSGX_DATA_DIR")
   }
 
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder()
-      .appName("QEDBenchmark")
-      .getOrCreate()
-    Utils.initSQLContext(spark.sqlContext)
-
-    // val numPartitions =
-    //   if (spark.sparkContext.isLocal) 1 else spark.sparkContext.defaultParallelism
-
+  def logisticRegression() = {
     // Warmup
     LogisticRegression.train(spark, Encrypted, 1000, 1)
     LogisticRegression.train(spark, Encrypted, 1000, 1)
@@ -52,7 +49,28 @@ object Benchmark {
     // Run
     LogisticRegression.train(spark, Insecure, 100000, 1)
     LogisticRegression.train(spark, Encrypted, 100000, 1)
+  }
 
+  def runAll() = {
+    logisticRegression()
+  }
+
+  def main(args: Array[String]): Unit = {
+    Utils.initSQLContext(spark.sqlContext)
+
+    if (args.size == 1) {
+      runAll()
+    } else {
+      for (arg <- args) {
+        println(arg)
+        arg match {
+          case "logistic_regression" => {
+            logisticRegression()
+          }
+          case _ => null
+        }
+      }
+    }
     spark.stop()
   }
 }

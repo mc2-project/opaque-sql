@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
-import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -27,12 +26,6 @@ import org.apache.spark.sql.SparkSession
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
  */
 object TPCHBenchmark {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder()
-      .appName("TPCHBenchmark")
-      .getOrCreate()
-    Utils.initSQLContext(spark.sqlContext)
-
-    spark.stop()
+  def run(spark: SparkSession) = {
   }
 }
