@@ -205,9 +205,7 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     }
   }
 
-  def getQuery(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : String = {
-    setupViews(securityLevel, numPartitions)
-
+  def getQuery(queryNumber: Int) : String = {
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
     Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
   }
@@ -217,7 +215,8 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   }
 
   def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : DataFrame = {
-    val sqlStr = getQuery(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int)
+    setupViews(securityLevel, numPartitions)
+    val sqlStr = getQuery(queryNumber)
     performQuery(sqlContext, sqlStr)
   }
 }

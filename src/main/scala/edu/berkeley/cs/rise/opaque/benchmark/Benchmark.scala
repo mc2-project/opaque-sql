@@ -24,7 +24,7 @@ import org.apache.spark.sql.SparkSession
  * Convenient runner for benchmarks.
  *
  * To run locally, use
- * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark'`.
+ * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark <args>'`.
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
  */
@@ -53,6 +53,7 @@ object Benchmark {
 
   def runAll() = {
     logisticRegression()
+    TPCHBenchmark.run(spark.sqlContext)
   }
 
   def main(args: Array[String]): Unit = {
@@ -62,10 +63,12 @@ object Benchmark {
       runAll()
     } else {
       for (arg <- args) {
-        println(arg)
         arg match {
           case "logistic_regression" => {
             logisticRegression()
+          }
+          case "tpch" => {
+            TPCHBenchmark.run(spark.sqlContext)
           }
           case _ => null
         }

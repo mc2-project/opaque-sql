@@ -17,15 +17,43 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
-import org.apache.spark.sql.SparkSession
+import edu.berkeley.cs.rise.opaque.Utils
 
-/**
- * To run locally, use
- * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.TPCHBenchmark'`.
- *
- * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
- */
+import org.apache.spark.sql.SQLContext
+
 object TPCHBenchmark {
-  def run(spark: SparkSession) = {
+  def size = "sf_small"
+
+  def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
+    val sqlStr = tpch.getQuery(queryNumber)
+
+    tpch.setupViews(Insecure, numPartitions)
+    Utils.timeBenchmark(
+        "distributed" -> (numPartitions > 1),
+        "query" -> s"TPC-H $queryNumber",
+        "system" -> Insecure.name) {
+      
+      tpch.performQuery(sqlContext, sqlStr)
+    }
+
+    tpch.setupViews(Encrypted, numPartitions)
+    Utils.timeBenchmark(
+        "distributed" -> (numPartitions > 1),
+        "query" -> s"TPC-H $queryNumber",
+        "system" -> Encrypted.name) {
+      
+      tpch.performQuery(sqlContext, sqlStr)
+    }
+  }
+
+  def run(sqlContext: SQLContext) = {
+    val tpch = TPCH(sqlContext, size)
+
+    val supportedQueries = Seq(1, 3, 5, 6, 7, 8, 9, 10, 14, 17)
+
+    for (queryNumber <- supportedQueries) {
+      query(queryNumber, tpch, sqlContext, 1)
+      query(queryNumber, tpch, sqlContext, 3)
+    }
   }
 }
