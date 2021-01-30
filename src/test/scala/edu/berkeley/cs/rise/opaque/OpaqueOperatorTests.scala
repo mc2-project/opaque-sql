@@ -440,6 +440,38 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.filter($"word".contains(lit("1"))).collect
   }
 
+  testAgainstSpark("isin1") { securityLevel =>
+    val ids = Seq((1, 2, 2), (2, 3, 1))
+    val df = makeDF(ids, securityLevel, "x", "y", "id")
+    val c = $"id" isin ($"x", $"y")
+    val result = df.filter(c)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin2") { securityLevel =>
+    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
+    val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
+    val c2 = $"id" isin (1 ,2, 4, 5, 6)
+    val result = df2.filter(c2)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin with string") { securityLevel =>
+    val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
+    val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
+    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
+    val result = df3.filter(c3)
+    result.collect
+  }
+    
+  testAgainstSpark("isin with null") { securityLevel =>
+    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
+    val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
+    val c4 = $"id" isin (null.asInstanceOf[Int])
+    val result = df4.filter(c4)
+    result.collect 
+  }
+
   testAgainstSpark("between") { securityLevel =>
     val data = for (i <- 0 until 256) yield(i.toString, i)
     val df = makeDF(data, securityLevel, "word", "count")
