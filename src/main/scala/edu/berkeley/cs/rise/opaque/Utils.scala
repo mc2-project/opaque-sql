@@ -21,7 +21,9 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom
+import java.util.Base64
 import java.util.UUID
 
 import javax.crypto._
@@ -44,6 +46,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+import org.apache.spark.sql.catalyst.expressions.Concat 
 import org.apache.spark.sql.catalyst.expressions.DateAdd
 import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
@@ -55,6 +58,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.If
+import org.apache.spark.sql.catalyst.expressions.In
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
@@ -71,7 +75,6 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
-import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -91,6 +94,8 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.SubqueryExec
+import org.apache.spark.sql.execution.ScalarSubquery
 import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -101,12 +106,15 @@ import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct
 import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+import org.apache.spark.sql.catalyst.expressions.PromotePrecision
+import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -348,8 +356,6 @@ object Utils extends Logging {
     rdd.foreach(x => {})
   }
 
-
-
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
@@ -396,6 +402,18 @@ object Utils extends Logging {
           tuix.FloatField.createFloatField(builder, x),
           isNull)
       case (null, FloatType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, 0),
+          isNull)
+      case (x: Decimal, DecimalType()) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, x.toFloat),
+          isNull)
+      case (null, DecimalType()) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.FloatField,
@@ -576,6 +594,7 @@ object Utils extends Logging {
             tuix.StringField.createValueVector(builder, Array.empty),
             0),
           isNull)
+      case _ => throw new OpaqueException(s"FlatbuffersCreateField failed to match on ${value} of type {value.getClass.getName()}, ${dataType}")
     }
   }
 
@@ -649,6 +668,50 @@ object Utils extends Logging {
   }
 
   val MaxBlockSize = 1000
+
+  /**
+    * Encrypts/decrypts a given scalar value
+    **/
+  def encryptScalar(value: Any, dataType: DataType): String = {
+    // First serialize the scalar value
+    var builder = new FlatBufferBuilder
+    var rowOffsets = ArrayBuilder.make[Int]
+
+    val v = dataType match {
+      case StringType => UTF8String.fromString(value.asInstanceOf[String])
+      case _ => value
+    }
+
+    val isNull = (value == null)
+
+    // TODO: the NULL variable for field value could be set to true
+    builder.finish(
+      tuix.Rows.createRows(
+        builder,
+        tuix.Rows.createRowsVector(
+          builder,
+          Array(tuix.Row.createRow(
+            builder,
+            tuix.Row.createFieldValuesVector(
+              builder,
+              Array(flatbuffersCreateField(builder, v, dataType, false))),
+            isNull)))))
+
+    val plaintext = builder.sizedByteArray()
+    val ciphertext = encrypt(plaintext)
+    val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext);
+    ciphertext_str
+  }
+
+  def decryptScalar(ciphertext: String): Any = {
+    val ciphertext_bytes = Base64.getDecoder().decode(ciphertext);
+    val plaintext = decrypt(ciphertext_bytes)
+    val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
+    val row = rows.rows(0)
+    val field = row.fieldValues(0)
+    val value = flatbuffersExtractFieldValue(field)
+    value
+  }
 
   /**
    * Encrypts the given Spark SQL [[InternalRow]]s into a [[Block]] (a serialized
@@ -777,6 +840,18 @@ object Utils extends Logging {
     op(fromChildren, tree)
   }
 
+  def getColType(dataType: DataType) = {
+    dataType match {
+        case IntegerType => tuix.ColType.IntegerType
+        case LongType => tuix.ColType.LongType
+        case FloatType => tuix.ColType.FloatType
+        case DecimalType() => tuix.ColType.FloatType
+        case DoubleType => tuix.ColType.DoubleType
+        case StringType => tuix.ColType.StringType
+        case _ => throw new OpaqueException("Type not supported: " + dataType.toString())
+    }
+  }
+
   /** Serialize an Expression into a tuix.Expr. Returns the offset of the written tuix.Expr. */
   def flatbuffersSerializeExpression(
     builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): Int = {
@@ -797,6 +872,13 @@ object Utils extends Logging {
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
 
+        // This expression should never be evaluated on the driver
+        case (Decrypt(child, dataType), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Decrypt,
+            tuix.Decrypt.createDecrypt(builder, childOffset))
+
         case (Alias(child, _), Seq(childOffset)) =>
           // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
           // tree. For now we just ignore them when evaluating expressions.
@@ -809,14 +891,7 @@ object Utils extends Logging {
             tuix.Cast.createCast(
               builder,
               childOffset,
-              dataType match {
-                case IntegerType => tuix.ColType.IntegerType
-                case LongType => tuix.ColType.LongType
-                case FloatType => tuix.ColType.FloatType
-                case DoubleType => tuix.ColType.DoubleType
-                case StringType => tuix.ColType.StringType
-              }))
-
+              getColType(dataType)))
         // Arithmetic
         case (Add(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
@@ -995,6 +1070,20 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        case (Concat(child), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Concat,
+            tuix.Concat.createConcat(
+              builder, tuix.Concat.createChildrenVector(builder, childrenOffsets.toArray)))
+
+        case (In(left, right), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.In,
+            tuix.In.createIn(
+              builder, tuix.In.createChildrenVector(builder, childrenOffsets.toArray)))
+
         // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
@@ -1071,6 +1160,47 @@ object Utils extends Logging {
             tuix.ExprUnion.ClosestPoint,
             tuix.ClosestPoint.createClosestPoint(
               builder, leftOffset, rightOffset))
+
+        case (PromotePrecision(child), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by PromotePrecision
+          childOffset
+
+        case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by CheckOverflow
+          childOffset
+
+        case (ScalarSubquery(SubqueryExec(name, child), exprId), Seq()) =>
+          val output = child.output(0)
+          val dataType = output match {
+            case AttributeReference(name, dataType, _, _) => dataType
+            case _ => throw new OpaqueException("Scalar subquery cannot match to AttributeReference")
+          }
+          // Need to deserialize the encrypted blocks to get the encrypted block
+          val blockList = child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()
+          val encryptedBlocksList = blockList.map { block =>
+            val buf = ByteBuffer.wrap(block.bytes)
+            tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+          }
+          val encryptedBlocks = encryptedBlocksList.find(_.blocksLength > 0).getOrElse(encryptedBlocksList(0))
+          if (encryptedBlocks.blocksLength == 0) {
+            // If empty, the returned result is null
+            flatbuffersSerializeExpression(builder, Literal(null, dataType), input)
+          } else {
+            assert(encryptedBlocks.blocksLength == 1)
+            val encryptedBlock = encryptedBlocks.blocks(0)
+            val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+            val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+            ciphertextBuf.get(ciphertext)
+            val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
+            flatbuffersSerializeExpression(
+              builder,
+              Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
+              input
+            )
+          }
+
+        case (_, Seq(childOffset)) =>
+          throw new OpaqueException("Expression not supported: " + expr.toString())
       }
     }
   }
@@ -1116,8 +1246,9 @@ object Utils extends Logging {
   }
 
   def serializeJoinExpression(
-    joinType: JoinType, leftKeys: Seq[Expression], rightKeys: Seq[Expression],
-    leftSchema: Seq[Attribute], rightSchema: Seq[Attribute]): Array[Byte] = {
+    joinType: JoinType, leftKeys: Option[Seq[Expression]], rightKeys: Option[Seq[Expression]],
+    leftSchema: Seq[Attribute], rightSchema: Seq[Attribute],
+    condition: Option[Expression] = None): Array[Byte] = {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.JoinExpr.createJoinExpr(
@@ -1136,12 +1267,28 @@ object Utils extends Logging {
           case UsingJoin(_, _) => ???
           // scalastyle:on
         },
-        tuix.JoinExpr.createLeftKeysVector(
-          builder,
-          leftKeys.map(e => flatbuffersSerializeExpression(builder, e, leftSchema)).toArray),
-        tuix.JoinExpr.createRightKeysVector(
-          builder,
-          rightKeys.map(e => flatbuffersSerializeExpression(builder, e, rightSchema)).toArray)))
+        // Non-zero when equi join
+        leftKeys match {
+          case Some(leftKeys) =>
+          tuix.JoinExpr.createLeftKeysVector(
+            builder,
+            leftKeys.map(e => flatbuffersSerializeExpression(builder, e, leftSchema)).toArray)
+          case None => 0
+        },
+        // Non-zero when equi join
+        rightKeys match {
+          case Some(rightKeys) =>
+          tuix.JoinExpr.createRightKeysVector(
+            builder,
+            rightKeys.map(e => flatbuffersSerializeExpression(builder, e, rightSchema)).toArray)
+          case None => 0
+        },
+        // Non-zero when non-equi join
+        condition match {
+          case Some(condition) =>
+            flatbuffersSerializeExpression(builder, condition, leftSchema ++ rightSchema)
+          case _ => 0
+        }))
     builder.sizedByteArray()
   }
 
@@ -1154,7 +1301,7 @@ object Utils extends Logging {
     // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
     // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+      case e: NamedExpression => AggregateExpression(First(e, false), Complete, false)
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
@@ -1241,8 +1388,7 @@ object Utils extends Logging {
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
           tuix.AggregateExpr.createEvaluateExprsVector(
             builder,
-            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
-        )
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
@@ -1280,10 +1426,9 @@ object Utils extends Logging {
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
           tuix.AggregateExpr.createEvaluateExprsVector(
             builder,
-            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
-        )
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      case f @ First(child, Literal(false, BooleanType)) =>
+      case f @ First(child, false) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
@@ -1321,7 +1466,7 @@ object Utils extends Logging {
             builder,
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      case l @ Last(child, Literal(false, BooleanType)) =>
+      case l @ Last(child, false) =>
         val last = l.aggBufferAttributes(0)
         val valueSet = l.aggBufferAttributes(1)
 

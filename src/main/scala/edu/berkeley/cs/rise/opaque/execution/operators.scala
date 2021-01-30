@@ -26,9 +26,11 @@ import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.plans.JoinType
+import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
+import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
+import edu.berkeley.cs.rise.opaque.OpaqueException
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -131,14 +133,19 @@ trait OpaqueOperatorExec extends SparkPlan {
    * method and persist the resulting RDD. [[ConvertToOpaqueOperators]] later eliminates the dummy
    * relation from the logical plan, but this only happens after InMemoryRelation has called this
    * method. We therefore have to silently return an empty RDD here.
-   */
+    */
+
   override def doExecute(): RDD[InternalRow] = {
     sqlContext.sparkContext.emptyRDD
     // throw new UnsupportedOperationException("use executeBlocked")
   }
 
+  def collectEncrypted(): Array[Block] = {
+    executeBlocked().collect
+  }
+
   override def executeCollect(): Array[InternalRow] = {
-    executeBlocked().collect().flatMap { block =>
+    collectEncrypted().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
   }
@@ -274,35 +281,98 @@ case class EncryptedSortMergeJoinExec(
     rightKeys: Seq[Expression],
     leftSchema: Seq[Attribute],
     rightSchema: Seq[Attribute],
-    output: Seq[Attribute],
     child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
+    extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def output: Seq[Attribute] = {
+    joinType match {
+      case Inner => 
+        (leftSchema ++ rightSchema).map(_.toAttribute)
+      case LeftOuter =>
+        leftSchema++ rightSchema.map(_.withNullability(true))
+      case LeftSemi | LeftAnti => 
+        leftSchema.map(_.toAttribute)
+      case _ =>
+        throw new IllegalArgumentException(
+          s"SortMergeJoin should not take $joinType as the JoinType")
+    }
+  }
 
   override def executeBlocked(): RDD[Block] = {
     val joinExprSer = Utils.serializeJoinExpression(
-      joinType, leftKeys, rightKeys, leftSchema, rightSchema)
+      joinType, Some(leftKeys), Some(rightKeys), leftSchema, rightSchema)
 
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
-      val lastPrimaryRows = childRDD.map { block =>
+      childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
-      }.collect
-      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
-      assert(shifted.size == childRDD.partitions.length)
-      val processedJoinRowsRDD =
-        sparkContext.parallelize(shifted, childRDD.partitions.length)
-
-      childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
-        (blockIter.toSeq, joinRowIter.toSeq) match {
-          case (Seq(block), Seq(joinRow)) =>
-            val (enclave, eid) = Utils.initEnclave()
-            Iterator(Block(enclave.NonObliviousSortMergeJoin(
-              eid, joinExprSer, block.bytes, joinRow.bytes)))
-        }
+        Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
       }
+    }
+  }
+}
+
+case class EncryptedBroadcastNestedLoopJoinExec(
+    left: SparkPlan,
+    right: SparkPlan,
+    buildSide: BuildSide,
+    joinType: JoinType,
+    condition: Option[Expression])
+    extends BinaryExecNode with OpaqueOperatorExec {
+
+  override def output: Seq[Attribute] = {
+    joinType match {
+      case _: InnerLike =>
+        left.output ++ right.output
+      case LeftOuter =>
+        left.output ++ right.output.map(_.withNullability(true))
+      case RightOuter =>
+        left.output.map(_.withNullability(true)) ++ right.output
+      case FullOuter =>
+        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
+      case j: ExistenceJoin =>
+        left.output :+ j.exists
+      case LeftExistence(_) =>
+        left.output
+      case _ =>
+        throw new IllegalArgumentException(
+          s"BroadcastNestedLoopJoin should not take $joinType as the JoinType")
+    }
+  }
+
+  override def executeBlocked(): RDD[Block] = {
+    val joinExprSer = Utils.serializeJoinExpression(
+        joinType, None, None, left.output, right.output, condition)
+
+    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+
+    joinType match {
+      case LeftExistence(_) | LeftOuter => {
+        join(leftRDD, rightRDD, joinExprSer)
+      }
+      case _ =>
+        throw new OpaqueException(s"$joinType JoinType is not yet supported")
+    }
+  }
+
+  def join(leftRDD: RDD[Block], rightRDD: RDD[Block],
+      joinExprSer: Array[Byte]): RDD[Block] = {
+    // We pick which side to broadcast/stream according to buildSide.
+    // BuildRight means the right relation <=> the broadcast relation.
+    // NOTE: outer_rows and inner_rows in C++ correspond to stream and broadcast side respectively.
+    var (streamRDD, broadcastRDD) = buildSide match {
+      case BuildRight =>
+        (leftRDD, rightRDD)
+      case BuildLeft =>
+        (rightRDD, leftRDD)
+    }
+    val broadcast = Utils.concatEncryptedBlocks(broadcastRDD.collect)
+    streamRDD.map { block =>
+      val (enclave, eid) = Utils.initEnclave()
+      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcast.bytes))
     }
   }
 }

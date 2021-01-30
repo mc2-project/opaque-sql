@@ -35,6 +35,7 @@ import org.apache.spark.unsafe.types.CalendarInterval
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
@@ -305,7 +306,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    p.join(f, $"pk" === $"fk").collect.toSet
+    val df = p.join(f, $"pk" === $"fk").collect.toSet
   }
 
   testAgainstSpark("non-foreign-key join") { securityLevel =>
@@ -314,6 +315,123 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
+  testAgainstSpark("left semi join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
+    df.collect
+  }
+
+  testAgainstSpark("left outer join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi left outer join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi left outer join 1 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("left anti join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("non-equi left anti join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("non-equi left anti join 1 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" < $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("left outer join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi left outer join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi left outer join 2 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" < $"join_col_2", "left_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("left anti join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("non-equi left anti join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("non-equi left anti join 2 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" < $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
   }
 
   def abc(i: Int): String = (i % 3) match {
@@ -438,6 +556,54 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val data = for (i <- 0 until 256) yield(i.toString, abc(i))
     val df = makeDF(data, securityLevel, "word", "abc")
     df.filter($"word".contains(lit("1"))).collect
+  }
+
+  testAgainstSpark("concat with string") { securityLevel =>
+    val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.select(concat(col("str"),lit(","),col("x"))).collect
+  }
+
+  testAgainstSpark("concat with other datatype") { securityLevel =>
+    // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out 
+    // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
+    // you can't serialize date so that's not supported as well 
+    // opaque doesn't support byte 
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int],"")
+    val df = makeDF(data, securityLevel, "str", "int","null","emptystring")
+    df.select(concat(col("str"),lit(","),col("int"),col("null"),col("emptystring"))).collect
+  }
+  
+  testAgainstSpark("isin1") { securityLevel =>
+    val ids = Seq((1, 2, 2), (2, 3, 1))
+    val df = makeDF(ids, securityLevel, "x", "y", "id")
+    val c = $"id" isin ($"x", $"y")
+    val result = df.filter(c)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin2") { securityLevel =>
+    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
+    val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
+    val c2 = $"id" isin (1 ,2, 4, 5, 6)
+    val result = df2.filter(c2)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin with string") { securityLevel =>
+    val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
+    val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
+    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
+    val result = df3.filter(c3)
+    result.collect
+  }
+    
+  testAgainstSpark("isin with null") { securityLevel =>
+    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
+    val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
+    val c4 = $"id" isin (null.asInstanceOf[Int])
+    val result = df4.filter(c4)
+    result.collect 
   }
 
   testAgainstSpark("between") { securityLevel =>
@@ -802,6 +968,30 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   testAgainstSpark("k-means") { securityLevel =>
     import scala.math.Ordering.Implicits.seqDerivedOrdering
     KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+
+  testAgainstSpark("encrypted literal") { securityLevel =>
+    val input = 10
+    val enc_str = Utils.encryptScalar(input, IntegerType)
+
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
+    df.collect
+  }
+
+  testAgainstSpark("scalar subquery") { securityLevel =>
+    // Example taken from https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/2728434780191932/1483312212640900/6987336228780374/latest.html
+    val data = for (i <- 0 until 256) yield (i, abc(i), i)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.createTempView("words")
+
+    try {
+      val df = spark.sql("""SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word""")
+      df.collect
+    } finally {
+      spark.catalog.dropTempView("words")
+    }
   }
 
   testAgainstSpark("pagerank") { securityLevel =>

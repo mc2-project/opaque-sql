@@ -23,6 +23,10 @@ public:
     return rows->rows()->Get(row_idx++);
   }
 
+  const tuix::Row *peek() {
+    return rows->rows()->Get(row_idx);
+  }
+
   flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator begin() {
     return rows->rows()->begin();
   }
@@ -51,6 +55,8 @@ public:
   bool has_next();
   /** Access the next Row. Invalidates any previously-returned Row pointers. */
   const tuix::Row *next();
+  /** Access the next Row without incrementing the reader. */
+  const tuix::Row *peek();
 
 private:
   void init_block_reader();

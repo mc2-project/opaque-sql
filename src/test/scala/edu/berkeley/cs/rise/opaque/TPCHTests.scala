@@ -21,99 +21,19 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.SparkSession
 
 import edu.berkeley.cs.rise.opaque.benchmark._
-import edu.berkeley.cs.rise.opaque.benchmark.TPCH
 
 trait TPCHTests extends OpaqueTestsBase { self => 
 
   def size = "sf_small"
-  def tpch = TPCH(spark.sqlContext, size)
+  def tpch = new TPCH(spark.sqlContext, size, "file://")
 
-  testAgainstSpark("TPC-H 1") { securityLevel =>
-    tpch.query(1, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 2", ignore) { securityLevel =>
-    tpch.query(2, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 3") { securityLevel =>
-    tpch.query(3, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 4", ignore) { securityLevel =>
-    tpch.query(4, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 5") { securityLevel =>
-    tpch.query(5, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 6") { securityLevel =>
-    tpch.query(6, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 7") { securityLevel =>
-    tpch.query(7, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 8") { securityLevel =>
-    tpch.query(8, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 9") { securityLevel =>
-    tpch.query(9, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 10") { securityLevel =>
-    tpch.query(10, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 11", ignore) { securityLevel =>
-    tpch.query(11, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 12", ignore) { securityLevel =>
-    tpch.query(12, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 13", ignore) { securityLevel =>
-    tpch.query(13, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 14") { securityLevel =>
-    tpch.query(14, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 15", ignore) { securityLevel =>
-    tpch.query(15, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 16", ignore) { securityLevel =>
-    tpch.query(16, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 17") { securityLevel =>
-    tpch.query(17, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 18", ignore) { securityLevel =>
-    tpch.query(18, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 19", ignore) { securityLevel =>
-    tpch.query(19, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 20", ignore) { securityLevel =>
-    tpch.query(20, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 21", ignore) { securityLevel =>
-    tpch.query(21, securityLevel, spark.sqlContext, numPartitions).collect.toSet
-  }
-
-  testAgainstSpark("TPC-H 22", ignore) { securityLevel =>
-    tpch.query(22, securityLevel, spark.sqlContext, numPartitions).collect.toSet
+  def runTests() = {
+    for (queryNum <- TPCHBenchmark.supportedQueries) {
+      val testStr = s"TPC-H $queryNum"
+      testAgainstSpark(testStr) { securityLevel =>
+        tpch.query(queryNum, securityLevel, numPartitions).collect
+      }
+    }
   }
 }
 
@@ -124,6 +44,8 @@ class TPCHSinglePartitionSuite extends TPCHTests {
     .appName("TPCHSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
+
+  runTests();
 }
 
 class TPCHMultiplePartitionSuite extends TPCHTests {
@@ -133,4 +55,6 @@ class TPCHMultiplePartitionSuite extends TPCHTests {
     .appName("TPCHMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
+
+  runTests();
 }

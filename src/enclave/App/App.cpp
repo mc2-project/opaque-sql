@@ -519,7 +519,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows) {
   (void)obj;
 
@@ -535,16 +535,16 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
   size_t output_rows_length = 0;
 
   if (input_rows_ptr == nullptr) {
-    ocall_throw("ScanCollectLastPrimary: JNI failed to get input byte array.");
+    ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
   } else {
-    oe_check_and_time("Scan Collect Last Primary",
-                       ecall_scan_collect_last_primary(
+    oe_check_and_time("Non-Oblivious Sort-Merge Join",
+                       ecall_non_oblivious_sort_merge_join(
                          (oe_enclave_t*)eid,
                          join_expr_ptr, join_expr_length,
                          input_rows_ptr, input_rows_length,
                          &output_rows, &output_rows_length));
   }
-
+  
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
   free(output_rows);
@@ -556,9 +556,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows,
-  jbyteArray join_row) {
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_BroadcastNestedLoopJoin(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray outer_rows, jbyteArray inner_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -566,34 +565,36 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   uint32_t join_expr_length = (uint32_t) env->GetArrayLength(join_expr);
   uint8_t *join_expr_ptr = (uint8_t *) env->GetByteArrayElements(join_expr, &if_copy);
 
-  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
+  uint32_t outer_rows_length = (uint32_t) env->GetArrayLength(outer_rows);
+  uint8_t *outer_rows_ptr = (uint8_t *) env->GetByteArrayElements(outer_rows, &if_copy);
 
-  uint32_t join_row_length = (uint32_t) env->GetArrayLength(join_row);
-  uint8_t *join_row_ptr = (uint8_t *) env->GetByteArrayElements(join_row, &if_copy);
+  uint32_t inner_rows_length = (uint32_t) env->GetArrayLength(inner_rows);
+  uint8_t *inner_rows_ptr = (uint8_t *) env->GetByteArrayElements(inner_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
 
-  if (input_rows_ptr == nullptr) {
-    ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
+  if (outer_rows_ptr == nullptr) {
+    ocall_throw("BroadcastNestedLoopJoin: JNI failed to get inner byte array.");
+  } else if (inner_rows_ptr == nullptr) {
+    ocall_throw("BroadcastNestedLoopJoin: JNI failed to get outer byte array.");
   } else {
-    oe_check_and_time("Non-Oblivious Sort-Merge Join",
-                       ecall_non_oblivious_sort_merge_join(
+    oe_check_and_time("Broadcast Nested Loop Join",
+                       ecall_broadcast_nested_loop_join(
                          (oe_enclave_t*)eid,
                          join_expr_ptr, join_expr_length,
-                         input_rows_ptr, input_rows_length,
-                         join_row_ptr, join_row_length,
+                         outer_rows_ptr, outer_rows_length,
+                         inner_rows_ptr, inner_rows_length,
                          &output_rows, &output_rows_length));
   }
-  
+
   jbyteArray ret = env->NewByteArray(output_rows_length);
   env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
   free(output_rows);
 
   env->ReleaseByteArrayElements(join_expr, (jbyte *) join_expr_ptr, 0);
-  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-  env->ReleaseByteArrayElements(join_row, (jbyte *) join_row_ptr, 0);
+  env->ReleaseByteArrayElements(outer_rows, (jbyte *) outer_rows_ptr, 0);
+  env->ReleaseByteArrayElements(inner_rows, (jbyte *) inner_rows_ptr, 0);
 
   return ret;
 }

@@ -28,13 +28,13 @@ public:
   void clear();
 
   /** Append the given Row. */
-  void append(const tuix::Row *row);
+  void append(const tuix::Row *row, bool force_null = false);
 
   /** Append the given `Field`s as a Row. */
-  void append(const std::vector<const tuix::Field *> &row_fields);
+  void append(const std::vector<const tuix::Field *> &row_fields, bool force_null = false);
 
   /** Concatenate the fields of the two given `Row`s and append the resulting single Row. */
-  void append(const tuix::Row *row1, const tuix::Row *row2);
+  void append(const tuix::Row *row1, const tuix::Row *row2, bool row1_force_null = false, bool row2_force_null = false);
 
   /** Expose the stored rows as a buffer. */
   UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer();

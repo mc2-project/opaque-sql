@@ -32,6 +32,14 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.plans.FullOuter
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.InnerLike
+import org.apache.spark.sql.catalyst.plans.LeftAnti
+import org.apache.spark.sql.catalyst.plans.LeftSemi
+import org.apache.spark.sql.catalyst.plans.LeftOuter
+import org.apache.spark.sql.catalyst.plans.JoinType
+import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
 
 import edu.berkeley.cs.rise.opaque.execution._
@@ -70,27 +78,59 @@ object OpaqueOperators extends Strategy {
     case Sort(sortExprs, global, child) if isEncrypted(child) =>
       EncryptedSortExec(sortExprs, global, planLater(child)) :: Nil
 
+    // Used to match equi joins
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
       val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
       val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
       val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
-      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), true, unioned)
+      // We partition based on the join keys only, so that rows from both the left and the right tables that match
+      // will colocate to the same partition
+      val partitionOrder = leftKeysProj.map(k => SortOrder(k, Ascending))
+      val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
+      val sortOrder = sortForJoin(leftKeysProj, tag, partitioned.output)
+      val sorted = EncryptedSortExec(sortOrder, false, partitioned)
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
         rightKeysProj,
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
-        (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
         sorted)
-      val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+
+
+      val tagsDropped = joinType match {
+        case LeftOuter | Inner => EncryptedProjectExec(dropTags(left.output, right.output), joined)
+        case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
+      }
+
       val filtered = condition match {
         case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
         case None => tagsDropped
       }
+
       filtered :: Nil
+
+    // Used to match non-equi joins
+    case Join(left, right, joinType, condition, hint) if isEncrypted(left) && isEncrypted(right) =>
+      // How to pick broadcast side: if left join, broadcast right. If right join, broadcast left.
+      // This is the simplest and most performant method, but may be worth revisting if one side is
+      // significantly smaller than the other. Otherwise, pick the smallest side to broadcast.
+      // NOTE: the current implementation of BNLJ only works under the assumption that
+      // left join <==> broadcast right AND right join <==> broadcast left.
+      val desiredBuildSide = if (joinType.isInstanceOf[InnerLike] || joinType == FullOuter)
+          getSmallerSide(left, right) else
+          getBroadcastSideBNLJ(joinType)
+
+      val joined = EncryptedBroadcastNestedLoopJoinExec(
+        planLater(left),
+        planLater(right),
+        desiredBuildSide,
+        joinType,
+        condition)
+
+      joined :: Nil
 
     case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
@@ -170,17 +210,29 @@ object OpaqueOperators extends Strategy {
     (Seq(tag) ++ keysProj ++ input, keysProj.map(_.toAttribute), tag.toAttribute)
   }
 
-  private def sortForJoin(
-      leftKeys: Seq[Expression], tag: Expression, input: Seq[Attribute]): Seq[SortOrder] =
-    leftKeys.map(k => SortOrder(k, Ascending)) :+ SortOrder(tag, Ascending)
-
   private def dropTags(
       leftOutput: Seq[Attribute], rightOutput: Seq[Attribute]): Seq[NamedExpression] =
     leftOutput ++ rightOutput
+
+  private def sortForJoin(
+      leftKeys: Seq[Expression], tag: Expression, input: Seq[Attribute]): Seq[SortOrder] =
+    leftKeys.map(k => SortOrder(k, Ascending)) :+ SortOrder(tag, Ascending)
 
   private def tagForGlobalAggregate(input: Seq[Attribute])
       : (Seq[NamedExpression], NamedExpression) = {
     val tag = Alias(Literal(0), "_tag")()
     (Seq(tag) ++ input, tag.toAttribute)
+  }
+
+  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = {
+    joinType match {
+      case LeftSemi | LeftAnti | LeftOuter => BuildRight
+      case _ => BuildLeft
+    }
+  }
+
+  // Everything below is a private method in SparkStrategies.scala
+  private def getSmallerSide(left: LogicalPlan, right: LogicalPlan): BuildSide = {
+    if (right.stats.sizeInBytes <= left.stats.sizeInBytes) BuildRight else BuildLeft
   }
 }
