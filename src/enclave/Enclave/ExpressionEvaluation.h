@@ -742,6 +742,60 @@ private:
       }
     }
 
+
+    case tuix::ExprUnion_In:
+    {
+      auto c = static_cast<const tuix::In *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+      bool result = false;
+      if (num_children < 2){
+        throw std::runtime_error(std::string("In can't operate with an empty list, currently we have ")
+          + std::to_string(num_children - 1)
+          + std::string("items in the list")); 
+      }
+
+      auto left_offset =  eval_helper(row, (*c->children())[0]);
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+
+      bool result_is_null = left->is_null(); 
+
+      for (size_t i=1; i<num_children; i++){
+        auto right_offset = eval_helper(row, (*c->children())[i]);
+        const tuix::Field *item = flatbuffers::GetTemporaryPointer(builder, right_offset);
+        if (item->value_type() != left->value_type()){
+          throw std::runtime_error(
+          std::string("In can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(item->value_type()))
+          + ". Please double check the type of each input");
+        }
+        result_is_null = result_is_null || item ->is_null(); 
+        
+        // adding dynamic casting 
+        bool temporary_result =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, left_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, right_offset)))
+          ->value())->value();
+
+        if (temporary_result){
+          result = true; 
+        }
+      }
+      
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        result_is_null && (!result));
+    }
+
+
     case tuix::ExprUnion_Upper:
     {
       auto n = static_cast<const tuix::Upper *>(expr->expr());
@@ -896,6 +950,7 @@ private:
       for (uint32_t i = 0; i < pattern_len; i++) {
         result = result && (left_field->value()->Get(i) == right_field->value()->Get(i));
       }
+
       return tuix::CreateField(
         builder,
         tuix::FieldUnion_BooleanField,
