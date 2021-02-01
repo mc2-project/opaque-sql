@@ -68,7 +68,7 @@ object Benchmark {
 
   def runAll() = {
     logisticRegression()
-    TPCHBenchmark.run(spark.sqlContext)
+    TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
   }
 
   def main(args: Array[String]): Unit = {
@@ -91,7 +91,7 @@ object Benchmark {
               logisticRegression()
             }
             case "tpc-h" => {
-              TPCHBenchmark.run(spark.sqlContext)
+              TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
             }
           }
         }
