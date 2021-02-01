@@ -78,10 +78,6 @@ class EnclaveContext {
     std::vector<std::vector<uint8_t>> log_entry_mac_lst;
 
     std::string curr_row_writer;
-    // Special vectors of nonObliviousAggregateStep1
-    // std::vector<std::vector<uint8_t>> first_row_log_entry_mac_lst;
-    // std::vector<std::vector<uint8_t>> last_group_log_entry_mac_lst;
-    // std::vector<std::vector<uint8_t>> last_row_log_entry_mac_lst;
 
     // int pid;
     bool append_mac;
@@ -216,11 +212,7 @@ class EnclaveContext {
 
       curr_row_writer = std::string("");
 
-      // first_row_log_entry_mac_lst.clear();
-      // last_group_log_entry_mac_lst.clear();
-      // last_row_log_entry_mac_lst.clear();
-      // log_entry_mac_lst.clear();
-
+      log_entry_mac_lst.clear();
       log_macs.clear();
       num_log_macs = 0;
       input_macs.clear();
@@ -229,29 +221,11 @@ class EnclaveContext {
 
     void add_mac_to_mac_lst(uint8_t* mac) {
       std::vector<uint8_t> mac_vector (mac, mac + SGX_AESGCM_MAC_SIZE);
-      // if (curr_row_writer == std::string("first_row")) {
-      //   first_row_log_entry_mac_lst.push_back(mac_vector);
-      // } else if (curr_row_writer == std::string("last_group")) {
-      //   last_group_log_entry_mac_lst.push_back(mac_vector);
-      // } else if (curr_row_writer == std::string("last_row")) {
-      //   last_row_log_entry_mac_lst.push_back(mac_vector);
-      // } else {
-      //   log_entry_mac_lst.push_back(mac_vector);
-      // }
       log_entry_mac_lst.push_back(mac_vector);
     }
 
     void hmac_mac_lst(const uint8_t* ret_mac_lst, const uint8_t* mac_lst_mac) {
       std::vector<std::vector<uint8_t>> chosen_mac_lst;
-      // if (curr_row_writer == std::string("first_row")) {
-      //   chosen_mac_lst = first_row_log_entry_mac_lst;
-      // } else if (curr_row_writer == std::string("last_group")) {
-      //   chosen_mac_lst = last_group_log_entry_mac_lst;
-      // } else if (curr_row_writer == std::string("last_row")) {
-      //   chosen_mac_lst = last_row_log_entry_mac_lst;
-      // } else {
-      //   chosen_mac_lst = log_entry_mac_lst;
-      // }
       chosen_mac_lst = log_entry_mac_lst;
 
       size_t mac_lst_length = chosen_mac_lst.size() * SGX_AESGCM_MAC_SIZE;
@@ -273,15 +247,6 @@ class EnclaveContext {
     }
 
     size_t get_num_macs() {
-      // if (curr_row_writer == std::string("first_row")) {
-      //   return first_row_log_entry_mac_lst.size();
-      // } else if (curr_row_writer == std::string("last_group")) {
-      //   return last_group_log_entry_mac_lst.size();
-      // } else if (curr_row_writer == std::string("last_row")) {
-      //   return last_row_log_entry_mac_lst.size();
-      // } else {
-      //   return log_entry_mac_lst.size();
-      // }
       return log_entry_mac_lst.size();
     }
 

@@ -262,6 +262,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
       securityLevel,
       "a", "b", "c", "d", "x")
+    df.explain
     df.filter($"x" > lit(10)).collect
   }
 
