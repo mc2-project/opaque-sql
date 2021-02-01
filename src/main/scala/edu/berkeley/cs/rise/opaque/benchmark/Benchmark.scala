@@ -24,15 +24,30 @@ import org.apache.spark.sql.SparkSession
  * Convenient runner for benchmarks.
  *
  * To run locally, use
- * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark <args>'`.
+ * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
+ * Available flags:
+ *   --num-partitions: specify the number of partitions the data should be split into.
+ *       Default: 2 * number of executors
+ *   --size: specify the size of the dataset that should be loaded into Spark.
+ *       Default: sf_small
+ *   --operations: select the different operations that should be benchmarked.
+ *       Default: all
+ *       Available operations: logistic-regression, tpc-h
+ *       Syntax: --operations "logistic-regression,tpc-h"
+ * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
  */
 object Benchmark {
 
   val spark = SparkSession.builder()
-    .appName("Benchmark")
-    .getOrCreate()
+      .appName("Benchmark")
+      .getOrCreate()
+  var numPartitions = 2 * spark.sparkContext
+      .getConf
+      .get("spark.executor.instances")
+      .toInt
+  var size = "sf_small"
 
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
@@ -59,20 +74,31 @@ object Benchmark {
   def main(args: Array[String]): Unit = {
     Utils.initSQLContext(spark.sqlContext)
 
-    if (args.size == 1) {
-      runAll()
-    } else {
-      for (arg <- args) {
-        arg match {
-          case "logistic_regression" => {
-            logisticRegression()
+    var runAll = true
+    args.sliding(2, 2).toList.collect {
+      case Array("--num-partitions", numPartitions: String) => {
+        this.numPartitions = numPartitions.toInt
+      }
+      case Array("--size", size: String) => {
+        this.size = size
+      }
+      case Array("--operations", operations: String) => {
+        runAll = false
+        val operationsArr = operations.split(",").map(_.trim)
+        for (operation <- operationsArr) {
+          operation match {
+            case "logistic-regression" => {
+              logisticRegression()
+            }
+            case "tpc-h" => {
+              TPCHBenchmark.run(spark.sqlContext)
+            }
           }
-          case "tpch" => {
-            TPCHBenchmark.run(spark.sqlContext)
-          }
-          case _ => null
         }
       }
+    }
+    if (runAll) {
+      this.runAll();
     }
     spark.stop()
   }
