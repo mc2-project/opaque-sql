@@ -37,6 +37,6 @@ void non_oblivious_aggregate(
     w.append(agg_op_eval.evaluate());
   }
 
-  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousAggregateStep2"));
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousAggregate"));
 }
 

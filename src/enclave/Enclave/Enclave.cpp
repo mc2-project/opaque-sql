@@ -245,10 +245,12 @@ void ecall_non_oblivious_aggregate(
   __builtin_ia32_lfence();
 
   try {
+    debug("Ecall: NonObliviousAggregate");
     non_oblivious_aggregate(agg_op, agg_op_length,
                             input_rows, input_rows_length,
                             output_rows, output_rows_length,
                             is_partial);
+    complete_encrypted_blocks(*output_rows);
     EnclaveContext::getInstance().finish_ecall();
   } catch (const std::runtime_error &e) {
     EnclaveContext::getInstance().finish_ecall();

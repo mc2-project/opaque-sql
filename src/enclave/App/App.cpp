@@ -617,7 +617,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
   bool is_partial = (bool) isPartial;
 
   if (input_rows_ptr == nullptr) {
-    ocall_throw("NonObliviousAggregateStep: JNI failed to get input byte array.");
+    ocall_throw("NonObliviousAggregate: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Non-Oblivious Aggregate",
                        ecall_non_oblivious_aggregate(

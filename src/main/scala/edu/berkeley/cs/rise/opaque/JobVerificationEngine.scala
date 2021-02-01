@@ -96,6 +96,18 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
   override def hashCode(): Int = {
     inputMacs.hashCode ^ allOutputsMac.hashCode
   }
+
+  def printNode() = {
+    println("====")
+    print("Ecall: ")
+    println(this.ecall)
+    print("Output: ")
+    for (i <- 0 until this.allOutputsMac.length) {
+      print(this.allOutputsMac(i))
+    }
+    println
+    println("===")
+  }
 }
 
 object JobVerificationEngine {
@@ -111,12 +123,11 @@ object JobVerificationEngine {
     6 -> "externalSort",
     7 -> "scanCollectLastPrimary",
     8 -> "nonObliviousSortMergeJoin",
-    9 -> "nonObliviousAggregateStep1",
-    10 -> "nonObliviousAggregateStep2",
-    11 -> "countRowsPerPartition",
-    12 -> "computeNumRowsPerPartition",
-    13 -> "localLimit",
-    14 -> "limitReturnRows"
+    9 -> "nonObliviousAggregate",
+    10 -> "countRowsPerPartition",
+    11 -> "computeNumRowsPerPartition",
+    12 -> "localLimit",
+    13 -> "limitReturnRows"
   ).withDefaultValue("unknown")
 
   def pathsEqual(path1: ArrayBuffer[List[Seq[Int]]],
@@ -163,11 +174,9 @@ object JobVerificationEngine {
       val lastJobNode = new JobNode(inputMacs, logEntry.numInputMacs,
                                     allOutputsMac, logEntry.ecall)
       nodeSet.add(lastJobNode)
-      // println(lastJobNode.ecall)
 
       // Create job nodes for all ecalls before last for this partition.
       for (i <- 0 until logEntryChain.pastEntriesLength) {
-
         val pastEntry = logEntryChain.pastEntries(i)
 
         // Copy byte buffers
@@ -205,6 +214,9 @@ object JobVerificationEngine {
       // Unclear what order to arrange log_macs to get the all_outputs_mac
       // Doing numEcalls * (numPartitions!) arrangements seems very bad.
       // See if we can do it more efficiently.
+
+      // debug
+      // println(node.ecall)
     }
 
     // Construct executed DAG by setting parent JobNodes for each node.
@@ -214,8 +226,7 @@ object JobVerificationEngine {
     executedSinkNode.setSink
     for (node <- nodeSet) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
-        // println("added source node neighbor")
-        // println(node.ecall)
+        // node.printNode
         executedSourceNode.addOutgoingNeighbor(node)
       } else {
         for (i <- 0 until node.numInputMacs) {
@@ -232,9 +243,16 @@ object JobVerificationEngine {
       }
     }
 
+    // ========================================== //
+
     // Construct expected DAG.
     val expectedDAG = ArrayBuffer[ArrayBuffer[JobNode]]()
     val expectedEcalls = ArrayBuffer[Int]()
+    for (operator <- sparkOperators) {
+      print(operator)
+      print(" ")
+    }
+    println()
     for (operator <- sparkOperators) {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
         // ("externalSort")
@@ -249,17 +267,17 @@ object JobVerificationEngine {
         // ("filter")
         expectedEcalls.append(2)
       } else if (operator == "EncryptedAggregateExec") {
-        // ("nonObliviousAggregateStep1", "nonObliviousAggregateStep2")
-        expectedEcalls.append(9, 10)
+        // ("nonObliviousAggregate")
+        expectedEcalls.append(9)
       } else if (operator == "EncryptedSortMergeJoinExec") {
         // ("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
         expectedEcalls.append(7, 8)
       } else if (operator == "EncryptedLocalLimitExec") {
         // ("limitReturnRows")
-        expectedEcalls.append(14)
+        expectedEcalls.append(13)
       } else if (operator == "EncryptedGlobalLimitExec") {
         // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
-        expectedEcalls.append(11, 12, 14)
+        expectedEcalls.append(10, 11, 13)
       } else {
         throw new Exception("Executed unknown operator") 
       }
@@ -328,27 +346,8 @@ object JobVerificationEngine {
             expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(k)(i + 1))
           }
         }
-      // nonObliviousAggregateStep1
+      // nonObliviousAggregate
       } else if (operator == 9) {
-        // Blocks sent to prev and next partition
-        if (numPartitions == 1) {
-          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
-        } else {
-          for (j <- 0 until numPartitions) {
-            val prev = j - 1
-            val next = j + 1
-            if (j > 0) {
-              // Send block to prev partition
-              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(prev)(i + 1))
-            } 
-            if (j < numPartitions - 1) {
-              // Send block to next partition
-              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(next)(i + 1))
-            }
-          }
-        }
-      // nonObliviousAggregateStep2
-      } else if (operator == 10) {
         for (j <- 0 until numPartitions) {
           expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
         }
@@ -371,19 +370,19 @@ object JobVerificationEngine {
           expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
         }
       // countRowsPerPartition
-      } else if (operator == 11) {
+      } else if (operator == 10) {
         // Send from all partitions to partition 0
         for (j <- 0 until numPartitions) {
           expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
         }
       // computeNumRowsPerPartition
-      } else if (operator == 12) {
+      } else if (operator == 11) {
         // Broadcast from one partition (assumed to be partition 0) to all partitions
         for (j <- 0 until numPartitions) {
           expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
         }
       // limitReturnRows
-      } else if (operator == 14) {
+      } else if (operator == 13) {
         for (j <- 0 until numPartitions) {
           expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
         }
@@ -403,9 +402,8 @@ object JobVerificationEngine {
       println(executedSourceNode.outgoingNeighbors.length)
       print("Expected DAG source nodes: ")
       println(expectedSourceNode.outgoingNeighbors.length)
+      println("===========DAGS NOT EQUAL===========")
     }
-    print("DAGs equal: ")
-    println(arePathsEqual)
     return true
   }
 }

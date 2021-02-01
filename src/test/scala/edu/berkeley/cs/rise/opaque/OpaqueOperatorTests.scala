@@ -921,45 +921,45 @@ class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
   override def numPartitions: Int = 1
 }
 
-class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
-  override val spark = SparkSession.builder()
-    .master("local[1]")
-    .appName("QEDSuite")
-    .config("spark.sql.shuffle.partitions", 3)
-    .getOrCreate()
+// class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
+//   override val spark = SparkSession.builder()
+//     .master("local[1]")
+//     .appName("QEDSuite")
+//     .config("spark.sql.shuffle.partitions", 3)
+//     .getOrCreate()
 
-  override def numPartitions: Int = 3
+//   override def numPartitions: Int = 3
 
-  import testImplicits._
+//   import testImplicits._
 
-  def makePartitionedDF[
-      A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-      data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
-    : DataFrame = {
-    securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data, numPartitions))
-        .toDF(columnNames: _*))
-  }
+//   def makePartitionedDF[
+//       A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
+//       data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
+//     : DataFrame = {
+//     securityLevel.applyTo(
+//       spark.createDataFrame(
+//         spark.sparkContext.makeRDD(data, numPartitions))
+//         .toDF(columnNames: _*))
+//   }
 
-  // FIXME: add integrity support for ecalls on dataframes with different numbers of partitions
-  // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
-  //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
-  //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
-  //   val p = makeDF(p_data, securityLevel, "pk", "x")
-  //   val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
-  //   p.join(f, $"pk" === $"fk").collect.toSet
-  // }
+//   // FIXME: add integrity support for ecalls on dataframes with different numbers of partitions
+//   // testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>
+//   //   val p_data = for (i <- 1 to 16) yield (i.toString, i * 10)
+//   //   val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
+//   //   val p = makeDF(p_data, securityLevel, "pk", "x")
+//   //   val f = makePartitionedDF(f_data, securityLevel, numPartitions + 1, "fk", "x", "y")
+//   //   p.join(f, $"pk" === $"fk").collect.toSet
+//   // }
   
-  testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
-    // This test is intended to ensure that primary groups are never split across multiple
-    // partitions, which would break our implementation of non-foreign-key join.
+//   testAgainstSpark("non-foreign-key join with high skew") { securityLevel =>
+//     // This test is intended to ensure that primary groups are never split across multiple
+//     // partitions, which would break our implementation of non-foreign-key join.
   
-    val p_data = for (i <- 1 to 128) yield (i, 1)
-    val f_data = for (i <- 1 to 128) yield (i, 1)
-    val p = makeDF(p_data, securityLevel, "id", "join_col_1")
-    val f = makeDF(f_data, securityLevel, "id", "join_col_2")
-    p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
-  }
+//     val p_data = for (i <- 1 to 128) yield (i, 1)
+//     val f_data = for (i <- 1 to 128) yield (i, 1)
+//     val p = makeDF(p_data, securityLevel, "id", "join_col_1")
+//     val f = makeDF(f_data, securityLevel, "id", "join_col_2")
+//     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+//   }
 
-}
+// }

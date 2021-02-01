@@ -276,11 +276,12 @@ case class EncryptedAggregateExec(
       }
     }
 
-    JobVerificationEngine.addExpectedOperator("EncryptedAggregateExec")
-    val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
+     val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
 
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
-      childRDD => childRDD.map { block =>
+      childRDD => 
+        JobVerificationEngine.addExpectedOperator("EncryptedAggregateExec")
+        childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial)))
       }
