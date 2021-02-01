@@ -27,7 +27,7 @@ import org.apache.spark.sql.SparkSession
  * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
  * Available flags:
  *   --num-partitions: specify the number of partitions the data should be split into.
- *       Default: 2 * number of executors
+ *       Default: 2 * number of executors if exists, 4 otherwise
  *   --size: specify the size of the dataset that should be loaded into Spark.
  *       Default: sf_small
  *   --operations: select the different operations that should be benchmarked.
@@ -45,8 +45,7 @@ object Benchmark {
       .getOrCreate()
   var numPartitions = 2 * spark.sparkContext
       .getConf
-      .get("spark.executor.instances")
-      .toInt
+      .getInt("spark.executor.instances", 2)
   var size = "sf_small"
 
   def dataDir: String = {
