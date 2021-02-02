@@ -88,6 +88,11 @@ val buildFlatbuffersTask = TaskKey[Seq[File]]("buildFlatbuffers",
 
 sourceGenerators in Compile += buildFlatbuffersTask.taskValue
 
+val buildGrpcTask = TaskKey[Seq[File]]("buildGrpc",
+  "Generates Java gRPC sources from ra.proto files, returning the Java sources.")
+
+sourceGenerators in Compile += buildGrpcTask.taskValue
+
 val enclaveBuildTask = TaskKey[File]("enclaveBuild",
   "Builds the C++ enclave code, returning the directory containing the resulting shared libraries.")
 
@@ -234,6 +239,58 @@ buildFlatbuffersTask := {
       }
     }
   }
+
+  (javaOutDir ** "*.java").get
+}
+
+// Java gRPC file generation
+
+buildGrpcTask := {
+  import sys.process._
+  val protoSourceDir = baseDirectory.value / "src" / "main" / "protobuf"
+  val javaOutDir = sourceManaged.value / "gRPC" / "gen-java"
+  javaOutDir.mkdirs()
+  val getGrpcExe = 
+    Process(Seq(
+      "wget", 
+      "https://search.maven.org/remotecontent?filepath=io/grpc/protoc-gen-grpc-java/1.34.1/protoc-gen-grpc-java-1.34.1-linux-x86_64.exe"),
+      baseDirectory.value).!
+  if (getGrpcExe != 0) sys.error("Unable to retrieve java-grpc plugin.")
+  
+  val renameExe = 
+    Process(Seq(
+      "mv",
+      "remotecontent?filepath=io%2Fgrpc%2Fprotoc-gen-grpc-java%2F1.34.1%2Fprotoc-gen-grpc-java-1.34.1-linux-x86_64.exe",
+      "protoc-gen-grpc-java.exe"),
+      baseDirectory.value).!      
+  if (renameExe != 0) sys.error("Renaming failed.")
+
+  val chmodExe = 
+    Process(Seq(
+      "chmod", 
+      "+x", 
+      "protoc-gen-grpc-java.exe"),
+      baseDirectory.value).!
+  if (chmodExe != 0) sys.error("Chmod failed.")
+
+  val genPB = 
+    Process(Seq(
+      "protoc",
+      "--java_out=" + javaOutDir,
+      "--proto_path=" + protoSourceDir,
+      protoSourceDir + "/ra.proto"),
+      baseDirectory.value).!
+  if (genPB != 0) sys.error("Protocol Buffer generation failed.")
+
+  val genGrpc = 
+    Process(Seq(
+      "protoc",
+      "--plugin=protoc-gen-grpc-java=./protoc-gen-grpc-java.exe",
+      "--grpc-java_out=" + javaOutDir,
+      "--proto_path=" + protoSourceDir,
+      protoSourceDir + "/ra.proto"),
+      baseDirectory.value).!
+  if (genGrpc != 0) sys.error("gRPC generation failed.")
 
   (javaOutDir ** "*.java").get
 }
