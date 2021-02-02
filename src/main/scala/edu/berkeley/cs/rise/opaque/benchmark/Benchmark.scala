@@ -73,13 +73,33 @@ object Benchmark {
   def main(args: Array[String]): Unit = {
     Utils.initSQLContext(spark.sqlContext)
 
+    if (args.length >= 2 && args(1) == "--help") {
+      println(
+"""Available flags:
+    --num-partitions: specify the number of partitions the data should be split into.
+          Default: 2 * number of executors if exists, 4 otherwise
+    --size: specify the size of the dataset that should be loaded into Spark.
+          Default: sf_small
+    --operations: select the different operations that should be benchmarked.
+          Default: all
+          Available operations: logistic-regression, tpc-h
+          Syntax: --operations "logistic-regression,tpc-h"
+          Leave --operations flag blank to run all benchmarks"""
+      )
+    }
+
     var runAll = true
-    args.sliding(2, 2).toList.collect {
+    args.slice(1, args.length).sliding(2, 2).toList.collect {
       case Array("--num-partitions", numPartitions: String) => {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        this.size = size
+        val supportedSizes = Set("sf_small")
+        if (supportedSizes.contains(size)) {
+          this.size = size
+        } else {
+          println("Given size is not supported: available values are " + supportedSizes.toString())
+        }
       }
       case Array("--operations", operations: String) => {
         runAll = false
