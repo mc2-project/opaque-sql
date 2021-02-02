@@ -44,8 +44,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
-
-import org.apache.spark.sql.catalyst.expressions.In
+import org.apache.spark.sql.catalyst.expressions.Concat 
 import org.apache.spark.sql.catalyst.expressions.DateAdd
 import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
@@ -57,6 +56,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.If
+import org.apache.spark.sql.catalyst.expressions.In
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
@@ -997,6 +997,12 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        case (Concat(child), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Concat,
+            tuix.Concat.createConcat(
+              builder, tuix.Concat.createChildrenVector(builder, childrenOffsets.toArray)))
 
         case (In(left, right), childrenOffsets) =>
           tuix.Expr.createExpr(
@@ -1004,8 +1010,8 @@ object Utils extends Logging {
             tuix.ExprUnion.In,
             tuix.In.createIn(
               builder, tuix.In.createChildrenVector(builder, childrenOffsets.toArray)))
-        // Time expressions
 
+        // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
