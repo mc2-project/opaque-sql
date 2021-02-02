@@ -49,7 +49,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("TPC-H 6") { securityLevel =>
-    tpch.query(6, securityLevel, spark.sqlContext, numPartitions).collect
+    tpch.query(6, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
   testAgainstSpark("TPC-H 7") { securityLevel =>
@@ -81,7 +81,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("TPC-H 14") { securityLevel =>
-    tpch.query(14, securityLevel, spark.sqlContext, numPartitions).collect
+    tpch.query(14, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
   testAgainstSpark("TPC-H 15", ignore) { securityLevel =>
@@ -93,7 +93,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("TPC-H 17") { securityLevel =>
-    tpch.query(17, securityLevel, spark.sqlContext, numPartitions).collect
+    tpch.query(17, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
   testAgainstSpark("TPC-H 18", ignore) { securityLevel =>
@@ -101,7 +101,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("TPC-H 19", ignore) { securityLevel =>
-    tpch.query(19, securityLevel, spark.sqlContext, numPartitions).collect
+    tpch.query(19, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
   testAgainstSpark("TPC-H 20", ignore) { securityLevel =>
