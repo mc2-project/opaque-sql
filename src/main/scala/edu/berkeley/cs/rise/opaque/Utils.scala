@@ -109,7 +109,6 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
-import org.apache.spark.sql.catalyst.expressions.PromotePrecision
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -351,7 +350,7 @@ object Utils extends Logging {
     rdd.foreach(x => {})
   }
 
-  def castValue(value: Any, dataType: DataType): (Any, DataType) = {
+  def castToSupportedValue(value: Any, dataType: DataType): (Any, DataType) = {
     var newVal = value
     var newDataType = dataType
     dataType match {
@@ -366,7 +365,7 @@ object Utils extends Logging {
 
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
-    (castValue(value, dataType)) match {
+    (castToSupportedValue(value, dataType)) match {
       case (b: Boolean, BooleanType) =>
         tuix.Field.createField(
           builder,
@@ -409,7 +408,7 @@ object Utils extends Logging {
           tuix.FieldUnion.FloatField,
           tuix.FloatField.createFloatField(builder, x),
           isNull)
-      case (null, FloatType) =>
+      case (null, FloatType) | (null, DecimalType()) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.FloatField,
