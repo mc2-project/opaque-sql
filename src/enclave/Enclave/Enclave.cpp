@@ -7,6 +7,7 @@
 #include "Crypto.h"
 #include "Filter.h"
 #include "Join.h"
+#include "Limit.h"
 #include "Project.h"
 #include "Sort.h"
 #include "util.h"
@@ -179,50 +180,82 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   }
 }
 
-void ecall_non_oblivious_aggregate_step1(
+void ecall_non_oblivious_aggregate(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
-  uint8_t **first_row, size_t *first_row_length,
-  uint8_t **last_group, size_t *last_group_length,
-  uint8_t **last_row, size_t *last_row_length) {
+  uint8_t **output_rows, size_t *output_rows_length,
+  bool is_partial) {
   // Guard against operating on arbitrary enclave memory
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    non_oblivious_aggregate_step1(
-      agg_op, agg_op_length,
-      input_rows, input_rows_length,
-      first_row, first_row_length,
-      last_group, last_group_length,
-      last_row, last_row_length);
+    non_oblivious_aggregate(agg_op, agg_op_length,
+                            input_rows, input_rows_length,
+                            output_rows, output_rows_length,
+                            is_partial);
+    
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
 }
 
-void ecall_non_oblivious_aggregate_step2(
-  uint8_t *agg_op, size_t agg_op_length,
-  uint8_t *input_rows, size_t input_rows_length,
-  uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
-  uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
-  uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
-  uint8_t **output_rows, size_t *output_rows_length) {
-  // Guard against operating on arbitrary enclave memory
+void ecall_count_rows_per_partition(uint8_t *input_rows, size_t input_rows_length,
+                                    uint8_t **output_rows, size_t *output_rows_length) {
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
-  assert(oe_is_outside_enclave(next_partition_first_row, next_partition_first_row_length) == 1);
-  assert(oe_is_outside_enclave(prev_partition_last_group, prev_partition_last_group_length) == 1);
-  assert(oe_is_outside_enclave(prev_partition_last_row, prev_partition_last_row_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    non_oblivious_aggregate_step2(
-      agg_op, agg_op_length,
-      input_rows, input_rows_length,
-      next_partition_first_row, next_partition_first_row_length,
-      prev_partition_last_group, prev_partition_last_group_length,
-      prev_partition_last_row, prev_partition_last_row_length,
-      output_rows, output_rows_length);
+    count_rows_per_partition(input_rows, input_rows_length,
+                             output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_compute_num_rows_per_partition(uint32_t limit,
+                                          uint8_t *input_rows, size_t input_rows_length,
+                                          uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    compute_num_rows_per_partition(limit,
+                                   input_rows, input_rows_length,
+                                   output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_local_limit(uint32_t limit,
+                       uint8_t *input_rows, size_t input_rows_length,
+                       uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    limit_return_rows(limit,
+                      input_rows, input_rows_length,
+                      output_rows, output_rows_length);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_limit_return_rows(uint64_t partition_id,
+                             uint8_t *limits, size_t limits_length,
+                             uint8_t *input_rows, size_t input_rows_length,
+                             uint8_t **output_rows, size_t *output_rows_length) {
+  assert(oe_is_outside_enclave(limits, limits_length) == 1);
+  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    limit_return_rows(partition_id,
+                      limits, limits_length,
+                      input_rows, input_rows_length,
+                      output_rows, output_rows_length);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

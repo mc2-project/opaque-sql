@@ -12,7 +12,7 @@ sparkVersion := "3.0.0"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
-libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
+libraryDependencies += "org.scalanlp" %% "breeze" % "1.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
@@ -24,6 +24,7 @@ concurrentRestrictions in Global := Seq(
 fork in Test := true
 fork in run := true
 
+testOptions in Test += Tests.Argument("-oF")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
   "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")

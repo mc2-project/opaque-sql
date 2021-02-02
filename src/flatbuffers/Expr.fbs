@@ -13,6 +13,7 @@ union ExprUnion {
     EqualTo,
     Contains,
     Concat, 
+    In,
     Col,
     Literal,
     And,
@@ -20,11 +21,15 @@ union ExprUnion {
     Not,
     IsNull,
     Substring,
+    Like,
+    StartsWith,
+    EndsWith,
     Multiply,
     Divide,
     Add,
     Subtract,
     If,
+    CaseWhen,
     Cast,
     Year,
     VectorAdd,
@@ -33,6 +38,9 @@ union ExprUnion {
     Exp,
     ClosestPoint,
     CreateArray,
+    Upper,
+    DateAdd,
+    DateAddInterval
 }
 
 table Expr {
@@ -119,7 +127,12 @@ table Contains {
     right:Expr;
 }
 
-table Concat{
+table Concat {
+    children:[Expr];
+}
+
+// Array expressions
+table In {
     children:[Expr]; 
 }
 
@@ -127,6 +140,21 @@ table Substring {
     str:Expr;
     pos:Expr;
     len:Expr;
+}
+
+table Like {
+    left:Expr;
+    right:Expr;
+}
+
+table StartsWith {
+    left:Expr;
+    right:Expr;
+}
+
+table EndsWith {
+    left:Expr;
+    right:Expr;
 }
 
 // Null expressions
@@ -141,9 +169,23 @@ table If {
     false_value:Expr;
 }
 
+table CaseWhen {
+    children:[Expr];
+}
+
 // Date expressions
 table Year {
     child:Expr;
+}
+
+table DateAdd {
+    left:Expr;
+    right:Expr;
+}
+
+table DateAddInterval {
+    left:Expr;
+    right:Expr;
 }
 
 // Math expressions
@@ -175,4 +217,8 @@ table DotProduct {
 table ClosestPoint {
     left:Expr;
     right:Expr;
+}
+
+table Upper {
+    child:Expr;
 }

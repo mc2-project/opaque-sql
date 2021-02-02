@@ -102,12 +102,17 @@ flatbuffers::Offset<tuix::Field> eval_binary_arithmetic_op(
  *
  * The left and right Fields are the inputs to the binary operation. They may be temporary pointers
  * invalidated by further writes to builder; this function will not read them after invalidating.
+ * 
+ * When either of the values is NULL, this function will return a NULL value, with a boolean underlying 
+ * value that is used for internal functions like sorting. 
+ * The parameter `nulls_first` enables the function to order either by NULLS FIRST or by NULLS LAST.
  */
 template<typename TuixExpr, template<typename T> class Operation>
 flatbuffers::Offset<tuix::Field> eval_binary_comparison(
   flatbuffers::FlatBufferBuilder &builder,
   const tuix::Field *left,
-  const tuix::Field *right) {
+  const tuix::Field *right,
+  bool nulls_first = true) {
 
   if (left->value_type() != right->value_type()) {
     throw std::runtime_error(
@@ -205,6 +210,21 @@ flatbuffers::Offset<tuix::Field> eval_binary_comparison(
         + std::string(" on ")
         + std::string(tuix::EnumNameFieldUnion(left->value_type())));
     }
+  } else {
+    // This code block handles comparison when at least one value is NULL.
+    // The logic can be summarized as: (note that the != operation implements XOR for boolean values)
+    //
+    // If nulls_first = 1
+    // | Input values | is_null() value | Inputs to Operation |
+    // | (x, NULL)    | (0, 1)          | (1, 0)              |
+    // | (NULL, x)    | (1, 0)          | (0, 1)              |
+    // | (NULL, NULL) | (1, 1)          | (0, 0)              |
+    //
+    // A similar table can be derived for when nulls_first is false
+    
+    bool left_is_null = left->is_null() != nulls_first;
+    bool right_is_null = right->is_null() != nulls_first;
+    result = Operation<bool>()(left_is_null, right_is_null);
   }
   // Writing the result invalidates the left and right temporary pointers
   return tuix::CreateField(
@@ -245,6 +265,25 @@ private:
 
     case tuix::ExprUnion_Literal:
     {
+      auto * literal = static_cast<const tuix::Literal *>(expr->expr());
+      const tuix::Field *value = literal->value();
+
+      // If type is CalendarInterval, manually return a calendar interval field. 
+      // Otherwise 'days' disappears in conversion.
+      if (value->value_type() == tuix::FieldUnion_CalendarIntervalField) {
+
+        auto  *interval = value->value_as_CalendarIntervalField();
+        uint32_t months = interval->months();
+        uint32_t days = interval->days();
+        uint64_t ms = interval->microseconds();
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_CalendarIntervalField,
+          tuix::CreateCalendarIntervalField(builder, months, days, ms).Union(),
+          false);
+      }
+
       return flatbuffers_copy<tuix::Field>(
         static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
     }
@@ -383,6 +422,7 @@ private:
       auto add = static_cast<const tuix::Add *>(expr->expr());
       auto left_offset = eval_helper(row, add->left());
       auto right_offset = eval_helper(row, add->right());
+
       return eval_binary_arithmetic_op<tuix::Add, std::plus>(
         builder,
         flatbuffers::GetTemporaryPointer(builder, left_offset),
@@ -702,6 +742,7 @@ private:
       }
     }
 
+
     case tuix::ExprUnion_Concat:
     {
       //implementing this like string concat since each argument in already serialized 
@@ -743,6 +784,266 @@ private:
           tuix::CreateStringFieldDirect(
             builder, &result, static_cast<uint32_t>(total)).Union(),
           total==0);
+      
+    }
+
+    case tuix::ExprUnion_In:
+    {
+      auto c = static_cast<const tuix::In *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+      bool result = false;
+      if (num_children < 2){
+        throw std::runtime_error(std::string("In can't operate with an empty list, currently we have ")
+          + std::to_string(num_children - 1)
+          + std::string("items in the list")); 
+      }
+
+      auto left_offset =  eval_helper(row, (*c->children())[0]);
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+
+      bool result_is_null = left->is_null(); 
+
+      for (size_t i=1; i<num_children; i++){
+        auto right_offset = eval_helper(row, (*c->children())[i]);
+        const tuix::Field *item = flatbuffers::GetTemporaryPointer(builder, right_offset);
+        if (item->value_type() != left->value_type()){
+          throw std::runtime_error(
+          std::string("In can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(item->value_type()))
+          + ". Please double check the type of each input");
+        }
+        result_is_null = result_is_null || item ->is_null(); 
+        
+        // adding dynamic casting 
+        bool temporary_result =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, left_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, right_offset)))
+          ->value())->value();
+
+        if (temporary_result){
+          result = true; 
+        }
+      }
+      
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        result_is_null && (!result));
+    }
+
+
+    case tuix::ExprUnion_Upper:
+    {
+      auto n = static_cast<const tuix::Upper *>(expr->expr());
+      auto child_offset = eval_helper(row, n->child());
+      const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, child_offset);
+
+      if (str->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Upper requires str String, not ")
+          + std::string("str ")
+          + std::string(tuix::EnumNameFieldUnion(str->value_type())));
+      }
+
+      // Obtain the input as a string
+      bool result_is_null = str->is_null();
+
+      if (!result_is_null) {
+
+        auto str_field = static_cast<const tuix::StringField *>(str->value());
+
+        std::vector<uint8_t> str_vec(
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(0)),
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(str_field->length())));
+
+        std::string lower(str_vec.begin(), str_vec.end());
+
+        // Turn lower into uppercase and revert to vector
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::toupper);
+        std::vector<uint8_t> result(lower.begin(), lower.end());
+
+        // Writing the result
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, str_field->length()).Union(),
+          result_is_null);
+      } else {
+
+        // Creation is failing with null pointer. Trivially create empty string
+        std::string empty("\0");
+        std::vector<uint8_t> result(empty.begin(), empty.end());
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, 0).Union(),
+          result_is_null);
+      }
+    }
+
+    case tuix::ExprUnion_Like:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      // Copy strings into char buffer
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t n = left_field->length();
+      uint32_t m = right_field->length();
+
+      // DP algorithm for wildcard matching taken from:
+      // https://www.geeksforgeeks.org/wildcard-pattern-matching/
+      bool result;
+      if (m == 0)
+        return (n == 0);
+      bool lookup[n + 1][m + 1];
+      memset(lookup, false, sizeof(lookup));
+      lookup[0][0] = true;
+      for (uint32_t j = 1; j <= m; j++) {
+        if (right_field->value()->Get(j - 1) == '%') {
+          lookup[0][j] = lookup[0][j - 1];
+        }
+      }
+      for (uint32_t i = 1; i <= n; i++) {
+        for (uint32_t j = 1; j <= m; j++) {
+          if (right_field->value()->Get(j - 1) == '%') {
+            lookup[i][j] = lookup[i][j - 1] || lookup[i - 1][j];
+          } else if (right_field->value()->Get(j - 1) == '_' || 
+                     left_field->value()->Get(i - 1) == right_field->value()->Get(j - 1)) {
+            lookup[i][j] = lookup[i - 1][j - 1];
+          } else {
+            lookup[i][j] = false;
+          }
+        }
+      }
+      result = lookup[n][m];
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
+    case tuix::ExprUnion_StartsWith:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t pattern_len = right_field->length();
+      bool result = true;
+      for (uint32_t i = 0; i < pattern_len; i++) {
+        result = result && (left_field->value()->Get(i) == right_field->value()->Get(i));
+      }
+
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
+    }
+
+    case tuix::ExprUnion_EndsWith:
+    {
+      auto e = static_cast<const tuix::Like *>(expr->expr());
+      auto left_offset = eval_helper(row, e->left());
+      auto right_offset = eval_helper(row, e->right());
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+      
+      // Type check
+      if (left->value_type() != tuix::FieldUnion_StringField
+          || right->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Contains requires left String, right String, not ")
+          + std::string("left ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", right ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+      }
+      
+      // Null check
+      if (left->is_null() || right->is_null()) {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_BooleanField,
+          tuix::CreateBooleanField(builder, false).Union(),
+          true);
+      }
+
+      auto left_field = static_cast<const tuix::StringField *>(left->value());
+      auto right_field = static_cast<const tuix::StringField *>(right->value());
+      uint32_t str_len = left_field->length();
+      uint32_t pattern_len = right_field->length();
+      bool result = true;
+      for (uint32_t i = 0; i < pattern_len; i++) {
+        uint32_t str_dex = str_len - pattern_len + i;
+        result = result && (left_field->value()->Get(str_dex) == right_field->value()->Get(i));
+      }
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        false);
     }
 
     // Conditional expressions
@@ -785,6 +1086,65 @@ private:
       }
     }
 
+    case tuix::ExprUnion_CaseWhen:
+    {
+      auto e = expr->expr_as_CaseWhen();
+      size_t num_children = e->children()->size();
+
+      // Evaluate to the first value whose predicate is true.
+      // Short circuit on the earliest branch possible.
+      tuix::FieldUnion result_type = tuix::FieldUnion_NONE;
+      for (size_t i = 0; i < num_children - 1; i += 2) {
+        auto predicate_offset = eval_helper(row, (*e->children())[i]);
+        auto true_value_offset = eval_helper(row, (*e->children())[i+1]);
+        const tuix::Field *predicate =
+          flatbuffers::GetTemporaryPointer(builder, predicate_offset);
+        const tuix::Field *true_value =
+          flatbuffers::GetTemporaryPointer(builder, true_value_offset);
+        if (result_type == tuix::FieldUnion_NONE) {
+          result_type = true_value->value_type();
+        }
+        if (predicate->value_type() != tuix::FieldUnion_BooleanField) {
+          throw std::runtime_error(
+            std::string("tuix::CaseWhen requires predicate to return Boolean, not ")
+            + std::string(tuix::EnumNameFieldUnion(predicate->value_type())));
+        }
+        if (true_value->value_type() != result_type) {
+          throw std::runtime_error(
+            std::string("tuix::CaseWhen requires a uniform data type, but ")
+            + std::string(tuix::EnumNameFieldUnion(true_value->value_type()))
+            + std::string(" != ")
+            + std::string(tuix::EnumNameFieldUnion(result_type)));
+        }
+        if (!predicate->is_null()) {
+          bool pred_val = static_cast<const tuix::BooleanField *>(predicate->value())->value();
+          if (pred_val) {
+            return GetOffset<tuix::Field>(builder, true_value);
+          }
+        }
+      }
+
+      // None of the predicates were true.
+      // Return the else value if it exists, or a null value if it doesn't.
+      if (num_children % 2 == 1) {
+        auto else_value_offset = eval_helper(row, (*e->children())[num_children-1]);
+        const tuix::Field *else_value = flatbuffers::GetTemporaryPointer(builder, else_value_offset);
+        return GetOffset<tuix::Field>(builder, else_value);
+      }
+      // Null strings require special handling...
+      if (result_type == tuix::FieldUnion_StringField) {
+        std::string empty("\0");
+        std::vector<uint8_t> result(empty.begin(), empty.end());
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(builder, &result, 0).Union(),
+          true);
+      }
+      return tuix::CreateField(builder, result_type,
+          tuix::CreateNullField(builder).Union(), true);
+    }
+
     // Null expressions
     case tuix::ExprUnion_IsNull:
     {
@@ -799,6 +1159,103 @@ private:
         tuix::CreateBooleanField(builder, result).Union(),
         false);
     }
+
+    // Time expressions
+    case tuix::ExprUnion_DateAdd:
+    {
+      auto c = static_cast<const tuix::DateAdd *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+
+      if (left->value_type() != tuix::FieldUnion_DateField
+          || right->value_type() != tuix::FieldUnion_IntegerField) {
+          throw std::runtime_error(
+          std::string("tuix::DateAdd requires date Date, increment Integer, not ")
+          + std::string("date ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", increment ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+        }
+
+      bool result_is_null = left->is_null() || right->is_null();
+
+      if (!result_is_null) {
+        auto left_field = static_cast<const tuix::DateField *>(left->value());
+        auto right_field = static_cast<const tuix::IntegerField *>(right->value());
+
+        uint32_t result = left_field->value() + right_field->value();
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      } else {
+        uint32_t result = 0;
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      }
+    }
+
+    case tuix::ExprUnion_DateAddInterval:
+    {
+      auto c = static_cast<const tuix::DateAddInterval *>(expr->expr());
+      auto left_offset = eval_helper(row, c->left());
+      auto right_offset = eval_helper(row, c->right());
+
+      // Note: These temporary pointers will be invalidated when we next write to builder
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+      const tuix::Field *right = flatbuffers::GetTemporaryPointer(builder, right_offset);
+
+      if (left->value_type() != tuix::FieldUnion_DateField
+          || right->value_type() != tuix::FieldUnion_CalendarIntervalField) {
+          throw std::runtime_error(
+          std::string("tuix::DateAddInterval requires date Date, interval CalendarIntervalField, not ")
+          + std::string("date ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(", interval ")
+          + std::string(tuix::EnumNameFieldUnion(right->value_type())));
+        }
+
+      bool result_is_null = left->is_null() || right->is_null();
+      uint32_t result = 0;
+
+      if (!result_is_null) {
+
+        auto left_field = static_cast<const tuix::DateField *>(left->value());
+        auto right_field = static_cast<const tuix::CalendarIntervalField *>(right->value());
+
+        //This is an approximation
+        //TODO take into account leap seconds
+        uint64_t date = 86400L*left_field->value();
+        struct tm tm;
+        secs_to_tm(date, &tm);
+        tm.tm_mon += right_field->months();
+        tm.tm_mday += right_field->days();
+        time_t time = std::mktime(&tm);
+        uint32_t result = (time + (right_field->microseconds() / 1000)) / 86400L;
+
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      } else {
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DateField,
+          tuix::CreateDateField(builder, result).Union(),
+          result_is_null);
+      }
+    }
+
     case tuix::ExprUnion_Year:
     {
       auto e = static_cast<const tuix::Year *>(expr->expr());
@@ -1177,6 +1634,8 @@ public:
       auto a_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(a), builder);
       auto b_eval_offset = flatbuffers_copy(sort_order_evaluators[i]->eval(b), builder);
 
+      // We ignore the result's NULL flag and use only its underlying value for the comparison.
+      // eval_binary_comparison() uses this underlying value to pass the desired information.
       bool a_less_than_b =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
@@ -1298,7 +1757,11 @@ public:
         std::unique_ptr<FlatbuffersExpressionEvaluator>(
           new FlatbuffersExpressionEvaluator(update_expr)));
     }
-    evaluate_evaluator.reset(new FlatbuffersExpressionEvaluator(expr->evaluate_expr()));
+    for (auto eval_expr : *expr->evaluate_exprs()) {
+      evaluate_evaluators.emplace_back(
+        std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(eval_expr)));
+    }
   }
 
   std::vector<const tuix::Field *> initial_values(const tuix::Row *unused) {
@@ -1317,15 +1780,19 @@ public:
     return result;
   }
 
-  const tuix::Field *evaluate(const tuix::Row *agg) {
-    return evaluate_evaluator->eval(agg);
+  std::vector<const tuix::Field *> evaluate(const tuix::Row *agg) {
+    std::vector<const tuix::Field *> result;
+    for (auto&& e : evaluate_evaluators) {
+      result.push_back(e->eval(agg));
+    }
+    return result;
   }
 
 private:
   flatbuffers::FlatBufferBuilder builder;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
-  std::unique_ptr<FlatbuffersExpressionEvaluator> evaluate_evaluator;
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> evaluate_evaluators;
 };
 
 class FlatbuffersAggOpEvaluator {
@@ -1338,7 +1805,7 @@ public:
         std::string("Corrupt AggregateOp buffer of length ")
         + std::to_string(len));
     }
-
+    
     const tuix::AggregateOp* agg_op = flatbuffers::GetRoot<tuix::AggregateOp>(buf);
 
     for (auto e : *agg_op->grouping_expressions()) {
@@ -1353,6 +1820,10 @@ public:
     }
 
     reset_group();
+  }
+
+  size_t get_num_grouping_keys() {
+    return grouping_evaluators.size();
   }
 
   void reset_group() {
@@ -1413,7 +1884,9 @@ public:
     builder.Clear();
     std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
     for (auto&& e : aggregate_evaluators) {
-      output_fields.push_back(flatbuffers_copy<tuix::Field>(e->evaluate(a), builder));
+      for (auto f : e->evaluate(a)) {
+        output_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder));
+      }
     }
     return flatbuffers::GetTemporaryPointer<tuix::Row>(
       builder,
