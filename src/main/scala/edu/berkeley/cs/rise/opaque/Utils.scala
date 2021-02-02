@@ -798,7 +798,7 @@ object Utils extends Logging {
         case FloatType => tuix.ColType.FloatType
         case DoubleType => tuix.ColType.DoubleType
         case StringType => tuix.ColType.StringType
-        case DecimalType() => tuix.ColType.StringType
+        case DecimalType() => tuix.ColType.FloatType
     }
   }
 
