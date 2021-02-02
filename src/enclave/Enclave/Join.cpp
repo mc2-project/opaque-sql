@@ -104,7 +104,6 @@ void non_oblivious_sort_merge_join(
             case tuix::JoinType_LeftSemi:
               if (leftsemi_add_row) {
                 w.append(primary, current);
-                leftsemi_add_row = false;
               }
               break;
               
@@ -115,6 +114,8 @@ void non_oblivious_sort_merge_join(
               break;
           }
         }
+
+        leftsemi_add_row = false;
       }
     }
   }
