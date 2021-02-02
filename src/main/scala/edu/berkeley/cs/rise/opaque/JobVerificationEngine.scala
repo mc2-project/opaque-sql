@@ -214,9 +214,6 @@ object JobVerificationEngine {
       // Unclear what order to arrange log_macs to get the all_outputs_mac
       // Doing numEcalls * (numPartitions!) arrangements seems very bad.
       // See if we can do it more efficiently.
-
-      // debug
-      // println(node.ecall)
     }
 
     // Construct executed DAG by setting parent JobNodes for each node.
@@ -226,7 +223,6 @@ object JobVerificationEngine {
     executedSinkNode.setSink
     for (node <- nodeSet) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
-        // node.printNode
         executedSourceNode.addOutgoingNeighbor(node)
       } else {
         for (i <- 0 until node.numInputMacs) {
@@ -237,8 +233,6 @@ object JobVerificationEngine {
     }
     for (node <- nodeSet) {
       if (node.outgoingNeighbors.length == 0) {
-        // println("added sink node predecessor")
-        // println(node.ecall)
         node.addOutgoingNeighbor(executedSinkNode)
       }
     }
@@ -248,11 +242,6 @@ object JobVerificationEngine {
     // Construct expected DAG.
     val expectedDAG = ArrayBuffer[ArrayBuffer[JobNode]]()
     val expectedEcalls = ArrayBuffer[Int]()
-    for (operator <- sparkOperators) {
-      print(operator)
-      print(" ")
-    }
-    println()
     for (operator <- sparkOperators) {
       if (operator == "EncryptedSortExec" && numPartitions == 1) {
         // ("externalSort")
@@ -395,13 +384,6 @@ object JobVerificationEngine {
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
-      println(executedPathsToSink)
-      println(expectedPathsToSink)
-
-      print("Executed DAG source nodes: ")
-      println(executedSourceNode.outgoingNeighbors.length)
-      print("Expected DAG source nodes: ")
-      println(expectedSourceNode.outgoingNeighbors.length)
       println("===========DAGS NOT EQUAL===========")
     }
     return true
