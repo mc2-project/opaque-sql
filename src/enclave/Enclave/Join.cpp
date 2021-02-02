@@ -59,6 +59,8 @@ void non_oblivious_sort_merge_join(
     last_primary_of_group.set(row);
   }
 
+  bool leftsemi_add_row = true;
+
   while (r.has_next()) {
     const tuix::Row *current = r.next();
 
@@ -73,6 +75,7 @@ void non_oblivious_sort_merge_join(
         primary_group.clear();
         primary_group.append(current);
         last_primary_of_group.set(current);
+        leftsemi_add_row = true;
       }
     } else {
       // Output the joined rows resulting from this foreign row
@@ -92,7 +95,25 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
-          w.append(primary, current);
+          tuix::JoinType join_type = join_expr_eval.get_join_type();
+          switch (join_type) {
+            case tuix::JoinType_Inner:
+              w.append(primary, current);
+              break;
+              
+            case tuix::JoinType_LeftSemi:
+              if (leftsemi_add_row) {
+                w.append(primary, current);
+                leftsemi_add_row = false;
+              }
+              break;
+              
+            default:
+              throw std::runtime_error(std::string("Join type ") +
+                                       tuix::EnumNameJoinType(join_type) +
+                                       std::string(" is not supported"));
+              break;
+          }
         }
       }
     }
