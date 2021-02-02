@@ -12,6 +12,8 @@ union ExprUnion {
     GreaterThanOrEqual,
     EqualTo,
     Contains,
+    Concat, 
+    In,
     Col,
     Literal,
     And,
@@ -123,6 +125,15 @@ table EqualTo {
 table Contains {
     left:Expr;
     right:Expr;
+}
+
+table Concat {
+    children:[Expr];
+}
+
+// Array expressions
+table In {
+    children:[Expr]; 
 }
 
 table Substring {
