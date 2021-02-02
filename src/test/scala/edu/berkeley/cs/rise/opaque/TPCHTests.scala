@@ -40,7 +40,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
     tpch.query(3, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
-  testAgainstSpark("TPC-H 4", ignore) { securityLevel =>
+  testAgainstSpark("TPC-H 4") { securityLevel =>
     tpch.query(4, securityLevel, spark.sqlContext, numPartitions).collect.toSet
   }
 
