@@ -44,8 +44,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
-
-import org.apache.spark.sql.catalyst.expressions.In
+import org.apache.spark.sql.catalyst.expressions.Concat 
 import org.apache.spark.sql.catalyst.expressions.DateAdd
 import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
@@ -57,6 +56,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.GreaterThan
 import org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.If
+import org.apache.spark.sql.catalyst.expressions.In
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.IsNull
 import org.apache.spark.sql.catalyst.expressions.LessThan
@@ -997,6 +997,12 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        case (Concat(child), childrenOffsets) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Concat,
+            tuix.Concat.createConcat(
+              builder, tuix.Concat.createChildrenVector(builder, childrenOffsets.toArray)))
 
         case (In(left, right), childrenOffsets) =>
           tuix.Expr.createExpr(
@@ -1004,8 +1010,8 @@ object Utils extends Logging {
             tuix.ExprUnion.In,
             tuix.In.createIn(
               builder, tuix.In.createChildrenVector(builder, childrenOffsets.toArray)))
-        // Time expressions
 
+        // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
@@ -1164,7 +1170,7 @@ object Utils extends Logging {
     // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
     // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+      case e: NamedExpression => AggregateExpression(First(e, false), Complete, false)
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
@@ -1293,7 +1299,7 @@ object Utils extends Logging {
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
         )
 
-      case f @ First(child, Literal(false, BooleanType)) =>
+      case f @ First(child, false) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
@@ -1331,7 +1337,7 @@ object Utils extends Logging {
             builder,
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      case l @ Last(child, Literal(false, BooleanType)) =>
+      case l @ Last(child, false) =>
         val last = l.aggBufferAttributes(0)
         val valueSet = l.aggBufferAttributes(1)
 
