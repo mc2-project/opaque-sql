@@ -25,22 +25,22 @@ object TPCHBenchmark {
   def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
     val sqlStr = tpch.getQuery(queryNumber)
 
-    tpch.setupViews(Insecure, numPartitions)
+    tpch.setupViews(Encrypted, numPartitions)
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
-        "system" -> Insecure.name) {
+        "system" -> Encrypted.name) {
       
       val df = tpch.performQuery(sqlContext, sqlStr)
       Utils.force(df)
       df
     }
 
-    tpch.setupViews(Encrypted, numPartitions)
+    tpch.setupViews(Insecure, numPartitions)
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
-        "system" -> Encrypted.name) {
+        "system" -> Insecure.name) {
       
       val df = tpch.performQuery(sqlContext, sqlStr)
       Utils.force(df)
