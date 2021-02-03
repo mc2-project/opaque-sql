@@ -56,6 +56,8 @@ object Benchmark {
   }
 
   def logisticRegression() = {
+    // TODO: this fails when Spark is ran on a cluster
+    /*
     // Warmup
     LogisticRegression.train(spark, Encrypted, 1000, 1)
     LogisticRegression.train(spark, Encrypted, 1000, 1)
@@ -63,10 +65,11 @@ object Benchmark {
     // Run
     LogisticRegression.train(spark, Insecure, 100000, 1)
     LogisticRegression.train(spark, Encrypted, 100000, 1)
+    */
   }
 
   def runAll() = {
-    // logisticRegression()
+    logisticRegression()
     TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
   }
 
