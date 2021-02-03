@@ -1164,7 +1164,7 @@ object Utils extends Logging {
     // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
     // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+      case e: NamedExpression => AggregateExpression(First(e, false), Complete, false)
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
@@ -1199,6 +1199,7 @@ object Utils extends Logging {
     input: Seq[Attribute],
     aggSchema: Seq[Attribute],
     concatSchema: Seq[Attribute]): Int = {
+    println(e.aggregateFunction)
     (e.aggregateFunction: @unchecked) match {
 
       case avg @ Average(child)  =>
@@ -1293,7 +1294,7 @@ object Utils extends Logging {
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
         )
 
-      case f @ First(child, Literal(false, BooleanType)) =>
+      case f @ First(child, false) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
@@ -1331,7 +1332,7 @@ object Utils extends Logging {
             builder,
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      case l @ Last(child, Literal(false, BooleanType)) =>
+      case l @ Last(child, false) =>
         val last = l.aggBufferAttributes(0)
         val valueSet = l.aggBufferAttributes(1)
 
