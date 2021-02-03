@@ -73,7 +73,6 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
-import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -109,6 +108,8 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+import org.apache.spark.sql.catalyst.expressions.PromotePrecision
+import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -350,22 +351,9 @@ object Utils extends Logging {
     rdd.foreach(x => {})
   }
 
-  def castToSupportedValue(value: Any, dataType: DataType): (Any, DataType) = {
-    var newVal = value
-    var newDataType = dataType
-    dataType match {
-      case _: DecimalType => {
-        newVal = value.toString().toFloat
-        newDataType = FloatType
-      }
-      case _ =>
-    }
-    (newVal, newDataType)
-  }
-
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
-    (castToSupportedValue(value, dataType)) match {
+    (value, dataType) match {
       case (b: Boolean, BooleanType) =>
         tuix.Field.createField(
           builder,
@@ -408,7 +396,19 @@ object Utils extends Logging {
           tuix.FieldUnion.FloatField,
           tuix.FloatField.createFloatField(builder, x),
           isNull)
-      case (null, FloatType) | (null, DecimalType()) =>
+      case (null, FloatType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, 0),
+          isNull)
+      case (x: Decimal, DecimalType()) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, x.toString().toFloat),
+          isNull)
+      case (null, DecimalType()) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.FloatField,
@@ -795,9 +795,10 @@ object Utils extends Logging {
         case IntegerType => tuix.ColType.IntegerType
         case LongType => tuix.ColType.LongType
         case FloatType => tuix.ColType.FloatType
+        case DecimalType() => tuix.ColType.FloatType
         case DoubleType => tuix.ColType.DoubleType
         case StringType => tuix.ColType.StringType
-        case DecimalType() => tuix.ColType.FloatType
+        case _ => throw new OpaqueException("Type not supported: " + dataType.toString())
     }
   }
 
@@ -1096,10 +1097,17 @@ object Utils extends Logging {
             tuix.ExprUnion.ClosestPoint,
             tuix.ClosestPoint.createClosestPoint(
               builder, leftOffset, rightOffset))
-        case (_, Seq(childOffset)) =>
-          // This case is used to match against CheckOverflow and promote_precision
-          // which are used in decimal operations. When decimals are supported, it should be deleted
+
+        case (PromotePrecision(child), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by PromotePrecision
           childOffset
+
+        case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by CheckOverflow
+          childOffset
+
+        case (_, Seq(childOffset)) =>
+          throw new OpaqueException("Expression not supported: " + expr.toString())
       }
     }
   }
