@@ -66,7 +66,7 @@ object Benchmark {
   }
 
   def runAll() = {
-    logisticRegression()
+    // logisticRegression()
     TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
   }
 

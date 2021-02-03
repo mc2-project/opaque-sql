@@ -31,7 +31,9 @@ object TPCHBenchmark {
         "query" -> s"TPC-H $queryNumber",
         "system" -> Insecure.name) {
       
-      tpch.performQuery(sqlContext, sqlStr)
+      val df = tpch.performQuery(sqlContext, sqlStr)
+      Utils.force(df)
+      df
     }
 
     tpch.setupViews(Encrypted, numPartitions)
@@ -40,7 +42,9 @@ object TPCHBenchmark {
         "query" -> s"TPC-H $queryNumber",
         "system" -> Encrypted.name) {
       
-      tpch.performQuery(sqlContext, sqlStr)
+      val df = tpch.performQuery(sqlContext, sqlStr)
+      Utils.force(df)
+      df
     }
   }
 
