@@ -59,7 +59,7 @@ After downloading the Opaque codebase, build and test it as follows.
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
 
 1. Package Opaque into a JAR:
 
