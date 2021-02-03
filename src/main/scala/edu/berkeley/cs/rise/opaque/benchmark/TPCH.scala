@@ -180,7 +180,6 @@ object TPCH {
     val tpch = new TPCH(sqlContext, size)
     tpch.tableNames = tableNames
     tpch.nameToDF = generateMap(sqlContext, size)
-    tpch.ensureCached()
     tpch
   }
 }
@@ -190,18 +189,9 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   var tableNames : Seq[String] = Seq()
   var nameToDF : Map[String, DataFrame] = Map()
 
-  def ensureCached() = {
-    for (name <- tableNames) {
-      nameToDF.get(name).foreach(df => {
-        Utils.ensureCached(df)
-        Utils.ensureCached(Encrypted.applyTo(df))
-      })
-    }
-  }
-
   def setupViews(securityLevel: SecurityLevel, numPartitions: Int) = {
     for ((name, df) <- nameToDF) {
-      securityLevel.applyTo(df.repartition(numPartitions)).createOrReplaceTempView(name)
+      Utils.ensureCached(securityLevel.applyTo(df.repartition(numPartitions))).createOrReplaceTempView(name)
     }
   }
 
