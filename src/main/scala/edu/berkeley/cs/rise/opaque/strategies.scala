@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.LeftAnti
 import org.apache.spark.sql.catalyst.plans.LeftSemi
 import org.apache.spark.sql.execution.SparkPlan
 
@@ -87,17 +88,18 @@ object OpaqueOperators extends Strategy {
         rightProjSchema.map(_.toAttribute),
         (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
         sorted)
-      val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+
+      val tagsDropped = joinType match {
+        case Inner => EncryptedProjectExec(dropTags(left.output, right.output), joined)
+        case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
+      }
+
       val filtered = condition match {
         case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
         case None => tagsDropped
       }
 
-      joinType match {
-        case Inner => filtered :: Nil
-        case LeftSemi => EncryptedProjectExec(left.output, filtered) :: Nil
-        case _ => Nil
-      }
+      filtered :: Nil
 
     case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>

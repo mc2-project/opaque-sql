@@ -325,6 +325,15 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect
   }
 
+  testAgainstSpark("left anti join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 9).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, ((i % 7) + 1).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
   def abc(i: Int): String = (i % 3) match {
     case 0 => "A"
     case 1 => "B"

@@ -47,6 +47,7 @@ void non_oblivious_sort_merge_join(
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
+  tuix::JoinType join_type = join_expr_eval.get_join_type();
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowReader j(BufferRefView<tuix::EncryptedBlocks>(join_row, join_row_length));
   RowWriter w;
@@ -59,7 +60,7 @@ void non_oblivious_sort_merge_join(
     last_primary_of_group.set(row);
   }
 
-  bool leftsemi_add_row = true;
+  bool pk_fk_match = false;
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
@@ -71,11 +72,22 @@ void non_oblivious_sort_merge_join(
         primary_group.append(current);
         last_primary_of_group.set(current);
       } else {
-        // Advance to a new group
+        // If a new primary group is encountered
+        if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
+          auto primary_group_buffer = primary_group.output_buffer();
+          RowReader primary_group_reader(primary_group_buffer.view());
+          
+          while (primary_group_reader.has_next()) {
+            const tuix::Row *primary = primary_group_reader.next();
+            w.append(primary);
+          }
+        }
+
         primary_group.clear();
         primary_group.append(current);
         last_primary_of_group.set(current);
-        leftsemi_add_row = true;
+        
+        pk_fk_match = false;
       }
     } else {
       // Output the joined rows resulting from this foreign row
@@ -95,28 +107,29 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
-          tuix::JoinType join_type = join_expr_eval.get_join_type();
-          switch (join_type) {
-            case tuix::JoinType_Inner:
-              w.append(primary, current);
-              break;
-              
-            case tuix::JoinType_LeftSemi:
-              if (leftsemi_add_row) {
-                w.append(primary, current);
-              }
-              break;
-              
-            default:
-              throw std::runtime_error(std::string("Join type ") +
-                                       tuix::EnumNameJoinType(join_type) +
-                                       std::string(" is not supported"));
-              break;
+          if (join_type == tuix::JoinType_Inner) {
+            w.append(primary, current);
+          } else if (join_type == tuix::JoinType_LeftSemi) {
+            if (!pk_fk_match) {
+              w.append(primary);
+            }
           }
         }
 
-        leftsemi_add_row = false;
+        pk_fk_match = true;
+      } else {
+        pk_fk_match = false;
       }
+    }
+  }
+
+  if (!pk_fk_match && join_type == tuix::JoinType_LeftAnti) {
+    auto primary_group_buffer = primary_group.output_buffer();
+    RowReader primary_group_reader(primary_group_buffer.view());
+          
+    while (primary_group_reader.has_next()) {
+      const tuix::Row *primary = primary_group_reader.next();
+      w.append(primary);
     }
   }
 
