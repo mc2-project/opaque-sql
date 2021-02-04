@@ -190,9 +190,9 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   val tableNames = TPCH.tableNames
   val nameToDF = TPCH.generateDFs(sqlContext, size)
 
-  var numPartitions: Int = 1
-  var nameToPath : Map[String, File] = Map()
-  var nameToEncryptedPath : Map[String, File] = Map()
+  var numPartitions: Int = -1
+  var nameToPath = scala.collection.mutable.Map[String, File]()
+  var nameToEncryptedPath = scala.collection.mutable.Map[String, File]()
 
   def generateFiles(numPartitions: Int) = {
     if (numPartitions != this.numPartitions) {
@@ -200,15 +200,16 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
       for ((name, df) <- nameToDF) {
         nameToPath.get(name).foreach{ path => Utils.deleteRecursively(path) }
 
-        nameToPath = nameToPath + (name -> createPath(df, Insecure, numPartitions))
-        nameToEncryptedPath = nameToEncryptedPath + (name -> createPath(df, Encrypted, numPartitions))
+        nameToPath += (name -> createPath(df, Insecure, numPartitions))
+        nameToEncryptedPath += (name -> createPath(df, Encrypted, numPartitions))
       }
     }
   }
 
   private def createPath(df: DataFrame, securityLevel: SecurityLevel, numPartitions: Int): File = {
-    val partitionedDF = df.repartition(numPartitions)
+    val partitionedDF = securityLevel.applyTo(df.repartition(numPartitions))
     val path = Utils.createTempDir()
+    path.delete()
     securityLevel match {
       case Insecure => {
         partitionedDF.write.format("com.databricks.spark.csv").save(path.toString)
@@ -231,7 +232,8 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
         (nameToEncryptedPath, "edu.berkeley.cs.rise.opaque.EncryptedSource")
     for ((name, path) <- map) {
         val df = sqlContext.sparkSession.read
-            .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+            .format(formatStr)
+            .schema(nameToDF.get(name).get.schema)
             .load(path.toString)
         df.createOrReplaceTempView(name)
     }
