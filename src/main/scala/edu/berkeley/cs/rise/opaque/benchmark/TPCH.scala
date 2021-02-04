@@ -17,6 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
+import java.io.File
 import scala.io.Source
 
 import org.apache.spark.sql.DataFrame
@@ -189,10 +190,22 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   var tableNames : Seq[String] = Seq()
   var nameToDF : Map[String, DataFrame] = Map()
 
-  def setupViews(securityLevel: SecurityLevel, numPartitions: Int) = {
+  def persistData(securityLevel: SecurityLevel, numPartitions: Int): Seq[File] = {
+    var paths = Seq[File]()
     for ((name, df) <- nameToDF) {
-      Utils.ensureCached(securityLevel.applyTo(df.repartition(numPartitions))).createOrReplaceTempView(name)
+      val partitionedDF = df.repartition(numPartitions)
+      val path = Utils.createTempDir()
+      paths = path +: paths
+      securityLevel match {
+        case Insecure => {
+          partitionedDF.write.format("com.databricks.spark.csv").save(path.toString)
+        }
+        case Encrypted => {
+          partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+        }
+      }
     }
+    paths
   }
 
   def getQuery(queryNumber: Int) : String = {
@@ -205,7 +218,7 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   }
 
   def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : DataFrame = {
-    setupViews(securityLevel, numPartitions)
+    persistData(securityLevel, numPartitions)
     val sqlStr = getQuery(queryNumber)
     performQuery(sqlContext, sqlStr)
   }
