@@ -178,7 +178,7 @@ object TPCH {
   }
 
 
-  def apply(sqlContext: SQLContext, size: String, numPartitions: Int) : TPCH = {
+  def apply(sqlContext: SQLContext, size: String) : TPCH = {
     val tpch = new TPCH(sqlContext, size)
     tpch.generateFiles(tpch.numPartitions)
     tpch
@@ -225,13 +225,13 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
   }
 
-  def performQuery(sqlContext: SQLContext, sqlStr: String, securityLevel: SecurityLevel): DataFrame  = {
+  def performQuery(sqlStr: String, securityLevel: SecurityLevel): DataFrame  = {
     sqlContext.sparkSession.sql(sqlStr);
   }
 
-  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int): DataFrame = {
+  def query(queryNumber: Int, securityLevel: SecurityLevel, numPartitions: Int): DataFrame = {
     generateFiles(numPartitions)
     val sqlStr = getQuery(queryNumber)
-    performQuery(sqlContext, sqlStr, securityLevel)
+    performQuery(sqlStr, securityLevel)
   }
 }
