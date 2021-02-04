@@ -28,7 +28,7 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
+    val rdd = sc.parallelize(Seq.fill(sc.defaultParallelism) {()}, 3)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
@@ -41,11 +41,13 @@ object RA extends Logging {
     }.collect.toMap
 
     val msg2s = msg1s.mapValues{case (enclave, eid, msg1) => (enclave, eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
+    println(sc.defaultParallelism)
+    println(rdd.getNumPartitions)
     println(msg2s)
 
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid, msg2) = msg2s.get(i).get
-      enclave.FinishAttestation(eid, msg2)
+      Utils.initEnclave()._1.FinishAttestation(eid, msg2)
       Iterator((eid, true))
     }.collect.toMap
 
