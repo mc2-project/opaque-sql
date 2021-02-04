@@ -26,7 +26,7 @@ import edu.berkeley.cs.rise.opaque.benchmark.TPCH
 trait TPCHTests extends OpaqueTestsBase { self => 
 
   def size = "sf_small"
-  def tpch = TPCH(spark.sqlContext, size)
+  def tpch = new TPCH(spark.sqlContext, size)
 
   testAgainstSpark("TPC-H 1") { securityLevel =>
     tpch.query(1, securityLevel, numPartitions).collect.toSet

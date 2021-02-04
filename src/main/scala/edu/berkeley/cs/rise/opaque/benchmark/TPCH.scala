@@ -176,13 +176,6 @@ object TPCH {
     "customer" -> customer(sqlContext, size)
     ),
   }
-
-
-  def apply(sqlContext: SQLContext, size: String) : TPCH = {
-    val tpch = new TPCH(sqlContext, size)
-    tpch.generateFiles(tpch.numPartitions)
-    tpch
-  }
 }
 
 class TPCH(val sqlContext: SQLContext, val size: String) {
@@ -190,9 +183,14 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
   val tableNames = TPCH.tableNames
   val nameToDF = TPCH.generateDFs(sqlContext, size)
 
-  var numPartitions: Int = -1
-  var nameToPath = scala.collection.mutable.Map[String, File]()
-  var nameToEncryptedPath = scala.collection.mutable.Map[String, File]()
+  private var numPartitions: Int = -1
+  private var nameToPath = Map[String, File]()
+  private var nameToEncryptedPath = Map[String, File]()
+
+  def getQuery(queryNumber: Int) : String = {
+    val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
+    Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
+  }
 
   def generateFiles(numPartitions: Int) = {
     if (numPartitions != this.numPartitions) {
@@ -221,12 +219,7 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     path
   }
 
-  def getQuery(queryNumber: Int) : String = {
-    val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
-    Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
-  }
-
-  def loadViews(securityLevel: SecurityLevel) = {
+  private def loadViews(securityLevel: SecurityLevel) = {
     val (map, formatStr) = if (securityLevel == Insecure) 
         (nameToPath, "com.databricks.spark.csv") else 
         (nameToEncryptedPath, "edu.berkeley.cs.rise.opaque.EncryptedSource")
