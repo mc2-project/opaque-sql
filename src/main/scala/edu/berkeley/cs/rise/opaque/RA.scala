@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 
+import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.execution.SP
 
 // Helper to handle remote attestation
@@ -28,7 +29,7 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.parallelize(Seq.fill(sc.defaultParallelism) {()}, 3)
+    val rdd = sc.parallelize(Seq.fill(sc.defaultParallelism) {()}, sc.defaultParallelism)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
@@ -37,18 +38,16 @@ object RA extends Logging {
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
-      Iterator((i, (enclave, eid, msg1)))
+      Iterator((i, (eid, msg1)))
     }.collect.toMap
 
-    val msg2s = msg1s.mapValues{case (enclave, eid, msg1) => (enclave, eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
-    println(sc.defaultParallelism)
-    println(rdd.getNumPartitions)
-    println(msg2s)
+    val msg2s = msg1s.mapValues{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
 
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (enclave, eid, msg2) = msg2s.get(i).get
-      Utils.initEnclave()._1.FinishAttestation(eid, msg2)
-      Iterator((eid, true))
+      val (eid, msg2) = msg2s(i)
+      val enclave = new SGXEnclave()
+      enclave.FinishAttestation(eid, msg2)
+      Iterator((i, true))
     }.collect.toMap
 
     for ((_, ret) <- attestationResults) {
