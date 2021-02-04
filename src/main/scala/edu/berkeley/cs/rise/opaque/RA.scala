@@ -37,14 +37,15 @@ object RA extends Logging {
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
-      Iterator((eid, msg1))
+      Iterator((i, (enclave, eid, msg1)))
     }.collect.toMap
 
-    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
+    val msg2s = msg1s.mapValues{case (enclave, eid, msg1) => (enclave, eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
+    println(msg2s)
 
-    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      enclave.FinishAttestation(eid, msg2s(eid))
+    val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
+      val (enclave, eid, msg2) = msg2s.get(i).get
+      enclave.FinishAttestation(eid, msg2)
       Iterator((eid, true))
     }.collect.toMap
 
