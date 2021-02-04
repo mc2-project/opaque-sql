@@ -225,13 +225,26 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
   }
 
+  def loadViews(securityLevel: SecurityLevel) = {
+    val (map, formatStr) = if (securityLevel == Insecure) 
+        (nameToPath, "com.databricks.spark.csv") else 
+        (nameToEncryptedPath, "edu.berkeley.cs.rise.opaque.EncryptedSource")
+    for ((name, path) <- map) {
+        val df = sqlContext.sparkSession.read
+            .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+            .load(path.toString)
+        df.createOrReplaceTempView(name)
+    }
+  }
+
   def performQuery(sqlStr: String, securityLevel: SecurityLevel): DataFrame  = {
-    sqlContext.sparkSession.sql(sqlStr);
+    loadViews(securityLevel)
+    sqlContext.sparkSession.sql(sqlStr)
   }
 
   def query(queryNumber: Int, securityLevel: SecurityLevel, numPartitions: Int): DataFrame = {
-    generateFiles(numPartitions)
     val sqlStr = getQuery(queryNumber)
+    generateFiles(numPartitions)
     performQuery(sqlStr, securityLevel)
   }
 }
