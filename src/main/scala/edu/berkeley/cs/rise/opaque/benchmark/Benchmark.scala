@@ -46,7 +46,7 @@ object Benchmark {
   var numPartitions = 2 * spark.sparkContext
       .getConf
       .getInt("spark.executor.instances", 2)
-  var size = "sf_small"
+  var size = "sf_none"
 
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
@@ -97,7 +97,7 @@ object Benchmark {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        val supportedSizes = Set("sf_small")
+        val supportedSizes = Set("sf_small", "sf_none")
         if (supportedSizes.contains(size)) {
           this.size = size
         } else {

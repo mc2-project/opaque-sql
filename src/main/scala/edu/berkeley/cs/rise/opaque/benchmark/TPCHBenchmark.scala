@@ -31,9 +31,7 @@ object TPCHBenchmark {
         "query" -> s"TPC-H $queryNumber",
         "system" -> Insecure.name) {
       
-      val df = tpch.performQuery(sqlStr, Insecure)
-      Utils.force(df)
-      df
+      tpch.performQuery(sqlStr, Insecure).collect
     }
 
     Utils.timeBenchmark(
@@ -41,9 +39,7 @@ object TPCHBenchmark {
         "query" -> s"TPC-H $queryNumber",
         "system" -> Encrypted.name) {
       
-      val df = tpch.performQuery(sqlStr, Encrypted)
-      Utils.force(df)
-      df
+      tpch.performQuery(sqlStr, Encrypted).collect
     }
   }
 
