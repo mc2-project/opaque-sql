@@ -79,15 +79,12 @@ class EnclaveContext {
 
     std::string curr_row_writer;
 
-    // int pid;
     bool append_mac;
 
     // Map of job ID for partition
     std::unordered_map<int, int> pid_jobid;
 
-
     EnclaveContext() {
-      // pid = -1;
       num_input_macs = 0;
       append_mac = true;
     }
