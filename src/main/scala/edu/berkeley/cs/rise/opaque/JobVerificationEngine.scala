@@ -130,9 +130,11 @@ object JobVerificationEngine {
     13 -> "limitReturnRows"
   ).withDefaultValue("unknown")
 
-  def pathsEqual(path1: ArrayBuffer[List[Seq[Int]]],
-                path2: ArrayBuffer[List[Seq[Int]]]): Boolean = {
-    return path1.size == path2.size && path1.toSet == path2.toSet
+  def pathsEqual(executedPaths: ArrayBuffer[List[Seq[Int]]],
+                expectedPaths: ArrayBuffer[List[Seq[Int]]]): Boolean = {
+    // Executed paths might contain extraneous paths from
+    // MACs matching across ecalls if a block is unchanged from ecall to ecall (?)
+    return expectedPaths.toSet.subsetOf(executedPaths.toSet)
   }
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
@@ -384,6 +386,8 @@ object JobVerificationEngine {
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
+      println(executedPathsToSink.toString)
+      println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
     return true
