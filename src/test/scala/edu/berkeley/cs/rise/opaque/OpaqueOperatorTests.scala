@@ -381,7 +381,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    print(p.join(f, $"pk" === $"fk").queryExecution.executedPlan)
     p.join(f, $"pk" === $"fk").collect.toSet
   }
   
@@ -755,7 +754,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
         schema))
-    print(df.select(exp($"y")).queryExecution.executedPlan)
     df.select(exp($"y")).collect
   }
   
