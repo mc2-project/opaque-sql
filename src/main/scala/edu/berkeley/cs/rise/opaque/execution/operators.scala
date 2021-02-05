@@ -19,7 +19,9 @@ package edu.berkeley.cs.rise.opaque.execution
 
 import scala.collection.mutable.ArrayBuffer
 
+import edu.berkeley.cs.rise.opaque.RA
 import edu.berkeley.cs.rise.opaque.Utils
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
@@ -112,6 +114,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
 
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
+    RA.initRA(sparkContext)
     import Utils.time
     Utils.ensureCached(childRDD)
     time(s"Force child of $desc") { childRDD.count }

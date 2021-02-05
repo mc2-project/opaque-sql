@@ -40,6 +40,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Proce
   JNIEnv *env, jobject obj, jbyteArray report_msg_input) {
   (void)obj;
 
+  if (report_msg_input == NULL) {
+    return NULL;
+  }
+
   jboolean if_copy = false;
   jbyte *report_msg_bytes = env->GetByteArrayElements(report_msg_input, &if_copy);
   oe_report_msg_t *report_msg = reinterpret_cast<oe_report_msg_t *>(report_msg_bytes);

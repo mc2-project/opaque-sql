@@ -45,8 +45,10 @@ object RA extends Logging {
 
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
       val (eid, msg2) = msg2s(i)
-      val enclave = new SGXEnclave()
-      enclave.FinishAttestation(eid, msg2)
+      if (msg2 != null) {
+        val enclave = new SGXEnclave()
+        enclave.FinishAttestation(eid, msg2)
+      }
       Iterator((i, true))
     }.collect.toMap
 
