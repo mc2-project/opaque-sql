@@ -40,7 +40,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Proce
   JNIEnv *env, jobject obj, jbyteArray report_msg_input) {
   (void)obj;
 
-  if (report_msg_input == NULL) {
+  if (report_msg_input == NULL) { // Attestation has already happened for this executor
     return NULL;
   }
 

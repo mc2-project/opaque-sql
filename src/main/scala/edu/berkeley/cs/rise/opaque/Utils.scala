@@ -292,7 +292,7 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies =
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
-    RA.initRA(sqlContext.sparkContext)
+    RA.performRA(sqlContext.sparkContext)
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

@@ -23,11 +23,11 @@ import org.apache.spark.internal.Logging
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.execution.SP
 
-// Helper to handle remote attestation
-// 
+// Performs remote attestation for all executors
+// that have not been attested yet
 
 object RA extends Logging {
-  def initRA(sc: SparkContext): Unit = {
+  def performRA(sc: SparkContext): Unit = {
 
     val rdd = sc.parallelize(Seq.fill(sc.defaultParallelism) {()}, sc.defaultParallelism)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
@@ -35,17 +35,20 @@ object RA extends Logging {
 
     sp.Init(Utils.sharedKey, intelCert)
 
+    // Runs on executors
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
       Iterator((i, (eid, msg1)))
     }.collect.toMap
 
+    // Runs on driver
     val msg2s = msg1s.mapValues{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
 
+    // Runs on executors
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
       val (eid, msg2) = msg2s(i)
-      if (msg2 != null) {
+      if (msg2 != null) { // Shared key has not been set for this executor
         val enclave = new SGXEnclave()
         enclave.FinishAttestation(eid, msg2)
       }

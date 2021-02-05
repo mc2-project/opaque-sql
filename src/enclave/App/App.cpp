@@ -208,7 +208,7 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   return enclavePtr;
 }
 
-int attestation_occured = false;
+int attestation_occured = FALSE;
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
   JNIEnv *env, jobject obj, jlong eid) {
@@ -231,7 +231,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
   env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
 
-  attestation_occured = true;
+  attestation_occured = TRUE;
   return report_msg_bytes;
 }
 
