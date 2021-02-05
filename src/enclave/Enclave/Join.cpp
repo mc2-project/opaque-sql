@@ -64,6 +64,7 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+    print(current);
 
     if (join_expr_eval.is_primary(current)) {
       if (last_primary_of_group.get()
@@ -110,6 +111,7 @@ void non_oblivious_sort_merge_join(
           if (join_type == tuix::JoinType_Inner) {
             w.append(primary, current);
           } else if (join_type == tuix::JoinType_LeftSemi) {
+            // Only output the pk group ONCE
             if (!pk_fk_match) {
               w.append(primary);
             }
@@ -118,12 +120,14 @@ void non_oblivious_sort_merge_join(
 
         pk_fk_match = true;
       } else {
-        pk_fk_match = false;
+        // If pk_fk_match were true, and the code got to here, then that means the group match has not been "cleared" yet
+        // It will be processed when the code advances to the next pk group
+        pk_fk_match &= true;
       }
     }
   }
 
-  if (!pk_fk_match && join_type == tuix::JoinType_LeftAnti) {
+  if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
     auto primary_group_buffer = primary_group.output_buffer();
     RowReader primary_group_reader(primary_group_buffer.view());
           
