@@ -49,6 +49,7 @@ object RA extends Logging {
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
       val (eid, msg2) = msg2s(i)
       if (msg2 != null) { // Shared key has not been set for this executor
+        // TODO: figure out why Utils.initEnclave() not working here and why RPC error occurs sometimes
         val enclave = new SGXEnclave()
         enclave.FinishAttestation(eid, msg2)
       }
