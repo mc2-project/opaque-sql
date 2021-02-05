@@ -156,7 +156,6 @@ Out of the existing [Spark SQL types](https://spark.apache.org/docs/latest/sql-r
 We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.
 
 - Scalar functions: `case`, `cast`, `concat`, `contains`, `if`, `in`, `like`, `substring`, `upper`
-
 - Aggregate functions: `average`, `count`, `first`, `last`, `max`, `min`, `sum`
 
 UDFs are not supported directly, but one can [extend Opaque with additional functions](#user-defined-functions-udfs) by writing it in C++.
@@ -167,15 +166,10 @@ UDFs are not supported directly, but one can [extend Opaque with additional func
 Opaque supports the core SQL operators:
 
 - Projection
-
 - Filter
-
 - Global aggregation and grouping aggregation
-
 - Order by, sort by
-
 - Inner join
-
 - Limit
 
     
