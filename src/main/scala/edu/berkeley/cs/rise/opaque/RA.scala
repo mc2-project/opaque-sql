@@ -28,19 +28,21 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.parallelize(Seq.fill(3) {()}, 3)
+    // This is required in order for all executors
+    // to have time to start up. Otherwise, getExecutorMemoryStatus
+    // below will not be initialized to the correct value and
+    // all enclaves won't be attested successfully
+    Thread.sleep(5000)
+
+    val numExecutors = sc.getExecutorMemoryStatus.size
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
-
     sp.Init(Utils.sharedKey, intelCert)
 
-    // This is required in order for all executors
-    // to have time to start up.
-    Thread.sleep(5000)
-
     // Runs on executors
-    val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+    val msg1s = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
       Iterator((eid, msg1))
@@ -50,7 +52,7 @@ object RA extends Logging {
     val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
 
     // Runs on executors
-    val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
+    val attestationResults = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg2 = msg2s(eid)
       enclave.FinishAttestation(eid, msg2)
