@@ -286,22 +286,18 @@ case class EncryptedSortMergeJoinExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
-      val lastPrimaryRows = childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
-      }.collect
-      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
-      assert(shifted.size == childRDD.partitions.length)
-      val processedJoinRowsRDD =
-        sparkContext.parallelize(shifted, childRDD.partitions.length)
+      // val lastPrimaryRows = childRDD.map { block =>
+      //   val (enclave, eid) = Utils.initEnclave()
+      //   Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
+      // }.collect
+      // val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
+      // assert(shifted.size == childRDD.partitions.length)
+      // val processedJoinRowsRDD =
+      //   sparkContext.parallelize(shifted, childRDD.partitions.length)
 
-      childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
-        (blockIter.toSeq, joinRowIter.toSeq) match {
-          case (Seq(block), Seq(joinRow)) =>
-            val (enclave, eid) = Utils.initEnclave()
-            Iterator(Block(enclave.NonObliviousSortMergeJoin(
-              eid, joinExprSer, block.bytes, joinRow.bytes)))
-        }
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
       }
     }
   }

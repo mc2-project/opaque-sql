@@ -79,7 +79,12 @@ object OpaqueOperators extends Strategy {
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
       val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
-      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), true, unioned)
+      // We partition based on the join keys only, so that rows from both the left and the right tables that match
+      // will colocate to the same partition
+      val partitionOrder = leftKeysProj.map(k => SortOrder(k, Ascending))
+      val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
+      val sortOrder = sortForJoin(leftKeysProj, tag, partitioned.output)
+      val sorted = EncryptedSortExec(sortOrder, false, partitioned)
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
