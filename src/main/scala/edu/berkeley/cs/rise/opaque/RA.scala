@@ -28,13 +28,13 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    // This is required in order for all executors
-    // to have time to start up. Otherwise, getExecutorMemoryStatus
-    // below will not be initialized to the correct value and
-    // all enclaves won't be attested successfully
-    Thread.sleep(5000)
+    // All executors need to be initialized before attestation can occur
+    var numExecutors = 1
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
+    }
 
-    val numExecutors = sc.getExecutorMemoryStatus.size
     val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
