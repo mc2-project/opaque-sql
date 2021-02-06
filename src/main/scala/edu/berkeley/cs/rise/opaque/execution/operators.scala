@@ -114,7 +114,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
 
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
-    RA.performRA(sparkContext)
+    // RA.performRA(sparkContext)
     import Utils.time
     Utils.ensureCached(childRDD)
     time(s"Force child of $desc") { childRDD.count }

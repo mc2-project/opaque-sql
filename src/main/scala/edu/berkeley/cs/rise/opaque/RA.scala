@@ -29,31 +29,31 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def performRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.parallelize(Seq.fill(sc.defaultParallelism) {()}, sc.defaultParallelism)
+    val rdd = sc.parallelize(Seq.fill(3) {()}, 3)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
+
     sp.Init(Utils.sharedKey, intelCert)
+
+    Thread.sleep(5000)
 
     // Runs on executors
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg1 = enclave.GenerateReport(eid)
-      Iterator((i, (eid, msg1)))
+      Iterator((eid, msg1))
     }.collect.toMap
 
     // Runs on driver
-    val msg2s = msg1s.mapValues{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}.map(identity)
+    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
 
     // Runs on executors
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (eid, msg2) = msg2s(i)
-      if (msg2 != null) { // Shared key has not been set for this executor
-        // TODO: figure out why Utils.initEnclave() not working here and why RPC error occurs sometimes
-        val enclave = new SGXEnclave()
+      val (enclave, eid) = Utils.initEnclave()
+      val msg2 = msg2s(eid)
         enclave.FinishAttestation(eid, msg2)
-      }
-      Iterator((i, true))
+      Iterator((eid, true))
     }.collect.toMap
 
     for ((_, ret) <- attestationResults) {
