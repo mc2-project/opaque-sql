@@ -20,14 +20,13 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 
-import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.execution.SP
 
 // Performs remote attestation for all executors
 // that have not been attested yet
 
 object RA extends Logging {
-  def performRA(sc: SparkContext): Unit = {
+  def initRA(sc: SparkContext): Unit = {
 
     val rdd = sc.parallelize(Seq.fill(3) {()}, 3)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
@@ -36,6 +35,8 @@ object RA extends Logging {
 
     sp.Init(Utils.sharedKey, intelCert)
 
+    // This is required in order for all executors
+    // to have time to start up.
     Thread.sleep(5000)
 
     // Runs on executors
@@ -52,7 +53,7 @@ object RA extends Logging {
     val attestationResults = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
       val msg2 = msg2s(eid)
-        enclave.FinishAttestation(eid, msg2)
+      enclave.FinishAttestation(eid, msg2)
       Iterator((eid, true))
     }.collect.toMap
 
