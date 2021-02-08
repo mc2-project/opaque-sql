@@ -743,6 +743,50 @@ private:
     }
 
 
+    case tuix::ExprUnion_Concat:
+    {
+      //implementing this like string concat since each argument in already serialized 
+      auto c = static_cast<const tuix::Concat *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+
+      size_t total = 0; 
+
+      std::vector<uint8_t> result; 
+
+      for (size_t i =0; i< num_children; i++){
+              auto offset =  eval_helper(row, (*c->children())[i]);
+              const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, offset);
+              if (str->value_type() != tuix::FieldUnion_StringField) {
+                throw std::runtime_error(
+                  std::string("tuix::Concat requires serializable data types, not ")
+                  + std::string(tuix::EnumNameFieldUnion(str->value_type()))
+                  + std::string(". You do not need to provide the data as string but the data should be serialized into string before sent to concat"));  
+              }
+              if (!str->is_null()){
+                // skipping over the null input 
+                auto str_field = static_cast<const tuix::StringField *>(str->value());
+                uint32_t start = 0;
+                uint32_t end = str_field ->length(); 
+                total += end; 
+                std::vector<uint8_t> stringtoadd(
+                flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          start),
+                flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          end));
+                result.insert(result.end(), stringtoadd.begin(), stringtoadd.end());
+              }
+
+      }
+
+      return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(
+            builder, &result, static_cast<uint32_t>(total)).Union(),
+          total==0);
+      
+    }
+
     case tuix::ExprUnion_In:
     {
       auto c = static_cast<const tuix::In *>(expr->expr());

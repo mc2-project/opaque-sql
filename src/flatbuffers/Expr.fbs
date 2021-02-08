@@ -12,6 +12,7 @@ union ExprUnion {
     GreaterThanOrEqual,
     EqualTo,
     Contains,
+    Concat, 
     In,
     Col,
     Literal,
@@ -126,8 +127,12 @@ table Contains {
     right:Expr;
 }
 
+table Concat {
+    children:[Expr];
+}
+
 // Array expressions
-table In{
+table In {
     children:[Expr]; 
 }
 
