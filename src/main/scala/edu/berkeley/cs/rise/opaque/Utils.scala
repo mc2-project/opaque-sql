@@ -406,7 +406,7 @@ object Utils extends Logging {
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.FloatField,
-          tuix.FloatField.createFloatField(builder, x.toString().toFloat),
+          tuix.FloatField.createFloatField(builder, x.toFloat),
           isNull)
       case (null, DecimalType()) =>
         tuix.Field.createField(
