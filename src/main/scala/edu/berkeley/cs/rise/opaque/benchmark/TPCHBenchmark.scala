@@ -24,32 +24,27 @@ import org.apache.spark.sql.SQLContext
 object TPCHBenchmark {
   def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
     val sqlStr = tpch.getQuery(queryNumber)
+    tpch.generateFiles(numPartitions)
 
-    tpch.setupViews(Encrypted, numPartitions)
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
         "system" -> Encrypted.name) {
       
-      val df = tpch.performQuery(sqlContext, sqlStr)
-      Utils.force(df)
-      df
+      tpch.performQuery(sqlStr, Insecure).collect
     }
 
-    tpch.setupViews(Insecure, numPartitions)
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
         "system" -> Insecure.name) {
       
-      val df = tpch.performQuery(sqlContext, sqlStr)
-      Utils.force(df)
-      df
+      tpch.performQuery(sqlStr, Encrypted).collect
     }
   }
 
   def run(sqlContext: SQLContext, numPartitions: Int, size: String) = {
-    val tpch = TPCH(sqlContext, size)
+    val tpch = new TPCH(sqlContext, size)
 
     val supportedQueries = Seq(1, 3, 5, 6, 7, 8, 9, 10, 14, 17)
 

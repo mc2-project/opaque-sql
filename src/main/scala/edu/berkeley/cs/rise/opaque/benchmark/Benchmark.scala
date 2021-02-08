@@ -43,9 +43,7 @@ object Benchmark {
   val spark = SparkSession.builder()
       .appName("Benchmark")
       .getOrCreate()
-  var numPartitions = 2 * spark.sparkContext
-      .getConf
-      .getInt("spark.executor.instances", 2)
+  var numPartitions = spark.sparkContext.defaultParallelism
   var size = "sf_small"
 
   def dataDir: String = {
