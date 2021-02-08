@@ -21,6 +21,7 @@ package edu.berkeley.cs.rise.opaque
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
+import scala.collection.mutable.Stack
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
@@ -110,6 +111,36 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
   }
 }
 
+// Used in construction of expected DAG.
+class OperatorNode(val operatorName: String = "") {
+  var children: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
+  var parents: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
+
+  def addChild(child: OperatorNode) = {
+    this.children.append(child)
+  }
+
+  def addParent(parent: OperatorNode) = {
+    this.parents.append(parent)
+  }
+
+  def isOrphan(): Boolean = {
+    return this.parents.isEmpty
+  }
+
+  def printOperatorTree(offset: Int): Unit = {
+    print(" "*offset)
+    println(operatorName)
+    for (parent <- this.parents) {
+      parent.printOperatorTree(offset + 4)
+    }
+  }
+
+  def printOperatorTree(): Unit = {
+    this.printOperatorTree(0)
+  }
+}
+
 object JobVerificationEngine {
   // An LogEntryChain object from each partition
   var logEntryChains = ArrayBuffer[tuix.LogEntryChain]()
@@ -148,6 +179,71 @@ object JobVerificationEngine {
   def resetForNextJob(): Unit = {
     sparkOperators.clear
     logEntryChains.clear
+  }
+
+  def operatorDAGFromPlan(executedPlan: String): OperatorNode = {
+    val root = new OperatorNode()
+    val lines = executedPlan.split("\n")
+
+    // Superstrings must come before substrings, 
+    // or inner the for loop will terminate when it finds an instance of the substring.
+    // (eg. EncryptedSortMergeJoin before EncryptedSort)
+    val possibleOperators = ArrayBuffer[String]("EncryptedProject", 
+                                                "EncryptedSortMergeJoin", 
+                                                "EncryptedSort", 
+                                                "EncryptedFilter")
+    val operatorStack = Stack[(Int, OperatorNode)]()
+    val allOperatorNodes = ArrayBuffer[OperatorNode]()
+    for (line <- lines) {
+      // Only one operator per line, so terminate as soon as one is found so
+      // no line creates two operator nodes because of superstring/substring instances.
+      // eg. EncryptedSort and EncryptedSortMergeJoin
+      var found = false
+      for (sparkOperator <- possibleOperators) {
+        if (!found) {
+          val index = line indexOf sparkOperator
+          if (index != -1) {
+            found = true
+            val newOperatorNode = new OperatorNode(sparkOperator)
+            allOperatorNodes.append(newOperatorNode)
+            if (operatorStack.isEmpty) {
+              operatorStack.push( (index, newOperatorNode) )
+            } else {
+              if (index > operatorStack.top._1) {
+                operatorStack.top._2.addParent(newOperatorNode)
+                operatorStack.push( (index, newOperatorNode) )
+              } else {
+                while (index <= operatorStack.top._1) {
+                  operatorStack.pop
+                }
+                operatorStack.top._2.addParent(newOperatorNode)
+                operatorStack.push( (index, newOperatorNode) )
+              }
+            }        
+          }
+        }
+      }
+    }
+
+    for (operatorNode <- allOperatorNodes) {
+      if (operatorNode.isOrphan) {
+        operatorNode.addParent(root)
+      }
+      for (parent <- operatorNode.parents) {
+        parent.addChild(operatorNode)
+      }
+    }
+    return root
+  }
+
+  def expectedDAGFromOperatorDAG(operatorDAGRoot: OperatorNode): JobNode = {
+
+  }
+
+  def expectedDAGFromPlan(executedPlan: String): Unit = {
+    val operatorDAGRoot = operatorDAGFromPlan(executedPlan)
+    operatorDAGRoot.printOperatorTree
+    // expectedDAGFromOperatorDAG(operatorDAGRoot)
   }
 
   def verify(): Boolean = {
@@ -385,6 +481,8 @@ object JobVerificationEngine {
     val executedPathsToSink = executedSourceNode.pathsToSink
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
+    println(executedPathsToSink.toString)
+    println(expectedPathsToSink.toString)
     if (!arePathsEqual) {
       println(executedPathsToSink.toString)
       println(expectedPathsToSink.toString)
