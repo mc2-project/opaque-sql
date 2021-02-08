@@ -210,7 +210,10 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     path.delete()
     securityLevel match {
       case Insecure => {
-        partitionedDF.write.format("com.databricks.spark.csv").save(path.toString)
+        partitionedDF.write.format("com.databricks.spark.csv")
+            .option("ignoreLeadingWhiteSpace", false)
+            .option("ignoreTrailingWhiteSpace", false)
+            .save(path.toString)
       }
       case Encrypted => {
         partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
