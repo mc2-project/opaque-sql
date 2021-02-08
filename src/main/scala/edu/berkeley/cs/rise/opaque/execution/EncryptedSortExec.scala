@@ -30,10 +30,12 @@ case class EncryptedSortExec(order: Seq[SortOrder], isGlobal: Boolean, child: Sp
 
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
-    if (isGlobal) {
-      EncryptedSortExec.sampleAndPartition(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
+    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val partitionedRDD = isGlobal match {
+      case true => EncryptedSortExec.sampleAndPartition(childRDD, orderSer)
+      case false => childRDD
     }
-    EncryptedSortExec.localSort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
+    EncryptedSortExec.localSort(partitionedRDD, orderSer)
   }
 }
 
@@ -86,7 +88,8 @@ object EncryptedSortExec {
           partitions.zipWithIndex.map {
             case (partition, i) => (i, Block(partition))
           }
-        }.groupByKey(numPartitions).map { case (i, blocks) =>
+        }.groupByKey(numPartitions).map {
+          case (i, blocks) =>
             Utils.concatEncryptedBlocks(blocks.toSeq)
         }
 
