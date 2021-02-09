@@ -213,10 +213,10 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
         partitionedDF.write.format("com.databricks.spark.csv")
             .option("ignoreLeadingWhiteSpace", false)
             .option("ignoreTrailingWhiteSpace", false)
-            .save(path.toString)
+            .save("hdfs://10.0.3.4:8020/" + path.toString)
       }
       case Encrypted => {
-        partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+        partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save("hdfs://10.0.3.4:8020" + path.toString)
       }
     }
     path
@@ -230,7 +230,7 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
         val df = sqlContext.sparkSession.read
             .format(formatStr)
             .schema(nameToDF.get(name).get.schema)
-            .load(path.toString)
+            .load("hdfs://10.0.3.4:8020" + path.toString)
         df.createOrReplaceTempView(name)
     }
   }
