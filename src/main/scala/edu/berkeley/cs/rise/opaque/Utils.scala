@@ -21,7 +21,9 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom
+import java.util.Base64
 import java.util.UUID
 
 import javax.crypto._
@@ -93,6 +95,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.ScalarSubquery
 import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -350,8 +353,6 @@ object Utils extends Logging {
     rdd.foreach(x => {})
   }
 
-
-
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
@@ -578,6 +579,7 @@ object Utils extends Logging {
             tuix.StringField.createValueVector(builder, Array.empty),
             0),
           isNull)
+      case _ => throw new OpaqueException(s"FlatbuffersCreateField failed to match on ${value} of type {value.getClass.getName()}, ${dataType}")
     }
   }
 
@@ -651,6 +653,34 @@ object Utils extends Logging {
   }
 
   val MaxBlockSize = 1000
+
+  /**
+    * Encrypts/decrypts a given scalar value
+    **/
+  def encryptScalar(value: Any, dataType: DataType): String = {
+    // First serialize the scalar value
+    var builder = new FlatBufferBuilder
+    var rowOffsets = ArrayBuilder.make[Int]
+
+    val v = dataType match {
+      case StringType => UTF8String.fromString(value.asInstanceOf[String])
+      case _ => value
+    }
+
+    builder.finish(flatbuffersCreateField(builder, v, dataType, false))
+    val plaintext = builder.sizedByteArray()
+    val ciphertext = encrypt(plaintext)
+    val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext);
+    ciphertext_str
+  }
+
+  def decryptScalar(ciphertext: String): Any = {
+    val ciphertext_bytes = Base64.getDecoder().decode(ciphertext);
+    val plaintext = decrypt(ciphertext_bytes)
+    val field = tuix.Field.getRootAsField(ByteBuffer.wrap(plaintext))
+    val value = flatbuffersExtractFieldValue(field)
+    value
+  }
 
   /**
    * Encrypts the given Spark SQL [[InternalRow]]s into a [[Block]] (a serialized
@@ -792,7 +822,7 @@ object Utils extends Logging {
             tuix.ExprUnion.Col,
             tuix.Col.createCol(builder, colNum))
 
-        case (Literal(value, dataType), Nil) =>
+         case (Literal(value, dataType), Nil) =>
           val valueOffset = flatbuffersCreateField(builder, value, dataType, (value == null))
           tuix.Expr.createExpr(
             builder,
@@ -1087,6 +1117,7 @@ object Utils extends Logging {
             tuix.ExprUnion.ClosestPoint,
             tuix.ClosestPoint.createClosestPoint(
               builder, leftOffset, rightOffset))
+
       }
     }
   }
