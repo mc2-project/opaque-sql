@@ -755,7 +755,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
         schema))
-    print(df.select(exp($"y")).queryExecution.executedPlan)
     df.select(exp($"y")).collect
   }
   
