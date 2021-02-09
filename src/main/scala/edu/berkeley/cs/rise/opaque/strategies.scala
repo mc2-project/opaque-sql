@@ -91,7 +91,6 @@ object OpaqueOperators extends Strategy {
         rightKeysProj,
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
-        (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
         sorted)
 
       val tagsDropped = joinType match {
