@@ -254,7 +254,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sto
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray project_list, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray project_list, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -276,7 +276,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                          (oe_enclave_t*)eid,
                          project_list_ptr, project_list_length,
                          input_rows_ptr, input_rows_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
 
   env->ReleaseByteArrayElements(project_list, (jbyte *) project_list_ptr, 0);
@@ -290,7 +290,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray condition, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray condition, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -312,7 +312,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                          (oe_enclave_t*)eid,
                          condition_ptr, condition_length,
                          input_rows_ptr, input_rows_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
 
   env->ReleaseByteArrayElements(condition, (jbyte *) condition_ptr, 0);
@@ -357,7 +357,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -375,7 +375,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                        ecall_sample(
                          (oe_enclave_t*)eid,
                          input_rows_ptr, input_rows_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -389,7 +389,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jint num_partitions,
-  jbyteArray input_rows, jint pid) {
+  jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -414,7 +414,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                          sort_order_ptr, sort_order_length,
                          num_partitions,
                          input_rows_ptr, input_rows_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -430,7 +430,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 JNIEXPORT jobjectArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jint num_partitions,
-  jbyteArray input_rows, jbyteArray boundary_rows, jint pid) {
+  jbyteArray input_rows, jbyteArray boundary_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -460,7 +460,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
                          num_partitions,
                          input_rows_ptr, input_rows_length,
                          boundary_rows_ptr, boundary_rows_length,
-                         output_partitions, output_partition_lengths, pid));
+                         output_partitions, output_partition_lengths));
   }
 
   env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
@@ -482,7 +482,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -505,7 +505,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                        ecall_external_sort((oe_enclave_t*)eid,
                                            sort_order_ptr, sort_order_length,
                                            input_rows_ptr, input_rows_length,
-                                           &output_rows, &output_rows_length, pid));
+                                           &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -520,7 +520,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
@@ -542,7 +542,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
                          (oe_enclave_t*)eid,
                          join_expr_ptr, join_expr_length,
                          input_rows_ptr, input_rows_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -558,7 +558,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ScanCollectLastPrimary(
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows,
-  jbyteArray join_row, jint pid) {
+  jbyteArray join_row) {
   (void)obj;
 
   jboolean if_copy;
@@ -584,7 +584,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
                          join_expr_ptr, join_expr_length,
                          input_rows_ptr, input_rows_length,
                          join_row_ptr, join_row_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length));
   }
   
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -599,8 +599,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
 }
 
 JNIEXPORT jobject JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows, jint pid) {
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows, jboolean isPartial) {
   (void)obj;
 
   jboolean if_copy;
@@ -610,99 +610,22 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep1
 
   uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
   uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
-
-  uint8_t *first_row = nullptr;
-  size_t first_row_length = 0;
-
-  uint8_t *last_group = nullptr;
-  size_t last_group_length = 0;
-
-  uint8_t *last_row = nullptr;
-  size_t last_row_length = 0;
-
-  if (input_rows_ptr == nullptr) {
-    ocall_throw("NonObliviousAggregateStep1: JNI failed to get input byte array.");
-  } else {
-    oe_check_and_time("Non-Oblivious Aggregate Step 1",
-                       ecall_non_oblivious_aggregate_step1(
-                         (oe_enclave_t*)eid,
-                         agg_op_ptr, agg_op_length,
-                         input_rows_ptr, input_rows_length,
-                         &first_row, &first_row_length,
-                         &last_group, &last_group_length,
-                         &last_row, &last_row_length, pid));
-  }
-
-  jbyteArray first_row_array = env->NewByteArray(first_row_length);
-  env->SetByteArrayRegion(first_row_array, 0, first_row_length, (jbyte *) first_row);
-  free(first_row);
-
-  jbyteArray last_group_array = env->NewByteArray(last_group_length);
-  env->SetByteArrayRegion(last_group_array, 0, last_group_length, (jbyte *) last_group);
-  free(last_group);
-
-  jbyteArray last_row_array = env->NewByteArray(last_row_length);
-  env->SetByteArrayRegion(last_row_array, 0, last_row_length, (jbyte *) last_row);
-  free(last_row);
-
-  env->ReleaseByteArrayElements(agg_op, (jbyte *) agg_op_ptr, 0);
-  env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-
-  jclass tuple3_class = env->FindClass("scala/Tuple3");
-  jobject ret = env->NewObject(
-    tuple3_class,
-    env->GetMethodID(tuple3_class, "<init>",
-                     "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V"),
-    first_row_array, last_group_array, last_row_array);
-
-  return ret;
-}
-
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows,
-  jbyteArray next_partition_first_row, jbyteArray prev_partition_last_group,
-  jbyteArray prev_partition_last_row, jint pid) {
-  (void)obj;
-
-  jboolean if_copy;
-
-  uint32_t agg_op_length = (uint32_t) env->GetArrayLength(agg_op);
-  uint8_t *agg_op_ptr = (uint8_t *) env->GetByteArrayElements(agg_op, &if_copy);
-
-  uint32_t input_rows_length = (uint32_t) env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr = (uint8_t *) env->GetByteArrayElements(input_rows, &if_copy);
-
-  uint32_t next_partition_first_row_length =
-    (uint32_t) env->GetArrayLength(next_partition_first_row);
-  uint8_t *next_partition_first_row_ptr =
-    (uint8_t *) env->GetByteArrayElements(next_partition_first_row, &if_copy);
-
-  uint32_t prev_partition_last_group_length =
-    (uint32_t) env->GetArrayLength(prev_partition_last_group);
-  uint8_t *prev_partition_last_group_ptr =
-    (uint8_t *) env->GetByteArrayElements(prev_partition_last_group, &if_copy);
-
-  uint32_t prev_partition_last_row_length =
-    (uint32_t) env->GetArrayLength(prev_partition_last_row);
-  uint8_t *prev_partition_last_row_ptr =
-    (uint8_t *) env->GetByteArrayElements(prev_partition_last_row, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
 
+  bool is_partial = (bool) isPartial;
+
   if (input_rows_ptr == nullptr) {
-    ocall_throw("NonObliviousAggregateStep2: JNI failed to get input byte array.");
+    ocall_throw("NonObliviousAggregate: JNI failed to get input byte array.");
   } else {
-    oe_check_and_time("Non-Oblivious Aggregate Step 2",
-                       ecall_non_oblivious_aggregate_step2(
+    oe_check_and_time("Non-Oblivious Aggregate",
+                       ecall_non_oblivious_aggregate(
                          (oe_enclave_t*)eid,
                          agg_op_ptr, agg_op_length,
                          input_rows_ptr, input_rows_length,
-                         next_partition_first_row_ptr, next_partition_first_row_length,
-                         prev_partition_last_group_ptr, prev_partition_last_group_length,
-                         prev_partition_last_row_ptr, prev_partition_last_row_length,
-                         &output_rows, &output_rows_length, pid));
+                         &output_rows, &output_rows_length,
+                         is_partial));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -711,19 +634,13 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregateStep2
 
   env->ReleaseByteArrayElements(agg_op, (jbyte *) agg_op_ptr, 0);
   env->ReleaseByteArrayElements(input_rows, (jbyte *) input_rows_ptr, 0);
-  env->ReleaseByteArrayElements(
-    next_partition_first_row, (jbyte *) next_partition_first_row_ptr, 0);
-  env->ReleaseByteArrayElements(
-    prev_partition_last_group, (jbyte *) prev_partition_last_group_ptr, 0);
-  env->ReleaseByteArrayElements(
-    prev_partition_last_row, (jbyte *) prev_partition_last_row_ptr, 0);
-
+  
   return ret;
 }
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
-  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -742,8 +659,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
                                                        input_rows_ptr,
                                                        input_rows_length,
                                                        &output_rows,
-                                                       &output_rows_length,
-                                                       pid));
+                                                       &output_rows_length));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -757,7 +673,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition(
-  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -777,8 +693,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
                                                              input_rows_ptr,
                                                              input_rows_length,
                                                              &output_rows,
-                                                             &output_rows_length,
-                                                             pid));
+                                                             &output_rows_length));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -792,7 +707,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
-  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -812,8 +727,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
                                           input_rows_ptr,
                                           input_rows_length,
                                           &output_rows,
-                                          &output_rows_length,
-                                          pid));
+                                          &output_rows_length));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -828,7 +742,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits, jbyteArray input_rows, jint pid) {
+  JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits, jbyteArray input_rows) {
 
     (void)obj;
     jboolean if_copy;
@@ -853,8 +767,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
                                                 input_rows_ptr,
                                                 input_rows_length,
                                                 &output_rows,
-                                                &output_rows_length,
-                                                pid));
+                                                &output_rows_length));
     }
 
     jbyteArray ret = env->NewByteArray(output_rows_length);

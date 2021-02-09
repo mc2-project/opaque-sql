@@ -30,10 +30,14 @@ table SortExpr {
 }
 
 // Aggregate
+table PartialAggregateExpr {
+    initial_values: [Expr];
+    update_exprs: [Expr];
+}
 table AggregateExpr {
     initial_values: [Expr];
     update_exprs: [Expr];
-    evaluate_expr: Expr;
+    evaluate_exprs: [Expr];
 }
 // Supported: Average, Count, First, Last, Max, Min, Sum
 

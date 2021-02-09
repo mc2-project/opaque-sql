@@ -44,6 +44,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+import org.apache.spark.sql.catalyst.expressions.DateAdd
+import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
 import org.apache.spark.sql.catalyst.expressions.EndsWith
@@ -69,18 +71,11 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.aggregate.Average
-import org.apache.spark.sql.catalyst.expressions.aggregate.Count
-import org.apache.spark.sql.catalyst.expressions.aggregate.Final
-import org.apache.spark.sql.catalyst.expressions.aggregate.First
-import org.apache.spark.sql.catalyst.expressions.aggregate.Last
-import org.apache.spark.sql.catalyst.expressions.aggregate.Max
-import org.apache.spark.sql.catalyst.expressions.aggregate.Min
-import org.apache.spark.sql.catalyst.expressions.aggregate.Sum
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.Cross
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
 import org.apache.spark.sql.catalyst.plans.FullOuter
@@ -734,7 +729,8 @@ object Utils extends Logging {
           tuix.LogEntryChain.createCurrEntriesVector(builder2, Array.empty),
           tuix.LogEntryChain.createPastEntriesVector(builder2, Array.empty),
           tuix.LogEntryChain.createNumPastEntriesVector(builder2, Array.empty)),
-        tuix.EncryptedBlocks.createLogMacVector(builder2, Array.empty)
+        tuix.EncryptedBlocks.createLogMacVector(builder2, Array.empty),
+        tuix.EncryptedBlocks.createAllOutputsMacVector(builder2, Array.empty)
       ))
     val encryptedBlockBytes = builder2.sizedByteArray()
 
@@ -1019,12 +1015,27 @@ object Utils extends Logging {
             tuix.Contains.createContains(
               builder, leftOffset, rightOffset))
 
+        // Time expressions
         case (Year(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Year,
             tuix.Year.createYear(
               builder, childOffset))
+
+        case (DateAdd(left, right), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAdd,
+            tuix.DateAdd.createDateAdd(
+              builder, leftOffset, rightOffset))
+
+        case (DateAddInterval(left, right, _, _), Seq(leftOffset, rightOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.DateAddInterval,
+            tuix.DateAddInterval.createDateAddInterval(
+              builder, leftOffset, rightOffset))
 
         // Math expressions
         case (Exp(child), Seq(childOffset)) =>
@@ -1155,17 +1166,19 @@ object Utils extends Logging {
   }
 
   def serializeAggOp(
-    groupingExpressions: Seq[Expression],
-    aggExpressions: Seq[NamedExpression],
+    groupingExpressions: Seq[NamedExpression],
+    aggExpressions: Seq[AggregateExpression],
     input: Seq[Attribute]): Array[Byte] = {
-    // aggExpressions contains both grouping expressions and AggregateExpressions. Transform the
-    // grouping expressions into AggregateExpressions that collect the first seen value.
-    val aggExpressionsWithFirst = aggExpressions.map {
-      case Alias(e: AggregateExpression, _) => e
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Final, false)
-    }
 
-    val aggSchema = aggExpressionsWithFirst.flatMap(_.aggregateFunction.aggBufferAttributes)
+    // The output of agg operator contains both the grouping columns and the aggregate values.
+    // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
+    // into AggregateExpressions that collect the first seen value.
+    val aggGroupingExpressions = groupingExpressions.map {
+      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+    }
+    val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
+
+    val aggSchema = aggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
     // For aggregation, we concatenate the current aggregate row with the new input row and run
     // the update expressions as a projection to obtain a new aggregate row. concatSchema
     // describes the schema of the temporary concatenated row.
@@ -1180,7 +1193,7 @@ object Utils extends Logging {
           groupingExpressions.map(e => flatbuffersSerializeExpression(builder, e, input)).toArray),
         tuix.AggregateOp.createAggregateExpressionsVector(
           builder,
-          aggExpressionsWithFirst
+          aggregateExpressions
             .map(e => serializeAggExpression(builder, e, input, aggSchema, concatSchema))
             .toArray)))
     builder.sizedByteArray()
@@ -1191,36 +1204,91 @@ object Utils extends Logging {
    * tuix.AggregateExpr.
    */
   def serializeAggExpression(
-    builder: FlatBufferBuilder, e: AggregateExpression, input: Seq[Attribute],
-    aggSchema: Seq[Attribute], concatSchema: Seq[Attribute]): Int = {
+    builder: FlatBufferBuilder,
+    e: AggregateExpression,
+    input: Seq[Attribute],
+    aggSchema: Seq[Attribute],
+    concatSchema: Seq[Attribute]): Int = {
     (e.aggregateFunction: @unchecked) match {
-      case avg @ Average(child) =>
+
+      case avg @ Average(child)  =>
         val sum = avg.aggBufferAttributes(0)
         val count = avg.aggBufferAttributes(1)
+        val dataType = child.dataType
 
-        // TODO: support aggregating null values
+        val sumInitValue = Literal.default(dataType)
+        val countInitValue = Literal(0L)
         // TODO: support DecimalType to match Spark SQL behavior
+
+        val (updateExprs: Seq[Expression], evaluateExprs: Seq[Expression]) = e.mode match {
+          case Partial => {
+            val sumUpdateExpr = Add(
+              sum,
+              If(IsNull(child),
+                Literal.default(dataType),
+                Cast(child, dataType)))
+            val countUpdateExpr = If(IsNull(child), count, Add(count, Literal(1L)))
+            (Seq(sumUpdateExpr, countUpdateExpr), Seq(sum, count))
+          }
+          case Final => {
+            val sumUpdateExpr = Add(sum, avg.inputAggBufferAttributes(0))
+            val countUpdateExpr = Add(count, avg.inputAggBufferAttributes(1))
+            val evalExpr = If(EqualTo(count, Literal(0L)),
+              Literal.create(null, DoubleType),
+              Divide(Cast(sum, DoubleType), Cast(count, DoubleType)))
+            (Seq(sumUpdateExpr, countUpdateExpr), Seq(evalExpr))
+          }
+          case Complete => {
+            val sumUpdateExpr = Add(
+              sum,
+              If(IsNull(child), Cast(Literal(0), dataType), Cast(child, dataType)))
+            val countUpdateExpr = If(IsNull(child), count, Add(count, Literal(1L)))
+            val evalExpr = Divide(Cast(sum, DoubleType), Cast(count, DoubleType))
+            (Seq(sumUpdateExpr, countUpdateExpr), Seq(evalExpr))
+          }
+          case _ => 
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
-              /* sum = */ flatbuffersSerializeExpression(builder, Literal(0.0), input),
-              /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
+              /* sum = */ flatbuffersSerializeExpression(builder, sumInitValue, input),
+              /* count = */ flatbuffersSerializeExpression(builder, countInitValue, input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* sum = */ flatbuffersSerializeExpression(
-                builder, Add(sum, Cast(child, DoubleType)), concatSchema),
-              /* count = */ flatbuffersSerializeExpression(
-                builder, Add(count, Literal(1L)), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, Divide(sum, Cast(count, DoubleType)), aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
+        )
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
+        // COUNT(*) should count NULL values
+        // COUNT(expr) should return the number or rows for which the supplied expressions are non-NULL
 
-        // TODO: support skipping null values
+        val (updateExprs: Seq[Expression], evaluateExprs: Seq[Expression]) = e.mode match {
+          case Partial => {
+            val nullableChildren = children.filter(_.nullable)
+            val countUpdateExpr = nullableChildren.isEmpty match {
+              case true => Add(count, Literal(1L))
+              case false => If(nullableChildren.map(IsNull).reduce(Or), count, Add(count, Literal(1L)))
+             }
+            (Seq(countUpdateExpr), Seq(count))
+          }
+          case Final => {
+            val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
+            (Seq(countUpdateExpr), Seq(count))
+          }
+          case Complete => {
+            val countUpdateExpr = Add(count, Literal(1L))
+            (Seq(countUpdateExpr), Seq(count))
+          }
+          case _ => 
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -1229,16 +1297,34 @@ object Utils extends Logging {
               /* count = */ flatbuffersSerializeExpression(builder, Literal(0L), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* count = */ flatbuffersSerializeExpression(
-                builder, Add(count, Literal(1L)), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, count, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
+        )
 
       case f @ First(child, Literal(false, BooleanType)) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val firstUpdateExpr = If(valueSet, first, child)
+              val valueSetUpdateExpr = Literal(true)
+            (Seq(firstUpdateExpr, valueSetUpdateExpr), Seq(first, valueSet))
+          }
+          case Final => {
+            val firstUpdateExpr = If(valueSet, first, f.inputAggBufferAttributes(0))
+            val valueSetUpdateExpr = Or(valueSet, f.inputAggBufferAttributes(1))
+            (Seq(firstUpdateExpr, valueSetUpdateExpr), Seq(first))
+          }
+          case Complete => {
+            val firstUpdateExpr = If(valueSet, first, child)
+            val valueSetUpdateExpr = Literal(true)
+            (Seq(firstUpdateExpr, valueSetUpdateExpr), Seq(first))
+          }
+        }
+
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
           builder,
@@ -1250,16 +1336,32 @@ object Utils extends Logging {
               /* valueSet = */ flatbuffersSerializeExpression(builder, Literal(false), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* first = */ flatbuffersSerializeExpression(
-                builder, If(valueSet, first, child), concatSchema),
-              /* valueSet = */ flatbuffersSerializeExpression(
-                builder, Literal(true), concatSchema))),
-          flatbuffersSerializeExpression(builder, first, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case l @ Last(child, Literal(false, BooleanType)) =>
         val last = l.aggBufferAttributes(0)
-        // val valueSet = l.aggBufferAttributes(1)
+        val valueSet = l.aggBufferAttributes(1)
+
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val lastUpdateExpr = child
+            val valueSetUpdateExpr = Literal(true)
+            (Seq(lastUpdateExpr, valueSetUpdateExpr), Seq(last, valueSet))
+          }
+          case Final => {
+            val lastUpdateExpr = If(l.inputAggBufferAttributes(1), l.inputAggBufferAttributes(0), last)
+            val valueSetUpdateExpr = Or(l.inputAggBufferAttributes(1), valueSet)
+            (Seq(lastUpdateExpr, valueSetUpdateExpr), Seq(last))
+          }
+          case Complete => {
+            val lastUpdateExpr = child
+            val valueSetUpdateExpr = Literal(true)
+            (Seq(lastUpdateExpr, valueSetUpdateExpr), Seq(last))
+          }
+        }
 
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
@@ -1272,16 +1374,30 @@ object Utils extends Logging {
               /* valueSet = */ flatbuffersSerializeExpression(builder, Literal(false), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* last = */ flatbuffersSerializeExpression(
-                builder, child, concatSchema),
-              /* valueSet = */ flatbuffersSerializeExpression(
-                builder, Literal(true), concatSchema))),
-          flatbuffersSerializeExpression(builder, last, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case m @ Max(child) =>
         val max = m.aggBufferAttributes(0)
 
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val maxUpdateExpr = If(Or(IsNull(max), GreaterThan(child, max)), child, max)
+            (Seq(maxUpdateExpr), Seq(max))
+          }
+          case Final => {
+            val maxUpdateExpr = If(Or(IsNull(max),
+              GreaterThan(m.inputAggBufferAttributes(0), max)), m.inputAggBufferAttributes(0), max)
+            (Seq(maxUpdateExpr), Seq(max))
+          }
+          case Complete => {
+            val maxUpdateExpr = child
+            (Seq(maxUpdateExpr), Seq(max))
+          }
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -1291,15 +1407,30 @@ object Utils extends Logging {
                 builder, Literal.create(null, child.dataType), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* max = */ flatbuffersSerializeExpression(
-                builder, If(Or(IsNull(max), GreaterThan(child, max)), child, max), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, max, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case m @ Min(child) =>
         val min = m.aggBufferAttributes(0)
 
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val minUpdateExpr = If(Or(IsNull(min), LessThan(child, min)), child, min)
+              (Seq(minUpdateExpr), Seq(min))
+          }
+          case Final => {
+            val minUpdateExpr = If(Or(IsNull(min),
+              LessThan(m.inputAggBufferAttributes(0), min)), m.inputAggBufferAttributes(0), min)
+              (Seq(minUpdateExpr), Seq(min))
+          }
+          case Complete => {
+            val minUpdateExpr = child
+            (Seq(minUpdateExpr), Seq(min))
+          }
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
@@ -1309,35 +1440,68 @@ object Utils extends Logging {
                 builder, Literal.create(null, child.dataType), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* min = */ flatbuffersSerializeExpression(
-                builder, If(Or(IsNull(min), LessThan(child, min)), child, min), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, min, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case s @ Sum(child) =>
         val sum = s.aggBufferAttributes(0)
-
         val sumDataType = s.dataType
+        // If any value is not NULL, return a non-NULL value
+        // If all values are NULL, return NULL
 
-        // TODO: support aggregating null values
+        val initValue = Literal.create(null, sumDataType)
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), Cast(child, sumDataType))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
+            (Seq(sumUpdateExpr), Seq(sum))
+          }
+          case Final => {
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), s.inputAggBufferAttributes(0))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
+            (Seq(sumUpdateExpr), Seq(sum))
+          }
+          case Complete => {
+            val sumUpdateExpr = Add(If(IsNull(sum), Literal.default(sumDataType), sum), Cast(child, sumDataType))
+            (Seq(sumUpdateExpr), Seq(sum))
+          }
+        }
+
         tuix.AggregateExpr.createAggregateExpr(
           builder,
           tuix.AggregateExpr.createInitialValuesVector(
             builder,
             Array(
               /* sum = */ flatbuffersSerializeExpression(
-                builder, Cast(Literal(0), sumDataType), input))),
+                builder, initValue, input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* sum = */ flatbuffersSerializeExpression(
-                builder, Add(sum, Cast(child, sumDataType)), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, sum, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
+
+        val sumDataType = vs.dataType
+
+        val (updateExprs, evaluateExprs) = e.mode match {
+          case Partial => {
+            val vectorSumUpdateExpr = VectorAdd(sum, child)
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+          case Final => {
+            val vectorSumUpdateExpr = VectorAdd(sum, vs.inputAggBufferAttributes(0))
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+          case Complete => {
+            val vectorSumUpdateExpr = VectorAdd(sum, child)
+            (Seq(vectorSumUpdateExpr), Seq(sum))
+          }
+        }
 
         // TODO: support aggregating null values
         tuix.AggregateExpr.createAggregateExpr(
@@ -1349,11 +1513,10 @@ object Utils extends Logging {
                 builder, Literal(Array[Double]()), input))),
           tuix.AggregateExpr.createUpdateExprsVector(
             builder,
-            Array(
-              /* sum = */ flatbuffersSerializeExpression(
-                builder, VectorAdd(sum, child), concatSchema))),
-          flatbuffersSerializeExpression(
-            builder, sum, aggSchema))
+            updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
+          tuix.AggregateExpr.createEvaluateExprsVector(
+            builder,
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
     }
   }
 
@@ -1371,6 +1534,19 @@ object Utils extends Logging {
       encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
       i <- 0 until encryptedBlocks.logMacLength
     } yield encryptedBlocks.logMac(i)
+
+    // For tuix::Mac EncryptedBlocks.all_outputs_mac
+    // val allAllOutputsMacs = for {
+    //   block <- blocks
+    //   encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+    //   i <- 0 until encryptedBlocks.allOutputsMacLength
+    // } yield encryptedBlocks.allOutputsMac(i)
+
+    val allAllOutputsMacs = for {
+      block <- blocks
+      encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+      i <- 0 until encryptedBlocks.allOutputsMacLength
+    } yield encryptedBlocks.allOutputsMac(i).toByte
 
     val allLogEntryChains = for {
       block <- blocks
@@ -1409,26 +1585,31 @@ object Utils extends Logging {
             currLogEntry.macLstAsByteBuffer.get(macLst)
             val macLstMac = new Array[Byte](currLogEntry.macLstMacLength)
             currLogEntry.macLstMacAsByteBuffer.get(macLstMac)
+            val inputMacs = new Array[Byte](currLogEntry.inputMacsLength)
+            currLogEntry.inputMacsAsByteBuffer.get(inputMacs)
             tuix.LogEntry.createLogEntry(
               builder,
               currLogEntry.ecall,
-              currLogEntry.sndPid,
-              currLogEntry.rcvPid,
-              currLogEntry.jobId,
               currLogEntry.numMacs,
               tuix.LogEntry.createMacLstVector(builder, macLst),
-              tuix.LogEntry.createMacLstMacVector(builder, macLstMac))
+              tuix.LogEntry.createMacLstMacVector(builder, macLstMac),
+              tuix.LogEntry.createInputMacsVector(builder, inputMacs),
+              currLogEntry.numInputMacs)
           }.toArray),
-          tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { pastLogEntry =>
-            tuix.LogEntry.createLogEntry(
+          tuix.LogEntryChain.createPastEntriesVector(builder, allPastLogEntries.map { crumb =>
+            val inputMacs = new Array[Byte](crumb.inputMacsLength)
+            crumb.inputMacsAsByteBuffer.get(inputMacs)
+            val allOutputsMac = new Array[Byte](crumb.allOutputsMacLength)
+            crumb.allOutputsMacAsByteBuffer.get(allOutputsMac)
+            val logMac = new Array[Byte](crumb.logMacLength)
+            crumb.logMacAsByteBuffer.get(logMac)
+            tuix.Crumb.createCrumb(
               builder,
-              pastLogEntry.ecall,
-              pastLogEntry.sndPid,
-              pastLogEntry.rcvPid,
-              pastLogEntry.jobId,
-              pastLogEntry.numMacs,
-              tuix.LogEntry.createMacLstVector(builder, Array.empty),
-              tuix.LogEntry.createMacLstMacVector(builder, Array.empty))
+              tuix.Crumb.createInputMacsVector(builder, inputMacs),
+              crumb.numInputMacs,
+              tuix.Crumb.createAllOutputsMacVector(builder, allOutputsMac),
+              crumb.ecall,
+              tuix.Crumb.createLogMacVector(builder, logMac))
           }.toArray),
           tuix.LogEntryChain.createNumPastEntriesVector(builder, numPastEntriesList.toArray)
         ),
@@ -1436,7 +1617,13 @@ object Utils extends Logging {
           val mac = new Array[Byte](logMac.macLength)
           logMac.macAsByteBuffer.get(mac)
           tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
-        }.toArray)
+        }.toArray),
+      // tuix.EncryptedBlocks.createAllOutputsMacVector(builder, allAllOutputsMacs.map { allOutputsMac =>
+      //     val mac = new Array[Byte](allOutputsMac.macLength)
+      //     allOutputsMac.macAsByteBuffer.get(mac)
+      //     tuix.Mac.createMac(builder, tuix.Mac.createMacVector(builder, mac))
+      //   }.toArray)
+      tuix.EncryptedBlocks.createAllOutputsMacVector(builder, allAllOutputsMacs.toArray)
       ))
     Block(builder.sizedByteArray())
   }
@@ -1451,43 +1638,44 @@ object Utils extends Logging {
           tuix.LogEntryChain.createCurrEntriesVector(builder, Array.empty),
           tuix.LogEntryChain.createPastEntriesVector(builder, Array.empty),
           tuix.LogEntryChain.createNumPastEntriesVector(builder, Array.empty)),
-        tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
+        tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty),
+        tuix.EncryptedBlocks.createAllOutputsMacVector(builder, Array.empty)))
     Block(builder.sizedByteArray())
   }
 
-  def emptyBlock(block: Block): Block = {
-    val builder = new FlatBufferBuilder
-    val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
-    val pastLogEntries = for {
-      i <- 0 until encryptedBlocks.log.pastEntriesLength
-    } yield encryptedBlocks.log.pastEntries(i)
-
-    val currLogEntry = encryptedBlocks.log.currEntries(0)
-
-    val logEntries = pastLogEntries :+ currLogEntry
-
-    val numPastEntries = encryptedBlocks.log.numPastEntries(0)
-
-    builder.finish(
-      tuix.EncryptedBlocks.createEncryptedBlocks(
-        builder, 
-        tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
-        tuix.LogEntryChain.createLogEntryChain(builder,
-          tuix.LogEntryChain.createCurrEntriesVector(builder, 
-            Array.empty),
-        tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
-          tuix.LogEntry.createLogEntry(
-            builder,
-            logEntry.ecall,
-            logEntry.sndPid,
-            logEntry.rcvPid,
-            logEntry.jobId,
-            0,
-            tuix.LogEntry.createMacLstVector(builder, Array.empty),
-            tuix.LogEntry.createMacLstMacVector(builder, Array.empty)
-        )}.toArray),
-        tuix.LogEntryChain.createNumPastEntriesVector(builder, Array(numPastEntries))),
-      tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
-    Block(builder.sizedByteArray())
-  }
+  // def emptyBlock(block: Block): Block = {
+  //   val builder = new FlatBufferBuilder
+  //   val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(ByteBuffer.wrap(block.bytes))
+  //   val pastLogEntries = for {
+  //     i <- 0 until encryptedBlocks.log.pastEntriesLength
+  //   } yield encryptedBlocks.log.pastEntries(i)
+  // 
+  //   val currLogEntry = encryptedBlocks.log.currEntries(0)
+  // 
+  //   val logEntries = pastLogEntries :+ currLogEntry
+  // 
+  //   val numPastEntries = encryptedBlocks.log.numPastEntries(0)
+  // 
+  //   builder.finish(
+  //     tuix.EncryptedBlocks.createEncryptedBlocks(
+  //       builder, 
+  //       tuix.EncryptedBlocks.createBlocksVector(builder, Array.empty), 
+  //       tuix.LogEntryChain.createLogEntryChain(builder,
+  //         tuix.LogEntryChain.createCurrEntriesVector(builder, 
+  //           Array.empty),
+  //       tuix.LogEntryChain.createPastEntriesVector(builder, logEntries.map { logEntry =>
+  //         tuix.LogEntry.createLogEntry(
+  //           builder,
+  //           logEntry.ecall,
+  //           logEntry.sndPid,
+  //           logEntry.rcvPid,
+  //           logEntry.jobId,
+  //           0,
+  //           tuix.LogEntry.createMacLstVector(builder, Array.empty),
+  //           tuix.LogEntry.createMacLstMacVector(builder, Array.empty)
+  //       )}.toArray),
+  //       tuix.LogEntryChain.createNumPastEntriesVector(builder, Array(numPastEntries))),
+  //     tuix.EncryptedBlocks.createLogMacVector(builder, Array.empty)))
+  //   Block(builder.sizedByteArray())
+  // }
 }

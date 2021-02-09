@@ -13,7 +13,7 @@ table EncryptedBlocks {
     blocks:[EncryptedBlock];
     log:LogEntryChain;
     log_mac:[Mac]; 
-    /* all_outputs_mac:[Mac]; */
+    all_outputs_mac:[ubyte];
 }
 
 table SortedRuns {
@@ -22,19 +22,17 @@ table SortedRuns {
 
 table LogEntry {
     ecall:int; // ecall executed
-    snd_pid:int; // partition where ecall was executed - to be deprecated
-    rcv_pid:int; // partition of subsequent ecall - to be deprecated
-    job_id:int; // Number of ecalls executed in this enclave before this ecall - to be deprecated
     num_macs:int; // Number of EncryptedBlock's in this EncryptedBlocks - checked during runtime
     mac_lst:[ubyte]; // List of all MACs. one from each EncryptedBlocks - checked during runtime
     mac_lst_mac:[ubyte]; // MAC(mac_lst) - checked during runtime
-    /* input_macs:[Mac]; // List of all EncryptedBlocks' all_outputs_mac's */
+    input_macs:[ubyte]; // List of input EncryptedBlocks' all_output_mac's
+    num_input_macs:int; // Number of input_macs
 }
 
 table LogEntryChain {
     curr_entries:[LogEntry];
-    past_entries:[LogEntry]; // To be deprecated in favor of the line below
-    // past_entries:[Crumb];
+    past_entries:[Crumb];
+    // TODO: do we still need this?
     num_past_entries:[int];
 }
 
@@ -43,13 +41,14 @@ table Mac {
 }
 
 // Contains information about an ecall, which will be pieced together during post verfication to verify the DAG
-// A crumb representing an ecall is created at the next ecall
+// A crumb is created at an ecall for each previous ecall that sent some data to this ecall
 table Crumb {
-    input_macs:[Mac]; // List of all EncryptedBlocks all_outputs_mac's
-    all_outputs_mac:Mac; // MAC over all outputs of ecall from which this EncryptedBlocks came from
-    ecall:string; // Ecall executed
-    log_mac:Mac; // MAC over the LogEntryChain from this EncryptedBlocks
+    input_macs:[ubyte]; // List of EncryptedBlocks all_output_mac's, from LogEntry
+    num_input_macs:int; // Number of input_macs
+    all_outputs_mac:[ubyte]; // MAC over all outputs of ecall from which this EncryptedBlocks came from, of size OE_HMAC_SIZE
+    ecall:int; // Ecall executed
+    log_mac:[ubyte]; // MAC over the LogEntryChain from this EncryptedBlocks, of size OE_HMAC_SIZE
 }
 
-
+root_type EncryptedBlocks;
 

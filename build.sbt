@@ -24,6 +24,7 @@ concurrentRestrictions in Global := Seq(
 fork in Test := true
 fork in run := true
 
+testOptions in Test += Tests.Argument("-oF")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
   "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")
@@ -217,7 +218,7 @@ buildFlatbuffersTask := {
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
-      if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
+      if (Seq(flatc.getPath, "--cpp", "--gen-mutable", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
         || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0) {
         sys.error("Flatbuffers build failed.")
       }

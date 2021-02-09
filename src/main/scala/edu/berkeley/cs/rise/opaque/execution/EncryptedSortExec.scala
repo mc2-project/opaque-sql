@@ -23,23 +23,22 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.TaskContext
 
-case class EncryptedSortExec(order: Seq[SortOrder], child: SparkPlan)
+case class EncryptedSortExec(order: Seq[SortOrder], isGlobal: Boolean, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
-    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer)
+    EncryptedSortExec.sort(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), orderSer, isGlobal)
   }
 }
 
 object EncryptedSortExec {
   import Utils.time
 
-  def sort(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
+  def sort(childRDD: RDD[Block], orderSer: Array[Byte], isGlobal: Boolean): RDD[Block] = {
     Utils.ensureCached(childRDD)
     time("force child of EncryptedSort") { childRDD.count }
     // RA.initRA(childRDD)
@@ -48,10 +47,10 @@ object EncryptedSortExec {
     time("non-oblivious sort") {
       val numPartitions = childRDD.partitions.length
       val result =
-        if (numPartitions <= 1) {
+        if (numPartitions <= 1 || !isGlobal) {
           childRDD.map { block =>
             val (enclave, eid) = Utils.initEnclave()
-            val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes, TaskContext.getPartitionId)
+            val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)
             Block(sortedRows)
           }
         } else {
@@ -59,7 +58,7 @@ object EncryptedSortExec {
           val sampled = time("non-oblivious sort - Sample") {
             Utils.concatEncryptedBlocks(childRDD.map { block =>
               val (enclave, eid) = Utils.initEnclave()
-              val sampledBlock = enclave.Sample(eid, block.bytes, TaskContext.getPartitionId)
+              val sampledBlock = enclave.Sample(eid, block.bytes)
               Block(sampledBlock)
             }.collect)
           }
@@ -68,14 +67,14 @@ object EncryptedSortExec {
             // Parallelize has only one worker perform this FindRangeBounds
             childRDD.context.parallelize(Array(sampled.bytes), 1).map { sampledBytes =>
               val (enclave, eid) = Utils.initEnclave()
-              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes, TaskContext.getPartitionId)
+              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
             }.collect.head
           }
           // Broadcast the range boundaries and use them to partition the input
           childRDD.flatMap { block =>
             val (enclave, eid) = Utils.initEnclave()
             val partitions = enclave.PartitionForSort(
-              eid, orderSer, numPartitions, block.bytes, boundaries, TaskContext.getPartitionId)
+              eid, orderSer, numPartitions, block.bytes, boundaries)
             partitions.zipWithIndex.map {
               case (partition, i) => (i, Block(partition))
             }
@@ -85,7 +84,7 @@ object EncryptedSortExec {
               case (i, blocks) =>
                 val (enclave, eid) = Utils.initEnclave()
                 Block(enclave.ExternalSort(
-                  eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes, TaskContext.getPartitionId))
+                  eid, orderSer, Utils.concatEncryptedBlocks(blocks.toSeq).bytes))
             }
         }
       Utils.ensureCached(result)
