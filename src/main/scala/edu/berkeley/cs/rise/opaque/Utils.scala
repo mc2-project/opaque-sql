@@ -822,12 +822,18 @@ object Utils extends Logging {
             tuix.ExprUnion.Col,
             tuix.Col.createCol(builder, colNum))
 
-         case (Literal(value, dataType), Nil) =>
+        case (Literal(value, dataType), Nil) =>
           val valueOffset = flatbuffersCreateField(builder, value, dataType, (value == null))
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
+
+        case (Decrypt(Literal(value, StringType), dataType), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Decrypt,
+            tuix.Decrypt.createDecrypt(builder, childOffset))
 
         case (Alias(child, _), Seq(childOffset)) =>
           // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
