@@ -43,8 +43,8 @@ object TPCHBenchmark {
     }
   }
 
-  def run(sqlContext: SQLContext, numPartitions: Int, size: String) = {
-    val tpch = new TPCH(sqlContext, size)
+  def run(sqlContext: SQLContext, numPartitions: Int, size: String, fileUrl: String) = {
+    val tpch = new TPCH(sqlContext, size, fileUrl)
 
     val supportedQueries = Seq(1, 3, 5, 6, 7, 8, 9, 10, 14, 17)
 

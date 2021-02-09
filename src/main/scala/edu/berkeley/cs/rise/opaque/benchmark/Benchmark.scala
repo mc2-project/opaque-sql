@@ -34,6 +34,8 @@ import org.apache.spark.sql.SparkSession
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
  *       Syntax: --operations "logistic-regression,tpc-h"
+ *   --run-local: boolean whether to use HDFS or the local filesystem
+ *       Default: HDFS
  * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
@@ -45,6 +47,9 @@ object Benchmark {
       .getOrCreate()
   var numPartitions = spark.sparkContext.defaultParallelism
   var size = "sf_med"
+
+  // Configure your HDFS namenode url here
+  var fileUrl = "hdfs://10.0.3.4:8020"
 
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
@@ -68,7 +73,7 @@ object Benchmark {
 
   def runAll() = {
     logisticRegression()
-    TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
+    TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
   }
 
   def main(args: Array[String]): Unit = {
@@ -85,7 +90,9 @@ object Benchmark {
           Default: all
           Available operations: logistic-regression, tpc-h
           Syntax: --operations "logistic-regression,tpc-h"
-          Leave --operations flag blank to run all benchmarks"""
+          Leave --operations flag blank to run all benchmarks
+    --run-local: boolean whether to use HDFS or the local filesystem
+          Default: HDFS"""
       )
     }
 
@@ -102,6 +109,14 @@ object Benchmark {
           println("Given size is not supported: available values are " + supportedSizes.toString())
         }
       }
+      case Array("--run-local", runLocal: String) => {
+        runLocal match {
+          case "true" => {
+            fileUrl = "file://"
+          }
+          case _ => {}
+        }
+      }
       case Array("--operations", operations: String) => {
         runAll = false
         val operationsArr = operations.split(",").map(_.trim)
@@ -111,7 +126,7 @@ object Benchmark {
               logisticRegression()
             }
             case "tpc-h" => {
-              TPCHBenchmark.run(spark.sqlContext, numPartitions, size)
+              TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
             }
           }
         }
