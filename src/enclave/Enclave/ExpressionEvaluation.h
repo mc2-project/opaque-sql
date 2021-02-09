@@ -288,6 +288,19 @@ private:
         static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
     }
 
+    case tuix::ExprUnion_Decrypt:
+    {
+      auto add = static_cast<const tuix::Add *>(expr->expr());
+      auto left_offset = eval_helper(row, add->left());
+      auto right_offset = eval_helper(row, add->right());
+
+      return eval_binary_arithmetic_op<tuix::Add, std::plus>(
+        builder,
+        flatbuffers::GetTemporaryPointer(builder, left_offset),
+        flatbuffers::GetTemporaryPointer(builder, right_offset));
+
+    }
+
     case tuix::ExprUnion_Cast:
     {
       auto cast = static_cast<const tuix::Cast *>(expr->expr());
