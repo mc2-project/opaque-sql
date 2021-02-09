@@ -488,6 +488,6 @@ object JobVerificationEngine {
       println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
-    return true
+    return true 
   }
 }
