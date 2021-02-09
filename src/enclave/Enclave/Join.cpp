@@ -5,59 +5,20 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-void scan_collect_last_primary(
-  uint8_t *join_expr, size_t join_expr_length,
-  uint8_t *input_rows, size_t input_rows_length,
-  uint8_t **output_rows, size_t *output_rows_length) {
-
-  FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
-  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
-  RowWriter w;
-
-  FlatbuffersTemporaryRow last_primary;
-
-  // Accumulate all primary table rows from the same group as the last primary row into `w`.
-  //
-  // Because our distributed sorting algorithm uses range partitioning over the join keys, all
-  // primary rows belonging to the same group will be colocated in the same partition. (The
-  // corresponding foreign rows may be in the same partition or the next partition.) Therefore it is
-  // sufficient to send primary rows at most one partition forward.
-  while (r.has_next()) {
-    const tuix::Row *row = r.next();
-    if (join_expr_eval.is_primary(row)) {
-      if (!last_primary.get() || !join_expr_eval.is_same_group(last_primary.get(), row)) {
-        w.clear();
-        last_primary.set(row);
-      }
-
-      w.append(row);
-    } else {
-      w.clear();
-      last_primary.set(nullptr);
-    }
-  }
-
-  w.output_buffer(output_rows, output_rows_length, std::string("scanCollectLastPrimary"));
-}
-
 void non_oblivious_sort_merge_join(
   uint8_t *join_expr, size_t join_expr_length,
   uint8_t *input_rows, size_t input_rows_length,
-  uint8_t *join_row, size_t join_row_length,
   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
+  tuix::JoinType join_type = join_expr_eval.get_join_type();
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
-  RowReader j(BufferRefView<tuix::EncryptedBlocks>(join_row, join_row_length));
   RowWriter w;
 
-  RowWriter primary_group; // All rows in this group
-  FlatbuffersTemporaryRow last_primary_of_group; // Last seen row
-  while (j.has_next()) {
-    const tuix::Row *row = j.next();
-    primary_group.append(row);
-    last_primary_of_group.set(row);
-  }
+  RowWriter primary_group;
+  FlatbuffersTemporaryRow last_primary_of_group;
+
+  bool pk_fk_match = false;
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
@@ -70,10 +31,22 @@ void non_oblivious_sort_merge_join(
         primary_group.append(current);
         last_primary_of_group.set(current);
       } else {
-        // Advance to a new group
+        // If a new primary group is encountered
+        if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
+          auto primary_group_buffer = primary_group.output_buffer();
+          RowReader primary_group_reader(primary_group_buffer.view());
+          
+          while (primary_group_reader.has_next()) {
+            const tuix::Row *primary = primary_group_reader.next();
+            w.append(primary);
+          }
+        }
+
         primary_group.clear();
         primary_group.append(current);
         last_primary_of_group.set(current);
+        
+        pk_fk_match = false;
       }
     } else {
       // Current row isn't from primary table
@@ -96,13 +69,34 @@ void non_oblivious_sort_merge_join(
               + to_string(current));
           }
 
-          EnclaveContext::getInstance().set_append_mac(true);
-          w.append(primary, current);
+          if (join_type == tuix::JoinType_Inner) {
+            w.append(primary, current);
+          } else if (join_type == tuix::JoinType_LeftSemi) {
+            // Only output the pk group ONCE
+            if (!pk_fk_match) {
+              w.append(primary);
+            }
+          }
         }
+
+        pk_fk_match = true;
+      } else {
+        // If pk_fk_match were true, and the code got to here, then that means the group match has not been "cleared" yet
+        // It will be processed when the code advances to the next pk group
+        pk_fk_match &= true;
       }
     }
   }
 
-  EnclaveContext::getInstance().set_append_mac(true);
-  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
+  if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
+    auto primary_group_buffer = primary_group.output_buffer();
+    RowReader primary_group_reader(primary_group_buffer.view());
+          
+    while (primary_group_reader.has_next()) {
+      const tuix::Row *primary = primary_group_reader.next();
+      w.append(primary);
+    }
+  }
+
+  w.output_buffer(output_rows, output_rows_length);
 }
