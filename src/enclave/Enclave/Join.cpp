@@ -33,7 +33,7 @@ void non_oblivious_sort_merge_join(
       } else {
         // If a new primary group is encountered
         if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
-          auto primary_group_buffer = primary_group.output_buffer();
+          auto primary_group_buffer = primary_group.output_buffer(std::string(""));
           RowReader primary_group_reader(primary_group_buffer.view());
           
           while (primary_group_reader.has_next()) {
@@ -89,7 +89,8 @@ void non_oblivious_sort_merge_join(
   }
 
   if (join_type == tuix::JoinType_LeftAnti && !pk_fk_match) {
-    auto primary_group_buffer = primary_group.output_buffer();
+    EnclaveContext::getInstance().set_append_mac(false);
+    auto primary_group_buffer = primary_group.output_buffer(std::string(""));
     RowReader primary_group_reader(primary_group_buffer.view());
           
     while (primary_group_reader.has_next()) {
@@ -98,5 +99,6 @@ void non_oblivious_sort_merge_join(
     }
   }
 
-  w.output_buffer(output_rows, output_rows_length);
+  EnclaveContext::getInstance().set_append_mac(true);
+  w.output_buffer(output_rows, output_rows_length, std::string("nonObliviousSortMergeJoin"));
 }

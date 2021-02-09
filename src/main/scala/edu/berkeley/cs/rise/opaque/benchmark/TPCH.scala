@@ -205,48 +205,6 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
     }
   }
 
-<<<<<<< HEAD
-   /** TPC-H query 9 - Product Type Profit Measure Query */
-   def tpch9(
-       sqlContext: SQLContext,
-       securityLevel: SecurityLevel,
-       size: String,
-       numPartitions: Int,
-       quantityThreshold: Option[Int] = None) : DataFrame = {
-     import sqlContext.implicits._
-     val (partDF, supplierDF, lineitemDF, partsuppDF, ordersDF, nationDF) =
-       tpch9EncryptedDFs(sqlContext, securityLevel, size, numPartitions)
-
-     val df =
-       ordersDF.select($"o_orderkey", year($"o_orderdate").as("o_year")) // 6. orders
-         .join(
-           (nationDF// 4. nation
-             .join(
-               supplierDF // 3. supplier
-                 .join(
-                   partDF // 1. part
-                     .filter($"p_name".contains("maroon"))
-                     .select($"p_partkey")
-                     .join(partsuppDF, $"p_partkey" === $"ps_partkey"), // 2. partsupp
-                   $"ps_suppkey" === $"s_suppkey"),
-               $"s_nationkey" === $"n_nationkey"))
-               .join(
-                 // 5. lineitem
-                 quantityThreshold match {
-                   case Some(q) => lineitemDF.filter($"l_quantity" > lit(q))
-                   case None => lineitemDF
-                 },
-                 $"s_suppkey" === $"l_suppkey" && $"p_partkey" === $"l_partkey"),
-             $"l_orderkey" === $"o_orderkey")
-           .select(
-             $"n_name",
-             $"o_year",
-             ($"l_extendedprice" * (lit(1) - $"l_discount") - $"ps_supplycost" * $"l_quantity")
-               .as("amount"))
-           .groupBy("n_name", "o_year").agg(sum($"amount").as("sum_profit"))
-     df
-   }
-=======
   def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : DataFrame = {
     setupViews(securityLevel, numPartitions)
 
@@ -255,5 +213,4 @@ class TPCH(val sqlContext: SQLContext, val size: String) {
 
     sqlContext.sparkSession.sql(sqlStr)
   }
->>>>>>> b4ba2db587e12f4a7aa05bf038327a3d653f63ff
 }

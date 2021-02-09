@@ -384,6 +384,8 @@ object JobVerificationEngine {
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
+      // println(executedPathsToSink.toString)
+      // println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
     return true
