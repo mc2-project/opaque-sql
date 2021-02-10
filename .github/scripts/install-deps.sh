@@ -17,11 +17,3 @@ sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 # Generate keypair for attestation
 openssl genrsa -out private_key.pem -3 3072
-
-# Set up environment variables
-source opaqueenv
-source /opt/openenclave/share/openenclave/openenclaverc
-export MODE=SIMULATE
-
-# Build package
-./build/sbt package

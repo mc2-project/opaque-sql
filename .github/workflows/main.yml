@@ -24,21 +24,23 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '8'
-      # Run the build script
+      # Run the test
       - name: Install dependencies, set environment variables, and build the package
-        run: ./.github/scripts/build.sh
-        shell: bash
+        run: |
+          ./.github/scripts/install-deps.sh
+          ./.github/scripts/setup-env.sh
+          ./build/sbt package
 
   test:
     runs-on: ubuntu-18.04
-    # Specify that the build job is a prerequisite
+    # Build job is a prerequisite
     needs: build
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
         with:
           java-version: '8'
-      # Run sbt tests
-      - name: Run tests
-        run: ./build/sbt test
-
+      - name: Run sbt tests
+        run: |
+          ./.github/scripts/setup-env.sh
+          ./build/sbt test
