@@ -22,8 +22,8 @@ jobs:
       - uses: actions/checkout@v2
       # Run the build script
       - name: Install dependencies, set environment variables, and build the package
-      - run: ./.github/scripts/build.sh
-      - shell: bash
+        run: ./.github/scripts/build.sh
+        shell: bash
 
   test:
     runs-on: ubuntu-18.04
@@ -33,4 +33,5 @@ jobs:
       - uses: actions/checkout@v2
       # Run tests
       - name: Run tests
-      - run: ./build/sbt test
+        run: ./build/sbt test
+        shell: bash
