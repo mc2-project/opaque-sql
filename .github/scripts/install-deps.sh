@@ -16,4 +16,4 @@ wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Lin
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 # Generate keypair for attestation
-openssl genrsa -out private_key.pem -3 3072
+openssl genrsa -out ./private_key.pem -3 3072
