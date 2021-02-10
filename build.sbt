@@ -8,11 +8,11 @@ scalaVersion := "2.12.10"
 
 spName := "amplab/opaque"
 
-sparkVersion := "3.0.0"
+sparkVersion := "3.0.1"
 
 sparkComponents ++= Seq("core", "sql", "catalyst")
 
-libraryDependencies += "org.scalanlp" %% "breeze" % "0.13.2"
+libraryDependencies += "org.scalanlp" %% "breeze" % "1.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 

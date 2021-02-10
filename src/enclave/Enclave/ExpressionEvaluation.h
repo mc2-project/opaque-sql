@@ -742,6 +742,104 @@ private:
       }
     }
 
+
+    case tuix::ExprUnion_Concat:
+    {
+      //implementing this like string concat since each argument in already serialized 
+      auto c = static_cast<const tuix::Concat *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+
+      size_t total = 0; 
+
+      std::vector<uint8_t> result; 
+
+      for (size_t i =0; i< num_children; i++){
+              auto offset =  eval_helper(row, (*c->children())[i]);
+              const tuix::Field *str = flatbuffers::GetTemporaryPointer(builder, offset);
+              if (str->value_type() != tuix::FieldUnion_StringField) {
+                throw std::runtime_error(
+                  std::string("tuix::Concat requires serializable data types, not ")
+                  + std::string(tuix::EnumNameFieldUnion(str->value_type()))
+                  + std::string(". You do not need to provide the data as string but the data should be serialized into string before sent to concat"));  
+              }
+              if (!str->is_null()){
+                // skipping over the null input 
+                auto str_field = static_cast<const tuix::StringField *>(str->value());
+                uint32_t start = 0;
+                uint32_t end = str_field ->length(); 
+                total += end; 
+                std::vector<uint8_t> stringtoadd(
+                flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          start),
+                flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          end));
+                result.insert(result.end(), stringtoadd.begin(), stringtoadd.end());
+              }
+
+      }
+
+      return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_StringField,
+          tuix::CreateStringFieldDirect(
+            builder, &result, static_cast<uint32_t>(total)).Union(),
+          total==0);
+      
+    }
+
+    case tuix::ExprUnion_In:
+    {
+      auto c = static_cast<const tuix::In *>(expr->expr());
+      size_t num_children = c->children()->size(); 
+      bool result = false;
+      if (num_children < 2){
+        throw std::runtime_error(std::string("In can't operate with an empty list, currently we have ")
+          + std::to_string(num_children - 1)
+          + std::string("items in the list")); 
+      }
+
+      auto left_offset =  eval_helper(row, (*c->children())[0]);
+      const tuix::Field *left = flatbuffers::GetTemporaryPointer(builder, left_offset);
+
+      bool result_is_null = left->is_null(); 
+
+      for (size_t i=1; i<num_children; i++){
+        auto right_offset = eval_helper(row, (*c->children())[i]);
+        const tuix::Field *item = flatbuffers::GetTemporaryPointer(builder, right_offset);
+        if (item->value_type() != left->value_type()){
+          throw std::runtime_error(
+          std::string("In can't operate on ")
+          + std::string(tuix::EnumNameFieldUnion(left->value_type()))
+          + std::string(" and ")
+          + std::string(tuix::EnumNameFieldUnion(item->value_type()))
+          + ". Please double check the type of each input");
+        }
+        result_is_null = result_is_null || item ->is_null(); 
+        
+        // adding dynamic casting 
+        bool temporary_result =
+        static_cast<const tuix::BooleanField *>(
+          flatbuffers::GetTemporaryPointer<tuix::Field>(
+            builder,
+            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+              builder,
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, left_offset),
+              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, right_offset)))
+          ->value())->value();
+
+        if (temporary_result){
+          result = true; 
+        }
+      }
+      
+      return tuix::CreateField(
+        builder,
+        tuix::FieldUnion_BooleanField,
+        tuix::CreateBooleanField(builder, result).Union(),
+        result_is_null && (!result));
+    }
+
+
     case tuix::ExprUnion_Upper:
     {
       auto n = static_cast<const tuix::Upper *>(expr->expr());
@@ -896,6 +994,7 @@ private:
       for (uint32_t i = 0; i < pattern_len; i++) {
         result = result && (left_field->value()->Get(i) == right_field->value()->Get(i));
       }
+
       return tuix::CreateField(
         builder,
         tuix::FieldUnion_BooleanField,
@@ -1583,6 +1682,7 @@ public:
     }
 
     const tuix::JoinExpr* join_expr = flatbuffers::GetRoot<tuix::JoinExpr>(buf);
+    join_type = join_expr->join_type();
 
     if (join_expr->left_keys()->size() != join_expr->right_keys()->size()) {
       throw std::runtime_error("Mismatched join key lengths");
@@ -1639,8 +1739,13 @@ public:
     return true;
   }
 
+  tuix::JoinType get_join_type() {
+    return join_type;
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
+  tuix::JoinType join_type;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> left_key_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;
 };
