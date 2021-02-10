@@ -20,6 +20,10 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      # Specify the version of Java that is installed
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '8'
       # Run the build script
       - name: Install dependencies, set environment variables, and build the package
         run: ./.github/scripts/build.sh
@@ -31,7 +35,10 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v2
-      # Run tests
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '8'
+      # Run sbt tests
       - name: Run tests
         run: ./build/sbt test
-        shell: bash
+
