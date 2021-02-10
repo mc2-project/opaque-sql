@@ -305,7 +305,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    val df = p.join(f, $"pk" === $"fk").collect.toSet
+    p.join(f, $"pk" === $"fk").collect.toSet
   }
   
   testAgainstSpark("non-foreign-key join") { securityLevel =>

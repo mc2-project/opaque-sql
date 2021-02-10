@@ -57,7 +57,7 @@ object EncryptedSortExec {
   def sampleAndPartition(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
     Utils.ensureCached(childRDD)
     time("force child of sampleAndPartition") { childRDD.count }
-
+    JobVerificationEngine.addExpectedOperator("EncryptedSortExec")
     val numPartitions = childRDD.partitions.length
     if (numPartitions <= 1) {
       childRDD

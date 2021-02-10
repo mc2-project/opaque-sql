@@ -316,6 +316,7 @@ case class EncryptedSortMergeJoinExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
+      JobVerificationEngine.addExpectedOperator("EncryptedSortMergeJoinExec")
       childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
