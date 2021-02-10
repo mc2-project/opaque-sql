@@ -12,9 +12,10 @@ set(SOURCES
   iasrequest.cpp
   sp_crypto.cpp)
 
-link_directories("$ENV{OE_SDK_PATH}/lib/openenclave/enclave")
-include_directories("$ENV{OE_SDK_PATH}/include")
-include_directories("$ENV{OE_SDK_PATH}/include/openenclave/3rdparty")
+link_directories(${OE_LIBDIR})
+link_directories(${OE_LIBDIR}/openenclave/enclave)
+include_directories(${OE_INCLUDEDIR})
+include_directories(${OE_INCLUDEDIR}/openenclave/3rdparty)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
@@ -27,6 +28,6 @@ endif()
 
 find_library(CRYPTO_LIB crypto)
 find_library(SSL_LIB ssl)
-target_link_libraries(ra_jni "${CRYPTO_LIB}" "${SSL_LIB}" mbedcrypto mbedtls openenclave::oehost openenclave::oehostverify)
+target_link_libraries(ra_jni ${CRYPTO_LIB} ${SSL_LIB} mbedcrypto mbedtls openenclave::oehost)
 
 install(TARGETS ra_jni DESTINATION lib)
