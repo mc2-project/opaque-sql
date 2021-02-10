@@ -27,10 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.plans.Inner
-=======
->>>>>>> a95f2c72af1e444b79a8dd7d71a11926c3435d4f
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.LeftAnti
 import org.apache.spark.sql.catalyst.plans.LeftSemi
