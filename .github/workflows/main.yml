@@ -24,9 +24,14 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '8'
+      # Caching
+      - uses: coursier/cache-action@v5
       # Run the test
       - name: Install dependencies, set environment variables, and build the package
         run: ./.github/scripts/build.sh
+        run: |
+          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+          find $HOME/.sbt                              -name "*.lock"               -delete || true
         shell: bash
 
   test:
@@ -38,6 +43,10 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '8'
+      - uses: coursier/cache-action@v5
       - name: Run sbt tests
         run: ./.github/scripts/test.sh
+        run: |
+          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+          find $HOME/.sbt                              -name "*.lock"               -delete || true
         shell: bash
