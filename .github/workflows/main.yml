@@ -24,31 +24,17 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '8'
-      # Caching
+      # Caching (from https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html)
       - uses: coursier/cache-action@v5
       # Run the test
-      - name: Install dependencies, set environment variables, and build the package
-        run: ./.github/scripts/build.sh
-        shell: bash
-
-  test:
-    runs-on: ubuntu-18.04
-    # Build job is a prerequisite
-    needs: build
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
-        with:
-          java-version: '8'
-      - uses: coursier/cache-action@v5
-      - name: Run sbt tests
+      - name: Install dependencies, set environment variables, and run sbt tests
         run: |
-          ./.github/scripts/test.sh
+          ./.github/scripts/build.sh
 
-          # From https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
           rm -rf "$HOME/.ivy2/local" || true
           find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
           find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
           find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
           find $HOME/.sbt                              -name "*.lock"               -delete || true
         shell: bash
+
