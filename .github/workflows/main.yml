@@ -26,7 +26,7 @@ jobs:
           java-version: '8'
       # Run the test
       - name: Install dependencies, set environment variables, and build the package
-        run: ./github/scripts/build.sh
+        run: ./.github/scripts/build.sh
         shell: bash
 
   test:
@@ -39,5 +39,5 @@ jobs:
         with:
           java-version: '8'
       - name: Run sbt tests
-        run: ./github/scripts/test.sh
+        run: ./.github/scripts/test.sh
         shell: bash
