@@ -237,7 +237,7 @@ object JobVerificationEngine {
   }
 
   def expectedDAGFromOperatorDAG(operatorDAGRoot: OperatorNode): JobNode = {
-
+    return new JobNode()
   }
 
   def expectedDAGFromPlan(executedPlan: String): Unit = {
@@ -481,8 +481,6 @@ object JobVerificationEngine {
     val executedPathsToSink = executedSourceNode.pathsToSink
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
-    println(executedPathsToSink.toString)
-    println(expectedPathsToSink.toString)
     if (!arePathsEqual) {
       println(executedPathsToSink.toString)
       println(expectedPathsToSink.toString)
