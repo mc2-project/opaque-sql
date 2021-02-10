@@ -1,0 +1,40 @@
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    # Define the OS to run on
+    runs-on: ubuntu-18.04
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      # Specify the version of Java that is installed
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '8'
+      # Caching (from https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html)
+      - uses: coursier/cache-action@v5
+      # Run the test
+      - name: Install dependencies, set environment variables, and run sbt tests
+        run: |
+          ./.github/scripts/build.sh
+
+          rm -rf "$HOME/.ivy2/local" || true
+          find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
+          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+          find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
+          find $HOME/.sbt                              -name "*.lock"               -delete || true
+        shell: bash
+
