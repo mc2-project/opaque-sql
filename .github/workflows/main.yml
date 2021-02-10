@@ -43,9 +43,9 @@ jobs:
       - uses: coursier/cache-action@v5
       - name: Run sbt tests
         run: |
-		  ./.github/scripts/test.sh
+          ./.github/scripts/test.sh
 
-		  # From https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
+          # From https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
           rm -rf "$HOME/.ivy2/local" || true
           find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
           find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
