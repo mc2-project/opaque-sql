@@ -357,8 +357,8 @@ object JobVerificationEngine {
         // ("nonObliviousAggregate")
         expectedEcalls.append(9)
       } else if (operator == "EncryptedSortMergeJoinExec") {
-        // ("scanCollectLastPrimary", "nonObliviousSortMergeJoin")
-        expectedEcalls.append(7, 8)
+        // ("nonObliviousSortMergeJoin")
+        expectedEcalls.append(8)
       } else if (operator == "EncryptedLocalLimitExec") {
         // ("limitReturnRows")
         expectedEcalls.append(13)
