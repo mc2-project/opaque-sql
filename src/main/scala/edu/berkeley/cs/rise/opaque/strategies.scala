@@ -109,25 +109,47 @@ object OpaqueOperators extends Strategy {
         if (isEncrypted(child) && aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression])) =>
 
       val aggregateExpressions = aggExpressions.map(expr => expr.asInstanceOf[AggregateExpression])
+      val (functionsWithDistinct, functionsWithoutDistinct) = aggregateExpressions.partition(_.isDistinct)
 
-      if (groupingExpressions.size == 0) {
-        // Global aggregation
-        val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
-        val partialOutput = partialAggregate.output
-        val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
+      functionsWithDistinct.size match {
+        case size if size == 0 => // No distinct aggregate operations
+          if (groupingExpressions.size == 0) {
+            // Global aggregation
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+            val partialOutput = partialAggregate.output
+            val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
 
-        EncryptedProjectExec(resultExpressions, 
-          EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
-            EncryptedProjectExec(partialOutput, 
-              EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
-                EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
-      } else {
-        // Grouping aggregation
-        EncryptedProjectExec(resultExpressions,
-          EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
-            EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
-                EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+            EncryptedProjectExec(resultExpressions, 
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+                EncryptedProjectExec(partialOutput,
+                  EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
+                    EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
+          } else {
+            // Grouping aggregation
+            EncryptedProjectExec(resultExpressions,
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
+                EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+                  EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
+                    EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
+          }
+        case size if size == 1 => // One distinct aggregate operation
+          if (groupingExpressions.size == 0) {
+            // Global aggregation
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+            val partialOutput = partialAggregate.output
+            val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
+
+            EncryptedProjectExec(resultExpressions, 
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+                  EncryptedProjectExec(partialOutput,
+                    EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true,
+                      EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
+          } else {
+            // Grouping aggregation
+            EncryptedProjectExec(resultExpressions,
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Complete,
+                EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), true, planLater(child)))) :: Nil
+          }
       }
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>

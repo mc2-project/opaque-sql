@@ -1811,6 +1811,9 @@ public:
         std::unique_ptr<FlatbuffersExpressionEvaluator>(
           new FlatbuffersExpressionEvaluator(eval_expr)));
     }
+    is_distinct = expr->is_distinct();
+    value_selector = std::unique_ptr<FlatbuffersExpressionEvaluator>(
+        new FlatbuffersExpressionEvaluator(expr->value_selector()));
   }
 
   std::vector<const tuix::Field *> initial_values(const tuix::Row *unused) {
@@ -1824,6 +1827,15 @@ public:
   std::vector<const tuix::Field *> update(const tuix::Row *concat) {
     std::vector<const tuix::Field *> result;
     for (auto&& e : update_evaluators) {
+      if (is_distinct) {
+        std::string value = to_string(value_selector->eval(concat));
+        /* Check to see if this distinct value has already been counted */
+        if (observed_values.count(value)) { 
+          std::vector<const tuix::Field *> vect(1, nullptr);
+          return vect;
+        }
+        observed_values.insert(value);
+      }
       result.push_back(e->eval(concat));
     }
     return result;
@@ -1837,11 +1849,18 @@ public:
     return result;
   }
 
+  void clear_observed_values() {
+    observed_values.clear();
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> initial_value_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> update_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> evaluate_evaluators;
+  bool is_distinct;
+  std::unique_ptr<FlatbuffersExpressionEvaluator> value_selector;
+  std::set<std::string> observed_values;
 };
 
 class FlatbuffersAggOpEvaluator {
@@ -1880,6 +1899,7 @@ public:
     // Write initial values to a
     std::vector<flatbuffers::Offset<tuix::Field>> init_fields;
     for (auto&& e : aggregate_evaluators) {
+      e->clear_observed_values();
       for (auto f : e->initial_values(nullptr)) {
         init_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder2));
       }
@@ -1901,6 +1921,7 @@ public:
   void aggregate(const tuix::Row *row) {
     builder.Clear();
     flatbuffers::Offset<tuix::Row> concat;
+    int a_length = a->field_values()->size();
 
     std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
     // concat row to a
@@ -1918,9 +1939,18 @@ public:
     std::vector<flatbuffers::Offset<tuix::Field>> output_fields;
     for (auto&& e : aggregate_evaluators) {
       for (auto f : e->update(concat_ptr)) {
+        if (f == nullptr) { // Only triggered on EXPR(distinct expr ...)
+          output_fields.clear();
+          for (int i = 0; i < a_length; i++) {
+            auto f = concat_ptr->field_values()->Get(i);
+            output_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder2));
+          }
+          goto save_a;
+        } 
         output_fields.push_back(flatbuffers_copy<tuix::Field>(f, builder2));
       }
     }
+save_a:
     a = flatbuffers::GetTemporaryPointer<tuix::Row>(
       builder2, tuix::CreateRowDirect(builder2, &output_fields));
   }

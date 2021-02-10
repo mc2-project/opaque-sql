@@ -377,6 +377,13 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
       .collect.sortBy { case Row(category: String, _) => category }
   }
 
+  testAgainstSpark("aggregate count - distinct") { securityLevel =>
+    val data = (0 until 32).map{ i => (abc(i), i % 8)}.toSeq
+    val words = makeDF(data, securityLevel, "category", "price")
+    words.groupBy("category").agg(countDistinct("price").as("distinctPrices"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
   testAgainstSpark("aggregate first") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
