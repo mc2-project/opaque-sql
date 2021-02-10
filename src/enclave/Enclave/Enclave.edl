@@ -42,10 +42,22 @@ enclave {
       [in, count=sort_order_length] uint8_t *sort_order, size_t sort_order_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+<<<<<<< HEAD
+=======
+
+    public void ecall_scan_collect_last_primary(
+      [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
+      [user_check] uint8_t *input_rows, size_t input_rows_length,
+      [out] uint8_t **output_rows, [out] size_t *output_rows_length);
+>>>>>>> a95f2c72af1e444b79a8dd7d71a11926c3435d4f
 
     public void ecall_non_oblivious_sort_merge_join(
       [in, count=join_expr_length] uint8_t *join_expr, size_t join_expr_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
+<<<<<<< HEAD
+=======
+      [user_check] uint8_t *join_row, size_t join_row_length,
+>>>>>>> a95f2c72af1e444b79a8dd7d71a11926c3435d4f
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_non_oblivious_aggregate(

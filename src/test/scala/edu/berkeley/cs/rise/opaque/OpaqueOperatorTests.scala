@@ -103,6 +103,63 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     }
   }
 
+  /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
+    * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
+    * Set nullable property of column.
+    * @param cn is the column name to change
+    * @param nullable is the flag to set, such that the column is  either nullable or not
+    */
+  object ExtraDFOperations {
+    implicit class AlternateDF(df : DataFrame) {
+      def setNullableStateOfColumn(cn: String, nullable: Boolean) : DataFrame = {
+        // get schema
+        val schema = df.schema
+        // modify [[StructField] with name `cn`
+        val newSchema = StructType(schema.map {
+          case StructField( c, t, _, m) if c.equals(cn) => StructField( c, t, nullable = nullable, m)
+          case y: StructField => y
+        })
+        // apply new schema
+        df.sqlContext.createDataFrame( df.rdd, newSchema )
+      }
+    }
+  }
+
+  import ExtraDFOperations._
+
+  testAgainstSpark("Interval SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 DAY FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Week SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
+  testAgainstSpark("Interval Month SQL") { securityLevel =>
+    val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
+    val df = makeDF(data, securityLevel, "index", "time")
+    df.createTempView("Interval")
+    try {
+      spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval").collect
+    } finally {
+      spark.catalog.dropTempView("Interval")
+    }
+  }
+
   testAgainstSpark("Date Add") { securityLevel =>
     val data = Seq(Tuple2(1, new java.sql.Date(new java.util.Date().getTime())))
     val df = makeDF(data, securityLevel, "index", "time")

@@ -44,7 +44,10 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.expressions.Contains
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.Concat 
+=======
+>>>>>>> a95f2c72af1e444b79a8dd7d71a11926c3435d4f
 import org.apache.spark.sql.catalyst.expressions.DateAdd
 import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
@@ -73,6 +76,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -1216,7 +1220,11 @@ object Utils extends Logging {
     // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
     // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
+<<<<<<< HEAD
       case e: NamedExpression => AggregateExpression(First(e, false), Complete, false)
+=======
+      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+>>>>>>> a95f2c72af1e444b79a8dd7d71a11926c3435d4f
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
