@@ -35,6 +35,7 @@ import org.apache.spark.unsafe.types.CalendarInterval
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
@@ -880,13 +881,15 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testOpaqueOnly("encrypted literal") { securityLevel =>
-    val input = 123
+    val input = 10
     val enc_str = Utils.encryptScalar(input, IntegerType)
-    val dec_str = Utils.decryptScalar(enc_str)
 
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
-
+    val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
+    df.explain
+    df.show()
+    df
   }
 
   testAgainstSpark("scalar subquery", ignore) { securityLevel =>
