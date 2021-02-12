@@ -880,16 +880,14 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
   }
 
-  testOpaqueOnly("encrypted literal") { securityLevel =>
+  testAgainstSpark("encrypted literal") { securityLevel =>
     val input = 10
     val enc_str = Utils.encryptScalar(input, IntegerType)
 
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
-    df.explain
-    df.show()
-    df
+    df.collect()
   }
 
   testAgainstSpark("scalar subquery", ignore) { securityLevel =>

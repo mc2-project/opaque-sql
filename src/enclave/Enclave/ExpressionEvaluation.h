@@ -290,9 +290,9 @@ private:
 
     case tuix::ExprUnion_Decrypt:
     {
-      auto decrypt = static_cast<const tuix::Decrypt *>(expr->expr());
+      auto decrypt_expr = static_cast<const tuix::Decrypt *>(expr->expr());
       const tuix::Field *value =
-        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, decrypt->value()));
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, decrypt_expr->value()));
 
       if (value->value_type() != tuix::FieldUnion_StringField) {
         throw std::runtime_error(
@@ -311,13 +311,16 @@ private:
                                                           static_cast<uint32_t>(str_field->length())));
 
         std::string ciphertext(str_vec.begin(), str_vec.end());
-        auto plaintext = ciphertext_base64_decode(ciphertext);
-        
-        const tuix::Field *field = flatbuffers::GetRoot<tuix::Field>(plaintext.data());
-        printf("Decrypted field is ");
-        print(field);
-        
-        return flatbuffers_copy<tuix::Field>(field, builder);
+        std::string ciphertext_decoded = ciphertext_base64_decode(ciphertext);
+
+        uint8_t *plaintext = new uint8_t[ciphertext_decoded.size()];
+        decrypt(reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()), ciphertext_decoded.size(), plaintext);
+                
+        const tuix::Field *field = flatbuffers::GetRoot<tuix::Field>(plaintext);
+        auto ret = flatbuffers_copy<tuix::Field>(field, builder);
+         
+        delete plaintext;
+        return ret;
       } else {
         throw std::runtime_error(std::string("tuix::Decrypt does not accept a NULL string\n"));
       }
