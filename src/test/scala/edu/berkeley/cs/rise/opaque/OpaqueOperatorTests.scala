@@ -853,10 +853,13 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testOpaqueOnly("encrypted literal") { securityLevel =>
-    val str = "hello world"
-    val enc_str = Utils.encryptScalar(str, StringType)
+    val input = 123
+    val enc_str = Utils.encryptScalar(input, IntegerType)
     val dec_str = Utils.decryptScalar(enc_str)
-    println(s"dec_str = ${dec_str}")
+
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+
   }
 
   testAgainstSpark("scalar subquery", ignore) { securityLevel =>

@@ -106,6 +106,7 @@ import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct
 import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
@@ -829,7 +830,7 @@ object Utils extends Logging {
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
 
-        case (Decrypt(Literal(value, StringType), dataType), Seq(childOffset)) =>
+        case (Decrypt(child, dataType), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Decrypt,

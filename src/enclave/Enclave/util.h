@@ -41,4 +41,6 @@ int pow_2(int value);
 
 int secs_to_tm(long long t, struct tm *tm);
 
+std::string ciphertext_base64_decode(std::string const &encoded_string);
+
 #endif // UTIL_H

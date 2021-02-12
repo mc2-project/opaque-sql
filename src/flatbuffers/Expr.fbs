@@ -225,5 +225,5 @@ table Upper {
 }
 
 table Decrypt {
-    child:Expr;
+    value:Expr;
 }

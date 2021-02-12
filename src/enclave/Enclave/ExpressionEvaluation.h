@@ -290,15 +290,38 @@ private:
 
     case tuix::ExprUnion_Decrypt:
     {
-      auto add = static_cast<const tuix::Add *>(expr->expr());
-      auto left_offset = eval_helper(row, add->left());
-      auto right_offset = eval_helper(row, add->right());
+      auto decrypt = static_cast<const tuix::Decrypt *>(expr->expr());
+      const tuix::Field *value =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, decrypt->value()));
 
-      return eval_binary_arithmetic_op<tuix::Add, std::plus>(
-        builder,
-        flatbuffers::GetTemporaryPointer(builder, left_offset),
-        flatbuffers::GetTemporaryPointer(builder, right_offset));
+      if (value->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Decrypt only accepts a string input, not ")
+          + std::string(tuix::EnumNameFieldUnion(value->value_type())));
+      }
 
+      bool result_is_null = value->is_null();
+      if (!result_is_null) {
+        auto str_field = static_cast<const tuix::StringField *>(value->value());
+
+        std::vector<uint8_t> str_vec(
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(0)),
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(str_field->length())));
+
+        std::string ciphertext(str_vec.begin(), str_vec.end());
+        auto plaintext = ciphertext_base64_decode(ciphertext);
+        
+        const tuix::Field *field = flatbuffers::GetRoot<tuix::Field>(plaintext.data());
+        printf("Decrypted field is ");
+        print(field);
+        
+        return flatbuffers_copy<tuix::Field>(field, builder);
+      } else {
+        throw std::runtime_error(std::string("tuix::Decrypt does not accept a NULL string\n"));
+      }
+      
     }
 
     case tuix::ExprUnion_Cast:
