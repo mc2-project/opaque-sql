@@ -3,6 +3,9 @@
 
 enclave {
 
+  from "openenclave/edl/syscall.edl" import *;
+  from "platform.edl" import *;
+
   include "stdbool.h"
 
   trusted {
