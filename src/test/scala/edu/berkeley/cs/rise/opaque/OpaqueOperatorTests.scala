@@ -305,7 +305,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    p.join(f, $"pk" === $"fk").collect.toSet
+    val df = p.join(f, $"pk" === $"fk").collect.toSet
   }
 
   testAgainstSpark("non-foreign-key join") { securityLevel =>
@@ -314,6 +314,33 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
+  testAgainstSpark("left semi join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
+    df.collect
+  }
+
+  testAgainstSpark("left anti join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("left anti join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
   }
 
   def abc(i: Int): String = (i % 3) match {

@@ -24,7 +24,7 @@ UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
 After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9.0 (so please install with `open-enclave=0.9.0`) and Ubuntu 18.04.
+1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.12.0 (so please install with `open-enclave=0.12.0`) and Ubuntu 18.04.
 
     ```sh
     # For Ubuntu 18.04:
@@ -60,7 +60,9 @@ After downloading the Opaque codebase, build and test it as follows.
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+
+\* Opaque needs Spark's `'spark.executor.instances'` property to be set. This can be done in a custom config file, the default config file found at `/opt/spark/conf/spark-defaults.conf`, or as a `spark-submit` or `spark-shell` argument: `--conf 'spark.executor.instances=<value>`.
 
 1. Package Opaque into a JAR:
 

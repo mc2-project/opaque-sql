@@ -42,7 +42,7 @@
 
 #include <stdint.h>
 #include <cstring>
-#include <sys/errno.h>
+#include <errno.h>
 
 #include "openssl/evp.h"
 #include "openssl/pem.h"

@@ -26,7 +26,10 @@ import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.JoinType
+import org.apache.spark.sql.catalyst.plans.LeftAnti
+import org.apache.spark.sql.catalyst.plans.LeftSemi
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.SparkPlan
 
@@ -275,9 +278,15 @@ case class EncryptedSortMergeJoinExec(
     rightKeys: Seq[Expression],
     leftSchema: Seq[Attribute],
     rightSchema: Seq[Attribute],
-    output: Seq[Attribute],
     child: SparkPlan)
-  extends UnaryExecNode with OpaqueOperatorExec {
+    extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def output: Seq[Attribute] = {
+    joinType match {
+      case Inner => (leftSchema ++ rightSchema).map(_.toAttribute)
+      case LeftSemi | LeftAnti => leftSchema.map(_.toAttribute)
+    }
+  }
 
   override def executeBlocked(): RDD[Block] = {
     val joinExprSer = Utils.serializeJoinExpression(
@@ -287,22 +296,9 @@ case class EncryptedSortMergeJoinExec(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec") { childRDD =>
 
-      val lastPrimaryRows = childRDD.map { block =>
+      childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.ScanCollectLastPrimary(eid, joinExprSer, block.bytes))
-      }.collect
-      val shifted = Utils.emptyBlock +: lastPrimaryRows.dropRight(1)
-      assert(shifted.size == childRDD.partitions.length)
-      val processedJoinRowsRDD =
-        sparkContext.parallelize(shifted, childRDD.partitions.length)
-
-      childRDD.zipPartitions(processedJoinRowsRDD) { (blockIter, joinRowIter) =>
-        (blockIter.toSeq, joinRowIter.toSeq) match {
-          case (Seq(block), Seq(joinRow)) =>
-            val (enclave, eid) = Utils.initEnclave()
-            Iterator(Block(enclave.NonObliviousSortMergeJoin(
-              eid, joinExprSer, block.bytes, joinRow.bytes)))
-        }
+        Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
       }
     }
   }
