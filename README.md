@@ -206,7 +206,3 @@ Now we can port this UDF to Opaque as follows:
     ```
 
 3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
-
-## Contact
-
-If you want to know more about our project or have questions, please contact Wenting (wzheng13@gmail.com) and/or Ankur (ankurdave@gmail.com).
