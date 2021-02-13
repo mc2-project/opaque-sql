@@ -315,8 +315,12 @@ private:
 
         uint8_t *plaintext = new uint8_t[ciphertext_decoded.size()];
         decrypt(reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()), ciphertext_decoded.size(), plaintext);
-                
-        const tuix::Field *field = flatbuffers::GetRoot<tuix::Field>(plaintext);
+
+        BufferRefView<tuix::Rows> buf(plaintext, ciphertext_decoded.size());
+        buf.verify();
+
+        const tuix::Rows *rows = buf.root();
+        const tuix::Field *field = rows->rows()->Get(0)->field_values()->Get(0);
         auto ret = flatbuffers_copy<tuix::Field>(field, builder);
          
         delete plaintext;

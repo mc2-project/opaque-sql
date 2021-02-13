@@ -682,7 +682,19 @@ object Utils extends Logging {
       case _ => value
     }
 
-    builder.finish(flatbuffersCreateField(builder, v, dataType, false))
+    // TODO: the NULL variable for field value could be set to true
+    builder.finish(
+      tuix.Rows.createRows(
+        builder,
+        tuix.Rows.createRowsVector(
+          builder,
+          Array(tuix.Row.createRow(
+            builder,
+            tuix.Row.createFieldValuesVector(
+              builder,
+              Array(flatbuffersCreateField(builder, v, dataType, false))),
+            false)))))
+
     val plaintext = builder.sizedByteArray()
     val ciphertext = encrypt(plaintext)
     val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext);
@@ -692,7 +704,9 @@ object Utils extends Logging {
   def decryptScalar(ciphertext: String): Any = {
     val ciphertext_bytes = Base64.getDecoder().decode(ciphertext);
     val plaintext = decrypt(ciphertext_bytes)
-    val field = tuix.Field.getRootAsField(ByteBuffer.wrap(plaintext))
+    val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
+    val row = rows.rows(0)
+    val field = row.fieldValues(0)
     val value = flatbuffersExtractFieldValue(field)
     value
   }
@@ -1168,14 +1182,11 @@ object Utils extends Logging {
           val ciphertext = new Array[Byte](ciphertextBuf.remaining)
           ciphertextBuf.get(ciphertext)
           val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
-          val value = decryptScalar(ciphertext_str)
-          println(s"value = ${value}")
-          // flatbuffersSerializeExpression(
-          //   builder,
-          //   Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
-          //   input
-          // )
-          0
+          flatbuffersSerializeExpression(
+            builder,
+            Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
+            input
+          )
 
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())

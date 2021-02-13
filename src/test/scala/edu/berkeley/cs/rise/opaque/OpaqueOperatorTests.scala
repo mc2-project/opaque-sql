@@ -890,15 +890,14 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect()
   }
 
-  testOpaqueOnly("scalar subquery") { securityLevel =>
+  testAgainstSpark("scalar subquery") { securityLevel =>
     // Example taken from https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/2728434780191932/1483312212640900/6987336228780374/latest.html
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val data = for (i <- 0 until 256) yield (i, abc(i), i)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     words.createTempView("words")
 
     try {
       val df = spark.sql("""SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word""")
-      df.explain(true)
       df.collect
     } finally {
       spark.catalog.dropTempView("words")
