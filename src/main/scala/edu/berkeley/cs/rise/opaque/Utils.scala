@@ -871,7 +871,6 @@ object Utils extends Logging {
             tuix.Literal.createLiteral(builder, valueOffset))
 
         case (Decrypt(child, dataType), Seq(childOffset)) =>
-          println("Decrypt serialization")
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Decrypt,
