@@ -94,6 +94,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.SubqueryExec
 import org.apache.spark.sql.execution.ScalarSubquery
 import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
@@ -1151,6 +1152,30 @@ object Utils extends Logging {
         case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
           // TODO: Implement decimal serialization, followed by CheckOverflow
           childOffset
+
+        case (ScalarSubquery(SubqueryExec(name, child), exprId), Seq()) =>
+          val output = child.output(0)
+          val dataType = output match {
+            case AttributeReference(name, dataType, _, _) => dataType
+            case _ => throw new OpaqueException("Scalar subquery cannot match to AttributeReference")
+          }
+          // Need to deserialize the encrypted blocks to get the encrypted block
+          val buf = ByteBuffer.wrap(child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()(0).bytes)
+          val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+          assert(encryptedBlocks.blocksLength == 1)
+          val encryptedBlock = encryptedBlocks.blocks(0)
+          val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+          val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+          ciphertextBuf.get(ciphertext)
+          val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
+          val value = decryptScalar(ciphertext_str)
+          println(s"value = ${value}")
+          // flatbuffersSerializeExpression(
+          //   builder,
+          //   Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
+          //   input
+          // )
+          0
 
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())

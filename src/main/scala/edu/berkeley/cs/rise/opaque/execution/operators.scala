@@ -141,8 +141,12 @@ trait OpaqueOperatorExec extends SparkPlan {
     // throw new UnsupportedOperationException("use executeBlocked")
   }
 
+  def collectEncrypted(): Array[Block] = {
+    executeBlocked().collect()
+  }
+
   override def executeCollect(): Array[InternalRow] = {
-    executeBlocked().collect().flatMap { block =>
+    collectEncrypted().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
   }

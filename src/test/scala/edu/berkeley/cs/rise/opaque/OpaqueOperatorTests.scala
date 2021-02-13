@@ -890,7 +890,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect()
   }
 
-  testAgainstSpark("scalar subquery", ignore) { securityLevel =>
+  testOpaqueOnly("scalar subquery") { securityLevel =>
     // Example taken from https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/2728434780191932/1483312212640900/6987336228780374/latest.html
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
