@@ -1175,6 +1175,7 @@ object Utils extends Logging {
           // Need to deserialize the encrypted blocks to get the encrypted block
           val buf = ByteBuffer.wrap(child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()(0).bytes)
           val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+          println(s"Has ${encryptedBlocks.blocksLength} blocks")
           assert(encryptedBlocks.blocksLength == 1)
           val encryptedBlock = encryptedBlocks.blocks(0)
           val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
