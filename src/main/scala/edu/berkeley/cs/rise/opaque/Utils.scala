@@ -682,6 +682,8 @@ object Utils extends Logging {
       case _ => value
     }
 
+    val isNull = (value == null)
+
     // TODO: the NULL variable for field value could be set to true
     builder.finish(
       tuix.Rows.createRows(
@@ -693,7 +695,7 @@ object Utils extends Logging {
             tuix.Row.createFieldValuesVector(
               builder,
               Array(flatbuffersCreateField(builder, v, dataType, false))),
-            false)))))
+            isNull)))))
 
     val plaintext = builder.sizedByteArray()
     val ciphertext = encrypt(plaintext)

@@ -5,6 +5,7 @@ import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.ExpressionDescription
 import org.apache.spark.sql.catalyst.expressions.NullIntolerant
 import org.apache.spark.sql.catalyst.expressions.Nondeterministic
 import org.apache.spark.sql.catalyst.expressions.UnaryExpression
@@ -18,7 +19,18 @@ object Decrypt {
   def decrypt(v: Column, dataType: DataType): Column = new Column(Decrypt(v.expr, dataType))
 }
 
-// TODO: write expression description
+@ExpressionDescription(
+  usage = """
+    _FUNC_(child, outputDataType) - Decrypt the input evaluated expression, which should always be a string
+  """,
+  arguments = """
+    Arguments:
+      * child - an encrypted literal of string type
+      * outputDataType - the decrypted data type
+  """)
+/**
+ * 
+ */
 case class Decrypt(child: Expression, outputDataType: DataType)
     extends UnaryExpression with NullIntolerant with CodegenFallback with Nondeterministic {
 
@@ -27,7 +39,7 @@ case class Decrypt(child: Expression, outputDataType: DataType)
   protected def initializeInternal(partitionIndex: Int): Unit = { }
 
   protected override def evalInternal(input: InternalRow): Any = {
-    val v = child.eval()
+    val v = input.getUTF8String(0)
     nullSafeEval(v)
   }
 
