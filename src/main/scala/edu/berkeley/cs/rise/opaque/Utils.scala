@@ -1173,20 +1173,29 @@ object Utils extends Logging {
             case _ => throw new OpaqueException("Scalar subquery cannot match to AttributeReference")
           }
           // Need to deserialize the encrypted blocks to get the encrypted block
-          val buf = ByteBuffer.wrap(child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()(0).bytes)
-          val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
-          println(s"Has ${encryptedBlocks.blocksLength} blocks")
-          assert(encryptedBlocks.blocksLength == 1)
-          val encryptedBlock = encryptedBlocks.blocks(0)
-          val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
-          val ciphertext = new Array[Byte](ciphertextBuf.remaining)
-          ciphertextBuf.get(ciphertext)
-          val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
-          flatbuffersSerializeExpression(
-            builder,
-            Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
-            input
-          )
+          val blockList = child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()
+          val encryptedBlocksList = blockList.map { block =>
+            val buf = ByteBuffer.wrap(block.bytes)
+            tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+          }
+          val encryptedBlocks = encryptedBlocksList.find(_.blocksLength > 0).getOrElse(encryptedBlocksList(0))
+          println(s"encryptedBlocks = ${encryptedBlocks}")
+          if (encryptedBlocks.blocksLength == 0) {
+            // If empty, the returned result is null
+            flatbuffersSerializeExpression(builder, Literal(null, dataType), input)
+          } else {
+            assert(encryptedBlocks.blocksLength == 1)
+            val encryptedBlock = encryptedBlocks.blocks(0)
+            val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+            val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+            ciphertextBuf.get(ciphertext)
+            val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
+            flatbuffersSerializeExpression(
+              builder,
+              Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
+              input
+            )
+          }
 
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())
