@@ -39,7 +39,7 @@ case class Decrypt(child: Expression, outputDataType: DataType)
   protected def initializeInternal(partitionIndex: Int): Unit = { }
 
   protected override def evalInternal(input: InternalRow): Any = {
-    val v = input.getUTF8String(0)
+    val v = child.eval()
     nullSafeEval(v)
   }
 
