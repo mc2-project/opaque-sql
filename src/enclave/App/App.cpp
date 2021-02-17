@@ -245,6 +245,71 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Fin
 
 }
 
+/////////////////////////////// Shared Key Gen Begin ////////////////////////////////
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetPublicKey(
+  JNIEnv *env, jobject obj, jlong eid) {
+  (void)obj;
+  (void)eid;
+
+  uint8_t* report_msg = NULL;
+  size_t report_msg_size = 0;
+
+  oe_check_and_time("Get enclave public key",
+                     ecall_get_public_key((oe_enclave_t*)eid,
+                                           &report_msg,
+                                           &report_msg_size));
+
+  // Allocate memory
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
+
+  return report_msg_bytes;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetListEncrypted(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
+  (void)obj;
+
+  jboolean if_copy = false;
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
+
+  uint8_t* report_msg = NULL;
+  size_t report_msg_size = 0;
+
+  oe_check_and_time("Get List Encrypted",
+                    ecall_get_list_encrypted((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size,
+                                             &report_msg,
+                                             &report_msg_size));
+
+  env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
+
+  jbyteArray ret = NULL;
+  return ret
+}
+
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishSharedKey(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
+  (void)obj;
+
+  jboolean if_copy = false;
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
+
+  oe_check_and_time("Finish attestation",
+                    ecall_finish_shared_key((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size));
+
+  env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
+
+}
+
+/////////////////////////////// Shared Key Gen End ////////////////////////////////
+
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
   JNIEnv *env, jobject obj, jlong eid) {
   (void)env;

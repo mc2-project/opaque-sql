@@ -47,18 +47,20 @@ object LA extends Logging {
       Iterator((eid, msg1))
     }.collect.toMap
 
-    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
-    msg1s.map{case (eid, msg1) => (eid, print(eid + "\n"))}
+   println("Finish LA")
 
-    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      enclave.FinishAttestation(eid, msg2s(eid))
-      Iterator((eid, true))
-    }.collect.toMap
-
-    for ((_, ret) <- attestationResults) {
-      if (!ret)
-        throw new OpaqueException("Attestation failed")
-    }
+//    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
+//    msg1s.map{case (eid, msg1) => (eid, print(eid + "\n"))}
+//
+//    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
+//      val (enclave, eid) = Utils.initEnclave()
+//      enclave.FinishAttestation(eid, msg2s(eid))
+//      Iterator((eid, true))
+//    }.collect.toMap
+//
+//    for ((_, ret) <- attestationResults) {
+//      if (!ret)
+//        throw new OpaqueException("Attestation failed")
+//    }
   }
 }

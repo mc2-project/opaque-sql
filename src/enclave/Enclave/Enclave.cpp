@@ -388,3 +388,32 @@ void ecall_generate_report(uint8_t **report_msg_data,
   oe_free_report(report);
 
 }
+
+//////////////////////////////////// Generate Shared Key Begin //////////////////////////////////////
+
+void ecall_get_public_key(uint8_t **report_msg_data,
+                           size_t* report_msg_data_size) {
+
+  std::cout << "ecall_get_public_key" << std::endl;
+}
+
+void ecall_get_list_encrypted(uint8_t *shared_key_msg_input,
+                              uint32_t shared_key_msg_size, 
+                              uint8_t **report_msg_data,
+                              size_t* report_msg_data_size) {
+  try {
+    std::cout << "ecall_get_list_encrypted" << std::endl;
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_finish_shared_key(uint8_t *shared_key_msg_input,
+                              uint32_t shared_key_msg_size) {
+  try {
+    std::cout << "ecall_finish_shared_key" << std::endl;
+
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}

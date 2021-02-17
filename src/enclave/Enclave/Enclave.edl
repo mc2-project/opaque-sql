@@ -84,6 +84,20 @@ enclave {
     public void ecall_finish_attestation(
       [in,size=msg4_size] uint8_t *msg4,
       uint32_t msg4_size);
+
+    public void ecall_get_public_key(
+      [out] uint8_t** msg1,
+      [out] size_t* msg1_size);
+
+    public void ecall_get_list_encrypted(
+      [in,size=msg4_size] uint8_t *msg4,
+      [in] uint32_t msg4_size,
+      [out] uint8_t** msg1,
+      [out] size_t* msg1_size);
+
+    public void ecall_finish_shared_key(
+      [in,size=msg4_size] uint8_t *msg4,
+      uint32_t msg4_size);
   };
 
   untrusted {
