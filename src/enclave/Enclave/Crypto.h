@@ -19,8 +19,9 @@ extern const sgx_ec256_public_t g_sp_pub_key;
 /**
  * Set the symmetric key used to encrypt row data using message 4 of the remote attestation process.
  */
-void set_shared_key(uint8_t *msg4, uint32_t msg4_size);
+void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* username);
 
+void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size);
 /**
  * Encrypt the given plaintext using AES-GCM with a 128-bit key and write the result to
  * `ciphertext`. The encrypted data will be formatted as follows, where || denotes concatenation:

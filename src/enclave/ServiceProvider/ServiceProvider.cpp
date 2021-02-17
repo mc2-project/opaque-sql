@@ -123,6 +123,21 @@ void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
 }
 
+// This function for testing purposes
+// void ServiceProvider::set_test_key(const uint8_t *shared_key) {
+//   memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
+// }
+
+void ServiceProvider::set_user_cert(const std::string user_cert) {
+  memcpy(this->user_cert, user_cert.c_str(), user_cert.length() + 1);
+  // this->user_cert = user_cert.c_str();
+  // std::cout << this->user_cert;
+}
+
+void ServiceProvider::set_key_share(const uint8_t *key_share) {
+  memcpy(this->key_share, key_share, LC_AESGCM_KEY_SIZE);
+}
+
 void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
@@ -240,6 +255,10 @@ std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+  unsigned char encrypted_key_share[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  size_t encrypted_key_share_size = sizeof(encrypted_key_share);
+
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
   
   EVP_PKEY* pkey = buffer_to_public_key((char*)report_msg->public_key, -1);
@@ -323,8 +342,42 @@ std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
+  // Encrypt key share
+  ret = public_encrypt(pkey, this->key_share, LC_AESGCM_KEY_SIZE, encrypted_key_share, &encrypted_key_share_size);
+  if (ret == 0) {
+    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  }
+  else if (ret < 0) {
+    throw std::runtime_error(std::string("public_encrypt failed"));
+  }
+ 
+  // Encrypt test key for testing purposes
+  // FIXME: remove this block - it was for testing purposes
+  // unsigned char encrypted_test_key[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  // size_t encrypted_test_key_size = sizeof(encrypted_test_key);
+  // ret = public_encrypt(pkey, this->test_key, LC_AESGCM_KEY_SIZE, encrypted_test_key, &encrypted_test_key_size);
+  // if (ret == 0) {
+  //   throw std::runtime_error(std::string("public_encrypt: buffer too small"));
+  // }
+  // else if (ret < 0) {
+  //   throw std::runtime_error(std::string("public_encrypt failed"));
+  // }
+  // memcpy_s(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_test_key, encrypted_test_key_size);
+  // FIXME: remove up to here
+
   // Prepare shared_key_msg
   memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, encrypted_sharedkey_size);
+  // *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
+
+  // Copy over key share ciphertext
+  memcpy_s(shared_key_msg->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_key_share, encrypted_key_share_size);
+
+  // Copy user certificate to msg2
+  size_t cert_len = strlen(this->user_cert) + 1;
+  memcpy_s(shared_key_msg->user_cert, cert_len, this->user_cert, cert_len);
+  shared_key_msg->user_cert_len = cert_len;
+
+  // FIXME: check if this is right
   *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
 
   // clean up

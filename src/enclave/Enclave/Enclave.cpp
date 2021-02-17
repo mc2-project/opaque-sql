@@ -1,4 +1,5 @@
 #include "Enclave_t.h"
+#include <iostream>
 
 #include <cstdint>
 #include <cassert>
@@ -20,6 +21,15 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
+
+// needed for certificate
+#include <mbedtls/platform.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/pk_internal.h>
+
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -180,50 +190,21 @@ void ecall_non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_le
   }
 }
 
-void ecall_non_oblivious_aggregate_step1(
+void ecall_non_oblivious_aggregate(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
-  uint8_t **first_row, size_t *first_row_length,
-  uint8_t **last_group, size_t *last_group_length,
-  uint8_t **last_row, size_t *last_row_length) {
+  uint8_t **output_rows, size_t *output_rows_length,
+  bool is_partial) {
   // Guard against operating on arbitrary enclave memory
   assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
   __builtin_ia32_lfence();
 
   try {
-    non_oblivious_aggregate_step1(
-      agg_op, agg_op_length,
-      input_rows, input_rows_length,
-      first_row, first_row_length,
-      last_group, last_group_length,
-      last_row, last_row_length);
-  } catch (const std::runtime_error &e) {
-    ocall_throw(e.what());
-  }
-}
-
-void ecall_non_oblivious_aggregate_step2(
-  uint8_t *agg_op, size_t agg_op_length,
-  uint8_t *input_rows, size_t input_rows_length,
-  uint8_t *next_partition_first_row, size_t next_partition_first_row_length,
-  uint8_t *prev_partition_last_group, size_t prev_partition_last_group_length,
-  uint8_t *prev_partition_last_row, size_t prev_partition_last_row_length,
-  uint8_t **output_rows, size_t *output_rows_length) {
-  // Guard against operating on arbitrary enclave memory
-  assert(oe_is_outside_enclave(input_rows, input_rows_length) == 1);
-  assert(oe_is_outside_enclave(next_partition_first_row, next_partition_first_row_length) == 1);
-  assert(oe_is_outside_enclave(prev_partition_last_group, prev_partition_last_group_length) == 1);
-  assert(oe_is_outside_enclave(prev_partition_last_row, prev_partition_last_row_length) == 1);
-  __builtin_ia32_lfence();
-
-  try {
-    non_oblivious_aggregate_step2(
-      agg_op, agg_op_length,
-      input_rows, input_rows_length,
-      next_partition_first_row, next_partition_first_row_length,
-      prev_partition_last_group, prev_partition_last_group_length,
-      prev_partition_last_row, prev_partition_last_row_length,
-      output_rows, output_rows_length);
+    non_oblivious_aggregate(agg_op, agg_op_length,
+                            input_rows, input_rows_length,
+                            output_rows, output_rows_length,
+                            is_partial);
+    
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -295,20 +276,70 @@ static Crypto g_crypto;
 void ecall_finish_attestation(uint8_t *shared_key_msg_input,
                               uint32_t shared_key_msg_size) {
   try {
+    (void) shared_key_msg_size;
     oe_shared_key_msg_t* shared_key_msg = (oe_shared_key_msg_t*) shared_key_msg_input;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size, shared_key_plaintext, &shared_key_plaintext_size);
+    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, shared_key_plaintext, &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
     }
 
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+    uint8_t key_share_plaintext[SGX_AESGCM_KEY_SIZE];
+    size_t key_share_plaintext_size = sizeof(key_share_plaintext);
+    ret = g_crypto.decrypt(shared_key_msg->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, key_share_plaintext, &key_share_plaintext_size);
+
+    if (!ret) {
+      ocall_throw("key share decryption failed");
+    }
+
+    // Add verifySignatureFromCertificate from XGBoost
+    // Get name from certificate
+    unsigned char nameptr[50];
+    size_t name_len;
+    int res;
+    mbedtls_x509_crt user_cert;
+    mbedtls_x509_crt_init(&user_cert);
+    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) shared_key_msg->user_cert, shared_key_msg->user_cert_len)) != 0) {
+        // char tmp[50];
+        // mbedtls_strerror(res, tmp, 50);
+        // std::cout << tmp << std::endl;
+        ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
+    }
+
+    mbedtls_x509_name subject_name = user_cert.subject;
+    mbedtls_asn1_buf name = subject_name.val;
+    strcpy((char*) nameptr, (const char*) name.p);
+    name_len = name.len;
+    std::string user_nam(nameptr, nameptr + name_len);
+
+    // TODO: Verify client's identity
+    // if (std::find(CLIENT_NAMES.begin(), CLIENT_NAMES.end(), user_nam) == CLIENT_NAMES.end()) {
+    //     LOG(FATAL) << "No such authorized client";
+    // }
+    // client_keys[user_nam] = user_symm_key;
+
+    // TODO: Store the client's public key
+    // std::vector<uint8_t> user_public_key(cert, cert + cert_len);
+    // client_public_keys.insert({user_nam, user_public_key});
+
+    // Set shared key for this client
+    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
+    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
+
+    // This block for testing loading from files encrypted with different keys
+    // FIXME: remove this block
+    // uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];
+    // size_t test_key_plaintext_size = sizeof(test_key_plaintext);
+    // ret = g_crypto.decrypt(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, test_key_plaintext, &test_key_plaintext_size);
+    // add_client_key(test_key_plaintext, test_key_plaintext_size, (char*) "user2");
+
+    // FIXME: we'll need to free nameptr eventually
+    // free(nameptr);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
 }
-
 
 /* 
    Enclave generates report, which is then sent back to the service provider

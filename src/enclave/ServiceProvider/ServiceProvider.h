@@ -21,6 +21,14 @@ public:
    * attestation succeeds.
    */
   void set_shared_key(const uint8_t *shared_key);
+  
+  // FOR TESTING PURPOSES
+  // FIXME: remove this function
+  // void set_test_key(const uint8_t *shared_key);
+
+  void set_user_cert(std::string user_cert);
+
+  void set_key_share(const uint8_t *key_share);
 
   /**
    * After calling load_private_key, write the corresponding public key as a C++ header file. This
@@ -40,6 +48,16 @@ private:
   lc_ec256_private_t sp_priv_key;
   
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
+
+  // FOR TESTING PURPOSES
+  // FIXME: remove this test key
+  // uint8_t test_key[LC_AESGCM_KEY_SIZE];
+
+  // FIXME: make this not a set length
+  char user_cert[2000];
+
+  // Key share; xor'ed among all parties to produce one shared key for spark cluster
+  uint8_t key_share[LC_AESGCM_KEY_SIZE];
   std::string spid;
 
   std::unique_ptr<IAS_Connection> ias;
