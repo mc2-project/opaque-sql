@@ -23,11 +23,10 @@ import org.apache.spark.internal.Logging
 import edu.berkeley.cs.rise.opaque.execution.SP
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 
-// Helper to handle remote attestation
-// 
+// Helper to handle enclave "local attestation" and determine shared key
 
-object RA extends Logging {
-  def initRA(sc: SparkContext): Unit = {
+object LA extends Logging {
+  def initLA(sc: SparkContext): Unit = {
 
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
@@ -44,7 +43,7 @@ object RA extends Logging {
       println(Utils)
       println(eid)
 
-      val msg1 = enclave.GenerateReport(eid) 
+      val msg1 = enclave.GetPublicKey(eid) 
       Iterator((eid, msg1))
     }.collect.toMap
 
