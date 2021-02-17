@@ -73,7 +73,6 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
-import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -109,6 +108,8 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
+import org.apache.spark.sql.catalyst.expressions.PromotePrecision
+import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
 object Utils extends Logging {
   private val perf: Boolean = System.getenv("SGX_PERF") == "1"
@@ -354,8 +355,6 @@ object Utils extends Logging {
     rdd.foreach(x => {})
   }
 
-
-
   def flatbuffersCreateField(
       builder: FlatBufferBuilder, value: Any, dataType: DataType, isNull: Boolean): Int = {
     (value, dataType) match {
@@ -402,6 +401,18 @@ object Utils extends Logging {
           tuix.FloatField.createFloatField(builder, x),
           isNull)
       case (null, FloatType) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, 0),
+          isNull)
+      case (x: Decimal, DecimalType()) =>
+        tuix.Field.createField(
+          builder,
+          tuix.FieldUnion.FloatField,
+          tuix.FloatField.createFloatField(builder, x.toFloat),
+          isNull)
+      case (null, DecimalType()) =>
         tuix.Field.createField(
           builder,
           tuix.FieldUnion.FloatField,
@@ -783,6 +794,18 @@ object Utils extends Logging {
     op(fromChildren, tree)
   }
 
+  def getColType(dataType: DataType) = {
+    dataType match {
+        case IntegerType => tuix.ColType.IntegerType
+        case LongType => tuix.ColType.LongType
+        case FloatType => tuix.ColType.FloatType
+        case DecimalType() => tuix.ColType.FloatType
+        case DoubleType => tuix.ColType.DoubleType
+        case StringType => tuix.ColType.StringType
+        case _ => throw new OpaqueException("Type not supported: " + dataType.toString())
+    }
+  }
+
   /** Serialize an Expression into a tuix.Expr. Returns the offset of the written tuix.Expr. */
   def flatbuffersSerializeExpression(
     builder: FlatBufferBuilder, expr: Expression, input: Seq[Attribute]): Int = {
@@ -815,14 +838,7 @@ object Utils extends Logging {
             tuix.Cast.createCast(
               builder,
               childOffset,
-              dataType match {
-                case IntegerType => tuix.ColType.IntegerType
-                case LongType => tuix.ColType.LongType
-                case FloatType => tuix.ColType.FloatType
-                case DoubleType => tuix.ColType.DoubleType
-                case StringType => tuix.ColType.StringType
-              }))
-
+              getColType(dataType)))
         // Arithmetic
         case (Add(left, right), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
@@ -1091,6 +1107,17 @@ object Utils extends Logging {
             tuix.ExprUnion.ClosestPoint,
             tuix.ClosestPoint.createClosestPoint(
               builder, leftOffset, rightOffset))
+
+        case (PromotePrecision(child), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by PromotePrecision
+          childOffset
+
+        case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
+          // TODO: Implement decimal serialization, followed by CheckOverflow
+          childOffset
+
+        case (_, Seq(childOffset)) =>
+          throw new OpaqueException("Expression not supported: " + expr.toString())
       }
     }
   }
@@ -1174,7 +1201,7 @@ object Utils extends Logging {
     // To avoid the need for special handling of the grouping columns, we transform the grouping expressions
     // into AggregateExpressions that collect the first seen value.
     val aggGroupingExpressions = groupingExpressions.map {
-      case e: NamedExpression => AggregateExpression(First(e, Literal(false)), Complete, false)
+      case e: NamedExpression => AggregateExpression(First(e, false), Complete, false)
     }
     val aggregateExpressions = aggGroupingExpressions ++ aggExpressions
 
@@ -1303,7 +1330,7 @@ object Utils extends Logging {
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
         )
 
-      case f @ First(child, Literal(false, BooleanType)) =>
+      case f @ First(child, false) =>
         val first = f.aggBufferAttributes(0)
         val valueSet = f.aggBufferAttributes(1)
 
@@ -1341,7 +1368,7 @@ object Utils extends Logging {
             builder,
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
-      case l @ Last(child, Literal(false, BooleanType)) =>
+      case l @ Last(child, false) =>
         val last = l.aggBufferAttributes(0)
         val valueSet = l.aggBufferAttributes(1)
 

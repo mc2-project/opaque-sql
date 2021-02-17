@@ -8,11 +8,12 @@ Opaque is a package for Apache Spark SQL that enables encryption for DataFrames 
 
 This project is based on the following NSDI 2017 paper [1]. The oblivious execution mode is not included in this release.
 
-This is an alpha preview of Opaque, which means the software is still in development (not production-ready!). It currently has the following limitations:
+This is an alpha preview of Opaque, but the software is still in active development. It currently has the following limitations:
 
 - Unlike the Spark cluster, the master must be run within a trusted environment (e.g., on the client).
 
-- Not all Spark SQL operations are supported. UDFs must be [implemented in C++](#user-defined-functions-udfs).
+- Not all Spark SQL operations are supported (see the [list of supported operations](#supported-functionalities)).
+UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 
@@ -23,7 +24,7 @@ This is an alpha preview of Opaque, which means the software is still in develop
 
 After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.9.x/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.9.0 (so please install with `open-enclave=0.9.0`) and Ubuntu 18.04.
+1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.12.0 (so please install with `open-enclave=0.12.0`) and Ubuntu 18.04.
 
     ```sh
     # For Ubuntu 18.04:
@@ -59,7 +60,9 @@ After downloading the Opaque codebase, build and test it as follows.
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+
+\* Opaque needs Spark's `'spark.executor.instances'` property to be set. This can be done in a custom config file, the default config file found at `/opt/spark/conf/spark-defaults.conf`, or as a `spark-submit` or `spark-shell` argument: `--conf 'spark.executor.instances=<value>`.
 
 1. Package Opaque into a JAR:
 
@@ -136,6 +139,41 @@ Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0](
     // | baz|    5|
     // +----+-----+
     ```
+
+## Supported functionalities
+
+This section lists Opaque's supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL -- Opaque simply replaces the execution to work with encrypted data.
+
+### Data types
+Out of the existing [Spark SQL types](https://spark.apache.org/docs/latest/sql-ref-datatypes.html), Opaque supports
+
+- All numeric types except `DecimalType`, which is currently converted into `FloatType`
+- `StringType`
+- `BinaryType`
+- `BooleanType`
+- `TimestampTime`, `DateType`
+- `ArrayType`, `MapType`
+
+### Functions
+We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.
+
+- Scalar functions: `case`, `cast`, `concat`, `contains`, `if`, `in`, `like`, `substring`, `upper`
+- Aggregate functions: `average`, `count`, `first`, `last`, `max`, `min`, `sum`
+
+UDFs are not supported directly, but one can [extend Opaque with additional functions](#user-defined-functions-udfs) by writing it in C++.
+
+
+### Operators
+
+Opaque supports the core SQL operators:
+
+- Projection
+- Filter
+- Global aggregation and grouping aggregation
+- Order by, sort by
+- Inner join
+- Limit
+
     
 ## User-Defined Functions (UDFs)
 
@@ -168,7 +206,3 @@ Now we can port this UDF to Opaque as follows:
     ```
 
 3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
-
-## Contact
-
-If you want to know more about our project or have questions, please contact Wenting (wzheng@eecs.berkeley.edu) and/or Ankur (ankurdave@gmail.com).
