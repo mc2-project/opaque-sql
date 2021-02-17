@@ -32,6 +32,9 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.LeftAnti
+import org.apache.spark.sql.catalyst.plans.LeftSemi
 import org.apache.spark.sql.execution.SparkPlan
 
 import edu.berkeley.cs.rise.opaque.execution._
@@ -76,20 +79,30 @@ object OpaqueOperators extends Strategy {
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
       val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
-      val sorted = EncryptedSortExec(sortForJoin(leftKeysProj, tag, unioned.output), true, unioned)
+      // We partition based on the join keys only, so that rows from both the left and the right tables that match
+      // will colocate to the same partition
+      val partitionOrder = leftKeysProj.map(k => SortOrder(k, Ascending))
+      val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
+      val sortOrder = sortForJoin(leftKeysProj, tag, partitioned.output)
+      val sorted = EncryptedSortExec(sortOrder, false, partitioned)
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
         rightKeysProj,
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
-        (leftProjSchema ++ rightProjSchema).map(_.toAttribute),
         sorted)
-      val tagsDropped = EncryptedProjectExec(dropTags(left.output, right.output), joined)
+
+      val tagsDropped = joinType match {
+        case Inner => EncryptedProjectExec(dropTags(left.output, right.output), joined)
+        case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
+      }
+
       val filtered = condition match {
         case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
         case None => tagsDropped
       }
+
       filtered :: Nil
 
     case a @ PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
@@ -116,7 +129,6 @@ object OpaqueOperators extends Strategy {
               EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
                 EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
       }
-      filtered :: Nil
 
     case p @ Union(Seq(left, right)) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil

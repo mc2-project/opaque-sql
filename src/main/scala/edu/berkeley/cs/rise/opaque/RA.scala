@@ -24,13 +24,20 @@ import java.nio.file.{Files, Paths}
 import edu.berkeley.cs.rise.opaque.execution.SP
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 
-// Helper to handle remote attestation
-// 
+// Performs remote attestation for all executors
+// that have not been attested yet
 
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
+    // All executors need to be initialized before attestation can occur
+    var numExecutors = 1
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
+    }
+
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
     // FIXME: hardcoded path
@@ -54,7 +61,8 @@ object RA extends Logging {
 
     println(Utils)
 
-    val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
+    // Runs on executors
+    val msg1s = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave()
      
       // Print utils and enclave address to ascertain different enclaves
@@ -65,12 +73,15 @@ object RA extends Logging {
       Iterator((eid, msg1))
     }.collect.toMap
 
+    // Runs on driver
     val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
     msg1s.map{case (eid, msg1) => (eid, print(eid + "\n"))}
 
-    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
+    // Runs on executors
+    val attestationResults = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave()
-      enclave.FinishAttestation(eid, msg2s(eid))
+      val msg2 = msg2s(eid)
+      enclave.FinishAttestation(eid, msg2)
       Iterator((eid, true))
     }.collect.toMap
 

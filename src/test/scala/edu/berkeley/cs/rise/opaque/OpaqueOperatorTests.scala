@@ -19,11 +19,8 @@ package edu.berkeley.cs.rise.opaque
 
 import java.sql.Timestamp
 
-import scala.collection.mutable
 import scala.util.Random
 
-import org.apache.log4j.Level
-import org.apache.log4j.LogManager
 import org.apache.spark.SparkException
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
@@ -35,10 +32,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
-import org.scalactic.Equality
-import org.scalactic.TolerantNumerics
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.FunSuite
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
@@ -46,83 +39,14 @@ import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
-trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
-  def spark: SparkSession
-  def numPartitions: Int
+trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
-  protected object testImplicits extends SQLImplicits {
-    protected override def _sqlContext: SQLContext = self.spark.sqlContext
-  }
-  import testImplicits._
-
-  override def beforeAll(): Unit = {
-    Utils.initSQLContext(spark.sqlContext)
-  }
-
-  override def afterAll(): Unit = {
-    spark.stop()
-  }
-
-  private def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
-    new Equality[Array[A]] {
-      def areEqual(a: Array[A], b: Any): Boolean = {
-        b match {
-          case b: Array[_] =>
-            (a.length == b.length
-              && a.zip(b).forall {
-                case (x, y) => implicitly[Equality[A]].areEqual(x, y)
-              })
-          case _ => false
-        }
-      }
-      override def toString: String = s"TolerantArrayEquality"
+    protected object testImplicits extends SQLImplicits {
+      protected override def _sqlContext: SQLContext = self.spark.sqlContext
     }
-  }
+    import testImplicits._
 
-  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
-  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
-  implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
-
-  def testAgainstSpark[A : Equality](name: String)(f: SecurityLevel => A): Unit = {
-    test(name + " - encrypted") {
-      // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
-      // using the numeric tolerance specified above
-      assert(f(Encrypted) === f(Insecure))
-    }
-  }
-
-  def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - encrypted") {
-      f(Encrypted)
-    }
-  }
-
-  def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - Spark") {
-      f(Insecure)
-    }
-  }
-
-  def withLoggingOff[A](f: () => A): A = {
-    val sparkLoggers = Seq(
-      "org.apache.spark",
-      "org.apache.spark.executor.Executor",
-      "org.apache.spark.scheduler.TaskSetManager")
-    val logLevels = new mutable.HashMap[String, Level]
-    for (l <- sparkLoggers) {
-      logLevels(l) = LogManager.getLogger(l).getLevel
-      LogManager.getLogger(l).setLevel(Level.OFF)
-    }
-    try {
-      f()
-    } finally {
-      for (l <- sparkLoggers) {
-        LogManager.getLogger(l).setLevel(logLevels(l))
-      }
-    }
-  }
-
-  /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
+    /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
     * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
     * Set nullable property of column.
     * @param cn is the column name to change
@@ -381,7 +305,7 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val f_data = for (i <- 1 to 256 - 16) yield ((i % 16).toString, (i * 10).toString, i.toFloat)
     val p = makeDF(p_data, securityLevel, "pk", "x")
     val f = makeDF(f_data, securityLevel, "fk", "x", "y")
-    p.join(f, $"pk" === $"fk").collect.toSet
+    val df = p.join(f, $"pk" === $"fk").collect.toSet
   }
 
   testAgainstSpark("non-foreign-key join") { securityLevel =>
@@ -390,6 +314,33 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
+  }
+
+  testAgainstSpark("left semi join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
+    df.collect
+  }
+
+  testAgainstSpark("left anti join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
+  }
+
+  testAgainstSpark("left anti join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
+    df.collect
   }
 
   def abc(i: Int): String = (i % 3) match {
@@ -514,6 +465,54 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     val data = for (i <- 0 until 256) yield(i.toString, abc(i))
     val df = makeDF(data, securityLevel, "word", "abc")
     df.filter($"word".contains(lit("1"))).collect
+  }
+
+  testAgainstSpark("concat with string") { securityLevel =>
+    val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
+    val df = makeDF(data, securityLevel, "str", "x")
+    df.select(concat(col("str"),lit(","),col("x"))).collect
+  }
+
+  testAgainstSpark("concat with other datatype") { securityLevel =>
+    // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out 
+    // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
+    // you can't serialize date so that's not supported as well 
+    // opaque doesn't support byte 
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int],"")
+    val df = makeDF(data, securityLevel, "str", "int","null","emptystring")
+    df.select(concat(col("str"),lit(","),col("int"),col("null"),col("emptystring"))).collect
+  }
+  
+  testAgainstSpark("isin1") { securityLevel =>
+    val ids = Seq((1, 2, 2), (2, 3, 1))
+    val df = makeDF(ids, securityLevel, "x", "y", "id")
+    val c = $"id" isin ($"x", $"y")
+    val result = df.filter(c)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin2") { securityLevel =>
+    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
+    val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
+    val c2 = $"id" isin (1 ,2, 4, 5, 6)
+    val result = df2.filter(c2)
+    result.collect 
+  }
+    
+  testAgainstSpark("isin with string") { securityLevel =>
+    val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
+    val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
+    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
+    val result = df3.filter(c3)
+    result.collect
+  }
+    
+  testAgainstSpark("isin with null") { securityLevel =>
+    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
+    val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
+    val c4 = $"id" isin (null.asInstanceOf[Int])
+    val result = df4.filter(c4)
+    result.collect 
   }
 
   testAgainstSpark("between") { securityLevel =>
@@ -884,10 +883,6 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
     PageRank.run(spark, securityLevel, "256", numPartitions).collect.toSet
   }
 
-  testAgainstSpark("TPC-H 9") { securityLevel =>
-    TPCH.tpch9(spark.sqlContext, securityLevel, "sf_small", numPartitions).collect.toSet
-  }
-
   testAgainstSpark("big data 1") { securityLevel =>
     BigDataBenchmark.q1(spark, securityLevel, "tiny", numPartitions).collect
   }
@@ -911,20 +906,20 @@ trait OpaqueOperatorTests extends FunSuite with BeforeAndAfterAll { self =>
 
 }
 
-class OpaqueSinglePartitionSuite extends OpaqueOperatorTests {
+class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
-    .appName("QEDSuite")
+    .appName("OpaqueOperatorSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
 
   override def numPartitions: Int = 1
 }
 
-class OpaqueMultiplePartitionSuite extends OpaqueOperatorTests {
+class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession.builder()
     .master("local[1]")
-    .appName("QEDSuite")
+    .appName("OpaqueOperatorMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
