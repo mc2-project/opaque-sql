@@ -23,6 +23,9 @@ import org.apache.spark.internal.Logging
 import edu.berkeley.cs.rise.opaque.execution.SP
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 
+import Array.concat
+import scala.util.Random
+
 // Helper to handle enclave "local attestation" and determine shared key
 
 object LA extends Logging {
@@ -32,7 +35,7 @@ object LA extends Logging {
 
     // Test print Utils.
     println(Utils)
-
+    // Obtain public keys
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
      
@@ -44,20 +47,33 @@ object LA extends Logging {
       Iterator((eid, msg1))
     }.collect.toMap
 
-   println("Finish LA")
+    // Combine all public keys into one large array
+    var pkArray = Array[Byte]()
+    for ((k,v) <- msg1s) concat(pkArray, v)
 
-//    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
-//    msg1s.map{case (eid, msg1) => (eid, print(eid + "\n"))}
-//
-//    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
-//      val (enclave, eid) = Utils.initEnclave()
-//      enclave.FinishAttestation(eid, msg2s(eid))
-//      Iterator((eid, true))
-//    }.collect.toMap
-//
-//    for ((_, ret) <- attestationResults) {
-//      if (!ret)
-//        throw new OpaqueException("Attestation failed")
-//    }
+    val msg2s = msg1s.map{case (eid, msg1) => (eid, pkArray)}
+
+    // Send list of public keys to enclaves
+    val encryptedResults = rdd.mapPartitionsWithIndex { (_, _) =>
+      val (enclave, eid) = Utils.initEnclave()
+      val msg2 = enclave.GetListEncrypted(eid, msg2s(eid))
+      Iterator((eid, msg2))
+    }.collect.toMap
+
+    // Pick a random encrypted list from the map and send it to all the enclaves
+    val random = new Random
+    val skArray = encryptedResults.values.toList(random.nextInt(encryptedResults.size))
+    val msg3s = msg1s.map{case (eid, _) => (eid, skArray)}
+
+    val setSharedKeyResults = rdd.mapPartitionsWithIndex { (_, _) =>
+      val (enclave, eid) = Utils.initEnclave()
+      val msg2 = enclave.FinishSharedKey(eid, msg3s(eid))
+      Iterator((eid, true))
+    }.collect.toMap
+
+    for ((_, ret) <- setSharedKeyResults) {
+      if (!ret)
+        throw new OpaqueException("Failed to set shared key")
+    }
   }
 }
