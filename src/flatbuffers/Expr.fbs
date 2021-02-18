@@ -40,7 +40,8 @@ union ExprUnion {
     CreateArray,
     Upper,
     DateAdd,
-    DateAddInterval
+    DateAddInterval,
+    NormalizeNaNAndZero
 }
 
 table Expr {
@@ -220,5 +221,9 @@ table ClosestPoint {
 }
 
 table Upper {
+    child:Expr;
+}
+
+table NormalizeNaNAndZero {
     child:Expr;
 }

@@ -1571,6 +1571,69 @@ private:
         result_is_null);
     }
 
+    case tuix::ExprUnion_NormalizeNaNAndZero:
+    {
+      auto *expr = static_cast<const tuix::NormalizeNaNAndZero>(expr->expr());
+      auto child_offset = eval_helper(row, expr->child());
+
+      const tuix::Field *value = flatbuffers::GetTemporaryPointer(builder, child_offset);
+
+      if (value->value_type() != tuix::FieldUnion_FloatField && value->value_type() != tuix::FieldUnion_DoubleField) {
+        throw std::runtime_error(
+          std::string("tuix::NormalizeNaNAndZero requires type Float or Double, not ")
+          + std::string(tuix::EnumNameFieldUnion(str->value_type())));
+      }
+
+      bool result_is_null = str->is_null();
+
+      if (value->value_type() != tuix::FieldUnion_FloatField) {
+        if (!result_is_null) {
+          float v = value->value();
+          if (isnan(v)) {
+            v = std::numeric_limits<float>::quiet_NaN();
+          } else if (v == -0.0f) {
+            v = 0.0f;
+          }
+
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_FloatField,
+            tuix::CreateFloatField(builder, v).Union(),
+            result_is_null);
+        }
+        
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_FloatField,
+          tuix::CreateFloatField(builder, 0).Union(),
+          result_is_null);
+        
+      } else {
+
+        if (!result_is_null) {
+          double v = value->value();
+          if (isnan(v)) {
+            v = std::numeric_limits<double>::quiet_NaN();
+          } else if (v == -0.0d) {
+            v = 0.0d;
+          }
+
+          return tuix::CreateField(
+            builder,
+            tuix::FieldUnion_DoubleField,
+            tuix::CreateDoubleField(builder, v).Union(),
+            result_is_null);
+        }
+        
+        return tuix::CreateField(
+          builder,
+          tuix::FieldUnion_DoubleField,
+          tuix::CreateDoubleField(builder, 0).Union(),
+          result_is_null);
+        
+      }
+    }
+
     default:
       throw std::runtime_error(
         std::string("Can't evaluate expression of type ")
