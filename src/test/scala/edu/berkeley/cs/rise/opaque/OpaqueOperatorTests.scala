@@ -887,7 +887,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
-    df.collect()
+    df.collect
   }
 
   testAgainstSpark("scalar subquery") { securityLevel =>

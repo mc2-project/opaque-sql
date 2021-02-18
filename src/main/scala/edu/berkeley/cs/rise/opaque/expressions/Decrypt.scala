@@ -28,9 +28,6 @@ object Decrypt {
       * child - an encrypted literal of string type
       * outputDataType - the decrypted data type
   """)
-/**
- * 
- */
 case class Decrypt(child: Expression, outputDataType: DataType)
     extends UnaryExpression with NullIntolerant with CodegenFallback with Nondeterministic {
 

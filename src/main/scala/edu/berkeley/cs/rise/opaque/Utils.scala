@@ -872,6 +872,7 @@ object Utils extends Logging {
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
 
+        // This expression should never be evaluated on the driver
         case (Decrypt(child, dataType), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
@@ -1181,7 +1182,6 @@ object Utils extends Logging {
             tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
           }
           val encryptedBlocks = encryptedBlocksList.find(_.blocksLength > 0).getOrElse(encryptedBlocksList(0))
-          println(s"encryptedBlocks = ${encryptedBlocks}")
           if (encryptedBlocks.blocksLength == 0) {
             // If empty, the returned result is null
             flatbuffersSerializeExpression(builder, Literal(null, dataType), input)

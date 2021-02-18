@@ -178,7 +178,7 @@ static inline bool is_base64(unsigned char c) {
   return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string ciphertext_base64_decode(std::string const& encoded_string) {
+std::string ciphertext_base64_decode(const std::string &encoded_string) {
   int in_len = encoded_string.size();
   int i = 0;
   int j = 0;

@@ -313,7 +313,7 @@ private:
         std::string ciphertext(str_vec.begin(), str_vec.end());
         std::string ciphertext_decoded = ciphertext_base64_decode(ciphertext);
 
-        uint8_t *plaintext = new uint8_t[ciphertext_decoded.size()];
+        uint8_t *plaintext = new uint8_t[dec_size(ciphertext_decoded.size())];
         decrypt(reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()), ciphertext_decoded.size(), plaintext);
 
         BufferRefView<tuix::Rows> buf(plaintext, ciphertext_decoded.size());

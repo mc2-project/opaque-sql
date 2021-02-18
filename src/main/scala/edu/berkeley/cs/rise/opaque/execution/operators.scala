@@ -142,7 +142,7 @@ trait OpaqueOperatorExec extends SparkPlan {
   }
 
   def collectEncrypted(): Array[Block] = {
-    executeBlocked().collect()
+    executeBlocked().collect
   }
 
   override def executeCollect(): Array[InternalRow] = {
