@@ -40,7 +40,8 @@ union ExprUnion {
     CreateArray,
     Upper,
     DateAdd,
-    DateAddInterval
+    DateAddInterval,
+    Decrypt
 }
 
 table Expr {
@@ -221,4 +222,8 @@ table ClosestPoint {
 
 table Upper {
     child:Expr;
+}
+
+table Decrypt {
+    value:Expr;
 }
