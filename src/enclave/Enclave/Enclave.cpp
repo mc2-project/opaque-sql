@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "Random.h"
+
 #include "Aggregate.h"
 #include "Crypto.h"
 #include "Filter.h"
@@ -394,26 +396,93 @@ void ecall_generate_report(uint8_t **report_msg_data,
 void ecall_get_public_key(uint8_t **report_msg_data,
                            size_t* report_msg_data_size) {
 
-  std::cout << "ecall_get_public_key" << std::endl;
+  std::cout << "enter ecall_get_public_key" << std::endl;
+
+  uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
+  size_t public_key_size = sizeof(public_key); 
+
+  g_crypto.retrieve_public_key(public_key);
+
+  *report_msg_data_size = public_key_size;
+  *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
+
+  memcpy_s(*report_msg_data, *report_msg_data_size, public_key, public_key_size);
+
+  std::cout << "exit ecall_get_public_key" << std::endl;
 }
 
-void ecall_get_list_encrypted(uint8_t *shared_key_msg_input,
-                              uint32_t shared_key_msg_size, 
-                              uint8_t **report_msg_data,
-                              size_t* report_msg_data_size) {
+void ecall_get_list_encrypted(uint8_t * pk_list,
+                              uint32_t pk_list_size, 
+                              uint8_t * sk_list,
+                              size_t* sk_list_size) {
+  std::cout << "enter ecall_get_list_encrypted" << std::endl;
+
+  // TODO: Guard against encrypting or overwriting enclave memory?
+
+  // Size of shared key is 16 from ServiceProvider - LC_AESGCM_KEY_SIZE
+  // For now SGX_AESGCM_KEY_SIZE is also 16, so will just use that for now
+
   try {
-    std::cout << "ecall_get_list_encrypted" << std::endl;
+    // Generate a random value used for key
+    unsigned char secret_key[SGX_AESGCM_KEY_SIZE] = {0};
+    mbedtls_read_rand(secret_key, SGX_AESGCM_KEY_SIZE);
+
+    uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
+    uint8_t *pk_pointer = pk_list;
+
+    unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+    size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+    *sk_list_size = encrypted_sharedkey_size * (pk_list_size / OE_PUBLIC_KEY_SIZE);
+    sk_list = (uint8_t*)oe_host_malloc(*sk_list_size);
+    uint8_t *sk_pointer = sk_list;
+
+    while (pk_pointer < pk_list + pk_list_size) {
+      memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
+      g_crypto.encrypt(public_key,
+                       secret_key,
+                       SGX_AESGCM_KEY_SIZE,
+                       encrypted_sharedkey,
+                       &encrypted_sharedkey_size);
+      memcpy_s(sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, OE_SHARED_KEY_CIPHERTEXT_SIZE);
+
+      pk_pointer += OE_PUBLIC_KEY_SIZE;
+      sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
+    }
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
+
+  std::cout << "exit ecall_get_list_encrypted" << std::endl;
 }
 
-void ecall_finish_shared_key(uint8_t *shared_key_msg_input,
-                              uint32_t shared_key_msg_size) {
-  try {
-    std::cout << "ecall_finish_shared_key" << std::endl;
+void ecall_finish_shared_key(uint8_t *sk_list,
+                              uint32_t sk_list_size) {
 
-  } catch (const std::runtime_error &e) {
-    ocall_throw(e.what());
+  std::cout << "enter ecall_finish_shared_key" << std::endl;
+
+  uint8_t *sk_pointer = sk_list;
+
+  uint8_t secret_key[SGX_AESGCM_KEY_SIZE] = {0};
+  size_t sk_size = sizeof(secret_key);
+
+  while (sk_pointer < sk_list + sk_list_size) {
+    uint8_t encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+    size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+    memcpy_s(encrypted_sharedkey, encrypted_sharedkey_size, sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE);
+
+    try {
+      bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, secret_key, &sk_size);
+      if (ret) {break;} // Decryption was successful to obtain secret key
+    } catch (const std::runtime_error &e) {
+      ocall_throw(e.what());
+    }
+
+    sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
   }
+
+  set_shared_key(secret_key, sk_size);
+
+  std::cout << "exit ecall_finish_shared_key" << std::endl;
 }

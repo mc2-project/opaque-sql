@@ -29,11 +29,8 @@ object LA extends Logging {
   def initLA(sc: SparkContext): Unit = {
 
     val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
-    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-    val sp = new SP()
 
-    sp.Init(Utils.sharedKey, intelCert)
-
+    // Test print Utils.
     println(Utils)
 
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>

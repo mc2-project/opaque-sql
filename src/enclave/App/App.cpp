@@ -282,13 +282,13 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                     ecall_get_list_encrypted((oe_enclave_t*)eid,
                                              reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
                                              shared_key_msg_size,
-                                             &report_msg,
+                                             report_msg,
                                              &report_msg_size));
 
   env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 
   jbyteArray ret = NULL;
-  return ret
+  return ret;
 }
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishSharedKey(
