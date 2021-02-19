@@ -1586,9 +1586,9 @@ private:
 
       bool result_is_null = value->is_null();
 
-      if (value->value_type() != tuix::FieldUnion_FloatField) {
+      if (value->value_type() == tuix::FieldUnion_FloatField) {
         if (!result_is_null) {
-          float v = value->value();
+          float v = value->value_as_FloatField()->value();
           if (isnan(v)) {
             v = std::numeric_limits<float>::quiet_NaN();
           } else if (v == -0.0f) {
@@ -1611,7 +1611,7 @@ private:
       } else {
 
         if (!result_is_null) {
-          double v = value->value();
+          double v = value->value_as_DoubleField()->value();
           if (isnan(v)) {
             v = std::numeric_limits<double>::quiet_NaN();
           } else if (v == -0.0d) {
@@ -1630,7 +1630,6 @@ private:
           tuix::FieldUnion_DoubleField,
           tuix::CreateDoubleField(builder, 0).Union(),
           result_is_null);
-        
       }
     }
 

@@ -1114,11 +1114,14 @@ object Utils extends Logging {
           // TODO: Implement decimal serialization, followed by CheckOverflow
           childOffset
 
-        case (KnownFloatingPointNormalized(NormalizeNaNAndZero(child)), Seq(childOffset)) =>
+        case (NormalizeNaNAndZero(child), Seq(childOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.NormalizeNaNAndZero,
             tuix.NormalizeNaNAndZero.createNormalizeNaNAndZero(builder, childOffset))
+
+        case (KnownFloatingPointNormalized(NormalizeNaNAndZero(child)), Seq(childOffset)) =>
+          flatbuffersSerializeExpression(builder, NormalizeNaNAndZero(child), input)
 
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())
