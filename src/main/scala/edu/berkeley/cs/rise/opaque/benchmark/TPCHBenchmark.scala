@@ -33,7 +33,7 @@ object TPCHBenchmark {
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
-        "system" -> Encrypted.name) {
+        "system" -> Insecure.name) {
       
       tpch.performQuery(sqlStr, Insecure).collect
     }
@@ -41,14 +41,14 @@ object TPCHBenchmark {
     Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
-        "system" -> Insecure.name) {
+        "system" -> Encrypted.name) {
       
       tpch.performQuery(sqlStr, Encrypted).collect
     }
   }
 
-  def run(sqlContext: SQLContext, numPartitions: Int, size: String) = {
-    val tpch = new TPCH(sqlContext, size)
+  def run(sqlContext: SQLContext, numPartitions: Int, size: String, fileUrl: String) = {
+    val tpch = new TPCH(sqlContext, size, fileUrl)
 
     for (queryNumber <- supportedQueries) {
       query(queryNumber, tpch, sqlContext, numPartitions)

@@ -25,7 +25,7 @@ import edu.berkeley.cs.rise.opaque.benchmark._
 trait TPCHTests extends OpaqueTestsBase { self => 
 
   def size = "sf_small"
-  def tpch = new TPCH(spark.sqlContext, size)
+  def tpch = new TPCH(spark.sqlContext, size, "file://")
 
   def runTests() = {
     for (queryNum <- TPCHBenchmark.supportedQueries) {
