@@ -22,6 +22,10 @@ import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.sql.SQLContext
 
 object TPCHBenchmark {
+
+  // Add query numbers here once they are supported
+  val supportedQueries = Seq(1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 19, 20, 22)
+
   def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
     val sqlStr = tpch.getQuery(queryNumber)
     tpch.generateFiles(numPartitions)
@@ -45,8 +49,6 @@ object TPCHBenchmark {
 
   def run(sqlContext: SQLContext, numPartitions: Int, size: String) = {
     val tpch = new TPCH(sqlContext, size)
-
-    val supportedQueries = Seq(1, 3, 5, 6, 7, 8, 9, 10, 14, 17)
 
     for (queryNumber <- supportedQueries) {
       query(queryNumber, tpch, sqlContext, numPartitions)
