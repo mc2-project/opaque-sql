@@ -343,6 +343,14 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect
   }
 
+  testAgainstSpark("join on floats") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, i.toFloat, i * 10)
+    val f_data = for (i <- 1 to 256 - 16) yield (i, i.toFloat, i * 10)
+    val p = makeDF(p_data, securityLevel, "id", "pk", "x")
+    val f = makeDF(f_data, securityLevel, "id", "fk", "x")
+    p.join(f, $"pk" === $"fk").collect.toSet
+  }
+
   def abc(i: Int): String = (i % 3) match {
     case 0 => "A"
     case 1 => "B"

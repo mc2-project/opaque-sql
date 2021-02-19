@@ -36,12 +36,12 @@ union ExprUnion {
     VectorMultiply,
     DotProduct,
     Exp,
+    NormalizeNaNAndZero,
     ClosestPoint,
     CreateArray,
     Upper,
     DateAdd,
-    DateAddInterval,
-    NormalizeNaNAndZero
+    DateAddInterval
 }
 
 table Expr {
@@ -199,6 +199,10 @@ table CreateArray {
     children:[Expr];
 }
 
+table NormalizeNaNAndZero {
+    child:Expr;
+}
+
 // Opaque UDFs
 table VectorAdd {
     left:Expr;
@@ -221,9 +225,5 @@ table ClosestPoint {
 }
 
 table Upper {
-    child:Expr;
-}
-
-table NormalizeNaNAndZero {
     child:Expr;
 }
