@@ -35,6 +35,7 @@ import org.apache.spark.unsafe.types.CalendarInterval
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
@@ -886,6 +887,30 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   testAgainstSpark("k-means") { securityLevel =>
     import scala.math.Ordering.Implicits.seqDerivedOrdering
     KMeans.train(spark, securityLevel, numPartitions, 10, 2, 3, 0.01).map(_.toSeq).sorted
+  }
+
+  testAgainstSpark("encrypted literal") { securityLevel =>
+    val input = 10
+    val enc_str = Utils.encryptScalar(input, IntegerType)
+
+    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
+    df.collect
+  }
+
+  testAgainstSpark("scalar subquery") { securityLevel =>
+    // Example taken from https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/2728434780191932/1483312212640900/6987336228780374/latest.html
+    val data = for (i <- 0 until 256) yield (i, abc(i), i)
+    val words = makeDF(data, securityLevel, "id", "word", "count")
+    words.createTempView("words")
+
+    try {
+      val df = spark.sql("""SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word""")
+      df.collect
+    } finally {
+      spark.catalog.dropTempView("words")
+    }
   }
 
   testAgainstSpark("pagerank") { securityLevel =>
