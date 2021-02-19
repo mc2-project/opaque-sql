@@ -288,6 +288,49 @@ private:
         static_cast<const tuix::Literal *>(expr->expr())->value(), builder);
     }
 
+    case tuix::ExprUnion_Decrypt:
+    {
+      auto decrypt_expr = static_cast<const tuix::Decrypt *>(expr->expr());
+      const tuix::Field *value =
+        flatbuffers::GetTemporaryPointer(builder, eval_helper(row, decrypt_expr->value()));
+
+      if (value->value_type() != tuix::FieldUnion_StringField) {
+        throw std::runtime_error(
+          std::string("tuix::Decrypt only accepts a string input, not ")
+          + std::string(tuix::EnumNameFieldUnion(value->value_type())));
+      }
+
+      bool result_is_null = value->is_null();
+      if (!result_is_null) {
+        auto str_field = static_cast<const tuix::StringField *>(value->value());
+
+        std::vector<uint8_t> str_vec(
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(0)),
+            flatbuffers::VectorIterator<uint8_t, uint8_t>(str_field->value()->Data(),
+                                                          static_cast<uint32_t>(str_field->length())));
+
+        std::string ciphertext(str_vec.begin(), str_vec.end());
+        std::string ciphertext_decoded = ciphertext_base64_decode(ciphertext);
+
+        uint8_t *plaintext = new uint8_t[dec_size(ciphertext_decoded.size())];
+        decrypt(reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()), ciphertext_decoded.size(), plaintext);
+
+        BufferRefView<tuix::Rows> buf(plaintext, ciphertext_decoded.size());
+        buf.verify();
+
+        const tuix::Rows *rows = buf.root();
+        const tuix::Field *field = rows->rows()->Get(0)->field_values()->Get(0);
+        auto ret = flatbuffers_copy<tuix::Field>(field, builder);
+         
+        delete plaintext;
+        return ret;
+      } else {
+        throw std::runtime_error(std::string("tuix::Decrypt does not accept a NULL string\n"));
+      }
+      
+    }
+
     case tuix::ExprUnion_Cast:
     {
       auto cast = static_cast<const tuix::Cast *>(expr->expr());
@@ -1682,6 +1725,7 @@ public:
     }
 
     const tuix::JoinExpr* join_expr = flatbuffers::GetRoot<tuix::JoinExpr>(buf);
+    join_type = join_expr->join_type();
 
     if (join_expr->left_keys()->size() != join_expr->right_keys()->size()) {
       throw std::runtime_error("Mismatched join key lengths");
@@ -1738,8 +1782,13 @@ public:
     return true;
   }
 
+  tuix::JoinType get_join_type() {
+    return join_type;
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
+  tuix::JoinType join_type;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> left_key_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;
 };

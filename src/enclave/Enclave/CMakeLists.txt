@@ -22,7 +22,10 @@ set(SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
 
 add_custom_command(
-  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave
+  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+          --search-path ${CMAKE_SOURCE_DIR}/Enclave
+          --search-path ${OE_INCLUDEDIR}
+          --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
@@ -41,22 +44,21 @@ endif()
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 
 # Need for the generated file Enclave_t.h
-target_include_directories(enclave_trusted PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(enclave_trusted PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${OE_INCLUDEDIR}/openenclave/3rdparty)
 
-target_link_libraries(enclave_trusted 
-                      openenclave::oeenclave 
-                      openenclave::oelibc 
+link_directories(${OE_LIBDIR} ${OE_LIBDIR}/openenclave/enclave)
+target_link_libraries(enclave_trusted
+                      openenclave::oeenclave
+                      openenclave::oecrypto${OE_CRYPTO_LIB}
+                      openenclave::oelibc
                       openenclave::oelibcxx
-                      openenclave::oehostsock
-		              openenclave::oehostresolver)
+                      openenclave::oecore)
 
 add_custom_command(
-  COMMAND oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 
+  COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed)
 
-# TODO: Use the user-generated private key to sign the enclave code.
-# Currently we use the sample private key from the Intel SGX SDK.
 add_custom_command(
   COMMAND mv ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted.so.signed  ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed

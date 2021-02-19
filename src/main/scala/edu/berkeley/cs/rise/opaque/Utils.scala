@@ -21,7 +21,9 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom
+import java.util.Base64
 import java.util.UUID
 
 import javax.crypto._
@@ -92,6 +94,8 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.execution.SubqueryExec
+import org.apache.spark.sql.execution.ScalarSubquery
 import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
@@ -102,6 +106,7 @@ import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
 import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct
 import edu.berkeley.cs.rise.opaque.expressions.VectorAdd
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
@@ -589,6 +594,7 @@ object Utils extends Logging {
             tuix.StringField.createValueVector(builder, Array.empty),
             0),
           isNull)
+      case _ => throw new OpaqueException(s"FlatbuffersCreateField failed to match on ${value} of type {value.getClass.getName()}, ${dataType}")
     }
   }
 
@@ -662,6 +668,50 @@ object Utils extends Logging {
   }
 
   val MaxBlockSize = 1000
+
+  /**
+    * Encrypts/decrypts a given scalar value
+    **/
+  def encryptScalar(value: Any, dataType: DataType): String = {
+    // First serialize the scalar value
+    var builder = new FlatBufferBuilder
+    var rowOffsets = ArrayBuilder.make[Int]
+
+    val v = dataType match {
+      case StringType => UTF8String.fromString(value.asInstanceOf[String])
+      case _ => value
+    }
+
+    val isNull = (value == null)
+
+    // TODO: the NULL variable for field value could be set to true
+    builder.finish(
+      tuix.Rows.createRows(
+        builder,
+        tuix.Rows.createRowsVector(
+          builder,
+          Array(tuix.Row.createRow(
+            builder,
+            tuix.Row.createFieldValuesVector(
+              builder,
+              Array(flatbuffersCreateField(builder, v, dataType, false))),
+            isNull)))))
+
+    val plaintext = builder.sizedByteArray()
+    val ciphertext = encrypt(plaintext)
+    val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext);
+    ciphertext_str
+  }
+
+  def decryptScalar(ciphertext: String): Any = {
+    val ciphertext_bytes = Base64.getDecoder().decode(ciphertext);
+    val plaintext = decrypt(ciphertext_bytes)
+    val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
+    val row = rows.rows(0)
+    val field = row.fieldValues(0)
+    val value = flatbuffersExtractFieldValue(field)
+    value
+  }
 
   /**
    * Encrypts the given Spark SQL [[InternalRow]]s into a [[Block]] (a serialized
@@ -821,6 +871,13 @@ object Utils extends Logging {
             builder,
             tuix.ExprUnion.Literal,
             tuix.Literal.createLiteral(builder, valueOffset))
+
+        // This expression should never be evaluated on the driver
+        case (Decrypt(child, dataType), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Decrypt,
+            tuix.Decrypt.createDecrypt(builder, childOffset))
 
         case (Alias(child, _), Seq(childOffset)) =>
           // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
@@ -1111,6 +1168,36 @@ object Utils extends Logging {
         case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
           // TODO: Implement decimal serialization, followed by CheckOverflow
           childOffset
+
+        case (ScalarSubquery(SubqueryExec(name, child), exprId), Seq()) =>
+          val output = child.output(0)
+          val dataType = output match {
+            case AttributeReference(name, dataType, _, _) => dataType
+            case _ => throw new OpaqueException("Scalar subquery cannot match to AttributeReference")
+          }
+          // Need to deserialize the encrypted blocks to get the encrypted block
+          val blockList = child.asInstanceOf[OpaqueOperatorExec].collectEncrypted()
+          val encryptedBlocksList = blockList.map { block =>
+            val buf = ByteBuffer.wrap(block.bytes)
+            tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+          }
+          val encryptedBlocks = encryptedBlocksList.find(_.blocksLength > 0).getOrElse(encryptedBlocksList(0))
+          if (encryptedBlocks.blocksLength == 0) {
+            // If empty, the returned result is null
+            flatbuffersSerializeExpression(builder, Literal(null, dataType), input)
+          } else {
+            assert(encryptedBlocks.blocksLength == 1)
+            val encryptedBlock = encryptedBlocks.blocks(0)
+            val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+            val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+            ciphertextBuf.get(ciphertext)
+            val ciphertext_str = Base64.getEncoder().encodeToString(ciphertext)
+            flatbuffersSerializeExpression(
+              builder,
+              Decrypt(Literal(UTF8String.fromString(ciphertext_str), StringType), dataType),
+              input
+            )
+          }
 
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())

@@ -29,9 +29,6 @@ object ClosestPoint {
       * point - list of coordinates representing a point
       * centroids - list of lists of coordinates, each representing a point
   """)
-/**
- *
- */
 case class ClosestPoint(left: Expression, right: Expression)
     extends BinaryExpression with NullIntolerant with CodegenFallback with ExpectsInputTypes {
 
