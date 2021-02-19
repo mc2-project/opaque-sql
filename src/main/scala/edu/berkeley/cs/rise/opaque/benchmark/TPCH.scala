@@ -17,6 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
+import java.io.File
 import scala.io.Source
 
 import org.apache.spark.sql.DataFrame
@@ -162,7 +163,7 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/customer.tbl")
 
-  def generateMap(
+  def generateDFs(
       sqlContext: SQLContext, size: String)
       : Map[String, DataFrame] = {
     Map("part" -> part(sqlContext, size),
@@ -175,42 +176,73 @@ object TPCH {
     "customer" -> customer(sqlContext, size)
     ),
   }
-
-  def apply(sqlContext: SQLContext, size: String) : TPCH = {
-    val tpch = new TPCH(sqlContext, size)
-    tpch.tableNames = tableNames
-    tpch.nameToDF = generateMap(sqlContext, size)
-    tpch.ensureCached()
-    tpch
-  }
 }
 
-class TPCH(val sqlContext: SQLContext, val size: String) {
+class TPCH(val sqlContext: SQLContext, val size: String, val fileUrl: String) {
 
-  var tableNames : Seq[String] = Seq()
-  var nameToDF : Map[String, DataFrame] = Map()
+  val tableNames = TPCH.tableNames
+  val nameToDF = TPCH.generateDFs(sqlContext, size)
 
-  def ensureCached() = {
-    for (name <- tableNames) {
-      nameToDF.get(name).foreach(df => {
-        Utils.ensureCached(df)
-        Utils.ensureCached(Encrypted.applyTo(df))
-      })
-    }
-  }
+  private var numPartitions: Int = -1
+  private var nameToPath = Map[String, File]()
+  private var nameToEncryptedPath = Map[String, File]()
 
-  def setupViews(securityLevel: SecurityLevel, numPartitions: Int) = {
-    for ((name, df) <- nameToDF) {
-      securityLevel.applyTo(df.repartition(numPartitions)).createOrReplaceTempView(name)
-    }
-  }
-
-  def query(queryNumber: Int, securityLevel: SecurityLevel, sqlContext: SQLContext, numPartitions: Int) : DataFrame = {
-    setupViews(securityLevel, numPartitions)
-
+  def getQuery(queryNumber: Int) : String = {
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
-    val sqlStr = Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
+    Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
+  }
 
+  def generateFiles(numPartitions: Int) = {
+    if (numPartitions != this.numPartitions) {
+      this.numPartitions = numPartitions
+      for ((name, df) <- nameToDF) {
+        nameToPath.get(name).foreach{ path => Utils.deleteRecursively(path) }
+
+        nameToPath += (name -> createPath(df, Insecure, numPartitions))
+        nameToEncryptedPath += (name -> createPath(df, Encrypted, numPartitions))
+      }
+    }
+  }
+
+  private def createPath(df: DataFrame, securityLevel: SecurityLevel, numPartitions: Int): File = {
+    val partitionedDF = securityLevel.applyTo(df.repartition(numPartitions))
+    val path = Utils.createTempDir()
+    path.delete()
+    securityLevel match {
+      case Insecure => {
+        partitionedDF.write.format("com.databricks.spark.csv")
+            .option("ignoreLeadingWhiteSpace", false)
+            .option("ignoreTrailingWhiteSpace", false)
+            .save(fileUrl + path.toString)
+      }
+      case Encrypted => {
+        partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(fileUrl + path.toString)
+      }
+    }
+    path
+  }
+
+  private def loadViews(securityLevel: SecurityLevel) = {
+    val (map, formatStr) = if (securityLevel == Insecure) 
+        (nameToPath, "com.databricks.spark.csv") else 
+        (nameToEncryptedPath, "edu.berkeley.cs.rise.opaque.EncryptedSource")
+    for ((name, path) <- map) {
+        val df = sqlContext.sparkSession.read
+            .format(formatStr)
+            .schema(nameToDF.get(name).get.schema)
+            .load(fileUrl + path.toString)
+        df.createOrReplaceTempView(name)
+    }
+  }
+
+  def performQuery(sqlStr: String, securityLevel: SecurityLevel): DataFrame  = {
+    loadViews(securityLevel)
     sqlContext.sparkSession.sql(sqlStr)
+  }
+
+  def query(queryNumber: Int, securityLevel: SecurityLevel, numPartitions: Int): DataFrame = {
+    val sqlStr = getQuery(queryNumber)
+    generateFiles(numPartitions)
+    performQuery(sqlStr, securityLevel)
   }
 }
