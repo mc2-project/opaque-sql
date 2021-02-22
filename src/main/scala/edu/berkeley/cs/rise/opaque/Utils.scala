@@ -303,6 +303,7 @@ object Utils extends Logging {
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
     RA.initRA(sqlContext.sparkContext)
+    LA.initLA(sqlContext.sparkContext)
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

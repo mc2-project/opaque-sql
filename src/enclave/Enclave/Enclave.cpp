@@ -484,5 +484,12 @@ void ecall_finish_shared_key(uint8_t *sk_list,
 
   set_shared_key(secret_key, sk_size);
 
+  // Print out shared_key
+  for (int i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
+    std::cout << secret_key[i];
+  }
+
+  std::cout << std::endl;
+
   std::cout << "exit ecall_finish_shared_key" << std::endl;
 }
