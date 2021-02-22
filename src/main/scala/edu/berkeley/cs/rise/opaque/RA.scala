@@ -41,25 +41,18 @@ object RA extends Logging {
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
 
     // FIXME: hardcoded path
-    val userCert = scala.io.Source.fromFile("/home/chester/opaque/user1.crt").mkString
+    val userCert = scala.io.Source.fromFile("/home/opaque/opaque/user1.crt").mkString
 
-    val keySharePath = sys.env("OPAQUE_KEY_SHARE")
-    val clientKeyPath = sys.env("OPAQUE_CLIENT_KEY")
+    val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
     
-    val keyShare: Array[Byte] = Files.readAllBytes(Paths.get(keySharePath))
-    val clientKey: Array[Byte] = Files.readAllBytes(Paths.get(clientKeyPath))
-
-    // val keyShare: Array[Byte] = "Opaque key share".getBytes("UTF-8")
-    // val clientKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
-    // val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
-    //
-    Utils.addClientKey(clientKey)
+    Utils.addClientKey(testKey)
 
     val sp = new SP()
 
-    sp.Init(Utils.clientKey, intelCert, userCert, keyShare)
+    sp.Init(Utils.clientKey, intelCert, userCert, testKey)
 
     println(Utils)
+    println(rdd.getNumPartitions)
 
     // Runs on executors
     val msg1s = rdd.mapPartitions { (_) =>
