@@ -112,7 +112,7 @@ object OpaqueOperators extends Strategy {
       val (functionsWithDistinct, functionsWithoutDistinct) = aggregateExpressions.partition(_.isDistinct)
 
       functionsWithDistinct.size match {
-        case size if size == 0 => // No distinct aggregate operations
+        case 0 => // No distinct aggregate operations
           if (groupingExpressions.size == 0) {
             // Global aggregation
             val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
