@@ -1210,7 +1210,6 @@ object Utils extends Logging {
             )
           }
 
-
         case (_, Seq(childOffset)) =>
           throw new OpaqueException("Expression not supported: " + expr.toString())
       }
