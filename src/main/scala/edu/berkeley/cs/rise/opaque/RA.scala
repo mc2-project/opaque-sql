@@ -33,7 +33,9 @@ object RA extends Logging {
     // All executors need to be initialized before attestation can occur
     var numExecutors = 1
     if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      // For now, I am hard-coding this value to 2, because it does not seem like Spark is picking the value up
+      numExecutors = sc.getConf.getInt("spark.executor.instances", 2)
+      println("RA: " + numExecutors)
       while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
     }
 
@@ -51,16 +53,15 @@ object RA extends Logging {
 
     sp.Init(Utils.clientKey, intelCert, userCert, testKey)
 
-    println(Utils)
-    println(rdd.getNumPartitions)
+    println("RA: " + Utils)
 
     // Runs on executors
     val msg1s = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave()
      
       // Print utils and enclave address to ascertain different enclaves
-      println(Utils)
-      println(eid)
+      println("RA: " + Utils)
+      println("RA: " + eid)
 
       val msg1 = enclave.GenerateReport(eid) 
       Iterator((eid, msg1))
