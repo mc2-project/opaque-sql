@@ -326,6 +326,24 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect
   }
 
+  testAgainstSpark("non-equi left semi join") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
+    df.collect
+  }
+
+  testAgainstSpark("non-equi left semi join negated") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" < $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
+    df.collect
+  }
+
   testAgainstSpark("left outer join 1") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
     val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)

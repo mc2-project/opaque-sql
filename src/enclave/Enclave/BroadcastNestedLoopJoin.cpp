@@ -4,6 +4,7 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
+#include <iostream>
 
 /** C++ implementation of a broadcast nested loop join.
  * Assumes outer_rows is streamed and inner_rows is broadcast.
@@ -20,6 +21,7 @@ void broadcast_nested_loop_join(
   const tuix::JoinType join_type = join_expr_eval.get_join_type();
 
   switch(join_type) {
+    case tuix::JoinType_LeftSemi:
     case tuix::JoinType_LeftAnti:
       default_join(join_expr, join_expr_length,
                   outer_rows, outer_rows_length,
@@ -118,8 +120,15 @@ void default_join(
           w.append(outer);
         }
         break;
-      default:
+      case tuix::JoinType_LeftSemi:
+        if (o_i_match) {
+          w.append(outer);
+        }
         break;
+      default:
+        throw std::runtime_error(
+          std::string("Join type not supported: ")
+          + std::string(to_string(join_type)));
     }
   }
   w.output_buffer(output_rows, output_rows_length);

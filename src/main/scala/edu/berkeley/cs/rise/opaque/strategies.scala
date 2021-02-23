@@ -44,6 +44,7 @@ import org.apache.spark.sql.execution.SparkPlan
 
 import edu.berkeley.cs.rise.opaque.execution._
 import edu.berkeley.cs.rise.opaque.logical._
+import org.apache.spark.sql.catalyst.plans.LeftExistence
 
 object OpaqueOperators extends Strategy {
 
@@ -226,7 +227,7 @@ object OpaqueOperators extends Strategy {
 
   private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = {
     joinType match {
-      case LeftSemi | LeftAnti | LeftOuter => BuildRight
+      case LeftExistence(_) | LeftOuter => BuildRight
       case _ => BuildLeft
     }
   }
