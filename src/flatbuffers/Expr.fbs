@@ -36,6 +36,7 @@ union ExprUnion {
     VectorMultiply,
     DotProduct,
     Exp,
+    NormalizeNaNAndZero,
     ClosestPoint,
     CreateArray,
     Upper,
@@ -197,6 +198,10 @@ table Exp {
 // Complex type creation
 table CreateArray {
     children:[Expr];
+}
+
+table NormalizeNaNAndZero {
+    child:Expr;
 }
 
 // Opaque UDFs

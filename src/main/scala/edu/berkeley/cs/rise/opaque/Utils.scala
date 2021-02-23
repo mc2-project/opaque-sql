@@ -61,6 +61,7 @@ import org.apache.spark.sql.catalyst.expressions.If
 import org.apache.spark.sql.catalyst.expressions.In
 import org.apache.spark.sql.catalyst.expressions.IsNotNull
 import org.apache.spark.sql.catalyst.expressions.IsNull
+import org.apache.spark.sql.catalyst.expressions.KnownFloatingPointNormalized
 import org.apache.spark.sql.catalyst.expressions.LessThan
 import org.apache.spark.sql.catalyst.expressions.LessThanOrEqual
 import org.apache.spark.sql.catalyst.expressions.Literal
@@ -91,6 +92,7 @@ import org.apache.spark.sql.catalyst.plans.NaturalJoin
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.UsingJoin
 import org.apache.spark.sql.catalyst.trees.TreeNode
+import org.apache.spark.sql.catalyst.optimizer.NormalizeNaNAndZero
 import org.apache.spark.sql.catalyst.util.ArrayBasedMapData
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.catalyst.util.MapData
@@ -1168,6 +1170,15 @@ object Utils extends Logging {
         case (CheckOverflow(child, dataType, _), Seq(childOffset)) =>
           // TODO: Implement decimal serialization, followed by CheckOverflow
           childOffset
+
+        case (NormalizeNaNAndZero(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.NormalizeNaNAndZero,
+            tuix.NormalizeNaNAndZero.createNormalizeNaNAndZero(builder, childOffset))
+
+        case (KnownFloatingPointNormalized(NormalizeNaNAndZero(child)), Seq(childOffset)) =>
+          flatbuffersSerializeExpression(builder, NormalizeNaNAndZero(child), input)
 
         case (ScalarSubquery(SubqueryExec(name, child), exprId), Seq()) =>
           val output = child.output(0)
