@@ -117,20 +117,20 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   }
 }
 
-class TPCHSinglePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 1
-  override val spark = SparkSession.builder()
-    .master("local[1]")
-    .appName("TPCHSinglePartitionSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-}
+// class TPCHSinglePartitionSuite extends TPCHTests {
+//   override def numPartitions: Int = 1
+//   override val spark = SparkSession.builder()
+//     .master("local[1]")
+//     .appName("TPCHSinglePartitionSuite")
+//     .config("spark.sql.shuffle.partitions", numPartitions)
+//     .getOrCreate()
+// }
 
-class TPCHMultiplePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 3
-  override val spark = SparkSession.builder()
-    .master("local[1]")
-    .appName("TPCHMultiplePartitionSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-}
+// class TPCHMultiplePartitionSuite extends TPCHTests {
+//   override def numPartitions: Int = 3
+//   override val spark = SparkSession.builder()
+//     .master("local[1]")
+//     .appName("TPCHMultiplePartitionSuite")
+//     .config("spark.sql.shuffle.partitions", numPartitions)
+//     .getOrCreate()
+// }

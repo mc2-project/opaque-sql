@@ -24,7 +24,7 @@ import scala.collection.mutable.Set
 import scala.collection.mutable.Stack
 
 import org.apache.spark.sql.DataFrame
-org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.SparkPlan
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
@@ -196,7 +196,10 @@ object JobVerificationEngine {
     val possibleOperators = ArrayBuffer[String]("EncryptedProject", 
                                                 "EncryptedSortMergeJoin", 
                                                 "EncryptedSort", 
-                                                "EncryptedFilter")
+                                                "EncryptedFilter",
+                                                "EncryptedAggregate",
+                                                "EncryptedGlobalLimit",
+                                                "EncryptedLocalLimit")
     val operatorStack = Stack[(Int, OperatorNode)]()
     val allOperatorNodes = ArrayBuffer[OperatorNode]()
     for (line <- lines) {
@@ -313,38 +316,38 @@ object JobVerificationEngine {
   def getJobNodes(numPartitions: Int, operatorName: String): ArrayBuffer[ArrayBuffer[JobNode]] = {
     val jobNodes = ArrayBuffer[ArrayBuffer[JobNode]]() 
     val expectedEcalls = ArrayBuffer[Int]()
-    if (operator == "EncryptedSortExec" && numPartitions == 1) {
+    if (operatorName == "EncryptedSort" && numPartitions == 1) {
       // ("externalSort")
       expectedEcalls.append(6)
-    } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
+    } else if (operatorName == "EncryptedSort" && numPartitions > 1) {
       // ("sample", "findRangeBounds", "partitionForSort", "externalSort")
       expectedEcalls.append(3, 4, 5, 6)
-    } else if (operator == "EncryptedProjectExec") {
+    } else if (operatorName == "EncryptedProject") {
       // ("project")
       expectedEcalls.append(1)
-    } else if (operator == "EncryptedFilterExec") {
+    } else if (operatorName == "EncryptedFilter") {
       // ("filter")
       expectedEcalls.append(2)
-    } else if (operator == "EncryptedAggregateExec") {
+    } else if (operatorName == "EncryptedAggregate") {
       // ("nonObliviousAggregate")
       expectedEcalls.append(9)
-    } else if (operator == "EncryptedSortMergeJoinExec") {
+    } else if (operatorName == "EncryptedSortMergeJoin") {
       // ("nonObliviousSortMergeJoin")
       expectedEcalls.append(8)
-    } else if (operator == "EncryptedLocalLimitExec") {
+    } else if (operatorName == "EncryptedLocalLimit") {
       // ("limitReturnRows")
       expectedEcalls.append(13)
-    } else if (operator == "EncryptedGlobalLimitExec") {
+    } else if (operatorName == "EncryptedGlobalLimit") {
       // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
       expectedEcalls.append(10, 11, 13)
     } else {
-      throw new Exception("Executed unknown operator") 
+      throw new Exception("Executed unknown operator: " + operatorName) 
     }
     for (ecallIdx <- 0 until expectedEcalls.length) {
+      val ecall = expectedEcalls(ecallIdx)
       val ecallJobNodes = ArrayBuffer[JobNode]()
       jobNodes.append(ecallJobNodes)
       for (partitionIdx <- 0 until numPartitions) { 
-        val ecall = expectedEcalls(i)
         val jobNode = new JobNode()
         jobNode.setEcall(ecall)
         ecallJobNodes.append(jobNode)
@@ -367,7 +370,7 @@ object JobVerificationEngine {
       for (ecallIdx <- 0 until node.jobNodes.length) {
         if (ecallIdx == node.jobNodes.length - 1) {
           // last ecall of this operator, link to child operators if one exists.
-          for (child <- node.chidren) {
+          for (child <- node.children) {
             linkEcalls(node.jobNodes(ecallIdx), child.jobNodes(0))
           }
         } else {
@@ -379,12 +382,12 @@ object JobVerificationEngine {
     for (node <- operatorNodes) {
       if (node.isOrphan) {
         for (jobNode <- node.jobNodes(0)) {
-          source.setOutgoingNeighbor(jobNode)
+          source.addOutgoingNeighbor(jobNode)
         }
       }
       if (node.children.isEmpty) {
         for (jobNode <- node.jobNodes(node.jobNodes.length - 1)) {
-          jobNode.setOutgoingNeighbor(sink)
+          jobNode.addOutgoingNeighbor(sink)
         }
       }
     }
@@ -401,7 +404,6 @@ object JobVerificationEngine {
       return true
     }
     val OE_HMAC_SIZE = 32    
-    val numPartitions = logEntryChains.size
 
     // Keep a set of nodes, since right now, the last nodes won't have outputs.
     val nodeSet = Set[JobNode]()
@@ -494,8 +496,8 @@ object JobVerificationEngine {
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
-      println(executedPathsToSink.toString)
-      println(expectedPathsToSink.toString)
+      // println(executedPathsToSink.toString)
+      // println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
     return true 
