@@ -90,10 +90,8 @@ enclave {
       [out] size_t* msg1_size);
 
     public void ecall_get_list_encrypted(
-      [in,size=pk_list_size] uint8_t *pk_list,
-      uint32_t pk_list_size,
-      [out] uint8_t* sk_list,
-      [out] size_t* sk_list_size);
+      [user_check] uint8_t *pk_list, uint32_t length,
+      [user_check] uint8_t *sk_list, uint32_t cipher_length);
 
     public void ecall_finish_shared_key(
       [in,size=msg4_size] uint8_t *msg4,

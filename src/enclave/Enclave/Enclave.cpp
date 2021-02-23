@@ -403,6 +403,12 @@ void ecall_get_public_key(uint8_t **report_msg_data,
 
   g_crypto.retrieve_public_key(public_key);
 
+  // Print out public key for debugging purposes
+  for (size_t i = 0; i < public_key_size; i++) {
+   std::cout << public_key[i];
+  }
+  std::cout << std::endl;
+
   *report_msg_data_size = public_key_size;
   *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
 
@@ -414,10 +420,13 @@ void ecall_get_public_key(uint8_t **report_msg_data,
 void ecall_get_list_encrypted(uint8_t * pk_list,
                               uint32_t pk_list_size, 
                               uint8_t * sk_list,
-                              size_t* sk_list_size) {
+                              uint32_t sk_list_size) {
   std::cout << "enter ecall_get_list_encrypted" << std::endl;
 
-  // TODO: Guard against encrypting or overwriting enclave memory?
+  // Guard against encrypting or overwriting enclave memory
+  assert(oe_is_outside_enclave(pk_list, pk_list_size) == 1);
+  assert(oe_is_outside_enclave(sk_list, *sk_list_size) == 1);
+  __builtin_ia32_lfence();
 
   // Size of shared key is 16 from ServiceProvider - LC_AESGCM_KEY_SIZE
   // For now SGX_AESGCM_KEY_SIZE is also 16, so will just use that for now
@@ -433,12 +442,17 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
     unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
     size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
 
-    *sk_list_size = encrypted_sharedkey_size * (pk_list_size / OE_PUBLIC_KEY_SIZE);
-    sk_list = (uint8_t*)oe_host_malloc(*sk_list_size);
     uint8_t *sk_pointer = sk_list;
 
     while (pk_pointer < pk_list + pk_list_size) {
       memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
+
+      // Print out public key for debugging purposes
+      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
+        std::cout << public_key[i];
+      }
+      std::cout << std::endl;
+
       g_crypto.encrypt(public_key,
                        secret_key,
                        SGX_AESGCM_KEY_SIZE,
@@ -446,12 +460,24 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
                        &encrypted_sharedkey_size);
       memcpy_s(sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, OE_SHARED_KEY_CIPHERTEXT_SIZE);
 
+      // Print out cipher for debugging purposes
+      for (size_t i = 0; i < OE_SHARED_KEY_CIPHERTEXT_SIZE; i++) {
+        std::cout << (int) encrypted_sharedkey[i] + " ";
+      }
+      std::cout << std::endl;
+
       pk_pointer += OE_PUBLIC_KEY_SIZE;
       sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
     }
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
+
+  // Print out sk_list for debugging purposes
+  for (size_t i = 0; i < sk_list_size; i++) {
+    std::cout << sk_list[i] + " ";
+  }
+  std::cout << std::endl;
 
   std::cout << "exit ecall_get_list_encrypted" << std::endl;
 }

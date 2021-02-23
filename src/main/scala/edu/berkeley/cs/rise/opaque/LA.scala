@@ -49,7 +49,11 @@ object LA extends Logging {
 
     // Combine all public keys into one large array
     var pkArray = Array[Byte]()
-    for ((k,v) <- msg1s) concat(pkArray, v)
+    for ((k,v) <- msg1s) {
+      pkArray = concat(pkArray, v)
+      for (byte <- v) print(byte.toChar)
+      println()
+    }
 
 //    val msg2s = msg1s.map{case (eid, msg1) => (eid, pkArray)}
     
@@ -60,12 +64,14 @@ object LA extends Logging {
       enclave.GetListEncrypted(eid, publicKeys)
     }.first()
 
+    println("Before encrypted results print")
+    for (byte <- encryptedResults) print(byte.toChar)
+    println("After encrypted results print")
+
     // Send encrypted secret key to all enclaves
     val msg3s = msg1s.map{case (eid, _) => (eid, encryptedResults)}
-    msg1s.map{case (eid, _) => println("msg1s keys: " + eid)}
-    msg3s.map{case (eid, _) => println("msg3s keys: " + eid)}
-
-//    val result: Nothing = encryptedResults
+//    msg1s.map{case (eid, _) => println("msg1s keys: " + eid)}
+//    msg3s.map{case (eid, _) => println("msg3s keys: " + eid)}
 
     val setSharedKeyResults = rdd.mapPartitionsWithIndex { (_, _) =>
       val (enclave, eid) = Utils.initEnclave()
