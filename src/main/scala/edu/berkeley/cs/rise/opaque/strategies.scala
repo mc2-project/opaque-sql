@@ -184,8 +184,16 @@ object OpaqueOperators extends Strategy {
                 functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
                   functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
             }
+            println(partialDistinctAggregate.output)
+            println(resultExpressions)
 
-            partialDistinctAggregate :: Nil
+            // 4. Create an Aggregate Operator for the final aggregation.
+            val finalAggregate = {
+              EncryptedAggregateExec(groupingExpressions,
+                  functionsWithoutDistinct ++ functionsWithDistinct, Some(Final), partialDistinctAggregate)
+            }
+
+            finalAggregate :: Nil
           }
       }
 
