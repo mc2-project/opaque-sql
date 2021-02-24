@@ -292,7 +292,7 @@ case class EncryptedAggregateExec(
     val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
     val isPartial = mode match {
       case Some(x) =>
-        x == Partial
+        x == Partial || x == PartialMerge
       case None =>
         false
     }

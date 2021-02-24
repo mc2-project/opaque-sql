@@ -133,67 +133,57 @@ object OpaqueOperators extends Strategy {
                     EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
           }
         case size if size == 1 => // One distinct aggregate operation
-          if (groupingExpressions.size == 0) {
-            // Global aggregation
-            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial), planLater(child))
-            val partialOutput = partialAggregate.output
-            val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
+          // Because we are also grouping on the columns used in the distinct expressions,
+          // we do not need separate cases for global and grouping aggregation.
 
-            EncryptedProjectExec(resultExpressions, 
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
-                  EncryptedProjectExec(partialOutput,
-                    EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true,
-                      EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
-          } else {
-            // Grouping aggregation
-            val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.map { e =>
-              e match {
-                case ne: NamedExpression => ne
-                case other =>
-                  // Keep the name of the original expression.
-                  val name = e match {
-                    case ne: NamedExpression => ne.name
-                    case _ => e.toString
-                  }
-                  Alias(other, name)()
-              }
+          val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.map { e =>
+            e match {
+              case ne: NamedExpression => ne
+              case other =>
+                // Keep the name of the original expression.
+                val name = e match {
+                  case ne: NamedExpression => ne.name
+                  case _ => e.toString
+                }
+                Alias(other, name)()
             }
-
-            // 1. Create an Aggregate operator for partial aggregations.
-            val partialAggregate = {
-              val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-
-              val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
-              EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Some(Partial), sorted)
-            }
-
-            // 2. Create an Aggregate operator for partial merge aggregations.
-            val partialMergeAggregate = {
-              val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-
-              EncryptedAggregateExec(combinedGroupingExpressions,
-                functionsWithoutDistinct, Some(PartialMerge), partialAggregate)
-            }
-
-            // 3. Create an Aggregate operator for partial aggregation of distinct aggregate expressions.
-            val partialDistinctAggregate = {
-              // Indistinct functions operate on aggregation buffers since partial aggregation was already called,
-              // but distinct functions operate on the original input to the aggregation.
-              EncryptedAggregateExec(groupingExpressions,
-                functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
-                  functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
-            }
-
-            // 4. Create an Aggregate operator for the final aggregation.
-            val finalAggregate = {
-              EncryptedAggregateExec(groupingExpressions,
-                  functionsWithoutDistinct ++ functionsWithDistinct, Some(Final), partialDistinctAggregate)
-            }
-
-            EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
           }
+
+          // 1. Create an Aggregate operator for partial aggregations.
+          val partialAggregate = {
+            val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
+
+            val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
+            EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Some(Partial), sorted)
+          }
+
+          // 2. Create an Aggregate operator for partial merge aggregations.
+          val partialMergeAggregate = {
+            val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
+
+            EncryptedAggregateExec(combinedGroupingExpressions,
+              functionsWithoutDistinct, Some(PartialMerge), partialAggregate)
+          }
+
+          // 3. Create an Aggregate operator for partial aggregation of distinct aggregate expressions.
+          val partialDistinctAggregate = {
+            // Indistinct functions operate on aggregation buffers since partial aggregation was already called,
+            // but distinct functions operate on the original input to the aggregation.
+            EncryptedAggregateExec(groupingExpressions,
+              functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
+                functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
+          }
+
+          // 4. Create an Aggregate operator for the final aggregation.
+          val finalAggregate = {
+            EncryptedAggregateExec(groupingExpressions,
+                functionsWithoutDistinct ++ functionsWithDistinct, Some(Final), partialDistinctAggregate)
+          }
+
+          EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
+
         case _ => { // more than one distinct operations
-          throw new UnsupportedOperationException("Aggregate operations with more than one distinct expressions is not yet supported")
+          throw new UnsupportedOperationException("Aggregate operations with more than one distinct expressions are not yet supported.")
         }
       }
 
