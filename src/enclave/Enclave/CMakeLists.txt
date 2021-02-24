@@ -10,7 +10,8 @@ set(SOURCES
   Flatbuffers.cpp
   FlatbuffersReaders.cpp
   FlatbuffersWriters.cpp
-  Join.cpp
+  NonObliviousSortMergeJoin.cpp
+  BroadcastNestedLoopJoin.cpp
   Limit.cpp
   Project.cpp
   Sort.cpp
