@@ -1388,6 +1388,10 @@ object Utils extends Logging {
              }
             (Seq(countUpdateExpr), Seq(count))
           }
+          case PartialMerge => {
+            val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
+            (Seq(countUpdateExpr), Seq(count))
+          }
           case Final => {
             val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
             (Seq(countUpdateExpr), Seq(count))

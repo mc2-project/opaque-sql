@@ -146,8 +146,25 @@ object OpaqueOperators extends Strategy {
                       EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
+            val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.map { e =>
+              e match {
+                case ne: NamedExpression => ne
+                case other =>
+                  // Keep the name of the original expression.
+                  val name = e match {
+                    case ne: NamedExpression => ne.name
+                    case _ => e.toString
+                  }
+                  Alias(other, name)()
+              }
+            }
 
             // 1. Create an Aggregate Operator for partial aggregations.
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
+                functionsWithoutDistinct, Partial, planLater(child))
+
+            println("Partial aggregate plan:")
+            println(partialAggregate)
             Nil
           }
       }
