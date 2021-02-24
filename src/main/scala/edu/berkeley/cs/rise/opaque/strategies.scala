@@ -148,19 +148,16 @@ object OpaqueOperators extends Strategy {
                 Alias(other, name)()
             }
           }
+          val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
 
           // 1. Create an Aggregate operator for partial aggregations.
           val partialAggregate = {
-            val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-
             val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
             EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Some(Partial), sorted)
           }
 
           // 2. Create an Aggregate operator for partial merge aggregations.
           val partialMergeAggregate = {
-            val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-
             EncryptedAggregateExec(combinedGroupingExpressions,
               functionsWithoutDistinct, Some(PartialMerge), partialAggregate)
           }
