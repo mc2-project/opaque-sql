@@ -281,7 +281,7 @@ case class EncryptedAggregateExec(
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial || mode == PartialMerge)))
+        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial)))
       }
     }
   }

@@ -7,6 +7,9 @@
 
 #include "Flatbuffers.h"
 
+#include <iostream>
+using namespace std;
+
 int printf(const char *fmt, ...);
 
 #ifndef EXPRESSION_EVALUATION_H

@@ -126,6 +126,8 @@ object OpaqueOperators extends Strategy {
                     EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
+            println(groupingExpressions)
+            println(aggregateExpressions)
             EncryptedProjectExec(resultExpressions,
               EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
                 EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
@@ -158,17 +160,27 @@ object OpaqueOperators extends Strategy {
                   Alias(other, name)()
               }
             }
+            println(groupingExpressions ++ namedDistinctExpressions)
+            println(functionsWithoutDistinct)
+            EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions, functionsWithoutDistinct, Final,
+              EncryptedSortExec((groupingExpressions ++ namedDistinctExpressions).map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
+                EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions, functionsWithoutDistinct, Partial,
+                  EncryptedSortExec((groupingExpressions ++ namedDistinctExpressions).map(e => SortOrder(e, Ascending)), false, planLater(child))))) :: Nil
+
+            /*
+            // Preprocessing.
+            val localSorted = EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
 
             // 1. Create an Aggregate Operator for partial aggregations.
             val partialAggregate = EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
-                functionsWithoutDistinct, Partial, planLater(child))
+                functionsWithoutDistinct, Partial, localSorted)
 
             // 2. Create an Aggregate Operator for partial merge aggregations.
             val partialMergeAggregate = EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
                 functionsWithoutDistinct, PartialMerge, partialAggregate)
 
-            println(partialMergeAggregate)
             partialMergeAggregate :: Nil
+            */
           }
       }
 
