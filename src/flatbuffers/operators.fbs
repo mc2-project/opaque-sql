@@ -54,10 +54,11 @@ enum JoinType : ubyte {
 }
 table JoinExpr {
     join_type:JoinType;
-    // Currently only cross joins and equijoins are supported, so we store
-    // parallel arrays of key expressions and the join outputs pairs of rows
-    // where each expression from the left is equal to the matching expression
-    // from the right.
+    // In the case of equi joins, we store parallel arrays of key expressions and have the join output
+    // pairs of rows  where each expression from the left is equal to the matching expression from the right.
     left_keys:[Expr];
     right_keys:[Expr];
+    // In the case of non-equi joins, we pass in a condition as an expression and evaluate that on each pair of rows.
+    // TODO: have equi joins use this condition rather than an additional filter operation.
+    condition:Expr;
 }

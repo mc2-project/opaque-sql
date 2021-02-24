@@ -1787,59 +1787,103 @@ public:
     }
 
     const tuix::JoinExpr* join_expr = flatbuffers::GetRoot<tuix::JoinExpr>(buf);
-    join_type = join_expr->join_type();
 
-    if (join_expr->left_keys()->size() != join_expr->right_keys()->size()) {
-      throw std::runtime_error("Mismatched join key lengths");
+    join_type = join_expr->join_type();
+    if (join_expr->condition() != NULL) {
+      condition_eval = std::unique_ptr<FlatbuffersExpressionEvaluator>(
+          new FlatbuffersExpressionEvaluator(join_expr->condition()));
     }
-    for (auto key_it = join_expr->left_keys()->begin();
-         key_it != join_expr->left_keys()->end(); ++key_it) {
-      left_key_evaluators.emplace_back(
-        std::unique_ptr<FlatbuffersExpressionEvaluator>(
-          new FlatbuffersExpressionEvaluator(*key_it)));
-    }
-    for (auto key_it = join_expr->right_keys()->begin();
-         key_it != join_expr->right_keys()->end(); ++key_it) {
-      right_key_evaluators.emplace_back(
-        std::unique_ptr<FlatbuffersExpressionEvaluator>(
-          new FlatbuffersExpressionEvaluator(*key_it)));
+    is_equi_join = false;
+
+    if (join_expr->left_keys() != NULL && join_expr->right_keys() != NULL) {
+      is_equi_join = true;
+      if (join_expr->condition() != NULL) {
+        throw std::runtime_error("Equi join cannot have condition");
+      }
+      if (join_expr->left_keys()->size() != join_expr->right_keys()->size()) {
+        throw std::runtime_error("Mismatched join key lengths");
+      }
+      for (auto key_it = join_expr->left_keys()->begin();
+          key_it != join_expr->left_keys()->end(); ++key_it) {
+        left_key_evaluators.emplace_back(
+          std::unique_ptr<FlatbuffersExpressionEvaluator>(
+            new FlatbuffersExpressionEvaluator(*key_it)));
+      }
+      for (auto key_it = join_expr->right_keys()->begin();
+          key_it != join_expr->right_keys()->end(); ++key_it) {
+        right_key_evaluators.emplace_back(
+          std::unique_ptr<FlatbuffersExpressionEvaluator>(
+            new FlatbuffersExpressionEvaluator(*key_it)));
+      }
     }
   }
 
-  /**
-   * Return true if the given row is from the primary table, indicated by its first field, which
-   * must be an IntegerField.
+   /** Return true if the given row is from the primary table, indicated by its first field, which
+    * must be an IntegerField.
+    * Rows MUST have been tagged in Scala.
    */
   bool is_primary(const tuix::Row *row) {
     return static_cast<const tuix::IntegerField *>(
       row->field_values()->Get(0)->value())->value() == 0;
   }
 
-  /** Return true if the two rows are from the same join group. */
-  bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {
+  /** Returns the row evaluator corresponding to the primary row
+   * Rows MUST have been tagged in Scala.
+  */
+  const tuix::Row *get_primary_row(
+      const tuix::Row *row1, const tuix::Row *row2) {
+    return is_primary(row1) ? row1 : row2;
+  }
+
+  /** Return true if the two rows satisfy the join condition. */
+  bool eval_condition(const tuix::Row *row1, const tuix::Row *row2) {
+    builder.Clear();
+    bool row1_equals_row2;
+
+    /** Check equality for equi joins. If it is a non-equi join, 
+     * the key evaluators will be empty, so the code never enters the for loop.
+    */
     auto &row1_evaluators = is_primary(row1) ? left_key_evaluators : right_key_evaluators;
     auto &row2_evaluators = is_primary(row2) ? left_key_evaluators : right_key_evaluators;
-
-    builder.Clear();
     for (uint32_t i = 0; i < row1_evaluators.size(); i++) {
       const tuix::Field *row1_eval_tmp = row1_evaluators[i]->eval(row1);
       auto row1_eval_offset = flatbuffers_copy(row1_eval_tmp, builder);
+      auto row1_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset);
+
       const tuix::Field *row2_eval_tmp = row2_evaluators[i]->eval(row2);
       auto row2_eval_offset = flatbuffers_copy(row2_eval_tmp, builder);
+      auto row2_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset);
 
-      bool row1_equals_row2 =
+      flatbuffers::Offset<tuix::Field> comparison = eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+        builder,
+        row1_field,
+        row2_field);
+      row1_equals_row2 =
         static_cast<const tuix::BooleanField *>(
           flatbuffers::GetTemporaryPointer<tuix::Field>(
             builder,
-            eval_binary_comparison<tuix::EqualTo, std::equal_to>(
-              builder,
-              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset),
-              flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset)))
-          ->value())->value();
+            comparison)->value())->value();
 
       if (!row1_equals_row2) {
         return false;
       }
+    }
+
+    /* Check condition for non-equi joins */
+    if (!is_equi_join) {
+      std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
+      for (auto field : *row1->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      for (auto field : *row2->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      flatbuffers::Offset<tuix::Row> concat = tuix::CreateRowDirect(builder, &concat_fields);
+      const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
+
+      const tuix::Field *condition_result = condition_eval->eval(concat_ptr);
+
+      return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     }
     return true;
   }
@@ -1853,6 +1897,8 @@ private:
   tuix::JoinType join_type;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> left_key_evaluators;
   std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> right_key_evaluators;
+  bool is_equi_join;
+  std::unique_ptr<FlatbuffersExpressionEvaluator> condition_eval;
 };
 
 class AggregateExpressionEvaluator {

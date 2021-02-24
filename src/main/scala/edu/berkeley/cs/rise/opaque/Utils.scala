@@ -1257,8 +1257,9 @@ object Utils extends Logging {
   }
 
   def serializeJoinExpression(
-    joinType: JoinType, leftKeys: Seq[Expression], rightKeys: Seq[Expression],
-    leftSchema: Seq[Attribute], rightSchema: Seq[Attribute]): Array[Byte] = {
+    joinType: JoinType, leftKeys: Option[Seq[Expression]], rightKeys: Option[Seq[Expression]],
+    leftSchema: Seq[Attribute], rightSchema: Seq[Attribute],
+    condition: Option[Expression] = None): Array[Byte] = {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.JoinExpr.createJoinExpr(
@@ -1277,12 +1278,28 @@ object Utils extends Logging {
           case UsingJoin(_, _) => ???
           // scalastyle:on
         },
-        tuix.JoinExpr.createLeftKeysVector(
-          builder,
-          leftKeys.map(e => flatbuffersSerializeExpression(builder, e, leftSchema)).toArray),
-        tuix.JoinExpr.createRightKeysVector(
-          builder,
-          rightKeys.map(e => flatbuffersSerializeExpression(builder, e, rightSchema)).toArray)))
+        // Non-zero when equi join
+        leftKeys match {
+          case Some(leftKeys) =>
+          tuix.JoinExpr.createLeftKeysVector(
+            builder,
+            leftKeys.map(e => flatbuffersSerializeExpression(builder, e, leftSchema)).toArray)
+          case None => 0
+        },
+        // Non-zero when equi join
+        rightKeys match {
+          case Some(rightKeys) =>
+          tuix.JoinExpr.createRightKeysVector(
+            builder,
+            rightKeys.map(e => flatbuffersSerializeExpression(builder, e, rightSchema)).toArray)
+          case None => 0
+        },
+        // Non-zero when non-equi join
+        condition match {
+          case Some(condition) =>
+            flatbuffersSerializeExpression(builder, condition, leftSchema ++ rightSchema)
+          case _ => 0
+        }))
     builder.sizedByteArray()
   }
 
@@ -1382,8 +1399,7 @@ object Utils extends Logging {
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
           tuix.AggregateExpr.createEvaluateExprsVector(
             builder,
-            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
-        )
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case c @ Count(children) =>
         val count = c.aggBufferAttributes(0)
@@ -1421,8 +1437,7 @@ object Utils extends Logging {
             updateExprs.map(e => flatbuffersSerializeExpression(builder, e, concatSchema)).toArray),
           tuix.AggregateExpr.createEvaluateExprsVector(
             builder,
-            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray)
-        )
+            evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray))
 
       case f @ First(child, false) =>
         val first = f.aggBufferAttributes(0)
