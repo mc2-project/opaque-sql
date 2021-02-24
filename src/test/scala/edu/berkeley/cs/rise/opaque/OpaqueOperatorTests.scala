@@ -477,6 +477,12 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     words.agg(sum("count").as("totalCount")).collect
   }
 
+  testAgainstSpark("global aggregate count distinct") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), i % 64)
+    val words = makeDF(data, securityLevel, "id", "word", "price")
+    words.agg(countDistinct("price").as("num_unique_prices")).collect
+  }
+
   testAgainstSpark("global aggregate with 0 rows") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
