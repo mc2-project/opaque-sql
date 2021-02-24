@@ -163,9 +163,12 @@ object OpaqueOperators extends Strategy {
             val partialAggregate = EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
                 functionsWithoutDistinct, Partial, planLater(child))
 
-            println("Partial aggregate plan:")
-            println(partialAggregate)
-            Nil
+            // 2. Create an Aggregate Operator for partial merge aggregations.
+            val partialMergeAggregate = EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
+                functionsWithoutDistinct, PartialMerge, partialAggregate)
+
+            println(partialMergeAggregate)
+            partialMergeAggregate :: Nil
           }
       }
 
