@@ -388,7 +388,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
     words.groupBy("category").agg(countDistinct("id").as("num_unique_ids"),
-        count("price").as("num_prices")).collect
+        count("price").as("num_prices")).collect.toSet
   }
 
   testAgainstSpark("aggregate count two indistinct") { securityLevel =>
