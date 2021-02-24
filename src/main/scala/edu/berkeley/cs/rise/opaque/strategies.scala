@@ -115,32 +115,32 @@ object OpaqueOperators extends Strategy {
         case 0 => // No distinct aggregate operations
           if (groupingExpressions.size == 0) {
             // Global aggregation
-            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial), planLater(child))
             val partialOutput = partialAggregate.output
             val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
 
             EncryptedProjectExec(resultExpressions, 
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
                 EncryptedProjectExec(partialOutput,
                   EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
                     EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
             EncryptedProjectExec(resultExpressions,
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final,
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
                 EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
-                  EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial,
+                  EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial),
                     EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
           }
         case size if size == 1 => // One distinct aggregate operation
           if (groupingExpressions.size == 0) {
             // Global aggregation
-            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Partial, planLater(child))
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial), planLater(child))
             val partialOutput = partialAggregate.output
             val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
 
             EncryptedProjectExec(resultExpressions, 
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Final, 
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
                   EncryptedProjectExec(partialOutput,
                     EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true,
                       EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
@@ -165,7 +165,7 @@ object OpaqueOperators extends Strategy {
               val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
 
               val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
-              EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Partial, sorted)
+              EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Some(Partial), sorted)
             }
 
             // 2. Create an Aggregate Operator for partial merge aggregations.
@@ -173,13 +173,16 @@ object OpaqueOperators extends Strategy {
               val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
 
               EncryptedAggregateExec(combinedGroupingExpressions,
-                functionsWithoutDistinct.map(_.copy(mode = PartialMerge)), PartialMerge, partialAggregate)
+                functionsWithoutDistinct, Some(PartialMerge), partialAggregate)
             }
 
             // 3. Create an Aggregate operator for partial aggregation (for distinct)
             val partialDistinctAggregate = {
+              // Indistinct functions operate on aggregation buffers since partial aggregation already called,
+              // but distinct functions operate on the original input to the aggregation.
               EncryptedAggregateExec(groupingExpressions,
-                functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++ functionsWithDistinct.map(_.copy(mode = Partial)), PartialMerge, partialMergeAggregate)
+                functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
+                  functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
             }
 
             partialDistinctAggregate :: Nil
