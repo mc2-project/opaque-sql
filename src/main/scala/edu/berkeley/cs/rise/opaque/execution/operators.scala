@@ -243,9 +243,16 @@ case class EncryptedAggregateExec(
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
 
   override def output: Seq[Attribute] = mode match {
-    case Partial => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.copy(mode = Partial)).flatMap(_.aggregateFunction.inputAggBufferAttributes)
-    case Final => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
-    case Complete => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
+    case Partial =>
+      groupingExpressions.map(_.toAttribute) ++
+        aggExpressions.map(_.copy(mode = Partial)).flatMap(_.aggregateFunction.inputAggBufferAttributes)
+    case PartialMerge =>
+      groupingExpressions.map(_.toAttribute) ++
+        aggExpressions.map(_.copy(mode = Partial)).flatMap(_.aggregateFunction.inputAggBufferAttributes)
+    case Final =>
+      groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
+    case Complete =>
+      groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
   }
 
   override def executeBlocked(): RDD[Block] = {
@@ -254,6 +261,10 @@ case class EncryptedAggregateExec(
       case Partial => {
         val partialAggExpressions = aggExpressions.map(_.copy(mode = Partial))
         (groupingExpressions, partialAggExpressions)
+      }
+      case PartialMerge => {
+        val partialMergeAggExpressions = aggExpressions.map(_.copy(mode = PartialMerge))
+        (groupingExpressions, partialMergeAggExpressions)
       }
       case Final => {
         val finalGroupingExpressions = groupingExpressions.map(_.toAttribute)
@@ -270,7 +281,7 @@ case class EncryptedAggregateExec(
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
       childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial)))
+        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial || mode == PartialMerge)))
       }
     }
   }

@@ -146,9 +146,9 @@ object OpaqueOperators extends Strategy {
                       EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
-            EncryptedProjectExec(resultExpressions,
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Complete,
-                EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), true, planLater(child)))) :: Nil
+
+            // 1. Create an Aggregate Operator for partial aggregations.
+            Nil
           }
       }
 
