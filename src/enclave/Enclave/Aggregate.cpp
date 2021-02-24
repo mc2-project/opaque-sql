@@ -26,7 +26,6 @@ void non_oblivious_aggregate(
     cur.set(r.next());
     
     if (prev.get() != nullptr && !agg_op_eval.is_same_group(prev.get(), cur.get())) {
-      cout << to_string(agg_op_eval.evaluate()) << endl;
       w.append(agg_op_eval.evaluate());
       agg_op_eval.reset_group();
     }
@@ -38,11 +37,9 @@ void non_oblivious_aggregate(
   // 1. It's a grouping aggregation, OR
   // 2. It's a global aggregation, the mode is final
   if (!(count == 0 && (agg_op_eval.get_num_grouping_keys() > 0 || (agg_op_eval.get_num_grouping_keys() == 0 && !is_partial)))) {
-    cout << to_string(agg_op_eval.evaluate()) << endl;
     w.append(agg_op_eval.evaluate());
   }
 
-  cout << "end of aggregate function" << endl;
   w.output_buffer(output_rows, output_rows_length);
 }
 

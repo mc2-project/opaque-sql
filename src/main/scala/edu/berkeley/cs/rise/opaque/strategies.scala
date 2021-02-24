@@ -176,7 +176,7 @@ object OpaqueOperators extends Strategy {
                 functionsWithoutDistinct, Some(PartialMerge), partialAggregate)
             }
 
-            // 3. Create an Aggregate operator for partial aggregation (for distinct)
+            // 3. Create an Aggregate operator for partial aggregation of distinct aggregate expressions
             val partialDistinctAggregate = {
               // Indistinct functions operate on aggregation buffers since partial aggregation already called,
               // but distinct functions operate on the original input to the aggregation.
@@ -184,8 +184,6 @@ object OpaqueOperators extends Strategy {
                 functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
                   functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
             }
-            println(partialDistinctAggregate.output)
-            println(resultExpressions)
 
             // 4. Create an Aggregate Operator for the final aggregation.
             val finalAggregate = {
@@ -193,7 +191,7 @@ object OpaqueOperators extends Strategy {
                   functionsWithoutDistinct ++ functionsWithDistinct, Some(Final), partialDistinctAggregate)
             }
 
-            finalAggregate :: Nil
+            EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
           }
       }
 
