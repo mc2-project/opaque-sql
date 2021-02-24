@@ -389,6 +389,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val words = makeDF(data, securityLevel, "category", "id", "price")
     val df = words.groupBy("category").agg(countDistinct("id").as("num_unique_ids"),
         count("price").as("num_prices"))
+    df.show()
     df.collect
   }
 

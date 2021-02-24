@@ -146,7 +146,8 @@ object OpaqueOperators extends Strategy {
                       EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
-            val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.map { e =>
+            val distinctExpressions = functionsWithDistinct.head.aggregateFunction.children
+            val namedDistinctExpressions = distinctExpressions.map { e =>
               e match {
                 case ne: NamedExpression => ne
                 case other =>
@@ -158,31 +159,27 @@ object OpaqueOperators extends Strategy {
                   Alias(other, name)()
               }
             }
-            /*
-            EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions, functionsWithoutDistinct, PartialMerge,
-              EncryptedSortExec((groupingExpressions ++ namedDistinctExpressions).map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
-                EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions, functionsWithoutDistinct, Partial,
-                  EncryptedSortExec((groupingExpressions ++ namedDistinctExpressions).map(e => SortOrder(e, Ascending)), false, planLater(child))))) :: Nil
-            */
-
-            // Preprocessing.
 
             // 1. Create an Aggregate Operator for partial aggregations.
             val partialAggregate = {
               val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-              val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
 
-              EncryptedAggregateExec(combinedGroupingExpressions,
-                functionsWithoutDistinct, Partial, sorted)
+              val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child))
+              EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Partial, sorted)
             }
 
             // 2. Create an Aggregate Operator for partial merge aggregations.
             val partialMergeAggregate = {
               val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-              val sorted = EncryptedSortExec(combinedGroupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true, partialAggregate)
 
-              EncryptedAggregateExec(groupingExpressions ++ namedDistinctExpressions,
-                functionsWithoutDistinct, PartialMerge, sorted)
+              EncryptedAggregateExec(combinedGroupingExpressions,
+                functionsWithoutDistinct, PartialMerge, partialAggregate)
+            }
+
+            // 3. Create an Aggregate operator for partial aggregation (for distinct)
+            val partialDistinctAggregate = {
+              EncryptedAggregateExec(groupingExpressions,
+                functionsWithoutDistinct ++ functionsWithDistinct, PartialMerge, partialMergeAggregate)
             }
 
             partialMergeAggregate :: Nil
