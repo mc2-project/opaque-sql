@@ -235,7 +235,7 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 case class EncryptedAggregateExec(
   groupingExpressions: Seq[NamedExpression],
   aggExpressions: Seq[AggregateExpression],
-  // Specify mode if ALL aggExpressions should be case to the desired AggregateMode
+  // Specify mode if ALL aggExpressions should be cast to the desired AggregateMode
   mode: Option[AggregateMode],
   child: SparkPlan)
     extends UnaryExecNode with OpaqueOperatorExec {
