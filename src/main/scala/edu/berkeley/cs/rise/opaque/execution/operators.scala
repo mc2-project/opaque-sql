@@ -263,7 +263,7 @@ case class EncryptedAggregateExec(
         (groupingExpressions, partialAggExpressions)
       }
       case PartialMerge => {
-        val partialMergeAggExpressions = aggExpressions.map(_.copy(mode = PartialMerge))
+        val partialMergeAggExpressions = aggExpressions
         (groupingExpressions, partialMergeAggExpressions)
       }
       case Final => {
