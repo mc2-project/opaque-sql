@@ -1394,7 +1394,6 @@ object Utils extends Logging {
           }
           case Final => {
             val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
-            println(countUpdateExpr)
             (Seq(countUpdateExpr), Seq(count))
           }
           case Complete => {

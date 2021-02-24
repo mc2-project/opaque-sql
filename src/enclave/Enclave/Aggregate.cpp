@@ -42,7 +42,7 @@ void non_oblivious_aggregate(
     w.append(agg_op_eval.evaluate());
   }
 
-  cout << "end of function" << endl;
+  cout << "end of aggregate function" << endl;
   w.output_buffer(output_rows, output_rows_length);
 }
 
