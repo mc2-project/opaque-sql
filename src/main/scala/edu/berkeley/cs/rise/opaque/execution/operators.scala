@@ -255,17 +255,14 @@ case class EncryptedAggregateExec(
     case Some(Complete) =>
       groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
     case None =>
-      var res = groupingExpressions.map(_.toAttribute)
-      for (aggExpr <- aggExpressions) {
-        val attributes = aggExpr.mode match {
+      groupingExpressions.map(_.toAttribute) ++ aggExpressions.flatMap(expr => {
+        expr.mode match {
           case Partial | PartialMerge =>
-            aggExpr.aggregateFunction.inputAggBufferAttributes
+            expr.aggregateFunction.inputAggBufferAttributes
           case _ =>
-            Seq(aggExpr.resultAttribute)
+            Seq(expr.resultAttribute)
         }
-        res = res ++ attributes
-      }
-      res
+      })
   }
 
   override def executeBlocked(): RDD[Block] = {
