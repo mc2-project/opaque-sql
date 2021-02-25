@@ -119,6 +119,8 @@ void xor_shared_key(uint8_t *key_share_bytes, uint32_t key_share_size) {
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
              uint8_t *ciphertext) {
 
+  std::cout << "Enter Crypto - encrypt" << std::endl;
+
   if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
@@ -133,9 +135,14 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   AesGcm cipher(ks.get(), reinterpret_cast<uint8_t*>(iv_ptr), SGX_AESGCM_IV_SIZE);
   cipher.encrypt(plaintext, plaintext_length, ciphertext_ptr, plaintext_length);
   memcpy(mac_ptr, cipher.tag().t, SGX_AESGCM_MAC_SIZE);
+
+  std::cout << "Exit Crypto - encrypt" << std::endl;
 }
 
 void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext) {
+
+  std::cout << "Enter Crypto - decrypt" << std::endl;
+
   if (!ks) {
     throw std::runtime_error(
       "Cannot encrypt without a shared key. Ensure all enclaves have completed attestation.");
@@ -166,6 +173,8 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
         throw std::runtime_error("Couldn't decrypt -- proper key unknown\n");
     }
   }
+
+  std::cout << "Exit Crypto - decrypt" << std::endl;
 }
 
 uint32_t enc_size(uint32_t plaintext_size) {

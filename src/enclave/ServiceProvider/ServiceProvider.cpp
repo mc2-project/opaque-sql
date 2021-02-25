@@ -385,3 +385,14 @@ std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_
 
   return shared_key_msg;
 }
+
+// Enclave functions for shared key generation
+EVP_PKEY* ServiceProvider::buffer_to_public_key_wrapper(char* public_key) {
+
+  return buffer_to_public_key(public_key, -1);
+}
+
+int ServiceProvider::public_encrypt_wrapper(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len) {
+
+  return public_encrypt(key, data, data_len, encrypted, encrypted_len);
+}

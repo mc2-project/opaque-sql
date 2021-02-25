@@ -308,7 +308,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Fin
   (void)obj;
 
 //  std::cout << "enter App.cpp" << std::endl;
-  std::cout << eid << std::endl;
+//  std::cout << eid << std::endl;
 
   jboolean if_copy = false;
 
@@ -320,12 +320,12 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Fin
   uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
 //  std::cout << "App.cpp - after getArraySize" << std::endl;
 
-  std::cout << "App.cpp - before ecall" << std::endl;
+//  std::cout << "App.cpp - before ecall" << std::endl;
   oe_check_and_time("Finish attestation",
                     ecall_finish_shared_key((oe_enclave_t*)eid,
                                              reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
                                              shared_key_msg_size));
-  std::cout << "App.cpp - after ecall" << std::endl;
+//  std::cout << "App.cpp - after ecall" << std::endl;
 
   env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 

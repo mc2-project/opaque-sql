@@ -41,6 +41,13 @@ public:
    */
   std::unique_ptr<oe_shared_key_msg_t> process_enclave_report(oe_report_msg_t *report_msg, uint32_t *shared_key_msg_size);
 
+  /**
+   * Functions to help enclaves generate shared key (public key verification specifically)
+   */
+  EVP_PKEY* buffer_to_public_key_wrapper(char* public_key);
+
+  int public_encrypt_wrapper(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len);
+
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);
 

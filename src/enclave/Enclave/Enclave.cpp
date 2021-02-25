@@ -15,6 +15,10 @@
 #include "Sort.h"
 #include "util.h"
 
+// Include ServiceProvider for public key verification and usage
+//#include "../ServiceProvider/ServiceProvider.h"
+//#include <openssl/pem.h>
+
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
 #include <mbedtls/config.h>
@@ -45,6 +49,8 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   assert(oe_is_outside_enclave(ciphertext, cipher_length) == 1);
   __builtin_ia32_lfence();
 
+  std::cout << "enter ecall_encrypt" << std::endl;
+
   try {
     // IV (12 bytes) + ciphertext + mac (16 bytes)
     assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
@@ -54,6 +60,8 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length,
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
+
+  std::cout << "exit ecall_encrypt" << std::endl;
 }
 
 void ecall_project(uint8_t *condition, size_t condition_length,
@@ -398,16 +406,55 @@ void ecall_get_public_key(uint8_t **report_msg_data,
 
   std::cout << "enter ecall_get_public_key" << std::endl;
 
+  // Testing generate report public key
+
   uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
-  size_t public_key_size = sizeof(public_key); 
+  size_t public_key_size = sizeof(public_key);
+
+  ecall_generate_report(report_msg_data, report_msg_data_size);
+
+  oe_report_msg_t *report_msg = (oe_report_msg_t *) report_msg_data;
+  memcpy_s(public_key, public_key_size, report_msg->public_key, OE_PUBLIC_KEY_SIZE);
+
+  // Test encryption and decryption works with report key
+  unsigned char zeroes[SGX_AESGCM_KEY_SIZE] = {0};
+  unsigned char plaintext[SGX_AESGCM_KEY_SIZE];
+  size_t plaintext_size = sizeof(plaintext);
+
+  std::cout << "Before print before encryption" << std::endl;
+  for (size_t i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
+   std::cout << zeroes[i];
+  }
+  std::cout << std::endl;
+  std::cout << "After print before encryption" << std::endl;
+
+  unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+  size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+  g_crypto.encrypt(public_key,
+                   zeroes,
+                   SGX_AESGCM_KEY_SIZE,
+                   encrypted_sharedkey,
+                   &encrypted_sharedkey_size);
+
+  try {
+    bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, plaintext, &plaintext_size);
+    if (ret) {
+      std::cout << "Decryption test with report key encryption worked successfully" << std::endl;
+    } else {
+      std::cout << "Decryption test with report key encryption failed" << std::endl;
+    }
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
 
   g_crypto.retrieve_public_key(public_key);
 
   // Print out public key for debugging purposes
-  for (size_t i = 0; i < public_key_size; i++) {
-   std::cout << public_key[i];
-  }
-  std::cout << std::endl;
+//  for (size_t i = 0; i < public_key_size; i++) {
+//   std::cout << public_key[i];
+//  }
+//  std::cout << std::endl;
 
   *report_msg_data_size = public_key_size;
   *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
@@ -425,14 +472,16 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
 
   // Guard against encrypting or overwriting enclave memory
   assert(oe_is_outside_enclave(pk_list, pk_list_size) == 1);
-  assert(oe_is_outside_enclave(sk_list, *sk_list_size) == 1);
+  assert(oe_is_outside_enclave(sk_list, sk_list_size) == 1);
   __builtin_ia32_lfence();
 
-  // Size of shared key is 16 from ServiceProvider - LC_AESGCM_KEY_SIZE
-  // For now SGX_AESGCM_KEY_SIZE is also 16, so will just use that for now
+  (void) sk_list_size;
 
   try {
     // Generate a random value used for key
+    // Size of shared key is 16 from ServiceProvider - LC_AESGCM_KEY_SIZE
+    // For now SGX_AESGCM_KEY_SIZE is also 16, so will just use that for now
+
     unsigned char secret_key[SGX_AESGCM_KEY_SIZE] = {0};
     mbedtls_read_rand(secret_key, SGX_AESGCM_KEY_SIZE);
 
@@ -448,10 +497,10 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
       memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
 
       // Print out public key for debugging purposes
-      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
-        std::cout << public_key[i];
-      }
-      std::cout << std::endl;
+//      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
+//        std::cout << public_key[i];
+//      }
+//      std::cout << std::endl;
 
       g_crypto.encrypt(public_key,
                        secret_key,
@@ -461,10 +510,10 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
       memcpy_s(sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, OE_SHARED_KEY_CIPHERTEXT_SIZE);
 
       // Print out cipher for debugging purposes
-      for (size_t i = 0; i < OE_SHARED_KEY_CIPHERTEXT_SIZE; i++) {
-        std::cout << (int) encrypted_sharedkey[i] + " ";
-      }
-      std::cout << std::endl;
+//      for (size_t i = 0; i < OE_SHARED_KEY_CIPHERTEXT_SIZE; i++) {
+//        std::cout << (int) encrypted_sharedkey[i] + " ";
+//      }
+//      std::cout << std::endl;
 
       pk_pointer += OE_PUBLIC_KEY_SIZE;
       sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
@@ -474,11 +523,11 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
   }
 
   // Print out sk_list for debugging purposes
-  for (size_t i = 0; i < sk_list_size; i++) {
-    std::cout << sk_list[i] + " ";
-  }
-  std::cout << std::endl;
-
+//  for (size_t i = 0; i < sk_list_size; i++) {
+//    std::cout << sk_list[i] + " ";
+//  }
+//  std::cout << std::endl;
+//
   std::cout << "exit ecall_get_list_encrypted" << std::endl;
 }
 

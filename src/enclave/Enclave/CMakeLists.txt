@@ -34,6 +34,21 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
+
+# start new
+
+#link_directories("$ENV{OE_SDK_PATH}/lib/openenclave/enclave")
+#include_directories("$ENV{OE_SDK_PATH}/include")
+#include_directories("$ENV{OE_SDK_PATH}/include/openenclave/3rdparty")
+#
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
+#set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
+#
+#find_library(CRYPTO_LIB crypto)
+#find_library(SSL_LIB ssl)
+
+# end new
+
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
 set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
 
@@ -48,6 +63,7 @@ target_include_directories(enclave_trusted PRIVATE ${CMAKE_CURRENT_BINARY_DIR} $
 
 link_directories(${OE_LIBDIR} ${OE_LIBDIR}/openenclave/enclave)
 target_link_libraries(enclave_trusted
+#                      "${CRYPTO_LIB}" "${SSL_LIB}" mbedcrypto mbedtls openenclave::oehost openenclave::oehostverify
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}
                       openenclave::oelibc

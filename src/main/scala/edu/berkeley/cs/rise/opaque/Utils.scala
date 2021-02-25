@@ -268,6 +268,7 @@ object Utils extends Logging {
   }
 
   def encrypt(data: Array[Byte]): Array[Byte] = {
+    println("Enter Utils - encrypt")
     val random = SecureRandom.getInstance("SHA1PRNG")
     val cipherKey = new SecretKeySpec(clientKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
@@ -275,17 +276,42 @@ object Utils extends Logging {
     val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-    val cipherText = cipher.doFinal(data)    
+    val cipherText = cipher.doFinal(data)
+    
+    // Print data for debugging purposes
+    for (byte <- data) print(byte.toChar)
+    println()    
+
+    // Print cipher for debugging purposes
+    for (byte <- iv) print(byte.toChar)
+    println()
+    for (byte <- cipherText) print(byte.toChar)
+    println()
+
+    println("Exit Utils - encrypt")    
     iv ++ cipherText
   }
   
   def decrypt(data: Array[Byte]): Array[Byte] = {
+    println("Enter Utils - decrypt")
+
+    // Print cipher for debugging purposes
+    for (byte <- data) print(byte.toChar)
+    println()
+
     val cipherKey = new SecretKeySpec(clientKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
     val cipherText = data.drop(GCM_IV_LENGTH)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
     cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    cipher.doFinal(cipherText)
+    val plaintext = cipher.doFinal(cipherText)
+
+    // Print plaintext for debugging purposes
+    for (byte <- plaintext) print(byte.toChar)
+    println()
+    println("Exit Utils - decrypt")
+
+    plaintext
   }
 
   var eid = 0L
@@ -730,6 +756,9 @@ object Utils extends Logging {
       rows: Seq[InternalRow],
       types: Seq[DataType],
       useEnclave: Boolean): Block = {
+
+    println("Utils.scala - encryptInternalRowsFlatbuffers - useEnclave: " + useEnclave)
+
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
     val encryptedBlockOffsets = ArrayBuilder.make[Int]
