@@ -289,7 +289,7 @@ case class EncryptedSortMergeJoinExec(
       case Inner => 
         (leftSchema ++ rightSchema).map(_.toAttribute)
       case LeftOuter =>
-        leftSchema++ rightSchema.map(_.withNullability(true))
+        leftSchema ++ rightSchema.map(_.withNullability(true))
       case LeftSemi | LeftAnti => 
         leftSchema.map(_.toAttribute)
       case _ =>
