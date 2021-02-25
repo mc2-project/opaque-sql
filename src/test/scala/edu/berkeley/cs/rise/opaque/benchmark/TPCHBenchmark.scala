@@ -20,14 +20,17 @@ package edu.berkeley.cs.rise.opaque.benchmark
 import edu.berkeley.cs.rise.opaque.Utils
 
 import org.apache.spark.sql.SQLContext
+import edu.berkeley.cs.rise.opaque.OpaqueTolerance
 
-object TPCHBenchmark {
+import org.scalatest.FunSuite
+
+object TPCHBenchmark extends FunSuite with OpaqueTolerance {
 
   def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
     val sqlStr = tpch.getQuery(queryNumber)
     tpch.generateFiles(numPartitions)
 
-    Utils.timeBenchmark(
+    val insecure = Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
         "system" -> Insecure.name) {
@@ -35,13 +38,20 @@ object TPCHBenchmark {
       tpch.performQuery(sqlStr, Insecure).collect
     }
 
-    Utils.timeBenchmark(
+    val encrypted = Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> s"TPC-H $queryNumber",
         "system" -> Encrypted.name) {
       
       tpch.performQuery(sqlStr, Encrypted).collect
     }
+
+    if (TPCH.unorderedQueries.contains(queryNumber)) {
+      assert(insecure.toSet === encrypted.toSet)
+    } else {
+      assert(insecure === encrypted)
+    }
+
   }
 
   def run(sqlContext: SQLContext, numPartitions: Int, size: String, fileUrl: String) = {

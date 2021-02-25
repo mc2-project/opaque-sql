@@ -1016,23 +1016,23 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 }
 
 class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
-  override val spark = SparkSession.builder()
+  val spark = SparkSession.builder()
     .master("local[1]")
     .appName("OpaqueOperatorSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
 
-  override def numPartitions: Int = 1
+  def numPartitions: Int = 1
 }
 
 class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
-  override val spark = SparkSession.builder()
+  val spark = SparkSession.builder()
     .master("local[1]")
     .appName("OpaqueOperatorMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
 
-  override def numPartitions: Int = 3
+  def numPartitions: Int = 3
 
   import testImplicits._
 
@@ -1064,5 +1064,4 @@ class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
     val f = makeDF(f_data, securityLevel, "id", "join_col_2")
     p.join(f, $"join_col_1" === $"join_col_2").collect.toSet
   }
-
 }
