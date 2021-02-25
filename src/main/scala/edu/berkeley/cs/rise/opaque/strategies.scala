@@ -209,7 +209,6 @@ object OpaqueOperators extends Strategy {
           }
 
           EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
-          // partialMergeAggregate :: Nil
 
         case _ => { // More than one distinct operations
           throw new UnsupportedOperationException("Aggregate operations with more than one distinct expressions are not yet supported.")

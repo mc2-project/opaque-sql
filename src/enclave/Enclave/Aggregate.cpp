@@ -5,9 +5,6 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-#include <iostream>
-using namespace std;
-
 void non_oblivious_aggregate(
   uint8_t *agg_op, size_t agg_op_length,
   uint8_t *input_rows, size_t input_rows_length,
