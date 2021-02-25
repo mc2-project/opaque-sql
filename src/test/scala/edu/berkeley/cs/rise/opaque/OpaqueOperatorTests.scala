@@ -461,14 +461,6 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
       .collect.sortBy { case Row(category: String, _) => category }
   }
 
-  testAgainstSpark("aggregate count two indistinct") { securityLevel =>
-    val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
-    val words = makeDF(data, securityLevel, "category", "id", "price")
-    val df = words.groupBy("category", "id").agg(
-        count("price").as("num_prices"))
-    df.collect.toSet
-  }
-
   testAgainstSpark("aggregate count distinct and indistinct") { securityLevel =>
     val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
@@ -528,6 +520,20 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
     words.groupBy("word").agg(sum("count").as("totalCount"))
       .collect.sortBy { case Row(word: String, _) => word }
+  }
+
+  testAgainstSpark("aggregate sum distinct and indistinct") { securityLevel =>
+    val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
+    val words = makeDF(data, securityLevel, "category", "id", "price")
+    words.groupBy("category").agg(sumDistinct("id").as("sum_unique_ids"),
+        count("price").as("num_prices")).collect.toSet
+  }
+
+  testAgainstSpark("aggregate sum distinct") { securityLevel =>
+    val data = (0 until 32).map{ i => (abc(i), i % 8)}.toSeq
+    val words = makeDF(data, securityLevel, "category", "price")
+    words.groupBy("category").agg(sumDistinct("price").as("sum_unique_prices"))
+      .collect.sortBy { case Row(category: String, _) => category }
   }
 
   testAgainstSpark("aggregate on multiple columns") { securityLevel =>
