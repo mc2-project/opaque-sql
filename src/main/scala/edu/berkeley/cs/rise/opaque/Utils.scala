@@ -1598,6 +1598,11 @@ object Utils extends Logging {
             val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
             (Seq(sumUpdateExpr), Seq(sum))
           }
+          case PartialMerge => {
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), s.inputAggBufferAttributes(0))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
+            (Seq(sumUpdateExpr), Seq(sum))
+          }
           case Final => {
             val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), s.inputAggBufferAttributes(0))
             val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)

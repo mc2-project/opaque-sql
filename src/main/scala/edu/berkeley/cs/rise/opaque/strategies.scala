@@ -168,14 +168,16 @@ object OpaqueOperators extends Strategy {
               case ne: NamedExpression => ne
               case other =>
                 // Keep the name of the original expression.
-                val name = e match {
+                val name = e.children(0) match {
                   case ne: NamedExpression => ne.name
                   case _ => e.toString
                 }
-                Alias(other, name)()
+                e.children(0).asInstanceOf[NamedExpression]
+                // Alias(other, name)()
             }
           }
           val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
+          println(combinedGroupingExpressions)
 
           // 1. Create an Aggregate operator for partial aggregations.
           val partialAggregate = {
@@ -210,6 +212,7 @@ object OpaqueOperators extends Strategy {
           }
 
           EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
+          // partialMergeAggregate :: Nil
 
         case _ => { // More than one distinct operations
           throw new UnsupportedOperationException("Aggregate operations with more than one distinct expressions are not yet supported.")
