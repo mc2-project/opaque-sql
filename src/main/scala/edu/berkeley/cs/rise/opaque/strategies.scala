@@ -107,11 +107,6 @@ object OpaqueOperators extends Strategy {
         case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
       }
 
-      // val filtered = condition match {
-      //   case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
-      //   case None => tagsDropped
-      // }
-
       tagsDropped :: Nil
 
     // Used to match non-equi joins
