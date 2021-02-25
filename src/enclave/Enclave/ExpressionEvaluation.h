@@ -1789,6 +1789,7 @@ public:
     const tuix::JoinExpr* join_expr = flatbuffers::GetRoot<tuix::JoinExpr>(buf);
 
     join_type = join_expr->join_type();
+    condition_eval = nullptr;
     if (join_expr->condition() != NULL) {
       condition_eval = std::unique_ptr<FlatbuffersExpressionEvaluator>(
           new FlatbuffersExpressionEvaluator(join_expr->condition()));
@@ -1797,9 +1798,6 @@ public:
 
     if (join_expr->left_keys() != NULL && join_expr->right_keys() != NULL) {
       is_equi_join = true;
-      if (join_expr->condition() != NULL) {
-        throw std::runtime_error("Equi join cannot have condition");
-      }
       if (join_expr->left_keys()->size() != join_expr->right_keys()->size()) {
         throw std::runtime_error("Mismatched join key lengths");
       }
@@ -1840,37 +1838,41 @@ public:
     builder.Clear();
     bool row1_equals_row2;
 
-    /** Check equality for equi joins. If it is a non-equi join, 
-     * the key evaluators will be empty, so the code never enters the for loop.
+    /** Check equality for equi joins
     */
-    auto &row1_evaluators = is_primary(row1) ? left_key_evaluators : right_key_evaluators;
-    auto &row2_evaluators = is_primary(row2) ? left_key_evaluators : right_key_evaluators;
-    for (uint32_t i = 0; i < row1_evaluators.size(); i++) {
-      const tuix::Field *row1_eval_tmp = row1_evaluators[i]->eval(row1);
-      auto row1_eval_offset = flatbuffers_copy(row1_eval_tmp, builder);
-      auto row1_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset);
+    if (is_equi_join) {
+      auto &row1_evaluators = is_primary(row1) ? left_key_evaluators : right_key_evaluators;
+      auto &row2_evaluators = is_primary(row2) ? left_key_evaluators : right_key_evaluators;
+      for (uint32_t i = 0; i < row1_evaluators.size(); i++) {
+        const tuix::Field *row1_eval_tmp = row1_evaluators[i]->eval(row1);
+        auto row1_eval_offset = flatbuffers_copy(row1_eval_tmp, builder);
+        auto row1_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row1_eval_offset);
 
-      const tuix::Field *row2_eval_tmp = row2_evaluators[i]->eval(row2);
-      auto row2_eval_offset = flatbuffers_copy(row2_eval_tmp, builder);
-      auto row2_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset);
+        const tuix::Field *row2_eval_tmp = row2_evaluators[i]->eval(row2);
+        auto row2_eval_offset = flatbuffers_copy(row2_eval_tmp, builder);
+        auto row2_field = flatbuffers::GetTemporaryPointer<tuix::Field>(builder, row2_eval_offset);
 
-      flatbuffers::Offset<tuix::Field> comparison = eval_binary_comparison<tuix::EqualTo, std::equal_to>(
-        builder,
-        row1_field,
-        row2_field);
-      row1_equals_row2 =
-        static_cast<const tuix::BooleanField *>(
-          flatbuffers::GetTemporaryPointer<tuix::Field>(
-            builder,
-            comparison)->value())->value();
+        flatbuffers::Offset<tuix::Field> comparison = eval_binary_comparison<tuix::EqualTo, std::equal_to>(
+          builder, row1_field, row2_field);
+        
+        row1_equals_row2 =
+          static_cast<const tuix::BooleanField *>(
+            flatbuffers::GetTemporaryPointer<tuix::Field>(
+              builder,
+              comparison)->value())->value();
 
-      if (!row1_equals_row2) {
-        return false;
+        if (!row1_equals_row2) {
+          return false;
+        }
       }
     }
 
-    /* Check condition for non-equi joins */
-    if (!is_equi_join) {
+    // Check for condition (if specified)
+    if (condition_eval != nullptr) {
+      // If this is an equi join, only check for condition if row1 and row2 are from different tables
+      if (is_equi_join && is_primary(row1) && is_primary(row2)) {
+        return false;
+      }
       std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
       for (auto field : *row1->field_values()) {
         concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
@@ -1880,11 +1882,10 @@ public:
       }
       flatbuffers::Offset<tuix::Row> concat = tuix::CreateRowDirect(builder, &concat_fields);
       const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
-
       const tuix::Field *condition_result = condition_eval->eval(concat_ptr);
-
       return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     }
+
     return true;
   }
 

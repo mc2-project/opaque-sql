@@ -31,9 +31,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
     for (queryNum <- TPCHBenchmark.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
       testAgainstSpark(testStr) { securityLevel =>
-        val df = tpch.query(queryNum, securityLevel, numPartitions)
-        df.explain
-        df.collect
+        tpch.query(queryNum, securityLevel, numPartitions).collect
       }
     }
   }

@@ -1259,7 +1259,7 @@ object Utils extends Logging {
   def serializeJoinExpression(
     joinType: JoinType, leftKeys: Option[Seq[Expression]], rightKeys: Option[Seq[Expression]],
     leftSchema: Seq[Attribute], rightSchema: Seq[Attribute],
-    condition: Option[Expression] = None): Array[Byte] = {
+    condition: Option[Expression]): Array[Byte] = {
     val builder = new FlatBufferBuilder
     builder.finish(
       tuix.JoinExpr.createJoinExpr(
@@ -1298,7 +1298,7 @@ object Utils extends Logging {
         condition match {
           case Some(condition) =>
             flatbuffersSerializeExpression(builder, condition, leftSchema ++ rightSchema)
-          case _ => 0
+          case None => 0
         }))
     builder.sizedByteArray()
   }
