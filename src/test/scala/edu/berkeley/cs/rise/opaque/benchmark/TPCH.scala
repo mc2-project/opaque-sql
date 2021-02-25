@@ -28,6 +28,9 @@ import edu.berkeley.cs.rise.opaque.Utils
 
 object TPCH {
 
+  // Add query numbers here once they are supported
+  val supportedQueries = Seq(1)
+
   val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
 
   def part(

@@ -19,7 +19,6 @@ package edu.berkeley.cs.rise.opaque
 
 
 import org.apache.spark.sql.SparkSession
-
 import edu.berkeley.cs.rise.opaque.benchmark._
 
 trait TPCHTests extends OpaqueTestsBase { self => 
@@ -28,7 +27,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   def tpch = new TPCH(spark.sqlContext, size, "file://")
 
   def runTests() = {
-    for (queryNum <- TPCHBenchmark.supportedQueries) {
+    for (queryNum <- TPCH.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
       testAgainstSpark(testStr) { securityLevel =>
         tpch.query(queryNum, securityLevel, numPartitions).collect
