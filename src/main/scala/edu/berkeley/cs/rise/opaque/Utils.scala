@@ -1297,7 +1297,6 @@ object Utils extends Logging {
         // Non-zero when non-equi join
         condition match {
           case Some(condition) =>
-            println(s"condition: concat schema is ${leftSchema ++ rightSchema}")
             flatbuffersSerializeExpression(builder, condition, leftSchema ++ rightSchema)
           case None => 0
         }))

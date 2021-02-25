@@ -81,7 +81,6 @@ object OpaqueOperators extends Strategy {
 
     // Used to match equi joins
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
-      println(s"condition is ${condition}")
       val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
       val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))

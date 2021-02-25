@@ -121,14 +121,14 @@ void non_oblivious_sort_merge_join(
             } else {
               new_left_unmatched_rows.append(primary);
             }
+          }
            
-            // Reset left_unmatched_rows
-            left_unmatched_rows.clear();
-            auto new_left_unmatched_rows_buffer = new_left_unmatched_rows.output_buffer();
-            RowReader new_left_unmatched_rows_reader(new_left_unmatched_rows_buffer.view());
-            while (new_left_unmatched_rows_reader.has_next()) {
-              left_unmatched_rows.append(new_left_unmatched_rows_reader.next());
-            }
+          // Reset left_unmatched_rows
+          left_unmatched_rows.clear();
+          auto new_left_unmatched_rows_buffer = new_left_unmatched_rows.output_buffer();
+          RowReader new_left_unmatched_rows_reader(new_left_unmatched_rows_buffer.view());
+          while (new_left_unmatched_rows_reader.has_next()) {
+            left_unmatched_rows.append(new_left_unmatched_rows_reader.next());
           }
         }
       }
