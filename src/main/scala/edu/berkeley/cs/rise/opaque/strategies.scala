@@ -163,21 +163,18 @@ object OpaqueOperators extends Strategy {
           // Because we are also grouping on the columns used in the distinct expressions,
           // we do not need separate cases for global and grouping aggregation.
 
-          val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.map { e =>
+          // We need to extract named expressions from the children of the distinct aggregate functions
+          // in order to group by those columns.
+          val namedDistinctExpressions = functionsWithDistinct.head.aggregateFunction.children.flatMap{ e =>
             e match {
-              case ne: NamedExpression => ne
-              case other =>
-                // Keep the name of the original expression.
-                val name = e.children(0) match {
-                  case ne: NamedExpression => ne.name
-                  case _ => e.toString
-                }
-                e.children(0).asInstanceOf[NamedExpression]
-                // Alias(other, name)()
+              case ne: NamedExpression =>
+                Seq(ne)
+              case _ =>
+                e.children.filter(child => child.isInstanceOf[NamedExpression])
+                  .map(child => child.asInstanceOf[NamedExpression])
             }
           }
           val combinedGroupingExpressions = groupingExpressions ++ namedDistinctExpressions
-          println(combinedGroupingExpressions)
 
           // 1. Create an Aggregate operator for partial aggregations.
           val partialAggregate = {
