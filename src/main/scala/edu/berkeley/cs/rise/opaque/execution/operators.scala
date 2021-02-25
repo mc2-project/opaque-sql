@@ -290,10 +290,11 @@ case class EncryptedAggregateExec(
 
     val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
     val isPartial = mode match {
-      case Some(x) =>
-        x == Partial || x == PartialMerge
+      case Some(mode) =>
+        mode == Partial || mode == PartialMerge
       case None =>
-        false
+        aggExpressions.map(expr => expr.mode)
+          .exists(mode => mode == Partial || mode == PartialMerge)
     }
 
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
