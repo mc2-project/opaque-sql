@@ -462,14 +462,24 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("aggregate count distinct and indistinct") { securityLevel =>
-    val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int], i % 8)
+      else
+        (abc(i), i % 4, i % 8)
+    }.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
     words.groupBy("category").agg(countDistinct("id").as("num_unique_ids"),
         count("price").as("num_prices")).collect.toSet
   }
 
   testAgainstSpark("aggregate count distinct") { securityLevel =>
-    val data = (0 until 32).map{ i => (abc(i), i % 8)}.toSeq
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int])
+      else
+        (abc(i), i % 8)
+    }.toSeq
     val words = makeDF(data, securityLevel, "category", "price")
     words.groupBy("category").agg(countDistinct("price").as("num_unique_prices"))
       .collect.sortBy { case Row(category: String, _) => category }
@@ -523,14 +533,24 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("aggregate sum distinct and indistinct") { securityLevel =>
-    val data = (0 until 32).map{ i => (abc(i), i % 4, i % 8)}.toSeq
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int], i % 8)
+      else
+        (abc(i), i % 4, i % 8)
+    }.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
     words.groupBy("category").agg(sumDistinct("id").as("sum_unique_ids"),
         sum("price").as("sum_prices")).collect.toSet
   }
 
   testAgainstSpark("aggregate sum distinct") { securityLevel =>
-    val data = (0 until 32).map{ i => (abc(i), i % 8)}.toSeq
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int])
+      else
+        (abc(i), i % 8)
+    }.toSeq
     val words = makeDF(data, securityLevel, "category", "price")
     words.groupBy("category").agg(sumDistinct("price").as("sum_unique_prices"))
       .collect.sortBy { case Row(category: String, _) => category }
