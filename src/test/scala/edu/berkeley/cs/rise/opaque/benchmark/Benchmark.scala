@@ -34,8 +34,8 @@ import org.apache.spark.sql.SparkSession
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
  *       Syntax: --operations "logistic-regression,tpc-h"
- *   --run-local: boolean whether to use HDFS or the local filesystem
- *       Default: HDFS
+ *   --filesystem-url: optional arguments to specify filesystem master node URL.
+ *       Default: file://"""
  * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.

@@ -29,6 +29,15 @@ javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
   "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")
 
+// Create fat jar with src and test classes using build/sbt test:assembly
+Project.inConfig(Test)(baseAssemblySettings)
+test in (Test, assembly) := {}
+
+assemblyMergeStrategy in (Test, assembly) := {
+ case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+ case x => MergeStrategy.first
+}
+
 // Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
 // spark-submit. From
 // https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
