@@ -142,21 +142,22 @@ object OpaqueOperators extends Strategy {
         case 0 => // No distinct aggregate operations
           if (groupingExpressions.size == 0) {
             // Global aggregation
-            val partialAggregate = EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial), planLater(child))
+            val partialAggregate = EncryptedAggregateExec(groupingExpressions,
+              aggregateExpressions.map(_.copy(mode = Partial)), planLater(child))
             val partialOutput = partialAggregate.output
             val (projSchema, tag) = tagForGlobalAggregate(partialOutput)
 
             EncryptedProjectExec(resultExpressions, 
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions.map(_.copy(mode = Final)),
                 EncryptedProjectExec(partialOutput,
                   EncryptedSortExec(Seq(SortOrder(tag, Ascending)), true, 
                     EncryptedProjectExec(projSchema, partialAggregate))))) :: Nil
           } else {
             // Grouping aggregation
             EncryptedProjectExec(resultExpressions,
-              EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Final),
+              EncryptedAggregateExec(groupingExpressions, aggregateExpressions.map(_.copy(mode = Final)),
                 EncryptedSortExec(groupingExpressions.map(_.toAttribute).map(e => SortOrder(e, Ascending)), true,
-                  EncryptedAggregateExec(groupingExpressions, aggregateExpressions, Some(Partial),
+                  EncryptedAggregateExec(groupingExpressions, aggregateExpressions.map(_.copy(mode = Partial)),
                     EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)), false, planLater(child)))))) :: Nil
           }
         case size if size == 1 => // One distinct aggregate operation
@@ -180,7 +181,7 @@ object OpaqueOperators extends Strategy {
           val partialAggregate = {
             val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), false,
               planLater(child))
-            EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct, Some(Partial), sorted)
+            EncryptedAggregateExec(combinedGroupingExpressions, functionsWithoutDistinct.map(_.copy(mode = Partial)), sorted)
           }
 
           // 2. Create an Aggregate operator for partial merge aggregations.
@@ -188,7 +189,7 @@ object OpaqueOperators extends Strategy {
             val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), true,
               partialAggregate)
             EncryptedAggregateExec(combinedGroupingExpressions,
-              functionsWithoutDistinct, Some(PartialMerge), sorted)
+              functionsWithoutDistinct.map(_.copy(mode = PartialMerge)), sorted)
           }
 
           // 3. Create an Aggregate operator for partial aggregation of distinct aggregate expressions.
@@ -197,7 +198,7 @@ object OpaqueOperators extends Strategy {
             // but distinct functions operate on the original input to the aggregation.
             EncryptedAggregateExec(groupingExpressions,
               functionsWithoutDistinct.map(_.copy(mode = PartialMerge)) ++
-                functionsWithDistinct.map(_.copy(mode = Partial)), None, partialMergeAggregate)
+                functionsWithDistinct.map(_.copy(mode = Partial)), partialMergeAggregate)
           }
 
           // 4. Create an Aggregate operator for the final aggregation.
@@ -205,7 +206,7 @@ object OpaqueOperators extends Strategy {
             val sorted = EncryptedSortExec(groupingExpressions.map(e => SortOrder(e, Ascending)),
               true, partialDistinctAggregate)
             EncryptedAggregateExec(groupingExpressions,
-                functionsWithoutDistinct ++ functionsWithDistinct, Some(Final), sorted)
+                (functionsWithoutDistinct ++ functionsWithDistinct).map(_.copy(mode = Final)), sorted)
           }
 
           EncryptedProjectExec(resultExpressions, finalAggregate) :: Nil
