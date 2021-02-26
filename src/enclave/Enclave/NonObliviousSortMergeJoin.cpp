@@ -94,12 +94,7 @@ void non_oblivious_sort_merge_join(
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w);
         } else if (is_left_existence(join_type)) {
-          auto unmatched_primary_rows_buffer = primary_unmatched_rows.output_buffer();
-          RowReader unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
-          while (unmatched_primary_rows_reader.has_next()) {
-            const tuix::Row *primary = unmatched_primary_rows_reader.next();
-            all_primary_unmatched_rows.append(primary);
-          }
+          write_output_rows(primary_unmatched_rows, all_primary_unmatched_rows);
         }
 
         primary_group.clear();
@@ -143,11 +138,7 @@ void non_oblivious_sort_merge_join(
            
           // Reset primary_unmatched_rows
           primary_unmatched_rows.clear();
-          auto new_primary_unmatched_rows_buffer = new_primary_unmatched_rows.output_buffer();
-          RowReader new_primary_unmatched_rows_reader(new_primary_unmatched_rows_buffer.view());
-          while (new_primary_unmatched_rows_reader.has_next()) {
-            primary_unmatched_rows.append(new_primary_unmatched_rows_reader.next());
-          }
+          write_output_rows(new_primary_unmatched_rows, primary_unmatched_rows);
         }
       }
     }
