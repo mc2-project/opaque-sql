@@ -75,7 +75,7 @@ void non_oblivious_sort_merge_join(
 
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, all_primary_unmatched_rows; // This is used for left semi and left existence joins
+  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for left semi and left existence joins
   FlatbuffersTemporaryRow last_foreign; // This is used only for left outer join
 
   while (r.has_next()) {
@@ -98,7 +98,7 @@ void non_oblivious_sort_merge_join(
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w);
         } else if (is_left_existence(join_type)) {
-          write_output_rows(primary_unmatched_rows, all_primary_unmatched_rows);
+          write_output_rows(primary_unmatched_rows, previous_primary_unmatched_rows);
         }
 
         primary_group.clear();
@@ -116,6 +116,7 @@ void non_oblivious_sort_merge_join(
         if (join_type == tuix::JoinType_Inner || join_type == tuix::JoinType_LeftOuter) {       
           auto primary_group_buffer = primary_group.output_buffer();
           RowReader primary_group_reader(primary_group_buffer.view());
+
           while (primary_group_reader.has_next()) {
             const tuix::Row *primary = primary_group_reader.next();
             test_rows_same_group(join_expr_eval, primary, current);
@@ -153,10 +154,10 @@ void non_oblivious_sort_merge_join(
   } else if (is_left_existence(join_type)) {
     if (join_type == tuix::JoinType_LeftAnti) {
       write_output_rows(primary_unmatched_rows, w);
-      write_output_rows(all_primary_unmatched_rows, w);
+      write_output_rows(previous_primary_unmatched_rows, w);
     } else { // tuix::JoinType_LeftOuter
       write_output_rows(primary_unmatched_rows, w, last_foreign.get());
-      write_output_rows(all_primary_unmatched_rows, w, last_foreign.get());
+      write_output_rows(previous_primary_unmatched_rows, w, last_foreign.get());
     }
   }
 
