@@ -1833,7 +1833,8 @@ public:
     return is_primary(row1) ? row1 : row2;
   }
 
-  /** Return true if the two rows are from the same join group */
+  /** Return true if the two rows are from the same join group
+   *  Since the function calls `is_primary`, the rows must have been tagged in Scala */
   bool is_same_group(const tuix::Row *row1, const tuix::Row *row2) {
     builder.Clear();
     bool row1_equals_row2;
@@ -1880,6 +1881,10 @@ public:
       const tuix::Field *condition_result = condition_eval->eval(concat_ptr);
       return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     }
+
+    // The `condition_eval` can only be empty when it's an equi-join.
+    // Since `condition_eval` is an extra predicate used to filter out *matched* rows in an equi-join, an empty
+    // condition means the matched row should not be filtered out; hence the default return value of true 
     return true;
   }
 
