@@ -36,6 +36,10 @@ void write_output_rows(RowWriter &group, RowWriter &w) {
   }  
 }
 
+bool is_left_existence(tuix::JoinType join_type) {
+  return join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter;
+}
+
 /** 
  * Sort merge equi join algorithm
  * Input: the rows are unioned from both the primary (or left) table and the non-primary (or right) table
@@ -80,7 +84,7 @@ void non_oblivious_sort_merge_join(
         // Add this primary row to the current group
         // If this is a left semi/anti join, also add the rows to primary_unmatched_rows
         primary_group.append(current);
-        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter) {
+        if (is_left_existence(join_type) || join_type == tuix::JoinType_LeftSemi) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -89,7 +93,7 @@ void non_oblivious_sort_merge_join(
         // If a new primary group is encountered
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w);
-        } else if (join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter) {
+        } else if (is_left_existence(join_type)) {
           auto unmatched_primary_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
           while (unmatched_primary_rows_reader.has_next()) {
@@ -122,7 +126,7 @@ void non_oblivious_sort_merge_join(
             }
           }
         } 
-        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter) {
+        if (is_left_existence(join_type) || join_type == tuix::JoinType_LeftSemi) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
@@ -151,7 +155,7 @@ void non_oblivious_sort_merge_join(
 
   if (join_type == tuix::JoinType_LeftSemi) {
     write_output_rows(primary_matched_rows, w);
-  } else if (join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter) {
+  } else if (is_left_existence(join_type)) {
     if (join_type == tuix::JoinType_LeftAnti) {
       write_output_rows(primary_unmatched_rows, w);
       write_output_rows(all_unmatched_primary_rows, w);
