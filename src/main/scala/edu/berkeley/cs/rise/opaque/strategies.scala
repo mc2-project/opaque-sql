@@ -186,8 +186,14 @@ object OpaqueOperators extends Strategy {
 
           // 2. Create an Aggregate operator for partial merge aggregations.
           val partialMergeAggregate = {
-            val sorted = EncryptedSortExec(combinedGroupingExpressions.map(e => SortOrder(e, Ascending)), true,
-              partialAggregate)
+            // Partition based on the final grouping expressions.
+            val partitionOrder = groupingExpressions.map(e => SortOrder(e, Ascending))
+            val partitioned = EncryptedRangePartitionExec(partitionOrder, partialAggregate)
+
+            // Local sort on the combined grouping expressions.
+            val sortOrder = combinedGroupingExpressions.map(e => SortOrder(e, Ascending))
+            val sorted = EncryptedSortExec(sortOrder, false, partitioned)
+
             EncryptedAggregateExec(combinedGroupingExpressions,
               functionsWithoutDistinct.map(_.copy(mode = PartialMerge)), sorted)
           }
