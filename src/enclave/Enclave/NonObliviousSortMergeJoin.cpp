@@ -26,13 +26,13 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
   }
 }
 
-void write_output_rows(RowWriter &group, RowWriter &w) {
-  auto group_buffer = group.output_buffer();
-  RowReader group_reader(group_buffer.view());
+void write_output_rows(RowWriter &input, RowWriter &output) {
+  auto input_buffer = input.output_buffer();
+  RowReader input_reader(input_buffer.view());
           
-  while (group_reader.has_next()) {
-    const tuix::Row *row = group_reader.next();
-    w.append(row);
+  while (input_reader.has_next()) {
+    const tuix::Row *row = input_reader.next();
+    output.append(row);
   }  
 }
 
@@ -71,7 +71,7 @@ void non_oblivious_sort_merge_join(
 
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, all_unmatched_primary_rows; // This is only used for left semi/anti join
+  RowWriter primary_matched_rows, primary_unmatched_rows, all_primary_unmatched_rows; // This is used for left semi and left existence joins
   FlatbuffersTemporaryRow last_foreign; // This is used only for left outer join
 
   while (r.has_next()) {
@@ -82,9 +82,9 @@ void non_oblivious_sort_merge_join(
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         
         // Add this primary row to the current group
-        // If this is a left semi/anti join, also add the rows to primary_unmatched_rows
+        // If this is a left semi or left existence join, also add the rows to primary_unmatched_rows
         primary_group.append(current);
-        if (is_left_existence(join_type) || join_type == tuix::JoinType_LeftSemi) {
+        if (join_type == tuix::JoinType_LeftSemi || is_left_existence(join_type)) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -98,7 +98,7 @@ void non_oblivious_sort_merge_join(
           RowReader unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
           while (unmatched_primary_rows_reader.has_next()) {
             const tuix::Row *primary = unmatched_primary_rows_reader.next();
-            all_unmatched_primary_rows.append(primary);
+            all_primary_unmatched_rows.append(primary);
           }
         }
 
@@ -126,7 +126,7 @@ void non_oblivious_sort_merge_join(
             }
           }
         } 
-        if (is_left_existence(join_type) || join_type == tuix::JoinType_LeftSemi) {
+        if (join_type == tuix::JoinType_LeftSemi || is_left_existence(join_type)) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
@@ -158,9 +158,9 @@ void non_oblivious_sort_merge_join(
   } else if (is_left_existence(join_type)) {
     if (join_type == tuix::JoinType_LeftAnti) {
       write_output_rows(primary_unmatched_rows, w);
-      write_output_rows(all_unmatched_primary_rows, w);
+      write_output_rows(all_primary_unmatched_rows, w);
     } else { // tuix::JoinType_LeftOuter
-      auto unmatched_primary_rows_buffer = all_unmatched_primary_rows.output_buffer();
+      auto unmatched_primary_rows_buffer = all_primary_unmatched_rows.output_buffer();
       RowReader all_unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
       while (all_unmatched_primary_rows_reader.has_next()) {
         const tuix::Row *primary = all_unmatched_primary_rows_reader.next();
