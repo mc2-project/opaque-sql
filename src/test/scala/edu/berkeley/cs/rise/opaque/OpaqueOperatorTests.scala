@@ -422,6 +422,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "join_col_2", "x")
     val df = p.join(f, $"join_col_1" === $"join_col_2", "left_outer")
+    df.show()
     df.collect.toSet
   }
 
