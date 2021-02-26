@@ -350,17 +350,6 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
-    joinType match {
-      case LeftExistence(_) | LeftOuter => {
-        join(leftRDD, rightRDD, joinExprSer)
-      }
-      case _ =>
-        throw new OpaqueException(s"$joinType JoinType is not yet supported")
-    }
-  }
-
-  def join(leftRDD: RDD[Block], rightRDD: RDD[Block],
-      joinExprSer: Array[Byte]): RDD[Block] = {
     // We pick which side to broadcast/stream according to buildSide.
     // BuildRight means the right relation <=> the broadcast relation.
     // NOTE: outer_rows and inner_rows in C++ correspond to stream and broadcast side respectively.
