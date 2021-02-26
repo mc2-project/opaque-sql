@@ -26,13 +26,17 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
   }
 }
 
-void write_output_rows(RowWriter &input, RowWriter &output) {
+void write_output_rows(RowWriter &input, RowWriter &output, const tuix::Row *foreign_row = nullptr) {
   auto input_buffer = input.output_buffer();
   RowReader input_reader(input_buffer.view());
           
   while (input_reader.has_next()) {
     const tuix::Row *row = input_reader.next();
-    output.append(row);
+    if (foreign_row == nullptr) {
+      output.append(row);
+    } else { // This is used only for left outer join
+      output.append(row, foreign_row, false, true);
+    }
   }  
 }
 
@@ -151,19 +155,8 @@ void non_oblivious_sort_merge_join(
       write_output_rows(primary_unmatched_rows, w);
       write_output_rows(all_primary_unmatched_rows, w);
     } else { // tuix::JoinType_LeftOuter
-      auto unmatched_primary_rows_buffer = all_primary_unmatched_rows.output_buffer();
-      RowReader all_unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
-      while (all_unmatched_primary_rows_reader.has_next()) {
-        const tuix::Row *primary = all_unmatched_primary_rows_reader.next();
-        w.append(primary, last_foreign.get(), false, true);
-      }
-
-      unmatched_primary_rows_buffer = primary_unmatched_rows.output_buffer();
-      RowReader unmatched_primary_rows_reader(unmatched_primary_rows_buffer.view());
-      while (unmatched_primary_rows_reader.has_next()) {
-        const tuix::Row *primary = unmatched_primary_rows_reader.next();
-        w.append(primary, last_foreign.get(), false, true);
-      }
+      write_output_rows(primary_unmatched_rows, w, last_foreign.get());
+      write_output_rows(all_primary_unmatched_rows, w, last_foreign.get());
     }
   }
 
