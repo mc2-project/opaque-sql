@@ -1877,7 +1877,6 @@ public:
       }
       flatbuffers::Offset<tuix::Row> concat = tuix::CreateRowDirect(builder, &concat_fields);
       const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
-    
       const tuix::Field *condition_result = condition_eval->eval(concat_ptr);
       return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     }
