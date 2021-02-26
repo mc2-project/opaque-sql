@@ -41,12 +41,15 @@ void write_output_rows(RowWriter &group, RowWriter &w) {
  * 
  * If it's a row from the left table
  * - Add it to the current group
- * - Start a new group
+ * - Otherwise start a new group
+ *   - If it's a left semi/anti join, output the left_matched_rows/left_unmatched_rows
  * 
  * If it's a row from the right table
  * - Inner join: iterate over current primary group, output the joined row only if the condition is satisfied
  * - Left semi/anti join: iterate over `left_unmatched_rows`, add a matched row to `left_matched_rows` 
  *   and remove from `left_unmatched_rows`
+ * 
+ * After loop: output the last group left semi/anti join
  */
 
 void non_oblivious_sort_merge_join(
