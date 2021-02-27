@@ -148,13 +148,16 @@ Opaque supports a command-line interface for benchmarking against plain-text Spa
     ```
 2. Submit the job to Spark:
     ```sh
-    spark-submit --class edu.berkeley.cs.rise.opaque.benchmark.Benchmark <Spark arguments> ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar <flags>
+    spark-submit --class edu.berkeley.cs.rise.opaque.benchmark.Benchmark \
+      <Spark arguments> \
+        ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar \
+          <flags>
     ```
    Alternatively, to run with `sbt`:
     ```sh
     build/sbt 'test:runMain edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'
     ```
-For usage, specify the `--help` flag or look at Benchmark.scala.
+For usage, specify the `--help` flag or look at [Benchmark.scala](https://github.com/mc2-project/opaque/blob/master/src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/Benchmark.scala).
 
 
 ## Supported functionalities
