@@ -29,7 +29,7 @@ import edu.berkeley.cs.rise.opaque.Utils
 object TPCH {
 
   // Add query numbers here once they are supported
-  val supportedQueries = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 19, 20, 22)
+  val supportedQueries = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22)
 
   // Queries whose results are not defined in a specific order
   val unorderedQueries = Seq(6, 14, 17, 19)
