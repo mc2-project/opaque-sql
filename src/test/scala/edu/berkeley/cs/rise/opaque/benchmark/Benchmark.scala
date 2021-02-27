@@ -35,7 +35,7 @@ import org.apache.spark.sql.SparkSession
  *       Available operations: logistic-regression, tpc-h
  *       Syntax: --operations "logistic-regression,tpc-h"
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
- *       Default: file://"""
+ *       Default: file://
  * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
@@ -79,7 +79,8 @@ object Benchmark {
 
     if (args.length >= 1 && args(0) == "--help") {
       println(
-"""Available flags:
+      """
+    Available flags:
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
@@ -89,7 +90,8 @@ object Benchmark {
           Available operations: logistic-regression, tpc-h
           Syntax: --operations "logistic-regression,tpc-h"
     --filesystem-url: optional arguments to specify filesystem master node URL.
-          Default: file://"""
+          Default: file://
+      """
       )
       return
     }

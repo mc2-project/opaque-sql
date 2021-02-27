@@ -35,7 +35,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
         }
       } else {
         testAgainstSpark(testStr) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions).collect.toSet
+          tpch.query(queryNum, securityLevel, numPartitions).collect
         }
       }
     }
