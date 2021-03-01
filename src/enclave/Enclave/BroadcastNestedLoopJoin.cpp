@@ -68,9 +68,9 @@ void outer_join(
 
     while (inner_r.has_next()) {
       inner = inner_r.next();
-      bool condition_met = join_expr_eval.is_left_join() ?
-        join_expr_eval.eval_condition(outer, inner) :
-        join_expr_eval.eval_condition(inner, outer);
+      bool condition_met = join_expr_eval.is_right_join() ?
+        join_expr_eval.eval_condition(inner, outer) :
+        join_expr_eval.eval_condition(outer, inner);
       if (!inner->is_dummy() && condition_met) {
         switch(join_type) {
           case tuix::JoinType_LeftOuter:

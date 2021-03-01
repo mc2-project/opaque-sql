@@ -77,8 +77,8 @@ void non_oblivious_sort_merge_join(
 
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for left semi and left existence joins
-  FlatbuffersTemporaryRow last_foreign; // This is used only for left outer join
+  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all but inner
+  FlatbuffersTemporaryRow last_foreign; // This is used only for outer joins
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
@@ -88,9 +88,8 @@ void non_oblivious_sort_merge_join(
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         
         // Add this primary row to the current group
-        // If this is a left semi or left existence join, also add the rows to primary_unmatched_rows
         primary_group.append(current);
-        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
+        if (join_type != tuix::JoinType_Inner) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -132,7 +131,7 @@ void non_oblivious_sort_merge_join(
             }
           }
         } 
-        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
+        if (join_type != tuix::JoinType_Inner) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
