@@ -79,20 +79,11 @@ object OpaqueOperators extends Strategy {
       EncryptedSortExec(sortExprs, global, planLater(child)) :: Nil
 
     // Used to match equi joins
-    case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, l, r, _) if isEncrypted(p) =>
-      val (left, right) = joinType match {
-        case LeftOuter =>
-          (planLater(l), EncryptedAddDummyRowsExec(planLater(r), 1))
-        case RightOuter =>
-          (EncryptedAddDummyRowsExec(planLater(l), 1), planLater(r))
-        case _ =>
-          (planLater(l), planLater(r))
-      }
-
+    case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
       val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
       val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
-      val leftProj = EncryptedProjectExec(leftProjSchema, left)
-      val rightProj = EncryptedProjectExec(rightProjSchema, right)
+      val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
+      val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
       // We partition based on the join keys only, so that rows from both the left and the right tables that match
       // will colocate to the same partition

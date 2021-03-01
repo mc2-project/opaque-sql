@@ -5,6 +5,9 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
+#include <iostream>
+using namespace std;
+
 /** 
  * C++ implementation of a non-oblivious sort merge join.
  * Rows MUST be tagged primary or secondary for this to work.
@@ -73,9 +76,6 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
-    if (current->is_dummy()) {
-      continue;
-    }
 
     if (join_expr_eval.is_primary(current)) {
       if (last_primary_of_group.get()

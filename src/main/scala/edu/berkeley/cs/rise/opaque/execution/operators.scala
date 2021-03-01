@@ -112,7 +112,9 @@ case class EncryptedAddDummyRowsExec(child: SparkPlan, numRows: Int)
       Seq(InternalRow.fromSeq(Seq.fill(child.output.length)(null))),
       child.output.map(_.dataType), useEnclave = false, isDummyRows = true))
 
-    childRDD.union(sqlContext.sparkContext.parallelize(nullRows))
+    childRDD.mapPartitions {rowIter =>
+      rowIter ++ nullRows
+    }
   }
 }
 
@@ -374,8 +376,7 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     }
 
     broadcast = joinType match {
-      // Need to add a dummy row full of nulls so the C++ code still has the correct
-      // schema for the right table.
+      // If outer join, then need to add a dummy row to ensure that the schema is available to C++ code.
       case LeftOuter | RightOuter =>
         EncryptedAddDummyRowsExec(broadcast, 1)
       case _ =>
