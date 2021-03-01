@@ -381,6 +381,34 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect.toSet
   }
 
+  testAgainstSpark("right outer join 1", ignore) { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "right_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi right outer join 1") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "right_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi right outer join 1 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
+    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "right_outer")
+    df.collect.toSet
+  }
+
+
   testAgainstSpark("left anti join") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
     val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
@@ -441,6 +469,33 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "join_col_2", "x")
     val df = p.join(f, $"join_col_1" < $"join_col_2", "left_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("right outer join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" === $"join_col_2", "right_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi right outer join 2") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" >= $"join_col_2", "right_outer")
+    df.collect.toSet
+  }
+
+  testAgainstSpark("non-equi right outer join 2 negated") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield ((i % 4).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i.toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "join_col_2", "x")
+    val df = p.join(f, $"join_col_1" < $"join_col_2", "right_outer")
     df.collect.toSet
   }
 

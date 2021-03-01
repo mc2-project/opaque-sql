@@ -80,8 +80,8 @@ object OpaqueOperators extends Strategy {
 
     // Used to match equi joins
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
-      val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
-      val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
+      val (leftProjSchema, leftKeysProj, tag) = tagForEquiJoin(leftKeys, left.output, isLeftPrimary(joinType))
+      val (rightProjSchema, rightKeysProj, _) = tagForEquiJoin(rightKeys, right.output, !isLeftPrimary(joinType))
       val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
       val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
       val unioned = EncryptedUnionExec(leftProj, rightProj)
@@ -197,11 +197,11 @@ object OpaqueOperators extends Strategy {
     case _ => Nil
   }
 
-  private def tagForJoin(
-      keys: Seq[Expression], input: Seq[Attribute], isLeft: Boolean)
+  private def tagForEquiJoin(
+      keys: Seq[Expression], input: Seq[Attribute], isPrimary: Boolean)
     : (Seq[NamedExpression], Seq[NamedExpression], NamedExpression) = {
     val keysProj = keys.zipWithIndex.map { case (k, i) => Alias(k, "_" + i)() }
-    val tag = Alias(Literal(if (isLeft) 0 else 1), "_tag")()
+    val tag = Alias(Literal(if (isPrimary) 0 else 1), "_tag")()
     (Seq(tag) ++ keysProj ++ input, keysProj.map(_.toAttribute), tag.toAttribute)
   }
 
@@ -219,11 +219,14 @@ object OpaqueOperators extends Strategy {
     (Seq(tag) ++ input, tag.toAttribute)
   }
 
-  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = {
-    joinType match {
+  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = joinType match {
       case LeftExistence(_) | LeftOuter => BuildRight
       case _ => BuildLeft
     }
+
+  private def isLeftPrimary(joinType: JoinType): Boolean = joinType match {
+    case RightOuter => false
+    case _ => true
   }
 
   // Everything below is a private method in SparkStrategies.scala
