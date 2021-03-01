@@ -100,6 +100,22 @@ case class EncryptExec(child: SparkPlan)
   }
 }
 
+case class EncryptAddDummyRows(child: SparkPlan, numRows: Int)
+  extends UnaryExecNode with OpaqueOperatorExec {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def executeBlocked(): RDD[Block] = {
+    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+
+    val nullRows = Seq(Utils.encryptInternalRowsFlatbuffers(
+      Seq(InternalRow.fromSeq(Seq.fill(child.output.length)(null))),
+      child.output.map(_.dataType), useEnclave = false, isDummyRows = true))
+
+    childRDD.union(sqlContext.sparkContext.parallelize(nullRows))
+  }
+}
+
 case class EncryptedBlockRDDScanExec(
     output: Seq[Attribute],
     rdd: RDD[Block])
@@ -347,33 +363,33 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     val joinExprSer = Utils.serializeJoinExpression(
         joinType, None, None, left.output, right.output, condition)
 
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-
     // We pick which side to broadcast/stream according to buildSide.
     // BuildRight means the right relation <=> the broadcast relation.
     // NOTE: outer_rows and inner_rows in C++ correspond to stream and broadcast side respectively.
-    var (streamRDD, broadcastRDD) = buildSide match {
+    var (stream, broadcast) = buildSide match {
       case BuildRight =>
-        (leftRDD, rightRDD)
+        (left, right)
       case BuildLeft =>
-        (rightRDD, leftRDD)
+        (right, left)
     }
 
-    broadcastRDD = joinType match {
+    broadcast = joinType match {
       // Need to add a dummy row full of nulls so the C++ code still has the correct
       // schema for the right table.
       case LeftOuter | RightOuter =>
-        val broadcastNullRow = Seq(Utils.encryptInternalRowsFlatbuffers(Seq(InternalRow.fromSeq(Seq.fill(right.output.length)(null))),
-            right.output.map(_.dataType), useEnclave = false, isDummyRows = true))
-        broadcastRDD.union(sqlContext.sparkContext.parallelize(broadcastNullRow))
+        EncryptAddDummyRows(broadcast, 1)
       case _ =>
-        broadcastRDD
+        broadcast
     }
-    val broadcast = Utils.concatEncryptedBlocks(broadcastRDD.collect)
+
+    val streamRDD = stream.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val broadcastRDD = broadcast.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+
+    val broadcastBlock = Utils.concatEncryptedBlocks(broadcastRDD.collect)
+
     streamRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcast.bytes))
+      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcastBlock.bytes))
     }
   }
 }
