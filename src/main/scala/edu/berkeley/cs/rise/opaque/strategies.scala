@@ -18,7 +18,6 @@
 package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Strategy
-import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
@@ -36,9 +35,8 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.InnerLike
-import org.apache.spark.sql.catalyst.plans.LeftAnti
-import org.apache.spark.sql.catalyst.plans.LeftSemi
 import org.apache.spark.sql.catalyst.plans.LeftOuter
+import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
@@ -81,11 +79,20 @@ object OpaqueOperators extends Strategy {
       EncryptedSortExec(sortExprs, global, planLater(child)) :: Nil
 
     // Used to match equi joins
-    case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
+    case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, l, r, _) if isEncrypted(p) =>
+      val (left, right) = joinType match {
+        case LeftOuter =>
+          (planLater(l), EncryptedAddDummyRowsExec(planLater(r), 1))
+        case RightOuter =>
+          (EncryptedAddDummyRowsExec(planLater(l), 1), planLater(r))
+        case _ =>
+          (planLater(l), planLater(r))
+      }
+
       val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
       val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
-      val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
-      val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
+      val leftProj = EncryptedProjectExec(leftProjSchema, left)
+      val rightProj = EncryptedProjectExec(rightProjSchema, right)
       val unioned = EncryptedUnionExec(leftProj, rightProj)
       // We partition based on the join keys only, so that rows from both the left and the right tables that match
       // will colocate to the same partition
