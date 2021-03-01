@@ -369,7 +369,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     }
 
     broadcast = joinType match {
-      // If outer join, then need to add a dummy row to ensure that the schema is available to C++ code.
+      // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
+      // in case of an empty foreign table.
       case LeftOuter | RightOuter =>
         EncryptedAddDummyRowsExec(broadcast, 1)
       case _ =>

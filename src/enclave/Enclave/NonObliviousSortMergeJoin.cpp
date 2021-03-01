@@ -5,9 +5,6 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-#include <iostream>
-using namespace std;
-
 /** 
  * C++ implementation of a non-oblivious sort merge join.
  * Rows MUST be tagged primary or secondary for this to work.
@@ -26,7 +23,10 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
   }
 }
 
-void write_output_rows(RowWriter &input, RowWriter &output, tuix::JoinType join_type, const tuix::Row *foreign_row = nullptr) {
+void write_output_rows(RowWriter &input,
+                       RowWriter &output,
+                       tuix::JoinType join_type,
+                       const tuix::Row *foreign_row = nullptr) {
   auto input_buffer = input.output_buffer();
   RowReader input_reader(input_buffer.view());
           
@@ -77,7 +77,7 @@ void non_oblivious_sort_merge_join(
 
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all but inner
+  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all joins but inner
   FlatbuffersTemporaryRow last_foreign; // This is used only for outer joins
 
   while (r.has_next()) {
@@ -166,6 +166,7 @@ void non_oblivious_sort_merge_join(
     case tuix::JoinType_RightOuter:
       write_output_rows(primary_unmatched_rows, w, join_type, last_foreign.get());
       write_output_rows(previous_primary_unmatched_rows, w, join_type, last_foreign.get());
+      break;
     default:
       break;
   }

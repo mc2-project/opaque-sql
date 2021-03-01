@@ -5,9 +5,6 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-#include <iostream>
-using namespace std;
-
 /** C++ implementation of a broadcast nested loop join.
  * Assumes outer_rows is streamed and inner_rows is broadcast.
  * DOES NOT rely on rows to be tagged primary or secondary, and that
