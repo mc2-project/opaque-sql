@@ -272,6 +272,7 @@ case class EncryptedSortMergeJoinExec(
     rightKeys: Seq[Expression],
     leftSchema: Seq[Attribute],
     rightSchema: Seq[Attribute],
+    condition: Option[Expression],
     child: SparkPlan)
     extends UnaryExecNode with OpaqueOperatorExec {
 
@@ -284,7 +285,7 @@ case class EncryptedSortMergeJoinExec(
 
   override def executeBlocked(): RDD[Block] = {
     val joinExprSer = Utils.serializeJoinExpression(
-      joinType, Some(leftKeys), Some(rightKeys), leftSchema, rightSchema)
+      joinType, Some(leftKeys), Some(rightKeys), leftSchema, rightSchema, condition)
 
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),

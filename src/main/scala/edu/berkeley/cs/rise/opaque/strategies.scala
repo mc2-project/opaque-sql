@@ -98,6 +98,7 @@ object OpaqueOperators extends Strategy {
         rightKeysProj,
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
+        condition, 
         sorted)
 
       val tagsDropped = joinType match {
@@ -105,12 +106,7 @@ object OpaqueOperators extends Strategy {
         case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
       }
 
-      val filtered = condition match {
-        case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
-        case None => tagsDropped
-      }
-
-      filtered :: Nil
+      tagsDropped :: Nil
 
     // Used to match non-equi joins
     case Join(left, right, joinType, condition, hint) if isEncrypted(left) && isEncrypted(right) =>
