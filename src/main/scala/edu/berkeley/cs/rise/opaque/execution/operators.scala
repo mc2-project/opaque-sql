@@ -311,6 +311,8 @@ case class EncryptedSortMergeJoinExec(
         leftSchema ++ rightSchema.map(_.withNullability(true))
       case LeftSemi | LeftAnti => 
         leftSchema.map(_.toAttribute)
+      case RightOuter =>
+        leftSchema.map(_.withNullability(true)) ++ rightSchema
       case _ =>
         throw new IllegalArgumentException(
           s"SortMergeJoin should not take $joinType as the JoinType")

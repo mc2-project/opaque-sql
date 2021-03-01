@@ -84,7 +84,7 @@ void non_oblivious_sort_merge_join(
         // Add this primary row to the current group
         // If this is a left semi or left existence join, also add the rows to primary_unmatched_rows
         primary_group.append(current);
-        if (join_type == tuix::JoinType_LeftSemi || join_expr_eval.is_left_anti_or_outer()) {
+        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -93,7 +93,7 @@ void non_oblivious_sort_merge_join(
         // If a new primary group is encountered
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w);
-        } else if (join_expr_eval.is_left_anti_or_outer()) {
+        } else if (join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
           write_output_rows(primary_unmatched_rows, previous_primary_unmatched_rows);
         }
 
@@ -109,7 +109,7 @@ void non_oblivious_sort_merge_join(
       last_foreign.set(current);
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        if (join_type == tuix::JoinType_Inner || join_type == tuix::JoinType_LeftOuter) {       
+        if (join_type == tuix::JoinType_Inner || join_expr_eval.is_outer_join()) {       
           auto primary_group_buffer = primary_group.output_buffer();
           RowReader primary_group_reader(primary_group_buffer.view());
 
@@ -122,7 +122,7 @@ void non_oblivious_sort_merge_join(
             }
           }
         } 
-        if (join_type == tuix::JoinType_LeftSemi || join_expr_eval.is_left_anti_or_outer()) {
+        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;

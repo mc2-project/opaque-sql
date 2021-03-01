@@ -1902,6 +1902,11 @@ public:
       join_type == tuix::JoinType_LeftOuter;
   }
 
+  bool is_outer_join() {
+    return join_type == tuix::JoinType_LeftOuter ||
+      join_type == tuix::JoinType_RightOuter;
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
   tuix::JoinType join_type;

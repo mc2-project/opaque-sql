@@ -101,7 +101,7 @@ object OpaqueOperators extends Strategy {
         sorted)
 
       val tagsDropped = joinType match {
-        case Inner | LeftOuter => EncryptedProjectExec(dropTags(left.output, right.output), joined)
+        case Inner | LeftOuter | RightOuter => EncryptedProjectExec(dropTags(left.output, right.output), joined)
         case LeftExistence(_) => EncryptedProjectExec(left.output, joined)
       }
 
