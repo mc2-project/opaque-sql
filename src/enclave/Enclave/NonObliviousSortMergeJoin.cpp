@@ -145,16 +145,20 @@ void non_oblivious_sort_merge_join(
     }
   }
 
-  if (join_type == tuix::JoinType_LeftSemi) {
-    write_output_rows(primary_matched_rows, w);
-  } else if (join_expr_eval.is_left_anti_or_outer()) {
-    if (join_type == tuix::JoinType_LeftAnti) {
+  switch (join_type) {
+    case tuix::JoinType_LeftSemi:
+      write_output_rows(primary_matched_rows, w);
+      break;
+    case tuix::JoinType_LeftAnti:
       write_output_rows(primary_unmatched_rows, w);
       write_output_rows(previous_primary_unmatched_rows, w);
-    } else { // tuix::JoinType_LeftOuter
+      break;
+    case tuix::JoinType_LeftOuter:
+    case tuix::JoinType_RightOuter:
       write_output_rows(primary_unmatched_rows, w, last_foreign.get());
       write_output_rows(previous_primary_unmatched_rows, w, last_foreign.get());
-    }
+    default:
+      break;
   }
 
   w.output_buffer(output_rows, output_rows_length);
