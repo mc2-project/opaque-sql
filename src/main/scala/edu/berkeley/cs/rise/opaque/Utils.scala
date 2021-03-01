@@ -1415,6 +1415,10 @@ object Utils extends Logging {
              }
             (Seq(countUpdateExpr), Seq(count))
           }
+          case PartialMerge => {
+            val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
+            (Seq(countUpdateExpr), Seq(count))
+          }
           case Final => {
             val countUpdateExpr = Add(count, c.inputAggBufferAttributes(0))
             (Seq(countUpdateExpr), Seq(count))
@@ -1423,7 +1427,7 @@ object Utils extends Logging {
             val countUpdateExpr = Add(count, Literal(1L))
             (Seq(countUpdateExpr), Seq(count))
           }
-          case _ => 
+          case _ =>
         }
 
         tuix.AggregateExpr.createAggregateExpr(
@@ -1591,6 +1595,11 @@ object Utils extends Logging {
         val (updateExprs, evaluateExprs) = e.mode match {
           case Partial => {
             val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), Cast(child, sumDataType))
+            val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
+            (Seq(sumUpdateExpr), Seq(sum))
+          }
+          case PartialMerge => {
+            val partialSum = Add(If(IsNull(sum), Literal.default(sumDataType), sum), s.inputAggBufferAttributes(0))
             val sumUpdateExpr = If(IsNull(partialSum), sum, partialSum)
             (Seq(sumUpdateExpr), Seq(sum))
           }
