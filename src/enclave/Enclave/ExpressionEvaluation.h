@@ -1892,6 +1892,16 @@ public:
     return join_type;
   }
 
+  bool is_left_anti_or_outer() {
+    return join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter;
+  }
+
+  bool is_left_join() {
+    return join_type == tuix::JoinType_LeftAnti ||
+      join_type == tuix::JoinType_LeftSemi ||
+      join_type == tuix::JoinType_LeftOuter;
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
   tuix::JoinType join_type;

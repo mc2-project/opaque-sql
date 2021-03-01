@@ -37,10 +37,6 @@ void write_output_rows(RowWriter &input, RowWriter &output, const tuix::Row *for
   }  
 }
 
-bool is_left_anti_or_outer(tuix::JoinType join_type) {
-  return join_type == tuix::JoinType_LeftAnti || join_type == tuix::JoinType_LeftOuter;
-}
-
 /** 
  * Sort merge equi join algorithm
  * Input: the rows are unioned from both the primary (or left) table and the non-primary (or right) table
@@ -85,7 +81,7 @@ void non_oblivious_sort_merge_join(
         // Add this primary row to the current group
         // If this is a left semi or left existence join, also add the rows to primary_unmatched_rows
         primary_group.append(current);
-        if (join_type == tuix::JoinType_LeftSemi || is_left_anti_or_outer(join_type)) {
+        if (join_type == tuix::JoinType_LeftSemi || join_expr_eval.is_left_anti_or_outer()) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -94,7 +90,7 @@ void non_oblivious_sort_merge_join(
         // If a new primary group is encountered
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w);
-        } else if (is_left_anti_or_outer(join_type)) {
+        } else if (join_expr_eval.is_left_anti_or_outer()) {
           write_output_rows(primary_unmatched_rows, previous_primary_unmatched_rows);
         }
 
@@ -123,7 +119,7 @@ void non_oblivious_sort_merge_join(
             }
           }
         } 
-        if (join_type == tuix::JoinType_LeftSemi || is_left_anti_or_outer(join_type)) {
+        if (join_type == tuix::JoinType_LeftSemi || join_expr_eval.is_left_anti_or_outer()) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
@@ -148,7 +144,7 @@ void non_oblivious_sort_merge_join(
 
   if (join_type == tuix::JoinType_LeftSemi) {
     write_output_rows(primary_matched_rows, w);
-  } else if (is_left_anti_or_outer(join_type)) {
+  } else if (join_expr_eval.is_left_anti_or_outer()) {
     if (join_type == tuix::JoinType_LeftAnti) {
       write_output_rows(primary_unmatched_rows, w);
       write_output_rows(previous_primary_unmatched_rows, w);
