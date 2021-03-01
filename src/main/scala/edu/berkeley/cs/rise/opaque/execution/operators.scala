@@ -361,9 +361,12 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     }
 
     broadcastRDD = joinType match {
-      case LeftOuter =>
-        val encryptedNulls = sqlContext.sparkContext.parallelize(Seq(Utils.encryptInternalRowsFlatbuffers(Seq(InternalRow(null, null)), right.output.map(_.dataType), useEnclave = false)))
-        broadcastRDD.union(encryptedNulls)
+      // Need to add a dummy row full of nulls so the C++ code still has the correct
+      // schema for the right table.
+      case LeftOuter | RightOuter =>
+        val broadcastNullRow = Seq(Utils.encryptInternalRowsFlatbuffers(Seq(InternalRow.fromSeq(Seq.fill(right.output.length)(null))),
+            right.output.map(_.dataType), useEnclave = false, isDummyRows = true))
+        broadcastRDD.union(sqlContext.sparkContext.parallelize(broadcastNullRow))
       case _ =>
         broadcastRDD
     }

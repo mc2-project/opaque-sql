@@ -726,7 +726,8 @@ object Utils extends Logging {
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
-      useEnclave: Boolean): Block = {
+      useEnclave: Boolean,
+      isDummyRows: Boolean = false): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
     val encryptedBlockOffsets = ArrayBuilder.make[Int]
@@ -772,7 +773,7 @@ object Utils extends Logging {
             case ((value, dataType), i) =>
               flatbuffersCreateField(builder, value, dataType, row.isNullAt(i))
           }.toArray),
-        false)
+        isDummyRows)
 
       if (builder.offset() > MaxBlockSize) {
         finishBlock()

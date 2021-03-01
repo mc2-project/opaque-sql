@@ -5,6 +5,9 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
+#include <iostream>
+using namespace std;
+
 /** C++ implementation of a broadcast nested loop join.
  * Assumes outer_rows is streamed and inner_rows is broadcast.
  * DOES NOT rely on rows to be tagged primary or secondary, and that
@@ -65,15 +68,15 @@ void outer_join(
     while (inner_r.has_next()) {
       inner = inner_r.next();
       bool condition_met = join_expr_eval.eval_condition(outer, inner);
-      if (condition_met) {
+      if (!inner->is_dummy() && condition_met) {
         switch(join_type) {
           case tuix::JoinType_LeftOuter:
             w.append(outer, inner);
           default:
             break;
         }
+        o_i_match |= condition_met;
       }
-      o_i_match |= condition_met;
     }
 
     switch(join_type) {
