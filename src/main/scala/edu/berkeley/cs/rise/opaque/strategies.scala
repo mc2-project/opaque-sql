@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.Strategy
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending

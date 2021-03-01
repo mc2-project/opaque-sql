@@ -359,6 +359,14 @@ case class EncryptedBroadcastNestedLoopJoinExec(
       case BuildLeft =>
         (rightRDD, leftRDD)
     }
+
+    broadcastRDD = joinType match {
+      case LeftOuter =>
+        val encryptedNulls = sqlContext.sparkContext.parallelize(Seq(Utils.encryptInternalRowsFlatbuffers(Seq(InternalRow(null, null)), right.output.map(_.dataType), useEnclave = false)))
+        broadcastRDD.union(encryptedNulls)
+      case _ =>
+        broadcastRDD
+    }
     val broadcast = Utils.concatEncryptedBlocks(broadcastRDD.collect)
     streamRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
