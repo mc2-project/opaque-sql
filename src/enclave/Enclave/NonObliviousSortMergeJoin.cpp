@@ -38,9 +38,9 @@ void write_output_rows(RowWriter &input,
     if (foreign_row == nullptr) {
       output.append(row);
     } else if (join_type == tuix::JoinType_LeftOuter) {
-      output.append(row, foreign_row, false, true);
+      output.append(row, row, false, true);
     } else if (join_type == tuix::JoinType_RightOuter) {
-      output.append(foreign_row, row, true, false);
+      output.append(row, row, true, false);
     } else {
       throw std::runtime_error(
         std::string("write_output_rows should not take a foreign row with join type ")
