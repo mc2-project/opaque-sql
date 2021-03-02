@@ -89,7 +89,6 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
-    cout << to_string(current) << endl;
     if (current->is_dummy()) {
       last_foreign_row.set(current);
       continue;
@@ -177,6 +176,7 @@ void non_oblivious_sort_merge_join(
     // Values of last_primary_of_group.get() are all null in write_output_rows.
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
+      cout << to_string(last_foreign_row.get()) << endl;
       write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
       write_output_rows(previous_primary_unmatched_rows, w, join_type, last_foreign_row.get());
       break;

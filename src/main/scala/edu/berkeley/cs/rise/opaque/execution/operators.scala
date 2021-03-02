@@ -105,12 +105,12 @@ case class EncryptedAddDummyRowsExec(output: Seq[Attribute], numRows: Int, child
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
-    val nullRows = Seq(Utils.encryptInternalRowsFlatbuffers(
+    val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
       Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
-      child.output.map(_.dataType), useEnclave = false, isDummyRows = true))
+      child.output.map(_.dataType), useEnclave = false, isDummyRows = true)
 
     childRDD.mapPartitions {rowIter =>
-      rowIter ++ nullRows
+      Iterator(Utils.concatEncryptedBlocks(rowIter.toSeq :+ nullRowsBlock))
     }
   }
 }
