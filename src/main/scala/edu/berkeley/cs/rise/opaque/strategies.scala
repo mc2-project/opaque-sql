@@ -80,23 +80,16 @@ object OpaqueOperators extends Strategy {
 
     // Used to match equi joins
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _) if isEncrypted(p) =>
-      val (leftProjSchema, leftKeysProj, leftTag) = tagForEquiJoin(leftKeys, left.output, isLeftPrimary(joinType))
-      val (rightProjSchema, rightKeysProj, rightTag) = tagForEquiJoin(rightKeys, right.output, !isLeftPrimary(joinType))
-
-      val (primary, primaryProjSchema, primaryKeysProj, tag) = if (isLeftPrimary(joinType))
-        (left, leftProjSchema, leftKeysProj, leftTag) else (right, rightProjSchema, rightKeysProj, rightTag)
-      val (foreign, foreignProjSchema) = if (isLeftPrimary(joinType))
-        (right, rightProjSchema) else (left, leftProjSchema)
-
-      val primaryProj = EncryptedProjectExec(primaryProjSchema, planLater(primary))
-      val foreignProj = EncryptedProjectExec(foreignProjSchema, planLater(foreign))
-      val unioned = EncryptedUnionExec(primaryProj, foreignProj)
-
-      // We partition based on the join keys only, so that rows from both the primary and foreign tables that match
-      // will colocate to the same partition.
-      val partitionOrder = primaryKeysProj.map(k => SortOrder(k, Ascending))
+      val (leftProjSchema, leftKeysProj, tag) = tagForEquiJoin(leftKeys, left.output, isLeftPrimary(joinType))
+      val (rightProjSchema, rightKeysProj, _) = tagForEquiJoin(rightKeys, right.output, !isLeftPrimary(joinType))
+      val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
+      val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
+      val unioned = EncryptedUnionExec(leftProj, rightProj)
+      // We partition based on the join keys only, so that rows from both the left and the right tables that match
+      // will colocate to the same partition
+      val partitionOrder = leftKeysProj.map(k => SortOrder(k, Ascending))
       val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
-      val sortOrder = sortForJoin(primaryKeysProj, tag, partitioned.output)
+      val sortOrder = sortForJoin(leftKeysProj, tag, partitioned.output)
       val sorted = EncryptedSortExec(sortOrder, false, partitioned)
 
       val joined = EncryptedSortMergeJoinExec(
