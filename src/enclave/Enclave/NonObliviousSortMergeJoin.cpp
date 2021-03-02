@@ -84,10 +84,10 @@ void non_oblivious_sort_merge_join(
   // For outer joins, this is used quite unintuitively.
   // Note that primary and foreign rows have the same schema in this algorithm.
   // During an outer join, we use the last primary of the current group we saw
-  // to get the shared schema because the non-primary table can be empty. In the case
+  // to get the shared schema because the foreign table can be empty. In the case
   // of an unmatched primary row, we use this schema to concatenate two rows
   // together: one row is the original unmatched primary row, and the other is
-  // last_primary_of_group.get() but with all values replaced by NULL.
+  // last_primary_of_group.get() but with all values replaced by null.
   FlatbuffersTemporaryRow last_primary_of_group;
 
   while (r.has_next()) {
