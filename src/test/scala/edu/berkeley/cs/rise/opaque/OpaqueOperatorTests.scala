@@ -353,9 +353,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     df.collect
   }
 
-  //TODO: support left outer equi join with null right data,
-  // and right outer equi join with null left data
-  testAgainstSpark("left outer join 1", ignore) { securityLevel =>
+  testAgainstSpark("left outer join 1") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield ((i % 16).toString, i * 10)
     val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i.toString, i * 10)
     val p = makeDF(p_data, securityLevel, "join_col_1", "x")

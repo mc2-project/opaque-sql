@@ -29,18 +29,18 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
 void write_output_rows(RowWriter &input,
                        RowWriter &output,
                        tuix::JoinType join_type,
-                       const tuix::Row *foreign_row = nullptr) {
+                       const tuix::Row *other_row = nullptr) {
   auto input_buffer = input.output_buffer();
   RowReader input_reader(input_buffer.view());
           
   while (input_reader.has_next()) {
     const tuix::Row *row = input_reader.next();
-    if (foreign_row == nullptr) {
+    if (other_row == nullptr) {
       output.append(row);
     } else if (join_type == tuix::JoinType_LeftOuter) {
-      output.append(row, row, false, true);
+      output.append(row, other_row, false, true);
     } else if (join_type == tuix::JoinType_RightOuter) {
-      output.append(foreign_row, row, true, false);
+      output.append(other_row, row, true, false);
     } else {
       throw std::runtime_error(
         std::string("write_output_rows should not take a foreign row with join type ")
@@ -79,8 +79,16 @@ void non_oblivious_sort_merge_join(
   RowWriter w;
 
   RowWriter primary_group;
-  FlatbuffersTemporaryRow last_primary_of_group;
   RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all joins but inner
+
+  // For outer joins, this is used quite unintuitively.
+  // Note that primary and foreign rows have the same schema in this algorithm.
+  // During an outer join, we use the last primary of the current group we saw
+  // to get the shared schema because the non-primary table can be empty. In the case
+  // of an unmatched primary row, we use this schema to concatenate two rows
+  // together: one row is the original unmatched primary row, and the other is
+  // last_primary_of_group.get() but with all values replaced by NULL.
+  FlatbuffersTemporaryRow last_primary_of_group;
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
@@ -163,6 +171,7 @@ void non_oblivious_sort_merge_join(
       write_output_rows(primary_unmatched_rows, w, join_type);
       write_output_rows(previous_primary_unmatched_rows, w, join_type);
       break;
+    // Values of last_primary_of_group.get() are all null in write_output_rows.
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
       write_output_rows(primary_unmatched_rows, w, join_type, last_primary_of_group.get());
