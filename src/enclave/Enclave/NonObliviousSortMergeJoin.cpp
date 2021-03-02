@@ -40,7 +40,7 @@ void write_output_rows(RowWriter &input,
     } else if (join_type == tuix::JoinType_LeftOuter) {
       output.append(row, row, false, true);
     } else if (join_type == tuix::JoinType_RightOuter) {
-      output.append(row, row, true, false);
+      output.append(foreign_row, row, true, false);
     } else {
       throw std::runtime_error(
         std::string("write_output_rows should not take a foreign row with join type ")
@@ -81,14 +81,9 @@ void non_oblivious_sort_merge_join(
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
   RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all joins but inner
-  FlatbuffersTemporaryRow last_foreign; // This is used only for outer joins
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
-    if (current->is_dummy()) {
-      last_foreign.set(current);
-      continue;
-    }
 
     if (join_expr_eval.is_primary(current)) {
       if (last_primary_of_group.get()
@@ -118,7 +113,6 @@ void non_oblivious_sort_merge_join(
         last_primary_of_group.set(current);
       }
     } else {
-      last_foreign.set(current);
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         if (join_type == tuix::JoinType_Inner || join_expr_eval.is_outer_join()) {       
@@ -171,8 +165,8 @@ void non_oblivious_sort_merge_join(
       break;
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
-      write_output_rows(primary_unmatched_rows, w, join_type, last_foreign.get());
-      write_output_rows(previous_primary_unmatched_rows, w, join_type, last_foreign.get());
+      write_output_rows(primary_unmatched_rows, w, join_type, last_primary_of_group.get());
+      write_output_rows(previous_primary_unmatched_rows, w, join_type, last_primary_of_group.get());
       break;
     default:
       break;

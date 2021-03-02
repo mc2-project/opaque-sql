@@ -30,7 +30,6 @@ import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
-import edu.berkeley.cs.rise.opaque.OpaqueException
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
