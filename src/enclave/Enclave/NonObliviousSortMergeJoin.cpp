@@ -80,18 +80,20 @@ void non_oblivious_sort_merge_join(
 
   RowWriter primary_group;
   RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all joins but inner
-
-  // For outer joins, this is used quite unintuitively.
-  // Note that primary and foreign rows have the same schema in this algorithm.
-  // During an outer join, we use the last primary of the current group we saw
-  // to get the shared schema because the foreign table can be empty. In the case
-  // of an unmatched primary row, we use this schema to concatenate two rows
-  // together: one row is the original unmatched primary row, and the other is
-  // last_primary_of_group.get() but with all values replaced by null.
   FlatbuffersTemporaryRow last_primary_of_group;
+
+  // Used for outer rows to get the schema of the foreign table.
+  // A "dummy" row with the desired schema is added for each partition,
+  // so last_foreign_row.get() is guaranteed to not be null.
+  FlatbuffersTemporaryRow last_foreign_row;
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+    cout << to_string(current) << endl;
+    if (current->is_dummy()) {
+      last_foreign_row.set(current);
+      continue;
+    }
 
     if (join_expr_eval.is_primary(current)) {
       if (last_primary_of_group.get()
@@ -121,6 +123,7 @@ void non_oblivious_sort_merge_join(
         last_primary_of_group.set(current);
       }
     } else {
+      last_foreign_row.set(current);
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         if (join_type == tuix::JoinType_Inner || join_expr_eval.is_outer_join()) {       
@@ -174,8 +177,8 @@ void non_oblivious_sort_merge_join(
     // Values of last_primary_of_group.get() are all null in write_output_rows.
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
-      write_output_rows(primary_unmatched_rows, w, join_type, last_primary_of_group.get());
-      write_output_rows(previous_primary_unmatched_rows, w, join_type, last_primary_of_group.get());
+      write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
+      write_output_rows(previous_primary_unmatched_rows, w, join_type, last_foreign_row.get());
       break;
     default:
       break;
