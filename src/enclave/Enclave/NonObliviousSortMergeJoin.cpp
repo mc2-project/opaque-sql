@@ -82,6 +82,10 @@ void non_oblivious_sort_merge_join(
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+    if (current->is_dummy()) {
+      last_foreign.set(current);
+      continue;
+    }
 
     if (join_expr_eval.is_primary(current)) {
       if (last_primary_of_group.get()

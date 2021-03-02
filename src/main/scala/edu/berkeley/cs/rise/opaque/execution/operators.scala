@@ -100,7 +100,7 @@ case class EncryptExec(child: SparkPlan)
   }
 }
 
-case class EncryptedAddDummyRowsExec(child: SparkPlan, numRows: Int)
+case class EncryptedAddDummyRowsExec(numRows: Int, child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def output: Seq[Attribute] = child.output
@@ -372,7 +372,7 @@ case class EncryptedBroadcastNestedLoopJoinExec(
       // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
       // in case of an empty foreign table.
       case LeftOuter | RightOuter =>
-        EncryptedAddDummyRowsExec(broadcast, 1)
+        EncryptedAddDummyRowsExec(1, broadcast)
       case _ =>
         broadcast
     }
