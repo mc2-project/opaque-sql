@@ -102,6 +102,7 @@ case class EncryptExec(child: SparkPlan)
 case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
+  // Add a dummy row full of nulls to each partition of child
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
@@ -372,10 +373,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
       case _ =>
         broadcast
     }
-
     val streamRDD = stream.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val broadcastRDD = broadcast.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-
     val broadcastBlock = Utils.concatEncryptedBlocks(broadcastRDD.collect)
 
     streamRDD.map { block =>

@@ -26,18 +26,18 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
 void write_output_rows(RowWriter &input,
                        RowWriter &output,
                        tuix::JoinType join_type,
-                       const tuix::Row *other_row = nullptr) {
+                       const tuix::Row *foreign_row = nullptr) {
   auto input_buffer = input.output_buffer();
   RowReader input_reader(input_buffer.view());
           
   while (input_reader.has_next()) {
     const tuix::Row *row = input_reader.next();
-    if (other_row == nullptr) {
+    if (foreign_row == nullptr) {
       output.append(row);
     } else if (join_type == tuix::JoinType_LeftOuter) {
-      output.append(row, other_row, false, true);
+      output.append(row, foreign_row, false, true);
     } else if (join_type == tuix::JoinType_RightOuter) {
-      output.append(other_row, row, true, false);
+      output.append(foreign_row, row, true, false);
     } else {
       throw std::runtime_error(
         std::string("write_output_rows should not take a foreign row with join type ")
@@ -76,7 +76,7 @@ void non_oblivious_sort_merge_join(
   RowWriter w;
 
   RowWriter primary_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // This is used for all joins but inner
+  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // These are used for all joins but inner
   FlatbuffersTemporaryRow last_primary_of_group;
 
   // Used for outer rows to get the schema of the foreign table.
