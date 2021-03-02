@@ -44,7 +44,6 @@ object Benchmark {
 
   val spark = SparkSession.builder()
       .appName("Benchmark")
-      .master("local[4]")
       .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism
