@@ -173,7 +173,6 @@ void non_oblivious_sort_merge_join(
       write_output_rows(primary_unmatched_rows, w, join_type);
       write_output_rows(previous_primary_unmatched_rows, w, join_type);
       break;
-    // Values of last_primary_of_group.get() are all null in write_output_rows.
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
       write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
