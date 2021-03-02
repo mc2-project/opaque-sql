@@ -30,12 +30,12 @@ import org.apache.spark.sql.SparkSession
  *       Default: 2 * number of executors if exists, 4 otherwise
  *   --size: specify the size of the dataset that should be loaded into Spark.
  *       Default: sf_small
+ *   --filesystem-url: optional arguments to specify filesystem master node URL.
+ *       Default: file://
  *   --operations: select the different operations that should be benchmarked.
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
  *       Syntax: --operations "logistic-regression,tpc-h"
- *   --filesystem-url: optional arguments to specify filesystem master node URL.
- *       Default: file://
  * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
@@ -84,12 +84,13 @@ object Benchmark {
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
           Default: sf_small
+    --filesystem-url: optional arguments to specify filesystem master node URL.
+          Default: file://
     --operations: select the different operations that should be benchmarked.
           Default: all
           Available operations: logistic-regression, tpc-h
-          Syntax: --operations "logistic-regression,tpc-h"
-    --filesystem-url: optional arguments to specify filesystem master node URL.
-          Default: file://
+          Syntax: --operations logistic-regression,tpc-h
+    Leave --operations flag blank to run all benchmarks
       """
       )
       return
@@ -101,11 +102,10 @@ object Benchmark {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        val supportedSizes = Set("sf_small, sf_med")
-        if (supportedSizes.contains(size)) {
+        if (size == "sf_small" || size == "sf_med") {
           this.size = size
         } else {
-          println("Given size is not supported: available values are " + supportedSizes.toString())
+          println(s"Given size is not supported: $size")
         }
       }
       case Array("--filesystem-url", url: String) => {
