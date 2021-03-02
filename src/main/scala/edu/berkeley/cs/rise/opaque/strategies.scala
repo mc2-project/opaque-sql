@@ -98,10 +98,10 @@ object OpaqueOperators extends Strategy {
       val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
       val sortOrder = sortForJoin(primaryKeysProj, tag, partitioned.output)
 
-      // Add dummy rows for the foreign table if outer join.
+      // Add dummy row for the foreign table if outer join.
       val sorted = joinType match {
         case LeftOuter | RightOuter =>
-          EncryptedAddDummyRowsExec(foreignProjSchema.map(_.toAttribute), 1,
+          EncryptedAddDummyRowExec(foreignProjSchema.map(_.toAttribute),
             EncryptedSortExec(sortOrder, false, partitioned))
         case _ =>
           EncryptedSortExec(sortOrder, false, partitioned)

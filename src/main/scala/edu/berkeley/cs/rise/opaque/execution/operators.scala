@@ -99,17 +99,16 @@ case class EncryptExec(child: SparkPlan)
   }
 }
 
-case class EncryptedAddDummyRowsExec(output: Seq[Attribute], numRows: Int, child: SparkPlan)
+case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
   extends UnaryExecNode with OpaqueOperatorExec {
 
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
-    val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
-      Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
-        output.map(_.dataType), useEnclave = false, isDummyRows = true)
-
     childRDD.mapPartitions {rowIter =>
+      val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
+        Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
+          output.map(_.dataType), useEnclave = true, isDummyRows = true)
       Iterator(Utils.concatEncryptedBlocks(rowIter.toSeq :+ nullRowsBlock))
     }
   }
@@ -369,7 +368,7 @@ case class EncryptedBroadcastNestedLoopJoinExec(
       // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
       // in case of an empty foreign table.
       case LeftOuter | RightOuter =>
-        EncryptedAddDummyRowsExec(broadcast.output, 1, broadcast)
+        EncryptedAddDummyRowExec(broadcast.output, broadcast)
       case _ =>
         broadcast
     }
