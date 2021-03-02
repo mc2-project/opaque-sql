@@ -99,8 +99,6 @@ object OpaqueOperators extends Strategy {
       val sortOrder = sortForJoin(primaryKeysProj, tag, partitioned.output)
       val sorted = EncryptedSortExec(sortOrder, false, partitioned)
 
-      val addedNulls = EncryptedAddDummyRowsExec(1, sorted)
-
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
@@ -108,7 +106,7 @@ object OpaqueOperators extends Strategy {
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
         condition, 
-        addedNulls)
+        sorted)
 
       val tagsDropped = joinType match {
         case Inner | LeftOuter | RightOuter => EncryptedProjectExec(dropTags(left.output, right.output), joined)
