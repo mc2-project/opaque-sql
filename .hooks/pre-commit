@@ -12,5 +12,16 @@ echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
 
+# Run git-clang-format and check format
+echo "* Checking changed C/C++ files for formatting..."
+(cd ${OPAQUE_HOME}/; git-clang-format HEAD~1)
+git diff --quiet
+echo "* Done!"
+echo "* The following files needed formatting:"
+git diff --name-only
+git add -u
+
+echo "* Pre-commit hook finished."
+
 exit 0
 
