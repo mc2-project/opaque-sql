@@ -1,9 +1,10 @@
+#!/bin/bash
+
 remote="$1"
 url="$2"
 
-echo "AHHHHHHHHHHHH"
-
 # Run scalafmt and check format
+echo "* Checking scala files for formating..."
 (cd $DIR/; scalafmt)
 git diff --quiet
 formatted=$?
