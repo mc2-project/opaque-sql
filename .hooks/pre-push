@@ -5,7 +5,7 @@ url="$2"
 
 # Run scalafmt and check format
 echo "* Checking changed Scala files for formatting..."
-(cd ${OPAQUE_HOME}/; scalafmt --diff)
+(cd ${OPAQUE_HOME}/; scalafmt --diff >/dev/null)
 git diff --quiet
 echo "* Done!"
 echo "* The following files needed formatting:"
@@ -14,7 +14,7 @@ git add -u
 
 # Run git-clang-format and check format
 echo "* Checking changed C/C++ files for formatting..."
-(cd ${OPAQUE_HOME}/; git-clang-format HEAD~1)
+(cd ${OPAQUE_HOME}/; git-clang-format HEAD~1 >/dev/null)
 git diff --quiet
 echo "* Done!"
 echo "* The following files needed formatting:"
