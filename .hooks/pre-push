@@ -3,25 +3,41 @@
 remote="$1"
 url="$2"
 
+format_needed=0
 # Run scalafmt and check format
 echo "* Checking changed Scala files for formatting..."
 (cd ${OPAQUE_HOME}/; scalafmt --diff >/dev/null)
 git diff --quiet
+formatted=$?
 echo "* Done!"
-echo "* The following files needed formatting:"
+echo "* The following files needed formatted:"
 git diff --name-only
-git add -u
+if [ $formatted -ne 0 ]
+then
+    git add -u
+    format_needed=1
+fi
 
 # Run git-clang-format and check format
 echo "* Checking changed C/C++ files for formatting..."
 (cd ${OPAQUE_HOME}/; git-clang-format master >/dev/null)
 git diff --quiet
+formatted=$?
 echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
-git add -u
+if [ $formatted -ne 0 ]
+then
+    git add -u
+    format_needed=1
+fi
 
-git commit --amend --no-edit
+if [ $format_needed -ne 0 ]
+then
+    echo "* Ammending commit to include linting changes..."
+    read -n 1 -s -r -p "Press any key to continue."
+    git commit --amend
+fi
 
 echo "* Pre-push hook finished."
 
