@@ -37,8 +37,7 @@ fi
 if [ $format_needed -ne 0 ]
 then
     echo "* Ammending commit to include linting changes..."
-    read -n 1 -s -r -p "Press any key to continue."
-    git commit --amend
+    git commit --amend --no-edit
 fi
 
 echo "* Pre-push hook finished."
