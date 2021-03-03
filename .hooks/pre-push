@@ -4,7 +4,7 @@ remote="$1"
 url="$2"
 
 # Run scalafmt and check format
-echo "* Checking changed scala files for formatting..."
+echo "* Checking changed Scala files for formatting..."
 (cd ${OPAQUE_HOME}/; scalafmt --diff)
 git diff --quiet
 echo "* Done!"
