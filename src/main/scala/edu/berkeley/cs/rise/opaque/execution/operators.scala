@@ -95,7 +95,11 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
     child.execute().mapPartitions { rowIter =>
       Iterator(
         Utils
-          .encryptInternalRowsFlatbuffers(rowIter.toSeq, output.map(_.dataType), useEnclave = true)
+          .encryptInternalRowsFlatbuffers(
+            rowIter.toSeq,
+            output.map(_.dataType),
+            useEnclave = true
+          )
       )
     }
   }
@@ -206,12 +210,14 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
   override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
-    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
-      childRDD =>
-        childRDD.map { block =>
-          val (enclave, eid) = Utils.initEnclave()
-          Block(enclave.Project(eid, projectListSer, block.bytes))
-        }
+    timeOperator(
+      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
+      "EncryptedProjectExec"
+    ) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.Project(eid, projectListSer, block.bytes))
+      }
     }
   }
 }
