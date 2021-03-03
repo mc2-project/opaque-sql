@@ -13,7 +13,7 @@ scala_formatted=$?
 echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
-if [ $scala_formatted -ne 0 ]
+if [ $scala_formatted -ne 0 ];
 then
     echo "* Adding newly formatted Scala files to the most recent commit."
     git add -u
@@ -27,7 +27,7 @@ c_formatted=$?
 echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
-if [ $c_formatted -ne 0 ]
+if [ $c_formatted -ne 0 ];
 then
     echo "* Adding newly formatted C/C++ files to the most recent commit."
     git add -u
