@@ -7,20 +7,10 @@ url="$2"
 echo "* Checking changed scala files for formatting..."
 (cd ${OPAQUE_HOME}/; scalafmt --diff)
 git diff --quiet
-formatted=$?
 echo "* Done!"
-echo "* Scala properly formatted?"
-if [ $formatted -eq 0 ]
-then
-   echo "* Yes"
-else
-    echo "* No"
-    echo "The following files need formatting:"
-    git diff --name-only
-    echo "Running 'scalafmt' to format the code."
-    scalafmt --diff
-    exit 1
-fi
+echo "* The following files needed formatting:"
+git diff --name-only
+git add -u
 
 exit 0
 
