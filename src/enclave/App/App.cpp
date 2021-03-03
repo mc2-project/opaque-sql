@@ -127,21 +127,21 @@ public:
 };
 
 #if defined(PERF) || defined(DEBUG)
-#define oe_check_and_time(description, op)                                     \
-  do {                                                                         \
-    printf("%s running...\n", description);                                    \
-    uint64_t t_ = 0;                                                           \
-    oe_result_t ret_;                                                          \
-    {                                                                          \
-      scoped_timer timer_(&t_);                                                \
-      ret_ = op;                                                               \
-    }                                                                          \
-    double t_ms_ = ((double)t_) / 1000;                                        \
-    if (ret_ != OE_OK) {                                                       \
-      oe_check(description, ret_);                                             \
-    } else {                                                                   \
-      printf("%s done (%f ms).\n", description, t_ms_);                        \
-    }                                                                          \
+#define oe_check_and_time(description, op)                                                       \
+  do {                                                                                           \
+    printf("%s running...\n", description);                                                      \
+    uint64_t t_ = 0;                                                                             \
+    oe_result_t ret_;                                                                            \
+    {                                                                                            \
+      scoped_timer timer_(&t_);                                                                  \
+      ret_ = op;                                                                                 \
+    }                                                                                            \
+    double t_ms_ = ((double)t_) / 1000;                                                          \
+    if (ret_ != OE_OK) {                                                                         \
+      oe_check(description, ret_);                                                               \
+    } else {                                                                                     \
+      printf("%s done (%f ms).\n", description, t_ms_);                                          \
+    }                                                                                            \
   } while (0)
 #else
 #define oe_check_and_time(description, op) oe_check(description, op)
@@ -177,13 +177,11 @@ void ocall_exit(int exit_code) { std::exit(exit_code); }
 void ocall_throw(const char *message) {
   JNIEnv *env;
   jvm->AttachCurrentThread((void **)&env, NULL);
-  jclass exception =
-      env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
+  jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
   env->ThrowNew(exception, message);
 }
 
-JNIEXPORT jlong JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave(
+JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave(
     JNIEnv *env, jobject obj, jstring library_path) {
   (void)obj;
 
@@ -197,17 +195,16 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StartEnclave(
 #endif
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
-  oe_check_and_time("StartEnclave", oe_create_Enclave_enclave(
-                                        library_path_str, OE_ENCLAVE_TYPE_AUTO,
-                                        flags, nullptr, 0, &enclave));
+  oe_check_and_time("StartEnclave",
+                    oe_create_Enclave_enclave(library_path_str, OE_ENCLAVE_TYPE_AUTO, flags,
+                                              nullptr, 0, &enclave));
   env->ReleaseStringUTFChars(library_path, library_path_str);
   long int enclavePtr = (long int)enclave;
 
   return enclavePtr;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
     JNIEnv *env, jobject obj, jlong eid) {
   (void)obj;
   (void)eid;
@@ -216,8 +213,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
   size_t report_msg_size = 0;
 
   oe_check_and_time("Generate enclave report",
-                    ecall_generate_report((oe_enclave_t *)eid, &report_msg,
-                                          &report_msg_size));
+                    ecall_generate_report((oe_enclave_t *)eid, &report_msg, &report_msg_size));
 
   // Allocate memory
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
@@ -227,51 +223,41 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
   return report_msg_bytes;
 }
 
-JNIEXPORT void JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
     JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
   (void)obj;
 
   jboolean if_copy = false;
-  jbyte *shared_key_msg_bytes =
-      env->GetByteArrayElements(shared_key_msg_input, &if_copy);
-  uint32_t shared_key_msg_size =
-      static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
 
   oe_check_and_time("Finish attestation",
-                    ecall_finish_attestation(
-                        (oe_enclave_t *)eid,
-                        reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
-                        shared_key_msg_size));
+                    ecall_finish_attestation((oe_enclave_t *)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size));
 
   env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 }
 
-JNIEXPORT void JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(JNIEnv *env,
-                                                                  jobject obj,
-                                                                  jlong eid) {
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
+    JNIEnv *env, jobject obj, jlong eid) {
   (void)env;
   (void)obj;
 
   oe_check("StopEnclave", oe_terminate_enclave((oe_enclave_t *)eid));
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray project_list,
-    jbyteArray input_rows) {
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray project_list, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
 
   uint32_t project_list_length = (uint32_t)env->GetArrayLength(project_list);
-  uint8_t *project_list_ptr =
-      (uint8_t *)env->GetByteArrayElements(project_list, &if_copy);
+  uint8_t *project_list_ptr = (uint8_t *)env->GetByteArrayElements(project_list, &if_copy);
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -280,9 +266,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
     ocall_throw("Project: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Project",
-                      ecall_project((oe_enclave_t *)eid, project_list_ptr,
-                                    project_list_length, input_rows_ptr,
-                                    input_rows_length, &output_rows,
+                      ecall_project((oe_enclave_t *)eid, project_list_ptr, project_list_length,
+                                    input_rows_ptr, input_rows_length, &output_rows,
                                     &output_rows_length));
   }
 
@@ -296,21 +281,17 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Project(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray condition,
-    jbyteArray input_rows) {
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray condition, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
 
   size_t condition_length = (size_t)env->GetArrayLength(condition);
-  uint8_t *condition_ptr =
-      (uint8_t *)env->GetByteArrayElements(condition, &if_copy);
+  uint8_t *condition_ptr = (uint8_t *)env->GetByteArrayElements(condition, &if_copy);
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -318,9 +299,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
   if (input_rows_ptr == nullptr) {
     ocall_throw("Filter: JNI failed to get input byte array.");
   } else {
-    oe_check_and_time("Filter", ecall_filter((oe_enclave_t *)eid, condition_ptr,
-                                             condition_length, input_rows_ptr,
-                                             input_rows_length, &output_rows,
+    oe_check_and_time("Filter", ecall_filter((oe_enclave_t *)eid, condition_ptr, condition_length,
+                                             input_rows_ptr, input_rows_length, &output_rows,
                                              &output_rows_length));
   }
 
@@ -334,15 +314,13 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Filter(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     JNIEnv *env, jobject obj, jlong eid, jbyteArray plaintext) {
   (void)obj;
 
   uint32_t plength = (uint32_t)env->GetArrayLength(plaintext);
   jboolean if_copy = false;
-  uint8_t *plaintext_ptr =
-      (uint8_t *)env->GetByteArrayElements(plaintext, &if_copy);
+  uint8_t *plaintext_ptr = (uint8_t *)env->GetByteArrayElements(plaintext, &if_copy);
 
   uint8_t *ciphertext_copy = nullptr;
   jsize clength = 0;
@@ -353,9 +331,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
-    oe_check("Encrypt",
-             ecall_encrypt((oe_enclave_t *)eid, plaintext_ptr, plength,
-                           ciphertext_copy, (uint32_t)clength));
+    oe_check("Encrypt", ecall_encrypt((oe_enclave_t *)eid, plaintext_ptr, plength,
+                                      ciphertext_copy, (uint32_t)clength));
   }
 
   jbyteArray ciphertext = env->NewByteArray(clength);
@@ -368,16 +345,14 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
   return ciphertext;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
     JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
-  size_t input_rows_length =
-      static_cast<size_t>(env->GetArrayLength(input_rows));
-  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(input_rows, &if_copy));
+  size_t input_rows_length = static_cast<size_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(input_rows, &if_copy));
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -386,9 +361,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
     ocall_throw("Sample: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Sample",
-                      ecall_sample((oe_enclave_t *)eid, input_rows_ptr,
-                                   input_rows_length, &output_rows,
-                                   &output_rows_length));
+                      ecall_sample((oe_enclave_t *)eid, input_rows_ptr, input_rows_length,
+                                   &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -401,22 +375,22 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order,
-    jint num_partitions, jbyteArray input_rows) {
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds(JNIEnv *env, jobject obj,
+                                                                      jlong eid,
+                                                                      jbyteArray sort_order,
+                                                                      jint num_partitions,
+                                                                      jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
 
-  size_t sort_order_length =
-      static_cast<size_t>(env->GetArrayLength(sort_order));
-  uint8_t *sort_order_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(sort_order, &if_copy));
+  size_t sort_order_length = static_cast<size_t>(env->GetArrayLength(sort_order));
+  uint8_t *sort_order_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(sort_order, &if_copy));
 
-  size_t input_rows_length =
-      static_cast<size_t>(env->GetArrayLength(input_rows));
-  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(input_rows, &if_copy));
+  size_t input_rows_length = static_cast<size_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(input_rows, &if_copy));
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -425,48 +399,40 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FindRangeBounds(
     ocall_throw("FindRangeBounds: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Find Range Bounds",
-                      ecall_find_range_bounds((oe_enclave_t *)eid,
-                                              sort_order_ptr, sort_order_length,
-                                              num_partitions, input_rows_ptr,
-                                              input_rows_length, &output_rows,
-                                              &output_rows_length));
+                      ecall_find_range_bounds(
+                          (oe_enclave_t *)eid, sort_order_ptr, sort_order_length, num_partitions,
+                          input_rows_ptr, input_rows_length, &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
-  env->SetByteArrayRegion(ret, 0, output_rows_length,
-                          reinterpret_cast<jbyte *>(output_rows));
+  env->SetByteArrayRegion(ret, 0, output_rows_length, reinterpret_cast<jbyte *>(output_rows));
   free(output_rows);
 
-  env->ReleaseByteArrayElements(sort_order,
-                                reinterpret_cast<jbyte *>(sort_order_ptr), 0);
-  env->ReleaseByteArrayElements(input_rows,
-                                reinterpret_cast<jbyte *>(input_rows_ptr), 0);
+  env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
+  env->ReleaseByteArrayElements(input_rows, reinterpret_cast<jbyte *>(input_rows_ptr), 0);
 
   return ret;
 }
 
 JNIEXPORT jobjectArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order,
-    jint num_partitions, jbyteArray input_rows, jbyteArray boundary_rows) {
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jint num_partitions,
+    jbyteArray input_rows, jbyteArray boundary_rows) {
   (void)obj;
 
   jboolean if_copy;
 
-  size_t sort_order_length =
-      static_cast<size_t>(env->GetArrayLength(sort_order));
-  uint8_t *sort_order_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(sort_order, &if_copy));
+  size_t sort_order_length = static_cast<size_t>(env->GetArrayLength(sort_order));
+  uint8_t *sort_order_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(sort_order, &if_copy));
 
-  size_t input_rows_length =
-      static_cast<size_t>(env->GetArrayLength(input_rows));
-  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(input_rows, &if_copy));
+  size_t input_rows_length = static_cast<size_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(input_rows, &if_copy));
 
-  size_t boundary_rows_length =
-      static_cast<size_t>(env->GetArrayLength(boundary_rows));
-  uint8_t *boundary_rows_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(boundary_rows, &if_copy));
+  size_t boundary_rows_length = static_cast<size_t>(env->GetArrayLength(boundary_rows));
+  uint8_t *boundary_rows_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(boundary_rows, &if_copy));
 
   uint8_t **output_partitions = new uint8_t *[num_partitions];
   size_t *output_partition_lengths = new size_t[num_partitions];
@@ -474,24 +440,18 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   if (input_rows_ptr == nullptr) {
     ocall_throw("PartitionForSort: JNI failed to get input byte array.");
   } else {
-    oe_check_and_time(
-        "Partition For Sort",
-        ecall_partition_for_sort((oe_enclave_t *)eid, sort_order_ptr,
-                                 sort_order_length, num_partitions,
-                                 input_rows_ptr, input_rows_length,
-                                 boundary_rows_ptr, boundary_rows_length,
-                                 output_partitions, output_partition_lengths));
+    oe_check_and_time("Partition For Sort",
+                      ecall_partition_for_sort(
+                          (oe_enclave_t *)eid, sort_order_ptr, sort_order_length, num_partitions,
+                          input_rows_ptr, input_rows_length, boundary_rows_ptr,
+                          boundary_rows_length, output_partitions, output_partition_lengths));
   }
 
-  env->ReleaseByteArrayElements(sort_order,
-                                reinterpret_cast<jbyte *>(sort_order_ptr), 0);
-  env->ReleaseByteArrayElements(input_rows,
-                                reinterpret_cast<jbyte *>(input_rows_ptr), 0);
-  env->ReleaseByteArrayElements(
-      boundary_rows, reinterpret_cast<jbyte *>(boundary_rows_ptr), 0);
+  env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
+  env->ReleaseByteArrayElements(input_rows, reinterpret_cast<jbyte *>(input_rows_ptr), 0);
+  env->ReleaseByteArrayElements(boundary_rows, reinterpret_cast<jbyte *>(boundary_rows_ptr), 0);
 
-  jobjectArray result =
-      env->NewObjectArray(num_partitions, env->FindClass("[B"), nullptr);
+  jobjectArray result = env->NewObjectArray(num_partitions, env->FindClass("[B"), nullptr);
   for (jint i = 0; i < num_partitions; i++) {
     jbyteArray partition = env->NewByteArray(output_partition_lengths[i]);
     env->SetByteArrayRegion(partition, 0, output_partition_lengths[i],
@@ -505,23 +465,19 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_PartitionForSort(
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order,
-    jbyteArray input_rows) {
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray sort_order, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
 
-  size_t sort_order_length =
-      static_cast<size_t>(env->GetArrayLength(sort_order));
-  uint8_t *sort_order_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(sort_order, &if_copy));
+  size_t sort_order_length = static_cast<size_t>(env->GetArrayLength(sort_order));
+  uint8_t *sort_order_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(sort_order, &if_copy));
 
-  size_t input_rows_length =
-      static_cast<size_t>(env->GetArrayLength(input_rows));
-  uint8_t *input_rows_ptr = reinterpret_cast<uint8_t *>(
-      env->GetByteArrayElements(input_rows, &if_copy));
+  size_t input_rows_length = static_cast<size_t>(env->GetArrayLength(input_rows));
+  uint8_t *input_rows_ptr =
+      reinterpret_cast<uint8_t *>(env->GetByteArrayElements(input_rows, &if_copy));
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -530,53 +486,44 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ExternalSort(
     ocall_throw("ExternalSort: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("External Non-Oblivious Sort",
-                      ecall_external_sort((oe_enclave_t *)eid, sort_order_ptr,
-                                          sort_order_length, input_rows_ptr,
-                                          input_rows_length, &output_rows,
+                      ecall_external_sort((oe_enclave_t *)eid, sort_order_ptr, sort_order_length,
+                                          input_rows_ptr, input_rows_length, &output_rows,
                                           &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
-  env->SetByteArrayRegion(ret, 0, output_rows_length,
-                          reinterpret_cast<jbyte *>(output_rows));
+  env->SetByteArrayRegion(ret, 0, output_rows_length, reinterpret_cast<jbyte *>(output_rows));
   free(output_rows);
 
-  env->ReleaseByteArrayElements(sort_order,
-                                reinterpret_cast<jbyte *>(sort_order_ptr), 0);
-  env->ReleaseByteArrayElements(input_rows,
-                                reinterpret_cast<jbyte *>(input_rows_ptr), 0);
+  env->ReleaseByteArrayElements(sort_order, reinterpret_cast<jbyte *>(sort_order_ptr), 0);
+  env->ReleaseByteArrayElements(input_rows, reinterpret_cast<jbyte *>(input_rows_ptr), 0);
 
   return ret;
 }
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr,
-    jbyteArray input_rows) {
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray input_rows) {
   (void)obj;
 
   jboolean if_copy;
 
   uint32_t join_expr_length = (uint32_t)env->GetArrayLength(join_expr);
-  uint8_t *join_expr_ptr =
-      (uint8_t *)env->GetByteArrayElements(join_expr, &if_copy);
+  uint8_t *join_expr_ptr = (uint8_t *)env->GetByteArrayElements(join_expr, &if_copy);
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
 
   if (input_rows_ptr == nullptr) {
-    ocall_throw(
-        "NonObliviousSortMergeJoin: JNI failed to get input byte array.");
+    ocall_throw("NonObliviousSortMergeJoin: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Non-Oblivious Sort-Merge Join",
                       ecall_non_oblivious_sort_merge_join(
-                          (oe_enclave_t *)eid, join_expr_ptr, join_expr_length,
-                          input_rows_ptr, input_rows_length, &output_rows,
-                          &output_rows_length));
+                          (oe_enclave_t *)eid, join_expr_ptr, join_expr_length, input_rows_ptr,
+                          input_rows_length, &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -591,23 +538,20 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
 
 JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_BroadcastNestedLoopJoin(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr,
-    jbyteArray outer_rows, jbyteArray inner_rows) {
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray outer_rows,
+    jbyteArray inner_rows) {
   (void)obj;
 
   jboolean if_copy;
 
   uint32_t join_expr_length = (uint32_t)env->GetArrayLength(join_expr);
-  uint8_t *join_expr_ptr =
-      (uint8_t *)env->GetByteArrayElements(join_expr, &if_copy);
+  uint8_t *join_expr_ptr = (uint8_t *)env->GetByteArrayElements(join_expr, &if_copy);
 
   uint32_t outer_rows_length = (uint32_t)env->GetArrayLength(outer_rows);
-  uint8_t *outer_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(outer_rows, &if_copy);
+  uint8_t *outer_rows_ptr = (uint8_t *)env->GetByteArrayElements(outer_rows, &if_copy);
 
   uint32_t inner_rows_length = (uint32_t)env->GetArrayLength(inner_rows);
-  uint8_t *inner_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(inner_rows, &if_copy);
+  uint8_t *inner_rows_ptr = (uint8_t *)env->GetByteArrayElements(inner_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -617,12 +561,11 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_BroadcastNestedLoopJoin(
   } else if (inner_rows_ptr == nullptr) {
     ocall_throw("BroadcastNestedLoopJoin: JNI failed to get outer byte array.");
   } else {
-    oe_check_and_time("Broadcast Nested Loop Join",
-                      ecall_broadcast_nested_loop_join(
-                          (oe_enclave_t *)eid, join_expr_ptr, join_expr_length,
-                          outer_rows_ptr, outer_rows_length, inner_rows_ptr,
-                          inner_rows_length, &output_rows,
-                          &output_rows_length));
+    oe_check_and_time(
+        "Broadcast Nested Loop Join",
+        ecall_broadcast_nested_loop_join((oe_enclave_t *)eid, join_expr_ptr, join_expr_length,
+                                         outer_rows_ptr, outer_rows_length, inner_rows_ptr,
+                                         inner_rows_length, &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -638,8 +581,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_BroadcastNestedLoopJoin(
 
 JNIEXPORT jobject JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
-    JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op,
-    jbyteArray input_rows, jboolean isPartial) {
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows,
+    jboolean isPartial) {
   (void)obj;
 
   jboolean if_copy;
@@ -648,8 +591,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
   uint8_t *agg_op_ptr = (uint8_t *)env->GetByteArrayElements(agg_op, &if_copy);
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -657,14 +599,12 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
   bool is_partial = (bool)isPartial;
 
   if (input_rows_ptr == nullptr) {
-    ocall_throw(
-        "NonObliviousAggregateStep: JNI failed to get input byte array.");
+    ocall_throw("NonObliviousAggregateStep: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("Non-Oblivious Aggregate",
                       ecall_non_oblivious_aggregate(
-                          (oe_enclave_t *)eid, agg_op_ptr, agg_op_length,
-                          input_rows_ptr, input_rows_length, &output_rows,
-                          &output_rows_length, is_partial));
+                          (oe_enclave_t *)eid, agg_op_ptr, agg_op_length, input_rows_ptr,
+                          input_rows_length, &output_rows, &output_rows_length, is_partial));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -685,8 +625,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -694,11 +633,10 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_CountRowsPerPartition(
   if (input_rows_ptr == nullptr) {
     ocall_throw("CountRowsPerPartition: JNI failed to get input byte array.");
   } else {
-    oe_check_and_time(
-        "CountRowsPerPartition",
-        ecall_count_rows_per_partition((oe_enclave_t *)eid, input_rows_ptr,
-                                       input_rows_length, &output_rows,
-                                       &output_rows_length));
+    oe_check_and_time("CountRowsPerPartition",
+                      ecall_count_rows_per_partition((oe_enclave_t *)eid, input_rows_ptr,
+                                                     input_rows_length, &output_rows,
+                                                     &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -718,21 +656,18 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
 
   if (input_rows_ptr == nullptr) {
-    ocall_throw(
-        "ComputeNumRowsPerPartition: JNI failed to get input byte array.");
+    ocall_throw("ComputeNumRowsPerPartition: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("ComputeNumRowsPerPartition",
-                      ecall_compute_num_rows_per_partition(
-                          (oe_enclave_t *)eid, (uint32_t)limit, input_rows_ptr,
-                          input_rows_length, &output_rows,
-                          &output_rows_length));
+                      ecall_compute_num_rows_per_partition((oe_enclave_t *)eid, (uint32_t)limit,
+                                                           input_rows_ptr, input_rows_length,
+                                                           &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -744,16 +679,14 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ComputeNumRowsPerPartition
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
     JNIEnv *env, jobject obj, jlong eid, jint limit, jbyteArray input_rows) {
 
   (void)obj;
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint8_t *output_rows = nullptr;
   size_t output_rows_length = 0;
@@ -762,9 +695,8 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
     ocall_throw("LocalLimit: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("LocalLimit",
-                      ecall_local_limit((oe_enclave_t *)eid, limit,
-                                        input_rows_ptr, input_rows_length,
-                                        &output_rows, &output_rows_length));
+                      ecall_local_limit((oe_enclave_t *)eid, limit, input_rows_ptr,
+                                        input_rows_length, &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);
@@ -777,16 +709,17 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LocalLimit(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
-    JNIEnv *env, jobject obj, jlong eid, jlong partition_id, jbyteArray limits,
-    jbyteArray input_rows) {
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(JNIEnv *env, jobject obj,
+                                                                      jlong eid,
+                                                                      jlong partition_id,
+                                                                      jbyteArray limits,
+                                                                      jbyteArray input_rows) {
 
   (void)obj;
   jboolean if_copy;
 
   uint32_t input_rows_length = (uint32_t)env->GetArrayLength(input_rows);
-  uint8_t *input_rows_ptr =
-      (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
+  uint8_t *input_rows_ptr = (uint8_t *)env->GetByteArrayElements(input_rows, &if_copy);
 
   uint32_t limits_length = (uint32_t)env->GetArrayLength(limits);
   uint8_t *limits_ptr = (uint8_t *)env->GetByteArrayElements(limits, &if_copy);
@@ -798,10 +731,9 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(
     ocall_throw("LimitReturnRows: JNI failed to get input byte array.");
   } else {
     oe_check_and_time("LimitReturnRows",
-                      ecall_limit_return_rows(
-                          (oe_enclave_t *)eid, partition_id, limits_ptr,
-                          limits_length, input_rows_ptr, input_rows_length,
-                          &output_rows, &output_rows_length));
+                      ecall_limit_return_rows((oe_enclave_t *)eid, partition_id, limits_ptr,
+                                              limits_length, input_rows_ptr, input_rows_length,
+                                              &output_rows, &output_rows_length));
   }
 
   jbyteArray ret = env->NewByteArray(output_rows_length);

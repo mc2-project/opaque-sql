@@ -9,11 +9,9 @@
 
 class ServiceProvider {
 public:
-  ServiceProvider(const std::string &spid, bool is_production,
-                  bool linkable_signature)
-      : spid(spid), is_production(is_production),
-        linkable_signature(linkable_signature), ias_api_version(3),
-        require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
+  ServiceProvider(const std::string &spid, bool is_production, bool linkable_signature)
+      : spid(spid), is_production(is_production), linkable_signature(linkable_signature),
+        ias_api_version(3), require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
@@ -34,9 +32,8 @@ public:
    * Process attestation report from an enclave, verify the report, and send the
    * shared key to the enclave
    */
-  std::unique_ptr<oe_shared_key_msg_t>
-  process_enclave_report(oe_report_msg_t *report_msg,
-                         uint32_t *shared_key_msg_size);
+  std::unique_ptr<oe_shared_key_msg_t> process_enclave_report(oe_report_msg_t *report_msg,
+                                                              uint32_t *shared_key_msg_size);
 
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);

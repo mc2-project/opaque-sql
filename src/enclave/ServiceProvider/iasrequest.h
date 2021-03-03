@@ -145,8 +145,7 @@ public:
   IAS_Connection *conn() { return r_conn; }
 
   ias_error_t sigrl(uint32_t gid, string &sigrl);
-  ias_error_t report(map<string, string> &payload, string &content,
-                     vector<string> &messages);
+  ias_error_t report(map<string, string> &payload, string &content, vector<string> &messages);
 };
 
 #endif

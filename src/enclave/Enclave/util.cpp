@@ -79,8 +79,7 @@ int secs_to_tm(long long t, struct tm *tm) {
   int qc_cycles, c_cycles, q_cycles;
   int years, months;
   int wday, yday, leap;
-  static const char days_in_month[] = {31, 30, 31, 30, 31, 31,
-                                       30, 31, 30, 31, 31, 29};
+  static const char days_in_month[] = {31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 29};
 
   /* Reject time_t values whose year would overflow int */
   if (t < INT_MIN * 31622400LL || t > INT_MAX * 31622400LL)
@@ -181,9 +180,7 @@ static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                         "abcdefghijklmnopqrstuvwxyz"
                                         "0123456789+/";
 
-static inline bool is_base64(unsigned char c) {
-  return (isalnum(c) || (c == '+') || (c == '/'));
-}
+static inline bool is_base64(unsigned char c) { return (isalnum(c) || (c == '+') || (c == '/')); }
 
 std::string ciphertext_base64_decode(const std::string &encoded_string) {
   int in_len = encoded_string.size();
@@ -193,18 +190,15 @@ std::string ciphertext_base64_decode(const std::string &encoded_string) {
   uint8_t char_array_4[4], char_array_3[3];
   std::string ret;
 
-  while (in_len-- && (encoded_string[in_] != '=') &&
-         is_base64(encoded_string[in_])) {
+  while (in_len-- && (encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
     char_array_4[i++] = encoded_string[in_];
     in_++;
     if (i == 4) {
       for (i = 0; i < 4; i++)
         char_array_4[i] = base64_chars.find(char_array_4[i]);
 
-      char_array_3[0] =
-          (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-      char_array_3[1] =
-          ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
       char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
       for (i = 0; (i < 3); i++)
@@ -221,8 +215,7 @@ std::string ciphertext_base64_decode(const std::string &encoded_string) {
       char_array_4[j] = base64_chars.find(char_array_4[j]);
 
     char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-    char_array_3[1] =
-        ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
     char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
     for (j = 0; (j < i - 1); j++)

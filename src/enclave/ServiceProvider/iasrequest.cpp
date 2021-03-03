@@ -43,8 +43,7 @@ using namespace httpparser;
 #include <exception>
 #include <string>
 
-static string ias_servers[2] = {IAS_SERVER_DEVELOPMENT_HOST,
-                                IAS_SERVER_PRODUCTION_HOST};
+static string ias_servers[2] = {IAS_SERVER_DEVELOPMENT_HOST, IAS_SERVER_PRODUCTION_HOST};
 
 static string url_decode(string str);
 
@@ -59,8 +58,7 @@ void ias_check(ias_error_t status) {
     throw std::runtime_error("IAS: Invalid payload.");
     break;
   case IAS_UNAUTHORIZED:
-    throw std::runtime_error(
-        "IAS: Failed to authenticate or authorize request.");
+    throw std::runtime_error("IAS: Failed to authenticate or authorize request.");
     break;
   case IAS_NOT_FOUND:
     throw std::runtime_error("IAS: Not found.");
@@ -77,12 +75,10 @@ void ias_check(ias_error_t status) {
         "IAS: An internal error occurred while processing the IAS response.");
     break;
   case IAS_BAD_CERTIFICATE:
-    throw std::runtime_error(
-        "IAS: The signing certificate could not be validated.");
+    throw std::runtime_error("IAS: The signing certificate could not be validated.");
     break;
   case IAS_BAD_SIGNATURE:
-    throw std::runtime_error(
-        "IAS: The report signature could not be validated.");
+    throw std::runtime_error("IAS: The report signature could not be validated.");
     break;
   default:
     if (status >= 100 && status < 600) {
@@ -507,8 +503,7 @@ ias_error_t IAS_Request::report(map<string, string> &payload, string &content,
 
   content = response.content_string();
 
-  if (!sha256_verify((const unsigned char *)content.c_str(), content.length(),
-                     sig, sigsz)) {
+  if (!sha256_verify((const unsigned char *)content.c_str(), content.length(), sig, sigsz)) {
 
     free(sig);
     printf("crypto error: sha256_verify");

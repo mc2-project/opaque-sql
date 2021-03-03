@@ -51,40 +51,37 @@ struct AesGcm {
   AesGcm(const KeySchedule *ks, const unsigned char *iv, size_t iv_len);
   AesGcm(const AesGcm &other);
   void aad(const unsigned char *data, size_t data_len);
-  void encrypt(const unsigned char *plaintext, size_t plaintext_len,
-               unsigned char *ciphertext, size_t ciphertext_len);
-  void decrypt(const unsigned char *ciphertext, size_t ciphertext_len,
-               unsigned char *plaintext, size_t plaintext_len);
+  void encrypt(const unsigned char *plaintext, size_t plaintext_len, unsigned char *ciphertext,
+               size_t ciphertext_len);
+  void decrypt(const unsigned char *ciphertext, size_t ciphertext_len, unsigned char *plaintext,
+               size_t plaintext_len);
   Tag tag() const;
 };
 
 extern "C" {
 /* Prepares the constants used in the aggregated reduction method */
-void intel_aes_gcmINIT(unsigned char Htbl[16 * AES_BLOCK_SIZE],
-                       const uint32_t *KS, int NR);
+void intel_aes_gcmINIT(unsigned char Htbl[16 * AES_BLOCK_SIZE], const uint32_t *KS, int NR);
 
 /* Produces the final GHASH value */
-void intel_aes_gcmTAG(const unsigned char Htbl[16 * AES_BLOCK_SIZE],
-                      const unsigned char *Tp, unsigned long Mlen,
-                      unsigned long Alen, const unsigned char *X0,
+void intel_aes_gcmTAG(const unsigned char Htbl[16 * AES_BLOCK_SIZE], const unsigned char *Tp,
+                      unsigned long Mlen, unsigned long Alen, const unsigned char *X0,
                       unsigned char *TAG);
 
 /* Hashes the Additional Authenticated Data, should be used before enc/dec.
        Operates on whole blocks only. Partial blocks should be padded
    externally. */
-void intel_aes_gcmAAD(unsigned char Htbl[16 * AES_BLOCK_SIZE],
-                      const unsigned char *AAD, unsigned long Alen,
-                      unsigned char *Tp);
+void intel_aes_gcmAAD(unsigned char Htbl[16 * AES_BLOCK_SIZE], const unsigned char *AAD,
+                      unsigned long Alen, unsigned char *Tp);
 
 /* Encrypts and hashes the Plaintext.
    Operates on any length of data, however partial block should only be
    encrypted at the last call, otherwise the result will be incorrect. */
-void intel_aes_gcmENC(const unsigned char *PT, unsigned char *CT,
-                      GcmContext *Gctx, unsigned long len);
+void intel_aes_gcmENC(const unsigned char *PT, unsigned char *CT, GcmContext *Gctx,
+                      unsigned long len);
 
 /* Similar to ENC, but decrypts the Ciphertext. */
-void intel_aes_gcmDEC(const unsigned char *CT, unsigned char *PT,
-                      GcmContext *Gctx, unsigned long len);
+void intel_aes_gcmDEC(const unsigned char *CT, unsigned char *PT, GcmContext *Gctx,
+                      unsigned long len);
 
 void intel_aes_encrypt_init_128(const unsigned char *key, uint32_t *expanded);
 void intel_aes_encrypt_init_192(const unsigned char *key, uint32_t *expanded);

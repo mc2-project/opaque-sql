@@ -40,8 +40,7 @@ static vector<string> wget_args;
 
 string AgentWget::name = "wget";
 
-int AgentWget::request(string const &url, string const &post,
-                       Response &response) {
+int AgentWget::request(string const &url, string const &post, Response &response) {
   HttpResponseParser parser;
   int pipefd[2];
   pid_t pid;
@@ -247,8 +246,7 @@ retry_wait:
     if (exitcode == WGET_NO_ERROR || exitcode == WGET_SERVER_ERROR) {
       HttpResponseParser::ParseResult result;
 
-      result = parser.parse(response, sresponse.c_str(),
-                            sresponse.c_str() + sresponse.length());
+      result = parser.parse(response, sresponse.c_str(), sresponse.c_str() + sresponse.length());
       rv = (result == HttpResponseParser::ParsingCompleted);
     }
   } else

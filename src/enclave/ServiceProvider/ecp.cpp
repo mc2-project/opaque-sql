@@ -52,9 +52,9 @@ bool derive_key(const lc_ec256_dh_shared_t *p_shared_key, uint8_t key_id,
 
   memset(&cmac_key, 0, MAC_KEY_SIZE);
 
-  ret = lc_rijndael128_cmac_msg(
-      (lc_cmac_128bit_key_t *)&*cmac_key, (uint8_t *)p_shared_key,
-      sizeof(sgx_ec256_dh_shared_t), (lc_cmac_128bit_tag_t *)&key_derive_key);
+  ret = lc_rijndael128_cmac_msg((lc_cmac_128bit_key_t *)&*cmac_key, (uint8_t *)p_shared_key,
+                                sizeof(sgx_ec256_dh_shared_t),
+                                (lc_cmac_128bit_tag_t *)&key_derive_key);
 
   if (ret != LC_SUCCESS) {
     // memset here can be optimized away by compiler, so please use memset_s on
@@ -106,13 +106,11 @@ bool derive_key(const lc_ec256_dh_shared_t *p_shared_key, uint8_t key_id,
   /*label*/
   memcpy(&p_derivation_buffer[1], label, label_length);
   /*output_key_len=0x0080*/
-  uint16_t *key_len =
-      (uint16_t *)(&(p_derivation_buffer[derivation_buffer_length - 2]));
+  uint16_t *key_len = (uint16_t *)(&(p_derivation_buffer[derivation_buffer_length - 2]));
   *key_len = 0x0080;
 
-  ret = lc_rijndael128_cmac_msg((lc_cmac_128bit_key_t *)&key_derive_key,
-                                p_derivation_buffer, derivation_buffer_length,
-                                (lc_cmac_128bit_tag_t *)derived_key);
+  ret = lc_rijndael128_cmac_msg((lc_cmac_128bit_key_t *)&key_derive_key, p_derivation_buffer,
+                                derivation_buffer_length, (lc_cmac_128bit_tag_t *)derived_key);
   free(p_derivation_buffer);
   // memset here can be optimized away by compiler, so please use memset_s on
   // windows for production code and similar functions on other OSes.

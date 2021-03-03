@@ -95,8 +95,7 @@ void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len) {
   }
 }
 
-void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private,
-                lc_ec256_public_t *p_public) {
+void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private, lc_ec256_public_t *p_public) {
 
   EC_GROUP *group = (EC_GROUP *)EC_KEY_get0_group(ssl_key);
   EC_POINT *point = (EC_POINT *)EC_KEY_get0_public_key(ssl_key);
@@ -144,11 +143,9 @@ void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private,
 }
 
 // This is a wrapper around the OpenSSL EVP AES-GCM encryption
-lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
-                                      const uint8_t *p_src, uint32_t src_len,
-                                      uint8_t *p_dst, const uint8_t *p_iv,
-                                      uint32_t iv_len, const uint8_t *p_aad,
-                                      uint32_t aad_len,
+lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src,
+                                      uint32_t src_len, uint8_t *p_dst, const uint8_t *p_iv,
+                                      uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len,
                                       lc_aes_gcm_128bit_tag_t *p_out_mac) {
 
   EVP_CIPHER_CTX *ctx = NULL;
@@ -181,8 +178,7 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   }
 
   /* Initialise key and IV */
-  ret =
-      EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *)*p_key, p_iv);
+  ret = EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *)*p_key, p_iv);
   if (ret != 1) {
     fprintf(stderr, "[%s] encryption init failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -204,8 +200,8 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
    */
   ret = EVP_EncryptUpdate(ctx, p_dst, &len, p_src, (int)src_len);
   if (ret != 1) {
-    fprintf(stderr, "[%s] encryption update failure, ret is %u, len is %u\n",
-            __FUNCTION__, ret, len);
+    fprintf(stderr, "[%s] encryption update failure, ret is %u, len is %u\n", __FUNCTION__, ret,
+            len);
     return LC_ERROR_UNEXPECTED;
   }
   ciphertext_len = len;
@@ -234,9 +230,8 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   return LC_SUCCESS;
 }
 
-lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext,
-                                      int ciphertext_len, unsigned char *aad,
-                                      int aad_len, unsigned char *tag,
+lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len,
+                                      unsigned char *aad, int aad_len, unsigned char *tag,
                                       unsigned char *key, unsigned char *iv,
                                       unsigned char *plaintext) {
   EVP_CIPHER_CTX *ctx;
@@ -312,9 +307,8 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext,
   return LC_SUCCESS;
 }
 
-lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
-                                    const uint8_t *p_src, uint32_t src_len,
-                                    lc_cmac_128bit_tag_t *p_mac) {
+lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key, const uint8_t *p_src,
+                                    uint32_t src_len, lc_cmac_128bit_tag_t *p_mac) {
   uint32_t p_mac_len = 16;
   int ret = 0;
 
@@ -501,8 +495,7 @@ lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
 // OpenSSL 1.0.2 backward compatibility - see
 // https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr,
-                    const BIGNUM **ps) {
+void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps) {
   if (pr != NULL)
     *pr = sig->r;
   if (ps != NULL)
@@ -511,8 +504,7 @@ void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr,
 #endif
 
 lc_status_t lc_ecdsa_sign(const uint8_t *p_data, uint32_t data_size,
-                          lc_ec256_private_t *p_private,
-                          lc_ec256_signature_t *p_signature) {
+                          lc_ec256_private_t *p_private, lc_ec256_signature_t *p_signature) {
   (void)p_data;
   (void)data_size;
   (void)p_private;
@@ -530,14 +522,11 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data, uint32_t data_size,
   lc_sha256_close(p_sha_handle);
 
   // sign the hash
-  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *)p_hash,
-                                 sizeof(lc_sha256_hash_t), key);
+  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *)p_hash, sizeof(lc_sha256_hash_t), key);
   assert(sig != NULL);
 
-  unsigned char *x_ =
-      (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
-  unsigned char *y_ =
-      (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  unsigned char *x_ = (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  unsigned char *y_ = (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
   const BIGNUM *pr, *ps;
   ECDSA_SIG_get0(sig, &pr, &ps);
@@ -545,10 +534,8 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data, uint32_t data_size,
   BN_bn2bin(ps, (uint8_t *)y_);
 
   // reverse r and s
-  reverse_endian(x_, (uint8_t *)p_signature->x,
-                 LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
-  reverse_endian(y_, (uint8_t *)p_signature->y,
-                 LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  reverse_endian(x_, (uint8_t *)p_signature->x, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  reverse_endian(y_, (uint8_t *)p_signature->y, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
   free(x_);
   free(y_);
@@ -564,14 +551,12 @@ void lc_sha256_init(lc_sha_state_handle_t *p_sha_handle) {
   *p_sha_handle = sha256_ctx;
 }
 
-void lc_sha256_update(const uint8_t *p_src, uint32_t src_len,
-                      lc_sha_state_handle_t sha_handle) {
+void lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {
   SHA256_CTX *ctx = (SHA256_CTX *)sha_handle;
   SHA256_Update(ctx, p_src, src_len);
 }
 
-void lc_sha256_get_hash(lc_sha_state_handle_t sha_handle,
-                        lc_sha256_hash_t *p_hash) {
+void lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash) {
   SHA256_CTX *ctx = (SHA256_CTX *)sha_handle;
   SHA256_Final((unsigned char *)p_hash, ctx);
 }
@@ -588,13 +573,13 @@ int lc_compute_sha256(const uint8_t *data, size_t data_size,
   int ret = 0;
   mbedtls_sha256_context ctx;
 
-#define safe_sha(call)                                                         \
-  {                                                                            \
-    int ret = (call);                                                          \
-    if (ret) {                                                                 \
-      mbedtls_sha256_free(&ctx);                                               \
-      return -1;                                                               \
-    }                                                                          \
+#define safe_sha(call)                                                                           \
+  {                                                                                              \
+    int ret = (call);                                                                            \
+    if (ret) {                                                                                   \
+      mbedtls_sha256_free(&ctx);                                                                 \
+      return -1;                                                                                 \
+    }                                                                                            \
   }
   mbedtls_sha256_init(&ctx);
   safe_sha(mbedtls_sha256_starts_ret(&ctx, 0));

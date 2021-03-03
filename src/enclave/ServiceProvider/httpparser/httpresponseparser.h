@@ -24,8 +24,7 @@ namespace httpparser {
 class HttpResponseParser {
 public:
   HttpResponseParser()
-      : state(ResponseStatusStart), contentSize(0), chunkSize(0),
-        chunked(false) {}
+      : state(ResponseStatusStart), contentSize(0), chunkSize(0), chunked(false) {}
 
   enum ParseResult { ParsingCompleted, ParsingIncompleted, ParsingError };
 
@@ -228,8 +227,8 @@ private:
         }
         break;
       case ExpectingNewline_3: {
-        std::vector<Response::HeaderItem>::iterator it = std::find_if(
-            resp.headers.begin(), resp.headers.end(), checkIfConnection);
+        std::vector<Response::HeaderItem>::iterator it =
+            std::find_if(resp.headers.begin(), resp.headers.end(), checkIfConnection);
 
         if (it != resp.headers.end()) {
           if (strcasecmp(it->value.c_str(), "Keep-Alive") == 0) {
@@ -239,8 +238,7 @@ private:
             resp.keepAlive = false;
           }
         } else {
-          if (resp.versionMajor > 1 ||
-              (resp.versionMajor == 1 && resp.versionMinor == 1))
+          if (resp.versionMajor > 1 || (resp.versionMajor == 1 && resp.versionMinor == 1))
             resp.keepAlive = true;
         }
 

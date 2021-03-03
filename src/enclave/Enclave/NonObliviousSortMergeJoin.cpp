@@ -10,13 +10,12 @@
  * Rows MUST be tagged primary or secondary for this to work.
  */
 
-void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
-                          const tuix::Row *primary, const tuix::Row *current) {
+void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval, const tuix::Row *primary,
+                          const tuix::Row *current) {
   if (!join_expr_eval.is_same_group(primary, current)) {
-    throw std::runtime_error(
-        std::string("Invariant violation: rows of primary_group "
-                    "are not of the same group: ") +
-        to_string(primary) + std::string(" vs ") + to_string(current));
+    throw std::runtime_error(std::string("Invariant violation: rows of primary_group "
+                                         "are not of the same group: ") +
+                             to_string(primary) + std::string(" vs ") + to_string(current));
   }
 }
 
@@ -53,15 +52,12 @@ void write_output_rows(RowWriter &group, RowWriter &w) {
  */
 
 void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
-                                   uint8_t *input_rows,
-                                   size_t input_rows_length,
-                                   uint8_t **output_rows,
-                                   size_t *output_rows_length) {
+                                   uint8_t *input_rows, size_t input_rows_length,
+                                   uint8_t **output_rows, size_t *output_rows_length) {
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
   tuix::JoinType join_type = join_expr_eval.get_join_type();
-  RowReader r(
-      BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
   RowWriter primary_group;
@@ -80,8 +76,7 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
         // If this is a left semi/anti join, also add the rows to
         // primary_unmatched_rows
         primary_group.append(current);
-        if (join_type == tuix::JoinType_LeftSemi ||
-            join_type == tuix::JoinType_LeftAnti) {
+        if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti) {
           primary_unmatched_rows.append(current);
         }
         last_primary_of_group.set(current);
@@ -116,12 +111,9 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
               w.append(primary, current);
             }
           }
-        } else if (join_type == tuix::JoinType_LeftSemi ||
-                   join_type == tuix::JoinType_LeftAnti) {
-          auto primary_unmatched_rows_buffer =
-              primary_unmatched_rows.output_buffer();
-          RowReader primary_unmatched_rows_reader(
-              primary_unmatched_rows_buffer.view());
+        } else if (join_type == tuix::JoinType_LeftSemi || join_type == tuix::JoinType_LeftAnti) {
+          auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
+          RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
 
           while (primary_unmatched_rows_reader.has_next()) {
@@ -136,13 +128,10 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
 
           // Reset primary_unmatched_rows
           primary_unmatched_rows.clear();
-          auto new_primary_unmatched_rows_buffer =
-              new_primary_unmatched_rows.output_buffer();
-          RowReader new_primary_unmatched_rows_reader(
-              new_primary_unmatched_rows_buffer.view());
+          auto new_primary_unmatched_rows_buffer = new_primary_unmatched_rows.output_buffer();
+          RowReader new_primary_unmatched_rows_reader(new_primary_unmatched_rows_buffer.view());
           while (new_primary_unmatched_rows_reader.has_next()) {
-            primary_unmatched_rows.append(
-                new_primary_unmatched_rows_reader.next());
+            primary_unmatched_rows.append(new_primary_unmatched_rows_reader.next());
           }
         }
       }

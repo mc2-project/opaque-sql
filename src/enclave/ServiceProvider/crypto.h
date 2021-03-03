@@ -31,8 +31,7 @@ extern "C" {
 
 /* HMAC */
 
-int sha256_verify(const unsigned char *msg, size_t mlen, unsigned char *sig,
-                  size_t sigsz);
+int sha256_verify(const unsigned char *msg, size_t mlen, unsigned char *sig, size_t sigsz);
 
 /* Certs */
 
@@ -45,8 +44,8 @@ STACK_OF(X509) * cert_stack_build(X509 **certs);
 void cert_stack_free(STACK_OF(X509) * chain);
 
 EVP_PKEY *buffer_to_public_key(char *input_buffer, int input_buf_size);
-int public_encrypt(EVP_PKEY *key, unsigned char *data, int data_len,
-                   unsigned char *encrypted, size_t *encrypted_len);
+int public_encrypt(EVP_PKEY *key, unsigned char *data, int data_len, unsigned char *encrypted,
+                   size_t *encrypted_len);
 
 #ifdef __cplusplus
 };

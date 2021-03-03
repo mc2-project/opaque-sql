@@ -5,24 +5,20 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-void project(uint8_t *project_list, size_t project_list_length,
-             uint8_t *input_rows, size_t input_rows_length,
-             uint8_t **output_rows, size_t *output_rows_length) {
-  BufferRefView<tuix::ProjectExpr> project_list_buf(project_list,
-                                                    project_list_length);
+void project(uint8_t *project_list, size_t project_list_length, uint8_t *input_rows,
+             size_t input_rows_length, uint8_t **output_rows, size_t *output_rows_length) {
+  BufferRefView<tuix::ProjectExpr> project_list_buf(project_list, project_list_length);
   project_list_buf.verify();
 
   // Create a vector of expression evaluators, one per output column
   const tuix::ProjectExpr *project_expr = project_list_buf.root();
-  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>>
-      project_eval_list;
-  for (auto it = project_expr->project_list()->begin();
-       it != project_expr->project_list()->end(); ++it) {
+  std::vector<std::unique_ptr<FlatbuffersExpressionEvaluator>> project_eval_list;
+  for (auto it = project_expr->project_list()->begin(); it != project_expr->project_list()->end();
+       ++it) {
     project_eval_list.emplace_back(new FlatbuffersExpressionEvaluator(*it));
   }
 
-  RowReader r(
-      BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
   std::vector<const tuix::Field *> out_fields(project_eval_list.size());

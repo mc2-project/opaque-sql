@@ -15,15 +15,13 @@ public:
 };
 
 void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
-                    SortedRunsWriter &w,
-                    FlatbuffersSortOrderEvaluator &sort_eval) {
+                    SortedRunsWriter &w, FlatbuffersSortOrderEvaluator &sort_eval) {
 
   // Maintain a priority queue with one row per run
   auto compare = [&sort_eval](const MergeItem &a, const MergeItem &b) {
     return sort_eval.less_than(b.v, a.v);
   };
-  std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)>
-      queue(compare);
+  std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)> queue(compare);
 
   // Initialize the priority queue with the first row from each run
   for (uint32_t i = run_start; i < run_start + num_runs; i++) {
@@ -49,18 +47,16 @@ void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
   w.finish_run();
 }
 
-void sort_single_encrypted_block(SortedRunsWriter &w,
-                                 const tuix::EncryptedBlock *block,
+void sort_single_encrypted_block(SortedRunsWriter &w, const tuix::EncryptedBlock *block,
                                  FlatbuffersSortOrderEvaluator &sort_eval) {
 
   EncryptedBlockToRowReader r;
   r.reset(block);
   std::vector<const tuix::Row *> sort_ptrs(r.begin(), r.end());
 
-  std::sort(sort_ptrs.begin(), sort_ptrs.end(),
-            [&sort_eval](const tuix::Row *a, const tuix::Row *b) {
-              return sort_eval.less_than(a, b);
-            });
+  std::sort(
+      sort_ptrs.begin(), sort_ptrs.end(),
+      [&sort_eval](const tuix::Row *a, const tuix::Row *b) { return sort_eval.less_than(a, b); });
 
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.append(*it);
@@ -68,9 +64,8 @@ void sort_single_encrypted_block(SortedRunsWriter &w,
   w.finish_run();
 }
 
-void external_sort(uint8_t *sort_order, size_t sort_order_length,
-                   uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t **output_rows, size_t *output_rows_length) {
+void external_sort(uint8_t *sort_order, size_t sort_order_length, uint8_t *input_rows,
+                   size_t input_rows_length, uint8_t **output_rows, size_t *output_rows_length) {
   FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
 
   // 1. Sort each EncryptedBlock individually by decrypting it, sorting within
@@ -99,16 +94,13 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   auto runs_buf = w.output_buffer();
   SortedRunsReader r(runs_buf.view());
   while (r.num_runs() > 1) {
-    debug("external_sort: Merging %d runs, up to %d at a time\n", r.num_runs(),
-          MAX_NUM_STREAMS);
+    debug("external_sort: Merging %d runs, up to %d at a time\n", r.num_runs(), MAX_NUM_STREAMS);
 
     w.clear();
-    for (uint32_t run_start = 0; run_start < r.num_runs();
-         run_start += MAX_NUM_STREAMS) {
-      uint32_t num_runs = std::min(
-          MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
-      debug("external_sort: Merging buffers %d-%d\n", run_start,
-            run_start + num_runs - 1);
+    for (uint32_t run_start = 0; run_start < r.num_runs(); run_start += MAX_NUM_STREAMS) {
+      uint32_t num_runs =
+          std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
+      debug("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
       external_merge(r, run_start, num_runs, w, sort_eval);
     }
@@ -124,10 +116,9 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length,
   }
 }
 
-void sample(uint8_t *input_rows, size_t input_rows_length,
-            uint8_t **output_rows, size_t *output_rows_length) {
-  RowReader r(
-      BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+void sample(uint8_t *input_rows, size_t input_rows_length, uint8_t **output_rows,
+            size_t *output_rows_length) {
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
   // Sample ~5% of the rows or 1000 rows, whichever is greater
@@ -151,19 +142,17 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
   w.output_buffer(output_rows, output_rows_length);
 }
 
-void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
-                       uint32_t num_partitions, uint8_t *input_rows,
-                       size_t input_rows_length, uint8_t **output_rows,
+void find_range_bounds(uint8_t *sort_order, size_t sort_order_length, uint32_t num_partitions,
+                       uint8_t *input_rows, size_t input_rows_length, uint8_t **output_rows,
                        size_t *output_rows_length) {
   // Sort the input rows
   uint8_t *sorted_rows;
   size_t sorted_rows_length;
-  external_sort(sort_order, sort_order_length, input_rows, input_rows_length,
-                &sorted_rows, &sorted_rows_length);
+  external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows,
+                &sorted_rows_length);
 
   // Split them into one range per partition
-  RowReader r(
-      BufferRefView<tuix::EncryptedBlocks>(sorted_rows, sorted_rows_length));
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(sorted_rows, sorted_rows_length));
   RowWriter w;
   uint32_t num_rows_per_part = r.num_rows() / num_partitions;
   uint32_t current_rows_in_part = 0;
@@ -182,17 +171,15 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
   ocall_free(sorted_rows);
 }
 
-void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
-                        uint32_t num_partitions, uint8_t *input_rows,
-                        size_t input_rows_length, uint8_t *boundary_rows,
-                        size_t boundary_rows_length,
-                        uint8_t **output_partition_ptrs,
+void partition_for_sort(uint8_t *sort_order, size_t sort_order_length, uint32_t num_partitions,
+                        uint8_t *input_rows, size_t input_rows_length, uint8_t *boundary_rows,
+                        size_t boundary_rows_length, uint8_t **output_partition_ptrs,
                         size_t *output_partition_lengths) {
   // Sort the input rows
   uint8_t *sorted_rows;
   size_t sorted_rows_length;
-  external_sort(sort_order, sort_order_length, input_rows, input_rows_length,
-                &sorted_rows, &sorted_rows_length);
+  external_sort(sort_order, sort_order_length, input_rows, input_rows_length, &sorted_rows,
+                &sorted_rows_length);
 
   // Scan through the input rows and copy each to the appropriate output
   // partition specified by the ranges encoded in the given boundary_rows. A
@@ -201,13 +188,11 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
   // first boundary row, and the last range contains all rows greater than or
   // equal to the last boundary row.
   FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
-  RowReader r(
-      BufferRefView<tuix::EncryptedBlocks>(sorted_rows, sorted_rows_length));
+  RowReader r(BufferRefView<tuix::EncryptedBlocks>(sorted_rows, sorted_rows_length));
   RowWriter w;
   uint32_t output_partition_idx = 0;
 
-  RowReader b(BufferRefView<tuix::EncryptedBlocks>(boundary_rows,
-                                                   boundary_rows_length));
+  RowReader b(BufferRefView<tuix::EncryptedBlocks>(boundary_rows, boundary_rows_length));
   // Invariant: b_upper is the first boundary row strictly greater than the
   // current range, or nullptr if we are in the last range
   FlatbuffersTemporaryRow b_upper(b.has_next() ? b.next() : nullptr);
@@ -216,8 +201,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
     const tuix::Row *row = r.next();
 
     // Advance boundary rows to maintain the invariant on b_upper
-    while (b_upper.get() != nullptr &&
-           !sort_eval.less_than(row, b_upper.get())) {
+    while (b_upper.get() != nullptr && !sort_eval.less_than(row, b_upper.get())) {
       b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition

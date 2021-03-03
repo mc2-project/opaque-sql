@@ -19,8 +19,7 @@ int mbedtls_read_rand(unsigned char *buf, size_t buf_len) {
     goto cleanup;
   }
 
-  mbedtls_ctr_drbg_set_prediction_resistance(&ctr_drbg,
-                                             MBEDTLS_CTR_DRBG_PR_OFF);
+  mbedtls_ctr_drbg_set_prediction_resistance(&ctr_drbg, MBEDTLS_CTR_DRBG_PR_OFF);
 
   ret = mbedtls_ctr_drbg_random(&ctr_drbg, buf, buf_len);
   if (ret != 0) {

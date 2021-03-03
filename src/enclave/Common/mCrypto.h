@@ -44,16 +44,15 @@ public:
    * Encrypt encrypts the given data using the given public key.
    * Used to encrypt data using the public key of another enclave.
    */
-  static bool encrypt(const uint8_t *pem_public_key, const uint8_t *data,
-                      size_t size, uint8_t *encrypted_data,
-                      size_t *encrypted_data_size);
+  static bool encrypt(const uint8_t *pem_public_key, const uint8_t *data, size_t size,
+                      uint8_t *encrypted_data, size_t *encrypted_data_size);
 
   /**
    * decrypt decrypts the given data using current enclave's private key.
    * Used to receive encrypted data from another enclave.
    */
-  bool decrypt(const uint8_t *encrypted_data, size_t encrypted_data_size,
-               uint8_t *data, size_t *data_size);
+  bool decrypt(const uint8_t *encrypted_data, size_t encrypted_data_size, uint8_t *data,
+               size_t *data_size);
 
   /**
    * Compute the sha256 hash of given data.

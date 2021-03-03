@@ -34,16 +34,15 @@ bool Crypto::init_mbedtls(void) {
   mbedtls_pk_init(&m_pk_context);
 
   // Initialize entropy.
-  res = mbedtls_ctr_drbg_seed(&m_ctr_drbg_contex, mbedtls_entropy_func,
-                              &m_entropy_context, NULL, 0);
+  res = mbedtls_ctr_drbg_seed(&m_ctr_drbg_contex, mbedtls_entropy_func, &m_entropy_context, NULL,
+                              0);
   if (res != 0) {
     fprintf(stderr, "mbedtls_ctr_drbg_seed failed.\n");
     goto exit;
   }
 
   // Initialize RSA context.
-  res = mbedtls_pk_setup(&m_pk_context,
-                         mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+  res = mbedtls_pk_setup(&m_pk_context, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
   if (res != 0) {
     fprintf(stderr, "mbedtls_pk_setup failed (%d).\n", res);
     goto exit;
@@ -51,17 +50,15 @@ bool Crypto::init_mbedtls(void) {
 
   // Generate an ephemeral 2048-bit RSA key pair with
   // exponent 65537 for the enclave.
-  res =
-      mbedtls_rsa_gen_key(mbedtls_pk_rsa(m_pk_context), mbedtls_ctr_drbg_random,
-                          &m_ctr_drbg_contex, 2048, 65537);
+  res = mbedtls_rsa_gen_key(mbedtls_pk_rsa(m_pk_context), mbedtls_ctr_drbg_random,
+                            &m_ctr_drbg_contex, 2048, 65537);
   if (res != 0) {
     fprintf(stderr, "mbedtls_rsa_gen_key failed (%d)\n", res);
     goto exit;
   }
 
   // Write out the public key in PEM format for exchange with other enclaves.
-  res = mbedtls_pk_write_pubkey_pem(&m_pk_context, m_public_key,
-                                    sizeof(m_public_key));
+  res = mbedtls_pk_write_pubkey_pem(&m_pk_context, m_public_key, sizeof(m_public_key));
   if (res != 0) {
     fprintf(stderr, "mbedtls_pk_write_pubkey_pem failed (%d)\n", res);
     goto exit;
@@ -116,9 +113,8 @@ exit:
  * Encrypt encrypts the given data using the given public key.
  * Used to encrypt data using the public key of another enclave.
  */
-bool Crypto::encrypt(const uint8_t *pem_public_key, const uint8_t *data,
-                     size_t data_size, uint8_t *encrypted_data,
-                     size_t *encrypted_data_size) {
+bool Crypto::encrypt(const uint8_t *pem_public_key, const uint8_t *data, size_t data_size,
+                     uint8_t *encrypted_data, size_t *encrypted_data_size) {
   bool result = false;
   mbedtls_pk_context key;
   mbedtls_entropy_context entropy;
@@ -131,8 +127,7 @@ bool Crypto::encrypt(const uint8_t *pem_public_key, const uint8_t *data,
   mbedtls_entropy_init(&entropy);
   mbedtls_pk_init(&key);
 
-  res =
-      mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
+  res = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
   if (res != 0) {
     fprintf(stderr, "mbedtls_ctr_drbg_seed failed.\n");
     goto exit;
@@ -151,9 +146,8 @@ bool Crypto::encrypt(const uint8_t *pem_public_key, const uint8_t *data,
   rsa_context->hash_id = MBEDTLS_MD_SHA256;
 
   // Encrypt the data.
-  res = mbedtls_rsa_pkcs1_encrypt(rsa_context, mbedtls_ctr_drbg_random,
-                                  &ctr_drbg, MBEDTLS_RSA_PUBLIC, data_size,
-                                  data, encrypted_data);
+  res = mbedtls_rsa_pkcs1_encrypt(rsa_context, mbedtls_ctr_drbg_random, &ctr_drbg,
+                                  MBEDTLS_RSA_PUBLIC, data_size, data, encrypted_data);
   if (res != 0) {
     fprintf(stderr, "mbedtls_rsa_pkcs1_encrypt failed with %d\n", res);
     goto exit;
@@ -172,8 +166,8 @@ exit:
  * decrypt the given data using current enclave's private key.
  * Used to receive encrypted data from another enclave.
  */
-bool Crypto::decrypt(const uint8_t *encrypted_data, size_t encrypted_data_size,
-                     uint8_t *data, size_t *data_size) {
+bool Crypto::decrypt(const uint8_t *encrypted_data, size_t encrypted_data_size, uint8_t *data,
+                     size_t *data_size) {
   bool ret = false;
   size_t output_size = 0;
   int res = 0;
@@ -188,9 +182,9 @@ bool Crypto::decrypt(const uint8_t *encrypted_data, size_t encrypted_data_size,
   rsa_context->hash_id = MBEDTLS_MD_SHA256;
 
   output_size = *data_size;
-  res = mbedtls_rsa_pkcs1_decrypt(
-      rsa_context, mbedtls_ctr_drbg_random, &m_ctr_drbg_contex,
-      MBEDTLS_RSA_PRIVATE, &output_size, encrypted_data, data, output_size);
+  res = mbedtls_rsa_pkcs1_decrypt(rsa_context, mbedtls_ctr_drbg_random, &m_ctr_drbg_contex,
+                                  MBEDTLS_RSA_PRIVATE, &output_size, encrypted_data, data,
+                                  output_size);
   if (res != 0) {
     fprintf(stderr, "mbedtls_rsa_pkcs1_decrypt failed with -0x%x\n", -res);
     goto exit;

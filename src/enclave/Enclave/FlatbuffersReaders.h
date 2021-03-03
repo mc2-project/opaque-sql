@@ -85,17 +85,14 @@ private:
  * object. */
 class EncryptedBlocksToEncryptedBlockReader {
 public:
-  EncryptedBlocksToEncryptedBlockReader(
-      BufferRefView<tuix::EncryptedBlocks> buf) {
+  EncryptedBlocksToEncryptedBlockReader(BufferRefView<tuix::EncryptedBlocks> buf) {
     buf.verify();
     encrypted_blocks = buf.root();
   }
-  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator
-  begin() {
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {
     return encrypted_blocks->blocks()->begin();
   }
-  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator
-  end() {
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator end() {
     return encrypted_blocks->blocks()->end();
   }
 

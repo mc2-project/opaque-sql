@@ -10,16 +10,15 @@
  * and re-encrypting them to untrusted memory. The granularity of decryption is
  * a tuix::EncryptedBlock, which should fit entirely in enclave memory.
  */
-void external_sort(uint8_t *sort_order, size_t sort_order_length,
-                   uint8_t *input_rows, size_t input_rows_length,
-                   uint8_t **output_rows, size_t *output_rows_length);
+void external_sort(uint8_t *sort_order, size_t sort_order_length, uint8_t *input_rows,
+                   size_t input_rows_length, uint8_t **output_rows, size_t *output_rows_length);
 
 /**
  * For distributed sorting, sample rows from a partition of data so they can be
  * collected to a single machine.
  */
-void sample(uint8_t *input_rows, size_t input_rows_length,
-            uint8_t **output_rows, size_t *output_rows_length);
+void sample(uint8_t *input_rows, size_t input_rows_length, uint8_t **output_rows,
+            size_t *output_rows_length);
 
 /**
  * For distributed sorting, range-partition the input rows and write the
@@ -29,9 +28,8 @@ void sample(uint8_t *input_rows, size_t input_rows_length,
  * to) num_partitions - 1 rows. If fewer than num_partitions - 1 input rows are
  * provided, then only that many boundary rows will be returned.
  */
-void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
-                       uint32_t num_partitions, uint8_t *input_rows,
-                       size_t input_rows_length, uint8_t **output_rows,
+void find_range_bounds(uint8_t *sort_order, size_t sort_order_length, uint32_t num_partitions,
+                       uint8_t *input_rows, size_t input_rows_length, uint8_t **output_rows,
                        size_t *output_rows_length);
 /**
  * For distributed sorting, range-partition the input partition according to the
@@ -41,11 +39,9 @@ void find_range_bounds(uint8_t *sort_order, size_t sort_order_length,
  * The range partitioning is expressed as an array of buffers, one per output
  * partition.
  */
-void partition_for_sort(uint8_t *sort_order, size_t sort_order_length,
-                        uint32_t num_partitions, uint8_t *input_rows,
-                        size_t input_rows_length, uint8_t *boundary_rows,
-                        size_t boundary_rows_length,
-                        uint8_t **output_partition_ptrs,
+void partition_for_sort(uint8_t *sort_order, size_t sort_order_length, uint32_t num_partitions,
+                        uint8_t *input_rows, size_t input_rows_length, uint8_t *boundary_rows,
+                        size_t boundary_rows_length, uint8_t **output_partition_ptrs,
                         size_t *output_partition_lengths);
 
 #endif /* _SORT_H_ */

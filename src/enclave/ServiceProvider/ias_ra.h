@@ -35,7 +35,7 @@
 #include "ecp.h"
 
 #define SAMPLE_HASH_SIZE 32 // SHA256
-#define SAMPLE_MAC_SIZE                                                        \
+#define SAMPLE_MAC_SIZE                                                                          \
   16 // Message Authentication Code
      // - 16 bytes
 

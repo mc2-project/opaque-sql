@@ -33,16 +33,14 @@ void set_shared_key(uint8_t *msg4, uint32_t msg4_size);
  *
  * A random IV will be used.
  */
-void encrypt(uint8_t *plaintext, uint32_t plaintext_length,
-             uint8_t *ciphertext);
+void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext);
 
 /**
  * Decrypt the given ciphertext using AES-GCM with a 128-bit key and write the
  * result to `plaintext`. The encrypted data must be formatted as described in
  * the documentation for `encrypt`.
  */
-void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length,
-             uint8_t *plaintext);
+void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *plaintext);
 
 /** Calculate how many bytes `encrypt` will write if invoked on plaintext of the
  * given length. */

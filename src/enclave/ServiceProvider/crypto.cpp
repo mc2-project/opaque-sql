@@ -30,12 +30,7 @@ in the License.
 #include <stdio.h>
 #include <string.h>
 
-static enum _error_type {
-  e_none,
-  e_crypto,
-  e_system,
-  e_api
-} error_type = e_none;
+static enum _error_type { e_none, e_crypto, e_system, e_api } error_type = e_none;
 
 /*==========================================================================
  * EC key functions
@@ -45,8 +40,7 @@ static enum _error_type {
  * HMAC
  *========================================================================== */
 
-int sha256_verify(const unsigned char *msg, size_t mlen, unsigned char *sig,
-                  size_t sigsz) {
+int sha256_verify(const unsigned char *msg, size_t mlen, unsigned char *sig, size_t sigsz) {
   if (sigsz != LC_SHA256_HASH_SIZE) {
     return 0;
   }
@@ -57,8 +51,7 @@ int sha256_verify(const unsigned char *msg, size_t mlen, unsigned char *sig,
   lc_sha256_hash_t hash;
   lc_sha256_get_hash(sha_handle, &hash);
   lc_sha256_close(sha_handle);
-  return memcmp(reinterpret_cast<const uint8_t *>(&hash), sig,
-                LC_SHA256_HASH_SIZE) == 0;
+  return memcmp(reinterpret_cast<const uint8_t *>(&hash), sig, LC_SHA256_HASH_SIZE) == 0;
 }
 
 /*==========================================================================
@@ -214,8 +207,8 @@ EVP_PKEY *buffer_to_public_key(char *input_buffer, int input_buf_size) {
   return key;
 }
 
-int public_encrypt(EVP_PKEY *key, unsigned char *data, int data_len,
-                   unsigned char *encrypted, size_t *encrypted_len) {
+int public_encrypt(EVP_PKEY *key, unsigned char *data, int data_len, unsigned char *encrypted,
+                   size_t *encrypted_len) {
   size_t outlen = 0;
   const int padding = RSA_PKCS1_PADDING;
   ENGINE *eng = NULL;

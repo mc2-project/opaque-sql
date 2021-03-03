@@ -25,17 +25,15 @@ using namespace edu::berkeley::cs::rise::opaque;
  */
 template <typename T> struct BufferRefView {
   BufferRefView() : buf(nullptr), len(0) {}
-  BufferRefView(uint8_t *_buf, flatbuffers::uoffset_t _len)
-      : buf(_buf), len(_len) {}
+  BufferRefView(uint8_t *_buf, flatbuffers::uoffset_t _len) : buf(_buf), len(_len) {}
 
   const T *root() const { return flatbuffers::GetRoot<T>(buf); }
 
   void verify() {
     flatbuffers::Verifier verifier(buf, len);
     if (!verifier.VerifyBuffer<T>(nullptr)) {
-      throw std::runtime_error(
-          std::string("Corrupt ") + std::string(typeid(T).name()) +
-          std::string(" buffer of length ") + std::to_string(len));
+      throw std::runtime_error(std::string("Corrupt ") + std::string(typeid(T).name()) +
+                               std::string(" buffer of length ") + std::to_string(len));
     }
   }
 
@@ -58,9 +56,8 @@ template <typename T> struct UntrustedBufferRef {
   void verify() {
     flatbuffers::Verifier verifier(buf, len);
     if (!verifier.VerifyBuffer<T>(nullptr)) {
-      throw std::runtime_error(
-          std::string("Corrupt ") + std::string(typeid(T).name()) +
-          std::string(" buffer of length ") + std::to_string(len));
+      throw std::runtime_error(std::string("Corrupt ") + std::string(typeid(T).name()) +
+                               std::string(" buffer of length ") + std::to_string(len));
     }
   }
 
@@ -108,46 +105,39 @@ flatbuffers::Offset<T> flatbuffers_copy(const T *flatbuffers_obj,
                                         bool force_null = false);
 template <>
 flatbuffers::Offset<tuix::Row>
-flatbuffers_copy(const tuix::Row *row, flatbuffers::FlatBufferBuilder &builder,
-                 bool force_null);
+flatbuffers_copy(const tuix::Row *row, flatbuffers::FlatBufferBuilder &builder, bool force_null);
 template <>
-flatbuffers::Offset<tuix::Field>
-flatbuffers_copy(const tuix::Field *field,
-                 flatbuffers::FlatBufferBuilder &builder, bool force_null);
+flatbuffers::Offset<tuix::Field> flatbuffers_copy(const tuix::Field *field,
+                                                  flatbuffers::FlatBufferBuilder &builder,
+                                                  bool force_null);
 
 /** Helper function for casting among primitive types and strings. */
 template <typename InputTuixField, typename InputType>
 flatbuffers::Offset<tuix::Field>
 flatbuffers_cast(const tuix::Cast *cast, const tuix::Field *value,
                  flatbuffers::FlatBufferBuilder &builder, bool result_is_null) {
-  InputType value_eval =
-      static_cast<const InputTuixField *>(value->value())->value();
+  InputType value_eval = static_cast<const InputTuixField *>(value->value())->value();
   switch (cast->target_type()) {
   case tuix::ColType_IntegerType: {
     return tuix::CreateField(
         builder, tuix::FieldUnion_IntegerField,
-        tuix::CreateIntegerField(builder, static_cast<int32_t>(value_eval))
-            .Union(),
+        tuix::CreateIntegerField(builder, static_cast<int32_t>(value_eval)).Union(),
         result_is_null);
   }
   case tuix::ColType_LongType: {
     return tuix::CreateField(
         builder, tuix::FieldUnion_LongField,
-        tuix::CreateLongField(builder, static_cast<int64_t>(value_eval))
-            .Union(),
-        result_is_null);
+        tuix::CreateLongField(builder, static_cast<int64_t>(value_eval)).Union(), result_is_null);
   }
   case tuix::ColType_FloatType: {
     return tuix::CreateField(
         builder, tuix::FieldUnion_FloatField,
-        tuix::CreateFloatField(builder, static_cast<float>(value_eval)).Union(),
-        result_is_null);
+        tuix::CreateFloatField(builder, static_cast<float>(value_eval)).Union(), result_is_null);
   }
   case tuix::ColType_DoubleType: {
     return tuix::CreateField(
         builder, tuix::FieldUnion_DoubleField,
-        tuix::CreateDoubleField(builder, static_cast<double>(value_eval))
-            .Union(),
+        tuix::CreateDoubleField(builder, static_cast<double>(value_eval)).Union(),
         result_is_null);
   }
   case tuix::ColType_StringType: {
@@ -156,24 +146,19 @@ flatbuffers_cast(const tuix::Cast *cast, const tuix::Field *value,
     std::vector<uint8_t> str_vec(str.begin(), str.end());
     return tuix::CreateField(
         builder, tuix::FieldUnion_StringField,
-        tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size())
-            .Union(),
-        result_is_null);
+        tuix::CreateStringFieldDirect(builder, &str_vec, str_vec.size()).Union(), result_is_null);
   }
   default: {
-    throw std::runtime_error(
-        std::string("Can't cast ") +
-        std::string(typeid(InputTuixField).name()) + std::string(" to ") +
-        std::string(tuix::EnumNameColType(cast->target_type())));
+    throw std::runtime_error(std::string("Can't cast ") +
+                             std::string(typeid(InputTuixField).name()) + std::string(" to ") +
+                             std::string(tuix::EnumNameColType(cast->target_type())));
   }
   }
 }
 
 template <typename T>
-flatbuffers::Offset<T> GetOffset(flatbuffers::FlatBufferBuilder &builder,
-                                 const T *pointer) {
-  return flatbuffers::Offset<T>(builder.GetCurrentBufferPointer() +
-                                builder.GetSize() -
+flatbuffers::Offset<T> GetOffset(flatbuffers::FlatBufferBuilder &builder, const T *pointer) {
+  return flatbuffers::Offset<T>(builder.GetCurrentBufferPointer() + builder.GetSize() -
                                 reinterpret_cast<const uint8_t *>(pointer));
 }
 
