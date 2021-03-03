@@ -5,9 +5,10 @@ url="$2"
 
 # Run scalafmt and check format
 echo "* Checking scala files for formating..."
-(cd $DIR/; scalafmt)
+(cd ${OPAQUE_HOME}/; scalafmt --diff)
 git diff --quiet
 formatted=$?
+echo "* Done!"
 echo "* Scala properly formatted?"
 if [ $formatted -eq 0 ]
 then
@@ -18,7 +19,7 @@ else
     git diff --name-only
     echo ""
     echo "Running 'scalafmt' to format the code."
-    scalafmt
+    scalafmt --diff
     exit 1
 fi
 
