@@ -209,7 +209,7 @@ Now we can port this UDF to Opaque as follows:
 
 ## Contributing
 
-Opaque uses a pre-push hook that formats all Scala and C/C++ files. Before opening a pull request, please do the following:
+Opaque uses a pre-commit hook to ensure that all commits are formatted to the desired style. Before making changes and opening a pull request, please do the following:
 
 1. Install dependencies:
 
@@ -228,9 +228,9 @@ Opaque uses a pre-push hook that formats all Scala and C/C++ files. Before openi
     sudo npm install -g clang-format
     ```
 
-2. Set up your local repository's pre-push hook:
+2. Set up your local repository's pre-commit hook:
 
     ```sh
     chmod +x .hooks/*
-    .hooks/install-pre-push
+    .hooks/install-pre-commit
     ```
