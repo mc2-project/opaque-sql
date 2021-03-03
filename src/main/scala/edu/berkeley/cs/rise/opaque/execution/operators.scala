@@ -38,7 +38,7 @@ trait LeafExecNode extends SparkPlan {
 }
 
 trait UnaryExecNode extends SparkPlan {
-  def child: SparkPlan
+def child: SparkPlan
 
   override final def children: Seq[SparkPlan] = child :: Nil
 
