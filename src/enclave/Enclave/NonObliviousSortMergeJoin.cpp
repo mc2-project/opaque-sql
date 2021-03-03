@@ -76,7 +76,7 @@ void non_oblivious_sort_merge_join(
   RowWriter w;
 
   RowWriter primary_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows, previous_primary_unmatched_rows; // These are used for all joins but inner
+  RowWriter primary_matched_rows, primary_unmatched_rows; // These are used for all joins but inner
   FlatbuffersTemporaryRow last_primary_of_group;
 
   // Used for outer rows to get the schema of the foreign table.
@@ -106,8 +106,11 @@ void non_oblivious_sort_merge_join(
         // If a new primary group is encountered
         if (join_type == tuix::JoinType_LeftSemi) {
           write_output_rows(primary_matched_rows, w, join_type);
-        } else if (join_type == tuix::JoinType_LeftAnti || join_expr_eval.is_outer_join()) {
-          write_output_rows(primary_unmatched_rows, previous_primary_unmatched_rows, join_type);
+        } else if (join_type == tuix::JoinType_LeftAnti) {
+          write_output_rows(primary_unmatched_rows, w, join_type);
+        } else if (join_expr_eval.is_outer_join()) {
+          // Dummy row is always guaranteed to be the first row, so last_foreign_row.get() cannot be null.
+          write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
         }
 
         primary_group.clear();
@@ -168,12 +171,10 @@ void non_oblivious_sort_merge_join(
       break;
     case tuix::JoinType_LeftAnti:
       write_output_rows(primary_unmatched_rows, w, join_type);
-      write_output_rows(previous_primary_unmatched_rows, w, join_type);
       break;
     case tuix::JoinType_LeftOuter:
     case tuix::JoinType_RightOuter:
       write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
-      write_output_rows(previous_primary_unmatched_rows, w, join_type, last_foreign_row.get());
       break;
     default:
       break;

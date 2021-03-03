@@ -110,7 +110,7 @@ case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
       val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
         Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
           output.map(_.dataType), useEnclave = true, isDummyRows = true)
-      Iterator(Utils.concatEncryptedBlocks(rowIter.toSeq :+ nullRowsBlock))
+      Iterator(Utils.concatEncryptedBlocks(nullRowsBlock +: rowIter.toSeq))
     }
   }
 }
