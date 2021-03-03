@@ -8,11 +8,11 @@ format_needed=0
 echo "* Checking changed Scala files for formatting..."
 (cd ${OPAQUE_HOME}/; scalafmt --diff >/dev/null)
 git diff --quiet
-formatted=$?
+scala_formatted=$?
 echo "* Done!"
 echo "* The following files needed formatted:"
 git diff --name-only
-if [ $formatted -ne 0 ]
+if [ $scala_formatted -ne 0 ]
 then
     git add -u
     format_needed=1
@@ -22,11 +22,11 @@ fi
 echo "* Checking changed C/C++ files for formatting..."
 (cd ${OPAQUE_HOME}/; git-clang-format master >/dev/null)
 git diff --quiet
-formatted=$?
+c_formatted=$?
 echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
-if [ $formatted -ne 0 ]
+if [ $c_formatted -ne 0 ]
 then
     git add -u
     format_needed=1
