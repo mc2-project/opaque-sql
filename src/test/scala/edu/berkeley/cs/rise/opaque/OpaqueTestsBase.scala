@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-
 import scala.collection.mutable
 
 import org.apache.log4j.Level
@@ -47,14 +46,14 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
   // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
   implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
 
-  def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
+  def equalityToArrayEquality[A: Equality](): Equality[Array[A]] = {
     new Equality[Array[A]] {
       def areEqual(a: Array[A], b: Any): Boolean = {
         b match {
           case b: Array[_] =>
             (a.length == b.length
-              && a.zip(b).forall {
-                case (x, y) => implicitly[Equality[A]].areEqual(x, y)
+              && a.zip(b).forall { case (x, y) =>
+                implicitly[Equality[A]].areEqual(x, y)
               })
           case _ => false
         }
@@ -63,8 +62,10 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
     }
   }
 
-  def testAgainstSpark[A : Equality](name: String, testFunc: (String, Tag*) => ((=> Any) => Unit) = test)
-      (f: SecurityLevel => A): Unit = {
+  def testAgainstSpark[A: Equality](
+      name: String,
+      testFunc: (String, Tag*) => ((=> Any) => Unit) = test
+  )(f: SecurityLevel => A): Unit = {
     testFunc(name + " - encrypted") {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified above
@@ -88,7 +89,8 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
     val sparkLoggers = Seq(
       "org.apache.spark",
       "org.apache.spark.executor.Executor",
-      "org.apache.spark.scheduler.TaskSetManager")
+      "org.apache.spark.scheduler.TaskSetManager"
+    )
     val logLevels = new mutable.HashMap[String, Level]
     for (l <- sparkLoggers) {
       logLevels(l) = LogManager.getLogger(l).getLevel

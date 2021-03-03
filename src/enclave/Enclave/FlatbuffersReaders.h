@@ -6,8 +6,8 @@
 using namespace edu::berkeley::cs::rise::opaque;
 
 /**
- * A reader for Row objects within an EncryptedBlock object that provides both iterator-based and
- * range-style interfaces.
+ * A reader for Row objects within an EncryptedBlock object that provides both
+ * iterator-based and range-style interfaces.
  */
 class EncryptedBlockToRowReader {
 public:
@@ -15,13 +15,9 @@ public:
 
   void reset(const tuix::EncryptedBlock *encrypted_block);
 
-  bool has_next() {
-    return initialized && row_idx < rows->rows()->size();
-  }
+  bool has_next() { return initialized && row_idx < rows->rows()->size(); }
 
-  const tuix::Row *next() {
-    return rows->rows()->Get(row_idx++);
-  }
+  const tuix::Row *next() { return rows->rows()->Get(row_idx++); }
 
   flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator begin() {
     return rows->rows()->begin();
@@ -63,8 +59,8 @@ private:
 /**
  * A reader for Rows organized into sorted runs.
  *
- * Different runs can be read independently. Within a run, access is performed using an
- * iterator-style sequential interface.
+ * Different runs can be read independently. Within a run, access is performed
+ * using an iterator-style sequential interface.
  */
 class SortedRunsReader {
 public:
@@ -75,8 +71,8 @@ public:
   uint32_t num_runs();
   bool run_has_next(uint32_t run_idx);
   /**
-   * Access the next Row from the given run. Invalidates any previously-returned Row pointers from
-   * the same run.
+   * Access the next Row from the given run. Invalidates any previously-returned
+   * Row pointers from the same run.
    */
   const tuix::Row *next_from_run(uint32_t run_idx);
 
@@ -85,17 +81,21 @@ private:
   std::vector<RowReader> run_readers;
 };
 
-/** A range-style reader for EncryptedBlock objects within an EncryptedBlocks object. */
+/** A range-style reader for EncryptedBlock objects within an EncryptedBlocks
+ * object. */
 class EncryptedBlocksToEncryptedBlockReader {
 public:
-  EncryptedBlocksToEncryptedBlockReader(BufferRefView<tuix::EncryptedBlocks> buf) {
+  EncryptedBlocksToEncryptedBlockReader(
+      BufferRefView<tuix::EncryptedBlocks> buf) {
     buf.verify();
     encrypted_blocks = buf.root();
   }
-  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator begin() {
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator
+  begin() {
     return encrypted_blocks->blocks()->begin();
   }
-  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator end() {
+  flatbuffers::Vector<flatbuffers::Offset<tuix::EncryptedBlock>>::const_iterator
+  end() {
     return encrypted_blocks->blocks()->end();
   }
 

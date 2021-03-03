@@ -5,50 +5,50 @@
 #include "FlatbuffersWriters.h"
 #include "common.h"
 
-/** 
+/**
  * C++ implementation of a non-oblivious sort merge join.
  * Rows MUST be tagged primary or secondary for this to work.
  */
 
 void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval,
-                          const tuix::Row *primary,
-                          const tuix::Row *current) {
+                          const tuix::Row *primary, const tuix::Row *current) {
   if (!join_expr_eval.is_same_group(primary, current)) {
     throw std::runtime_error(
-                             std::string("Invariant violation: rows of primary_group "
-                                         "are not of the same group: ")
-                             + to_string(primary)
-                             + std::string(" vs ")
-                             + to_string(current));
+        std::string("Invariant violation: rows of primary_group "
+                    "are not of the same group: ") +
+        to_string(primary) + std::string(" vs ") + to_string(current));
   }
 }
 
 void write_output_rows(RowWriter &group, RowWriter &w) {
   auto group_buffer = group.output_buffer();
   RowReader group_reader(group_buffer.view());
-          
+
   while (group_reader.has_next()) {
     const tuix::Row *row = group_reader.next();
     w.append(row);
-  }  
+  }
 }
 
-/** 
+/**
  * Sort merge equi join algorithm
- * Input: the rows are unioned from both the primary (or left) table and the non-primary (or right) table
- * 
+ * Input: the rows are unioned from both the primary (or left) table and the
+ * non-primary (or right) table
+ *
  * Outer loop: iterate over all input rows
- * 
+ *
  * If it's a row from the left table
  * - Add it to the current group
  * - Otherwise start a new group
- *   - If it's a left semi/anti join, output the primary_matched_rows/primary_unmatched_rows
- * 
+ *   - If it's a left semi/anti join, output the
+ * primary_matched_rows/primary_unmatched_rows
+ *
  * If it's a row from the right table
- * - Inner join: iterate over current left group, output the joined row only if the condition is satisfied
- * - Left semi/anti join: iterate over `primary_unmatched_rows`, add a matched row to `primary_matched_rows` 
- *   and remove from `primary_unmatched_rows`
- * 
+ * - Inner join: iterate over current left group, output the joined row only if
+ * the condition is satisfied
+ * - Left semi/anti join: iterate over `primary_unmatched_rows`, add a matched
+ * row to `primary_matched_rows` and remove from `primary_unmatched_rows`
+ *
  * After loop: output the last group left semi/anti join
  */
 
@@ -60,12 +60,14 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
 
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
   tuix::JoinType join_type = join_expr_eval.get_join_type();
-  RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
+  RowReader r(
+      BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
   RowWriter w;
 
   RowWriter primary_group;
   FlatbuffersTemporaryRow last_primary_of_group;
-  RowWriter primary_matched_rows, primary_unmatched_rows; // This is only used for left semi/anti join
+  RowWriter primary_matched_rows,
+      primary_unmatched_rows; // This is only used for left semi/anti join
 
   while (r.has_next()) {
     const tuix::Row *current = r.next();
@@ -116,8 +118,10 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
           }
         } else if (join_type == tuix::JoinType_LeftSemi ||
                    join_type == tuix::JoinType_LeftAnti) {
-          auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
-          RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
+          auto primary_unmatched_rows_buffer =
+              primary_unmatched_rows.output_buffer();
+          RowReader primary_unmatched_rows_reader(
+              primary_unmatched_rows_buffer.view());
           RowWriter new_primary_unmatched_rows;
 
           while (primary_unmatched_rows_reader.has_next()) {
@@ -129,13 +133,16 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
               new_primary_unmatched_rows.append(primary);
             }
           }
-           
+
           // Reset primary_unmatched_rows
           primary_unmatched_rows.clear();
-          auto new_primary_unmatched_rows_buffer = new_primary_unmatched_rows.output_buffer();
-          RowReader new_primary_unmatched_rows_reader(new_primary_unmatched_rows_buffer.view());
+          auto new_primary_unmatched_rows_buffer =
+              new_primary_unmatched_rows.output_buffer();
+          RowReader new_primary_unmatched_rows_reader(
+              new_primary_unmatched_rows_buffer.view());
           while (new_primary_unmatched_rows_reader.has_next()) {
-            primary_unmatched_rows.append(new_primary_unmatched_rows_reader.next());
+            primary_unmatched_rows.append(
+                new_primary_unmatched_rows_reader.next());
           }
         }
       }

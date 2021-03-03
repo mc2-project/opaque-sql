@@ -1,32 +1,29 @@
 #include "FlatbuffersReaders.h"
 
-void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
+void EncryptedBlockToRowReader::reset(
+    const tuix::EncryptedBlock *encrypted_block) {
   uint32_t num_rows = encrypted_block->num_rows();
 
   const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
   rows_buf.reset(new uint8_t[rows_len]);
-  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
-          rows_buf.get());
+  decrypt(encrypted_block->enc_rows()->data(),
+          encrypted_block->enc_rows()->size(), rows_buf.get());
   BufferRefView<tuix::Rows> buf(rows_buf.get(), rows_len);
   buf.verify();
 
   rows = buf.root();
   if (rows->rows()->size() != num_rows) {
     throw std::runtime_error(
-      std::string("EncryptedBlock claimed to contain ")
-      + std::to_string(num_rows)
-      + std::string("rows but actually contains ")
-      + std::to_string(rows->rows()->size())
-      + std::string(" rows"));
+        std::string("EncryptedBlock claimed to contain ") +
+        std::to_string(num_rows) + std::string("rows but actually contains ") +
+        std::to_string(rows->rows()->size()) + std::string(" rows"));
   }
 
   row_idx = 0;
   initialized = true;
 }
 
-RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) {
-  reset(buf);
-}
+RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) { reset(buf); }
 
 RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks) {
   reset(encrypted_blocks);
@@ -53,11 +50,13 @@ uint32_t RowReader::num_rows() {
 }
 
 bool RowReader::has_next() {
-  return block_reader.has_next() || block_idx + 1 < encrypted_blocks->blocks()->size();
+  return block_reader.has_next() ||
+         block_idx + 1 < encrypted_blocks->blocks()->size();
 }
 
 const tuix::Row *RowReader::next() {
-  // Note: this will invalidate any pointers returned by previous invocations of this method
+  // Note: this will invalidate any pointers returned by previous invocations of
+  // this method
   if (!block_reader.has_next()) {
     assert(block_idx + 1 < encrypted_blocks->blocks()->size());
     block_idx++;
@@ -81,14 +80,13 @@ void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf) {
   buf.verify();
   sorted_runs = buf.root();
   run_readers.clear();
-  for (auto it = sorted_runs->runs()->begin(); it != sorted_runs->runs()->end(); ++it) {
+  for (auto it = sorted_runs->runs()->begin(); it != sorted_runs->runs()->end();
+       ++it) {
     run_readers.push_back(RowReader(*it));
   }
 }
 
-uint32_t SortedRunsReader::num_runs() {
-  return sorted_runs->runs()->size();
-}
+uint32_t SortedRunsReader::num_runs() { return sorted_runs->runs()->size(); }
 
 bool SortedRunsReader::run_has_next(uint32_t run_idx) {
   return run_readers[run_idx].has_next();

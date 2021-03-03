@@ -35,7 +35,7 @@
 
 // print functions for debugging
 lc_status_t print_priv_key(lc_ec256_private_t p_private) {
-  uint8_t *ptr = (uint8_t *) p_private.r;
+  uint8_t *ptr = (uint8_t *)p_private.r;
   printf("Private key: ");
   print_hex(ptr, LC_ECP256_KEY_SIZE);
   printf("\n");
@@ -43,14 +43,13 @@ lc_status_t print_priv_key(lc_ec256_private_t p_private) {
   return LC_SUCCESS;
 }
 
-
 lc_status_t print_pub_key(lc_ec256_public_t p_public) {
-  uint8_t *ptr = (uint8_t *) p_public.gx;
+  uint8_t *ptr = (uint8_t *)p_public.gx;
   printf("Public key gx: ");
   print_hex(ptr, LC_ECP256_KEY_SIZE);
   printf("\n");
 
-  ptr = (uint8_t *) p_public.gy;
+  ptr = (uint8_t *)p_public.gy;
   printf("Public key gy: ");
   print_hex(ptr, LC_ECP256_KEY_SIZE);
   printf("\n");
@@ -63,8 +62,8 @@ void print_ec_key(EC_KEY *ec_key) {
 
   BIO *o = BIO_new_fp(stdout, BIO_NOCLOSE);
 
-  EC_GROUP *group = (EC_GROUP *) EC_KEY_get0_group(ec_key);
-  EC_POINT *point = (EC_POINT *) EC_KEY_get0_public_key(ec_key);
+  EC_GROUP *group = (EC_GROUP *)EC_KEY_get0_group(ec_key);
+  EC_POINT *point = (EC_POINT *)EC_KEY_get0_public_key(ec_key);
 
   BIGNUM *x_ec = BN_new();
   BIGNUM *y_ec = BN_new();
@@ -89,20 +88,18 @@ void print_ec_key(EC_KEY *ec_key) {
   BN_free(y_ec);
 }
 
-
 // helper functions
 void reverse_endian(uint8_t *input, uint8_t *output, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
-    *(output+i) = *(input+len-i-1);
+    *(output + i) = *(input + len - i - 1);
   }
 }
 
-void lc_ssl2sgx(EC_KEY *ssl_key,
-                lc_ec256_private_t *p_private,
+void lc_ssl2sgx(EC_KEY *ssl_key, lc_ec256_private_t *p_private,
                 lc_ec256_public_t *p_public) {
 
-  EC_GROUP *group = (EC_GROUP *) EC_KEY_get0_group(ssl_key);
-  EC_POINT *point = (EC_POINT *) EC_KEY_get0_public_key(ssl_key);
+  EC_GROUP *group = (EC_GROUP *)EC_KEY_get0_group(ssl_key);
+  EC_POINT *point = (EC_POINT *)EC_KEY_get0_public_key(ssl_key);
 
   // get pub key coordinates
   BIGNUM *x_ec = BN_new();
@@ -113,13 +110,13 @@ void lc_ssl2sgx(EC_KEY *ssl_key,
   const BIGNUM *priv_bn = EC_KEY_get0_private_key(ssl_key);
 
   // Store the public and private keys in binary format
-  unsigned char *x_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
-  unsigned char *y_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
-  unsigned char *r_ = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *x_ = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *y_ = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *r_ = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
 
-  unsigned char *x = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
-  unsigned char *y = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
-  unsigned char *r = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *x = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *y = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *r = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
 
   BN_bn2bin(x_ec, x_);
   BN_bn2bin(y_ec, y_);
@@ -149,9 +146,9 @@ void lc_ssl2sgx(EC_KEY *ssl_key,
 // This is a wrapper around the OpenSSL EVP AES-GCM encryption
 lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
                                       const uint8_t *p_src, uint32_t src_len,
-                                      uint8_t *p_dst,
-                                      const uint8_t *p_iv, uint32_t iv_len,
-                                      const uint8_t *p_aad, uint32_t aad_len,
+                                      uint8_t *p_dst, const uint8_t *p_iv,
+                                      uint32_t iv_len, const uint8_t *p_aad,
+                                      uint32_t aad_len,
                                       lc_aes_gcm_128bit_tag_t *p_out_mac) {
 
   EVP_CIPHER_CTX *ctx = NULL;
@@ -159,8 +156,8 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   int len = 0;
   uint32_t ciphertext_len;
 
-  (void) p_aad;
-  (void) aad_len;
+  (void)p_aad;
+  (void)aad_len;
 
   /* Create and initialise the context */
   ctx = EVP_CIPHER_CTX_new();
@@ -184,7 +181,8 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   }
 
   /* Initialise key and IV */
-  ret = EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *) *p_key, p_iv);
+  ret =
+      EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *)*p_key, p_iv);
   if (ret != 1) {
     fprintf(stderr, "[%s] encryption init failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -204,9 +202,10 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   /* Provide the message to be encrypted, and obtain the encrypted output.
    * EVP_EncryptUpdate can be called multiple times if necessary
    */
-  ret = EVP_EncryptUpdate(ctx, p_dst, &len, p_src, (int) src_len);
+  ret = EVP_EncryptUpdate(ctx, p_dst, &len, p_src, (int)src_len);
   if (ret != 1) {
-    fprintf(stderr, "[%s] encryption update failure, ret is %u, len is %u\n", __FUNCTION__, ret, len);
+    fprintf(stderr, "[%s] encryption update failure, ret is %u, len is %u\n",
+            __FUNCTION__, ret, len);
     return LC_ERROR_UNEXPECTED;
   }
   ciphertext_len = len;
@@ -222,7 +221,8 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   ciphertext_len += len;
 
   /* Get the tag */
-  ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE, (unsigned char *) *p_out_mac);
+  ret = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, LC_AESGCM_MAC_SIZE,
+                            (unsigned char *)*p_out_mac);
   if (ret != 1) {
     fprintf(stderr, "[%s]  \n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
@@ -234,11 +234,11 @@ lc_status_t lc_rijndael128GCM_encrypt(const lc_aes_gcm_128bit_key_t *p_key,
   return LC_SUCCESS;
 }
 
-
-lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *aad,
-                                      int aad_len, unsigned char *tag, unsigned char *key, unsigned char *iv,
-                                      unsigned char *plaintext)
-{
+lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext,
+                                      int ciphertext_len, unsigned char *aad,
+                                      int aad_len, unsigned char *tag,
+                                      unsigned char *key, unsigned char *iv,
+                                      unsigned char *plaintext) {
   EVP_CIPHER_CTX *ctx;
   int len;
   int plaintext_len;
@@ -248,23 +248,23 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_
   (void)ret;
 
   /* Create and initialise the context */
-  if(!(ctx = EVP_CIPHER_CTX_new())) {
+  if (!(ctx = EVP_CIPHER_CTX_new())) {
     printf("ctx not initialized correct\n");
   }
 
   /* Initialise the decryption operation. */
-  if(!EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL)) {
+  if (!EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL)) {
     printf("evp decryption not initialized correct\n");
   }
 
   /* Set IV length. Not necessary if this is 12 bytes (96 bits) */
-  if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL)) {
+  if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL)) {
     printf("evp IV size not correctly set\n");
     return LC_ERROR_UNEXPECTED;
   }
 
   /* Initialise key and IV */
-  if(!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
+  if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
     fprintf(stderr, "evp decryption init incorrect\n");
     return LC_ERROR_UNEXPECTED;
   }
@@ -272,7 +272,7 @@ lc_status_t lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_
   /* Provide any AAD data. This can be called zero or more times as
    * required
    */
-  if (aad != NULL)  {
+  if (aad != NULL) {
     if (!EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
       fprintf(stderr, "evp decryption aad update failed\n");
       return LC_ERROR_UNEXPECTED;
@@ -320,8 +320,8 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
 
   // reverse p_key
   lc_cmac_128bit_key_t p_key_;
-  uint8_t *p_key_ptr = (uint8_t *) p_key_;
-  reverse_endian((uint8_t *) p_key, p_key_ptr, sizeof(lc_cmac_128bit_key_t));
+  uint8_t *p_key_ptr = (uint8_t *)p_key_;
+  reverse_endian((uint8_t *)p_key, p_key_ptr, sizeof(lc_cmac_128bit_key_t));
 
   CMAC_CTX *ctx = CMAC_CTX_new();
   if (!ctx) {
@@ -341,13 +341,14 @@ lc_status_t lc_rijndael128_cmac_msg(const lc_cmac_128bit_key_t *p_key,
     return LC_ERROR_UNEXPECTED;
   }
 
-  ret = CMAC_Final(ctx, (unsigned char *) *p_mac, (size_t *) &p_mac_len);
+  ret = CMAC_Final(ctx, (unsigned char *)*p_mac, (size_t *)&p_mac_len);
   if (ret != 1) {
     fprintf(stderr, "[%s] CMAC final output failure\n", __FUNCTION__);
     return LC_ERROR_UNEXPECTED;
   }
 
-  //printf("[%s] LC_CMAC_KEY_SIZE is %u, p_mac_len is %u\n", __FUNCTION__, LC_CMAC_KEY_SIZE, p_mac_len);
+  // printf("[%s] LC_CMAC_KEY_SIZE is %u, p_mac_len is %u\n", __FUNCTION__,
+  // LC_CMAC_KEY_SIZE, p_mac_len);
   CMAC_CTX_free(ctx);
 
   return LC_SUCCESS;
@@ -383,8 +384,8 @@ lc_status_t lc_ecc256_create_key_pair(lc_ec256_private_t *p_private,
 
 EC_POINT *get_ec_point(lc_ec256_public_t *p_public) {
 
-  unsigned char *x = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
-  unsigned char *y = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *x = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *y = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
 
   // reverse for endian-ness
   reverse_endian(p_public->gx, x, LC_ECP256_KEY_SIZE);
@@ -442,7 +443,7 @@ EC_POINT *get_ec_point(lc_ec256_public_t *p_public) {
 EC_KEY *get_priv_key(lc_ec256_private_t *p_private) {
   int ret = 0;
 
-  unsigned char *r = (unsigned char *) malloc(LC_ECP256_KEY_SIZE);
+  unsigned char *r = (unsigned char *)malloc(LC_ECP256_KEY_SIZE);
   // reverse endian-ness
   reverse_endian(p_private->r, r, LC_ECP256_KEY_SIZE);
 
@@ -486,35 +487,30 @@ lc_status_t lc_ecc256_compute_shared_dhkey(lc_ec256_private_t *p_private_b,
   EC_KEY *priv_key = get_priv_key(p_private_b);
   EC_POINT *sec = EC_POINT_new(EC_KEY_get0_group(priv_key));
 
-  ECDH_compute_key(reverse.s,
-                   LC_ECP256_KEY_SIZE,
-                   pub_key, priv_key, NULL);
+  ECDH_compute_key(reverse.s, LC_ECP256_KEY_SIZE, pub_key, priv_key, NULL);
 
   reverse_endian(reverse.s, p_shared_key->s, LC_ECP256_KEY_SIZE);
-
 
   EC_POINT_free(pub_key);
   EC_KEY_free(priv_key);
   EC_POINT_free(sec);
 
   return LC_SUCCESS;
-
 }
 
 // OpenSSL 1.0.2 backward compatibility - see
 // https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)
-{
-    if (pr != NULL)
-        *pr = sig->r;
-    if (ps != NULL)
-        *ps = sig->s;
+void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr,
+                    const BIGNUM **ps) {
+  if (pr != NULL)
+    *pr = sig->r;
+  if (ps != NULL)
+    *ps = sig->s;
 }
 #endif
 
-lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
-                          uint32_t data_size,
+lc_status_t lc_ecdsa_sign(const uint8_t *p_data, uint32_t data_size,
                           lc_ec256_private_t *p_private,
                           lc_ec256_signature_t *p_signature) {
   (void)p_data;
@@ -534,20 +530,25 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   lc_sha256_close(p_sha_handle);
 
   // sign the hash
-  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *) p_hash, sizeof(lc_sha256_hash_t), key);
+  ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *)p_hash,
+                                 sizeof(lc_sha256_hash_t), key);
   assert(sig != NULL);
 
-  unsigned char * x_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
-  unsigned char * y_ = (unsigned char *) malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  unsigned char *x_ =
+      (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  unsigned char *y_ =
+      (unsigned char *)malloc(LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
   const BIGNUM *pr, *ps;
   ECDSA_SIG_get0(sig, &pr, &ps);
-  BN_bn2bin(pr, (uint8_t *) x_);
-  BN_bn2bin(ps, (uint8_t *) y_);
+  BN_bn2bin(pr, (uint8_t *)x_);
+  BN_bn2bin(ps, (uint8_t *)y_);
 
   // reverse r and s
-  reverse_endian(x_, (uint8_t *) p_signature->x, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
-  reverse_endian(y_, (uint8_t *) p_signature->y, LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  reverse_endian(x_, (uint8_t *)p_signature->x,
+                 LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
+  reverse_endian(y_, (uint8_t *)p_signature->y,
+                 LC_NISTP_ECP256_KEY_SIZE * sizeof(uint32_t));
 
   free(x_);
   free(y_);
@@ -557,38 +558,43 @@ lc_status_t lc_ecdsa_sign(const uint8_t *p_data,
   return LC_SUCCESS;
 }
 
-void lc_sha256_init(lc_sha_state_handle_t* p_sha_handle) {
+void lc_sha256_init(lc_sha_state_handle_t *p_sha_handle) {
   SHA256_CTX *sha256_ctx = new SHA256_CTX;
   SHA256_Init(sha256_ctx);
   *p_sha_handle = sha256_ctx;
 }
 
-void lc_sha256_update(const uint8_t *p_src, uint32_t src_len, lc_sha_state_handle_t sha_handle) {
-  SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
+void lc_sha256_update(const uint8_t *p_src, uint32_t src_len,
+                      lc_sha_state_handle_t sha_handle) {
+  SHA256_CTX *ctx = (SHA256_CTX *)sha_handle;
   SHA256_Update(ctx, p_src, src_len);
 }
 
-void lc_sha256_get_hash(lc_sha_state_handle_t sha_handle, lc_sha256_hash_t *p_hash) {
-  SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
-  SHA256_Final((unsigned char *) p_hash, ctx);
+void lc_sha256_get_hash(lc_sha_state_handle_t sha_handle,
+                        lc_sha256_hash_t *p_hash) {
+  SHA256_CTX *ctx = (SHA256_CTX *)sha_handle;
+  SHA256_Final((unsigned char *)p_hash, ctx);
 }
 
 void lc_sha256_close(lc_sha_state_handle_t sha_handle) {
-  SHA256_CTX *ctx = (SHA256_CTX *) sha_handle;
+  SHA256_CTX *ctx = (SHA256_CTX *)sha_handle;
   free(ctx);
 }
 
-// Taken from https://github.com/mc2-project/mc2-xgboost/blob/466ac95a2d244cab6e43d1049f3243e006372ed6/include/enclave/crypto.h#L209
-int lc_compute_sha256(const uint8_t* data, size_t data_size, uint8_t sha256[LC_SHA256_HASH_SIZE]) {
+// Taken from
+// https://github.com/mc2-project/mc2-xgboost/blob/466ac95a2d244cab6e43d1049f3243e006372ed6/include/enclave/crypto.h#L209
+int lc_compute_sha256(const uint8_t *data, size_t data_size,
+                      uint8_t sha256[LC_SHA256_HASH_SIZE]) {
   int ret = 0;
   mbedtls_sha256_context ctx;
 
-#define safe_sha(call) {                        \
-    int ret = (call);                           \
-    if (ret) {                                  \
-      mbedtls_sha256_free(&ctx);                \
-      return -1;                                \
-    }                                           \
+#define safe_sha(call)                                                         \
+  {                                                                            \
+    int ret = (call);                                                          \
+    if (ret) {                                                                 \
+      mbedtls_sha256_free(&ctx);                                               \
+      return -1;                                                               \
+    }                                                                          \
   }
   mbedtls_sha256_init(&ctx);
   safe_sha(mbedtls_sha256_starts_ret(&ctx, 0));

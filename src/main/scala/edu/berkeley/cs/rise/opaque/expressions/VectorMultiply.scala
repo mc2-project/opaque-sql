@@ -18,7 +18,10 @@ object VectorMultiply {
 }
 
 case class VectorMultiply(left: Expression, right: Expression)
-    extends BinaryExpression with NullIntolerant with CodegenFallback with ExpectsInputTypes {
+    extends BinaryExpression
+    with NullIntolerant
+    with CodegenFallback
+    with ExpectsInputTypes {
 
   override def dataType: DataType = left.dataType
 

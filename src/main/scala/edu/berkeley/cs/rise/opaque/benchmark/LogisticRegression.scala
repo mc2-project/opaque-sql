@@ -39,27 +39,33 @@ object LogisticRegression {
       rand: Random,
       N: Int,
       D: Int,
-      R: Double)
-    : DataFrame = {
+      R: Double
+  ): DataFrame = {
     def generatePoint(i: Int): (Array[Double], Double) = {
       val y = if (i % 2 == 0) -1 else 1
-      val x = Array.fill(D) {rand.nextGaussian + y * R}
+      val x = Array.fill(D) { rand.nextGaussian + y * R }
       (x, y)
     }
 
     val data = Array.tabulate(N)(generatePoint)
-    val schema = StructType(Seq(
-      StructField("x", DataTypes.createArrayType(DoubleType)),
-      StructField("y", DoubleType)))
+    val schema = StructType(
+      Seq(StructField("x", DataTypes.createArrayType(DoubleType)), StructField("y", DoubleType))
+    )
 
     securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
   }
 
-  def train(spark: SparkSession, securityLevel: SecurityLevel, N: Int, numPartitions: Int)
-    : Array[Double] = {
+  def train(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      N: Int,
+      numPartitions: Int
+  ): Array[Double] = {
     import spark.implicits._
     val rand = new Random(42)
     val D = 10
@@ -73,19 +79,25 @@ object LogisticRegression {
       "distributed" -> (numPartitions > 1),
       "query" -> "logistic regression",
       "system" -> securityLevel.name,
-      "N" -> N) {
+      "N" -> N
+    ) {
 
-      val w = DenseVector.fill(D) {2 * rand.nextDouble - 1}
+      val w = DenseVector.fill(D) { 2 * rand.nextDouble - 1 }
 
       for (i <- 1 to ITERATIONS) {
         val gradient = points
           .select(
             vectormultiply(
               $"x",
-              (lit(1.0) / (lit(1.0) + exp(-$"y" * dot(lit(w.toArray), $"x"))) - lit(1.0)) * $"y")
-              .as("v"))
-          .groupBy().agg(vectorsum($"v"))
-          .first().getSeq[Double](0).toArray
+              (lit(1.0) / (lit(1.0) + exp(-$"y" * dot(lit(w.toArray), $"x"))) - lit(1.0)) * $"y"
+            )
+              .as("v")
+          )
+          .groupBy()
+          .agg(vectorsum($"v"))
+          .first()
+          .getSeq[Double](0)
+          .toArray
         w -= new DenseVector(gradient)
       }
 
