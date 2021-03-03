@@ -4,7 +4,6 @@ remote="$1"
 url="$2"
 
 echo "Running pre-commit hook for linting."
-format_needed=0
 
 # Run scalafmt and check format
 echo "* Checking changed Scala files for formatting..."
@@ -18,7 +17,6 @@ if [ $scala_formatted -ne 0 ]
 then
     echo "* Adding newly formatted Scala files to the most recent commit."
     git add -u
-    format_needed=1
 fi
 
 # Run git-clang-format and check format
@@ -33,10 +31,9 @@ if [ $c_formatted -ne 0 ]
 then
     echo "* Adding newly formatted C/C++ files to the most recent commit."
     git add -u
-    format_needed=1
 fi
 
-if [ $format_needed -ne 0 ]
+if [ $c_formatted -ne 0 ] || [ $scala_formatted -ne 0]
 then
     echo "* Ammending commit to include linting changes..."
 fi
