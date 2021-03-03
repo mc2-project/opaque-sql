@@ -89,7 +89,7 @@ void non_oblivious_sort_merge_join(
           write_output_rows(primary_unmatched_rows, w);
         }
 
-          primary_group.clear();
+        primary_group.clear();
         primary_unmatched_rows.clear();
         primary_matched_rows.clear();
         
