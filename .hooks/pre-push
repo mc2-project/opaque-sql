@@ -11,7 +11,6 @@ echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
-git commit --amend
 
 # Run git-clang-format and check format
 echo "* Checking changed C/C++ files for formatting..."
@@ -21,7 +20,8 @@ echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
-git commit --amend
+
+git commit --amend --no-edit
 
 echo "* Pre-push hook finished."
 
