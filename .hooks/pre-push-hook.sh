@@ -1,6 +1,8 @@
 remote="$1"
 url="$2"
 
+echo "AHHHHHHHHHHHH"
+
 # Run scalafmt and check format
 (cd $DIR/; scalafmt)
 git diff --quiet
