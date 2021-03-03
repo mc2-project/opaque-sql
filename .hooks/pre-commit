@@ -37,7 +37,6 @@ fi
 if [ $format_needed -ne 0 ]
 then
     echo "* Ammending commit to include linting changes..."
-    git commit --amend --no-edit
 fi
 
 echo "* Pre-commit hook finished."
