@@ -339,10 +339,6 @@ case class EncryptedBroadcastNestedLoopJoinExec(
         left.output ++ right.output.map(_.withNullability(true))
       case RightOuter =>
         left.output.map(_.withNullability(true)) ++ right.output
-      case FullOuter =>
-        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
-      case j: ExistenceJoin =>
-        left.output :+ j.exists
       case LeftExistence(_) =>
         left.output
       case _ =>
