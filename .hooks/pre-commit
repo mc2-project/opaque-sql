@@ -4,7 +4,7 @@ remote="$1"
 url="$2"
 
 # Run scalafmt and check format
-echo "* Checking scala files for formating..."
+echo "* Checking changed scala files for formatting..."
 (cd ${OPAQUE_HOME}/; scalafmt --diff)
 git diff --quiet
 formatted=$?
@@ -15,9 +15,8 @@ then
    echo "* Yes"
 else
     echo "* No"
-    echo "The following files need formatting (in stage or commited):"
+    echo "The following files need formatting:"
     git diff --name-only
-    echo ""
     echo "Running 'scalafmt' to format the code."
     scalafmt --diff
     exit 1
