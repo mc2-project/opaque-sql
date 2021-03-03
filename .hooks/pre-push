@@ -14,6 +14,7 @@ echo "* The following files needed formatted:"
 git diff --name-only
 if [ $scala_formatted -ne 0 ]
 then
+    echo "* Adding newly formatted Scala files to the most recent commit."
     git add -u
     format_needed=1
 fi
@@ -28,6 +29,7 @@ echo "* The following files needed formatting:"
 git diff --name-only
 if [ $c_formatted -ne 0 ]
 then
+    echo "* Adding newly formatted C/C++ files to the most recent commit."
     git add -u
     format_needed=1
 fi
