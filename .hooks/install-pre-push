@@ -1,7 +1,0 @@
-#!/bin/bash
-
-cd ${OPAQUE_HOME}
-touch .git/hooks/pre-push
-rm .git/hooks/pre-push
-ln -s ../../.hooks/pre-push .git/hooks/pre-push
-
