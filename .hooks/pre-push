@@ -21,7 +21,7 @@ echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
 
-echo "* Pre-commit hook finished."
+echo "* Pre-push hook finished."
 
 exit 0
 
