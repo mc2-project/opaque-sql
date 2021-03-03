@@ -33,9 +33,9 @@ then
     git add -u
 fi
 
-if [ $c_formatted -ne 0 ] || [ $scala_formatted -ne 0]
+if [ $c_formatted -ne 0 ] || [ $scala_formatted -ne 0 ];
 then
-    echo "* Ammending commit to include linting changes..."
+    echo "* Ammending commit to include linting changes."
 fi
 
 echo "Pre-commit hook finished."
