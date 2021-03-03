@@ -11,6 +11,7 @@ echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
+git commit -m "[Git Pre-push Hook] Formatting Scala files."
 
 # Run git-clang-format and check format
 echo "* Checking changed C/C++ files for formatting..."
@@ -20,6 +21,7 @@ echo "* Done!"
 echo "* The following files needed formatting:"
 git diff --name-only
 git add -u
+git commit -m "[Git Pre-push Hook] Formatting C/C++ files."
 
 echo "* Pre-push hook finished."
 
