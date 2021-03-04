@@ -26,20 +26,32 @@ import org.apache.spark.sql.types._
 object LeastSquares {
 
   def data(
-    spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame =
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame =
     securityLevel.applyTo(
-      spark.read.schema(
-        StructType(Seq(
-          StructField("x1", FloatType),
-          StructField("x2", FloatType),
-          StructField("y", FloatType))))
+      spark.read
+        .schema(
+          StructType(
+            Seq(
+              StructField("x1", FloatType),
+              StructField("x2", FloatType),
+              StructField("y", FloatType)
+            )
+          )
+        )
         .csv(s"${Benchmark.dataDir}/least_squares/$size")
-        .repartition(numPartitions))
+        .repartition(numPartitions)
+    )
 
-
-  def query(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame = {
+  def query(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame = {
     import spark.implicits._
     val dataDF = Utils.ensureCached(data(spark, securityLevel, size, numPartitions))
     Utils.time("Load least squares data") { Utils.force(dataDF) }
@@ -47,20 +59,24 @@ object LeastSquares {
       "distributed" -> (numPartitions > 1),
       "query" -> "least squares",
       "system" -> securityLevel.name,
-      "size" -> size) {
+      "size" -> size
+    ) {
 
-      val df = dataDF.select(
-        ($"x1" * $"x1").as("c11"),
-        ($"x1" * $"x2"). as("c12"),
-        ($"x2" * $"x2").as("c22"),
-        ($"x1" * $"y").as("b1"),
-        ($"x2" * $"y"). as("b2"))
+      val df = dataDF
+        .select(
+          ($"x1" * $"x1").as("c11"),
+          ($"x1" * $"x2").as("c12"),
+          ($"x2" * $"x2").as("c22"),
+          ($"x1" * $"y").as("b1"),
+          ($"x2" * $"y").as("b2")
+        )
         .agg(
           sum("c11").as("c11sum"),
           sum("c12").as("c12sum"),
           sum("c22").as("c22sum"),
           sum("b1").as("b1sum"),
-          sum("b2").as("b2sum"))
+          sum("b2").as("b2sum")
+        )
 
       Utils.force(df)
 

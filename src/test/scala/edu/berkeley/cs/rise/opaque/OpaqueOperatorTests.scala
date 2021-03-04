@@ -42,29 +42,31 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
 trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
-    protected object testImplicits extends SQLImplicits {
-      protected override def _sqlContext: SQLContext = self.spark.sqlContext
-    }
-    import testImplicits._
+  protected object testImplicits extends SQLImplicits {
+    protected override def _sqlContext: SQLContext = self.spark.sqlContext
+  }
+  import testImplicits._
 
-    /** Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
-    * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
-    * Set nullable property of column.
-    * @param cn is the column name to change
-    * @param nullable is the flag to set, such that the column is  either nullable or not
-    */
+  /**
+   * Modified from https://stackoverflow.com/questions/33193958/change-nullable-property-of-column-in-spark-dataframe
+   * and https://stackoverflow.com/questions/32585670/what-is-the-best-way-to-define-custom-methods-on-a-dataframe
+   * Set nullable property of column.
+   * @param cn is the column name to change
+   * @param nullable is the flag to set, such that the column is  either nullable or not
+   */
   object ExtraDFOperations {
-    implicit class AlternateDF(df : DataFrame) {
-      def setNullableStateOfColumn(cn: String, nullable: Boolean) : DataFrame = {
+    implicit class AlternateDF(df: DataFrame) {
+      def setNullableStateOfColumn(cn: String, nullable: Boolean): DataFrame = {
         // get schema
         val schema = df.schema
         // modify [[StructField] with name `cn`
         val newSchema = StructType(schema.map {
-          case StructField( c, t, _, m) if c.equals(cn) => StructField( c, t, nullable = nullable, m)
+          case StructField(c, t, _, m) if c.equals(cn) =>
+            StructField(c, t, nullable = nullable, m)
           case y: StructField => y
         })
         // apply new schema
-        df.sqlContext.createDataFrame( df.rdd, newSchema )
+        df.sqlContext.createDataFrame(df.rdd, newSchema)
       }
     }
   }
@@ -123,80 +125,99 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testAgainstSpark("create DataFrame with CalendarIntervalType + NullType") { securityLevel =>
     val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
-    val schema = StructType(Seq(
-      StructField("CalendarIntervalType", CalendarIntervalType),
-      StructField("NullType", NullType)))
+    val schema = StructType(
+      Seq(
+        StructField("CalendarIntervalType", CalendarIntervalType),
+        StructField("NullType", NullType)
+      )
+    )
 
-    securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema)).collect
+    securityLevel
+      .applyTo(
+        spark.createDataFrame(
+          spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
+          schema
+        )
+      )
+      .collect
   }
 
   testAgainstSpark("create DataFrame with ShortType + TimestampType") { securityLevel =>
-    val data: Seq[(Short, Timestamp)] = Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
+    val data: Seq[(Short, Timestamp)] =
+      Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
     makeDF(data, securityLevel, "ShortType", "TimestampType").collect
   }
 
   testAgainstSpark("create DataFrame with ArrayType") { securityLevel =>
     val array: Array[Int] = Array(0, -128, 127, 1)
-    val data = Seq(
-      (array, "dog"),
-      (array, "cat"),
-      (array, "ant"))
+    val data = Seq((array, "dog"), (array, "cat"), (array, "ant"))
     val df = makeDF(data, securityLevel, "array", "string")
     df.collect
   }
 
   testAgainstSpark("create DataFrame with MapType") { securityLevel =>
     val map: Map[String, Int] = Map("x" -> 24, "y" -> 25, "z" -> 26)
-    val data = Seq(
-      (map, "dog"),
-      (map, "cat"),
-      (map, "ant"))
+    val data = Seq((map, "dog"), (map, "cat"), (map, "ant"))
     val df = makeDF(data, securityLevel, "map", "string")
     df.collect
   }
 
   testAgainstSpark("create DataFrame with nulls for all types") { securityLevel =>
-    val schema = StructType(Seq(
-      StructField("boolean", BooleanType),
-      StructField("integer", IntegerType),
-      StructField("long", LongType),
-      StructField("float", FloatType),
-      StructField("double", DoubleType),
-      StructField("date", DateType),
-      StructField("binary", BinaryType),
-      StructField("byte", ByteType),
-      StructField("calendar_interval", CalendarIntervalType),
-      StructField("null", NullType),
-      StructField("short", ShortType),
-      StructField("timestamp", TimestampType),
-      StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
-      StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
-      StructField("string", StringType)))
+    val schema = StructType(
+      Seq(
+        StructField("boolean", BooleanType),
+        StructField("integer", IntegerType),
+        StructField("long", LongType),
+        StructField("float", FloatType),
+        StructField("double", DoubleType),
+        StructField("date", DateType),
+        StructField("binary", BinaryType),
+        StructField("byte", ByteType),
+        StructField("calendar_interval", CalendarIntervalType),
+        StructField("null", NullType),
+        StructField("short", ShortType),
+        StructField("timestamp", TimestampType),
+        StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
+        StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
+        StructField("string", StringType)
+      )
+    )
 
-    securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
-        schema)).collect
+    securityLevel
+      .applyTo(
+        spark.createDataFrame(
+          spark.sparkContext
+            .makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
+          schema
+        )
+      )
+      .collect
   }
 
   testAgainstSpark("filter") { securityLevel =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
       securityLevel,
-      "a", "b", "c", "d", "x")
+      "a",
+      "b",
+      "c",
+      "d",
+      "x"
+    )
     df.filter($"x" > lit(10)).collect
   }
 
   testAgainstSpark("filter with NULLs") { securityLevel =>
-    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
-      if (x % 3 == 0)
-        Tuple1(null.asInstanceOf[Integer])
-      else
-        Tuple1(x.asInstanceOf[Integer])
-    }).toSeq)
+    val data: Seq[Tuple1[Integer]] = Random.shuffle(
+      (0 until 256)
+        .map(x => {
+          if (x % 3 == 0)
+            Tuple1(null.asInstanceOf[Integer])
+          else
+            Tuple1(x.asInstanceOf[Integer])
+        })
+        .toSeq
+    )
     val df = makeDF(data, securityLevel, "x")
     df.filter($"x" > lit(10)).collect.toSet
   }
@@ -211,24 +232,25 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello world!", 1.0, 2.0f, x)),
       securityLevel,
-      "a", "b", "c", "d", "x")
+      "a",
+      "b",
+      "c",
+      "d",
+      "x"
+    )
     df.select(
       $"x" + $"x" * $"x" - $"x",
       substring($"b", 5, 20),
       $"x" > $"x",
       $"x" >= $"x",
-      $"x" <= $"x").collect.toSet
+      $"x" <= $"x"
+    ).collect
+      .toSet
   }
 
   testAgainstSpark("union") { securityLevel =>
-    val df1 = makeDF(
-      (1 to 20).map(x => (x, x.toString)).reverse,
-      securityLevel,
-      "a", "b")
-    val df2 = makeDF(
-      (1 to 20).map(x => (x, (x + 1).toString)),
-      securityLevel,
-      "a", "b")
+    val df1 = makeDF((1 to 20).map(x => (x, x.toString)).reverse, securityLevel, "a", "b")
+    val df2 = makeDF((1 to 20).map(x => (x, (x + 1).toString)), securityLevel, "a", "b")
     df1.union(df2).collect.toSet
   }
 
@@ -283,12 +305,16 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("sort with null values") { securityLevel =>
-    val data: Seq[Tuple1[Integer]] = Random.shuffle((0 until 256).map(x => {
-      if (x % 3 == 0)
-        Tuple1(null.asInstanceOf[Integer])
-      else
-        Tuple1(x.asInstanceOf[Integer])
-    }).toSeq)
+    val data: Seq[Tuple1[Integer]] = Random.shuffle(
+      (0 until 256)
+        .map(x => {
+          if (x % 3 == 0)
+            Tuple1(null.asInstanceOf[Integer])
+          else
+            Tuple1(x.asInstanceOf[Integer])
+        })
+        .toSeq
+    )
     val df = makeDF(data, securityLevel, "x")
     df.sort($"x").collect
   }
@@ -331,7 +357,9 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "y")
-    val df = p.join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_semi").sort($"join_col_1", $"id1")
+    val df = p
+      .join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_semi")
+      .sort($"join_col_1", $"id1")
     df.collect
   }
 
@@ -355,7 +383,8 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testAgainstSpark("left anti join") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
-    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val f_data =
+      for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
@@ -367,13 +396,16 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "y")
-    val df = p.join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_anti").sort($"join_col_1", $"id1")
+    val df = p
+      .join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_anti")
+      .sort($"join_col_1", $"id1")
     df.collect
   }
 
   testAgainstSpark("non-equi left anti join 1") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
-    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val f_data =
+      for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti").sort($"join_col_1", $"id")
@@ -382,7 +414,8 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testAgainstSpark("non-equi left anti join 1 negated") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
-    val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
+    val f_data =
+      for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" < $"join_col_2", "left_anti").sort($"join_col_1", $"id")
@@ -418,12 +451,14 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testAgainstSpark("join on floats") { securityLevel =>
     val p_data = for (i <- 0 to 16) yield (i, i.toFloat, i * 10)
-    val f_data = (0 until 256).map(x => {
-      if (x % 3 == 0)
-        (x, null.asInstanceOf[Float], x * 10)
-      else
-        (x, (x % 16).asInstanceOf[Float], x * 10)
-    }).toSeq
+    val f_data = (0 until 256)
+      .map(x => {
+        if (x % 3 == 0)
+          (x, null.asInstanceOf[Float], x * 10)
+        else
+          (x, (x % 16).asInstanceOf[Float], x * 10)
+      })
+      .toSeq
 
     val p = makeDF(p_data, securityLevel, "id", "pk", "x")
     val f = makeDF(f_data, securityLevel, "id", "fk", "x")
@@ -433,12 +468,14 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testAgainstSpark("join on doubles") { securityLevel =>
     val p_data = for (i <- 0 to 16) yield (i, i.toDouble, i * 10)
-    val f_data = (0 until 256).map(x => {
-      if (x % 3 == 0)
-        (x, null.asInstanceOf[Double], x * 10)
-      else
-        (x, (x % 16).asInstanceOf[Double], x * 10)
-    }).toSeq
+    val f_data = (0 until 256)
+      .map(x => {
+        if (x % 3 == 0)
+          (x, null.asInstanceOf[Double], x * 10)
+        else
+          (x, (x % 16).asInstanceOf[Double], x * 10)
+      })
+      .toSeq
 
     val p = makeDF(p_data, securityLevel, "id", "pk", "x")
     val f = makeDF(f_data, securityLevel, "id", "fk", "x")
@@ -453,7 +490,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("aggregate average") { securityLevel =>
-    val data = (0 until 256).map{ i =>
+    val data = (0 until 256).map { i =>
       if (i % 3 == 0 || (i + 1) % 6 == 0)
         (i, abc(i), None)
       else
@@ -467,76 +504,85 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("aggregate count") { securityLevel =>
-    val data = (0 until 256).map{ i =>
+    val data = (0 until 256).map { i =>
       if (i % 3 == 0 || (i + 1) % 6 == 0)
         (i, abc(i), None)
-      else 
+      else
         (i, abc(i), Some(i))
     }.toSeq
     val words = makeDF(data, securityLevel, "id", "category", "price")
     words.setNullableStateOfColumn("price", true)
-    words.groupBy("category").agg(count("category").as("itemsInCategory"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(count("category").as("itemsInCategory")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate count distinct and indistinct") { securityLevel =>
-    val data = (0 until 64).map{ i =>
+    val data = (0 until 64).map { i =>
       if (i % 6 == 0)
         (abc(i), null.asInstanceOf[Int], i % 8)
       else
         (abc(i), i % 4, i % 8)
     }.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
-    words.groupBy("category").agg(countDistinct("id").as("num_unique_ids"),
-        count("price").as("num_prices")).collect.toSet
+    words
+      .groupBy("category")
+      .agg(countDistinct("id").as("num_unique_ids"), count("price").as("num_prices"))
+      .collect
+      .toSet
   }
 
   testAgainstSpark("aggregate count distinct") { securityLevel =>
-    val data = (0 until 64).map{ i =>
+    val data = (0 until 64).map { i =>
       if (i % 6 == 0)
         (abc(i), null.asInstanceOf[Int])
       else
         (abc(i), i % 8)
     }.toSeq
     val words = makeDF(data, securityLevel, "category", "price")
-    words.groupBy("category").agg(countDistinct("price").as("num_unique_prices"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(countDistinct("price").as("num_unique_prices")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate first") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
-    words.groupBy("category").agg(first("category").as("firstInCategory"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(first("category").as("firstInCategory")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate last") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
-    words.groupBy("category").agg(last("category").as("lastInCategory"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(last("category").as("lastInCategory")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate max") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
-    words.groupBy("category").agg(max("price").as("maxPrice"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(max("price").as("maxPrice")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate min") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
 
-    words.groupBy("category").agg(min("price").as("minPrice"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(min("price").as("minPrice")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate sum") { securityLevel =>
-    val data = (0 until 256).map{ i =>
+    val data = (0 until 256).map { i =>
       if (i % 3 == 0 || i % 4 == 0)
         (i, abc(i), None)
       else
@@ -546,57 +592,69 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val words = makeDF(data, securityLevel, "id", "word", "count")
     words.setNullableStateOfColumn("count", true)
 
-    words.groupBy("word").agg(sum("count").as("totalCount"))
-      .collect.sortBy { case Row(word: String, _) => word }
+    words.groupBy("word").agg(sum("count").as("totalCount")).collect.sortBy {
+      case Row(word: String, _) => word
+    }
   }
 
   testAgainstSpark("aggregate sum distinct and indistinct") { securityLevel =>
-    val data = (0 until 64).map{ i =>
+    val data = (0 until 64).map { i =>
       if (i % 6 == 0)
         (abc(i), null.asInstanceOf[Int], i % 8)
       else
         (abc(i), i % 4, i % 8)
     }.toSeq
     val words = makeDF(data, securityLevel, "category", "id", "price")
-    words.groupBy("category").agg(sumDistinct("id").as("sum_unique_ids"),
-        sum("price").as("sum_prices")).collect.toSet
+    words
+      .groupBy("category")
+      .agg(sumDistinct("id").as("sum_unique_ids"), sum("price").as("sum_prices"))
+      .collect
+      .toSet
   }
 
   testAgainstSpark("aggregate sum distinct") { securityLevel =>
-    val data = (0 until 64).map{ i =>
+    val data = (0 until 64).map { i =>
       if (i % 6 == 0)
         (abc(i), null.asInstanceOf[Int])
       else
         (abc(i), i % 8)
     }.toSeq
     val words = makeDF(data, securityLevel, "category", "price")
-    words.groupBy("category").agg(sumDistinct("price").as("sum_unique_prices"))
-      .collect.sortBy { case Row(category: String, _) => category }
+    words.groupBy("category").agg(sumDistinct("price").as("sum_unique_prices")).collect.sortBy {
+      case Row(category: String, _) => category
+    }
   }
 
   testAgainstSpark("aggregate on multiple columns") { securityLevel =>
     val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
     val words = makeDF(data, securityLevel, "str", "x", "y")
 
-    words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX"))
-      .collect.sortBy { case Row(str: String, _, _) => str }
+    words.groupBy("str").agg(sum("y").as("totalY"), avg("x").as("avgX")).collect.sortBy {
+      case Row(str: String, _, _) => str
+    }
   }
 
   testAgainstSpark("skewed aggregate sum") { securityLevel =>
-    val data = Random.shuffle((0 until 256).map(i => {
-        (i, abc(123), 1)
-    }).toSeq)
+    val data = Random.shuffle(
+      (0 until 256)
+        .map(i => {
+          (i, abc(123), 1)
+        })
+        .toSeq
+    )
 
     val words = makeDF(data, securityLevel, "id", "word", "count")
-    words.groupBy("word").agg(sum("count").as("totalCount"))
-      .collect.sortBy { case Row(word: String, _) => word }
+    words.groupBy("word").agg(sum("count").as("totalCount")).collect.sortBy {
+      case Row(word: String, _) => word
+    }
   }
 
   testAgainstSpark("grouping aggregate with 0 rows") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
-    words.filter($"id" < lit(0)).groupBy("word").agg(sum("count"))
-      .collect.sortBy { case Row(word: String, _) => word }
+    words.filter($"id" < lit(0)).groupBy("word").agg(sum("count")).collect.sortBy {
+      case Row(word: String, _) => word
+    }
   }
 
   testAgainstSpark("global aggregate") { securityLevel =>
@@ -619,7 +677,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("contains") { securityLevel =>
-    val data = for (i <- 0 until 256) yield(i.toString, abc(i))
+    val data = for (i <- 0 until 256) yield (i.toString, abc(i))
     val df = makeDF(data, securityLevel, "word", "abc")
     df.filter($"word".contains(lit("1"))).collect
   }
@@ -627,53 +685,62 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   testAgainstSpark("concat with string") { securityLevel =>
     val data = for (i <- 0 until 256) yield ("%03d".format(i) * 3, i.toString)
     val df = makeDF(data, securityLevel, "str", "x")
-    df.select(concat(col("str"),lit(","),col("x"))).collect
+    df.select(concat(col("str"), lit(","), col("x"))).collect
   }
 
   testAgainstSpark("concat with other datatype") { securityLevel =>
-    // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out 
+    // float causes a formating issue where opaque outputs 1.000000 and spark produces 1.0 so the following line is commented out
     // val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, 1.0f)
-    // you can't serialize date so that's not supported as well 
-    // opaque doesn't support byte 
-    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int],"")
-    val df = makeDF(data, securityLevel, "str", "int","null","emptystring")
-    df.select(concat(col("str"),lit(","),col("int"),col("null"),col("emptystring"))).collect
+    // you can't serialize date so that's not supported as well
+    // opaque doesn't support byte
+    val data = for (i <- 0 until 3) yield ("%03d".format(i) * 3, i, null.asInstanceOf[Int], "")
+    val df = makeDF(data, securityLevel, "str", "int", "null", "emptystring")
+    df.select(concat(col("str"), lit(","), col("int"), col("null"), col("emptystring"))).collect
   }
-  
+
   testAgainstSpark("isin1") { securityLevel =>
     val ids = Seq((1, 2, 2), (2, 3, 1))
     val df = makeDF(ids, securityLevel, "x", "y", "id")
     val c = $"id" isin ($"x", $"y")
     val result = df.filter(c)
-    result.collect 
+    result.collect
   }
-    
+
   testAgainstSpark("isin2") { securityLevel =>
-    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3,3,3), (4,4,4))
+    val ids2 = Seq((1, 1, 1), (2, 2, 2), (3, 3, 3), (4, 4, 4))
     val df2 = makeDF(ids2, securityLevel, "x", "y", "id")
-    val c2 = $"id" isin (1 ,2, 4, 5, 6)
+    val c2 = $"id" isin (1, 2, 4, 5, 6)
     val result = df2.filter(c2)
-    result.collect 
+    result.collect
   }
-    
+
   testAgainstSpark("isin with string") { securityLevel =>
-    val ids3 = Seq(("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), ("b", "b", "b"), ("c","c","c"), ("d","d","d"))
+    val ids3 = Seq(
+      (
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ),
+      ("b", "b", "b"),
+      ("c", "c", "c"),
+      ("d", "d", "d")
+    )
     val df3 = makeDF(ids3, securityLevel, "x", "y", "id")
-    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ,"b", "c", "d", "e")
+    val c3 = $"id" isin ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "b", "c", "d", "e")
     val result = df3.filter(c3)
     result.collect
   }
-    
+
   testAgainstSpark("isin with null") { securityLevel =>
-    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3,3,null.asInstanceOf[Int]), (4,4,4))
+    val ids4 = Seq((1, 1, 1), (2, 2, 2), (3, 3, null.asInstanceOf[Int]), (4, 4, 4))
     val df4 = makeDF(ids4, securityLevel, "x", "y", "id")
     val c4 = $"id" isin (null.asInstanceOf[Int])
     val result = df4.filter(c4)
-    result.collect 
+    result.collect
   }
 
   testAgainstSpark("between") { securityLevel =>
-    val data = for (i <- 0 until 256) yield(i.toString, i)
+    val data = for (i <- 0 until 256) yield (i.toString, i)
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"count".between(50, 150)).collect
   }
@@ -705,13 +772,15 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   testAgainstSpark("case when - 1 branch without else (int)") { securityLevel =>
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
-    df.select(when(df("word") === "foo", 10)).collect 
+    df.select(when(df("word") === "foo", 10)).collect
   }
 
   testAgainstSpark("case when - 2 branch with else (string)") { securityLevel =>
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
-    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello").otherwise("bye")).collect
+    df.select(
+      when(df("word") === "foo", "hi").when(df("word") === "baz", "hello").otherwise("bye")
+    ).collect
   }
 
   testAgainstSpark("case when - 2 branch with else (int)") { securityLevel =>
@@ -723,7 +792,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   testAgainstSpark("case when - 2 branch without else (string)") { securityLevel =>
     val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), ("bear", null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
-    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello")).collect 
+    df.select(when(df("word") === "foo", "hi").when(df("word") === "baz", "hello")).collect
   }
 
   testAgainstSpark("case when - 2 branch without else (int)") { securityLevel =>
@@ -733,43 +802,50 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("LIKE - Contains") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%a%")).collect
-  } 
+  }
 
   testAgainstSpark("LIKE - StartsWith") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("ba%")).collect
-  } 
+  }
 
   testAgainstSpark("LIKE - EndsWith") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%ar")).collect
   }
 
   testAgainstSpark("LIKE - Empty Pattern") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("")).collect
   }
 
   testAgainstSpark("LIKE - Match All") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("%")).collect
   }
 
   testAgainstSpark("LIKE - Single Wildcard") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.filter($"word".like("ba_")).collect
   }
 
   testAgainstSpark("LIKE - SQL API") { securityLevel =>
-    val data = Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
+    val data =
+      Seq(("foo", 4), ("bar", 1), ("baz", 5), (null.asInstanceOf[String], null.asInstanceOf[Int]))
     val df = makeDF(data, securityLevel, "word", "count")
     df.createTempView("df")
     try {
@@ -791,8 +867,10 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
         .schema(df.schema)
         .load(path.toString)
       assert(df.collect.toSet === df2.collect.toSet)
-      assert(df.groupBy("word").agg(sum("count")).collect.toSet
-        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+      assert(
+        df.groupBy("word").agg(sum("count")).collect.toSet
+          === df2.groupBy("word").agg(sum("count")).collect.toSet
+      )
     } finally {
       Utils.deleteRecursively(path)
     }
@@ -809,8 +887,10 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
         .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
         .load(path.toString)
       assert(df.collect.toSet === df2.collect.toSet)
-      assert(df.groupBy("word").agg(sum("count")).collect.toSet
-        === df2.groupBy("word").agg(sum("count")).collect.toSet)
+      assert(
+        df.groupBy("word").agg(sum("count")).collect.toSet
+          === df2.groupBy("word").agg(sum("count")).collect.toSet
+      )
     } finally {
       Utils.deleteRecursively(path)
     }
@@ -871,7 +951,12 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val df = makeDF(
       (1 to 20).map(x => (true, "hello", 1.0, 2.0f, x)),
       securityLevel,
-      "a", "b", "c", "d", "x")
+      "a",
+      "b",
+      "c",
+      "d",
+      "x"
+    )
     df.createTempView("df")
     try {
       spark.sql("SELECT * FROM df WHERE x > 10").collect
@@ -882,13 +967,18 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
   testOpaqueOnly("cast error") { securityLevel =>
     val data: Seq[(CalendarInterval, Byte)] = Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
-    val schema = StructType(Seq(
-      StructField("CalendarIntervalType", CalendarIntervalType),
-      StructField("NullType", NullType)))
+    val schema = StructType(
+      Seq(
+        StructField("CalendarIntervalType", CalendarIntervalType),
+        StructField("NullType", NullType)
+      )
+    )
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
     // Trigger an Opaque exception by attempting an unsupported cast: CalendarIntervalType to
     // StringType
     val e = intercept[SparkException] {
@@ -900,60 +990,65 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("exp") { securityLevel =>
-    val data: Seq[(Double, Double)] = Seq(
-      (2.0, 3.0))
-    val schema = StructType(Seq(
-      StructField("x", DoubleType),
-      StructField("y", DoubleType)))
+    val data: Seq[(Double, Double)] = Seq((2.0, 3.0))
+    val schema = StructType(Seq(StructField("x", DoubleType), StructField("y", DoubleType)))
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     df.select(exp($"y")).collect
   }
 
   testAgainstSpark("vector multiply") { securityLevel =>
-    val data: Seq[(Array[Double], Double)] = Seq(
-      (Array[Double](1.0, 1.0, 1.0), 3.0))
-    val schema = StructType(Seq(
-      StructField("v", DataTypes.createArrayType(DoubleType)),
-      StructField("c", DoubleType)))
+    val data: Seq[(Array[Double], Double)] = Seq((Array[Double](1.0, 1.0, 1.0), 3.0))
+    val schema = StructType(
+      Seq(StructField("v", DataTypes.createArrayType(DoubleType)), StructField("c", DoubleType))
+    )
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     df.select(vectormultiply($"v", $"c")).collect
   }
 
   testAgainstSpark("dot product") { securityLevel =>
-    val data: Seq[(Array[Double], Array[Double])] = Seq(
-      (Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
-    val schema = StructType(Seq(
-      StructField("v1", DataTypes.createArrayType(DoubleType)),
-      StructField("v2", DataTypes.createArrayType(DoubleType))))
+    val data: Seq[(Array[Double], Array[Double])] =
+      Seq((Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
+    val schema = StructType(
+      Seq(
+        StructField("v1", DataTypes.createArrayType(DoubleType)),
+        StructField("v2", DataTypes.createArrayType(DoubleType))
+      )
+    )
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     df.select(dot($"v1", $"v2")).collect
   }
 
   testAgainstSpark("upper") { securityLevel =>
     val data = Seq(("lower", "upper"), ("lower2", "upper2"))
-    val schema = StructType(Seq(
-      StructField("v1", StringType),
-      StructField("v2", StringType)))
+    val schema = StructType(Seq(StructField("v1", StringType), StructField("v2", StringType)))
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     df.select(upper($"v1")).collect
   }
@@ -967,59 +1062,58 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("vector sum") { securityLevel =>
-    val data: Seq[(Array[Double], Double)] = Seq(
-      (Array[Double](1.0, 2.0, 3.0), 4.0),
-      (Array[Double](5.0, 7.0, 7.0), 8.0))
-    val schema = StructType(Seq(
-      StructField("v", DataTypes.createArrayType(DoubleType)),
-      StructField("c", DoubleType)))
+    val data: Seq[(Array[Double], Double)] =
+      Seq((Array[Double](1.0, 2.0, 3.0), 4.0), (Array[Double](5.0, 7.0, 7.0), 8.0))
+    val schema = StructType(
+      Seq(StructField("v", DataTypes.createArrayType(DoubleType)), StructField("c", DoubleType))
+    )
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     val vectorsum = new VectorSum
     df.groupBy().agg(vectorsum($"v")).collect
   }
 
   testAgainstSpark("create array") { securityLevel =>
-    val data: Seq[(Double, Double)] = Seq(
-      (1.0, 2.0),
-      (3.0, 4.0))
-    val schema = StructType(Seq(
-      StructField("x1", DoubleType),
-      StructField("x2", DoubleType)))
+    val data: Seq[(Double, Double)] = Seq((1.0, 2.0), (3.0, 4.0))
+    val schema = StructType(Seq(StructField("x1", DoubleType), StructField("x2", DoubleType)))
 
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
 
     df.select(array($"x1", $"x2").as("x")).collect
   }
 
   testAgainstSpark("limit with fewer returned values") { securityLevel =>
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
-    val schema = StructType(Seq(
-      StructField("id", IntegerType),
-      StructField("word", StringType)))
+    val schema = StructType(Seq(StructField("id", IntegerType), StructField("word", StringType)))
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
     df.sort($"id").limit(5).collect
   }
 
   testAgainstSpark("limit with more returned values") { securityLevel =>
     val data = Random.shuffle(for (i <- 0 until 256) yield (i, abc(i)))
-    val schema = StructType(Seq(
-      StructField("id", IntegerType),
-      StructField("word", StringType)))
+    val schema = StructType(Seq(StructField("id", IntegerType), StructField("word", StringType)))
     val df = securityLevel.applyTo(
       spark.createDataFrame(
         spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-        schema))
+        schema
+      )
+    )
     df.sort($"id").limit(200).collect
   }
 
@@ -1053,7 +1147,9 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     words.createTempView("words")
 
     try {
-      val df = spark.sql("""SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word""")
+      val df = spark.sql(
+        """SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word"""
+      )
       df.collect
     } finally {
       spark.catalog.dropTempView("words")
@@ -1069,7 +1165,9 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
   }
 
   testAgainstSpark("big data 2") { securityLevel =>
-    BigDataBenchmark.q2(spark, securityLevel, "tiny", numPartitions).collect
+    BigDataBenchmark
+      .q2(spark, securityLevel, "tiny", numPartitions)
+      .collect
       .map { case Row(a: String, b: Double) => (a, b.toFloat) }
       .sortBy(_._1)
   }
@@ -1078,17 +1176,22 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     BigDataBenchmark.q3(spark, securityLevel, "tiny", numPartitions).collect
   }
 
-  def makeDF[A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-    data: Seq[A], securityLevel: SecurityLevel, columnNames: String*): DataFrame =
+  def makeDF[A <: Product: scala.reflect.ClassTag: scala.reflect.runtime.universe.TypeTag](
+      data: Seq[A],
+      securityLevel: SecurityLevel,
+      columnNames: String*
+  ): DataFrame =
     securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data, numPartitions))
-        .toDF(columnNames: _*))
+      spark
+        .createDataFrame(spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*)
+    )
 
 }
 
 class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
-  override val spark = SparkSession.builder()
+  override val spark = SparkSession
+    .builder()
     .master("local[1]")
     .appName("OpaqueOperatorSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", 1)
@@ -1098,7 +1201,8 @@ class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
 }
 
 class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
-  override val spark = SparkSession.builder()
+  override val spark = SparkSession
+    .builder()
     .master("local[1]")
     .appName("OpaqueOperatorMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", 3)
@@ -1109,13 +1213,18 @@ class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
   import testImplicits._
 
   def makePartitionedDF[
-      A <: Product : scala.reflect.ClassTag : scala.reflect.runtime.universe.TypeTag](
-      data: Seq[A], securityLevel: SecurityLevel, numPartitions: Int, columnNames: String*)
-    : DataFrame = {
+      A <: Product: scala.reflect.ClassTag: scala.reflect.runtime.universe.TypeTag
+  ](
+      data: Seq[A],
+      securityLevel: SecurityLevel,
+      numPartitions: Int,
+      columnNames: String*
+  ): DataFrame = {
     securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data, numPartitions))
-        .toDF(columnNames: _*))
+      spark
+        .createDataFrame(spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*)
+    )
   }
 
   testAgainstSpark("join with different numbers of partitions (#34)") { securityLevel =>

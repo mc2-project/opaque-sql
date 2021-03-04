@@ -27,13 +27,17 @@ object Decrypt {
     Arguments:
       * child - an encrypted literal of string type
       * outputDataType - the decrypted data type
-  """)
+  """
+)
 case class Decrypt(child: Expression, outputDataType: DataType)
-    extends UnaryExpression with NullIntolerant with CodegenFallback with Nondeterministic {
+    extends UnaryExpression
+    with NullIntolerant
+    with CodegenFallback
+    with Nondeterministic {
 
   override def dataType: DataType = outputDataType
 
-  protected def initializeInternal(partitionIndex: Int): Unit = { }
+  protected def initializeInternal(partitionIndex: Int): Unit = {}
 
   protected override def evalInternal(input: InternalRow): Any = {
     val v = child.eval()
