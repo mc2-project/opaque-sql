@@ -22,7 +22,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 class QEDSuite extends FunSuite with BeforeAndAfterAll {
-  val spark = SparkSession.builder()
+  val spark = SparkSession
+    .builder()
     .master("local[1]")
     .appName("QEDSuite")
     .getOrCreate()
@@ -40,5 +41,3 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
     assert(data === Utils.decrypt(enclave.Encrypt(eid, data)))
   }
 }
-
-

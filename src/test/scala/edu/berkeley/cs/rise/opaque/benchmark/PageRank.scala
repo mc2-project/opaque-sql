@@ -24,13 +24,20 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 object PageRank {
-  def run(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame = {
+  def run(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame = {
     import spark.implicits._
-    val inputSchema = StructType(Seq(
-      StructField("src", IntegerType, false),
-      StructField("dst", IntegerType, false),
-      StructField("isVertex", IntegerType, false)))
+    val inputSchema = StructType(
+      Seq(
+        StructField("src", IntegerType, false),
+        StructField("dst", IntegerType, false),
+        StructField("isVertex", IntegerType, false)
+      )
+    )
     val data = spark.read
       .schema(inputSchema)
       .option("delimiter", " ")
@@ -41,7 +48,9 @@ object PageRank {
           data
             .filter($"isVertex" === lit(0))
             .select($"src", $"dst", lit(1.0f).as("weight"))
-            .repartition(numPartitions)))
+            .repartition(numPartitions)
+        )
+      )
     Utils.time("load edges") { Utils.force(edges) }
     val vertices =
       Utils.ensureCached(
@@ -49,18 +58,23 @@ object PageRank {
           data
             .filter($"isVertex" === lit(1))
             .select($"src".as("id"), lit(1.0f).as("rank"))
-            .repartition(numPartitions)))
+            .repartition(numPartitions)
+        )
+      )
     Utils.time("load vertices") { Utils.force(vertices) }
     val newV =
       Utils.timeBenchmark(
         "distributed" -> (numPartitions > 1),
         "query" -> "pagerank",
         "system" -> securityLevel.name,
-        "size" -> size) {
+        "size" -> size
+      ) {
         val result =
-          vertices.join(edges, $"id" === $"src")
+          vertices
+            .join(edges, $"id" === $"src")
             .select($"dst", ($"rank" * $"weight").as("weightedRank"))
-            .groupBy("dst").agg(sum("weightedRank").as("totalIncomingRank"))
+            .groupBy("dst")
+            .agg(sum("weightedRank").as("totalIncomingRank"))
             .select($"dst", (lit(0.15) + lit(0.85) * $"totalIncomingRank").as("rank"))
         Utils.force(result)
         result

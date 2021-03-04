@@ -65,6 +65,7 @@ R/unit-tests.out
 python/lib/pyspark.zip
 lint-r-report.log
 /.tags
+.metals/
 
 # For Hive
 metastore_db/

@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-
 import scala.collection.mutable
 
 import org.apache.log4j.Level
@@ -68,7 +67,8 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll with OpaqueToleran
     val sparkLoggers = Seq(
       "org.apache.spark",
       "org.apache.spark.executor.Executor",
-      "org.apache.spark.scheduler.TaskSetManager")
+      "org.apache.spark.scheduler.TaskSetManager"
+    )
     val logLevels = new mutable.HashMap[String, Level]
     for (l <- sparkLoggers) {
       logLevels(l) = LogManager.getLogger(l).getLevel

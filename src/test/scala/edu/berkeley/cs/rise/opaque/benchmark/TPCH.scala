@@ -29,7 +29,7 @@ import edu.berkeley.cs.rise.opaque.Utils
 object TPCH {
 
   // Add query numbers here once they are supported
-  val supportedQueries = Set(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22)
+  val supportedQueries = Set(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
 
   // Queries whose results are not defined in a specific order
   val unorderedQueries = Set(6, 14, 17, 19)
@@ -95,91 +95,105 @@ object TPCH {
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/lineitem.tbl")
 
-  def partsupp(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("ps_partkey", IntegerType),
-        StructField("ps_suppkey", IntegerType),
-        StructField("ps_availqty", IntegerType),
-        StructField("ps_supplycost", FloatType),
-        StructField("ps_comment", StringType))))
+  def partsupp(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("ps_partkey", IntegerType),
+            StructField("ps_suppkey", IntegerType),
+            StructField("ps_availqty", IntegerType),
+            StructField("ps_supplycost", FloatType),
+            StructField("ps_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/partsupp.tbl")
 
-  def orders(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("o_orderkey", IntegerType),
-        StructField("o_custkey", IntegerType),
-        StructField("o_orderstatus", StringType),
-        StructField("o_totalprice", FloatType),
-        StructField("o_orderdate", DateType),
-        StructField("o_orderpriority", StringType),
-        StructField("o_clerk", StringType),
-        StructField("o_shippriority", IntegerType),
-        StructField("o_comment", StringType))))
+  def orders(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("o_orderkey", IntegerType),
+            StructField("o_custkey", IntegerType),
+            StructField("o_orderstatus", StringType),
+            StructField("o_totalprice", FloatType),
+            StructField("o_orderdate", DateType),
+            StructField("o_orderpriority", StringType),
+            StructField("o_clerk", StringType),
+            StructField("o_shippriority", IntegerType),
+            StructField("o_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/orders.tbl")
 
-  def nation(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("n_nationkey", IntegerType),
-        StructField("n_name", StringType),
-        StructField("n_regionkey", IntegerType),
-        StructField("n_comment", StringType))))
+  def nation(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("n_nationkey", IntegerType),
+            StructField("n_name", StringType),
+            StructField("n_regionkey", IntegerType),
+            StructField("n_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/nation.tbl")
 
-  def region(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("r_regionkey", IntegerType),
-        StructField("r_name", StringType),
-        StructField("r_comment", StringType))))
+  def region(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("r_regionkey", IntegerType),
+            StructField("r_name", StringType),
+            StructField("r_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/region.tbl")
 
-  def customer(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("c_custkey", IntegerType),
-        StructField("c_name", StringType),
-        StructField("c_address", StringType),
-        StructField("c_nationkey", IntegerType),
-        StructField("c_phone", StringType),
-        StructField("c_acctbal", FloatType),
-        StructField("c_mktsegment", StringType),
-        StructField("c_comment", StringType))))
+  def customer(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("c_custkey", IntegerType),
+            StructField("c_name", StringType),
+            StructField("c_address", StringType),
+            StructField("c_nationkey", IntegerType),
+            StructField("c_phone", StringType),
+            StructField("c_acctbal", FloatType),
+            StructField("c_mktsegment", StringType),
+            StructField("c_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/customer.tbl")
 
-  def generateDFs(
-      sqlContext: SQLContext, size: String)
-      : Map[String, DataFrame] = {
-    Map("part" -> part(sqlContext, size),
-    "supplier" -> supplier(sqlContext, size),
-    "lineitem" -> lineitem(sqlContext, size),
-    "partsupp" -> partsupp(sqlContext, size),
-    "orders" -> orders(sqlContext, size),
-    "nation" -> nation(sqlContext, size),
-    "region" -> region(sqlContext, size),
-    "customer" -> customer(sqlContext, size)
+  def generateDFs(sqlContext: SQLContext, size: String): Map[String, DataFrame] = {
+    Map(
+      "part" -> part(sqlContext, size),
+      "supplier" -> supplier(sqlContext, size),
+      "lineitem" -> lineitem(sqlContext, size),
+      "partsupp" -> partsupp(sqlContext, size),
+      "orders" -> orders(sqlContext, size),
+      "nation" -> nation(sqlContext, size),
+      "region" -> region(sqlContext, size),
+      "customer" -> customer(sqlContext, size)
     ),
   }
 }
@@ -193,7 +207,7 @@ class TPCH(val sqlContext: SQLContext, val size: String, val fileUrl: String) {
   private var nameToPath = Map[String, File]()
   private var nameToEncryptedPath = Map[String, File]()
 
-  def getQuery(queryNumber: Int) : String = {
+  def getQuery(queryNumber: Int): String = {
     val queryLocation = sys.env.getOrElse("OPAQUE_HOME", ".") + "/src/test/resources/tpch/"
     Source.fromFile(queryLocation + s"q$queryNumber.sql").getLines().mkString("\n")
   }
@@ -202,7 +216,7 @@ class TPCH(val sqlContext: SQLContext, val size: String, val fileUrl: String) {
     if (numPartitions != this.numPartitions) {
       this.numPartitions = numPartitions
       for ((name, df) <- nameToDF) {
-        nameToPath.get(name).foreach{ path => Utils.deleteRecursively(path) }
+        nameToPath.get(name).foreach { path => Utils.deleteRecursively(path) }
 
         nameToPath += (name -> createPath(df, Insecure, numPartitions))
         nameToEncryptedPath += (name -> createPath(df, Encrypted, numPartitions))
@@ -210,38 +224,47 @@ class TPCH(val sqlContext: SQLContext, val size: String, val fileUrl: String) {
     }
   }
 
-  private def createPath(df: DataFrame, securityLevel: SecurityLevel, numPartitions: Int): File = {
+  private def createPath(
+      df: DataFrame,
+      securityLevel: SecurityLevel,
+      numPartitions: Int
+  ): File = {
     val partitionedDF = securityLevel.applyTo(df.repartition(numPartitions))
     val path = Utils.createTempDir()
     path.delete()
     securityLevel match {
       case Insecure => {
-        partitionedDF.write.format("com.databricks.spark.csv")
-            .option("ignoreLeadingWhiteSpace", false)
-            .option("ignoreTrailingWhiteSpace", false)
-            .save(fileUrl + path.toString)
+        partitionedDF.write
+          .format("com.databricks.spark.csv")
+          .option("ignoreLeadingWhiteSpace", false)
+          .option("ignoreTrailingWhiteSpace", false)
+          .save(fileUrl + path.toString)
       }
       case Encrypted => {
-        partitionedDF.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(fileUrl + path.toString)
+        partitionedDF.write
+          .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
+          .save(fileUrl + path.toString)
       }
     }
     path
   }
 
   private def loadViews(securityLevel: SecurityLevel) = {
-    val (map, formatStr) = if (securityLevel == Insecure) 
-        (nameToPath, "com.databricks.spark.csv") else 
+    val (map, formatStr) =
+      if (securityLevel == Insecure)
+        (nameToPath, "com.databricks.spark.csv")
+      else
         (nameToEncryptedPath, "edu.berkeley.cs.rise.opaque.EncryptedSource")
     for ((name, path) <- map) {
-        val df = sqlContext.sparkSession.read
-            .format(formatStr)
-            .schema(nameToDF.get(name).get.schema)
-            .load(fileUrl + path.toString)
-        df.createOrReplaceTempView(name)
+      val df = sqlContext.sparkSession.read
+        .format(formatStr)
+        .schema(nameToDF.get(name).get.schema)
+        .load(fileUrl + path.toString)
+      df.createOrReplaceTempView(name)
     }
   }
 
-  def performQuery(sqlStr: String, securityLevel: SecurityLevel): DataFrame  = {
+  def performQuery(sqlStr: String, securityLevel: SecurityLevel): DataFrame = {
     loadViews(securityLevel)
     sqlContext.sparkSession.sql(sqlStr)
   }

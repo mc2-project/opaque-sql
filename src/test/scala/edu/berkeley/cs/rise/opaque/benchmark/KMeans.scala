@@ -39,26 +39,29 @@ object KMeans {
       numPartitions: Int,
       rand: Random,
       N: Int,
-      D: Int)
-    : DataFrame = {
+      D: Int
+  ): DataFrame = {
     def generatePoint(): Array[Double] = {
-      Array.fill(D) {rand.nextGaussian}
+      Array.fill(D) { rand.nextGaussian }
     }
 
     val data = Array.fill(N)(Row(generatePoint()))
-    val schema = StructType(Seq(
-      StructField("p", DataTypes.createArrayType(DoubleType))))
+    val schema = StructType(Seq(StructField("p", DataTypes.createArrayType(DoubleType))))
 
     securityLevel.applyTo(
-      spark.createDataFrame(
-        spark.sparkContext.makeRDD(data, numPartitions),
-        schema))
+      spark.createDataFrame(spark.sparkContext.makeRDD(data, numPartitions), schema)
+    )
   }
 
   def train(
-      spark: SparkSession, securityLevel: SecurityLevel, numPartitions: Int,
-      N: Int, D: Int, K: Int, convergeDist: Double)
-    : Array[Array[Double]] = {
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      numPartitions: Int,
+      N: Int,
+      D: Int,
+      K: Int,
+      convergeDist: Double
+  ): Array[Array[Double]] = {
     import spark.implicits._
     val rand = new Random(42)
     val vectorsum = new VectorSum
@@ -70,7 +73,8 @@ object KMeans {
       "distributed" -> (numPartitions > 1),
       "query" -> "k-means",
       "system" -> securityLevel.name,
-      "N" -> N) {
+      "N" -> N
+    ) {
 
       // Sample k random points.
       // TODO: Assumes points are already permuted randomly.
@@ -82,26 +86,29 @@ object KMeans {
           .select(
             closestPoint($"p", lit(centroids)).as("oldCentroid"),
             $"p".as("centroidPartialSum"),
-            lit(1).as("centroidPartialCount"))
+            lit(1).as("centroidPartialCount")
+          )
           .groupBy($"oldCentroid")
           .agg(
             vectorsum($"centroidPartialSum").as("centroidSum"),
-            sum($"centroidPartialCount").as("centroidCount"))
+            sum($"centroidPartialCount").as("centroidCount")
+          )
           .select(
             $"oldCentroid",
-            vectormultiply($"centroidSum", (lit(1.0) / $"centroidCount")).as("newCentroid"))
+            vectormultiply($"centroidSum", (lit(1.0) / $"centroidCount")).as("newCentroid")
+          )
           .collect
 
         tempDist = 0.0
         for (row <- newCentroids) {
           tempDist += squaredDistance(
             new DenseVector(row.getSeq[Double](0).toArray),
-            new DenseVector(row.getSeq[Double](1).toArray))
+            new DenseVector(row.getSeq[Double](1).toArray)
+          )
         }
 
         centroids = newCentroids.map(_.getSeq[Double](1).toArray)
       }
-
 
       centroids
     }

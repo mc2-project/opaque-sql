@@ -51,7 +51,6 @@ object TPCHBenchmark extends FunSuite with OpaqueTolerance {
     } else {
       assert(insecure === encrypted)
     }
-
   }
 
   def run(sqlContext: SQLContext, numPartitions: Int, size: String, fileUrl: String) = {

@@ -226,3 +226,31 @@ Now we can port this UDF to Opaque as follows:
     ```
 
 3. Finally, implement the UDF in C++. In [`FlatbuffersExpressionEvaluator#eval_helper`](src/enclave/Enclave/ExpressionEvaluation.h), add a case for `tuix::ExprUnion_DotProduct`. Within that case, cast the expression to a `tuix::DotProduct`, recursively evaluate the left and right children, perform the dot product computation on them, and construct a `DoubleField` containing the result.
+
+## Contributing
+
+Opaque uses a pre-commit hook to ensure that all commits are formatted to the desired style. Before making changes and opening a pull request, please do the following:
+
+1. Install dependencies:
+
+    ```sh
+    # Install Coursier and scalafmt
+    curl -fLo cs https://git.io/coursier-cli-"$(uname | tr LD ld)"
+    chmod +x cs
+    ./cs install cs
+    rm cs
+    cs install scalafmt
+    echo "" >> ~/.bashrc
+    export PATH="$PATH:~/.local/share/coursier/bin"
+
+    # Install npm and clang-format
+    sudo apt -y install npm
+    sudo npm install -g clang-format
+    ```
+
+2. Set up your local repository's pre-commit hook:
+
+    ```sh
+    chmod +x .hooks/*
+    .hooks/install-pre-commit
+    ```
