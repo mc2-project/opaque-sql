@@ -22,6 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
 import scala.collection.mutable.Stack
+import scala.collection.mutable.Queue
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.SparkPlan
@@ -84,6 +85,11 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
     return retval
   }
 
+  // Returns if this DAG is empty
+  def graphIsEmpty(): Boolean = {
+    return this.isSource && this.outgoingNeighbors.isEmpty
+  }
+
   // Checks if JobNodeData originates from same partition (?)
   override def equals(that: Any): Boolean = {
     that match {
@@ -99,18 +105,6 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
 
   override def hashCode(): Int = {
     inputMacs.hashCode ^ allOutputsMac.hashCode
-  }
-
-  def printNode() = {
-    println("====")
-    print("Ecall: ")
-    println(this.ecall)
-    print("Output: ")
-    for (i <- 0 until this.allOutputsMac.length) {
-      print(this.allOutputsMac(i))
-    }
-    println
-    println("===")
   }
 }
 
@@ -133,24 +127,11 @@ class OperatorNode(val operatorName: String = "") {
   def isOrphan(): Boolean = {
     return this.parents.isEmpty
   }
-
-  def printOperatorTree(offset: Int): Unit = {
-    print(" "*offset)
-    println(this.operatorName)
-    for (child <- this.children) {
-      child.printOperatorTree(offset + 4)
-    }
-  }
-
-  def printOperatorTree(): Unit = {
-    this.printOperatorTree(0)
-  }
 }
 
 object JobVerificationEngine {
   // An LogEntryChain object from each partition
   var logEntryChains = ArrayBuffer[tuix.LogEntryChain]()
-  var sparkOperators = ArrayBuffer[String]()
   val ecallId = Map(
     1 -> "project",
     2 -> "filter",
@@ -178,16 +159,11 @@ object JobVerificationEngine {
     logEntryChains += logEntryChain 
   }
 
-  def addExpectedOperator(operator: String): Unit = {
-    sparkOperators += operator
-  }
-
   def resetForNextJob(): Unit = {
-    sparkOperators.clear
     logEntryChains.clear
   }
 
-  def operatorDAGFromPlan(executedPlan: String): ArrayBuffer[OperatorNode] = {
+  def operatorDAGFromPlanString(executedPlan: String): ArrayBuffer[OperatorNode] = {
     val lines = executedPlan.split("\n")
 
     // Superstrings must come before substrings, 
@@ -241,6 +217,21 @@ object JobVerificationEngine {
     return allOperatorNodes
   }
 
+  // def operatorDAGFromPlan(executedPlan: SparkPlan): ArrayBuffer[OperatorNode] = {
+  //   val allOperatorNodes = ArrayBuffer[OperatorNode]()
+  //   // Superstrings must come before substrings, 
+  //   // or inner the for loop will terminate when it finds an instance of the substring.
+  //   // (eg. EncryptedSortMergeJoin before EncryptedSort)
+  //   val possibleSparkOperators = ArrayBuffer[String]("EncryptedProject", 
+  //                                               "EncryptedSortMergeJoin", 
+  //                                               "EncryptedSort", 
+  //                                               "EncryptedFilter",
+  //                                               "EncryptedAggregate",
+  //                                               "EncryptedGlobalLimit",
+  //                                               "EncryptedLocalLimit")
+  // }
+
+  // expectedDAGFromOperatorDAG helper - links parent ecall partitions to child ecall partitions.
   def linkEcalls(parentEcalls: ArrayBuffer[JobNode], childEcalls: ArrayBuffer[JobNode]): Unit = {
     if (parentEcalls.length != childEcalls.length) {
       println("Ecall lengths don't match! (linkEcalls)")
@@ -313,7 +304,8 @@ object JobVerificationEngine {
     }
   }
 
-  def getJobNodes(numPartitions: Int, operatorName: String): ArrayBuffer[ArrayBuffer[JobNode]] = {
+  // expectedDAGFromOperatorDAG helper - generates a matrix of job nodes for each operator node.
+  def generateJobNodes(numPartitions: Int, operatorName: String): ArrayBuffer[ArrayBuffer[JobNode]] = {
     val jobNodes = ArrayBuffer[ArrayBuffer[JobNode]]() 
     val expectedEcalls = ArrayBuffer[Int]()
     if (operatorName == "EncryptedSort" && numPartitions == 1) {
@@ -356,6 +348,7 @@ object JobVerificationEngine {
     return jobNodes
   }
 
+  // Converts a DAG of Spark operators to a DAG of ecalls and partitions.
   def expectedDAGFromOperatorDAG(operatorNodes: ArrayBuffer[OperatorNode]): JobNode = {
     val source = new JobNode()
     val sink = new JobNode()
@@ -363,7 +356,7 @@ object JobVerificationEngine {
     sink.setSink
     // For each node, create numPartitions * numEcalls jobnodes.
     for (node <- operatorNodes) {
-      node.jobNodes = getJobNodes(logEntryChains.size, node.operatorName)
+      node.jobNodes = generateJobNodes(logEntryChains.size, node.operatorName)
     }
     // Link all ecalls.
     for (node <- operatorNodes) {
@@ -394,17 +387,23 @@ object JobVerificationEngine {
     return source
   }
 
+  // Generates an expected DAG of ecalls and partitions from a dataframe's SparkPlan object.
   def expectedDAGFromPlan(executedPlan: SparkPlan): JobNode = {
-    val operatorDAGRoot = operatorDAGFromPlan(executedPlan.toString)
+    val operatorDAGRoot = operatorDAGFromPlanString(executedPlan.toString)
     expectedDAGFromOperatorDAG(operatorDAGRoot)
   }
 
   def verify(df: DataFrame): Boolean = {
-    if (sparkOperators.isEmpty) {
+    // Get expected DAG.
+    val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
+
+    // Quit if graph is empty.
+    if (expectedSourceNode.graphIsEmpty) {
       return true
     }
-    val OE_HMAC_SIZE = 32    
 
+    // Construct executed DAG.
+    val OE_HMAC_SIZE = 32    
     // Keep a set of nodes, since right now, the last nodes won't have outputs.
     val nodeSet = Set[JobNode]()
     // Set up map from allOutputsMAC --> JobNode.    
@@ -486,11 +485,6 @@ object JobVerificationEngine {
         node.addOutgoingNeighbor(executedSinkNode)
       }
     }
-
-    // ========================================== //
-
-    // Get expected DAG
-    val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
 
     val executedPathsToSink = executedSourceNode.pathsToSink
     val expectedPathsToSink = expectedSourceNode.pathsToSink
