@@ -19,7 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.SparkSession
 
-class QEDSuite extends OpaqueTestsBase {
+class QEDSuite extends OpaqueSuiteBase {
   override val spark = SparkSession
     .builder()
     .master("local[1]")

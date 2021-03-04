@@ -17,6 +17,10 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import org.apache.spark.sql.catalyst.util.sideBySide
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Row
+
 import org.apache.log4j.Level
 import org.apache.log4j.LogManager
 
@@ -54,12 +58,26 @@ trait OpaqueFunSuite extends FunSuite {
 
   def testAgainstSpark[A: Equality](
       name: String,
+      isOrdered: Boolean = true,
       testFunc: (String, Tag*) => ((=> Any) => Unit) = test
   )(f: SecurityLevel => A): Unit = {
     testFunc(name + " - encrypted") {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified in OpaqueTolerance
-      assert(f(Insecure) === f(Encrypted))
+      val (insecure, encrypted) = (f(Insecure), f(Encrypted))
+      (insecure, encrypted) match {
+        case (insecure: DataFrame, encrypted: DataFrame) =>
+          val (insecureSeq, encryptedSeq) = (insecure.collect, encrypted.collect)
+          val equal =
+            if (isOrdered) insecureSeq === encryptedSeq
+            else insecureSeq.toSet === encryptedSeq.toSet
+          if (!equal) {
+            println(genError(insecureSeq, encryptedSeq, isOrdered))
+          }
+          assert(equal)
+        case _ =>
+          assert(insecure === encrypted)
+      }
     }
   }
 
@@ -93,5 +111,67 @@ trait OpaqueFunSuite extends FunSuite {
         LogManager.getLogger(l).setLevel(logLevels(l))
       }
     }
+  }
+
+  private def genError(
+      sparkAnswer: Seq[Row],
+      opaqueAnswer: Seq[Row],
+      isOrdered: Boolean
+  ): String = {
+    val getRowType: Option[Row] => String = row =>
+      row
+        .map(row =>
+          if (row.schema == null) {
+            "struct<>"
+          } else {
+            s"${row.schema.catalogString}"
+          }
+        )
+        .getOrElse("struct<>")
+
+    s"""
+       |== Results ==
+       |${sideBySide(
+      s"== Spark Answer - ${sparkAnswer.size} ==" +:
+        getRowType(sparkAnswer.headOption) +:
+        prepareAnswer(sparkAnswer, isOrdered).map(_.toString()),
+      s"== Opaque Answer - ${opaqueAnswer.size} ==" +:
+        getRowType(opaqueAnswer.headOption) +:
+        prepareAnswer(opaqueAnswer, isOrdered).map(_.toString())
+    ).mkString("\n")}
+    """.stripMargin
+  }
+
+  def prepareAnswer(answer: Seq[Row], isSorted: Boolean): Seq[Row] = {
+    // Converts data to types that we can do equality comparison using Scala collections.
+    // For BigDecimal type, the Scala type has a better definition of equality test (similar to
+    // Java's java.math.BigDecimal.compareTo).
+    // For binary arrays, we convert it to Seq to avoid of calling java.util.Arrays.equals for
+    // equality test.
+    val converted: Seq[Row] = answer.map(prepareRow)
+    if (!isSorted) converted.sortBy(_.toString()) else converted
+  }
+
+  // We need to call prepareRow recursively to handle schemas with struct types.
+  def prepareRow(row: Row): Row = {
+    Row.fromSeq(row.toSeq.map {
+      case null => null
+      case bd: java.math.BigDecimal => BigDecimal(bd)
+      // Equality of WrappedArray differs for AnyVal and AnyRef in Scala 2.12.2+
+      case seq: Seq[_] =>
+        seq.map {
+          case b: java.lang.Byte => b.byteValue
+          case s: java.lang.Short => s.shortValue
+          case i: java.lang.Integer => i.intValue
+          case l: java.lang.Long => l.longValue
+          case f: java.lang.Float => f.floatValue
+          case d: java.lang.Double => d.doubleValue
+          case x => x
+        }
+      // Convert array to Seq for easy equality check.
+      case b: Array[_] => b.toSeq
+      case r: Row => prepareRow(r)
+      case o => o
+    })
   }
 }

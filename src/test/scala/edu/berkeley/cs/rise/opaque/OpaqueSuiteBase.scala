@@ -21,7 +21,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.scalatest.BeforeAndAfterAll
 
-trait OpaqueTestsBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTestData { self =>
+trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTestData { self =>
 
   override def spark: SparkSession
 

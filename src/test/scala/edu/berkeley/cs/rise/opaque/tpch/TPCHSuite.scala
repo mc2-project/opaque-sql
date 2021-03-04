@@ -18,9 +18,9 @@
 package edu.berkeley.cs.rise.opaque.tpch
 
 import org.apache.spark.sql.SparkSession
-import edu.berkeley.cs.rise.opaque.OpaqueTestsBase
+import edu.berkeley.cs.rise.opaque.OpaqueSuiteBase
 
-trait TPCHTests extends OpaqueTestsBase { self =>
+trait TPCHSuite extends OpaqueSuiteBase { self =>
 
   def size = "sf_small"
   def tpch = new TPCH(spark.sqlContext, size, "file://")
@@ -29,19 +29,19 @@ trait TPCHTests extends OpaqueTestsBase { self =>
     for (queryNum <- TPCH.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
       if (TPCH.unorderedQueries.contains(queryNum)) {
-        testAgainstSpark(testStr) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions).collect.toSet
+        testAgainstSpark(testStr, isOrdered = false) { securityLevel =>
+          tpch.query(queryNum, securityLevel, numPartitions)
         }
       } else {
-        testAgainstSpark(testStr) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions).collect
+        testAgainstSpark(testStr, isOrdered = true) { securityLevel =>
+          tpch.query(queryNum, securityLevel, numPartitions)
         }
       }
     }
   }
 }
 
-class TPCHSinglePartitionSuite extends TPCHTests {
+class SinglePartitionTPCHSuite extends TPCHSuite {
   override val spark = SparkSession
     .builder()
     .master("local[1]")
@@ -53,7 +53,7 @@ class TPCHSinglePartitionSuite extends TPCHTests {
   runTests(numPartitions);
 }
 
-class TPCHMultiplePartitionSuite extends TPCHTests {
+class MultipleTPCHMultipleSuite extends TPCHSuite {
   override val spark = SparkSession
     .builder()
     .master("local[1]")
