@@ -27,7 +27,6 @@ trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTest
 
   override def beforeAll(): Unit = {
     Utils.initSQLContext(spark.sqlContext)
-    loadTestData()
   }
 
   override def afterAll(): Unit = {

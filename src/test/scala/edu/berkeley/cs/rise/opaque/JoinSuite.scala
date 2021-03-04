@@ -22,7 +22,11 @@ import org.apache.spark.sql.SparkSession
 trait JoinSuite extends OpaqueSuiteBase {
 
   def numPartitions: Int
-  def queries = Seq("SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a")
+  def queries = Seq(
+    "SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a",
+    "SELECT * FROM testData LEFT SEMI JOIN testData2",
+    "SELECT * FROM testData JOIN testData2"
+  )
 
   def runTests(numPartitions: Int) = {
     for (sqlStr <- queries) {
@@ -41,6 +45,7 @@ class MultiplePartitionJoinSuite extends JoinSuite {
     .appName("MultiplePartitionJoinSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
+  loadTestData()
 
   runTests(numPartitions);
 }

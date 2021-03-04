@@ -59,9 +59,10 @@ trait OpaqueFunSuite extends FunSuite {
   def testAgainstSpark[A: Equality](
       name: String,
       isOrdered: Boolean = true,
+      printPlan: Boolean = false,
       testFunc: (String, Tag*) => ((=> Any) => Unit) = test
   )(f: SecurityLevel => A): Unit = {
-    testFunc(name + " - encrypted") {
+    testFunc(name) {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified in OpaqueTolerance
       val (insecure, encrypted) = (f(Insecure), f(Encrypted))
@@ -71,7 +72,13 @@ trait OpaqueFunSuite extends FunSuite {
           val equal =
             if (isOrdered) insecureSeq === encryptedSeq
             else insecureSeq.toSet === encryptedSeq.toSet
-          if (!equal) {
+          if (equal) {
+            if (printPlan) {
+              println("**************** Spark Plan ****************")
+              insecure.explain()
+              println("**************** Opaque Plan ****************")
+              encrypted.explain()
+            }
             println(genError(insecureSeq, encryptedSeq, isOrdered))
           }
           assert(equal)
@@ -82,13 +89,13 @@ trait OpaqueFunSuite extends FunSuite {
   }
 
   def testOpaqueOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - encrypted") {
+    test(name + " - encrypted only") {
       f(Encrypted)
     }
   }
 
   def testSparkOnly(name: String)(f: SecurityLevel => Unit): Unit = {
-    test(name + " - Spark") {
+    test(name + " - Spark only") {
       f(Insecure)
     }
   }
@@ -129,27 +136,29 @@ trait OpaqueFunSuite extends FunSuite {
         )
         .getOrElse("struct<>")
 
+    val sparkPrepared = prepareAnswer(sparkAnswer, isOrdered)
+    val opaquePrepared = prepareAnswer(opaqueAnswer, isOrdered)
     s"""
        |== Results ==
        |${sideBySide(
       s"== Spark Answer - ${sparkAnswer.size} ==" +:
         getRowType(sparkAnswer.headOption) +:
-        prepareAnswer(sparkAnswer, isOrdered).map(_.toString()),
+        sparkPrepared.map(_.toString()),
       s"== Opaque Answer - ${opaqueAnswer.size} ==" +:
         getRowType(opaqueAnswer.headOption) +:
-        prepareAnswer(opaqueAnswer, isOrdered).map(_.toString())
+        opaquePrepared.map(_.toString())
     ).mkString("\n")}
     """.stripMargin
   }
 
-  def prepareAnswer(answer: Seq[Row], isSorted: Boolean): Seq[Row] = {
+  def prepareAnswer(answer: Seq[Row], isOrdered: Boolean): Seq[Row] = {
     // Converts data to types that we can do equality comparison using Scala collections.
     // For BigDecimal type, the Scala type has a better definition of equality test (similar to
     // Java's java.math.BigDecimal.compareTo).
     // For binary arrays, we convert it to Seq to avoid of calling java.util.Arrays.equals for
     // equality test.
     val converted: Seq[Row] = answer.map(prepareRow)
-    if (!isSorted) converted.sortBy(_.toString()) else converted
+    if (!isOrdered) converted.sortBy(_.toString()) else converted
   }
 
   // We need to call prepareRow recursively to handle schemas with struct types.

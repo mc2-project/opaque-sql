@@ -370,6 +370,10 @@ protected trait SQLTestData {
     complexData
     courseSales
   }
+
+  def showData(tableName: String) = {
+    spark.table(tableName).show()
+  }
 }
 
 /**
