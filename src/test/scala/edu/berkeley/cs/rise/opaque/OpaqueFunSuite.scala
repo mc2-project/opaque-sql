@@ -59,6 +59,7 @@ trait OpaqueFunSuite extends FunSuite {
   def testAgainstSpark[A: Equality](
       name: String,
       isOrdered: Boolean = true,
+      verbose: Boolean = false,
       printPlan: Boolean = false,
       testFunc: (String, Tag*) => ((=> Any) => Unit) = test
   )(f: SecurityLevel => A): Unit = {
@@ -72,14 +73,14 @@ trait OpaqueFunSuite extends FunSuite {
           val equal =
             if (isOrdered) insecureSeq === encryptedSeq
             else insecureSeq.toSet === encryptedSeq.toSet
-          if (equal) {
+          if (!equal) {
             if (printPlan) {
               println("**************** Spark Plan ****************")
               insecure.explain()
               println("**************** Opaque Plan ****************")
               encrypted.explain()
             }
-            println(genError(insecureSeq, encryptedSeq, isOrdered))
+            println(genError(insecureSeq, encryptedSeq, isOrdered, verbose))
           }
           assert(equal)
         case _ =>
@@ -123,7 +124,8 @@ trait OpaqueFunSuite extends FunSuite {
   private def genError(
       sparkAnswer: Seq[Row],
       opaqueAnswer: Seq[Row],
-      isOrdered: Boolean
+      isOrdered: Boolean,
+      verbose: Boolean = false
   ): String = {
     val getRowType: Option[Row] => String = row =>
       row
@@ -138,15 +140,20 @@ trait OpaqueFunSuite extends FunSuite {
 
     val sparkPrepared = prepareAnswer(sparkAnswer, isOrdered)
     val opaquePrepared = prepareAnswer(opaqueAnswer, isOrdered)
+    val sparkDiff = sparkPrepared.diff(opaquePrepared)
+    val opaqueDiff = opaquePrepared.diff(sparkPrepared)
+
     s"""
        |== Results ==
        |${sideBySide(
-      s"== Spark Answer - ${sparkAnswer.size} ==" +:
+      s"== Spark ${if (verbose) "Result" else "Diff"} - ${if (verbose) sparkPrepared.size
+       else sparkDiff.size} ==" +:
         getRowType(sparkAnswer.headOption) +:
-        sparkPrepared.map(_.toString()),
-      s"== Opaque Answer - ${opaqueAnswer.size} ==" +:
+        (if (verbose) sparkPrepared else sparkDiff).map(_.toString()),
+      s"== Opaque ${if (verbose) "Result" else "Diff"} - ${if (verbose) opaquePrepared.size
+       else opaqueDiff.size} ==" +:
         getRowType(opaqueAnswer.headOption) +:
-        opaquePrepared.map(_.toString())
+        (if (verbose) opaquePrepared else opaqueDiff).map(_.toString())
     ).mkString("\n")}
     """.stripMargin
   }
