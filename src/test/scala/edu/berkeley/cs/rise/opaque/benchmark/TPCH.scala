@@ -29,68 +29,79 @@ import edu.berkeley.cs.rise.opaque.Utils
 object TPCH {
 
   // Add query numbers here once they are supported
-  val supportedQueries = Set(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+  val supportedQueries =
+    Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
 
   // Queries whose results are not defined in a specific order
   val unorderedQueries = Set(6, 14, 17, 19)
 
-  val tableNames = Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
+  val tableNames =
+    Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")
 
-  def part(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-       StructType(Seq(
-         StructField("p_partkey", IntegerType),
-         StructField("p_name", StringType),
-         StructField("p_mfgr", StringType),
-         StructField("p_brand", StringType),
-         StructField("p_type", StringType),
-         StructField("p_size", IntegerType),
-         StructField("p_container", StringType),
-         StructField("p_retailprice", FloatType),
-         StructField("p_comment", StringType))))
-       .format("csv")
-       .option("delimiter", "|")
-       .load(s"${Benchmark.dataDir}/tpch/$size/part.tbl")
+  def part(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("p_partkey", IntegerType),
+            StructField("p_name", StringType),
+            StructField("p_mfgr", StringType),
+            StructField("p_brand", StringType),
+            StructField("p_type", StringType),
+            StructField("p_size", IntegerType),
+            StructField("p_container", StringType),
+            StructField("p_retailprice", FloatType),
+            StructField("p_comment", StringType)
+          )
+        )
+      )
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"${Benchmark.dataDir}/tpch/$size/part.tbl")
 
-  def supplier(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-       StructType(Seq(
-         StructField("s_suppkey", IntegerType),
-         StructField("s_name", StringType),
-         StructField("s_address", StringType),
-         StructField("s_nationkey", IntegerType),
-         StructField("s_phone", StringType),
-         StructField("s_acctbal", FloatType),
-         StructField("s_comment", StringType))))
-       .format("csv")
-       .option("delimiter", "|")
-       .load(s"${Benchmark.dataDir}/tpch/$size/supplier.tbl")
+  def supplier(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("s_suppkey", IntegerType),
+            StructField("s_name", StringType),
+            StructField("s_address", StringType),
+            StructField("s_nationkey", IntegerType),
+            StructField("s_phone", StringType),
+            StructField("s_acctbal", FloatType),
+            StructField("s_comment", StringType)
+          )
+        )
+      )
+      .format("csv")
+      .option("delimiter", "|")
+      .load(s"${Benchmark.dataDir}/tpch/$size/supplier.tbl")
 
-  def lineitem(
-      sqlContext: SQLContext, size: String)
-      : DataFrame =
-      sqlContext.read.schema(
-      StructType(Seq(
-        StructField("l_orderkey", IntegerType),
-        StructField("l_partkey", IntegerType),
-        StructField("l_suppkey", IntegerType),
-        StructField("l_linenumber", IntegerType),
-        StructField("l_quantity", IntegerType),
-        StructField("l_extendedprice", FloatType),
-        StructField("l_discount", FloatType),
-        StructField("l_tax", FloatType),
-        StructField("l_returnflag", StringType),
-        StructField("l_linestatus", StringType),
-        StructField("l_shipdate", DateType),
-        StructField("l_commitdate", DateType),
-        StructField("l_receiptdate", DateType),
-        StructField("l_shipinstruct", StringType),
-        StructField("l_shipmode", StringType),
-        StructField("l_comment", StringType))))
+  def lineitem(sqlContext: SQLContext, size: String): DataFrame =
+    sqlContext.read
+      .schema(
+        StructType(
+          Seq(
+            StructField("l_orderkey", IntegerType),
+            StructField("l_partkey", IntegerType),
+            StructField("l_suppkey", IntegerType),
+            StructField("l_linenumber", IntegerType),
+            StructField("l_quantity", IntegerType),
+            StructField("l_extendedprice", FloatType),
+            StructField("l_discount", FloatType),
+            StructField("l_tax", FloatType),
+            StructField("l_returnflag", StringType),
+            StructField("l_linestatus", StringType),
+            StructField("l_shipdate", DateType),
+            StructField("l_commitdate", DateType),
+            StructField("l_receiptdate", DateType),
+            StructField("l_shipinstruct", StringType),
+            StructField("l_shipmode", StringType),
+            StructField("l_comment", StringType)
+          )
+        )
+      )
       .format("csv")
       .option("delimiter", "|")
       .load(s"${Benchmark.dataDir}/tpch/$size/lineitem.tbl")

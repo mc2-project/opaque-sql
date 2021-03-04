@@ -31,18 +31,20 @@ object TPCHBenchmark extends FunSuite with OpaqueTolerance {
     tpch.generateFiles(numPartitions)
 
     val insecure = Utils.timeBenchmark(
-        "distributed" -> (numPartitions > 1),
-        "query" -> s"TPC-H $queryNumber",
-        "system" -> Insecure.name) {
-      
+      "distributed" -> (numPartitions > 1),
+      "query" -> s"TPC-H $queryNumber",
+      "system" -> Insecure.name
+    ) {
+
       tpch.performQuery(sqlStr, Insecure).collect
     }
 
     val encrypted = Utils.timeBenchmark(
-        "distributed" -> (numPartitions > 1),
-        "query" -> s"TPC-H $queryNumber",
-        "system" -> Encrypted.name) {
-      
+      "distributed" -> (numPartitions > 1),
+      "query" -> s"TPC-H $queryNumber",
+      "system" -> Encrypted.name
+    ) {
+
       tpch.performQuery(sqlStr, Encrypted).collect
     }
 

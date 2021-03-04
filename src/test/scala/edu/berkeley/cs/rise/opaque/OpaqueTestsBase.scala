@@ -42,8 +42,10 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll with OpaqueToleran
     spark.stop()
   }
 
-  def testAgainstSpark[A : Equality](name: String, testFunc: (String, Tag*) => ((=> Any) => Unit) = test)
-      (f: SecurityLevel => A): Unit = {
+  def testAgainstSpark[A: Equality](
+      name: String,
+      testFunc: (String, Tag*) => ((=> Any) => Unit) = test
+  )(f: SecurityLevel => A): Unit = {
     testFunc(name + " - encrypted") {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified above

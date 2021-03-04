@@ -36,8 +36,8 @@ Project.inConfig(Test)(baseAssemblySettings)
 test in (Test, assembly) := {}
 
 assemblyMergeStrategy in (Test, assembly) := {
- case PathList("META-INF", xs @ _*) => MergeStrategy.discard
- case x => MergeStrategy.first
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
 }
 
 // Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with

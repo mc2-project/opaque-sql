@@ -19,9 +19,7 @@ public:
 
   const tuix::Row *next() { return rows->rows()->Get(row_idx++); }
 
-  const tuix::Row *peek() {
-    return rows->rows()->Get(row_idx);
-  }
+  const tuix::Row *peek() { return rows->rows()->Get(row_idx); }
 
   flatbuffers::Vector<flatbuffers::Offset<tuix::Row>>::const_iterator begin() {
     return rows->rows()->begin();
