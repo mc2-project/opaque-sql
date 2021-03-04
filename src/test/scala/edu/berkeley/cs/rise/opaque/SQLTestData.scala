@@ -403,8 +403,47 @@ protected trait SQLTestData {
     df
   }
 
+  val nameToFunc =
+    Map[String, SecurityLevel => Unit](
+      "emptyTestData" -> emptyTestData,
+      "testData" -> testData,
+      "testData2" -> testData2,
+      "testData3" -> testData3,
+      "negativeData" -> negativeData,
+      "largeAndSmallInts" -> largeAndSmallInts,
+      "decimalData" -> decimalData,
+      "binaryData" -> binaryData,
+      "upperCaseData" -> upperCaseData,
+      "lowerCaseData" -> lowerCaseData,
+      "arrayData" -> arrayData,
+      "mapData" -> mapData,
+      "repeatedData" -> repeatedData,
+      "nullableRepeatedData" -> nullableRepeatedData,
+      "nullInts" -> nullInts,
+      "allNulls" -> allNulls,
+      "nullStrings" -> nullStrings,
+      "tableName" -> tableName,
+      "unparsedStrings" -> unparsedStrings,
+      "withEmptyParts" -> withEmptyParts,
+      "person" -> person,
+      "salary" -> salary,
+      "complexData" -> complexData,
+      "courseSales" -> courseSales
+    )
+
   /**
-   * Initialize all test data such that all temp tables are properly registered.
+   * Initialize all test data that is found in sqlStr.
+   */
+  def loadTestData(sqlStr: String, securityLevel: SecurityLevel): Unit = {
+    for ((name, func) <- nameToFunc) {
+      if (sqlStr.contains(name)) {
+        func(securityLevel)
+      }
+    }
+  }
+
+  /**
+   * Initialize all test data according to securityLevel.
    */
   def loadTestData(securityLevel: SecurityLevel): Unit = {
     assert(spark != null, "attempted to initialize test data before SparkSession.")

@@ -46,7 +46,7 @@ trait JoinSuite extends OpaqueSuiteBase {
     for (sqlStr <- queries) {
       testAgainstSpark(sqlStr, isOrdered = false, verbose = false, printPlan = true) {
         securityLevel =>
-          loadTestData(securityLevel)
+          loadTestData(sqlStr, securityLevel)
           spark.sqlContext.sparkSession.sql(sqlStr)
       }
     }
