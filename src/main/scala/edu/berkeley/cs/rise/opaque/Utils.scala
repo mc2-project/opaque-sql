@@ -21,7 +21,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
@@ -781,7 +780,8 @@ object Utils extends Logging {
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
-      useEnclave: Boolean
+      useEnclave: Boolean,
+      isDummyRows: Boolean = false
   ): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
@@ -831,7 +831,7 @@ object Utils extends Logging {
             }
             .toArray
         ),
-        false
+        isDummyRows
       )
 
       if (builder.offset() > MaxBlockSize) {

@@ -9,32 +9,32 @@ void RowWriter::clear() {
   finished = false;
 }
 
-void RowWriter::append(const tuix::Row *row) {
-  rows_vector.push_back(flatbuffers_copy(row, builder));
+void RowWriter::append(const tuix::Row *row, bool force_null) {
+  rows_vector.push_back(flatbuffers_copy(row, builder, force_null));
   total_num_rows++;
   maybe_finish_block();
 }
 
-void RowWriter::append(const std::vector<const tuix::Field *> &row_fields) {
+void RowWriter::append(const std::vector<const tuix::Field *> &row_fields, bool force_null) {
   flatbuffers::uoffset_t num_fields = row_fields.size();
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
   for (flatbuffers::uoffset_t i = 0; i < num_fields; i++) {
-    field_values[i] = flatbuffers_copy<tuix::Field>(row_fields[i], builder);
+    field_values[i] = flatbuffers_copy<tuix::Field>(row_fields[i], builder, force_null);
   }
   rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
   total_num_rows++;
   maybe_finish_block();
 }
 
-void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2) {
+void RowWriter::append(const tuix::Row *row1, const tuix::Row *row2, bool row1_force_null, bool row2_force_null) {
   flatbuffers::uoffset_t num_fields = row1->field_values()->size() + row2->field_values()->size();
   std::vector<flatbuffers::Offset<tuix::Field>> field_values(num_fields);
   flatbuffers::uoffset_t i = 0;
   for (auto it = row1->field_values()->begin(); it != row1->field_values()->end(); ++it, ++i) {
-    field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder);
+    field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder, row1_force_null);
   }
   for (auto it = row2->field_values()->begin(); it != row2->field_values()->end(); ++it, ++i) {
-    field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder);
+    field_values[i] = flatbuffers_copy<tuix::Field>(*it, builder, row2_force_null);
   }
   rows_vector.push_back(tuix::CreateRowDirect(builder, &field_values));
   total_num_rows++;

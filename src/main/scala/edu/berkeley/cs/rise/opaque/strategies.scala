@@ -35,9 +35,8 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.FullOuter
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.InnerLike
-import org.apache.spark.sql.catalyst.plans.LeftAnti
-import org.apache.spark.sql.catalyst.plans.LeftSemi
 import org.apache.spark.sql.catalyst.plans.LeftOuter
+import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
@@ -82,17 +81,41 @@ object OpaqueOperators extends Strategy {
     // Used to match equi joins
     case p @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right, _)
         if isEncrypted(p) =>
-      val (leftProjSchema, leftKeysProj, tag) = tagForJoin(leftKeys, left.output, true)
-      val (rightProjSchema, rightKeysProj, _) = tagForJoin(rightKeys, right.output, false)
-      val leftProj = EncryptedProjectExec(leftProjSchema, planLater(left))
-      val rightProj = EncryptedProjectExec(rightProjSchema, planLater(right))
-      val unioned = EncryptedUnionExec(leftProj, rightProj)
-      // We partition based on the join keys only, so that rows from both the left and the right tables that match
-      // will colocate to the same partition
-      val partitionOrder = leftKeysProj.map(k => SortOrder(k, Ascending))
+      val (leftProjSchema, leftKeysProj, leftTag) =
+        tagForEquiJoin(leftKeys, left.output, isLeftPrimary(joinType))
+      val (rightProjSchema, rightKeysProj, rightTag) =
+        tagForEquiJoin(rightKeys, right.output, !isLeftPrimary(joinType))
+
+      val (primary, primaryProjSchema, primaryKeysProj, tag) =
+        if (isLeftPrimary(joinType))
+          (left, leftProjSchema, leftKeysProj, leftTag)
+        else (right, rightProjSchema, rightKeysProj, rightTag)
+      val (foreign, foreignProjSchema) =
+        if (isLeftPrimary(joinType))
+          (right, rightProjSchema)
+        else (left, leftProjSchema)
+
+      val primaryProj = EncryptedProjectExec(primaryProjSchema, planLater(primary))
+      val foreignProj = EncryptedProjectExec(foreignProjSchema, planLater(foreign))
+      val unioned = EncryptedUnionExec(primaryProj, foreignProj)
+
+      // We partition based on the join keys only, so that rows from both the primary and foreign tables that match
+      // will colocate to the same partition.
+      val partitionOrder = primaryKeysProj.map(k => SortOrder(k, Ascending))
       val partitioned = EncryptedRangePartitionExec(partitionOrder, unioned)
-      val sortOrder = sortForJoin(leftKeysProj, tag, partitioned.output)
-      val sorted = EncryptedSortExec(sortOrder, false, partitioned)
+      val sortOrder = sortForJoin(primaryKeysProj, tag, partitioned.output)
+
+      // Add dummy row for the foreign table if outer join.
+      val sorted = joinType match {
+        case LeftOuter | RightOuter =>
+          EncryptedAddDummyRowExec(
+            foreignProjSchema.map(_.toAttribute),
+            EncryptedSortExec(sortOrder, false, partitioned)
+          )
+        case _ =>
+          EncryptedSortExec(sortOrder, false, partitioned)
+      }
+
       val joined = EncryptedSortMergeJoinExec(
         joinType,
         leftKeysProj,
@@ -104,8 +127,9 @@ object OpaqueOperators extends Strategy {
       )
 
       val tagsDropped = joinType match {
-        case Inner => EncryptedProjectExec(dropTags(left.output, right.output), joined)
-        case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
+        case Inner | LeftOuter | RightOuter =>
+          EncryptedProjectExec(dropTags(left.output, right.output), joined)
+        case LeftExistence(_) => EncryptedProjectExec(left.output, joined)
       }
 
       tagsDropped :: Nil
@@ -327,13 +351,13 @@ object OpaqueOperators extends Strategy {
     case _ => Nil
   }
 
-  private def tagForJoin(
+  private def tagForEquiJoin(
       keys: Seq[Expression],
       input: Seq[Attribute],
-      isLeft: Boolean
+      isPrimary: Boolean
   ): (Seq[NamedExpression], Seq[NamedExpression], NamedExpression) = {
     val keysProj = keys.zipWithIndex.map { case (k, i) => Alias(k, "_" + i)() }
-    val tag = Alias(Literal(if (isLeft) 0 else 1), "_tag")()
+    val tag = Alias(Literal(if (isPrimary) 0 else 1), "_tag")()
     (Seq(tag) ++ keysProj ++ input, keysProj.map(_.toAttribute), tag.toAttribute)
   }
 
@@ -357,11 +381,14 @@ object OpaqueOperators extends Strategy {
     (Seq(tag) ++ input, tag.toAttribute)
   }
 
-  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = {
-    joinType match {
-      case LeftExistence(_) => BuildRight
-      case _ => BuildLeft
-    }
+  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = joinType match {
+    case LeftExistence(_) | LeftOuter => BuildRight
+    case _ => BuildLeft
+  }
+
+  private def isLeftPrimary(joinType: JoinType): Boolean = joinType match {
+    case RightOuter => false
+    case _ => true
   }
 
   // Everything below is a private method in SparkStrategies.scala

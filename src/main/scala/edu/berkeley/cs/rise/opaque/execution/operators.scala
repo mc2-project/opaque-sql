@@ -30,7 +30,6 @@ import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
-import edu.berkeley.cs.rise.opaque.OpaqueException
 
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
@@ -100,6 +99,26 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
           useEnclave = true
         )
       )
+    }
+  }
+}
+
+case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
+    extends UnaryExecNode
+    with OpaqueOperatorExec {
+
+  // Add a dummy row full of nulls to each partition of child
+  override def executeBlocked(): RDD[Block] = {
+    val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+
+    childRDD.mapPartitions { rowIter =>
+      val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
+        Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
+        output.map(_.dataType),
+        useEnclave = true,
+        isDummyRows = true
+      )
+      Iterator(Utils.concatEncryptedBlocks(nullRowsBlock +: rowIter.toSeq))
     }
   }
 }
@@ -291,8 +310,18 @@ case class EncryptedSortMergeJoinExec(
 
   override def output: Seq[Attribute] = {
     joinType match {
-      case Inner => (leftSchema ++ rightSchema).map(_.toAttribute)
-      case LeftSemi | LeftAnti => leftSchema.map(_.toAttribute)
+      case Inner =>
+        (leftSchema ++ rightSchema).map(_.toAttribute)
+      case LeftOuter =>
+        leftSchema ++ rightSchema.map(_.withNullability(true))
+      case LeftSemi | LeftAnti =>
+        leftSchema.map(_.toAttribute)
+      case RightOuter =>
+        leftSchema.map(_.withNullability(true)) ++ rightSchema
+      case _ =>
+        throw new IllegalArgumentException(
+          s"SortMergeJoin should not take $joinType as the JoinType"
+        )
     }
   }
 
@@ -335,15 +364,11 @@ case class EncryptedBroadcastNestedLoopJoinExec(
         left.output ++ right.output.map(_.withNullability(true))
       case RightOuter =>
         left.output.map(_.withNullability(true)) ++ right.output
-      case FullOuter =>
-        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
-      case j: ExistenceJoin =>
-        left.output :+ j.exists
       case LeftExistence(_) =>
         left.output
-      case x =>
+      case _ =>
         throw new IllegalArgumentException(
-          s"BroadcastNestedLoopJoin should not take $x as the JoinType"
+          s"BroadcastNestedLoopJoin should not take $joinType as the JoinType"
         )
     }
   }
@@ -352,32 +377,31 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     val joinExprSer =
       Utils.serializeJoinExpression(joinType, None, None, left.output, right.output, condition)
 
-    val leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    val rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-
-    joinType match {
-      case LeftExistence(_) => {
-        join(leftRDD, rightRDD, joinExprSer)
-      }
-      case _ =>
-        throw new OpaqueException(s"$joinType JoinType is not yet supported")
-    }
-  }
-
-  def join(leftRDD: RDD[Block], rightRDD: RDD[Block], joinExprSer: Array[Byte]): RDD[Block] = {
     // We pick which side to broadcast/stream according to buildSide.
     // BuildRight means the right relation <=> the broadcast relation.
     // NOTE: outer_rows and inner_rows in C++ correspond to stream and broadcast side respectively.
-    var (streamRDD, broadcastRDD) = buildSide match {
+    var (stream, broadcast) = buildSide match {
       case BuildRight =>
-        (leftRDD, rightRDD)
+        (left, right)
       case BuildLeft =>
-        (rightRDD, leftRDD)
+        (right, left)
     }
-    val broadcast = Utils.concatEncryptedBlocks(broadcastRDD.collect)
+
+    broadcast = joinType match {
+      // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
+      // in case of an empty foreign table.
+      case LeftOuter | RightOuter =>
+        EncryptedAddDummyRowExec(broadcast.output, broadcast)
+      case _ =>
+        broadcast
+    }
+    val streamRDD = stream.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val broadcastRDD = broadcast.asInstanceOf[OpaqueOperatorExec].executeBlocked()
+    val broadcastBlock = Utils.concatEncryptedBlocks(broadcastRDD.collect)
+
     streamRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcast.bytes))
+      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcastBlock.bytes))
     }
   }
 }

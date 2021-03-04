@@ -1683,6 +1683,15 @@ public:
 
   tuix::JoinType get_join_type() { return join_type; }
 
+  bool is_right_join() {
+    return join_type == tuix::JoinType_RightOuter;
+  }
+
+  bool is_outer_join() {
+    return join_type == tuix::JoinType_LeftOuter ||
+      join_type == tuix::JoinType_RightOuter;
+  }
+
 private:
   flatbuffers::FlatBufferBuilder builder;
   tuix::JoinType join_type;

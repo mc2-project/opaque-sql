@@ -62,6 +62,10 @@ const tuix::Row *RowReader::next() {
   return block_reader.next();
 }
 
+const tuix::Row *RowReader::peek() {
+  return block_reader.peek();
+}
+
 void RowReader::init_block_reader() {
   if (block_idx < encrypted_blocks->blocks()->size()) {
     block_reader.reset(encrypted_blocks->blocks()->Get(block_idx));
