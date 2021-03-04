@@ -60,8 +60,7 @@ object ConvertToOpaqueOperators extends Rule[LogicalPlan] {
     case InMemoryRelationMatcher(output, storageLevel, child) if isEncrypted(child) =>
       EncryptedBlockRDD(
         output,
-        Utils.ensureCached(
-          child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-          storageLevel))
+        Utils.ensureCached(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), storageLevel)
+      )
   }
 }

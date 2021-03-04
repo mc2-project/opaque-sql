@@ -28,19 +28,25 @@ object ClosestPoint {
     Arguments:
       * point - list of coordinates representing a point
       * centroids - list of lists of coordinates, each representing a point
-  """)
+  """
+)
 case class ClosestPoint(left: Expression, right: Expression)
-    extends BinaryExpression with NullIntolerant with CodegenFallback with ExpectsInputTypes {
+    extends BinaryExpression
+    with NullIntolerant
+    with CodegenFallback
+    with ExpectsInputTypes {
 
   override def dataType: DataType = left.dataType
 
   override def inputTypes = Seq(
     DataTypes.createArrayType(DoubleType),
-    DataTypes.createArrayType(DataTypes.createArrayType(DoubleType)))
+    DataTypes.createArrayType(DataTypes.createArrayType(DoubleType))
+  )
 
   protected override def nullSafeEval(input1: Any, input2: Any): ArrayData = {
     val point = new DenseVector(input1.asInstanceOf[ArrayData].toDoubleArray)
-    val centroids = input2.asInstanceOf[ArrayData]
+    val centroids = input2
+      .asInstanceOf[ArrayData]
       .toArray[ArrayData](DataTypes.createArrayType(DoubleType))
       .map(centroid => new DenseVector(centroid.toDoubleArray))
 

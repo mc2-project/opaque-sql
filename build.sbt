@@ -18,8 +18,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 val flatbuffersVersion = "1.7.0"
 
-concurrentRestrictions in Global := Seq(
-  Tags.limit(Tags.Test, 1))
+concurrentRestrictions in Global := Seq(Tags.limit(Tags.Test, 1))
 
 fork in Test := true
 fork in run := true
@@ -27,19 +26,22 @@ fork in run := true
 testOptions in Test += Tests.Argument("-oF")
 javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
-  "-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dspark.master=local[1]")
+  "-Xmx2048m",
+  "-XX:ReservedCodeCacheSize=384m",
+  "-Dspark.master=local[1]"
+)
 
 // Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
 // spark-submit. From
 // https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
-run in Compile := Defaults.runTask(
-  fullClasspath in Compile,
-  mainClass in (Compile, run),
-  runner in (Compile, run)).evaluated
+run in Compile := Defaults
+  .runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
+  .evaluated
 
 scalacOptions ++= Seq(
   "-deprecation",
-  "-encoding", "UTF-8",
+  "-encoding",
+  "UTF-8",
   "-feature",
   "-unchecked",
   "-Xfuture",
@@ -55,38 +57,49 @@ scalacOptions ++= Seq(
 
 scalacOptions in (Compile, console) := Seq.empty
 
-val flatbuffersGenCppDir = SettingKey[File]("flatbuffersGenCppDir",
-  "Location of Flatbuffers generated C++ files.")
+val flatbuffersGenCppDir =
+  SettingKey[File]("flatbuffersGenCppDir", "Location of Flatbuffers generated C++ files.")
 
 flatbuffersGenCppDir := sourceManaged.value / "flatbuffers" / "gen-cpp"
 
-val buildType = SettingKey[BuildType]("buildType",
-  "Release, Debug, or Profile.")
+val buildType = SettingKey[BuildType]("buildType", "Release, Debug, or Profile.")
 
 buildType := Release
 
 scalacOptions ++= { if (buildType.value == Debug) Seq("-g:vars") else Nil }
-javaOptions ++= { if (buildType.value == Debug) Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000") else Nil }
+javaOptions ++= {
+  if (buildType.value == Debug)
+    Seq("-Xdebug", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000")
+  else Nil
+}
 
-val fetchFlatbuffersLibTask = TaskKey[File]("fetchFlatbuffersLib",
-  "Fetches and builds the Flatbuffers library, returning its location.")
+val fetchFlatbuffersLibTask = TaskKey[File](
+  "fetchFlatbuffersLib",
+  "Fetches and builds the Flatbuffers library, returning its location."
+)
 
 unmanagedSources in Compile ++= ((fetchFlatbuffersLibTask.value / "java") ** "*.java").get
 
-val buildFlatbuffersTask = TaskKey[Seq[File]]("buildFlatbuffers",
-  "Generates Java and C++ sources from Flatbuffers interface files, returning the Java sources.")
+val buildFlatbuffersTask = TaskKey[Seq[File]](
+  "buildFlatbuffers",
+  "Generates Java and C++ sources from Flatbuffers interface files, returning the Java sources."
+)
 
 sourceGenerators in Compile += buildFlatbuffersTask.taskValue
 
-val enclaveBuildTask = TaskKey[File]("enclaveBuild",
-  "Builds the C++ enclave code, returning the directory containing the resulting shared libraries.")
+val enclaveBuildTask = TaskKey[File](
+  "enclaveBuild",
+  "Builds the C++ enclave code, returning the directory containing the resulting shared libraries."
+)
 
 baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
 
 compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
-val copyEnclaveLibrariesToResourcesTask = TaskKey[Seq[File]]("copyEnclaveLibrariesToResources",
-  "Copies the enclave libraries to the managed resources directory, returning the copied files.")
+val copyEnclaveLibrariesToResourcesTask = TaskKey[Seq[File]](
+  "copyEnclaveLibrariesToResources",
+  "Copies the enclave libraries to the managed resources directory, returning the copied files."
+)
 
 resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
 
@@ -96,26 +109,25 @@ managedResourceDirectories in Compile += resourceManaged.value
 val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
   "fetchIntelAttestationReportSigningCACert",
   "Fetches and decompresses the Intel IAS SGX Report Signing CA file, required for "
-    + "remote attestation.")
+    + "remote attestation."
+)
 
 resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((sourceDirectory.value / "enclave") ** (
-    ("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+  ((sourceDirectory.value / "enclave") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
   ((sourceDirectory.value / "flatbuffers") ** "*.fbs").get
 
-val synthTestDataTask = TaskKey[Unit]("synthTestData",
-  "Synthesizes test data.")
+val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
 test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
 
-val sgxGdbTask = TaskKey[Unit]("sgx-gdb-task",
-  "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
+val sgxGdbTask =
+  TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
 
 def sgxGdbCommand = Command.command("sgx-gdb") { state =>
   val extracted = Project extract state
@@ -163,12 +175,16 @@ cleanupCommands in console := "spark.stop()"
 
 sgxGdbTask := {
   (compile in Test).value
-  Process(Seq(
-    "sgx-gdb", "java",
-    "-x",
-    ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath),
+  Process(
+    Seq(
+      "sgx-gdb",
+      "java",
+      "-x",
+      ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath
+    ),
     None,
-    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")).!<
+    "CLASSPATH" -> (fullClasspath in Test).value.map(_.data.getPath).mkString(":")
+  ).!<
 }
 
 fetchFlatbuffersLibTask := {
@@ -176,8 +192,8 @@ fetchFlatbuffersLibTask := {
   if (!flatbuffersSource.exists) {
     // Fetch flatbuffers from Github
     streams.value.log.info(s"Fetching Flatbuffers")
-    val flatbuffersUrl = new java.net.URL(
-      s"https://github.com/google/flatbuffers/archive/v$flatbuffersVersion.zip")
+    val flatbuffersUrl =
+      new java.net.URL(s"https://github.com/google/flatbuffers/archive/v$flatbuffersVersion.zip")
     IO.unzipURL(flatbuffersUrl, flatbuffersSource.getParentFile)
   }
   val flatc = flatbuffersSource / "flatc"
@@ -186,13 +202,21 @@ fetchFlatbuffersLibTask := {
     import sys.process._
     streams.value.log.info(s"Building Flatbuffers")
     val nproc = java.lang.Runtime.getRuntime.availableProcessors
-    if (Process(Seq(
-      "cmake", "-G", "Unix Makefiles",
-      "-DFLATBUFFERS_BUILD_TESTS=OFF",
-      "-DFLATBUFFERS_BUILD_FLATLIB=OFF",
-      "-DFLATBUFFERS_BUILD_FLATHASH=OFF",
-      "-DFLATBUFFERS_BUILD_FLATC=ON"), flatbuffersSource).! != 0
-      || Process(Seq("make", "-j" + nproc), flatbuffersSource).! != 0) {
+    if (
+      Process(
+        Seq(
+          "cmake",
+          "-G",
+          "Unix Makefiles",
+          "-DFLATBUFFERS_BUILD_TESTS=OFF",
+          "-DFLATBUFFERS_BUILD_FLATLIB=OFF",
+          "-DFLATBUFFERS_BUILD_FLATHASH=OFF",
+          "-DFLATBUFFERS_BUILD_FLATC=ON"
+        ),
+        flatbuffersSource
+      ).! != 0
+      || Process(Seq("make", "-j" + nproc), flatbuffersSource).! != 0
+    ) {
       sys.error("Flatbuffers library build failed.")
     }
   }
@@ -218,8 +242,10 @@ buildFlatbuffersTask := {
   if (gen.isEmpty || fbsLastMod > gen.map(_.lastModified).max) {
     for (fbs <- flatbuffers) {
       streams.value.log.info(s"Generating flatbuffers for ${fbs}")
-      if (Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
-        || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0) {
+      if (
+        Seq(flatc.getPath, "--cpp", "-o", flatbuffersGenCppDir.value.getPath, fbs.getPath).! != 0
+        || Seq(flatc.getPath, "--java", "-o", javaOutDir.getPath, fbs.getPath).! != 0
+      ) {
         sys.error("Flatbuffers build failed.")
       }
     }
@@ -258,13 +284,17 @@ enclaveBuildTask := {
   val enclaveBuildDir = target.value / "enclave"
   enclaveBuildDir.mkdirs()
   val cmakeResult =
-    Process(Seq(
-      "cmake",
-      s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
-      s"-DCMAKE_BUILD_TYPE=${buildType.value}",
-      s"-DFLATBUFFERS_LIB_DIR=${(fetchFlatbuffersLibTask.value / "include").getPath}",
-      s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
-      enclaveSourceDir.getPath), enclaveBuildDir).!
+    Process(
+      Seq(
+        "cmake",
+        s"-DCMAKE_INSTALL_PREFIX:PATH=${enclaveBuildDir.getPath}",
+        s"-DCMAKE_BUILD_TYPE=${buildType.value}",
+        s"-DFLATBUFFERS_LIB_DIR=${(fetchFlatbuffersLibTask.value / "include").getPath}",
+        s"-DFLATBUFFERS_GEN_CPP_DIR=${flatbuffersGenCppDir.value.getPath}",
+        enclaveSourceDir.getPath
+      ),
+      enclaveBuildDir
+    ).!
   if (cmakeResult != 0) sys.error("C++ build failed.")
   val nproc = java.lang.Runtime.getRuntime.availableProcessors
   val buildResult = Process(Seq("make", "-j" + nproc), enclaveBuildDir).!
@@ -290,8 +320,8 @@ fetchIntelAttestationReportSigningCACertTask := {
   val cert = resourceManaged.value / "AttestationReportSigningCACert.pem"
   if (!cert.exists) {
     streams.value.log.info(s"Fetching Intel Attestation report signing CA certificate")
-    val certUrl = new java.net.URL(
-      s"https://software.intel.com/sites/default/files/managed/7b/de/RK_PUB.zip")
+    val certUrl =
+      new java.net.URL(s"https://software.intel.com/sites/default/files/managed/7b/de/RK_PUB.zip")
     IO.unzipURL(certUrl, cert.getParentFile)
   }
   Seq(cert)
@@ -309,8 +339,15 @@ synthTestDataTask := {
   val tpchDataFiles =
     for {
       name <- Seq(
-        "customer.tbl", "lineitem.tbl", "nation.tbl", "orders.tbl", "partsupp.tbl", "part.tbl",
-        "region.tbl", "supplier.tbl")
+        "customer.tbl",
+        "lineitem.tbl",
+        "nation.tbl",
+        "orders.tbl",
+        "partsupp.tbl",
+        "part.tbl",
+        "region.tbl",
+        "supplier.tbl"
+      )
     } yield new File(tpchDir, name)
 
   if (!diseaseDataFiles.forall(_.exists)) {

@@ -25,37 +25,59 @@ import org.apache.spark.sql.types._
 
 object BigDataBenchmark {
   def rankings(
-      spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame =
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame =
     securityLevel.applyTo(
-      spark.read.schema(
-        StructType(Seq(
-          StructField("pageURL", StringType),
-          StructField("pageRank", IntegerType),
-          StructField("avgDuration", IntegerType))))
+      spark.read
+        .schema(
+          StructType(
+            Seq(
+              StructField("pageURL", StringType),
+              StructField("pageRank", IntegerType),
+              StructField("avgDuration", IntegerType)
+            )
+          )
+        )
         .csv(s"${Benchmark.dataDir}/bdb/rankings/$size")
-        .repartition(numPartitions))
+        .repartition(numPartitions)
+    )
 
   def uservisits(
-      spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame =
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame =
     securityLevel.applyTo(
-      spark.read.schema(
-        StructType(Seq(
-          StructField("sourceIP", StringType),
-          StructField("destURL", StringType),
-          StructField("visitDate", DateType),
-          StructField("adRevenue", FloatType),
-          StructField("userAgent", StringType),
-          StructField("countryCode", StringType),
-          StructField("languageCode", StringType),
-          StructField("searchWord", StringType),
-          StructField("duration", IntegerType))))
+      spark.read
+        .schema(
+          StructType(
+            Seq(
+              StructField("sourceIP", StringType),
+              StructField("destURL", StringType),
+              StructField("visitDate", DateType),
+              StructField("adRevenue", FloatType),
+              StructField("userAgent", StringType),
+              StructField("countryCode", StringType),
+              StructField("languageCode", StringType),
+              StructField("searchWord", StringType),
+              StructField("duration", IntegerType)
+            )
+          )
+        )
         .csv(s"${Benchmark.dataDir}/bdb/uservisits/$size")
-        .repartition(numPartitions))
+        .repartition(numPartitions)
+    )
 
-  def q1(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame = {
+  def q1(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame = {
     import spark.implicits._
     val rankingsDF = Utils.ensureCached(rankings(spark, securityLevel, size, numPartitions))
     Utils.time("load rankings") { Utils.force(rankingsDF) }
@@ -63,15 +85,20 @@ object BigDataBenchmark {
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 1",
       "system" -> securityLevel.name,
-      "size" -> size) {
+      "size" -> size
+    ) {
       val df = rankingsDF.filter($"pageRank" > 1000)
       Utils.force(df)
       df
     }
   }
 
-  def q2(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame = {
+  def q2(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
     Utils.time("load uservisits") { Utils.force(uservisitsDF) }
@@ -79,17 +106,23 @@ object BigDataBenchmark {
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 2",
       "system" -> securityLevel.name,
-      "size" -> size) {
+      "size" -> size
+    ) {
       val df = uservisitsDF
         .select(substring($"sourceIP", 0, 8).as("sourceIPSubstr"), $"adRevenue")
-        .groupBy($"sourceIPSubstr").sum("adRevenue")
+        .groupBy($"sourceIPSubstr")
+        .sum("adRevenue")
       Utils.force(df)
       df
     }
   }
 
-  def q3(spark: SparkSession, securityLevel: SecurityLevel, size: String, numPartitions: Int)
-    : DataFrame = {
+  def q3(
+      spark: SparkSession,
+      securityLevel: SecurityLevel,
+      size: String,
+      numPartitions: Int
+  ): DataFrame = {
     import spark.implicits._
     val uservisitsDF = Utils.ensureCached(uservisits(spark, securityLevel, size, numPartitions))
     Utils.time("load uservisits") { Utils.force(uservisitsDF) }
@@ -99,13 +132,15 @@ object BigDataBenchmark {
       "distributed" -> (numPartitions > 1),
       "query" -> "big data 3",
       "system" -> securityLevel.name,
-      "size" -> size) {
+      "size" -> size
+    ) {
       val df = rankingsDF
         .join(
           uservisitsDF
             .filter($"visitDate" >= lit("1980-01-01") && $"visitDate" <= lit("1980-04-01"))
             .select($"destURL", $"sourceIP", $"adRevenue"),
-          rankingsDF("pageURL") === uservisitsDF("destURL"))
+          rankingsDF("pageURL") === uservisitsDF("destURL")
+        )
         .select($"sourceIP", $"pageRank", $"adRevenue")
         .groupBy("sourceIP")
         .agg(avg("pageRank").as("avgPageRank"), sum("adRevenue").as("totalRevenue"))

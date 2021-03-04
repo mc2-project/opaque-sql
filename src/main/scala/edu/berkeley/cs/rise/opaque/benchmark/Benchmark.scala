@@ -42,9 +42,10 @@ import org.apache.spark.sql.SparkSession
  */
 object Benchmark {
 
-  val spark = SparkSession.builder()
-      .appName("Benchmark")
-      .getOrCreate()
+  val spark = SparkSession
+    .builder()
+    .appName("Benchmark")
+    .getOrCreate()
   var numPartitions = spark.sparkContext.defaultParallelism
   var size = "sf_med"
 
@@ -68,7 +69,7 @@ object Benchmark {
     // Run
     LogisticRegression.train(spark, Insecure, 100000, 1)
     LogisticRegression.train(spark, Encrypted, 100000, 1)
-    */
+     */
   }
 
   def runAll() = {
@@ -80,8 +81,7 @@ object Benchmark {
     Utils.initSQLContext(spark.sqlContext)
 
     if (args.length >= 2 && args(1) == "--help") {
-      println(
-"""Available flags:
+      println("""Available flags:
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
@@ -92,8 +92,7 @@ object Benchmark {
           Syntax: --operations "logistic-regression,tpc-h"
           Leave --operations flag blank to run all benchmarks
     --run-local: boolean whether to use HDFS or the local filesystem
-          Default: HDFS"""
-      )
+          Default: HDFS""")
     }
 
     var runAll = true
@@ -106,7 +105,9 @@ object Benchmark {
         if (supportedSizes.contains(size)) {
           this.size = size
         } else {
-          println("Given size is not supported: available values are " + supportedSizes.toString())
+          println(
+            "Given size is not supported: available values are " + supportedSizes.toString()
+          )
         }
       }
       case Array("--run-local", runLocal: String) => {

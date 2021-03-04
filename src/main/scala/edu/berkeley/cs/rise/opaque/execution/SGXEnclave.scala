@@ -33,29 +33,53 @@ class SGXEnclave extends java.io.Serializable {
 
   @native def Sample(eid: Long, input: Array[Byte]): Array[Byte]
   @native def FindRangeBounds(
-    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte]): Array[Byte]
+      eid: Long,
+      order: Array[Byte],
+      numPartitions: Int,
+      input: Array[Byte]
+  ): Array[Byte]
   @native def PartitionForSort(
-    eid: Long, order: Array[Byte], numPartitions: Int, input: Array[Byte],
-    boundaries: Array[Byte]): Array[Array[Byte]]
+      eid: Long,
+      order: Array[Byte],
+      numPartitions: Int,
+      input: Array[Byte],
+      boundaries: Array[Byte]
+  ): Array[Array[Byte]]
   @native def ExternalSort(eid: Long, order: Array[Byte], input: Array[Byte]): Array[Byte]
 
   @native def NonObliviousSortMergeJoin(
-    eid: Long, joinExpr: Array[Byte], input: Array[Byte]): Array[Byte]
+      eid: Long,
+      joinExpr: Array[Byte],
+      input: Array[Byte]
+  ): Array[Byte]
 
   @native def BroadcastNestedLoopJoin(
-    eid: Long, joinExpr: Array[Byte], outerBlock: Array[Byte], innerBlock: Array[Byte]): Array[Byte]
+      eid: Long,
+      joinExpr: Array[Byte],
+      outerBlock: Array[Byte],
+      innerBlock: Array[Byte]
+  ): Array[Byte]
 
   @native def NonObliviousAggregate(
-    eid: Long, aggOp: Array[Byte], inputRows: Array[Byte], isPartial: Boolean): (Array[Byte])
+      eid: Long,
+      aggOp: Array[Byte],
+      inputRows: Array[Byte],
+      isPartial: Boolean
+  ): (Array[Byte])
 
-  @native def CountRowsPerPartition(
-    eid: Long, inputRows: Array[Byte]): Array[Byte]
+  @native def CountRowsPerPartition(eid: Long, inputRows: Array[Byte]): Array[Byte]
   @native def ComputeNumRowsPerPartition(
-    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
-  @native def LocalLimit(
-    eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
+      eid: Long,
+      limit: Int,
+      inputRows: Array[Byte]
+  ): Array[Byte]
+  @native def LocalLimit(eid: Long, limit: Int, inputRows: Array[Byte]): Array[Byte]
   @native def LimitReturnRows(
-    eid: Long, partitionID: Long, limits: Array[Byte], inputRows: Array[Byte]): Array[Byte]
+      eid: Long,
+      partitionID: Long,
+      limits: Array[Byte],
+      inputRows: Array[Byte]
+  ): Array[Byte]
 
   // Remote attestation, enclave side
   @native def GenerateReport(eid: Long): Array[Byte]

@@ -12,25 +12,19 @@ void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_bloc
 
   rows = buf.root();
   if (rows->rows()->size() != num_rows) {
-    throw std::runtime_error(
-      std::string("EncryptedBlock claimed to contain ")
-      + std::to_string(num_rows)
-      + std::string("rows but actually contains ")
-      + std::to_string(rows->rows()->size())
-      + std::string(" rows"));
+    throw std::runtime_error(std::string("EncryptedBlock claimed to contain ") +
+                             std::to_string(num_rows) +
+                             std::string("rows but actually contains ") +
+                             std::to_string(rows->rows()->size()) + std::string(" rows"));
   }
 
   row_idx = 0;
   initialized = true;
 }
 
-RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) {
-  reset(buf);
-}
+RowReader::RowReader(BufferRefView<tuix::EncryptedBlocks> buf) { reset(buf); }
 
-RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks) {
-  reset(encrypted_blocks);
-}
+RowReader::RowReader(const tuix::EncryptedBlocks *encrypted_blocks) { reset(encrypted_blocks); }
 
 void RowReader::reset(BufferRefView<tuix::EncryptedBlocks> buf) {
   buf.verify();
@@ -45,8 +39,8 @@ void RowReader::reset(const tuix::EncryptedBlocks *encrypted_blocks) {
 
 uint32_t RowReader::num_rows() {
   uint32_t result = 0;
-  for (auto it = encrypted_blocks->blocks()->begin();
-       it != encrypted_blocks->blocks()->end(); ++it) {
+  for (auto it = encrypted_blocks->blocks()->begin(); it != encrypted_blocks->blocks()->end();
+       ++it) {
     result += it->num_rows();
   }
   return result;
@@ -57,7 +51,8 @@ bool RowReader::has_next() {
 }
 
 const tuix::Row *RowReader::next() {
-  // Note: this will invalidate any pointers returned by previous invocations of this method
+  // Note: this will invalidate any pointers returned by previous invocations of
+  // this method
   if (!block_reader.has_next()) {
     assert(block_idx + 1 < encrypted_blocks->blocks()->size());
     block_idx++;
@@ -77,9 +72,7 @@ void RowReader::init_block_reader() {
   }
 }
 
-SortedRunsReader::SortedRunsReader(BufferRefView<tuix::SortedRuns> buf) {
-  reset(buf);
-}
+SortedRunsReader::SortedRunsReader(BufferRefView<tuix::SortedRuns> buf) { reset(buf); }
 
 void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf) {
   buf.verify();
@@ -90,13 +83,9 @@ void SortedRunsReader::reset(BufferRefView<tuix::SortedRuns> buf) {
   }
 }
 
-uint32_t SortedRunsReader::num_runs() {
-  return sorted_runs->runs()->size();
-}
+uint32_t SortedRunsReader::num_runs() { return sorted_runs->runs()->size(); }
 
-bool SortedRunsReader::run_has_next(uint32_t run_idx) {
-  return run_readers[run_idx].has_next();
-}
+bool SortedRunsReader::run_has_next(uint32_t run_idx) { return run_readers[run_idx].has_next(); }
 
 const tuix::Row *SortedRunsReader::next_from_run(uint32_t run_idx) {
   return run_readers[run_idx].next();

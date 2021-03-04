@@ -35,29 +35,35 @@ object RA extends Logging {
       while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
     }
 
-    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
     sp.Init(Utils.sharedKey, intelCert)
 
     // Runs on executors
-    val msg1s = rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.initEnclave()
-      val msg1 = enclave.GenerateReport(eid)
-      Iterator((eid, msg1))
-    }.collect.toMap
+    val msg1s = rdd
+      .mapPartitions { (_) =>
+        val (enclave, eid) = Utils.initEnclave()
+        val msg1 = enclave.GenerateReport(eid)
+        Iterator((eid, msg1))
+      }
+      .collect
+      .toMap
 
     // Runs on driver
-    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
+    val msg2s = msg1s.map { case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1)) }
 
     // Runs on executors
-    val attestationResults = rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.initEnclave()
-      val msg2 = msg2s(eid)
-      enclave.FinishAttestation(eid, msg2)
-      Iterator((eid, true))
-    }.collect.toMap
+    val attestationResults = rdd
+      .mapPartitions { (_) =>
+        val (enclave, eid) = Utils.initEnclave()
+        val msg2 = msg2s(eid)
+        enclave.FinishAttestation(eid, msg2)
+        Iterator((eid, true))
+      }
+      .collect
+      .toMap
 
     for ((_, ret) <- attestationResults) {
       if (!ret)

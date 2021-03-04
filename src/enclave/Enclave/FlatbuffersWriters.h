@@ -22,8 +22,8 @@ public:
 class RowWriter {
 public:
   RowWriter()
-    : builder(), rows_vector(), total_num_rows(0), untrusted_alloc(),
-      enc_block_builder(1024, &untrusted_alloc), finished(false) {}
+      : builder(), rows_vector(), total_num_rows(0), untrusted_alloc(),
+        enc_block_builder(1024, &untrusted_alloc), finished(false) {}
 
   void clear();
 
@@ -39,7 +39,8 @@ public:
   /** Expose the stored rows as a buffer. */
   UntrustedBufferRef<tuix::EncryptedBlocks> output_buffer();
 
-  /** Expose the stored rows as a buffer. The caller takes ownership of the resulting buffer. */
+  /** Expose the stored rows as a buffer. The caller takes ownership of the
+   * resulting buffer. */
   void output_buffer(uint8_t **output_rows, size_t *output_rows_length);
 
   /** Count how many rows have been appended. */
@@ -77,23 +78,26 @@ public:
   /** Append the given `Field`s as a Row. */
   void append(const std::vector<const tuix::Field *> &row_fields);
 
-  /** Concatenate the fields of the two given `Row`s and append the resulting single Row. */
+  /** Concatenate the fields of the two given `Row`s and append the resulting
+   * single Row. */
   void append(const tuix::Row *row1, const tuix::Row *row2);
 
   /**
-   * Wrap all rows written since the last call to this method into a single sorted run.
+   * Wrap all rows written since the last call to this method into a single
+   * sorted run.
    */
   void finish_run();
 
-  /** Count how many runs have been written (i.e., how many times `finish_run` has been called). */
+  /** Count how many runs have been written (i.e., how many times `finish_run`
+   * has been called). */
   uint32_t num_runs();
 
   /** Expose the stored runs as a buffer. */
   UntrustedBufferRef<tuix::SortedRuns> output_buffer();
 
   /**
-   * If there is only one run, expose it as as a RowWriter. This object retains ownership of the
-   * returned pointer.
+   * If there is only one run, expose it as as a RowWriter. This object retains
+   * ownership of the returned pointer.
    */
   RowWriter *as_row_writer();
 
