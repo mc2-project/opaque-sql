@@ -21,7 +21,6 @@ package edu.berkeley.cs.rise.opaque
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
-import scala.collection.mutable.Stack
 import scala.collection.mutable.Queue
 
 import org.apache.spark.sql.DataFrame
@@ -120,8 +119,16 @@ class OperatorNode(val operatorName: String = "") {
     this.children.append(child)
   }
 
+  def setChildren(children: ArrayBuffer[OperatorNode]) = {
+    this.children = children
+  }
+
   def addParent(parent: OperatorNode) = {
     this.parents.append(parent)
+  }
+
+  def setParents(parents: ArrayBuffer[OperatorNode]) = {
+    this.parents = parents
   }
 
   def isOrphan(): Boolean = {
@@ -148,12 +155,13 @@ object JobVerificationEngine {
     13 -> "limitReturnRows"
   ).withDefaultValue("unknown")
 
-  def pathsEqual(executedPaths: ArrayBuffer[List[Seq[Int]]],
-                expectedPaths: ArrayBuffer[List[Seq[Int]]]): Boolean = {
-    // Executed paths might contain extraneous paths from
-    // MACs matching across ecalls if a block is unchanged from ecall to ecall (?)
-    return expectedPaths.toSet.subsetOf(executedPaths.toSet)
-  }
+  val possibleSparkOperators = Seq[String]("EncryptedProject", 
+                                              "EncryptedSortMergeJoin", 
+                                              "EncryptedSort", 
+                                              "EncryptedFilter",
+                                              "EncryptedAggregate",
+                                              "EncryptedGlobalLimit",
+                                              "EncryptedLocalLimit")
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 
@@ -163,73 +171,107 @@ object JobVerificationEngine {
     logEntryChains.clear
   }
 
-  def operatorDAGFromPlanString(executedPlan: String): ArrayBuffer[OperatorNode] = {
-    val lines = executedPlan.split("\n")
+  def isValidOperatorNode(node: OperatorNode): Boolean = {
+    for (targetSubstring <- possibleSparkOperators) {
+      if (node.operatorName contains targetSubstring) {
+        return true
+      }
+    }
+    return false
+  }
 
-    // Superstrings must come before substrings, 
-    // or inner the for loop will terminate when it finds an instance of the substring.
-    // (eg. EncryptedSortMergeJoin before EncryptedSort)
-    val possibleOperators = ArrayBuffer[String]("EncryptedProject", 
-                                                "EncryptedSortMergeJoin", 
-                                                "EncryptedSort", 
-                                                "EncryptedFilter",
-                                                "EncryptedAggregate",
-                                                "EncryptedGlobalLimit",
-                                                "EncryptedLocalLimit")
-    val operatorStack = Stack[(Int, OperatorNode)]()
-    val allOperatorNodes = ArrayBuffer[OperatorNode]()
-    for (line <- lines) {
-      // Only one operator per line, so terminate as soon as one is found so
-      // no line creates two operator nodes because of superstring/substring instances.
-      // eg. EncryptedSort and EncryptedSortMergeJoin
-      var found = false
-      for (sparkOperator <- possibleOperators) {
-        if (!found) {
-          val index = line indexOf sparkOperator
-          if (index != -1) {
-            found = true
-            val newOperatorNode = new OperatorNode(sparkOperator)
-            allOperatorNodes.append(newOperatorNode)
-            if (operatorStack.isEmpty) {
-              operatorStack.push( (index, newOperatorNode) )
-            } else {
-              if (index > operatorStack.top._1) {
-                operatorStack.top._2.addParent(newOperatorNode)
-                operatorStack.push( (index, newOperatorNode) )
-              } else {
-                while (index <= operatorStack.top._1) {
-                  operatorStack.pop
-                }
-                operatorStack.top._2.addParent(newOperatorNode)
-                operatorStack.push( (index, newOperatorNode) )
-              }
-            }        
+  def pathsEqual(executedPaths: ArrayBuffer[List[Seq[Int]]],
+                expectedPaths: ArrayBuffer[List[Seq[Int]]]): Boolean = {
+    // Executed paths might contain extraneous paths from
+    // MACs matching across ecalls if a block is unchanged from ecall to ecall (?)
+    return expectedPaths.toSet.subsetOf(executedPaths.toSet)
+  }
+
+  // Recursively convert SparkPlan objects to OperatorNode object.
+  def sparkNodesToOperatorNodes(plan: SparkPlan): OperatorNode = {
+    var operatorName = ""
+    for (sparkOperator <- possibleSparkOperators) {
+      if (plan.toString.split("\n")(0) contains sparkOperator) {
+        operatorName = sparkOperator
+      }
+    }
+    val operatorNode = new OperatorNode(operatorName)
+    for (child <- plan.children) {
+      val parentOperatorNode = sparkNodesToOperatorNodes(child)
+      operatorNode.addParent(parentOperatorNode)
+    }
+    return operatorNode
+  }
+
+  // Returns true if every OperatorNode in this list is "valid".
+  def allValidOperators(operators: ArrayBuffer[OperatorNode]): Boolean = {
+    for (operator <- operators) {
+      if (!isValidOperatorNode(operator)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  // Recursively prunes non valid nodes from an OperatorNode tree.
+  def fixOperatorTree(root: OperatorNode): Unit = {
+    if (root.isOrphan) {
+      return
+    }
+    while (!allValidOperators(root.parents)) {
+      val newParents = new ArrayBuffer[OperatorNode]()
+      for (parent <- root.parents) {
+        if (isValidOperatorNode(parent)) {
+          newParents.append(parent)
+        } else {
+          for (grandparent <- parent.parents) {
+            newParents.append(grandparent)
           }
         }
       }
+      root.setParents(newParents)
     }
-
-    for (operatorNode <- allOperatorNodes) {
-      for (parent <- operatorNode.parents) {
-        parent.addChild(operatorNode)
-      }
+    for (parent <- root.parents) {
+      parent.addChild(root)
+      fixOperatorTree(parent)
     }
-    return allOperatorNodes
   }
 
-  // def operatorDAGFromPlan(executedPlan: SparkPlan): ArrayBuffer[OperatorNode] = {
-  //   val allOperatorNodes = ArrayBuffer[OperatorNode]()
-  //   // Superstrings must come before substrings, 
-  //   // or inner the for loop will terminate when it finds an instance of the substring.
-  //   // (eg. EncryptedSortMergeJoin before EncryptedSort)
-  //   val possibleSparkOperators = ArrayBuffer[String]("EncryptedProject", 
-  //                                               "EncryptedSortMergeJoin", 
-  //                                               "EncryptedSort", 
-  //                                               "EncryptedFilter",
-  //                                               "EncryptedAggregate",
-  //                                               "EncryptedGlobalLimit",
-  //                                               "EncryptedLocalLimit")
-  // }
+  // Uses BFS to put all nodes in an OperatorNode tree into a list.
+  def treeToList(root: OperatorNode): ArrayBuffer[OperatorNode] = {
+    val retval = ArrayBuffer[OperatorNode]()
+    val queue = new Queue[OperatorNode]()
+    queue.enqueue(root)
+    while (!queue.isEmpty) {
+      val curr = queue.dequeue
+      retval.append(curr)
+      for (parent <- curr.parents) {
+        queue.enqueue(parent)
+      }
+    }
+    return retval
+  }
+
+  // Converts a SparkPlan into a DAG of OperatorNode objects.
+  // Returns a list of all the nodes in the DAG.
+  def operatorDAGFromPlan(executedPlan: SparkPlan): ArrayBuffer[OperatorNode] = {
+    // Convert SparkPlan tree to OperatorNode tree
+    val leafOperatorNode = sparkNodesToOperatorNodes(executedPlan)
+    // Enlist the tree
+    val allOperatorNodes = treeToList(leafOperatorNode)
+    // Attach a sink to the tree and prune invalid OperatorNodes starting from the sink.
+    val sinkNode = new OperatorNode("sink")
+    for (operatorNode <- allOperatorNodes) {
+      if (operatorNode.children.isEmpty) {
+        operatorNode.addChild(sinkNode)
+      }
+    }
+    fixOperatorTree(sinkNode)
+    // Enlist the fixed tree.
+    val fixedOperatorNodes = treeToList(sinkNode)
+    fixedOperatorNodes -= sinkNode
+    return fixedOperatorNodes
+  }
 
   // expectedDAGFromOperatorDAG helper - links parent ecall partitions to child ecall partitions.
   def linkEcalls(parentEcalls: ArrayBuffer[JobNode], childEcalls: ArrayBuffer[JobNode]): Unit = {
@@ -389,10 +431,12 @@ object JobVerificationEngine {
 
   // Generates an expected DAG of ecalls and partitions from a dataframe's SparkPlan object.
   def expectedDAGFromPlan(executedPlan: SparkPlan): JobNode = {
-    val operatorDAGRoot = operatorDAGFromPlanString(executedPlan.toString)
+    val operatorDAGRoot = operatorDAGFromPlan(executedPlan)
     expectedDAGFromOperatorDAG(operatorDAGRoot)
   }
 
+  // Verify that the executed flow of information from ecall partition to ecall partition
+  // matches what is expected for a given Spark dataframe.
   def verify(df: DataFrame): Boolean = {
     // Get expected DAG.
     val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
