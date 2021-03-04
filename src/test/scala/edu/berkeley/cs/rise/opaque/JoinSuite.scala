@@ -26,15 +26,15 @@ trait JoinSuite extends OpaqueSuiteBase {
   def queries = Seq(
     "SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a",
     "SELECT * FROM testData LEFT SEMI JOIN testData2",
-    "SELECT * FROM testData JOIN testData2",
-    "SELECT * FROM testData JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData LEFT JOIN testData2",
     "SELECT * FROM testData RIGHT JOIN testData2",
-    "SELECT * FROM testData LEFT JOIN testData2 WHERE key = 2",
-    "SELECT * FROM testData RIGHT JOIN testData2 WHERE key = 2",
-    "SELECT * FROM testData JOIN testData2 WHERE key > a"
+    "SELECT * FROM testData LEFT JOIN testData2 WHERE key = 2"
   )
   /* Unsupported Queries;
+   * "SELECT * FROM testData JOIN testData2",
+   * "SELECT * FROM testData JOIN testData2 WHERE key = 2",
+   * "SELECT * FROM testData RIGHT JOIN testData2 WHERE key = 2",
+   * "SELECT * FROM testData JOIN testData2 WHERE key > a"
    * "SELECT * FROM testData FULL OUTER JOIN testData2"
    * "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2"
    * "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a"
