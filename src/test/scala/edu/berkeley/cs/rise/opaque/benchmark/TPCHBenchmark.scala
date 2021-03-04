@@ -19,14 +19,13 @@ package edu.berkeley.cs.rise.opaque.benchmark
 
 import edu.berkeley.cs.rise.opaque.Utils
 
-import org.apache.spark.sql.SQLContext
-import edu.berkeley.cs.rise.opaque.OpaqueTolerance
 import edu.berkeley.cs.rise.opaque.{Insecure, Encrypted}
 import edu.berkeley.cs.rise.opaque.tpch.TPCH
+import edu.berkeley.cs.rise.opaque.OpaqueFunSuite
 
-import org.scalatest.FunSuite
+import org.apache.spark.sql.SQLContext
 
-object TPCHBenchmark extends FunSuite with OpaqueTolerance {
+object TPCHBenchmark extends OpaqueFunSuite {
 
   def query(queryNumber: Int, tpch: TPCH, sqlContext: SQLContext, numPartitions: Int) = {
     val sqlStr = tpch.getQuery(queryNumber)

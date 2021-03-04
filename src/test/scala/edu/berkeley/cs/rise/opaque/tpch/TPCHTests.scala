@@ -25,7 +25,7 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   def size = "sf_small"
   def tpch = new TPCH(spark.sqlContext, size, "file://")
 
-  def runTests() = {
+  def runTests(numPartitions: Int) = {
     for (queryNum <- TPCH.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
       if (TPCH.unorderedQueries.contains(queryNum)) {
@@ -42,25 +42,25 @@ trait TPCHTests extends OpaqueTestsBase { self =>
 }
 
 class TPCHSinglePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 1
   override val spark = SparkSession
     .builder()
     .master("local[1]")
     .appName("TPCHSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
+  def numPartitions: Int = 1
 
-  runTests();
+  runTests(numPartitions);
 }
 
 class TPCHMultiplePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 3
   override val spark = SparkSession
     .builder()
     .master("local[1]")
     .appName("TPCHMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
+  def numPartitions: Int = 3
 
-  runTests();
+  runTests(numPartitions);
 }
