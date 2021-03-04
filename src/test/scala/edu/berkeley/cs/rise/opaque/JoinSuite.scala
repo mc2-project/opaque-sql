@@ -15,46 +15,25 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque.tpch
+package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.SparkSession
-import edu.berkeley.cs.rise.opaque.OpaqueSuiteBase
 
-trait TPCHSuite extends OpaqueSuiteBase { self =>
+trait JoinSuite extends OpaqueSuiteBase {
 
-  def size = "sf_small"
-  def tpch = new TPCH(spark.sqlContext, size, "file://")
   def numPartitions: Int
+  def queries = Seq("SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a")
 
   def runTests(numPartitions: Int) = {
-    for (queryNum <- TPCH.supportedQueries) {
-      val testStr = s"TPC-H $queryNum"
-      if (TPCH.unorderedQueries.contains(queryNum)) {
-        testAgainstSpark(testStr, isOrdered = false) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions)
-        }
-      } else {
-        testAgainstSpark(testStr, isOrdered = true) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions)
-        }
+    for (sqlStr <- queries) {
+      testAgainstSpark(sqlStr, isOrdered = false) { securityLevel =>
+        spark.sqlContext.sparkSession.sql(sqlStr)
       }
     }
   }
 }
 
-class SinglePartitionTPCHSuite extends TPCHSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[4]")
-    .appName("SinglePartitionTPCHSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-
-  runTests(numPartitions);
-}
-
-class MultiplePartitionTPCHSuite extends TPCHSuite {
+class MultiplePartitionJoinSuite extends JoinSuite {
   override def numPartitions = 3
   override val spark = SparkSession
     .builder()
