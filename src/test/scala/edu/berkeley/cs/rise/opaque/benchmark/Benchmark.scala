@@ -18,6 +18,8 @@
 package edu.berkeley.cs.rise.opaque.benchmark
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.{Encrypted, Insecure}
+
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -42,9 +44,10 @@ import org.apache.spark.sql.SparkSession
  */
 object Benchmark {
 
-  val spark = SparkSession.builder()
-      .appName("Benchmark")
-      .getOrCreate()
+  val spark = SparkSession
+    .builder()
+    .appName("Benchmark")
+    .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism
   var size = "sf_small"
@@ -77,8 +80,7 @@ object Benchmark {
     Utils.initSQLContext(spark.sqlContext)
 
     if (args.length >= 1 && args(0) == "--help") {
-      println(
-      """
+      println("""
     Available flags:
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
@@ -91,8 +93,7 @@ object Benchmark {
           Available operations: logistic-regression, tpc-h
           Syntax: --operations logistic-regression,tpc-h
     Leave --operations flag blank to run all benchmarks
-      """
-      )
+      """)
       return
     }
 

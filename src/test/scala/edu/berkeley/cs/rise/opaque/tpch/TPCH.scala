@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque.benchmark
+package edu.berkeley.cs.rise.opaque.tpch
 
 import java.io.File
 import scala.io.Source
@@ -24,6 +24,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
 
+import edu.berkeley.cs.rise.opaque.benchmark.Benchmark
+import edu.berkeley.cs.rise.opaque.{SecurityLevel, Insecure, Encrypted}
 import edu.berkeley.cs.rise.opaque.Utils
 
 object TPCH {

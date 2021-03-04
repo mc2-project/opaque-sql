@@ -21,6 +21,8 @@ import edu.berkeley.cs.rise.opaque.Utils
 
 import org.apache.spark.sql.SQLContext
 import edu.berkeley.cs.rise.opaque.OpaqueTolerance
+import edu.berkeley.cs.rise.opaque.{Insecure, Encrypted}
+import edu.berkeley.cs.rise.opaque.tpch.TPCH
 
 import org.scalatest.FunSuite
 

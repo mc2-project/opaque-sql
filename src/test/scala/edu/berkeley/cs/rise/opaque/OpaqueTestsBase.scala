@@ -27,8 +27,6 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalactic.Equality
 import org.scalatest.Tag
 
-import edu.berkeley.cs.rise.opaque.benchmark._
-
 trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll with OpaqueTolerance { self =>
 
   def spark: SparkSession

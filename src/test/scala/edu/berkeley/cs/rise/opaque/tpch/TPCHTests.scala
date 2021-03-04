@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque
+package edu.berkeley.cs.rise.opaque.tpch
 
 import org.apache.spark.sql.SparkSession
-import edu.berkeley.cs.rise.opaque.benchmark._
+import edu.berkeley.cs.rise.opaque.OpaqueTestsBase
 
 trait TPCHTests extends OpaqueTestsBase { self =>
 
