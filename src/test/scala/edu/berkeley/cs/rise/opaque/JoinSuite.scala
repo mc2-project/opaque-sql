@@ -22,16 +22,32 @@ import org.apache.spark.sql.SparkSession
 trait JoinSuite extends OpaqueSuiteBase {
 
   def numPartitions: Int
+
   def queries = Seq(
     "SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a",
     "SELECT * FROM testData LEFT SEMI JOIN testData2",
-    "SELECT * FROM testData JOIN testData2"
+    "SELECT * FROM testData JOIN testData2",
+    "SELECT * FROM testData JOIN testData2 WHERE key = 2",
+    "SELECT * FROM testData LEFT JOIN testData2",
+    "SELECT * FROM testData RIGHT JOIN testData2",
+    "SELECT * FROM testData LEFT JOIN testData2 WHERE key = 2",
+    "SELECT * FROM testData RIGHT JOIN testData2 WHERE key = 2",
+    "SELECT * FROM testData JOIN testData2 WHERE key > a"
   )
+  /* Unsupported Queries;
+   * "SELECT * FROM testData FULL OUTER JOIN testData2"
+   * "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2"
+   * "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a"
+   *
+   * Failing Queries:
+   */
 
   def runTests(numPartitions: Int) = {
     for (sqlStr <- queries) {
-      testAgainstSpark(sqlStr, isOrdered = false) { securityLevel =>
-        spark.sqlContext.sparkSession.sql(sqlStr)
+      testAgainstSpark(sqlStr, isOrdered = false, verbose = false, printPlan = true) {
+        securityLevel =>
+          loadTestData(securityLevel)
+          spark.sqlContext.sparkSession.sql(sqlStr)
       }
     }
   }
@@ -45,7 +61,6 @@ class MultiplePartitionJoinSuite extends JoinSuite {
     .appName("MultiplePartitionJoinSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
-  loadTestData()
 
   runTests(numPartitions);
 }

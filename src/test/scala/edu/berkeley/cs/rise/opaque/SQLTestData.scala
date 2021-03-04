@@ -19,6 +19,8 @@ package edu.berkeley.cs.rise.opaque
 
 import java.nio.charset.StandardCharsets
 
+import edu.berkeley.cs.rise.opaque.implicits._
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession, SQLContext, SQLImplicits}
 import org.apache.spark.unsafe.types.CalendarInterval
@@ -48,24 +50,28 @@ protected trait SQLTestData {
     df
   }
 
-  protected lazy val testData: DataFrame = {
-    val df = spark.sparkContext.parallelize((1 to 100).map(i => TestData(i, i.toString))).toDF()
+  def testData(securityLevel: SecurityLevel): DataFrame = {
+    val df = securityLevel.applyTo(
+      spark.sparkContext.parallelize((1 to 100).map(i => TestData(i, i.toString))).toDF()
+    )
     df.createOrReplaceTempView("testData")
     df
   }
 
-  protected lazy val testData2: DataFrame = {
-    val df = spark.sparkContext
-      .parallelize(
-        TestData2(1, 1) ::
-          TestData2(1, 2) ::
-          TestData2(2, 1) ::
-          TestData2(2, 2) ::
-          TestData2(3, 1) ::
-          TestData2(3, 2) :: Nil,
-        2
-      )
-      .toDF()
+  def testData2(securityLevel: SecurityLevel): DataFrame = {
+    val df = securityLevel.applyTo(
+      spark.sparkContext
+        .parallelize(
+          TestData2(1, 1) ::
+            TestData2(1, 2) ::
+            TestData2(2, 1) ::
+            TestData2(2, 2) ::
+            TestData2(3, 1) ::
+            TestData2(3, 2) :: Nil,
+          2
+        )
+        .toDF()
+    )
     df.createOrReplaceTempView("testData2")
     df
   }
@@ -343,11 +349,11 @@ protected trait SQLTestData {
   /**
    * Initialize all test data such that all temp tables are properly registered.
    */
-  def loadTestData(): Unit = {
+  def loadTestData(securityLevel: SecurityLevel): Unit = {
     assert(spark != null, "attempted to initialize test data before SparkSession.")
     emptyTestData
-    testData
-    testData2
+    testData(securityLevel)
+    testData2(securityLevel)
     testData3
     negativeData
     largeAndSmallInts
