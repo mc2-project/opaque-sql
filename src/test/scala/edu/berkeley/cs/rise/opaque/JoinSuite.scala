@@ -40,7 +40,13 @@ trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
     "SELECT * FROM testData left JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData right JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData ANTI JOIN testData2 ON key = a",
-    "SELECT * FROM testData LEFT ANTI JOIN testData2"
+    "SELECT * FROM testData LEFT ANTI JOIN testData2",
+    "SELECT * FROM testData t1 JOIN " +
+      "testData2 t2 ON t1.key = t2.a JOIN testData3 t3 ON t2.a = t3.a",
+    "SELECT * FROM testData t1 JOIN " +
+      "testData2 t2 ON t1.key = t2.a JOIN " +
+      "testData3 t3 ON t2.a = t3.a JOIN " +
+      "testData t4 ON t1.key = t4.key"
   )
   /* Tests that are failing but should be passing */
   def failingQueries = Seq()
@@ -244,6 +250,104 @@ trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
 
     safeDropTables("left", "right")
   }
+
+  ignore("cross join with broadcast") {
+    withSQLConf(
+      SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key -> 0.toString,
+      SQLConf.CROSS_JOINS_ENABLED.key -> "true"
+    ) {
+      checkAnswer() { sl =>
+        val sqlStr = """
+          SELECT x.value, y.a, y.b FROM testData x JOIN testData2 y WHERE x.key = 2
+          """.stripMargin
+        loadTestData(sqlStr, sl)
+        spark.sqlContext.sparkSession.sql(sqlStr)
+      }
+      checkAnswer() { sl =>
+        val sqlStr = """
+          SELECT x.value, y.a, y.b FROM testData x JOIN testData2 y WHERE x.key < y.a
+          """.stripMargin
+        loadTestData(sqlStr, sl)
+        spark.sqlContext.sparkSession.sql(sqlStr)
+      }
+      checkAnswer() { sl =>
+        val sqlStr = """
+          SELECT x.value, y.a, y.b FROM testData x JOIN testData2 y ON x.key < y.a
+          """.stripMargin
+        loadTestData(sqlStr, sl)
+        spark.sqlContext.sparkSession.sql(sqlStr)
+      }
+    }
+  }
+
+  ignore("NaN and -0.0 in join keys") {
+    def createTables(sl: SecurityLevel) = {
+      val v1 = sl.applyTo(Seq(Float.NaN -> Double.NaN, 0.0f -> 0.0, -0.0f -> -0.0).toDF("f", "d"))
+      v1.createOrReplaceTempView("v1")
+      val v2 = sl.applyTo(Seq(Float.NaN -> Double.NaN, 0.0f -> 0.0, -0.0f -> -0.0).toDF("f", "d"))
+      v1.createOrReplaceTempView("v2")
+      val v3 = sl.applyTo(
+        Seq((Array(-0.0f, 0.0f), Tuple2(-0.0d, Double.NaN), Seq(Tuple2(-0.0d, Double.NaN))))
+          .toDF("arr", "stru", "arrOfStru")
+      )
+      v3.createOrReplaceTempView("v3")
+      val v4 = sl.applyTo(
+        Seq((Array(0.0f, -0.0f), Tuple2(0.0d, 0.0 / 0.0), Seq(Tuple2(0.0d, 0.0 / 0.0))))
+          .toDF("arr", "stru", "arrOfStru")
+      )
+      v4.createOrReplaceTempView("v4")
+      (v1, v2, v3, v4)
+    }
+
+    checkAnswer() { sl =>
+      createTables(sl)
+      val sqlStr = """
+        |SELECT v1.f, v1.d, v2.f, v2.d
+        |FROM v1 JOIN v2
+        |ON v1.f = v2.f AND v1.d = v2.d
+        """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+    checkAnswer() { sl =>
+      createTables(sl)
+      val sqlStr = """
+        |SELECT v1.f, v1.d, v2.f, v2.d
+        |FROM v1 JOIN v2
+        |ON
+        |  array(v1.f) = array(v2.f) AND
+        |  struct(v1.d) = struct(v2.d) AND
+        |  array(struct(v1.f, v1.d)) = array(struct(v2.f, v2.d)) AND
+        |  struct(array(v1.f), array(v1.d)) = struct(array(v2.f), array(v2.d))
+        """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+    checkAnswer() { sl =>
+      createTables(sl)
+      val sqlStr = """
+        |SELECT v3.arr, v3.stru, v3.arrOfStru, v4.arr, v4.stru, v4.arrOfStru
+        |FROM v3 JOIN v4
+        |ON v3.arr = v4.arr AND v3.stru = v4.stru AND v3.arrOfStru = v4.arrOfStru
+        """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+
+    safeDropTables("v1", "v2", "v3", "v4")
+  }
+}
+
+class SinglePartitionJoinSuite extends JoinSuite {
+  override def numPartitions = 1
+  override val spark = SparkSession
+    .builder()
+    .master("local[4]")
+    .appName("SinglePartitionJoinSuite")
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .getOrCreate()
+
+  runSQLQueries();
 }
 
 class MultiplePartitionJoinSuite extends JoinSuite {
