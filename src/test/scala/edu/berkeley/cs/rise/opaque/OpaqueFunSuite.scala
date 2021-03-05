@@ -58,7 +58,7 @@ trait OpaqueFunSuite extends FunSuite {
 
   def testAgainstSpark[A: Equality](
       name: String,
-      isOrdered: Boolean = true,
+      isOrdered: Boolean = false,
       verbose: Boolean = false,
       printPlan: Boolean = false,
       testFunc: (String, Tag*) => ((=> Any) => Unit) = test

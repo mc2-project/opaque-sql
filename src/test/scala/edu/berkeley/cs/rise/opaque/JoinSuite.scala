@@ -20,6 +20,7 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.SparkSession
 
 trait JoinSuite extends OpaqueSuiteBase {
+  import spark.implicits._
 
   def numPartitions: Int
 
@@ -53,8 +54,7 @@ trait JoinSuite extends OpaqueSuiteBase {
     "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a",
     "SELECT * FROM testData full JOIN testData2 ON (key * a != key + a)"
   )
-
-  def runTests(numPartitions: Int) = {
+  def runSQLQueries() = {
     for (sqlStr <- queries) {
       testAgainstSpark(sqlStr, isOrdered = false, verbose = false, printPlan = false) {
         securityLevel =>
@@ -62,6 +62,22 @@ trait JoinSuite extends OpaqueSuiteBase {
           spark.sqlContext.sparkSession.sql(sqlStr)
       }
     }
+  }
+
+  testAgainstSpark("inner join where, one match per row", testFunc = ignore) { securityLevel =>
+    upperCaseData(securityLevel).join(lowerCaseData(securityLevel)).where($"n" === $"N"),
+  }
+
+  testAgainstSpark("inner join where, multiple matches", isOrdered = false) { securityLevel =>
+    val x = testData2(securityLevel).where($"a" === 1).as("x")
+    val y = testData2(securityLevel).where($"a" === 1).as("y")
+    x.join(y).where($"x.a" === $"y.a")
+  }
+
+  testAgainstSpark("inner join, no matches") { securityLevel =>
+    val x = testData2(securityLevel).where($"a" === 1).as("x")
+    val y = testData2(securityLevel).where($"a" === 2).as("y")
+    x.join(y).where($"x.a" === $"y.a")
   }
 }
 
@@ -74,5 +90,5 @@ class MultiplePartitionJoinSuite extends JoinSuite {
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
 
-  runTests(numPartitions);
+  runSQLQueries();
 }

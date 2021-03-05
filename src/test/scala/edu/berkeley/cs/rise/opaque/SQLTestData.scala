@@ -19,9 +19,6 @@ package edu.berkeley.cs.rise.opaque
 
 import java.nio.charset.StandardCharsets
 
-import edu.berkeley.cs.rise.opaque.implicits._
-
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession, SQLContext, SQLImplicits}
 import org.apache.spark.unsafe.types.CalendarInterval
 
@@ -31,7 +28,7 @@ import org.apache.spark.unsafe.types.CalendarInterval
  */
 protected trait SQLTestData {
 
-  protected def spark: SparkSession
+  val spark: SparkSession
 
   // Helper object to import SQL implicits without a concrete SQLContext
   private object internalImplicits extends SQLImplicits {
