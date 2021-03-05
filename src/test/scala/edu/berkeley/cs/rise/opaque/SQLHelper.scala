@@ -17,9 +17,13 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 trait SQLHelper {
+
+  val spark: SparkSession
 
   /**
    * Sets all SQL configurations specified in `pairs`, calls `f`, and then restores all SQL
@@ -46,6 +50,20 @@ trait SQLHelper {
       keys.zip(currentValues).foreach {
         case (key, Some(value)) => conf.setConfString(key, value)
         case (key, None) => conf.unsetConf(key)
+      }
+    }
+  }
+
+  /**
+   * Drops temporary view `viewNames` after calling `f`.
+   */
+  protected def safeDropTables(viewNames: String*): Unit = {
+    viewNames.foreach { viewName =>
+      try spark.catalog.dropTempView(viewName)
+      catch {
+        // If the test failed part way, we don't want to mask the failure by failing to remove
+        // temp views that never got created.
+        case _: NoSuchTableException =>
       }
     }
   }

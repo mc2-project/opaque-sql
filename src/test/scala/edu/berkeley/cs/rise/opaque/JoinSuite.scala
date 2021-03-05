@@ -179,6 +179,71 @@ trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
       }
     }
   }
+
+  ignore("full outer join") {
+    def createTables(sl: SecurityLevel) = {
+      val left = upperCaseData(sl).where('N <= 4)
+      left.createOrReplaceTempView("left")
+      val right = upperCaseData(sl).where('N >= 3)
+      right.createOrReplaceTempView("right")
+      (left, right)
+    }
+
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      left.join(right, $"left.N" === $"right.N", "full")
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      left.join(right, ($"left.N" === $"right.N") && ($"left.N" =!= 3), "full")
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      left.join(right, ($"left.N" === $"right.N") && ($"right.N" =!= 3), "full")
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      val sqlStr = """
+          |SELECT l.a, count(*)
+          |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
+          |GROUP BY l.a
+        """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      val sqlStr = """
+          |SELECT r.N, count(*)
+          |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
+          |GROUP BY r.N
+          """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      val sqlStr = """
+          |SELECT l.N, count(*)
+          |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)
+          |GROUP BY l.N
+          """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+    checkAnswer() { sl =>
+      val (left, right) = createTables(sl)
+      val sqlStr = """
+          |SELECT r.a, count(*)
+          |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)
+          |GROUP BY r.a
+          """.stripMargin
+      loadTestData(sqlStr, sl)
+      spark.sqlContext.sparkSession.sql(sqlStr)
+    }
+
+    safeDropTables("left", "right")
+  }
 }
 
 class MultiplePartitionJoinSuite extends JoinSuite {
