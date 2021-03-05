@@ -27,7 +27,6 @@ import org.apache.log4j.LogManager
 import org.scalatest.FunSuite
 import org.scalactic.Equality
 import org.scalactic.TolerantNumerics
-import org.scalatest.Tag
 import scala.collection.mutable
 
 trait OpaqueFunSuite extends FunSuite {
@@ -57,10 +56,14 @@ trait OpaqueFunSuite extends FunSuite {
   }
 
   def checkAnswer[A: Equality](
+      ignore: Boolean = false,
       isOrdered: Boolean = false,
       verbose: Boolean = false,
       printPlan: Boolean = false
   )(f: SecurityLevel => A): Unit = {
+    if (ignore) {
+      return
+    }
     val (insecure, encrypted) = (f(Insecure), f(Encrypted))
     (insecure, encrypted) match {
       case (insecure: DataFrame, encrypted: DataFrame) =>
