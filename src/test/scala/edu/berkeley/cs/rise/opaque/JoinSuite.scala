@@ -56,19 +56,18 @@ trait JoinSuite extends OpaqueSuiteBase {
   )
   def runSQLQueries() = {
     for (sqlStr <- queries) {
-      testAgainstSpark(sqlStr, isOrdered = false, verbose = false, printPlan = false) {
-        securityLevel =>
-          loadTestData(sqlStr, securityLevel)
-          spark.sqlContext.sparkSession.sql(sqlStr)
+      testAgainstSpark(sqlStr) { securityLevel =>
+        loadTestData(sqlStr, securityLevel)
+        spark.sqlContext.sparkSession.sql(sqlStr)
       }
     }
   }
 
-  testAgainstSpark("inner join where, one match per row", testFunc = ignore) { securityLevel =>
+  testAgainstSpark("inner join, one match per row", testFunc = ignore) { securityLevel =>
     upperCaseData(securityLevel).join(lowerCaseData(securityLevel)).where($"n" === $"N"),
   }
 
-  testAgainstSpark("inner join where, multiple matches", isOrdered = false) { securityLevel =>
+  testAgainstSpark("inner join, multiple matches", isOrdered = false) { securityLevel =>
     val x = testData2(securityLevel).where($"a" === 1).as("x")
     val y = testData2(securityLevel).where($"a" === 1).as("y")
     x.join(y).where($"x.a" === $"y.a")
@@ -78,6 +77,16 @@ trait JoinSuite extends OpaqueSuiteBase {
     val x = testData2(securityLevel).where($"a" === 1).as("x")
     val y = testData2(securityLevel).where($"a" === 2).as("y")
     x.join(y).where($"x.a" === $"y.a")
+  }
+
+  testAgainstSpark("big inner join, 4 matches per row", testFunc = ignore) { securityLevel =>
+    val bigData = testData(securityLevel)
+      .union(testData(securityLevel))
+      .union(testData(securityLevel))
+      .union(testData(securityLevel))
+    val bigDataX = bigData.as("x")
+    val bigDataY = bigData.as("y")
+    bigDataX.join(bigDataY).where($"x.key" === $"y.key")
   }
 }
 
