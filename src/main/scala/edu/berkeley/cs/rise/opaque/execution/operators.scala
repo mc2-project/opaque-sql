@@ -228,12 +228,10 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
 
   override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
-    timeOperator(
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedProjectExec"
-    ) { childRDD =>
-      childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedProjectExec") {
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
         Block(enclave.Project(eid, projectListSer, block.bytes))
       }
     }
@@ -249,11 +247,11 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   override def executeBlocked(): RDD[Block] = {
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
-      childRDD =>
-        childRDD.map { block =>
-          val (enclave, eid) = Utils.initEnclave()
-          Block(enclave.Filter(eid, conditionSer, block.bytes))
-        }
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
+        Block(enclave.Filter(eid, conditionSer, block.bytes))
+      }
     }
   }
 }
@@ -285,12 +283,10 @@ case class EncryptedAggregateExec(
       .map(expr => expr.mode)
       .exists(mode => mode == Partial || mode == PartialMerge)
 
-    timeOperator(
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedPartialAggregateExec"
-    ) { childRDD =>
-      childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
         Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, isPartial))
       }
     }
@@ -337,9 +333,10 @@ case class EncryptedSortMergeJoinExec(
 
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedSortMergeJoinExec"
-    ) { childRDD =>
-      childRDD.map { block =>
+      "EncryptedSortMergeJoinExec") {
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+
+      childRDD => childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
         Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
       }
@@ -399,8 +396,9 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     val broadcastRDD = broadcast.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val broadcastBlock = Utils.concatEncryptedBlocks(broadcastRDD.collect)
 
+    val (numUnattested, numAttested) = Utils.getAttestationCounters()
     streamRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
+      val (enclave, eid) = Utils.initEnclave(numUnattested)
       Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcastBlock.bytes))
     }
   }
@@ -449,12 +447,10 @@ case class EncryptedLocalLimitExec(limit: Int, child: SparkPlan)
     child.output
 
   override def executeBlocked(): RDD[Block] = {
-    timeOperator(
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedLocalLimitExec"
-    ) { childRDD =>
-      childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedLocalLimitExec") {
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+      childRDD => childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
         Block(enclave.LocalLimit(eid, limit, block.bytes))
       }
     }
@@ -470,27 +466,23 @@ case class EncryptedGlobalLimitExec(limit: Int, child: SparkPlan)
     child.output
 
   override def executeBlocked(): RDD[Block] = {
-    timeOperator(
-      child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
-      "EncryptedGlobalLimitExec"
-    ) { childRDD =>
+    timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedGlobalLimitExec") {
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
+
+      childRDD =>
       val numRowsPerPartition = Utils.concatEncryptedBlocks(childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
         Block(enclave.CountRowsPerPartition(eid, block.bytes))
       }.collect)
 
-      val limitPerPartition = childRDD.context
-        .parallelize(Array(numRowsPerPartition.bytes), 1)
-        .map { numRowsList =>
-          val (enclave, eid) = Utils.initEnclave()
-          enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
-        }
-        .collect
-        .head
+      val limitPerPartition = childRDD.context.parallelize(Array(numRowsPerPartition.bytes), 1).map { numRowsList =>
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
+        enclave.ComputeNumRowsPerPartition(eid, limit, numRowsList)
+      }.collect.head
 
       childRDD.zipWithIndex.map {
         case (block, i) => {
-          val (enclave, eid) = Utils.initEnclave()
+          val (enclave, eid) = Utils.initEnclave(numUnattested)
           Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
         }
       }

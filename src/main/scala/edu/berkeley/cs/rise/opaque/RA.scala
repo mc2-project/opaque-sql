@@ -28,46 +28,51 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
-    // All executors need to be initialized before attestation can occur
-    var numExecutors = 1
-    if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
-    }
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
 
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
     sp.Init(Utils.sharedKey, intelCert)
 
+    val (numUnattested, numAttested) = Utils.getAttestationCounters()
+
     // Runs on executors
-    val msg1s = rdd
-      .mapPartitions { (_) =>
-        val (enclave, eid) = Utils.initEnclave()
-        val msg1 = enclave.GenerateReport(eid)
-        Iterator((eid, msg1))
-      }
-      .collect
-      .toMap
+    val msg1s = rdd.mapPartitions { (_) =>
+      val (enclave, eid) = Utils.initEnclave(numUnattested)
+      val msg1 = None if Utils.attested else enclave.GenerateReport(eid)
+      Iterator((eid, msg1))
+    }.collect.toMap
 
     // Runs on driver
-    val msg2s = msg1s.map { case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1)) }
+    val msg2s = msg1s.map{
+      case (eid, Some(msg1)) => (eid, sp.ProcessEnclaveReport(msg1))
+    }
 
     // Runs on executors
-    val attestationResults = rdd
-      .mapPartitions { (_) =>
-        val (enclave, eid) = Utils.initEnclave()
+    val attestationResults = rdd.mapPartitions { (_) =>
+      val (enclave, eid) = Utils.initEnclave(numUnattested)
+      if (!Utils.attested) {
         val msg2 = msg2s(eid)
         enclave.FinishAttestation(eid, msg2)
+        Utils.finishAttestation(numAttested)
         Iterator((eid, true))
       }
-      .collect
-      .toMap
+    }.collect.toMap
 
     for ((_, ret) <- attestationResults) {
       if (!ret)
         throw new OpaqueException("Attestation failed")
+    }
+  }
+
+  def run(sc: SparkContext): Unit = {
+    while (True) {
+      // A loop that repeatedly tries to call initRA if new enclaves are added
+      if (Utils.numUnattested.value != Utils.numAttested.value) {
+        initRA(sc)
+      }
+      Thread.sleep(500)
     }
   }
 }

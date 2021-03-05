@@ -102,6 +102,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.unsafe.types.UTF8String
+import org.apache.spark.util.LongAccumulator
 
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
@@ -244,22 +245,33 @@ object Utils extends Logging {
     }
   }
 
-  def initEnclave(): (SGXEnclave, Long) = {
+  def initEnclave(numUnattested: LongAccumulator): (SGXEnclave, Long) = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
         val path = findLibraryAsResource("enclave_trusted_signed")
         eid = enclave.StartEnclave(path)
+        numUnattested.add(1)
         logInfo("Starting an enclave")
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
+        
         (enclave, eid)
       }
     }
   }
 
-  final val GCM_IV_LENGTH = 12
+  def finishAttestation(numAttested: LongAccumulator) = {
+    this.synchronized {
+      if (attested == False) {
+        numAttested.add(1)
+      }
+      attested = True
+    }
+  }
+
+  final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
 
@@ -292,19 +304,33 @@ object Utils extends Logging {
   }
 
   var eid = 0L
-  var attested: Boolean = false
-  var attesting_getepid: Boolean = false
-  var attesting_getmsg1: Boolean = false
-  var attesting_getmsg3: Boolean = false
-  var attesting_final_ra: Boolean = false
+  var attested : Boolean = false
+  val numUnattested : LongAccumulator = new LongAccumulator
+  val numAttested : LongAccumulator = new LongAccumulator
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
-    sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
-      sqlContext.experimental.extraStrategies)
-    RA.initRA(sqlContext.sparkContext)
+    sqlContext.experimental.extraStrategies =
+      (Seq(OpaqueOperators) ++
+        sqlContext.experimental.extraStrategies)
+
+    // Initialize accumulator variable for attestation
+    val sc = sqlContext.sparkContext
+
+    sc.register(numUnattested, "UnattestedCounter")
+    sc.register(numAttested, "AttestedCounter")
+    val thread = new Thread {
+      override def run {
+        RA.run(sc)
+      }
+    }
+    thread.start
+  }
+
+  def getAttestationCounters(): (LongAccumulator, LongAccumulator) = {
+    (numUnattested, numAttested)
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
