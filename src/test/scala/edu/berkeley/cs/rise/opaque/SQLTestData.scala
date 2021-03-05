@@ -436,7 +436,7 @@ protected trait SQLTestData {
    */
   def loadTestData(sqlStr: String, securityLevel: SecurityLevel): Unit = {
     for ((name, func) <- nameToFunc) {
-      if (sqlStr.contains(name)) {
+      if (sqlStr.toLowerCase.contains(name.toLowerCase)) {
         func(securityLevel)
       }
     }
