@@ -56,36 +56,30 @@ trait OpaqueFunSuite extends FunSuite {
     }
   }
 
-  def testAgainstSpark[A: Equality](
-      name: String,
+  def checkAnswer[A: Equality](
       isOrdered: Boolean = false,
       verbose: Boolean = false,
-      printPlan: Boolean = false,
-      testFunc: (String, Tag*) => ((=> Any) => Unit) = test
+      printPlan: Boolean = false
   )(f: SecurityLevel => A): Unit = {
-    testFunc(name) {
-      // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
-      // using the numeric tolerance specified in OpaqueTolerance
-      val (insecure, encrypted) = (f(Insecure), f(Encrypted))
-      (insecure, encrypted) match {
-        case (insecure: DataFrame, encrypted: DataFrame) =>
-          val (insecureSeq, encryptedSeq) = (insecure.collect, encrypted.collect)
-          val equal =
-            if (isOrdered) insecureSeq === encryptedSeq
-            else insecureSeq.toSet === encryptedSeq.toSet
-          if (!equal) {
-            if (printPlan) {
-              println("**************** Spark Plan ****************")
-              insecure.explain()
-              println("**************** Opaque Plan ****************")
-              encrypted.explain()
-            }
-            println(genError(insecureSeq, encryptedSeq, isOrdered, verbose))
+    val (insecure, encrypted) = (f(Insecure), f(Encrypted))
+    (insecure, encrypted) match {
+      case (insecure: DataFrame, encrypted: DataFrame) =>
+        val (insecureSeq, encryptedSeq) = (insecure.collect, encrypted.collect)
+        val equal =
+          if (isOrdered) insecureSeq === encryptedSeq
+          else insecureSeq.toSet === encryptedSeq.toSet
+        if (!equal) {
+          if (printPlan) {
+            println("**************** Spark Plan ****************")
+            insecure.explain()
+            println("**************** Opaque Plan ****************")
+            encrypted.explain()
           }
-          assert(equal)
-        case _ =>
-          assert(insecure === encrypted)
-      }
+          println(genError(insecureSeq, encryptedSeq, isOrdered, verbose))
+        }
+        assert(equal)
+      case _ =>
+        assert(insecure === encrypted)
     }
   }
 

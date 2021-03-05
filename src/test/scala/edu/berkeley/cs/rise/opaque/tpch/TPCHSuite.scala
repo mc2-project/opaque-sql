@@ -30,12 +30,16 @@ trait TPCHSuite extends OpaqueSuiteBase { self =>
     for (queryNum <- TPCH.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
       if (TPCH.unorderedQueries.contains(queryNum)) {
-        testAgainstSpark(testStr, isOrdered = false) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions)
+        test(testStr) {
+          checkAnswer(isOrdered = false) { securityLevel =>
+            tpch.query(queryNum, securityLevel, numPartitions)
+          }
         }
       } else {
-        testAgainstSpark(testStr, isOrdered = true) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions)
+        test(testStr) {
+          checkAnswer(isOrdered = true) { securityLevel =>
+            tpch.query(queryNum, securityLevel, numPartitions)
+          }
         }
       }
     }

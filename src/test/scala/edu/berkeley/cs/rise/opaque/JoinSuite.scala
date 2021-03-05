@@ -57,41 +57,65 @@ trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
   )
   def runSQLQueries() = {
     for (sqlStr <- queries) {
-      testAgainstSpark(sqlStr) { securityLevel =>
-        loadTestData(sqlStr, securityLevel)
-        spark.sqlContext.sparkSession.sql(sqlStr)
+      test(sqlStr) {
+        checkAnswer() { securityLevel =>
+          loadTestData(sqlStr, securityLevel)
+          spark.sqlContext.sparkSession.sql(sqlStr)
+        }
       }
     }
   }
 
-  testAgainstSpark("inner join, one match per row") { securityLevel =>
+  test("inner join, one match per row") {
     withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
-      val upper = upperCaseData(securityLevel)
-      val lower = lowerCaseData(securityLevel)
-      upper.join(lower).where('n === 'N)
+      checkAnswer() { securityLevel =>
+        val upper = upperCaseData(securityLevel)
+        val lower = lowerCaseData(securityLevel)
+        upper.join(lower).where('n === 'N)
+      }
     }
   }
 
-  testAgainstSpark("inner join, multiple matches", isOrdered = false) { securityLevel =>
-    val x = testData2(securityLevel).where($"a" === 1).as("x")
-    val y = testData2(securityLevel).where($"a" === 1).as("y")
-    x.join(y).where($"x.a" === $"y.a")
+  test("inner join, multiple matches") {
+    checkAnswer() { securityLevel =>
+      val x = testData2(securityLevel).where($"a" === 1).as("x")
+      val y = testData2(securityLevel).where($"a" === 1).as("y")
+      x.join(y).where($"x.a" === $"y.a")
+    }
   }
 
-  testAgainstSpark("inner join, no matches") { securityLevel =>
-    val x = testData2(securityLevel).where($"a" === 1).as("x")
-    val y = testData2(securityLevel).where($"a" === 2).as("y")
-    x.join(y).where($"x.a" === $"y.a")
+  test("inner join, no matches") {
+    checkAnswer() { securityLevel =>
+      val x = testData2(securityLevel).where($"a" === 1).as("x")
+      val y = testData2(securityLevel).where($"a" === 2).as("y")
+      x.join(y).where($"x.a" === $"y.a")
+    }
   }
 
-  testAgainstSpark("big inner join, 4 matches per row", testFunc = ignore) { securityLevel =>
-    val bigData = testData(securityLevel)
-      .union(testData(securityLevel))
-      .union(testData(securityLevel))
-      .union(testData(securityLevel))
-    val bigDataX = bigData.as("x")
-    val bigDataY = bigData.as("y")
-    bigDataX.join(bigDataY).where($"x.key" === $"y.key")
+  ignore("big inner join, 4 matches per row") {
+    checkAnswer() { securityLevel =>
+      val bigData = testData(securityLevel)
+        .union(testData(securityLevel))
+        .union(testData(securityLevel))
+        .union(testData(securityLevel))
+      val bigDataX = bigData.as("x")
+      val bigDataY = bigData.as("y")
+      bigDataX.join(bigDataY).where($"x.key" === $"y.key")
+    }
+  }
+
+  ignore("cartesian product join") {
+    withSQLConf(SQLConf.CROSS_JOINS_ENABLED.key -> "true") {
+      checkAnswer() { securityLevel => testData3(securityLevel).join(testData3(securityLevel)) }
+    }
+  }
+
+  test("left outer join") {
+    withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
+      checkAnswer() { securityLevel =>
+        upperCaseData(securityLevel).join(lowerCaseData(securityLevel), $"n" === $"N", "left")
+      }
+    }
   }
 }
 
