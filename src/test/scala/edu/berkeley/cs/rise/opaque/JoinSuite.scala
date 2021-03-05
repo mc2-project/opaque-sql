@@ -17,9 +17,10 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.SparkSession
 
-trait JoinSuite extends OpaqueSuiteBase {
+trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
   import spark.implicits._
 
   def numPartitions: Int
@@ -63,8 +64,12 @@ trait JoinSuite extends OpaqueSuiteBase {
     }
   }
 
-  testAgainstSpark("inner join, one match per row", testFunc = ignore) { securityLevel =>
-    upperCaseData(securityLevel).join(lowerCaseData(securityLevel)).where($"n" === $"N"),
+  testAgainstSpark("inner join, one match per row") { securityLevel =>
+    withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
+      val upper = upperCaseData(securityLevel)
+      val lower = lowerCaseData(securityLevel)
+      upper.join(lower).where('n === 'N)
+    }
   }
 
   testAgainstSpark("inner join, multiple matches", isOrdered = false) { securityLevel =>
