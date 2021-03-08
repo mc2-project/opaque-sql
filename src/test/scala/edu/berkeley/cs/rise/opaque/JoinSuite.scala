@@ -25,7 +25,6 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
 
   def numPartitions: Int
 
-  /* Tests that are passing */
   def queries = Seq(
     "SELECT * FROM testData LEFT SEMI JOIN testData2 ON key = a",
     "SELECT * FROM testData LEFT SEMI JOIN testData2",
@@ -48,9 +47,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       "testData3 t3 ON t2.a = t3.a JOIN " +
       "testData t4 ON t1.key = t4.key"
   )
-  /* Tests that are failing but should be passing */
   def failingQueries = Seq()
-  /* Tests that contain unsupported operators */
   def unsupportedQueries = Seq(
     "SELECT * FROM testData JOIN testData2",
     "SELECT * FROM testData JOIN testData2 WHERE key = 2",
