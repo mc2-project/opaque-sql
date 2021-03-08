@@ -74,7 +74,7 @@ object RA extends Logging {
       if (Utils.numUnattested.value != Utils.numAttested.value) {
         initRA(sc)
       }
-      Thread.sleep(500)
+      Thread.sleep(10)
     }
   }
 }

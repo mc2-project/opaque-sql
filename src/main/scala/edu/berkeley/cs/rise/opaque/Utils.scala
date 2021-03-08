@@ -323,6 +323,7 @@ object Utils extends Logging {
     }
 
     if (!attested) {
+      Thread.sleep(500)
       throw new OpaqueException("Attestation not yet complete")
     }
  
@@ -348,6 +349,7 @@ object Utils extends Logging {
     this.synchronized {
       val enclave = new SGXEnclave()
       val msg2 = msg2s(eid)
+      println(s"Enclave ${eid} received msg2")
       enclave.FinishAttestation(eid, msg2)
       if (!attested) {
         numAttested.add(1)
