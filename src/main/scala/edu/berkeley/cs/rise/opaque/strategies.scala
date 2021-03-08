@@ -145,8 +145,8 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
       val desiredBuildSide =
         if (joinType.isInstanceOf[InnerLike] || joinType == FullOuter)
           getSmallerSide(left, right)
-        else if (canBuildBroadcastLeft(joinType)) BuildLeft
-        else BuildRight
+        else
+          getBroadcastSideBNLJ((joinType))
 
       val joined = EncryptedBroadcastNestedLoopJoinExec(
         planLater(left),
@@ -384,5 +384,10 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
   private def isLeftPrimary(joinType: JoinType): Boolean = joinType match {
     case RightOuter => false
     case _ => true
+  }
+
+  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = joinType match {
+    case LeftExistence(_) | LeftOuter => BuildRight
+    case _ => BuildLeft
   }
 }
