@@ -40,15 +40,12 @@ object RA extends Logging {
     sp.Init(Utils.sharedKey, intelCert)
 
     val (numUnattested, numAttested) = Utils.getAttestationCounters()
-    println("initRA called")
 
     // Runs on executors
     val msg1s = rdd.mapPartitions { (_) =>
       val (eid, msg1) = Utils.generateReport()
       Iterator((eid, msg1))
     }.collect.toMap
-
-    println(s"Received msg1s, ${numUnattested.value} unattested, ${numAttested.value} attested")
 
     // Runs on driver
     val msg2s = msg1s.collect{
@@ -70,8 +67,8 @@ object RA extends Logging {
   def run(sc: SparkContext): Unit = {
     while (true) {
       // A loop that repeatedly tries to call initRA if new enclaves are added
-      println(s"Loop: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested")
       if (Utils.numUnattested.value != Utils.numAttested.value) {
+        println(s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested")
         initRA(sc)
       }
       Thread.sleep(10)

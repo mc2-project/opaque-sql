@@ -293,8 +293,9 @@ object Utils extends Logging {
     // Initialize accumulator variable for attestation
     val sc = sqlContext.sparkContext
 
-    sc.register(numUnattested, "UnattestedCounter")
-    sc.register(numAttested, "AttestedCounter")
+    val r = scala.util.Random
+    sc.register(numUnattested, s"UnattestedCounter_${r.nextInt}")
+    sc.register(numAttested, s"AttestedCounter_${r.nextInt}")
     val thread = new Thread {
       override def run : Unit = {
         RA.run(sc)
@@ -322,9 +323,13 @@ object Utils extends Logging {
       }
     }
 
-    if (!attested) {
-      Thread.sleep(500)
-      throw new OpaqueException("Attestation not yet complete")
+    // This following exception relies on the Spark fault tolerance and its retry mechanism
+    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure
+    this.synchronized {
+      if (!attested) {
+        Thread.sleep(200)
+        throw new OpaqueException("Attestation not yet complete")
+      }
     }
  
     (enclave_ret, eid_ret)

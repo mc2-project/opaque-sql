@@ -24,7 +24,7 @@ import org.scalatest.FunSuite
 class QEDSuite extends FunSuite with BeforeAndAfterAll {
   val spark = SparkSession
     .builder()
-    .master("local[1]")
+    .master("local[1, 10]")
     .appName("QEDSuite")
     .getOrCreate()
 
