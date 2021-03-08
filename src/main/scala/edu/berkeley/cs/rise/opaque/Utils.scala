@@ -245,50 +245,6 @@ object Utils extends Logging {
     }
   }
 
-  def initEnclave(numUnattested: LongAccumulator): (SGXEnclave, Long) = {
-    val (enclave_ret, eid_ret) = this.synchronized {
-      if (eid == 0L) {
-        val enclave = new SGXEnclave()
-        val path = findLibraryAsResource("enclave_trusted_signed")
-        eid = enclave.StartEnclave(path)
-        numUnattested.add(1)
-        logInfo("Starting an enclave")
-        (enclave, eid)
-      } else {
-        val enclave = new SGXEnclave()
-        (enclave, eid)
-      }
-    }
-
-    var loop = true
-    while (loop) {
-      this.synchronized {
-        if (attested) {
-          loop = false
-        }
-      }
-      Thread.sleep(500)
-    }
-
-    (enclave_ret, eid_ret)
-  }
-
-  def finishAttestation(
-    numAttested: LongAccumulator,
-    msg2s: Map[Long, Array[Byte]]
-  ): (Long, Boolean) = {
-    this.synchronized {
-      val enclave = new SGXEnclave()
-      val msg2 = msg2s(eid)
-      enclave.FinishAttestation(eid, msg2)
-      if (!attested) {
-        numAttested.add(1)
-      }
-      attested = true
-      (eid, attested)
-    }
-  }
-
   final val GCM_IV_LENGTH = 12 
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
@@ -349,6 +305,56 @@ object Utils extends Logging {
 
   def getAttestationCounters(): (LongAccumulator, LongAccumulator) = {
     (numUnattested, numAttested)
+  }
+
+  def initEnclave(numUnattested: LongAccumulator): (SGXEnclave, Long) = {
+    val (enclave_ret, eid_ret) = this.synchronized {
+      if (eid == 0L) {
+        val enclave = new SGXEnclave()
+        val path = findLibraryAsResource("enclave_trusted_signed")
+        eid = enclave.StartEnclave(path)
+        numUnattested.add(1)
+        logInfo("Starting an enclave")
+        (enclave, eid)
+      } else {
+        val enclave = new SGXEnclave()
+        (enclave, eid)
+      }
+    }
+
+    if (!attested) {
+      throw new OpaqueException("Attestation not yet complete")
+    }
+ 
+    (enclave_ret, eid_ret)
+  }
+
+  def generateReport() : (Long, Option[Array[Byte]]) = {
+    this.synchronized {
+      if (!attested) {
+        val enclave = new SGXEnclave()
+        val msg1 = enclave.GenerateReport(eid)
+        println(s"Unattested enclave ${eid} generated msg1")
+        (eid, Option(msg1))
+      } else {
+        (eid, None)
+      }
+    }
+  }
+
+  def finishAttestation(
+    numAttested: LongAccumulator,
+    msg2s: Map[Long, Array[Byte]]): (Long, Boolean) = {
+    this.synchronized {
+      val enclave = new SGXEnclave()
+      val msg2 = msg2s(eid)
+      enclave.FinishAttestation(eid, msg2)
+      if (!attested) {
+        numAttested.add(1)
+      }
+      attested = true
+      (eid, attested)
+    }
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
