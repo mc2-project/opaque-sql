@@ -17,8 +17,8 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.internal.SQLConf
 
 trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
   import spark.implicits._
