@@ -396,11 +396,6 @@ trait AggregationSuite extends OpaqueSuiteBase with SQLHelper {
     }
   }
 
-  override def loadTestData(sqlStr: String, sl: SecurityLevel) = {
-    super.loadTestData(sqlStr, sl)
-    loadAggData(sl)
-  }
-
   def loadAggData(sl: SecurityLevel) = {
     val data1 = sl.applyTo(
       Seq[(Integer, Integer)](
@@ -469,6 +464,16 @@ trait AggregationSuite extends OpaqueSuiteBase with SQLHelper {
   }
 }
 
+class SinglePartitionAggregationSuite extends AggregationSuite {
+  override def numPartitions = 1
+  override val spark = SparkSession
+    .builder()
+    .master("local[*]")
+    .appName("SinglePartitionAggregationSuite")
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .getOrCreate()
+}
+
 class MultiplePartitionAggregationSuite extends AggregationSuite {
   override def numPartitions = 3
   override val spark = SparkSession
@@ -477,5 +482,4 @@ class MultiplePartitionAggregationSuite extends AggregationSuite {
     .appName("MultiplePartitionAggregationSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
-
 }
