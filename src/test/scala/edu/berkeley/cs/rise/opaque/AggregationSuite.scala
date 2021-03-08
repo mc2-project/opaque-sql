@@ -21,61 +21,220 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.Row
 
-trait AggregationSuite extends OpaqueSQLSuiteBase with SQLHelper {
+trait AggregationSuite extends OpaqueSuiteBase with SQLHelper {
   import spark.implicits._
 
   def numPartitions: Int
 
-  def queries = Seq(
-  )
-  def failingQueries = Seq(
-    """
-    |SELECT
-    |  AVG(value),
-    |  COUNT(*),
-    |  COUNT(key),
-    |  COUNT(value),
-    |  FIRST(key),
-    |  LAST(value),
-    |  MAX(key),
-    |  MIN(value),
-    |  SUM(key)
-    |FROM emptyTable
-    """.stripMargin,
-    """
-    |SELECT
-    |  AVG(value),
-    |  COUNT(*),
-    |  COUNT(key),
-    |  COUNT(value),
-    |  FIRST(key),
-    |  LAST(value),
-    |  MAX(key),
-    |  MIN(value),
-    |  SUM(key),
-    |  COUNT(DISTINCT value)
-    |FROM emptyTable
-    """.stripMargin,
-    """
-    |SELECT
-    |  AVG(value),
-    |  COUNT(*),
-    |  COUNT(value),
-    |  FIRST(value),
-    |  LAST(value),
-    |  MAX(value),
-    |  MIN(value),
-    |  SUM(value),
-    |  COUNT(DISTINCT value)
-    |FROM emptyTable
-    |GROUP BY key
-    """.stripMargin
-  )
-  def unsupportedQueries = Seq()
+  ignore("empty table") {
+    // If there is no GROUP BY clause and the table is empty, we will generate a single row.
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT
+          |  AVG(value),
+          |  COUNT(*),
+          |  COUNT(key),
+          |  COUNT(value),
+          |  FIRST(key),
+          |  LAST(value),
+          |  MAX(key),
+          |  MIN(value),
+          |  SUM(key)
+          |FROM emptyTable
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT
+          |  AVG(value),
+          |  COUNT(*),
+          |  COUNT(key),
+          |  COUNT(value),
+          |  FIRST(key),
+          |  LAST(value),
+          |  MAX(key),
+          |  MIN(value),
+          |  SUM(key),
+          |  COUNT(DISTINCT value)
+          |FROM emptyTable
+        """.stripMargin),
+    }
+
+    // If there is a GROUP BY clause and the table is empty, there is no output.
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT
+          |  AVG(value),
+          |  COUNT(*),
+          |  COUNT(value),
+          |  FIRST(value),
+          |  LAST(value),
+          |  MAX(value),
+          |  MIN(value),
+          |  SUM(value),
+          |  COUNT(DISTINCT value)
+          |FROM emptyTable
+          |GROUP BY key
+        """.stripMargin),
+    }
+  }
+
+  test("null literal") {
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT
+          |  AVG(null),
+          |  COUNT(null),
+          |  FIRST(null),
+          |  LAST(null),
+          |  MAX(null),
+          |  MIN(null),
+          |  SUM(null)
+        """.stripMargin)
+    }
+  }
+
+  test("only do grouping") {
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT key
+          |FROM agg1
+          |GROUP BY key
+        """.stripMargin),
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT DISTINCT value1, key
+          |FROM agg2
+        """.stripMargin),
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT value1, key
+          |FROM agg2
+          |GROUP BY key, value1
+        """.stripMargin),
+    }
+
+    checkAnswer(ignore = true) { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT DISTINCT key
+          |FROM agg3
+        """.stripMargin),
+    }
+
+    checkAnswer(ignore = true) { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT value1, key
+          |FROM agg3
+          |GROUP BY value1, key
+        """.stripMargin)
+    }
+  }
+
+  ignore("case in-sensitive resolution") {
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT avg(value), kEY - 100
+          |FROM agg1
+          |GROUP BY Key - 100
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT sum(distinct value1), kEY - 100, count(distinct value1)
+          |FROM agg2
+          |GROUP BY Key - 100
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT valUe * key - 100
+          |FROM agg1
+          |GROUP BY vAlue * keY - 100
+        """.stripMargin)
+    }
+  }
+
+  test("test average no key in output") {
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT avg(value)
+          |FROM agg1
+          |GROUP BY key
+        """.stripMargin)
+    }
+  }
+
+  test("test average") {
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT key, avg(value)
+          |FROM agg1
+          |GROUP BY key
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT key, mean(value)
+          |FROM agg1
+          |GROUP BY key
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT avg(value), key
+          |FROM agg1
+          |GROUP BY key
+        """.stripMargin)
+    }
+
+    checkAnswer(true) { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT avg(value) + 1.5, key + 10
+          |FROM agg1
+          |GROUP BY key + 10
+        """.stripMargin)
+    }
+
+    checkAnswer() { sl =>
+      loadAggData(sl)
+      spark.sql("""
+          |SELECT avg(value) FROM agg1
+        """.stripMargin)
+    }
+  }
 
   override def loadTestData(sqlStr: String, sl: SecurityLevel) = {
     super.loadTestData(sqlStr, sl)
+    loadAggData(sl)
+  }
 
+  def loadAggData(sl: SecurityLevel) = {
     val data1 = sl.applyTo(
       Seq[(Integer, Integer)](
         (1, 10),
@@ -152,5 +311,4 @@ class MultiplePartitionAggregationSuite extends AggregationSuite {
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
 
-  runSQLQueries();
 }
