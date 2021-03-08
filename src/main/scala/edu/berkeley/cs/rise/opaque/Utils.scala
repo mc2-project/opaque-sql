@@ -246,7 +246,7 @@ object Utils extends Logging {
   }
 
   def initEnclave(numUnattested: LongAccumulator): (SGXEnclave, Long) = {
-    this.synchronized {
+    val (enclave_ret, eid_ret) = this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
         val path = findLibraryAsResource("enclave_trusted_signed")
@@ -256,18 +256,36 @@ object Utils extends Logging {
         (enclave, eid)
       } else {
         val enclave = new SGXEnclave()
-        
         (enclave, eid)
       }
     }
+
+    var loop = true
+    while (loop) {
+      this.synchronized {
+        if (attested) {
+          loop = false
+        }
+      }
+      Thread.sleep(500)
+    }
+
+    (enclave_ret, eid_ret)
   }
 
-  def finishAttestation(numAttested: LongAccumulator) = {
+  def finishAttestation(
+    numAttested: LongAccumulator,
+    msg2s: Map[Long, Array[Byte]]
+  ): (Long, Boolean) = {
     this.synchronized {
-      if (attested == False) {
+      val enclave = new SGXEnclave()
+      val msg2 = msg2s(eid)
+      enclave.FinishAttestation(eid, msg2)
+      if (!attested) {
         numAttested.add(1)
       }
-      attested = True
+      attested = true
+      (eid, attested)
     }
   }
 
@@ -322,7 +340,7 @@ object Utils extends Logging {
     sc.register(numUnattested, "UnattestedCounter")
     sc.register(numAttested, "AttestedCounter")
     val thread = new Thread {
-      override def run {
+      override def run : Unit = {
         RA.run(sc)
       }
     }
@@ -750,7 +768,6 @@ object Utils extends Logging {
   def encryptScalar(value: Any, dataType: DataType): String = {
     // First serialize the scalar value
     var builder = new FlatBufferBuilder
-    var rowOffsets = ArrayBuilder.make[Int]
 
     val v = dataType match {
       case StringType => UTF8String.fromString(value.asInstanceOf[String])
@@ -825,9 +842,10 @@ object Utils extends Logging {
       val plaintext = builder.sizedByteArray()
 
       // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
+      val (numUnattested, numAttested) = Utils.getAttestationCounters()
       val ciphertext =
         if (useEnclave) {
-          val (enclave, eid) = initEnclave()
+          val (enclave, eid) = initEnclave(numUnattested)
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)
@@ -1809,8 +1827,6 @@ object Utils extends Logging {
 
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
-
-        val sumDataType = vs.dataType
 
         val (updateExprs, evaluateExprs) = e.mode match {
           case Partial => {

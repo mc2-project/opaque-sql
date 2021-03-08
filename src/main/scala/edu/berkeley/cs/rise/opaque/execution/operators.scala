@@ -337,7 +337,7 @@ case class EncryptedSortMergeJoinExec(
       val (numUnattested, numAttested) = Utils.getAttestationCounters()
 
       childRDD => childRDD.map { block =>
-        val (enclave, eid) = Utils.initEnclave()
+        val (enclave, eid) = Utils.initEnclave(numUnattested)
         Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
       }
     }

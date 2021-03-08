@@ -28,6 +28,10 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
   def initRA(sc: SparkContext): Unit = {
 
+    var numExecutors = 1
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+    }
     val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
@@ -40,24 +44,19 @@ object RA extends Logging {
     // Runs on executors
     val msg1s = rdd.mapPartitions { (_) =>
       val (enclave, eid) = Utils.initEnclave(numUnattested)
-      val msg1 = None if Utils.attested else enclave.GenerateReport(eid)
+      val msg1 = if (Utils.attested) None else enclave.GenerateReport(eid)
       Iterator((eid, msg1))
     }.collect.toMap
 
     // Runs on driver
-    val msg2s = msg1s.map{
-      case (eid, Some(msg1)) => (eid, sp.ProcessEnclaveReport(msg1))
+    val msg2s = msg1s.collect{
+      case (eid, Some(msg1: Array[Byte])) => (eid, sp.ProcessEnclaveReport(msg1))
     }
 
     // Runs on executors
     val attestationResults = rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.initEnclave(numUnattested)
-      if (!Utils.attested) {
-        val msg2 = msg2s(eid)
-        enclave.FinishAttestation(eid, msg2)
-        Utils.finishAttestation(numAttested)
-        Iterator((eid, true))
-      }
+      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
+      Iterator((eid, true))
     }.collect.toMap
 
     for ((_, ret) <- attestationResults) {
@@ -67,7 +66,7 @@ object RA extends Logging {
   }
 
   def run(sc: SparkContext): Unit = {
-    while (True) {
+    while (true) {
       // A loop that repeatedly tries to call initRA if new enclaves are added
       if (Utils.numUnattested.value != Utils.numAttested.value) {
         initRA(sc)

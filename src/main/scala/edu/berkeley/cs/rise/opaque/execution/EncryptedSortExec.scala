@@ -62,6 +62,7 @@ object EncryptedSortExec {
     Utils.ensureCached(childRDD)
     time("force child of sampleAndPartition") { childRDD.count }
 
+    val (numUnattested, numAttested) = Utils.getAttestationCounters()
     val numPartitions = childRDD.partitions.length
     if (numPartitions <= 1) {
       childRDD
@@ -69,7 +70,7 @@ object EncryptedSortExec {
       // Collect a sample of the input rows
       val sampled = time("non-oblivious sort - Sample") {
         Utils.concatEncryptedBlocks(childRDD.map { block =>
-          val (enclave, eid) = Utils.initEnclave()
+          val (enclave, eid) = Utils.initEnclave(numUnattested)
           val sampledBlock = enclave.Sample(eid, block.bytes)
           Block(sampledBlock)
         }.collect)
@@ -79,7 +80,7 @@ object EncryptedSortExec {
         childRDD.context
           .parallelize(Array(sampled.bytes), 1)
           .map { sampledBytes =>
-            val (enclave, eid) = Utils.initEnclave()
+            val (enclave, eid) = Utils.initEnclave(numUnattested)
             enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
           }
           .collect
@@ -89,7 +90,7 @@ object EncryptedSortExec {
       // Shuffle the input to achieve range partitioning and sort locally
       val result = childRDD
         .flatMap { block =>
-          val (enclave, eid) = Utils.initEnclave()
+          val (enclave, eid) = Utils.initEnclave(numUnattested)
           val partitions =
             enclave.PartitionForSort(eid, orderSer, numPartitions, block.bytes, boundaries)
           partitions.zipWithIndex.map { case (partition, i) =>
@@ -106,8 +107,9 @@ object EncryptedSortExec {
 
   def localSort(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
     Utils.ensureCached(childRDD)
+    val (numUnattested, numAttested) = Utils.getAttestationCounters()
     val result = childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
+      val (enclave, eid) = Utils.initEnclave(numUnattested)
       val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)
       Block(sortedRows)
     }
