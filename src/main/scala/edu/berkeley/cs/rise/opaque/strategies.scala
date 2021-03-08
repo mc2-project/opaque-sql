@@ -17,7 +17,11 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import edu.berkeley.cs.rise.opaque.execution._
+import edu.berkeley.cs.rise.opaque.logical._
+
 import org.apache.spark.sql.Strategy
+import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
@@ -38,12 +42,13 @@ import org.apache.spark.sql.catalyst.plans.InnerLike
 import org.apache.spark.sql.catalyst.plans.LeftOuter
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.JoinType
-import org.apache.spark.sql.catalyst.optimizer.{BuildLeft, BuildRight, JoinSelectionHelper}
-import org.apache.spark.sql.execution.SparkPlan
-
-import edu.berkeley.cs.rise.opaque.execution._
-import edu.berkeley.cs.rise.opaque.logical._
 import org.apache.spark.sql.catalyst.plans.LeftExistence
+import org.apache.spark.sql.catalyst.optimizer.{
+  BuildLeft,
+  BuildRight,
+  BuildSide,
+  JoinSelectionHelper
+}
 
 object OpaqueOperators extends Strategy with JoinSelectionHelper {
 
