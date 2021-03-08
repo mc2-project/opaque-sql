@@ -20,7 +20,7 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.SparkSession
 
-trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
+trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
   import spark.implicits._
 
   def numPartitions: Int
@@ -61,16 +61,6 @@ trait JoinSuite extends OpaqueSuiteBase with SQLHelper {
     "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a",
     "SELECT * FROM testData full JOIN testData2 ON (key * a != key + a)"
   )
-  def runSQLQueries() = {
-    for (sqlStr <- queries) {
-      test(sqlStr) {
-        checkAnswer() { sl =>
-          loadTestData(sqlStr, sl)
-          spark.sqlContext.sparkSession.sql(sqlStr)
-        }
-      }
-    }
-  }
 
   test("inner join, one match per row") {
     withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
