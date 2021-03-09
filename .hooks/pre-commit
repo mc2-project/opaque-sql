@@ -39,4 +39,3 @@ then
 fi
 
 echo "Pre-commit hook finished."
-

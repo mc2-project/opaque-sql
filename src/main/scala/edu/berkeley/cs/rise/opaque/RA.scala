@@ -50,10 +50,14 @@ object RA extends Logging {
       .collect
       .toMap
 
+    logInfo("Driver collected msg1s")
+
     // Runs on driver
     val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
       (eid, sp.ProcessEnclaveReport(msg1))
     }
+
+    logInfo("Driver processed msg2s")
 
     // Runs on executors
     val attestationResults = rdd
