@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque.benchmark
+package edu.berkeley.cs.rise.opaque.tpch
 
 import java.io.File
 import scala.io.Source
@@ -24,9 +24,18 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.SQLContext
 
+import edu.berkeley.cs.rise.opaque.benchmark.Benchmark
+import edu.berkeley.cs.rise.opaque.{SecurityLevel, Insecure, Encrypted}
 import edu.berkeley.cs.rise.opaque.Utils
 
 object TPCH {
+
+  // Add query numbers here once they are supported
+  val supportedQueries =
+    Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+
+  // Queries whose results are not defined in a specific order
+  val unorderedQueries = Set(6, 14, 17, 19)
 
   val tableNames =
     Seq("part", "supplier", "lineitem", "partsupp", "orders", "nation", "region", "customer")

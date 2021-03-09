@@ -18,24 +18,26 @@
 package edu.berkeley.cs.rise.opaque.benchmark
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.{Encrypted, Insecure}
+
 import org.apache.spark.sql.SparkSession
 
 /**
  * Convenient runner for benchmarks.
  *
  * To run locally, use
- * `$OPAQUE_HOME/build/sbt 'run edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
+ * `$OPAQUE_HOME/build/sbt 'test:runMain edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
  * Available flags:
  *   --num-partitions: specify the number of partitions the data should be split into.
  *       Default: 2 * number of executors if exists, 4 otherwise
  *   --size: specify the size of the dataset that should be loaded into Spark.
  *       Default: sf_small
+ *   --filesystem-url: optional arguments to specify filesystem master node URL.
+ *       Default: file://
  *   --operations: select the different operations that should be benchmarked.
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
  *       Syntax: --operations "logistic-regression,tpc-h"
- *   --run-local: boolean whether to use HDFS or the local filesystem
- *       Default: HDFS
  * Leave --operations flag blank to run all benchmarks
  *
  * To run on a cluster, use `$SPARK_HOME/bin/spark-submit` with appropriate arguments.
@@ -46,11 +48,10 @@ object Benchmark {
     .builder()
     .appName("Benchmark")
     .getOrCreate()
-  var numPartitions = spark.sparkContext.defaultParallelism
-  var size = "sf_med"
 
-  // Configure your HDFS namenode url here
-  var fileUrl = "hdfs://10.0.3.4:8020"
+  var numPartitions = spark.sparkContext.defaultParallelism
+  var size = "sf_small"
+  var fileUrl = "file://"
 
   def dataDir: String = {
     if (System.getenv("SPARKSGX_DATA_DIR") == null) {
@@ -60,8 +61,6 @@ object Benchmark {
   }
 
   def logisticRegression() = {
-    // TODO: this fails when Spark is ran on a cluster
-    /*
     // Warmup
     LogisticRegression.train(spark, Encrypted, 1000, 1)
     LogisticRegression.train(spark, Encrypted, 1000, 1)
@@ -69,10 +68,10 @@ object Benchmark {
     // Run
     LogisticRegression.train(spark, Insecure, 100000, 1)
     LogisticRegression.train(spark, Encrypted, 100000, 1)
-     */
   }
 
   def runAll() = {
+    println("Running all supported benchmarks.")
     logisticRegression()
     TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
   }
@@ -80,43 +79,38 @@ object Benchmark {
   def main(args: Array[String]): Unit = {
     Utils.initSQLContext(spark.sqlContext)
 
-    if (args.length >= 2 && args(1) == "--help") {
-      println("""Available flags:
+    if (args.length >= 1 && args(0) == "--help") {
+      println("""
+    Available flags:
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
           Default: sf_small
+    --filesystem-url: optional arguments to specify filesystem master node URL.
+          Default: file://
     --operations: select the different operations that should be benchmarked.
           Default: all
           Available operations: logistic-regression, tpc-h
-          Syntax: --operations "logistic-regression,tpc-h"
-          Leave --operations flag blank to run all benchmarks
-    --run-local: boolean whether to use HDFS or the local filesystem
-          Default: HDFS""")
+          Syntax: --operations logistic-regression,tpc-h
+    Leave --operations flag blank to run all benchmarks
+      """)
+      return
     }
 
     var runAll = true
-    args.slice(1, args.length).sliding(2, 2).toList.collect {
+    args.sliding(2, 2).toList.collect {
       case Array("--num-partitions", numPartitions: String) => {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        val supportedSizes = Set("sf_small, sf_med")
-        if (supportedSizes.contains(size)) {
+        if (size == "sf_small" || size == "sf_med") {
           this.size = size
         } else {
-          println(
-            "Given size is not supported: available values are " + supportedSizes.toString()
-          )
+          println(s"Given size is not supported: $size")
         }
       }
-      case Array("--run-local", runLocal: String) => {
-        runLocal match {
-          case "true" => {
-            fileUrl = "file://"
-          }
-          case _ => {}
-        }
+      case Array("--filesystem-url", url: String) => {
+        fileUrl = url
       }
       case Array("--operations", operations: String) => {
         runAll = false

@@ -24,11 +24,13 @@ import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
+import edu.berkeley.cs.rise.opaque.SecurityLevel
+
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
 object LogisticRegression {
 

@@ -18,10 +18,12 @@
 package edu.berkeley.cs.rise.opaque.benchmark
 
 import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.SecurityLevel
+
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
 object PageRank {
   def run(

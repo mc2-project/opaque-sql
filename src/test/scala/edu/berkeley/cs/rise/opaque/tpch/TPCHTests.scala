@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque
+package edu.berkeley.cs.rise.opaque.tpch
 
 import org.apache.spark.sql.SparkSession
-
-import edu.berkeley.cs.rise.opaque.benchmark._
+import edu.berkeley.cs.rise.opaque.OpaqueTestsBase
 
 trait TPCHTests extends OpaqueTestsBase { self =>
 
@@ -27,10 +26,16 @@ trait TPCHTests extends OpaqueTestsBase { self =>
   def tpch = new TPCH(spark.sqlContext, size, "file://")
 
   def runTests() = {
-    for (queryNum <- TPCHBenchmark.supportedQueries) {
+    for (queryNum <- TPCH.supportedQueries) {
       val testStr = s"TPC-H $queryNum"
-      testAgainstSpark(testStr) { securityLevel =>
-        tpch.query(queryNum, securityLevel, numPartitions).collect
+      if (TPCH.unorderedQueries.contains(queryNum)) {
+        testAgainstSpark(testStr) { securityLevel =>
+          tpch.query(queryNum, securityLevel, numPartitions).collect.toSet
+        }
+      } else {
+        testAgainstSpark(testStr) { securityLevel =>
+          tpch.query(queryNum, securityLevel, numPartitions).collect
+        }
       }
     }
   }

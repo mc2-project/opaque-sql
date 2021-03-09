@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque.benchmark
+package edu.berkeley.cs.rise.opaque
 
 import edu.berkeley.cs.rise.opaque.implicits._
 import org.apache.spark.sql.DataFrame

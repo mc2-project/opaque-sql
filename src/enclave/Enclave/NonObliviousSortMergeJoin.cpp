@@ -19,13 +19,11 @@ void test_rows_same_group(FlatbuffersJoinExprEvaluator &join_expr_eval, const tu
   }
 }
 
-void write_output_rows(RowWriter &input,
-                       RowWriter &output,
-                       tuix::JoinType join_type,
+void write_output_rows(RowWriter &input, RowWriter &output, tuix::JoinType join_type,
                        const tuix::Row *foreign_row = nullptr) {
   auto input_buffer = input.output_buffer();
   RowReader input_reader(input_buffer.view());
-          
+
   while (input_reader.has_next()) {
     const tuix::Row *row = input_reader.next();
     if (foreign_row == nullptr) {
@@ -36,10 +34,10 @@ void write_output_rows(RowWriter &input,
       output.append(foreign_row, row, true, false);
     } else {
       throw std::runtime_error(
-        std::string("write_output_rows should not take a foreign row with join type ")
-        + to_string(join_type));
+          std::string("write_output_rows should not take a foreign row with join type ") +
+          to_string(join_type));
     }
-  }  
+  }
 }
 
 /**
@@ -125,7 +123,7 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
       last_foreign_row.set(current);
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        if (join_type == tuix::JoinType_Inner || join_expr_eval.is_outer_join()) {       
+        if (join_type == tuix::JoinType_Inner || join_expr_eval.is_outer_join()) {
           auto primary_group_buffer = primary_group.output_buffer();
           RowReader primary_group_reader(primary_group_buffer.view());
 
@@ -141,7 +139,7 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
               }
             }
           }
-        } 
+        }
         if (join_type != tuix::JoinType_Inner) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();
           RowReader primary_unmatched_rows_reader(primary_unmatched_rows_buffer.view());
@@ -166,18 +164,18 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
   }
 
   switch (join_type) {
-    case tuix::JoinType_LeftSemi:
-      write_output_rows(primary_matched_rows, w, join_type);
-      break;
-    case tuix::JoinType_LeftAnti:
-      write_output_rows(primary_unmatched_rows, w, join_type);
-      break;
-    case tuix::JoinType_LeftOuter:
-    case tuix::JoinType_RightOuter:
-      write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
-      break;
-    default:
-      break;
+  case tuix::JoinType_LeftSemi:
+    write_output_rows(primary_matched_rows, w, join_type);
+    break;
+  case tuix::JoinType_LeftAnti:
+    write_output_rows(primary_unmatched_rows, w, join_type);
+    break;
+  case tuix::JoinType_LeftOuter:
+  case tuix::JoinType_RightOuter:
+    write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());
+    break;
+  default:
+    break;
   }
 
   w.output_buffer(output_rows, output_rows_length);
