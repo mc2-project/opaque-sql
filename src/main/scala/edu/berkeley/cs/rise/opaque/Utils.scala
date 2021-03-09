@@ -245,7 +245,7 @@ object Utils extends Logging {
     }
   }
 
-  final val GCM_IV_LENGTH = 12 
+  final val GCM_IV_LENGTH = 12
   final val GCM_KEY_LENGTH = 16
   final val GCM_TAG_LENGTH = 16
 
@@ -278,19 +278,18 @@ object Utils extends Logging {
   }
 
   var eid = 0L
-  var attested : Boolean = false
-  var acc_registered : Boolean = false
+  var attested: Boolean = false
   // Initialize accumulator variables for tracking the state of attestation
-  val numUnattested : LongAccumulator = new LongAccumulator
-  val numAttested : LongAccumulator = new LongAccumulator
+  var acc_registered: Boolean = false
+  val numUnattested: LongAccumulator = new LongAccumulator
+  val numAttested: LongAccumulator = new LongAccumulator
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
-    sqlContext.experimental.extraStrategies =
-      (Seq(OpaqueOperators) ++
-        sqlContext.experimental.extraStrategies)
+    sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
+      sqlContext.experimental.extraStrategies)
 
     val sc = sqlContext.sparkContext
     if (!acc_registered) {
@@ -299,7 +298,7 @@ object Utils extends Logging {
       acc_registered = true
     }
     val thread = new Thread {
-      override def run : Unit = {
+      override def run: Unit = {
         RA.run(sc)
       }
     }
@@ -333,11 +332,11 @@ object Utils extends Logging {
         throw new OpaqueException("Attestation not yet complete")
       }
     }
- 
+
     (enclave_ret, eid_ret)
   }
 
-  def generateReport() : (Long, Option[Array[Byte]]) = {
+  def generateReport(): (Long, Option[Array[Byte]]) = {
     this.synchronized {
       if (!attested) {
         val enclave = new SGXEnclave()
@@ -351,8 +350,9 @@ object Utils extends Logging {
   }
 
   def finishAttestation(
-    numAttested: LongAccumulator,
-    msg2s: Map[Long, Array[Byte]]): (Long, Boolean) = {
+      numAttested: LongAccumulator,
+      msg2s: Map[Long, Array[Byte]]
+  ): (Long, Boolean) = {
     this.synchronized {
       val enclave = new SGXEnclave()
       val msg2 = msg2s(eid)
