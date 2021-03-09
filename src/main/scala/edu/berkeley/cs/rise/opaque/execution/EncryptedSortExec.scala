@@ -59,9 +59,6 @@ object EncryptedSortExec {
   import Utils.time
 
   def sampleAndPartition(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
-    Utils.ensureCached(childRDD)
-    time("force child of sampleAndPartition") { childRDD.count }
-
     val numPartitions = childRDD.partitions.length
     if (numPartitions <= 1) {
       childRDD
@@ -105,7 +102,6 @@ object EncryptedSortExec {
   }
 
   def localSort(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
-    Utils.ensureCached(childRDD)
     val result = childRDD.map { block =>
       val (enclave, eid) = Utils.initEnclave()
       val sortedRows = enclave.ExternalSort(eid, orderSer, block.bytes)
