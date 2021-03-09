@@ -32,7 +32,7 @@ object RA extends Logging {
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
-    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
@@ -42,33 +42,43 @@ object RA extends Logging {
     val (numUnattested, numAttested) = Utils.getAttestationCounters()
 
     // Runs on executors
-    val msg1s = rdd.mapPartitions { (_) =>
-      val (eid, msg1) = Utils.generateReport()
-      Iterator((eid, msg1))
-    }.collect.toMap
+    val msg1s = rdd
+      .mapPartitions { (_) =>
+        val (eid, msg1) = Utils.generateReport()
+        Iterator((eid, msg1))
+      }
+      .collect
+      .toMap
 
     // Runs on driver
-    val msg2s = msg1s.collect{
-      case (eid, Some(msg1: Array[Byte])) => (eid, sp.ProcessEnclaveReport(msg1))
+    val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
+      (eid, sp.ProcessEnclaveReport(msg1))
     }
 
     // Runs on executors
-    val attestationResults = rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
-      Iterator((eid, true))
-    }.collect.toMap
+    val attestationResults = rdd
+      .mapPartitions { (_) =>
+        val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
+        Iterator((eid, true))
+      }
+      .collect
+      .toMap
 
     for ((_, ret) <- attestationResults) {
       if (!ret)
         throw new OpaqueException("Attestation failed")
     }
+
+    logInfo("Attestation successfully completed")
   }
 
   def run(sc: SparkContext): Unit = {
     while (true) {
       // A loop that repeatedly tries to call initRA if new enclaves are added
       if (Utils.numUnattested.value != Utils.numAttested.value) {
-        logInfo(s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested")
+        logInfo(
+          s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
+        )
         initRA(sc)
       }
       Thread.sleep(10)
