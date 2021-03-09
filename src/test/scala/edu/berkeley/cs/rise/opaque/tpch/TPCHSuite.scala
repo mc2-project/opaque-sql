@@ -45,6 +45,7 @@ trait TPCHSuite extends OpaqueSuiteBase { self =>
     }
   }
 }
+
 class SinglePartitionTPCHSuite extends TPCHSuite {
   override def numPartitions = 1
   override val spark = SparkSession
