@@ -280,6 +280,7 @@ object Utils extends Logging {
   var eid = 0L
   var attested : Boolean = false
   var acc_registered : Boolean = false
+  // Initialize accumulator variables for tracking the state of attestation
   val numUnattested : LongAccumulator = new LongAccumulator
   val numAttested : LongAccumulator = new LongAccumulator
 
@@ -291,9 +292,7 @@ object Utils extends Logging {
       (Seq(OpaqueOperators) ++
         sqlContext.experimental.extraStrategies)
 
-    // Initialize accumulator variable for attestation
     val sc = sqlContext.sparkContext
-
     if (!acc_registered) {
       sc.register(numUnattested)
       sc.register(numAttested)
