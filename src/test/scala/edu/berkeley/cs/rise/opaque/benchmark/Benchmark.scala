@@ -29,7 +29,7 @@ import org.apache.spark.sql.SparkSession
  * `$OPAQUE_HOME/build/sbt 'test:runMain edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
  * Available flags:
  *   --num-partitions: specify the number of partitions the data should be split into.
- *       Default: 2 * number of executors if exists, 4 otherwise
+ *       Default: spark.default.parallelism
  *   --size: specify the size of the dataset that should be loaded into Spark.
  *       Default: sf_small
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
@@ -103,7 +103,7 @@ object Benchmark {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        if (size == "sf_small" || size == "sf_med") {
+        if (size == "sf_small" || size == "sf_med" || size == "sf_none") {
           this.size = size
         } else {
           println(s"Given size is not supported: $size")

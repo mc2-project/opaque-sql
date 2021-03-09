@@ -716,8 +716,6 @@ object Utils extends Logging {
     }
   }
 
-  val MaxBlockSize = 1000
-
   /**
    * Encrypts/decrypts a given scalar value
    */
@@ -776,12 +774,33 @@ object Utils extends Logging {
    * If `useEnclave` is true, it will attempt to use the local enclave. Otherwise, it will attempt
    * to use the local encryption key, which is intended to be available only on the driver, not the
    * workers.
+   *
+   * If `MaxBlockSize` is too large, there will be an AssertionError:
+   * FlatBuffers: cannot grow buffer beyond 2 gigabytes.
+   * The solution is to decrease `MaxBlockSize` by an order of magnitude and
+   * try again.
    */
+  var MaxBlockSize = 1024
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
       useEnclave: Boolean,
       isDummyRows: Boolean = false
+  ): Block = {
+
+    try { performEncryptInternalRowsFlatbuffers(rows, types, useEnclave, isDummyRows) }
+    catch {
+      case _: AssertionError =>
+        MaxBlockSize >>= 1
+        encryptInternalRowsFlatbuffers(rows, types, useEnclave, isDummyRows)
+    }
+  }
+
+  private def performEncryptInternalRowsFlatbuffers(
+      rows: Seq[InternalRow],
+      types: Seq[DataType],
+      useEnclave: Boolean,
+      isDummyRows: Boolean
   ): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
