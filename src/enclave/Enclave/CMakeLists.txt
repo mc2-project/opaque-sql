@@ -4,6 +4,7 @@ project(OpaqueEnclaveTrusted)
 
 set(SOURCES
   Aggregate.cpp
+  Attestation.cpp
   Crypto.cpp
   Enclave.cpp
   Filter.cpp

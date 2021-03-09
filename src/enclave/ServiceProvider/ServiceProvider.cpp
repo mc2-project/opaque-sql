@@ -262,6 +262,7 @@ std::unique_ptr<oe_shared_key_msg_t> ServiceProvider::process_enclave_report(oe_
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
   
   EVP_PKEY* pkey = buffer_to_public_key((char*)report_msg->public_key, -1);
+
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }

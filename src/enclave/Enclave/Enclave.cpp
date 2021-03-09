@@ -7,6 +7,7 @@
 #include "Random.h"
 
 #include "Aggregate.h"
+#include "Attestation.h"
 #include "Crypto.h"
 #include "Filter.h"
 #include "Join.h"
@@ -14,10 +15,6 @@
 #include "Project.h"
 #include "Sort.h"
 #include "util.h"
-
-// Include ServiceProvider for public key verification and usage
-//#include "../ServiceProvider/ServiceProvider.h"
-//#include <openssl/pem.h>
 
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
@@ -36,6 +33,7 @@
 #include <mbedtls/error.h>
 #include <mbedtls/pk_internal.h>
 
+#include <openenclave/attestation/sgx/evidence.h>
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors originating within
 // these ecalls are signaled by throwing a std::runtime_error, which is caught at the top level of
@@ -401,65 +399,51 @@ void ecall_generate_report(uint8_t **report_msg_data,
 
 //////////////////////////////////// Generate Shared Key Begin //////////////////////////////////////
 
+static Attestation attestation(&g_crypto);
+
 void ecall_get_public_key(uint8_t **report_msg_data,
                            size_t* report_msg_data_size) {
 
   std::cout << "enter ecall_get_public_key" << std::endl;
 
-  // Testing generate report public key
+  oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
+  oe_uuid_t* format_id = &sgx_local_uuid;
 
-  uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
-  size_t public_key_size = sizeof(public_key);
+  uint8_t* format_settings = NULL;
+  size_t format_settings_size = 0;
 
-  ecall_generate_report(report_msg_data, report_msg_data_size);
-
-  oe_report_msg_t *report_msg = (oe_report_msg_t *) report_msg_data;
-  memcpy_s(public_key, public_key_size, report_msg->public_key, OE_PUBLIC_KEY_SIZE);
-
-  // Test encryption and decryption works with report key
-  unsigned char zeroes[SGX_AESGCM_KEY_SIZE] = {0};
-  unsigned char plaintext[SGX_AESGCM_KEY_SIZE];
-  size_t plaintext_size = sizeof(plaintext);
-
-  std::cout << "Before print before encryption" << std::endl;
-  for (size_t i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-   std::cout << zeroes[i];
-  }
-  std::cout << std::endl;
-  std::cout << "After print before encryption" << std::endl;
-
-  unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
-
-  g_crypto.encrypt(public_key,
-                   zeroes,
-                   SGX_AESGCM_KEY_SIZE,
-                   encrypted_sharedkey,
-                   &encrypted_sharedkey_size);
-
-  try {
-    bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, plaintext, &plaintext_size);
-    if (ret) {
-      std::cout << "Decryption test with report key encryption worked successfully" << std::endl;
-    } else {
-      std::cout << "Decryption test with report key encryption failed" << std::endl;
-    }
-  } catch (const std::runtime_error &e) {
-    ocall_throw(e.what());
+  if (!attestation.get_format_settings(
+        format_id,
+        &format_settings,
+        &format_settings_size)) {
+    ocall_throw("Unable to get enclave format settings");
   }
 
-  g_crypto.retrieve_public_key(public_key);
+  uint8_t pem_public_key[512];
+  size_t public_key_size = sizeof(pem_public_key);
+  uint8_t* evidence = nullptr;
+  size_t evidence_size = 0;
 
-  // Print out public key for debugging purposes
-//  for (size_t i = 0; i < public_key_size; i++) {
-//   std::cout << public_key[i];
-//  }
-//  std::cout << std::endl;
+  g_crypto.retrieve_public_key(pem_public_key);
 
-  *report_msg_data_size = public_key_size;
+  if (attestation.generate_attestation_evidence(
+            format_id,
+            format_settings,
+            format_settings_size,
+            pem_public_key,
+            public_key_size,
+            &evidence,
+            &evidence_size) == false) {
+    ocall_throw("Unable to retrieve enclave evidence");
+  }
+
+  // The report msg includes the public key, the size of the evidence, and the evidence itself
+  *report_msg_data_size = public_key_size + sizeof(evidence_size) + evidence_size;
   *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
 
-  memcpy_s(*report_msg_data, *report_msg_data_size, public_key, public_key_size);
+  memcpy_s(*report_msg_data, public_key_size, pem_public_key, public_key_size);
+  memcpy_s(*report_msg_data + public_key_size, sizeof(size_t), &evidence_size, sizeof(evidence_size)); 
+  memcpy_s(*report_msg_data + public_key_size + sizeof(size_t), evidence_size, evidence, evidence_size);
 
   std::cout << "exit ecall_get_public_key" << std::endl;
 }
@@ -488,19 +472,44 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
     uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
     uint8_t *pk_pointer = pk_list;
 
+    size_t evidence_size[1] = {};
+
     unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
     size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
 
     uint8_t *sk_pointer = sk_list;
 
+    oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
+    oe_uuid_t* format_id = &sgx_local_uuid;
+
+    uint8_t* format_settings = NULL;
+    size_t format_settings_size = 0;
+
+    if (!attestation.get_format_settings(
+          format_id,
+          &format_settings,
+          &format_settings_size)) {
+      ocall_throw("Unable to get enclave format settings");
+    }
+
     while (pk_pointer < pk_list + pk_list_size) {
+
+      // Read public key, size of evidence, and evidence
       memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
+      memcpy_s(evidence_size, sizeof(evidence_size), pk_pointer + OE_PUBLIC_KEY_SIZE, sizeof(size_t));
+      uint8_t evidence[evidence_size[0]] = {};
+      memcpy_s(evidence, evidence_size[0], pk_pointer + OE_PUBLIC_KEY_SIZE + sizeof(size_t), evidence_size[0]);
+
+      // Verify the provided public key is valid
+      if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size[0], public_key, sizeof(public_key))) {
+        ocall_throw("Unable to verify attestation evidence");
+      }
 
       // Print out public key for debugging purposes
-//      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
-//        std::cout << public_key[i];
-//      }
-//      std::cout << std::endl;
+      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
+        std::cout << public_key[i];
+      }
+      std::cout << std::endl;
 
       g_crypto.encrypt(public_key,
                        secret_key,
@@ -515,7 +524,7 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
 //      }
 //      std::cout << std::endl;
 
-      pk_pointer += OE_PUBLIC_KEY_SIZE;
+      pk_pointer += OE_PUBLIC_KEY_SIZE + sizeof(size_t) + evidence_size[0];
       sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
     }
   } catch (const std::runtime_error &e) {
@@ -568,3 +577,5 @@ void ecall_finish_shared_key(uint8_t *sk_list,
 
   std::cout << "exit ecall_finish_shared_key" << std::endl;
 }
+
+//////////////////////////////////// Generate Shared Key End //////////////////////////////////////

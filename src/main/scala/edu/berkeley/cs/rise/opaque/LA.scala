@@ -20,9 +20,6 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 
-import edu.berkeley.cs.rise.opaque.execution.SP
-import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
-
 import Array.concat
 
 // Helper to handle enclave "local attestation" and determine shared key
@@ -30,19 +27,18 @@ import Array.concat
 object LA extends Logging {
   def initLA(sc: SparkContext): Unit = {
 
-    // Hard-coded to be 2 for now
-    val rdd = sc.makeRDD(Seq.fill(2) { () })
+    var numExecutors = 1
+    if (!sc.isLocal) {
+      // For now, I am hard-coding this value to 2, because it does not seem like Spark is picking the value up
+      numExecutors = sc.getConf.getInt("spark.executor.instances", 2)
+      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
+    }
 
-    // Test print Utils.
-//    println("LA: " + Utils)
+    val rdd = sc.makeRDD(Seq.fill(numExecutors) { () })
+
     // Obtain public keys
     val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
       val (enclave, eid) = Utils.initEnclave()
-     
-      // Print utils and enclave address to ascertain different enclaves
-//      println("LA: " + Utils)
-//      println("LA: " + eid)
-
       val msg1 = enclave.GetPublicKey(eid) 
       Iterator((eid, msg1))
     }.collect.toMap
@@ -51,33 +47,21 @@ object LA extends Logging {
     var pkArray = Array[Byte]()
     for ((k,v) <- msg1s) {
       pkArray = concat(pkArray, v)
-//      for (byte <- v) print(byte.toChar)
-//      println()
     }
-
-//    val msg2s = msg1s.map{case (eid, msg1) => (eid, pkArray)}
     
     // Send list of public keys to enclaves
     val encryptedResults = rdd.context.parallelize(Array(pkArray), 1).map { publicKeys =>
       val (enclave, eid) = Utils.initEnclave()
-//      println("LA: " + eid)
       enclave.GetListEncrypted(eid, publicKeys)
     }.first()
 
-//    println("Before encrypted results print")
-//    for (byte <- encryptedResults) print(byte.toChar)
-//    println("After encrypted results print")
 
     // Send encrypted secret key to all enclaves
     val msg3s = msg1s.map{case (eid, _) => (eid, encryptedResults)}
-//    msg1s.map{case (eid, _) => println("msg1s keys: " + eid)}
-//    msg3s.map{case (eid, _) => println("msg3s keys: " + eid)}
 
     val setSharedKeyResults = rdd.mapPartitionsWithIndex { (_, _) =>
       val (enclave, eid) = Utils.initEnclave()
-//      println("LA - set shared key: " + eid)
       enclave.FinishSharedKey(eid, msg3s(eid))
-//      println("LA - after set shared key: " + eid)
       Iterator((eid, true))
     }.collect.toMap
 
