@@ -793,6 +793,8 @@ object Utils extends Logging {
       case _: AssertionError =>
         MaxBlockSize >>= 1
         encryptInternalRowsFlatbuffers(rows, types, useEnclave, isDummyRows)
+      case as: Throwable =>
+        throw as
     }
   }
 
