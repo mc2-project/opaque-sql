@@ -8,7 +8,21 @@ rm -rf tpch-dbgen
 git clone https://github.com/electrum/tpch-dbgen
 cd tpch-dbgen
 make -j$(nproc)
+
+# Create ~0.01GB files
 ./dbgen -vf -s 0.01
 mkdir -p $SPARKSGX_DATA_DIR/tpch/sf_small
 chmod u+r *.tbl
-cp *.tbl $SPARKSGX_DATA_DIR/tpch/sf_small/
+cp *.tbl $SPARKSGX_DATA_DIR/tpch/sf_small
+
+# Create ~0.1GB files
+./dbgen -vf -s 0.1
+mkdir -p $SPARKSGX_DATA_DIR/tpch/sf_med
+chmod u+r *.tbl
+cp *.tbl $SPARKSGX_DATA_DIR/tpch/sf_med
+
+# Create ~1GB files
+./dbgen -vf -s 1.0
+mkdir -p $SPARKSGX_DATA_DIR/tpch/sf_none
+chmod u+r *.tbl
+cp *.tbl $SPARKSGX_DATA_DIR/tpch/sf_none
