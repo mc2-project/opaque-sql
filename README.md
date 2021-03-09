@@ -218,12 +218,14 @@ Opaque uses a pre-commit hook to ensure that all commits are formatted to the de
     curl -fLo cs https://git.io/coursier-cli-"$(uname | tr LD ld)"
     chmod +x cs
     ./cs install cs
+    echo "" >> ~/.bashrc
+    echo "export PATH=$PATH:~/.local/share/coursier/bin" >> ~/.bashrc
+    source ~/.bashrc
     rm cs
     cs install scalafmt
-    echo "" >> ~/.bashrc
-    export PATH="$PATH:~/.local/share/coursier/bin"
 
     # Install npm and clang-format
+    sudo apt -y update
     sudo apt -y install npm
     sudo npm install -g clang-format
     ```
