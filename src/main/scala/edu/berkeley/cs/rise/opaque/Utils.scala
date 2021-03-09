@@ -279,6 +279,7 @@ object Utils extends Logging {
 
   var eid = 0L
   var attested : Boolean = false
+  var acc_registered : Boolean = false
   val numUnattested : LongAccumulator = new LongAccumulator
   val numAttested : LongAccumulator = new LongAccumulator
 
@@ -293,9 +294,11 @@ object Utils extends Logging {
     // Initialize accumulator variable for attestation
     val sc = sqlContext.sparkContext
 
-    val r = scala.util.Random
-    sc.register(numUnattested, s"UnattestedCounter_${r.nextInt}")
-    sc.register(numAttested, s"AttestedCounter_${r.nextInt}")
+    if (!acc_registered) {
+      sc.register(numUnattested)
+      sc.register(numAttested)
+      acc_registered = true
+    }
     val thread = new Thread {
       override def run : Unit = {
         RA.run(sc)

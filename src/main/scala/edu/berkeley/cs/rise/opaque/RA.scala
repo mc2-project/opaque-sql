@@ -68,7 +68,7 @@ object RA extends Logging {
     while (true) {
       // A loop that repeatedly tries to call initRA if new enclaves are added
       if (Utils.numUnattested.value != Utils.numAttested.value) {
-        println(s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested")
+        logInfo(s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested")
         initRA(sc)
       }
       Thread.sleep(10)
