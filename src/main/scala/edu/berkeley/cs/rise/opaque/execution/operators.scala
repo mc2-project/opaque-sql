@@ -55,6 +55,8 @@ case class EncryptedLocalTableScanExec(output: Seq[Attribute], plaintextData: Se
     extends LeafExecNode
     with OpaqueOperatorExec {
 
+  override def name = "EncryptedLocalTableScanExec"
+
   private val unsafeRows: Array[InternalRow] = {
     val proj = UnsafeProjection.create(output, output)
     val result: Array[InternalRow] = plaintextData.map(r => proj(r).copy()).toArray
@@ -88,6 +90,8 @@ case class EncryptedLocalTableScanExec(output: Seq[Attribute], plaintextData: Se
 
 case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperatorExec {
 
+  override def name = "EncryptExec"
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
@@ -106,6 +110,8 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
 case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
     extends UnaryExecNode
     with OpaqueOperatorExec {
+
+  override def name = "EncryptedAddDummyRowExec"
 
   // Add a dummy row full of nulls to each partition of child
   override def executeBlocked(): RDD[Block] = {
@@ -127,23 +133,31 @@ case class EncryptedBlockRDDScanExec(output: Seq[Attribute], rdd: RDD[Block])
     extends LeafExecNode
     with OpaqueOperatorExec {
 
+  override def name = "EncryptedBlockRDDScanExec"
+
   override def executeBlocked(): RDD[Block] = rdd
 }
 
 case class Block(bytes: Array[Byte]) extends Serializable
 
 trait OpaqueOperatorExec extends SparkPlan {
+  def name: String
+
   def executeBlocked(): RDD[Block]
 
   /* Used for performance debugging individual operators. */
-  def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
+  def timeOperator[A](childRDD: RDD[A])(f: RDD[A] => RDD[Block]): RDD[Block] = {
     import Utils.time
-    Utils.ensureCached(childRDD)
-    time(desc) {
+    childRDD.count
+    time(name) {
       val result = f(childRDD)
-      Utils.ensureCached(result)
+      result.count
       result
     }
+  }
+
+  def applyLoggingLevel[A](childRDD: RDD[A])(f: RDD[A] => RDD[Block]): RDD[Block] = {
+    if (Utils.getOperatorLoggingLevel()) timeOperator(childRDD)(f) else f(childRDD)
   }
 
   /**
@@ -223,14 +237,18 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
     extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  override def name = "EncryptedProjectExec"
+
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
     val projectListSer = Utils.serializeProjectList(projectList, child.output)
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.Project(eid, projectListSer, block.bytes))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.Project(eid, projectListSer, block.bytes))
+      }
     }
   }
 }
@@ -239,14 +257,18 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
     extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  override def name = "EncryptedFilterExec"
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.Filter(eid, conditionSer, block.bytes))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.Filter(eid, conditionSer, block.bytes))
+      }
     }
   }
 }
@@ -257,6 +279,8 @@ case class EncryptedAggregateExec(
     child: SparkPlan
 ) extends UnaryExecNode
     with OpaqueOperatorExec {
+
+  override def name = "EncryptedAggregateExec"
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggregateExpressions) -- AttributeSet(groupingExpressions)
@@ -279,9 +303,11 @@ case class EncryptedAggregateExec(
       .exists(mode => mode == Partial || mode == PartialMerge)
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, isPartial))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, isPartial))
+      }
     }
   }
 }
@@ -296,6 +322,8 @@ case class EncryptedSortMergeJoinExec(
     child: SparkPlan
 ) extends UnaryExecNode
     with OpaqueOperatorExec {
+
+  override def name = "EncryptedSortMergeJoinExec"
 
   override def output: Seq[Attribute] = {
     joinType match {
@@ -325,9 +353,11 @@ case class EncryptedSortMergeJoinExec(
     )
 
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.NonObliviousSortMergeJoin(eid, joinExprSer, block.bytes))
+      }
     }
   }
 }
@@ -340,6 +370,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     condition: Option[Expression]
 ) extends BinaryExecNode
     with OpaqueOperatorExec {
+
+  override def name = "EncryptedBroadcastNestedLoopJoinExec"
 
   override def output: Seq[Attribute] = {
     joinType match {
@@ -384,9 +416,13 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     val broadcastRDD = broadcast.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     val broadcastBlock = Utils.concatEncryptedBlocks(broadcastRDD.collect)
 
-    streamRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcastBlock.bytes))
+    applyLoggingLevel(streamRDD) { streamRDD =>
+      streamRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(
+          enclave.BroadcastNestedLoopJoin(eid, joinExprSer, block.bytes, broadcastBlock.bytes)
+        )
+      }
     }
   }
 }
@@ -394,7 +430,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
 case class EncryptedUnionExec(left: SparkPlan, right: SparkPlan)
     extends BinaryExecNode
     with OpaqueOperatorExec {
-  import Utils.time
+
+  override def name = "EncryptedUnionExec"
 
   override def output: Seq[Attribute] =
     left.output
@@ -402,10 +439,6 @@ case class EncryptedUnionExec(left: SparkPlan, right: SparkPlan)
   override def executeBlocked(): RDD[Block] = {
     var leftRDD = left.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     var rightRDD = right.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    Utils.ensureCached(leftRDD)
-    time("Force left child of EncryptedUnionExec") { leftRDD.count }
-    Utils.ensureCached(rightRDD)
-    time("Force right child of EncryptedUnionExec") { rightRDD.count }
 
     val num_left_partitions = leftRDD.getNumPartitions
     val num_right_partitions = rightRDD.getNumPartitions
@@ -416,12 +449,11 @@ case class EncryptedUnionExec(left: SparkPlan, right: SparkPlan)
         rightRDD = rightRDD.coalesce(num_left_partitions)
       }
     }
-    val unioned = leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
-      Iterator(Utils.concatEncryptedBlocks(leftBlockIter.toSeq ++ rightBlockIter.toSeq))
+    applyLoggingLevel(leftRDD) { leftRDD =>
+      leftRDD.zipPartitions(rightRDD) { (leftBlockIter, rightBlockIter) =>
+        Iterator(Utils.concatEncryptedBlocks(leftBlockIter.toSeq ++ rightBlockIter.toSeq))
+      }
     }
-    Utils.ensureCached(unioned)
-    time("EncryptedUnionExec") { unioned.count }
-    unioned
   }
 }
 
@@ -429,14 +461,18 @@ case class EncryptedLocalLimitExec(limit: Int, child: SparkPlan)
     extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  override def name = "EncryptedLocalLimitExec"
+
   override def output: Seq[Attribute] =
     child.output
 
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    childRDD.map { block =>
-      val (enclave, eid) = Utils.initEnclave()
-      Block(enclave.LocalLimit(eid, limit, block.bytes))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.map { block =>
+        val (enclave, eid) = Utils.initEnclave()
+        Block(enclave.LocalLimit(eid, limit, block.bytes))
+      }
     }
   }
 }
@@ -444,6 +480,8 @@ case class EncryptedLocalLimitExec(limit: Int, child: SparkPlan)
 case class EncryptedGlobalLimitExec(limit: Int, child: SparkPlan)
     extends UnaryExecNode
     with OpaqueOperatorExec {
+
+  override def name = "EncryptedGlobalLimitExec"
 
   override def output: Seq[Attribute] =
     child.output
@@ -464,10 +502,12 @@ case class EncryptedGlobalLimitExec(limit: Int, child: SparkPlan)
       .collect
       .head
 
-    childRDD.zipWithIndex.map {
-      case (block, i) => {
-        val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
+    applyLoggingLevel(childRDD) { childRDD =>
+      childRDD.zipWithIndex.map {
+        case (block, i) => {
+          val (enclave, eid) = Utils.initEnclave()
+          Block(enclave.LimitReturnRows(eid, i, limitPerPartition, block.bytes))
+        }
       }
     }
   }

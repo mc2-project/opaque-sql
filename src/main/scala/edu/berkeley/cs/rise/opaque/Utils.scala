@@ -118,21 +118,12 @@ import org.apache.spark.sql.catalyst.expressions.PromotePrecision
 import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
 object Utils extends Logging {
-  private val perf: Boolean = System.getenv("SGX_PERF") == "1"
 
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
-    if (perf) {
-      logInfo(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
-    }
+    logInfo(s"$desc took ${(System.nanoTime - start) / 1000000.0}ms to complete.")
     result
-  }
-
-  def logPerf(message: String): Unit = {
-    if (perf) {
-      logInfo(message)
-    }
   }
 
   /**
@@ -174,6 +165,14 @@ object Utils extends Logging {
     "sgx" -> (if (System.getenv("SGX_MODE") == "HW") "hw" else "sim"))
     logInfo(jsonSerialize(attrs))
     result
+  }
+
+  private var logOperators = false
+  def setOperatorLoggingLevel(logOperators: Boolean) = {
+    this.logOperators = logOperators
+  }
+  def getOperatorLoggingLevel() = {
+    this.logOperators
   }
 
   def findLibraryAsResource(libraryName: String): String = {
@@ -780,7 +779,7 @@ object Utils extends Logging {
    * The solution is to decrease `MaxBlockSize` by an order of magnitude and
    * try again.
    */
-  var MaxBlockSize = 1024
+  private var MaxBlockSize = 1024
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
@@ -797,7 +796,6 @@ object Utils extends Logging {
         throw as
     }
   }
-
   private def performEncryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],

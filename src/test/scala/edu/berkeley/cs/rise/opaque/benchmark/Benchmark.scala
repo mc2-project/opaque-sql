@@ -36,7 +36,8 @@ import org.apache.spark.sql.SparkSession
  *       Default: file://
  *   --log-operators: boolean whether or not to log individual physical operators.
  *       Default: false
- *       Note: may reduce performance if set to true.
+ *       Note: may reduce performance if set to true (forces caching of
+ *       intermediate values).
  *   --operations: select the different operations that should be benchmarked.
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
@@ -93,7 +94,8 @@ object Benchmark {
           Default: file://
     --log-operators: boolean whether or not to log individual physical operators.
           Default: false
-          Note: may reduce performance if set to true.
+          Note: may reduce performance if set to true (forces caching of
+            intermediate values).
     --operations: select the different operations that should be benchmarked.
           Default: all
           Available operations: logistic-regression, tpc-h
@@ -117,6 +119,9 @@ object Benchmark {
       }
       case Array("--filesystem-url", url: String) => {
         fileUrl = url
+      }
+      case Array("--log-operators", bool: String) => {
+        Utils.setOperatorLoggingLevel(bool.toBoolean)
       }
       case Array("--operations", operations: String) => {
         val operationsArr = operations.split(",").map(_.trim)
