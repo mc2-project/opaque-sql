@@ -17,7 +17,11 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import edu.berkeley.cs.rise.opaque.execution._
+import edu.berkeley.cs.rise.opaque.logical._
+
 import org.apache.spark.sql.Strategy
+import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
 import org.apache.spark.sql.catalyst.expressions.Ascending
@@ -38,14 +42,15 @@ import org.apache.spark.sql.catalyst.plans.InnerLike
 import org.apache.spark.sql.catalyst.plans.LeftOuter
 import org.apache.spark.sql.catalyst.plans.RightOuter
 import org.apache.spark.sql.catalyst.plans.JoinType
-import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight, BuildSide}
-import org.apache.spark.sql.execution.SparkPlan
-
-import edu.berkeley.cs.rise.opaque.execution._
-import edu.berkeley.cs.rise.opaque.logical._
 import org.apache.spark.sql.catalyst.plans.LeftExistence
+import org.apache.spark.sql.catalyst.optimizer.{
+  BuildLeft,
+  BuildRight,
+  BuildSide,
+  JoinSelectionHelper
+}
 
-object OpaqueOperators extends Strategy {
+object OpaqueOperators extends Strategy with JoinSelectionHelper {
 
   def isEncrypted(plan: LogicalPlan): Boolean = {
     plan.find {
@@ -146,7 +151,7 @@ object OpaqueOperators extends Strategy {
         if (joinType.isInstanceOf[InnerLike] || joinType == FullOuter)
           getSmallerSide(left, right)
         else
-          getBroadcastSideBNLJ(joinType)
+          getBroadcastSideBNLJ((joinType))
 
       val joined = EncryptedBroadcastNestedLoopJoinExec(
         planLater(left),
@@ -301,7 +306,7 @@ object OpaqueOperators extends Strategy {
         }
       }
 
-    case p @ Union(Seq(left, right)) if isEncrypted(p) =>
+    case p @ Union(Seq(left, right), _, _) if isEncrypted(p) =>
       EncryptedUnionExec(planLater(left), planLater(right)) :: Nil
 
     case ReturnAnswer(rootPlan) =>
@@ -381,18 +386,13 @@ object OpaqueOperators extends Strategy {
     (Seq(tag) ++ input, tag.toAttribute)
   }
 
-  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = joinType match {
-    case LeftExistence(_) | LeftOuter => BuildRight
-    case _ => BuildLeft
-  }
-
   private def isLeftPrimary(joinType: JoinType): Boolean = joinType match {
     case RightOuter => false
     case _ => true
   }
 
-  // Everything below is a private method in SparkStrategies.scala
-  private def getSmallerSide(left: LogicalPlan, right: LogicalPlan): BuildSide = {
-    if (right.stats.sizeInBytes <= left.stats.sizeInBytes) BuildRight else BuildLeft
+  private def getBroadcastSideBNLJ(joinType: JoinType): BuildSide = joinType match {
+    case LeftExistence(_) | LeftOuter => BuildRight
+    case _ => BuildLeft
   }
 }

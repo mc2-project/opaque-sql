@@ -955,35 +955,35 @@ object Utils extends Logging {
             tuix.Cast.createCast(builder, childOffset, getColType(dataType))
           )
         // Arithmetic
-        case (Add(left, right), Seq(leftOffset, rightOffset)) =>
+        case (Add(left, right, _), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Add,
             tuix.Add.createAdd(builder, leftOffset, rightOffset)
           )
 
-        case (Subtract(left, right), Seq(leftOffset, rightOffset)) =>
+        case (Subtract(left, right, _), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Subtract,
             tuix.Subtract.createSubtract(builder, leftOffset, rightOffset)
           )
 
-        case (Multiply(left, right), Seq(leftOffset, rightOffset)) =>
+        case (Multiply(left, right, _), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Multiply,
             tuix.Multiply.createMultiply(builder, leftOffset, rightOffset)
           )
 
-        case (Divide(left, right), Seq(leftOffset, rightOffset)) =>
+        case (Divide(left, right, _), Seq(leftOffset, rightOffset)) =>
           tuix.Expr.createExpr(
             builder,
             tuix.ExprUnion.Divide,
             tuix.Divide.createDivide(builder, leftOffset, rightOffset)
           )
 
-        case (UnaryMinus(child), Seq(childOffset)) =>
+        case (UnaryMinus(child, _), Seq(childOffset)) =>
           // Implement UnaryMinus(child) as Subtract(Literal(0), child)
           val zeroOffset =
             flatbuffersSerializeExpression(builder, Cast(Literal(0), child.dataType), input)
@@ -1250,7 +1250,7 @@ object Utils extends Logging {
         case (KnownFloatingPointNormalized(NormalizeNaNAndZero(child)), Seq(childOffset)) =>
           flatbuffersSerializeExpression(builder, NormalizeNaNAndZero(child), input)
 
-        case (ScalarSubquery(SubqueryExec(name, child), exprId), Seq()) =>
+        case (ScalarSubquery(SubqueryExec(name, child, _), exprId), Seq()) =>
           val output = child.output(0)
           val dataType = output match {
             case AttributeReference(name, dataType, _, _) => dataType
