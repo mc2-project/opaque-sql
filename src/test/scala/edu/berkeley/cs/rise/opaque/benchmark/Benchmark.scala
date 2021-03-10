@@ -34,6 +34,9 @@ import org.apache.spark.sql.SparkSession
  *       Default: sf_small
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
  *       Default: file://
+ *   --log-operators: boolean whether or not to log individual physical operators.
+ *       Default: false
+ *       Note: may reduce performance if set to true.
  *   --operations: select the different operations that should be benchmarked.
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
@@ -88,6 +91,9 @@ object Benchmark {
           Default: sf_small
     --filesystem-url: optional arguments to specify filesystem master node URL.
           Default: file://
+    --log-operators: boolean whether or not to log individual physical operators.
+          Default: false
+          Note: may reduce performance if set to true.
     --operations: select the different operations that should be benchmarked.
           Default: all
           Available operations: logistic-regression, tpc-h
@@ -97,7 +103,7 @@ object Benchmark {
       return
     }
 
-    var runAll = true
+    var benchmarks = Seq[() => Any]()
     args.sliding(2, 2).toList.collect {
       case Array("--num-partitions", numPartitions: String) => {
         this.numPartitions = numPartitions.toInt
@@ -113,22 +119,25 @@ object Benchmark {
         fileUrl = url
       }
       case Array("--operations", operations: String) => {
-        runAll = false
         val operationsArr = operations.split(",").map(_.trim)
         for (operation <- operationsArr) {
           operation match {
             case "logistic-regression" => {
-              logisticRegression()
+              benchmarks = benchmarks :+ { () => logisticRegression() }
             }
             case "tpc-h" => {
-              TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
+              benchmarks = benchmarks :+ { () =>
+                TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
+              }
             }
           }
         }
       }
     }
-    if (runAll) {
+    if (benchmarks.isEmpty) {
       this.runAll();
+    } else {
+      benchmarks.foreach(f => f())
     }
     spark.stop()
   }

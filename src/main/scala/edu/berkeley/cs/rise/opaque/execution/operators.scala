@@ -135,14 +135,13 @@ case class Block(bytes: Array[Byte]) extends Serializable
 trait OpaqueOperatorExec extends SparkPlan {
   def executeBlocked(): RDD[Block]
 
+  /* Used for performance debugging individual operators. */
   def timeOperator[A](childRDD: RDD[A], desc: String)(f: RDD[A] => RDD[Block]): RDD[Block] = {
     import Utils.time
     Utils.ensureCached(childRDD)
-    time(s"Force child of $desc") { childRDD.count }
     time(desc) {
       val result = f(childRDD)
       Utils.ensureCached(result)
-      result.count
       result
     }
   }
