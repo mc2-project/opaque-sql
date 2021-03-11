@@ -98,7 +98,7 @@ object RA extends Logging {
       }.collect
 
       if (Utils.numUnattested.value != Utils.numAttested.value) {
-        println(
+        logInfo(
           s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
         )
         initRA(sc)
