@@ -297,16 +297,18 @@ object Utils extends Logging {
       sc.register(numAttested)
       acc_registered = true
     }
+
+    RA.wait(sc)
+    RA.run(sc)
+
     val thread = new Thread {
       override def run: Unit = {
-        RA.run(sc)
+        while (true) {
+          RA.run(sc)
+        }
       }
     }
     thread.start
-  }
-
-  def getAttestationCounters(): (LongAccumulator, LongAccumulator) = {
-    (numUnattested, numAttested)
   }
 
   def startEnclave(numUnattestedAcc: LongAccumulator) : Long = {
@@ -323,12 +325,11 @@ object Utils extends Logging {
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
-
     // This following exception relies on the Spark fault tolerance and its retry mechanism
     // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure
     this.synchronized {
       if (!attested) {
-        Thread.sleep(500)
+        Thread.sleep(200)
         throw new OpaqueException("Attestation not yet complete")
       } else {
         val enclave = new SGXEnclave()

@@ -26,6 +26,9 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 // that have not been attested yet
 
 object RA extends Logging {
+
+  var numExecutors : Int = 1
+
   def initRA(sc: SparkContext): Unit = {
 
     var numExecutors = 1
@@ -39,8 +42,7 @@ object RA extends Logging {
 
     sp.Init(Utils.sharedKey, intelCert)
 
-    val (numUnattested, numAttested) = Utils.getAttestationCounters()
-
+    val numAttested = Utils.numAttested
     // Runs on executors
     val msg1s = rdd
       .mapPartitions { (_) =>
@@ -76,34 +78,35 @@ object RA extends Logging {
     logInfo("Attestation successfully completed")
   }
 
-  def run(sc: SparkContext): Unit = {
-    var numExecutors = 1
+  def wait(sc: SparkContext): Unit = {
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
       while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
     }
+    println(s"All executors have started, numExecutors is ${numExecutors}")
+  }
 
-    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
+  // This function is executed in a loop that repeatedly tries to
+  // call initRA if new enclaves are added
+  // Periodically probe the workers using `startEnclave`
+  def run(sc: SparkContext): Unit = {
+    // Proactively initialize enclaves
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+    val numUnattestedAcc = Utils.numUnattested
+    val eids = rdd.mapPartitions{ (_) =>
+      val eid = Utils.startEnclave(numUnattestedAcc)
+      Iterator(eid)
+    }.collect
 
-    while (true) {
-      // A loop that repeatedly tries to call initRA if new enclaves are added
-      // Periodically probe the workers using `startEnclave`
-
-      // Proactively initialize enclaves
-      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-      val numUnattestedAcc = Utils.numUnattested
-      val eids = rdd.mapPartitions{ (_) =>
-        val eid = Utils.startEnclave(numUnattestedAcc)
-        Iterator(eid)
-      }.collect
-
-      if (Utils.numUnattested.value != Utils.numAttested.value) {
-        logInfo(
-          s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
-        )
-        initRA(sc)
-      }
-      Thread.sleep(50)
+    if (Utils.numUnattested.value != Utils.numAttested.value) {
+      println(
+        s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
+      )
+      initRA(sc)
     }
+    println(
+      s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
+    )
+    Thread.sleep(100)
   }
 }

@@ -1306,7 +1306,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession
     .builder()
-    .master("local[1, 10]")
+    .master("local[1, 20]")
     .appName("OpaqueOperatorSinglePartitionSuite")
     .config("spark.sql.shuffle.partitions", 1)
     .getOrCreate()
@@ -1317,7 +1317,7 @@ class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
 class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
   override val spark = SparkSession
     .builder()
-    .master("local[1, 10]")
+    .master("local[1, 20]")
     .appName("OpaqueOperatorMultiplePartitionSuite")
     .config("spark.sql.shuffle.partitions", 3)
     .getOrCreate()
