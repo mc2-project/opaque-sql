@@ -9,14 +9,14 @@ trait OpaqueTolerance {
   implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
   implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
 
-  def equalityToArrayEquality[A : Equality](): Equality[Array[A]] = {
+  def equalityToArrayEquality[A: Equality](): Equality[Array[A]] = {
     new Equality[Array[A]] {
       def areEqual(a: Array[A], b: Any): Boolean = {
         b match {
           case b: Array[_] =>
             (a.length == b.length
-              && a.zip(b).forall {
-                case (x, y) => implicitly[Equality[A]].areEqual(x, y)
+              && a.zip(b).forall { case (x, y) =>
+                implicitly[Equality[A]].areEqual(x, y)
               })
           case _ => false
         }

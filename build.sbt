@@ -133,7 +133,22 @@ watchSources ++=
 
 val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
-test in Test := { (test in Test).dependsOn(synthTestDataTask).value }
+/*
+ * local-cluster[*,*,*] in our tests requires a packaged .jar file to run correctly.
+ * See https://stackoverflow.com/questions/28186607/java-lang-classcastexception-using-lambda-expressions-in-spark-job-on-remote-ser
+ * The following code creates dependencies for test and testOnly to ensure that the given .jar is always created by
+ * build/sbt package before running any tests. Note that .class files are still only compiled ONCE for both package and tests.
+ */
+test in Test := {
+  (synthTestDataTask).value
+  (Keys.`package` in Compile).value
+  (test in Test).value
+}
+(Keys.`testOnly` in Test) := {
+  (synthTestDataTask).value
+  (Keys.`package` in Compile).value
+  (Keys.`testOnly` in Test).evaluated
+}
 
 val sgxGdbTask =
   TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
