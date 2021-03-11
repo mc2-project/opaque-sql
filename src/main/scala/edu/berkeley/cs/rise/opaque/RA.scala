@@ -83,7 +83,7 @@ object RA extends Logging {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
       while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
     }
-    println(s"All executors have started, numExecutors is ${numExecutors}")
+    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
   }
 
   // This function is executed in a loop that repeatedly tries to
@@ -99,14 +99,11 @@ object RA extends Logging {
     }.collect
 
     if (Utils.numUnattested.value != Utils.numAttested.value) {
-      println(
+      logInfo(
         s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
       )
       initRA(sc)
     }
-    println(
-      s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
-    )
     Thread.sleep(100)
   }
 }
