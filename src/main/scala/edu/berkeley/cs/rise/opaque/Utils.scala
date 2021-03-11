@@ -309,32 +309,34 @@ object Utils extends Logging {
     (numUnattested, numAttested)
   }
 
-  def initEnclave(numUnattested: LongAccumulator): (SGXEnclave, Long) = {
-    val (enclave_ret, eid_ret) = this.synchronized {
+  def startEnclave(numUnattestedAcc: LongAccumulator) : Long = {
+    this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
         val path = findLibraryAsResource("enclave_trusted_signed")
         eid = enclave.StartEnclave(path)
-        numUnattested.add(1)
+        numUnattestedAcc.add(1)
         logInfo("Starting an enclave")
-        (enclave, eid)
+      }
+    }
+    eid
+  }
+
+  def initEnclave(): (SGXEnclave, Long) = {
+
+    // This following exception relies on the Spark fault tolerance and its retry mechanism
+    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure
+    this.synchronized {
+      if (!attested) {
+        Thread.sleep(500)
+        throw new OpaqueException("Attestation not yet complete")
       } else {
         val enclave = new SGXEnclave()
         (enclave, eid)
       }
     }
 
-    // This following exception relies on the Spark fault tolerance and its retry mechanism
-    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure
-    this.synchronized {
-      if (!attested) {
-        Thread.sleep(200)
-        throw new OpaqueException("Attestation not yet complete")
-      }
-    }
-
-    (enclave_ret, eid_ret)
-  }
+  }  
 
   def generateReport(): (Long, Option[Array[Byte]]) = {
     this.synchronized {
@@ -857,10 +859,9 @@ object Utils extends Logging {
       val plaintext = builder.sizedByteArray()
 
       // 2. Encrypt the row data and put it into a tuix.EncryptedBlock
-      val (numUnattested, numAttested) = Utils.getAttestationCounters()
       val ciphertext =
         if (useEnclave) {
-          val (enclave, eid) = initEnclave(numUnattested)
+          val (enclave, eid) = initEnclave()
           enclave.Encrypt(eid, plaintext)
         } else {
           encrypt(plaintext)

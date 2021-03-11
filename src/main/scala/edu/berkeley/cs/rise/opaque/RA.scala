@@ -77,15 +77,33 @@ object RA extends Logging {
   }
 
   def run(sc: SparkContext): Unit = {
+    var numExecutors = 1
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
+    }
+
+    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
+
     while (true) {
       // A loop that repeatedly tries to call initRA if new enclaves are added
+      // Periodically probe the workers using `startEnclave`
+
+      // Proactively initialize enclaves
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      val numUnattestedAcc = Utils.numUnattested
+      val eids = rdd.mapPartitions{ (_) =>
+        val eid = Utils.startEnclave(numUnattestedAcc)
+        Iterator(eid)
+      }.collect
+
       if (Utils.numUnattested.value != Utils.numAttested.value) {
-        logInfo(
+        println(
           s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
         )
         initRA(sc)
       }
-      Thread.sleep(10)
+      Thread.sleep(50)
     }
   }
 }
