@@ -3,13 +3,16 @@
 
 #include <stdexcept>
 #include <string.h>
+#include <iostream>
+#include <fstream>
 
 #include "Attestation.h"
+//#include <enclave_pubkey.h>
 
 #include <openenclave/attestation/attester.h>
 #include <openenclave/attestation/custom_claims.h>
 #include <openenclave/attestation/verifier.h>
-#include <openenclave/bits/report.h>
+#include <openenclave/attestation/sgx/report.h>
 
 Attestation::Attestation(Crypto* crypto)
 {
@@ -92,7 +95,6 @@ bool Attestation::generate_attestation_evidence(
     custom_claims[1].value = hash;
     custom_claims[1].value_size = sizeof(hash);
 
-//    ocall_throw("oe_serialize_custom_claims");
     if (oe_serialize_custom_claims(
             custom_claims,
             2,
@@ -102,8 +104,6 @@ bool Attestation::generate_attestation_evidence(
         throw std::runtime_error("oe_serialize_custom_claims failed.");
         goto exit;
     }
-//    ocall_throw(
-//        "serialized custom claims buffer size: %lu", custom_claims_buffer_size);
 
     // Generate evidence based on the format selected by the attester.
     result = oe_get_evidence(
@@ -119,12 +119,11 @@ bool Attestation::generate_attestation_evidence(
         0);
     if (result != OE_OK)
     {
-//        throw std::runtime_error("oe_get_evidence failed.(%s)", oe_result_str(result));
+        throw std::runtime_error("oe_get_evidence failed.(%s)");
         goto exit;
     }
 
     ret = true;
-//    ocall_throw("generate_attestation_evidence succeeded.");
 exit:
     return ret;
 }
@@ -176,6 +175,46 @@ bool Attestation::attest_attestation_evidence(
     oe_claim_t* custom_claims = nullptr;
     size_t custom_claims_length = 0;
 
+    // Read in the public key as a string
+
+//    uint8_t m_enclave_signer_id[OE_SIGNER_ID_SIZE];
+//    size_t signer_size = sizeof(m_enclave_signer_id);
+//
+
+    std::cout << "Attestation.cpp - before read environment variable" << std::endl;
+    std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
+    public_key_file.append("/public_key.pub");
+    std::cout << "Attestation.cpp - after read environment variable" << std::endl;
+
+    std::cout << "Attestation.cpp - before create file stream" << std::endl;
+    std::ifstream t(public_key_file.c_str());
+    std::string public_key;
+    std::cout << "Attestation.cpp - after create file stream" << std::endl;
+
+    std::cout << "Attestation.cpp - before read from file" << std::endl;
+    t.seekg(0, std::ios::end);
+    size_t public_key_size = t.tellg();
+    public_key.reserve(public_key_size + 1);
+    t.seekg(0, std::ios::beg);
+    std::cout << "Attestation.cpp - after read from file" << std::endl;
+
+    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
+    public_key.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+    public_key.replace(public_key_size, 1, "\0");
+    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
+
+    std::cout << "Attestation.cpp - public key: " + public_key << std::endl;
+
+//    if (oe_sgx_get_signer_id_from_public_key(
+//            public_key.c_str(),
+//            public_key.size(),
+//            m_enclave_signer_id,
+//            &signer_size) != OE_OK)
+//    {
+//        throw std::runtime_error("oe_sgx_get_signer_id_from_public_key failed\n");
+//        return false;
+//    }
+
     // While attesting, the evidence being attested must not be tampered
     // with. Ensure that it has been copied over to the enclave.
     if (!oe_is_within_enclave(evidence, evidence_size))
@@ -198,56 +237,35 @@ bool Attestation::attest_attestation_evidence(
         &claims_length);
     if (result != OE_OK)
     {
-//        throw std::runtime_error(
-//            "oe_verify_evidence failed (%s).\n", oe_result_str(result));
+        throw std::runtime_error("oe_verify_evidence failed (%s).\n");
         goto exit;
     }
-
-//    ocall_throw("oe_verify_evidence succeeded");
 
     // 2) validate the enclave identity's signer_id is the hash of the public
     // signing key that was used to sign an enclave. Check that the enclave was
     // signed by an trusted entity.
 
-//    // TODO: Read signer public key from file. Make sure that enclave can read file
-//    uint8_t* m_enclave_signer_id = nullptr;
-//
-//    // Validate the signer id.
+    // Validate the signer id.
 //    if ((claim = _find_claim(claims, claims_length, OE_CLAIM_SIGNER_ID)) ==
 //        nullptr)
 //    {
-//        ocall_throw("Could not find claim.");
+//        throw std::runtime_error("Could not find claim.");
 //        goto exit;
 //    };
 //
 //    if (claim->value_size != OE_SIGNER_ID_SIZE)
 //    {
-//        ocall_throw("signer_id size(%lu) checking failed", claim->value_size);
+//        throw std::runtime_error("signer_id size checking failed");
 //        goto exit;
 //    }
 //
 //    if (memcmp(claim->value, m_enclave_signer_id, OE_SIGNER_ID_SIZE) != 0)
 //    {
-//        ocall_throw("signer_id checking failed");
-//
-//        for (int j = 0; j < OE_SIGNER_ID_SIZE; j++)
-//        {
-//            ocall_throw(
-//                "m_enclave_signer_id[%d]=0x%0x",
-//                j,
-//                (uint8_t)m_enclave_signer_id[j]);
-//        }
-//
-//        ocall_throw("\n");
-//
-//        for (int j = 0; j < OE_SIGNER_ID_SIZE; j++)
-//        {
-//            ocall_throw("signer_id[%d]=0x%0x", j, (uint8_t)claim->value[j]);
-//        }
+//        throw std::runtime_error("signer_id checking failed");
 //        goto exit;
 //    }
-
-    // Check the enclave's product id.
+//
+//    // Check the enclave's product id.
     if ((claim = _find_claim(claims, claims_length, OE_CLAIM_PRODUCT_ID)) ==
         nullptr)
     {
@@ -257,14 +275,14 @@ bool Attestation::attest_attestation_evidence(
 
     if (claim->value_size != OE_PRODUCT_ID_SIZE)
     {
-//        throw std::runtime_error(
-//            "product_id size(%lu) checking failed", claim->value_size);
+        throw std::runtime_error(
+            "product_id size checking failed");
         goto exit;
     }
 
     if (*(claim->value) != 1)
     {
-//        throw std::runtime_error("product_id(%u) checking failed", *(claim->value));
+        throw std::runtime_error("product_id checking failed");
         goto exit;
     }
 
@@ -278,14 +296,14 @@ bool Attestation::attest_attestation_evidence(
 
     if (claim->value_size != sizeof(uint32_t))
     {
-//        throw std::runtime_error(
-//            "security_version size(%lu) checking failed", claim->value_size);
+        throw std::runtime_error(
+            "security_version size checking failed");
         goto exit;
     }
 
     if (*(claim->value) < 1)
     {
-//        throw std::runtime_error("security_version(%u) checking failed", *(claim->value));
+        throw std::runtime_error("security_version checking failed");
         goto exit;
     }
 
@@ -305,7 +323,6 @@ bool Attestation::attest_attestation_evidence(
     }
 
     // deserialize the custom claims buffer
-//    ocall_throw("oe_deserialize_custom_claims");
     if (oe_deserialize_custom_claims(
             claim->value,
             claim->value_size,
@@ -316,23 +333,14 @@ bool Attestation::attest_attestation_evidence(
         goto exit;
     }
 
-//    ocall_throw(
-//        "custom claim 1(%s): %s",
-//        custom_claims[0].name,
-//        custom_claims[0].value);
-
-//    ocall_throw("custom claim 2(%s) hash check:", custom_claims[1].name);
-
     if (custom_claims[1].value_size != sizeof(hash) ||
         memcmp(custom_claims[1].value, hash, sizeof(hash)) != 0)
     {
         throw std::runtime_error("hash mismatch");
         goto exit;
     }
-//    ocall_throw("hash match");
 
     ret = true;
-//    ocall_throw("attestation succeeded");
 exit:
     // Shut down attester/verifier and free claims.
     oe_attester_shutdown();

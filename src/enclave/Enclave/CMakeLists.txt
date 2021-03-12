@@ -30,25 +30,25 @@ add_custom_command(
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
+# new key-gen attestation begin
+
+# Generate header with signer public key
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h
+#  COMMAND ${CMAKE_SOURCE_DIR}/gen_pubkey_header.sh enclave_pubkey.h $ENV{PUBLIC_KEY_PATH}
+  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/gen_pubkey_header.sh enclave_pubkey.h $ENV{PUBLIC_KEY_PATH}
+)
+
+# new key-gen attestation end
+
+add_executable(Enclave Attestation.cpp
+                         ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
-
-# start new
-
-#link_directories("$ENV{OE_SDK_PATH}/lib/openenclave/enclave")
-#include_directories("$ENV{OE_SDK_PATH}/include")
-#include_directories("$ENV{OE_SDK_PATH}/include/openenclave/3rdparty")
-#
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
-#set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
-#
-#find_library(CRYPTO_LIB crypto)
-#find_library(SSL_LIB ssl)
-
-# end new
 
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
 set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
@@ -64,7 +64,6 @@ target_include_directories(enclave_trusted PRIVATE ${CMAKE_CURRENT_BINARY_DIR} $
 
 link_directories(${OE_LIBDIR} ${OE_LIBDIR}/openenclave/enclave)
 target_link_libraries(enclave_trusted
-#                      "${CRYPTO_LIB}" "${SSL_LIB}" mbedcrypto mbedtls openenclave::oehost openenclave::oehostverify
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}
                       openenclave::oelibc
@@ -72,7 +71,7 @@ target_link_libraries(enclave_trusted
                       openenclave::oecore)
 
 add_custom_command(
-  COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 
+  COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH}
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed)
 
