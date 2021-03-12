@@ -1,0 +1,159 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Usage &#8212; Opaque SQL 0.3 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Installation" href="../install/install.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](<a class="reference external" href="https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz">https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz</a>) (<code class="docutils literal"><span class="pre">wget</span> <span class="pre">http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz</span></code>) is already installed:</p>
+<p>* Opaque needs Spark’s <code class="docutils literal"><span class="pre">'spark.executor.instances'</span></code> property to be set. This can be done in a custom config file, the default config file found at <code class="docutils literal"><span class="pre">/opt/spark/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal"><span class="pre">spark-submit</span></code> or <code class="docutils literal"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal"><span class="pre">--conf</span> <span class="pre">'spark.executor.instances=&lt;value&gt;</span></code>.</p>
+<ol class="arabic">
+<li><p class="first">Package Opaque into a JAR:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
+build/sbt package
+</pre></div>
+</div>
+</li>
+<li><p class="first">Launch the Spark shell with Opaque:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="si">${</span><span class="nv">SPARK_HOME</span><span class="si">}</span>/bin/spark-shell --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
+</pre></div>
+</div>
+<p>Alternatively, to run Opaque queries locally for development rather than on a cluster:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
+<span class="nv">JVM_OPTS</span><span class="o">=</span><span class="s2">&quot;-Xmx4G&quot;</span> build/sbt console
+</pre></div>
+</div>
+</li>
+<li><p class="first">Inside the Spark shell, import Opaque’s DataFrame methods and install Opaque’s query planner rules:</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">edu.berkeley.cs.rise.opaque.implicits._</span>
+<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initSQLContext</span><span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Create an encrypted DataFrame:</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">data</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="s">&quot;foo&quot;</span><span class="o">,</span> <span class="mi">4</span><span class="o">),</span> <span class="o">(</span><span class="s">&quot;bar&quot;</span><span class="o">,</span> <span class="mi">1</span><span class="o">),</span> <span class="o">(</span><span class="s">&quot;baz&quot;</span><span class="o">,</span> <span class="mi">5</span><span class="o">))</span>
+<span class="k">val</span> <span class="n">df</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="o">(</span><span class="n">data</span><span class="o">).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&quot;word&quot;</span><span class="o">,</span> <span class="s">&quot;count&quot;</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">encrypted</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Query the DataFrames and explain the query plan to see the secure operators:</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">&quot;count&quot;</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">)).</span><span class="n">explain</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+<span class="c1">// [...]</span>
+<span class="c1">// == Optimized Logical Plan ==</span>
+<span class="c1">// EncryptedFilter (count#6 &gt; 3)</span>
+<span class="c1">// +- EncryptedLocalRelation [word#5, count#6]</span>
+<span class="c1">// [...]</span>
+
+<span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">&quot;count&quot;</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">)).</span><span class="n">show</span>
+<span class="c1">// +----+-----+</span>
+<span class="c1">// |word|count|</span>
+<span class="c1">// +----+-----+</span>
+<span class="c1">// | foo|    4|</span>
+<span class="c1">// | baz|    5|</span>
+<span class="c1">// +----+-----+</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Save and load an encrypted DataFrame:</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&quot;edu.berkeley.cs.rise.opaque.EncryptedSource&quot;</span><span class="o">).</span><span class="n">save</span><span class="o">(</span><span class="s">&quot;dfEncrypted&quot;</span><span class="o">)</span>
+<span class="c1">// The file dfEncrypted/part-00000 now contains encrypted data</span>
+
+<span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
+<span class="k">val</span> <span class="n">df2</span> <span class="k">=</span> <span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&quot;edu.berkeley.cs.rise.opaque.EncryptedSource&quot;</span><span class="o">)</span>
+<span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="nc">StructType</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;word&quot;</span><span class="o">,</span> <span class="nc">StringType</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;count&quot;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))))</span>
+<span class="o">.</span><span class="n">load</span><span class="o">(</span><span class="s">&quot;dfEncrypted&quot;</span><span class="o">))</span>
+<span class="n">df2</span><span class="o">.</span><span class="n">show</span>
+<span class="c1">// +----+-----+</span>
+<span class="c1">// |word|count|</span>
+<span class="c1">// +----+-----+</span>
+<span class="c1">// | foo|    4|</span>
+<span class="c1">// | bar|    1|</span>
+<span class="c1">// | baz|    5|</span>
+<span class="c1">// +----+-----+</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../install/install.html" title="previous chapter">Installation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Octavian Sima, Wenting Zheng.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="../_sources/usage/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
