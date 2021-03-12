@@ -29,6 +29,7 @@ conf/*.xml
 conf/slaves
 docs/_site
 docs/api
+docs/build
 target/
 reports/
 .project
