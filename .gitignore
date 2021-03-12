@@ -93,6 +93,7 @@ hs_err_pid*.log
 
 # For CMake
 Makefile
+!docs/Makefile
 CMakeCache.txt
 cmake_install.cmake
 CMakeFiles/
