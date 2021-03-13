@@ -148,10 +148,13 @@ trait OpaqueOperatorExec extends SparkPlan {
   /* Used for performance debugging individual operators. */
   def timeOperator[A](childRDD: RDD[A])(f: RDD[A] => RDD[Block]): RDD[Block] = {
     import Utils.time
+    Utils.ensureCached(childRDD)
     childRDD.count
     time(name) {
       val result = f(childRDD)
+      Utils.ensureCached(result)
       result.count
+      result.unpersist(blocking = true)
       result
     }
   }

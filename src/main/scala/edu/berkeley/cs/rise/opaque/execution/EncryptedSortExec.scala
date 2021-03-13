@@ -66,10 +66,10 @@ object EncryptedSortExec {
 
   def applyLoggingLevel[A, B](childRDD: RDD[A], name: String)(f: RDD[A] => B): B = {
     if (Utils.getOperatorLoggingLevel()) time(name) {
+      Utils.ensureCached(childRDD)
       childRDD.count
-      f(childRDD)
     }
-    else f(childRDD)
+    f(childRDD)
   }
 
   def sampleAndPartition(childRDD: RDD[Block], orderSer: Array[Byte]): RDD[Block] = {
