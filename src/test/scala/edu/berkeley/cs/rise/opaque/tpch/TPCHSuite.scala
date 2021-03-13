@@ -68,7 +68,10 @@ class MultiplePartitionTPCHSuite extends TPCHSuite {
     .appName("MultiplePartitionTPCHSuite")
     .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
-    .config("spark.jars", "target/scala-2.12/opaque_2.12-0.1.jar")
+    .config(
+      "spark.jars",
+      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
+    )
     .getOrCreate()
 
   runTests()

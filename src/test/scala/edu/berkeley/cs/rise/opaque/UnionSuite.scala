@@ -91,12 +91,19 @@ class SinglePartitionUnionSuite extends UnionSuite {
 }
 
 class MultiplePartitionUnionSuite extends UnionSuite {
-  override def numPartitions = 3
+  val executorInstances = 3
+
+  override def numPartitions = executorInstances
   override val spark = SparkSession
     .builder()
-    .master("local[*]")
+    .master(s"local-cluster[$executorInstances,1,1024]")
     .appName("MultiplePartitionUnionSuite")
+    .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
+    .config(
+      "spark.jars",
+      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
+    )
     .getOrCreate()
 
   runSQLQueries()
