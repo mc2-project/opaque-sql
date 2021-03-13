@@ -12,12 +12,26 @@ sudo apt -y install clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-
 # Install Opaque Dependencies
 sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev
 
+# Install a newer version of CMake (3.15)
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
+
+# Install Spark 3.1.1
+wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+tar xvf spark-3.1.1*
+sudo mkdir /opt/spark
+sudo mv spark-3.1.1*/* /opt/spark
+rm -rf spark-3.1.1*
+sudo chmod -R +wx /opt/spark/work
+
+# Set Spark environment variables
+export SPARK_HOME=/opt/spark
+export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin
 
 # Generate keypair for attestation
 openssl genrsa -out ./private_key.pem -3 3072
 
+# Set Opaque environment variables
 source opaqueenv
 source /opt/openenclave/share/openenclave/openenclaverc
 export MODE=SIMULATE
