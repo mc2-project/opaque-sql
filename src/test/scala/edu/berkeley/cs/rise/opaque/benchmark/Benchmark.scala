@@ -58,10 +58,10 @@ object Benchmark {
   var fileUrl = "file://"
 
   def dataDir: String = {
-    if (System.getenv("SPARKSGX_DATA_DIR") == null) {
-      throw new Exception("Set SPARKSGX_DATA_DIR")
+    if (System.getenv("OPAQUE_DATA_DIR") == null) {
+      throw new Exception("Set OPAQUE_DATA_DIR")
     }
-    System.getenv("SPARKSGX_DATA_DIR")
+    System.getenv("OPAQUE_DATA_DIR")
   }
 
   def logisticRegression() = {
