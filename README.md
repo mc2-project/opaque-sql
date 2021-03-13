@@ -29,7 +29,7 @@ After downloading the Opaque codebase, build and test it on Ubuntu 18.04 as foll
     ```sh
     sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
     
-    # Install a newer version of CMake (>= 3.13)
+    # Install a newer version of CMake (3.15)
     wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
     sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 

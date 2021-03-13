@@ -1,5 +1,5 @@
 export OPAQUE_HOME=$(pwd)
-export SPARKSGX_DATA_DIR=${OPAQUE_HOME}/data/
+export OPAQUE_DATA_DIR=${OPAQUE_HOME}/data/
 export SPARK_SCALA_VERSION=2.12
 export PRIVATE_KEY_PATH=${OPAQUE_HOME}/private_key.pem
 export MODE=HARDWARE

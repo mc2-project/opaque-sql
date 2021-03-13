@@ -12,7 +12,7 @@ sudo apt -y install clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-
 # Install Opaque Dependencies
 sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev
 
-# Install a newer version of CMake (>= 3.13)
+# Install a newer version of CMake (3.15)
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
