@@ -31,7 +31,6 @@ object RA extends Logging {
 
   def initRA(sc: SparkContext): Unit = {
 
-    var numExecutors = 1
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
@@ -92,15 +91,15 @@ object RA extends Logging {
   def run(sc: SparkContext): Unit = {
     // Proactively initialize enclaves
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-    val numUnattestedAcc = Utils.numUnattested
-    val eids = rdd.mapPartitions{ (_) =>
-      val eid = Utils.startEnclave(numUnattestedAcc)
+    val numEnclavesAcc = Utils.numEnclaves
+    rdd.mapPartitions{ (_) =>
+      val eid = Utils.startEnclave(numEnclavesAcc)
       Iterator(eid)
-    }.collect
+    }.count
 
-    if (Utils.numUnattested.value != Utils.numAttested.value) {
+    if (Utils.numEnclaves.value != Utils.numAttested.value) {
       logInfo(
-        s"RA.run: ${Utils.numUnattested.value} unattested, ${Utils.numAttested.value} attested"
+        s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
       )
       initRA(sc)
     }

@@ -281,7 +281,7 @@ object Utils extends Logging {
   var attested: Boolean = false
   // Initialize accumulator variables for tracking the state of attestation
   var acc_registered: Boolean = false
-  val numUnattested: LongAccumulator = new LongAccumulator
+  val numEnclaves: LongAccumulator = new LongAccumulator
   val numAttested: LongAccumulator = new LongAccumulator
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
@@ -292,8 +292,10 @@ object Utils extends Logging {
       sqlContext.experimental.extraStrategies)
 
     val sc = sqlContext.sparkContext
+    // This is needed to prevent an error from re-registering accumulator variables if
+    // `initSQLContext` is called multiple times on the driver
     if (!acc_registered) {
-      sc.register(numUnattested)
+      sc.register(numEnclaves)
       sc.register(numAttested)
       acc_registered = true
     }
@@ -311,13 +313,13 @@ object Utils extends Logging {
     thread.start
   }
 
-  def startEnclave(numUnattestedAcc: LongAccumulator) : Long = {
+  def startEnclave(numEnclavesAcc: LongAccumulator) : Long = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
         val path = findLibraryAsResource("enclave_trusted_signed")
         eid = enclave.StartEnclave(path)
-        numUnattestedAcc.add(1)
+        numEnclavesAcc.add(1)
         logInfo("Starting an enclave")
       }
     }
