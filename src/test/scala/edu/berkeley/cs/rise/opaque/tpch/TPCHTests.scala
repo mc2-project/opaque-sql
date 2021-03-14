@@ -54,13 +54,17 @@ class TPCHSinglePartitionSuite extends TPCHTests {
 }
 
 class TPCHMultiplePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 3
+  val executorInstances = 3
+
+  override def numPartitions = executorInstances
   override val spark = SparkSession
     .builder()
-    .master("local[1, 10]")
-    .appName("TPCHMultiplePartitionSuite")
+    .master(s"local-cluster[$executorInstances,1,1024]")
+    .appName("MultiplePartitionJoinSuite")
+    .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
+    .config("spark.jars", "target/scala-2.12/opaque_2.12-0.1.jar")
     .getOrCreate()
 
-  runTests();
+  runTests()
 }

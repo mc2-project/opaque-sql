@@ -22,17 +22,31 @@ UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
 ## Installation
 
-After downloading the Opaque codebase, build and test it as follows.
+After downloading the Opaque codebase, build and test it on Ubuntu 18.04 as follows.
 
 1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.12.0 (so please install with `open-enclave=0.12.0`) and Ubuntu 18.04.
 
     ```sh
-    # For Ubuntu 18.04:
     sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
     
-    # Install a newer version of CMake (>= 3.13)
+    # Install a newer version of CMake (3.15)
     wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
     sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
+
+    # Install Spark 3.1.1 (if not already done)
+    wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+    tar xvf spark-3.1.1*
+    sudo mkdir /opt/spark
+    sudo mv spark-3.1.1*/* /opt/spark
+    rm -rf spark-3.1.1*
+    sudo chmod -R +wx /opt/spark/work # may not be needed, depends on where Spark is installed
+
+    # Set Spark environment variables in .bashrc
+    echo "" >> ~/.bashrc
+    echo "# Spark settings" >> ~/.bashrc
+    echo "export SPARK_HOME=/opt/spark" >> ~/.bashrc
+    echo "export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin" >> ~/.bashrc
+    source ~/.bashrc
     ```
 
 2. On the master, generate a keypair using OpenSSL for remote attestation.
@@ -60,7 +74,7 @@ After downloading the Opaque codebase, build and test it as follows.
 
 ## Usage
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (`wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz`) is already installed:
+Next, run Apache Spark SQL queries with Opaque as follows:
 
 \* Opaque needs Spark's `'spark.executor.instances'` property to be set. This can be done in a custom config file, the default config file found at `/opt/spark/conf/spark-defaults.conf`, or as a `spark-submit` or `spark-shell` argument: `--conf 'spark.executor.instances=<value>`.
 

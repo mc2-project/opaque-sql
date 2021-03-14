@@ -1315,14 +1315,17 @@ class OpaqueOperatorSinglePartitionSuite extends OpaqueOperatorTests {
 }
 
 class OpaqueOperatorMultiplePartitionSuite extends OpaqueOperatorTests {
+  val executorInstances = 3
+
+  override def numPartitions = executorInstances
   override val spark = SparkSession
     .builder()
-    .master("local[1, 20]")
+    .master(s"local-cluster[$executorInstances,1,1024]")
     .appName("OpaqueOperatorMultiplePartitionSuite")
-    .config("spark.sql.shuffle.partitions", 3)
+    .config("spark.executor.instances", executorInstances)
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .config("spark.jars", "target/scala-2.12/opaque_2.12-0.1.jar")
     .getOrCreate()
-
-  override def numPartitions: Int = 3
 
   import testImplicits._
 
