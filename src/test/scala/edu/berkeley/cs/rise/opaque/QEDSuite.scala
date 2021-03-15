@@ -19,11 +19,11 @@ package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.SparkSession
 
-class QEDSuite extends OpaqueSuiteBase {
+class EncryptionSuite extends OpaqueSuiteBase {
   override val spark = SparkSession
     .builder()
-    .master("local[1]")
-    .appName("QEDSuite")
+    .master("local[*]")
+    .appName("EncryptionSuite")
     .getOrCreate()
 
   test("java encryption/decryption") {
