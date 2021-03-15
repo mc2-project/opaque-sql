@@ -42,24 +42,29 @@
   <div class="section" id="supported-functionalities">
 <span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
 <p>This section lists Opaque’s supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL – Opaque simply replaces the execution to work with encrypted data.</p>
-<p>### Data types
-Out of the existing <a class="reference external" href="https://spark.apache.org/docs/latest/sql-ref-datatypes.html">Spark SQL types</a>, Opaque supports</p>
+<div class="section" id="data-types">
+<h2>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h2>
+<p>Out of the existing <a class="reference external" href="https://spark.apache.org/docs/latest/sql-ref-datatypes.html">Spark SQL types</a>, Opaque supports</p>
 <ul class="simple">
-<li>All numeric types except <code class="docutils literal"><span class="pre">DecimalType</span></code>, which is currently converted into <code class="docutils literal"><span class="pre">FloatType</span></code></li>
+<li>All numeric types. <code class="docutils literal"><span class="pre">DecimalType</span></code> is supported by converting into <code class="docutils literal"><span class="pre">FloatType</span></code></li>
 <li><code class="docutils literal"><span class="pre">StringType</span></code></li>
 <li><code class="docutils literal"><span class="pre">BinaryType</span></code></li>
 <li><code class="docutils literal"><span class="pre">BooleanType</span></code></li>
 <li><code class="docutils literal"><span class="pre">TimestampTime</span></code>, <code class="docutils literal"><span class="pre">DateType</span></code></li>
 <li><code class="docutils literal"><span class="pre">ArrayType</span></code>, <code class="docutils literal"><span class="pre">MapType</span></code></li>
 </ul>
-<p>### Functions
-We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.</p>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<p>We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.</p>
 <ul class="simple">
 <li>Scalar functions: <code class="docutils literal"><span class="pre">case</span></code>, <code class="docutils literal"><span class="pre">cast</span></code>, <code class="docutils literal"><span class="pre">concat</span></code>, <code class="docutils literal"><span class="pre">contains</span></code>, <code class="docutils literal"><span class="pre">if</span></code>, <code class="docutils literal"><span class="pre">in</span></code>, <code class="docutils literal"><span class="pre">like</span></code>, <code class="docutils literal"><span class="pre">substring</span></code>, <code class="docutils literal"><span class="pre">upper</span></code></li>
 <li>Aggregate functions: <code class="docutils literal"><span class="pre">average</span></code>, <code class="docutils literal"><span class="pre">count</span></code>, <code class="docutils literal"><span class="pre">first</span></code>, <code class="docutils literal"><span class="pre">last</span></code>, <code class="docutils literal"><span class="pre">max</span></code>, <code class="docutils literal"><span class="pre">min</span></code>, <code class="docutils literal"><span class="pre">sum</span></code></li>
 </ul>
 <p>UDFs are not supported directly, but one can <a class="reference internal" href="#udf"><span class="std std-ref">extend Opaque with additional functions</span></a> by writing it in C++.</p>
-<p>### Operators</p>
+</div>
+<div class="section" id="operators">
+<h2>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">¶</a></h2>
 <p>Opaque supports the core SQL operators:</p>
 <ul class="simple">
 <li>Projection (e.g., <code class="docutils literal"><span class="pre">SELECT</span></code> statements)</li>
@@ -69,7 +74,9 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 <li>All join types except: cross join, full outer join, existence join</li>
 <li>Limit</li>
 </ul>
-<p id="udf">## User-Defined Functions (UDFs)</p>
+</div>
+<div class="section" id="user-defined-functions-udfs">
+<span id="udf"></span><h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">¶</a></h2>
 <p>To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque’s serialized row representation.</p>
 <p>For example, suppose we wish to implement a UDF called <code class="docutils literal"><span class="pre">dot</span></code>, which computes the dot product of two double arrays (<code class="docutils literal"><span class="pre">Array[Double]</span></code>). We [define it in Scala](src/main/scala/edu/berkeley/cs/rise/opaque/expressions/DotProduct.scala) in terms of the Breeze linear algebra library’s implementation. We can then use it in a DataFrame query, such as <a class="reference external" href="src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/LogisticRegression.scala">logistic regression</a>.</p>
 <p>Now we can port this UDF to Opaque as follows:</p>
@@ -96,6 +103,7 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 <li><p class="first">Finally, implement the UDF in C++. In <code class="docutils literal"><span class="pre">FlatbuffersExpressionEvaluator#eval_helper</span></code> (from <code class="docutils literal"><span class="pre">ExpressionEvaluation.h</span></code>), add a case for <code class="docutils literal"><span class="pre">tuix::ExprUnion_DotProduct</span></code>. Within that case, cast the expression to a <code class="docutils literal"><span class="pre">tuix::DotProduct</span></code>, recursively evaluate the left and right children, perform the dot product computation on them, and construct a <code class="docutils literal"><span class="pre">DoubleField</span></code> containing the result.</p>
 </li>
 </ol>
+</div>
 </div>
 
 

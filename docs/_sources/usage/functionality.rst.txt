@@ -6,17 +6,21 @@ Supported functionalities
 
 This section lists Opaque's supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL -- Opaque simply replaces the execution to work with encrypted data.
 
-### Data types
+Data types
+##########
+
 Out of the existing `Spark SQL types <https://spark.apache.org/docs/latest/sql-ref-datatypes.html>`_, Opaque supports
 
-- All numeric types except ``DecimalType``, which is currently converted into ``FloatType``
+- All numeric types. ``DecimalType`` is supported by converting into ``FloatType``
 - ``StringType``
 - ``BinaryType``
 - ``BooleanType``
 - ``TimestampTime``, ``DateType``
 - ``ArrayType``, ``MapType``
 
-### Functions
+Functions
+#########
+
 We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.
 
 - Scalar functions: ``case``, ``cast``, ``concat``, ``contains``, ``if``, ``in``, ``like``, ``substring``, ``upper``
@@ -25,7 +29,8 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 UDFs are not supported directly, but one can :ref:`extend Opaque with additional functions <udf>` by writing it in C++.
 
 
-### Operators
+Operators
+#########
 
 Opaque supports the core SQL operators:
 
@@ -38,7 +43,8 @@ Opaque supports the core SQL operators:
 
 .. _udf:
 
-## User-Defined Functions (UDFs)
+User-Defined Functions (UDFs)
+#############################
 
 To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque's serialized row representation.
 
