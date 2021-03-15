@@ -67,7 +67,7 @@ inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len) {
 }
 
 #define SGX_AESGCM_IV_SIZE 12
-#define SGX_AESGCM_KEY_SIZE 16
+#define SGX_AESGCM_KEY_SIZE 32
 #define SGX_AESGCM_MAC_SIZE 16
 
 typedef uint8_t sgx_aes_gcm_128bit_tag_t[SGX_AESGCM_MAC_SIZE];
