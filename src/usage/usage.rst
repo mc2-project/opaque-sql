@@ -2,9 +2,9 @@
 Usage
 ***************
 
-Next, run Apache Spark SQL queries with Opaque as follows, assuming [Spark 3.0.1](https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz) (``wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz``) is already installed:
+Once you have installed Opaque SQL, you can run Spark SQL queries as follows, assuming `Spark 3.0.1 <https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz>`_ (``wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz``) is already installed:
 
-\* Opaque needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
+Opaque needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
 
 1. Package Opaque into a JAR:
 
