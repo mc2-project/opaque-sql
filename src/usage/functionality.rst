@@ -14,7 +14,7 @@ Data types
 
 Out of the existing `Spark SQL types <https://spark.apache.org/docs/latest/sql-ref-datatypes.html>`_, Opaque supports
 
-- All numeric types. ``DecimalType`` is supported by converting into ``FloatType``
+- All numeric types. ``DecimalType`` is supported via conversion into ``FloatType``
 - ``StringType``
 - ``BinaryType``
 - ``BooleanType``

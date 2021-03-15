@@ -1,10 +1,11 @@
-***************
-Usage
-***************
+****************
+Using Opaque SQL
+****************
 
-Once you have installed Opaque SQL, you can run Spark SQL queries as follows, assuming `Spark 3.0.1 <https://www.apache.org/dyn/closer.lua/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz>`_ (``wget http://apache.mirrors.pair.com/spark/spark-3.0.1/spark-3.0.1-bin-hadoop2.7.tgz``) is already installed:
+Opaque setup
+###############
 
-Opaque needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
+Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Opaque SQL needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
 
 1. Package Opaque into a JAR:
 
@@ -26,57 +27,82 @@ Opaque needs Spark's ``'spark.executor.instances'`` property to be set. This can
                    cd ${OPAQUE_HOME}
                    JVM_OPTS="-Xmx4G" build/sbt console
 
-3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
+.. I think this is obsolete
+   3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules:
 
-   .. code-block:: scala
-                    
-                   import edu.berkeley.cs.rise.opaque.implicits._
-                   edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
+      .. code-block:: scala
 
-4. Create an encrypted DataFrame:
+                      import edu.berkeley.cs.rise.opaque.implicits._
+                      edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
 
-   .. code-block:: scala
-      
-                   val data = Seq(("foo", 4), ("bar", 1), ("baz", 5))
-                   val df = spark.createDataFrame(data).toDF("word", "count")
-                   val dfEncrypted = df.encrypted
+Encrypting, saving, and loading a DataFrame
+###########################################
 
-5. Query the DataFrames and explain the query plan to see the secure operators:
-
+1. Create an unencrypted DataFrame on the driver.
+   This should be done on the client, i.e., in a trusted setting.
 
    .. code-block:: scala
                    
-                   dfEncrypted.filter($"count" > lit(3)).explain(true)
-                   // [...]
-                   // == Optimized Logical Plan ==
-                   // EncryptedFilter (count#6 > 3)
-                   // +- EncryptedLocalRelation [word#5, count#6]
-                   // [...]
+                   val data = Seq(("foo", 4), ("bar", 1), ("baz", 5))
+                   val df = spark.createDataFrame(data).toDF("word", "count")
 
-                   dfEncrypted.filter($"count" > lit(3)).show
-                   // +----+-----+
-                   // |word|count|
-                   // +----+-----+
-                   // | foo|    4|
-                   // | baz|    5|
-                   // +----+-----+
+2. Create an encrypted DataFrame from the unencrypted version.
+   This is as easy as calling ``.encrypted``.
+   
+   .. code-block:: scala
+                   
+                   val dfEncrypted = df.encrypted
 
-6. Save and load an encrypted DataFrame:
+3. Save the encrypted DataFrame to local disk.
+   The encrypted data can also be uploaded to cloud storage for easy access.
 
    .. code-block:: scala
                    
                    dfEncrypted.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save("dfEncrypted")
                    // The file dfEncrypted/part-00000 now contains encrypted data
 
+4. Users can load the persisted encrypted DataFrame back into Spark.
+
+   .. code-block:: scala
+                   
                    import org.apache.spark.sql.types._
                    val df2 = (spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource")
                    .schema(StructType(Seq(StructField("word", StringType), StructField("count", IntegerType))))
                    .load("dfEncrypted"))
-                   df2.show
+
+Using the DataFrame interface
+#############################
+
+1. Given an encrypted DataFrame ``dfEncrypted``, construct a new query.
+   Users can use ``explain`` to see the generated query plan.
+
+   .. code-block:: scala
+                   
+                   val result = dfEncrypted.filter($"count" > lit(3))
+                   result.explain(true)
+                   // [...]
+                   // == Optimized Logical Plan ==
+                   // EncryptedFilter (count#6 > 3)
+                   // +- EncryptedLocalRelation [word#5, count#6]
+                   // [...]
+
+2. Call ``.collect`` or ``.show`` to retreive the results.
+   The final result will be decrypted on the driver. 
+
+   .. code-block:: scala
+                   
+                   result.filter($"count" > lit(3)).show
                    // +----+-----+
                    // |word|count|
                    // +----+-----+
                    // | foo|    4|
-                   // | bar|    1|
                    // | baz|    5|
                    // +----+-----+
+
+
+Using the DataFrame interface should be very straightforward -- simply 
+                   
+
+Using the SQL interface
+#######################
+
