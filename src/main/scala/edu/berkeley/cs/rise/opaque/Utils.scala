@@ -33,7 +33,6 @@ import scala.collection.mutable.ArrayBuilder
 import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.InternalRow
@@ -74,6 +73,7 @@ import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.expressions.StartsWith
 import org.apache.spark.sql.catalyst.expressions.Substring
 import org.apache.spark.sql.catalyst.expressions.Subtract
+import org.apache.spark.sql.catalyst.expressions.TimeAdd
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
@@ -800,8 +800,8 @@ object Utils extends Logging {
     JobVerificationEngine.addLogEntryChain(blockLog)
   }
 
-  def verifyJob(df: DataFrame): Boolean = {
-    return JobVerificationEngine.verify(df)
+  def verifyJob(): Boolean = {
+    return JobVerificationEngine.verify()
   }
 
   def treeFold[BaseType <: TreeNode[BaseType], B](
