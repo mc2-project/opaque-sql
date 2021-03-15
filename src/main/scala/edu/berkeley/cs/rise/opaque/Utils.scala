@@ -260,14 +260,14 @@ object Utils extends Logging {
   }
 
   final val GCM_IV_LENGTH = 12
-  final val GCM_KEY_LENGTH = 16
+  final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
 
   /**
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
    * attestation succeeds. For development, we use a hardcoded key. You should change it.
    */
-  val sharedKey: Array[Byte] = "Opaque devel key".getBytes("UTF-8")
+  val sharedKey: Array[Byte] = "Opaque devel keyOpaque devel key".getBytes("UTF-8")
   assert(sharedKey.size == GCM_KEY_LENGTH)
 
   def encrypt(data: Array[Byte]): Array[Byte] = {
