@@ -99,7 +99,7 @@ html_theme = "furo"
 html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#00B0FF",
-        "color-brand-content": "#CC3333",
+        "color-brand-content": "#00B0FF",
         "color-admonition-background": "orange",
     },
 }
@@ -117,7 +117,8 @@ html_static_path = ['_static']
 html_sidebars = {
     '**': [
         #'relations.html',  # needs 'show_related': True theme option to display
-        'searchbox.html',
+        'sidebar/brand.html',
+        'sidebar/search.html',
         'sidebar/navigation.html'
     ]
 }

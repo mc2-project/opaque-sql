@@ -16,7 +16,7 @@
     --color-code-background: #eeffcc;
   --color-code-foreground: black;
   --color-brand-primary: #00B0FF;
-  --color-brand-content: #CC3333;
+  --color-brand-content: #00B0FF;
   --color-admonition-background: orange;
   
   }
@@ -33,7 +33,7 @@
     --color-code-background: #eeffcc;
   --color-code-foreground: black;
   --color-brand-primary: #00B0FF;
-  --color-brand-content: #CC3333;
+  --color-brand-content: #00B0FF;
   --color-admonition-background: orange;
   
   }
@@ -102,17 +102,16 @@
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
       
-      <div class="sidebar-sticky">
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>$('#searchbox').show(0);</script><div class="sidebar-tree">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+  
+  
+  <span class="sidebar-brand-text">Opaque SQL 0.3 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html">
+  <input class="sidebar-search" placeholder=Search name="q">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form><div class="sidebar-tree">
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install/install.html">Installation</a></li>
