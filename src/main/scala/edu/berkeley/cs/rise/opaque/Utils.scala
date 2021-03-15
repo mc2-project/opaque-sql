@@ -283,6 +283,7 @@ object Utils extends Logging {
   var acc_registered: Boolean = false
   val numEnclaves: LongAccumulator = new LongAccumulator
   val numAttested: LongAccumulator = new LongAccumulator
+  var loop : Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
@@ -300,17 +301,10 @@ object Utils extends Logging {
       acc_registered = true
     }
 
-    RA.wait(sc)
-    RA.run(sc)
+    RA.waitForExecutors(sc)
+    RA.attestEnclaves(sc)
 
-    val thread = new Thread {
-      override def run: Unit = {
-        while (true) {
-          RA.run(sc)
-        }
-      }
-    }
-    thread.start
+    RA.startThread(sc)
   }
 
   def startEnclave(numEnclavesAcc: LongAccumulator) : Long = {
@@ -346,7 +340,6 @@ object Utils extends Logging {
       if (!attested) {
         val enclave = new SGXEnclave()
         val msg1 = enclave.GenerateReport(eid)
-        println(s"Unattested enclave ${eid} generated msg1")
         (eid, Option(msg1))
       } else {
         (eid, None)
@@ -361,7 +354,6 @@ object Utils extends Logging {
     this.synchronized {
       val enclave = new SGXEnclave()
       val msg2 = msg2s(eid)
-      println(s"Enclave ${eid} received msg2")
       enclave.FinishAttestation(eid, msg2)
       if (!attested) {
         numAttested.add(1)
@@ -369,6 +361,10 @@ object Utils extends Logging {
       attested = true
       (eid, attested)
     }
+  }
+
+  def cleanup() {
+    RA.stopThread()
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {

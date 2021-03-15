@@ -37,6 +37,7 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll with OpaqueToleran
   }
 
   override def afterAll(): Unit = {
+    Utils.cleanup()
     spark.stop()
   }
 

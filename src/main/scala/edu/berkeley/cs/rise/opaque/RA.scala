@@ -28,6 +28,7 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 object RA extends Logging {
 
   var numExecutors : Int = 1
+  var loop : Boolean = true
 
   def initRA(sc: SparkContext): Unit = {
 
@@ -77,7 +78,7 @@ object RA extends Logging {
     logInfo("Attestation successfully completed")
   }
 
-  def wait(sc: SparkContext): Unit = {
+  def waitForExecutors(sc: SparkContext): Unit = {
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
       while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
@@ -88,7 +89,7 @@ object RA extends Logging {
   // This function is executed in a loop that repeatedly tries to
   // call initRA if new enclaves are added
   // Periodically probe the workers using `startEnclave`
-  def run(sc: SparkContext): Unit = {
+  def attestEnclaves(sc: SparkContext): Unit = {
     // Proactively initialize enclaves
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
@@ -104,5 +105,21 @@ object RA extends Logging {
       initRA(sc)
     }
     Thread.sleep(100)
+  }
+
+  def startThread(sc: SparkContext) : Unit = {
+    val thread = new Thread {
+      override def run: Unit = {
+        while (loop) {
+          RA.attestEnclaves(sc)
+        }
+      }
+    }
+    thread.start
+  }
+
+  def stopThread() : Unit = {
+    loop = false
+    Thread.sleep(5000)
   }
 }

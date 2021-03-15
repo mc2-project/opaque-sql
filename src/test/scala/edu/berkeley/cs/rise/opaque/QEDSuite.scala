@@ -31,6 +31,7 @@ class QEDSuite extends FunSuite with BeforeAndAfterAll {
   Utils.initSQLContext(spark.sqlContext)
 
   override def afterAll(): Unit = {
+    Utils.cleanup()
     spark.stop()
   }
 
