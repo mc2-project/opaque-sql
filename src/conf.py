@@ -96,7 +96,13 @@ html_theme = "furo"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "blue",
+        "color-brand-content": "#CC3333",
+        "color-admonition-background": "orange",
+    },
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -112,6 +118,7 @@ html_sidebars = {
     '**': [
         'relations.html',  # needs 'show_related': True theme option to display
         'searchbox.html',
+        'globaltoc.html'
     ]
 }
 

@@ -15,6 +15,9 @@
   :root {
     --color-code-background: #eeffcc;
   --color-code-foreground: black;
+  --color-brand-primary: blue;
+  --color-brand-content: #CC3333;
+  --color-admonition-background: orange;
   
   }
   @media (prefers-color-scheme: dark) {
@@ -29,6 +32,9 @@
   .override-light {
     --color-code-background: #eeffcc;
   --color-code-foreground: black;
+  --color-brand-primary: blue;
+  --color-brand-content: #CC3333;
+  --color-admonition-background: orange;
   
   }
   .override-dark {
@@ -109,7 +115,10 @@
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>You are using <code>globaltoc.html</code> in <code>html_sidebars</code>. This
+configuration does not work with Furo, which is why you're seeing this message.
+Please see <a href="https://pradyunsg.me/furo/customisation/sidebar/">
+documentation on sidebar customisation in Furo</a> for more details.
       </div>
       
     </div>
@@ -134,7 +143,7 @@ It currently has the following limitations:</p>
 <p>[1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
 <a class="reference external" href="https://people.eecs.berkeley.edu/~wzheng/opaque.pdf">Opaque: An Oblivious and Encrypted Distributed Analytics Platform</a>. NSDI 2017, March 2017.</p>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install/install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/usage.html">Using Opaque SQL</a><ul>

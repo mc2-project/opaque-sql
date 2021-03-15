@@ -25,7 +25,7 @@ Unlike the Spark cluster, the driver must be run within a trusted environment (e
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Table of contents
 
    install/install.rst
    usage/usage.rst
