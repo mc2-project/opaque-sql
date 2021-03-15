@@ -98,7 +98,7 @@ html_theme = "furo"
 #
 html_theme_options = {
     "light_css_variables": {
-        "color-brand-primary": "blue",
+        "color-brand-primary": "#00B0FF",
         "color-brand-content": "#CC3333",
         "color-admonition-background": "orange",
     },
@@ -116,7 +116,7 @@ html_static_path = ['_static']
 # refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
 html_sidebars = {
     '**': [
-        'relations.html',  # needs 'show_related': True theme option to display
+        #'relations.html',  # needs 'show_related': True theme option to display
         'searchbox.html',
         'sidebar/navigation.html'
     ]
