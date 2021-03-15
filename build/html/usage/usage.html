@@ -42,8 +42,8 @@
             
   <div class="section" id="using-opaque-sql">
 <h1>Using Opaque SQL<a class="headerlink" href="#using-opaque-sql" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="opaque-setup">
-<h2>Opaque setup<a class="headerlink" href="#opaque-setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
 <p>Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Opaque SQL needs Spark’s <code class="docutils literal"><span class="pre">'spark.executor.instances'</span></code> property to be set. This can be done in a custom config file, the default config file found at <code class="docutils literal"><span class="pre">/opt/spark/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal"><span class="pre">spark-submit</span></code> or <code class="docutils literal"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal"><span class="pre">--conf</span> <span class="pre">'spark.executor.instances=&lt;value&gt;</span></code>.</p>
 <ol class="arabic">
 <li><p class="first">Package Opaque into a JAR:</p>
@@ -80,18 +80,12 @@ This is as easy as calling <code class="docutils literal"><span class="pre">.enc
 </pre></div>
 </div>
 </li>
+</ol>
+<ol class="arabic" id="save-df" start="3">
 <li><p class="first">Save the encrypted DataFrame to local disk.
 The encrypted data can also be uploaded to cloud storage for easy access.</p>
 <div class="highlight-scala"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&quot;edu.berkeley.cs.rise.opaque.EncryptedSource&quot;</span><span class="o">).</span><span class="n">save</span><span class="o">(</span><span class="s">&quot;dfEncrypted&quot;</span><span class="o">)</span>
 <span class="c1">// The file dfEncrypted/part-00000 now contains encrypted data</span>
-</pre></div>
-</div>
-</li>
-<li><p class="first">Users can load the persisted encrypted DataFrame back into Spark.</p>
-<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
-<span class="k">val</span> <span class="n">df2</span> <span class="k">=</span> <span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&quot;edu.berkeley.cs.rise.opaque.EncryptedSource&quot;</span><span class="o">)</span>
-<span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="nc">StructType</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;word&quot;</span><span class="o">,</span> <span class="nc">StringType</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;count&quot;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))))</span>
-<span class="o">.</span><span class="n">load</span><span class="o">(</span><span class="s">&quot;dfEncrypted&quot;</span><span class="o">))</span>
 </pre></div>
 </div>
 </li>
@@ -100,6 +94,14 @@ The encrypted data can also be uploaded to cloud storage for easy access.</p>
 <div class="section" id="using-the-dataframe-interface">
 <h2>Using the DataFrame interface<a class="headerlink" href="#using-the-dataframe-interface" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
+<li><p class="first">Users can load the <a class="reference internal" href="#save-df"><span class="std std-ref">previously persisted encrypted DataFrame</span></a>.</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
+<span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&quot;edu.berkeley.cs.rise.opaque.EncryptedSource&quot;</span><span class="o">)</span>
+<span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="nc">StructType</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;word&quot;</span><span class="o">,</span> <span class="nc">StringType</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">&quot;count&quot;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))))</span>
+<span class="o">.</span><span class="n">load</span><span class="o">(</span><span class="s">&quot;dfEncrypted&quot;</span><span class="o">))</span>
+</pre></div>
+</div>
+</li>
 <li><p class="first">Given an encrypted DataFrame <code class="docutils literal"><span class="pre">dfEncrypted</span></code>, construct a new query.
 Users can use <code class="docutils literal"><span class="pre">explain</span></code> to see the generated query plan.</p>
 <div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">&quot;count&quot;</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">))</span>
@@ -125,10 +127,29 @@ The final result will be decrypted on the driver.</p>
 </div>
 </li>
 </ol>
-<p>Using the DataFrame interface should be very straightforward – simply</p>
 </div>
 <div class="section" id="using-the-sql-interface">
 <h2>Using the SQL interface<a class="headerlink" href="#using-the-sql-interface" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Users can also load the <a class="reference internal" href="#save-df"><span class="std std-ref">previously persisted encrypted DataFrame</span></a> using the SQL interface.</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">s&quot;&quot;&quot;</span>
+<span class="s">  |CREATE TEMPORARY VIEW dfEncrypted</span>
+<span class="s">  |USING edu.berkeley.cs.rise.opaque.EncryptedSource</span>
+<span class="s">  |OPTIONS (</span>
+<span class="s">  |  path &quot;dfEncrypted&quot;</span>
+<span class="s">  |)&quot;&quot;&quot;</span><span class="o">.</span><span class="n">stripMargin</span><span class="o">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">The SQL API can be used to run the same query on the loaded data.</p>
+<div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">s&quot;&quot;&quot;</span>
+<span class="s">  |SELECT * FROM dfEncrypted</span>
+<span class="s">  |WHERE count &gt; 3&quot;&quot;&quot;</span><span class="o">.</span><span class="n">stripMargin</span><span class="o">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">show</span>
+</pre></div>
+</div>
+</li>
+</ol>
 </div>
 </div>
 
