@@ -11,18 +11,18 @@ make -j$(nproc)
 
 # Create ~0.01GB files
 ./dbgen -vf -s 0.01
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_small
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_001
 chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_small
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_001
 
 # Create ~0.1GB files
 ./dbgen -vf -s 0.1
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_med
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_01
 chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_med
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_01
 
 # Create ~1GB files
 ./dbgen -vf -s 1.0
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_none
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_1
 chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_none
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_1

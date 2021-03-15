@@ -361,7 +361,7 @@ synthTestDataTask := {
       name <- Seq("disease.csv", "gene.csv", "treatment.csv", "patient-125.csv")
     } yield new File(diseaseDir, name)
 
-  val tpchDir = baseDirectory.value / "data" / "tpch" / "sf_small"
+  val tpchDir = baseDirectory.value / "data" / "tpch" / "sf_001"
   tpchDir.mkdirs()
   val tpchDataFiles =
     for {

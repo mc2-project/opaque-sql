@@ -22,7 +22,7 @@ import edu.berkeley.cs.rise.opaque.OpaqueSuiteBase
 
 trait TPCHSuite extends OpaqueSuiteBase { self =>
 
-  def size = "sf_small"
+  def size = "sf_001"
   def tpch = new TPCH(spark.sqlContext, size, "file://")
   def numPartitions: Int
 

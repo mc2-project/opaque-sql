@@ -31,7 +31,7 @@ import org.apache.spark.sql.SparkSession
  *   --num-partitions: specify the number of partitions the data should be split into.
  *       Default: spark.default.parallelism
  *   --size: specify the size of the dataset that should be loaded into Spark.
- *       Default: sf_small
+ *       Default: sf_001
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
  *       Default: file://
  *   --log-operators: boolean whether or not to log individual physical operators.
@@ -54,7 +54,7 @@ object Benchmark {
     .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism
-  var size = "sf_small"
+  var size = "sf_001"
   var fileUrl = "file://"
 
   def dataDir: String = {
@@ -89,7 +89,7 @@ object Benchmark {
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
-          Default: sf_small
+          Default: sf_001
     --filesystem-url: optional arguments to specify filesystem master node URL.
           Default: file://
     --log-operators: boolean whether or not to log individual physical operators.
@@ -111,7 +111,7 @@ object Benchmark {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        if (size == "sf_small" || size == "sf_med" || size == "sf_none") {
+        if (size == "sf_001" || size == "sf_01" || size == "sf_1") {
           this.size = size
         } else {
           println(s"Given size is not supported: $size")
