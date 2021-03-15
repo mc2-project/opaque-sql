@@ -18,7 +18,6 @@
 package edu.berkeley.cs.rise.opaque.execution
 
 import edu.berkeley.cs.rise.opaque.Utils
-import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.SortOrder
@@ -32,7 +31,6 @@ case class EncryptedSortExec(order: Seq[SortOrder], isGlobal: Boolean, child: Sp
   override def executeBlocked(): RDD[Block] = {
     val orderSer = Utils.serializeSortOrder(order, child.output)
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
-    JobVerificationEngine.addExpectedOperator("EncryptedSortExec")
     val partitionedRDD = isGlobal match {
       case true => EncryptedSortExec.sampleAndPartition(childRDD, orderSer)
       case false => childRDD

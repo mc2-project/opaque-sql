@@ -21,6 +21,10 @@ package edu.berkeley.cs.rise.opaque
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
 import scala.collection.mutable.Set
+import scala.collection.mutable.Queue
+
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.execution.SparkPlan
 
 // Wraps Crumb data specific to graph vertices and adds graph methods.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
@@ -80,6 +84,11 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
     return retval
   }
 
+  // Returns if this DAG is empty
+  def graphIsEmpty(): Boolean = {
+    return this.isSource && this.outgoingNeighbors.isEmpty
+  }
+
   // Checks if JobNodeData originates from same partition (?)
   override def equals(that: Any): Boolean = {
     that match {
@@ -96,24 +105,40 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
   override def hashCode(): Int = {
     inputMacs.hashCode ^ allOutputsMac.hashCode
   }
+}
 
-  def printNode() = {
-    println("====")
-    print("Ecall: ")
-    println(this.ecall)
-    print("Output: ")
-    for (i <- 0 until this.allOutputsMac.length) {
-      print(this.allOutputsMac(i))
-    }
-    println
-    println("===")
+// Used in construction of expected DAG.
+class OperatorNode(val operatorName: String = "") {
+  var children: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
+  var parents: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
+  // Contains numPartitions * numEcalls job nodes.
+  // numPartitions rows (outer array), numEcalls columns (inner array)
+  var jobNodes: ArrayBuffer[ArrayBuffer[JobNode]] = ArrayBuffer[ArrayBuffer[JobNode]]() 
+
+  def addChild(child: OperatorNode) = {
+    this.children.append(child)
+  }
+
+  def setChildren(children: ArrayBuffer[OperatorNode]) = {
+    this.children = children
+  }
+
+  def addParent(parent: OperatorNode) = {
+    this.parents.append(parent)
+  }
+
+  def setParents(parents: ArrayBuffer[OperatorNode]) = {
+    this.parents = parents
+  }
+
+  def isOrphan(): Boolean = {
+    return this.parents.isEmpty
   }
 }
 
 object JobVerificationEngine {
   // An LogEntryChain object from each partition
   var logEntryChains = ArrayBuffer[tuix.LogEntryChain]()
-  var sparkOperators = ArrayBuffer[String]()
   val ecallId = Map(
     1 -> "project",
     2 -> "filter",
@@ -130,31 +155,299 @@ object JobVerificationEngine {
     13 -> "limitReturnRows"
   ).withDefaultValue("unknown")
 
-  def pathsEqual(path1: ArrayBuffer[List[Seq[Int]]],
-                path2: ArrayBuffer[List[Seq[Int]]]): Boolean = {
-    return path1.size == path2.size && path1.toSet == path2.toSet
-  }
+  val possibleSparkOperators = Seq[String]("EncryptedProject", 
+                                              "EncryptedSortMergeJoin", 
+                                              "EncryptedSort", 
+                                              "EncryptedFilter",
+                                              "EncryptedAggregate",
+                                              "EncryptedGlobalLimit",
+                                              "EncryptedLocalLimit")
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 
   }
 
-  def addExpectedOperator(operator: String): Unit = {
-    sparkOperators += operator
-  }
-
   def resetForNextJob(): Unit = {
-    sparkOperators.clear
     logEntryChains.clear
   }
 
-  def verify(): Boolean = {
-    if (sparkOperators.isEmpty) {
+  def isValidOperatorNode(node: OperatorNode): Boolean = {
+    for (targetSubstring <- possibleSparkOperators) {
+      if (node.operatorName contains targetSubstring) {
+        return true
+      }
+    }
+    return false
+  }
+
+  def pathsEqual(executedPaths: ArrayBuffer[List[Seq[Int]]],
+                expectedPaths: ArrayBuffer[List[Seq[Int]]]): Boolean = {
+    // Executed paths might contain extraneous paths from
+    // MACs matching across ecalls if a block is unchanged from ecall to ecall (?)
+    return expectedPaths.toSet.subsetOf(executedPaths.toSet)
+  }
+
+  // Recursively convert SparkPlan objects to OperatorNode object.
+  def sparkNodesToOperatorNodes(plan: SparkPlan): OperatorNode = {
+    var operatorName = ""
+    for (sparkOperator <- possibleSparkOperators) {
+      if (plan.toString.split("\n")(0) contains sparkOperator) {
+        operatorName = sparkOperator
+      }
+    }
+    val operatorNode = new OperatorNode(operatorName)
+    for (child <- plan.children) {
+      val parentOperatorNode = sparkNodesToOperatorNodes(child)
+      operatorNode.addParent(parentOperatorNode)
+    }
+    return operatorNode
+  }
+
+  // Returns true if every OperatorNode in this list is "valid".
+  def allValidOperators(operators: ArrayBuffer[OperatorNode]): Boolean = {
+    for (operator <- operators) {
+      if (!isValidOperatorNode(operator)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  // Recursively prunes non valid nodes from an OperatorNode tree.
+  def fixOperatorTree(root: OperatorNode): Unit = {
+    if (root.isOrphan) {
+      return
+    }
+    while (!allValidOperators(root.parents)) {
+      val newParents = new ArrayBuffer[OperatorNode]()
+      for (parent <- root.parents) {
+        if (isValidOperatorNode(parent)) {
+          newParents.append(parent)
+        } else {
+          for (grandparent <- parent.parents) {
+            newParents.append(grandparent)
+          }
+        }
+      }
+      root.setParents(newParents)
+    }
+    for (parent <- root.parents) {
+      parent.addChild(root)
+      fixOperatorTree(parent)
+    }
+  }
+
+  // Uses BFS to put all nodes in an OperatorNode tree into a list.
+  def treeToList(root: OperatorNode): ArrayBuffer[OperatorNode] = {
+    val retval = ArrayBuffer[OperatorNode]()
+    val queue = new Queue[OperatorNode]()
+    queue.enqueue(root)
+    while (!queue.isEmpty) {
+      val curr = queue.dequeue
+      retval.append(curr)
+      for (parent <- curr.parents) {
+        queue.enqueue(parent)
+      }
+    }
+    return retval
+  }
+
+  // Converts a SparkPlan into a DAG of OperatorNode objects.
+  // Returns a list of all the nodes in the DAG.
+  def operatorDAGFromPlan(executedPlan: SparkPlan): ArrayBuffer[OperatorNode] = {
+    // Convert SparkPlan tree to OperatorNode tree
+    val leafOperatorNode = sparkNodesToOperatorNodes(executedPlan)
+    // Enlist the tree
+    val allOperatorNodes = treeToList(leafOperatorNode)
+    // Attach a sink to the tree and prune invalid OperatorNodes starting from the sink.
+    val sinkNode = new OperatorNode("sink")
+    for (operatorNode <- allOperatorNodes) {
+      if (operatorNode.children.isEmpty) {
+        operatorNode.addChild(sinkNode)
+      }
+    }
+    fixOperatorTree(sinkNode)
+    // Enlist the fixed tree.
+    val fixedOperatorNodes = treeToList(sinkNode)
+    fixedOperatorNodes -= sinkNode
+    return fixedOperatorNodes
+  }
+
+  // expectedDAGFromOperatorDAG helper - links parent ecall partitions to child ecall partitions.
+  def linkEcalls(parentEcalls: ArrayBuffer[JobNode], childEcalls: ArrayBuffer[JobNode]): Unit = {
+    if (parentEcalls.length != childEcalls.length) {
+      println("Ecall lengths don't match! (linkEcalls)")
+    }
+    val numPartitions = parentEcalls.length
+    val ecall = parentEcalls(0).ecall
+    // project
+    if (ecall == 1) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    // filter
+    } else if (ecall == 2) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    // externalSort
+    } else if (ecall == 6) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    // sample
+    } else if (ecall == 3) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(0))
+      }
+    // findRangeBounds
+    } else if (ecall == 4) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(0).addOutgoingNeighbor(childEcalls(i))
+      }
+    // partitionForSort
+    } else if (ecall == 5) {
+      // All to all shuffle
+      for (i <- 0 until numPartitions) {
+        for (j <- 0 until numPartitions) {
+          parentEcalls(i).addOutgoingNeighbor(childEcalls(j))
+        }
+      }
+    // nonObliviousAggregate
+    } else if (ecall == 9) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    // nonObliviousSortMergeJoin
+    } else if (ecall == 8) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    // countRowsPerPartition
+    } else if (ecall == 10) {
+      // Send from all partitions to partition 0
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(0))
+      }
+    // computeNumRowsPerPartition
+    } else if (ecall == 11) {
+      // Broadcast from one partition (assumed to be partition 0) to all partitions
+      for (i <- 0 until numPartitions) {
+        parentEcalls(0).addOutgoingNeighbor(childEcalls(i))
+      }
+    // limitReturnRows
+    } else if (ecall == 13) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
+    } else {
+      throw new Exception("Job Verification Error creating expected DAG: "
+        + "ecall not supported - " + ecall)
+    }
+  }
+
+  // expectedDAGFromOperatorDAG helper - generates a matrix of job nodes for each operator node.
+  def generateJobNodes(numPartitions: Int, operatorName: String): ArrayBuffer[ArrayBuffer[JobNode]] = {
+    val jobNodes = ArrayBuffer[ArrayBuffer[JobNode]]() 
+    val expectedEcalls = ArrayBuffer[Int]()
+    if (operatorName == "EncryptedSort" && numPartitions == 1) {
+      // ("externalSort")
+      expectedEcalls.append(6)
+    } else if (operatorName == "EncryptedSort" && numPartitions > 1) {
+      // ("sample", "findRangeBounds", "partitionForSort", "externalSort")
+      expectedEcalls.append(3, 4, 5, 6)
+    } else if (operatorName == "EncryptedProject") {
+      // ("project")
+      expectedEcalls.append(1)
+    } else if (operatorName == "EncryptedFilter") {
+      // ("filter")
+      expectedEcalls.append(2)
+    } else if (operatorName == "EncryptedAggregate") {
+      // ("nonObliviousAggregate")
+      expectedEcalls.append(9)
+    } else if (operatorName == "EncryptedSortMergeJoin") {
+      // ("nonObliviousSortMergeJoin")
+      expectedEcalls.append(8)
+    } else if (operatorName == "EncryptedLocalLimit") {
+      // ("limitReturnRows")
+      expectedEcalls.append(13)
+    } else if (operatorName == "EncryptedGlobalLimit") {
+      // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
+      expectedEcalls.append(10, 11, 13)
+    } else {
+      throw new Exception("Executed unknown operator: " + operatorName) 
+    }
+    for (ecallIdx <- 0 until expectedEcalls.length) {
+      val ecall = expectedEcalls(ecallIdx)
+      val ecallJobNodes = ArrayBuffer[JobNode]()
+      jobNodes.append(ecallJobNodes)
+      for (partitionIdx <- 0 until numPartitions) { 
+        val jobNode = new JobNode()
+        jobNode.setEcall(ecall)
+        ecallJobNodes.append(jobNode)
+      }
+    }
+    return jobNodes
+  }
+
+  // Converts a DAG of Spark operators to a DAG of ecalls and partitions.
+  def expectedDAGFromOperatorDAG(operatorNodes: ArrayBuffer[OperatorNode]): JobNode = {
+    val source = new JobNode()
+    val sink = new JobNode()
+    source.setSource
+    sink.setSink
+    // For each node, create numPartitions * numEcalls jobnodes.
+    for (node <- operatorNodes) {
+      node.jobNodes = generateJobNodes(logEntryChains.size, node.operatorName)
+    }
+    // Link all ecalls.
+    for (node <- operatorNodes) {
+      for (ecallIdx <- 0 until node.jobNodes.length) {
+        if (ecallIdx == node.jobNodes.length - 1) {
+          // last ecall of this operator, link to child operators if one exists.
+          for (child <- node.children) {
+            linkEcalls(node.jobNodes(ecallIdx), child.jobNodes(0))
+          }
+        } else {
+          linkEcalls(node.jobNodes(ecallIdx), node.jobNodes(ecallIdx + 1))
+        }
+      }
+    }
+    // Set source and sink
+    for (node <- operatorNodes) {
+      if (node.isOrphan) {
+        for (jobNode <- node.jobNodes(0)) {
+          source.addOutgoingNeighbor(jobNode)
+        }
+      }
+      if (node.children.isEmpty) {
+        for (jobNode <- node.jobNodes(node.jobNodes.length - 1)) {
+          jobNode.addOutgoingNeighbor(sink)
+        }
+      }
+    }
+    return source
+  }
+
+  // Generates an expected DAG of ecalls and partitions from a dataframe's SparkPlan object.
+  def expectedDAGFromPlan(executedPlan: SparkPlan): JobNode = {
+    val operatorDAGRoot = operatorDAGFromPlan(executedPlan)
+    expectedDAGFromOperatorDAG(operatorDAGRoot)
+  }
+
+  // Verify that the executed flow of information from ecall partition to ecall partition
+  // matches what is expected for a given Spark dataframe.
+  def verify(df: DataFrame): Boolean = {
+    // Get expected DAG.
+    val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
+
+    // Quit if graph is empty.
+    if (expectedSourceNode.graphIsEmpty) {
       return true
     }
-    val OE_HMAC_SIZE = 32    
-    val numPartitions = logEntryChains.size
 
+    // Construct executed DAG.
+    val OE_HMAC_SIZE = 32    
     // Keep a set of nodes, since right now, the last nodes won't have outputs.
     val nodeSet = Set[JobNode]()
     // Set up map from allOutputsMAC --> JobNode.    
@@ -237,157 +530,14 @@ object JobVerificationEngine {
       }
     }
 
-    // ========================================== //
-
-    // Construct expected DAG.
-    val expectedDAG = ArrayBuffer[ArrayBuffer[JobNode]]()
-    val expectedEcalls = ArrayBuffer[Int]()
-    for (operator <- sparkOperators) {
-      if (operator == "EncryptedSortExec" && numPartitions == 1) {
-        // ("externalSort")
-        expectedEcalls.append(6)
-      } else if (operator == "EncryptedSortExec" && numPartitions > 1) {
-        // ("sample", "findRangeBounds", "partitionForSort", "externalSort")
-        expectedEcalls.append(3, 4, 5, 6)
-      } else if (operator == "EncryptedProjectExec") {
-        // ("project")
-        expectedEcalls.append(1)
-      } else if (operator == "EncryptedFilterExec") {
-        // ("filter")
-        expectedEcalls.append(2)
-      } else if (operator == "EncryptedAggregateExec") {
-        // ("nonObliviousAggregate")
-        expectedEcalls.append(9)
-      } else if (operator == "EncryptedSortMergeJoinExec") {
-        // ("nonObliviousSortMergeJoin")
-        expectedEcalls.append(8)
-      } else if (operator == "EncryptedLocalLimitExec") {
-        // ("limitReturnRows")
-        expectedEcalls.append(13)
-      } else if (operator == "EncryptedGlobalLimitExec") {
-        // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
-        expectedEcalls.append(10, 11, 13)
-      } else {
-        throw new Exception("Executed unknown operator") 
-      }
-    }
-
-    // Initialize job nodes.
-    val expectedSourceNode = new JobNode()
-    expectedSourceNode.setSource
-    val expectedSinkNode = new JobNode()
-    expectedSinkNode.setSink
-    for (j <- 0 until numPartitions) {
-      val partitionJobNodes = ArrayBuffer[JobNode]()
-      expectedDAG.append(partitionJobNodes)
-      for (i <- 0 until expectedEcalls.length) {
-        val ecall = expectedEcalls(i)
-        val jobNode = new JobNode()
-        jobNode.setEcall(ecall)
-        partitionJobNodes.append(jobNode)
-        // Connect source node to starting ecall partitions.
-        if (i == 0) {
-          expectedSourceNode.addOutgoingNeighbor(jobNode)
-        }
-        // Connect ending ecall partitions to sink.
-        if (i == expectedEcalls.length - 1) {
-          jobNode.addOutgoingNeighbor(expectedSinkNode)
-        }
-      }
-    }
-    
-    // Set outgoing neighbors for all nodes, except for the ones in the last ecall.
-    for (i <- 0 until expectedEcalls.length - 1) {
-      // i represents the current ecall index
-      val operator = expectedEcalls(i)
-      // project
-      if (operator == 1) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // filter
-      } else if (operator == 2) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // externalSort
-      } else if (operator == 6) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // sample
-      } else if (operator == 3) {
-        for (j <- 0 until numPartitions) {
-          // All EncryptedBlocks resulting from sample go to one worker
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
-        }
-      // findRangeBounds
-      } else if (operator == 4) {
-        // Broadcast from one partition (assumed to be partition 0) to all partitions
-        for (j <- 0 until numPartitions) {
-          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // partitionForSort
-      } else if (operator == 5) {
-        // All to all shuffle
-        for (j <- 0 until numPartitions) {
-          for (k <- 0 until numPartitions) {
-            expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(k)(i + 1))
-          }
-        }
-      // nonObliviousAggregate
-      } else if (operator == 9) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // scanCollectLastPrimary
-      } else if (operator == 7) {
-        // Blocks sent to next partition
-        if (numPartitions == 1) {
-          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
-        } else {
-          for (j <- 0 until numPartitions) {
-            if (j < numPartitions - 1) {
-              val next = j + 1
-              expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(next)(i + 1))
-            }
-          }
-        }
-      // nonObliviousSortMergeJoin
-      } else if (operator == 8) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // countRowsPerPartition
-      } else if (operator == 10) {
-        // Send from all partitions to partition 0
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(0)(i + 1))
-        }
-      // computeNumRowsPerPartition
-      } else if (operator == 11) {
-        // Broadcast from one partition (assumed to be partition 0) to all partitions
-        for (j <- 0 until numPartitions) {
-          expectedDAG(0)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      // limitReturnRows
-      } else if (operator == 13) {
-        for (j <- 0 until numPartitions) {
-          expectedDAG(j)(i).addOutgoingNeighbor(expectedDAG(j)(i + 1))
-        }
-      } else {
-        throw new Exception("Job Verification Error creating expected DAG: "
-          + "operator not supported - " + operator)
-      }
-    }
     val executedPathsToSink = executedSourceNode.pathsToSink
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
-      println(executedPathsToSink.toString)
-      println(expectedPathsToSink.toString)
+      // println(executedPathsToSink.toString)
+      // println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
-    return true
+    return true 
   }
 }
