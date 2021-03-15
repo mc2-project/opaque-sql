@@ -58,7 +58,7 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 <li>Scalar functions: <code class="docutils literal"><span class="pre">case</span></code>, <code class="docutils literal"><span class="pre">cast</span></code>, <code class="docutils literal"><span class="pre">concat</span></code>, <code class="docutils literal"><span class="pre">contains</span></code>, <code class="docutils literal"><span class="pre">if</span></code>, <code class="docutils literal"><span class="pre">in</span></code>, <code class="docutils literal"><span class="pre">like</span></code>, <code class="docutils literal"><span class="pre">substring</span></code>, <code class="docutils literal"><span class="pre">upper</span></code></li>
 <li>Aggregate functions: <code class="docutils literal"><span class="pre">average</span></code>, <code class="docutils literal"><span class="pre">count</span></code>, <code class="docutils literal"><span class="pre">first</span></code>, <code class="docutils literal"><span class="pre">last</span></code>, <code class="docutils literal"><span class="pre">max</span></code>, <code class="docutils literal"><span class="pre">min</span></code>, <code class="docutils literal"><span class="pre">sum</span></code></li>
 </ul>
-<p>UDFs are not supported directly, but one can :ref: <cite>extend Opaque with additional functions &lt;udf&gt;</cite> by writing it in C++.</p>
+<p>UDFs are not supported directly, but one can <a class="reference internal" href="#udf"><span class="std std-ref">extend Opaque with additional functions</span></a> by writing it in C++.</p>
 <p>### Operators</p>
 <p>Opaque supports the core SQL operators:</p>
 <ul class="simple">
@@ -66,7 +66,7 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 <li>Filter</li>
 <li>Global aggregation and grouping aggregation</li>
 <li>Order by, sort by</li>
-<li>Inner join</li>
+<li>All join types except: cross join, full outer join, existence join</li>
 <li>Limit</li>
 </ul>
 <p id="udf">## User-Defined Functions (UDFs)</p>
