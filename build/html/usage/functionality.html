@@ -24,6 +24,7 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Usage" href="usage.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -39,7 +40,7 @@
           <div class="body" role="main">
             
   <div class="section" id="supported-functionalities">
-<h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
+<span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
 <p>This section lists Opaque’s supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL – Opaque simply replaces the execution to work with encrypted data.</p>
 <p>### Data types
 Out of the existing <a class="reference external" href="https://spark.apache.org/docs/latest/sql-ref-datatypes.html">Spark SQL types</a>, Opaque supports</p>
@@ -74,14 +75,13 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 <p>Now we can port this UDF to Opaque as follows:</p>
 <ol class="arabic">
 <li><p class="first">Define a corresponding expression using Opaque’s expression serialization format by adding the following to [Expr.fbs](src/flatbuffers/Expr.fbs), which indicates that a DotProduct expression takes two inputs (the two double arrays):</p>
-<div class="highlight-protobuf"><div class="highlight"><pre><span></span>               table DotProduct {
-                 left:Expr;
-                 right:Expr;
-               }
-
-In the same file, add ``DotProduct`` to the list of expressions in ``ExprUnion``.
+<div class="highlight-protobuf"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="n">DotProduct</span> <span class="p">{</span>
+  <span class="n">left</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
+  <span class="n">right</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
+<p>In the same file, add <code class="docutils literal"><span class="pre">DotProduct</span></code> to the list of expressions in <code class="docutils literal"><span class="pre">ExprUnion</span></code>.</p>
 </li>
 <li><p class="first">Implement the serialization logic from the Scala <code class="docutils literal"><span class="pre">DotProduct</span></code> UDF to the Opaque expression that we just defined. In <code class="docutils literal"><span class="pre">Utils.flatbuffersSerializeExpression</span></code> (from <code class="docutils literal"><span class="pre">Utils.scala</span></code>), add a case for <code class="docutils literal"><span class="pre">DotProduct</span></code> as follows:</p>
 <div class="highlight-scala"><div class="highlight"><pre><span></span><span class="k">case</span> <span class="o">(</span><span class="nc">DotProduct</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">),</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">leftOffset</span><span class="o">,</span> <span class="n">rightOffset</span><span class="o">))</span> <span class="k">=&gt;</span>
@@ -107,6 +107,7 @@ In the same file, add ``DotProduct`` to the list of expressions in ``ExprUnion``
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage</a></li>
   </ul></li>
 </ul>
 </div>

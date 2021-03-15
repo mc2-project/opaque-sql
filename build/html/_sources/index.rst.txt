@@ -15,8 +15,7 @@ It currently has the following limitations:
 
 Unlike the Spark cluster, the driver must be run within a trusted environment (e.g., on the client).
 
-- Not all Spark SQL operations are supported (see the [list of supported operations](#supported-functionalities)).
-UDFs must be [implemented in C++](#user-defined-functions-udfs).
+- Not all Spark SQL operations are supported (see the `list of supported operations <functionalities>`_). UDFs must be `implemented in C++ <udf>`_
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 
@@ -30,3 +29,5 @@ UDFs must be [implemented in C++](#user-defined-functions-udfs).
 
    install/install.rst
    usage/usage.rst
+   usage/functionality.rst
+   

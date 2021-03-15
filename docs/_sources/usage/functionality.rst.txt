@@ -1,3 +1,5 @@
+.. _functionalities:
+
 *************************
 Supported functionalities
 *************************
@@ -53,7 +55,7 @@ Now we can port this UDF to Opaque as follows:
                      right:Expr;
                    }
 
-    In the same file, add ``DotProduct`` to the list of expressions in ``ExprUnion``.
+   In the same file, add ``DotProduct`` to the list of expressions in ``ExprUnion``.
 
 2. Implement the serialization logic from the Scala ``DotProduct`` UDF to the Opaque expression that we just defined. In ``Utils.flatbuffersSerializeExpression`` (from ``Utils.scala``), add a case for ``DotProduct`` as follows:
 
