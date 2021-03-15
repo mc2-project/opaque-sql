@@ -42,8 +42,10 @@
   <div class="section" id="supported-functionalities">
 <span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
 <p>This section lists Opaque’s supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL – Opaque simply replaces the execution to work with encrypted data.</p>
+<div class="section" id="sql-interface">
+<h2>SQL interface<a class="headerlink" href="#sql-interface" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="data-types">
-<h2>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h2>
+<h3>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h3>
 <p>Out of the existing <a class="reference external" href="https://spark.apache.org/docs/latest/sql-ref-datatypes.html">Spark SQL types</a>, Opaque supports</p>
 <ul class="simple">
 <li>All numeric types. <code class="docutils literal"><span class="pre">DecimalType</span></code> is supported by converting into <code class="docutils literal"><span class="pre">FloatType</span></code></li>
@@ -55,7 +57,7 @@
 </ul>
 </div>
 <div class="section" id="functions">
-<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
 <p>We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.</p>
 <ul class="simple">
 <li>Scalar functions: <code class="docutils literal"><span class="pre">case</span></code>, <code class="docutils literal"><span class="pre">cast</span></code>, <code class="docutils literal"><span class="pre">concat</span></code>, <code class="docutils literal"><span class="pre">contains</span></code>, <code class="docutils literal"><span class="pre">if</span></code>, <code class="docutils literal"><span class="pre">in</span></code>, <code class="docutils literal"><span class="pre">like</span></code>, <code class="docutils literal"><span class="pre">substring</span></code>, <code class="docutils literal"><span class="pre">upper</span></code></li>
@@ -64,7 +66,7 @@
 <p>UDFs are not supported directly, but one can <a class="reference internal" href="#udf"><span class="std std-ref">extend Opaque with additional functions</span></a> by writing it in C++.</p>
 </div>
 <div class="section" id="operators">
-<h2>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">¶</a></h2>
+<h3>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">¶</a></h3>
 <p>Opaque supports the core SQL operators:</p>
 <ul class="simple">
 <li>Projection (e.g., <code class="docutils literal"><span class="pre">SELECT</span></code> statements)</li>
@@ -74,6 +76,11 @@
 <li>All join types except: cross join, full outer join, existence join</li>
 <li>Limit</li>
 </ul>
+</div>
+</div>
+<div class="section" id="dataframe-interface">
+<h2>DataFrame interface<a class="headerlink" href="#dataframe-interface" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
 </div>
 <div class="section" id="user-defined-functions-udfs">
 <span id="udf"></span><h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">¶</a></h2>

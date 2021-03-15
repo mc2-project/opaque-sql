@@ -6,8 +6,11 @@ Supported functionalities
 
 This section lists Opaque's supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL -- Opaque simply replaces the execution to work with encrypted data.
 
+SQL interface
+#############
+
 Data types
-##########
+**********
 
 Out of the existing `Spark SQL types <https://spark.apache.org/docs/latest/sql-ref-datatypes.html>`_, Opaque supports
 
@@ -19,7 +22,7 @@ Out of the existing `Spark SQL types <https://spark.apache.org/docs/latest/sql-r
 - ``ArrayType``, ``MapType``
 
 Functions
-#########
+*********
 
 We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.
 
@@ -30,7 +33,7 @@ UDFs are not supported directly, but one can :ref:`extend Opaque with additional
 
 
 Operators
-#########
+*********
 
 Opaque supports the core SQL operators:
 
@@ -40,6 +43,11 @@ Opaque supports the core SQL operators:
 - Order by, sort by
 - All join types except: cross join, full outer join, existence join
 - Limit
+
+DataFrame interface
+###################
+
+TODO
 
 .. _udf:
 
