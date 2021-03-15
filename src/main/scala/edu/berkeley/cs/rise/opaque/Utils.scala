@@ -109,7 +109,6 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
-// import edu.berkeley.cs.rise.opaque.JobVerificationEngine
 import org.apache.spark.sql.catalyst.expressions.PromotePrecision
 import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
