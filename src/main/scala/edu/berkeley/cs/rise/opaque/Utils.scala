@@ -303,8 +303,21 @@ object Utils extends Logging {
 
     RA.waitForExecutors(sc)
     RA.attestEnclaves(sc)
-
     RA.startThread(sc)
+  }
+
+  def initEnclave(): (SGXEnclave, Long) = {
+    // This following exception relies on the Spark fault tolerance and its retry mechanism
+    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure.
+    this.synchronized {
+      if (!attested) {
+        Thread.sleep(200)
+        throw new OpaqueException("Attestation not yet complete")
+      } else {
+        val enclave = new SGXEnclave()
+        (enclave, eid)
+      }
+    }
   }
 
   def startEnclave(numEnclavesAcc: LongAccumulator) : Long = {
@@ -320,24 +333,10 @@ object Utils extends Logging {
     eid
   }
 
-  def initEnclave(): (SGXEnclave, Long) = {
-    // This following exception relies on the Spark fault tolerance and its retry mechanism
-    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure
-    this.synchronized {
-      if (!attested) {
-        Thread.sleep(200)
-        throw new OpaqueException("Attestation not yet complete")
-      } else {
-        val enclave = new SGXEnclave()
-        (enclave, eid)
-      }
-    }
-
-  }  
-
   def generateReport(): (Long, Option[Array[Byte]]) = {
     this.synchronized {
-      if (!attested) {
+      // Only generate report if the enclave has already been started, but not yet attested
+      if (eid != 0L && !attested) {
         val enclave = new SGXEnclave()
         val msg1 = enclave.GenerateReport(eid)
         (eid, Option(msg1))
@@ -353,12 +352,12 @@ object Utils extends Logging {
   ): (Long, Boolean) = {
     this.synchronized {
       val enclave = new SGXEnclave()
-      val msg2 = msg2s(eid)
-      enclave.FinishAttestation(eid, msg2)
-      if (!attested) {
+      if (msg2s.contains(eid) && !attested) {
+        val msg2 = msg2s(eid)
+        enclave.FinishAttestation(eid, msg2)
         numAttested.add(1)
+        attested = true
       }
-      attested = true
       (eid, attested)
     }
   }

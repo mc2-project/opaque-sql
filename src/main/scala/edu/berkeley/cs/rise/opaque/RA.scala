@@ -69,19 +69,22 @@ object RA extends Logging {
       }
       .collect
       .toMap
-
-    for ((_, ret) <- attestationResults) {
-      if (!ret)
-        throw new OpaqueException("Attestation failed")
-    }
-
-    logInfo("Attestation successfully completed")
   }
 
   def waitForExecutors(sc: SparkContext): Unit = {
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-      while (!sc.isLocal && sc.getExecutorMemoryStatus.size < numExecutors) {}
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      while (
+        rdd
+          .mapPartitions { (_) =>
+            val id = SparkEnv.get.executorId
+            Iterator(id)
+          }
+          .collect
+          .toSet
+          .size < numExecutors
+      ) {}
     }
     logInfo(s"All executors have started, numExecutors is ${numExecutors}")
   }
@@ -122,4 +125,5 @@ object RA extends Logging {
     loop = false
     Thread.sleep(5000)
   }
+
 }
