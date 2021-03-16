@@ -47,9 +47,44 @@ Opaque supports the core SQL operators:
 DataFrame interface
 ###################
 
-TODO
+Because Opaque only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark's, which can be found `here <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html>`_. Opaque is still a work in progress, so not all of these functionalities are currently implemented. The list of unsupported operators is as follows:
 
-.. _udf:
+Actions
+*******
+-
+  .. code-block:: scala
+
+                  def describe(cols: String*): DataFrame
+-
+  .. code-block:: scala
+
+                  def reduce(func: (T, T) => T): T
+-
+  .. code-block:: scala
+
+                  def summary(statistics: String*): DataFrame
+-
+  .. code-block:: scala
+
+                  def tail(n: Int): Array[T]
+
+Basic Dataset functions
+***********************
+-
+  .. code-block:: scala
+
+                  def as[U](implicit arg0: Encoder[U]): Dataset[U]
+-
+  .. code-block:: scala
+
+                  def checkpoint(eager: Boolean): Dataset[T]
+                  def checkpoint(): Dataset[T]
+-
+  .. code-block:: scala
+
+                  def persist(newLevel: StorageLevel): Dataset.this.type
+                  def persist(): Dataset.this.type
+
 
 User-Defined Functions (UDFs)
 #############################
