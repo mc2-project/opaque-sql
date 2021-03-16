@@ -72,6 +72,14 @@ After downloading the Opaque codebase, build and test it on Ubuntu 18.04 as foll
     build/sbt test
     ```
 
+Alternatively, with coverage report generation:
+    ```sh
+    cd ${OPAQUE_HOME}
+    build/sbt clean coverage test
+    build/sbt coverageReport
+    ```
+
+
 ## Usage
 
 Next, run Apache Spark SQL queries with Opaque as follows:
