@@ -1282,7 +1282,7 @@ object Utils extends Logging {
             )
           }
 
-        case (_, Seq(childOffset)) =>
+        case _ =>
           throw new OpaqueException("Expression " + expr.toString() + " is not supported in Opaque")
       }
     }
@@ -1819,6 +1819,9 @@ object Utils extends Logging {
             evaluateExprs.map(e => flatbuffersSerializeExpression(builder, e, aggSchema)).toArray
           )
         )
+
+      case _ =>
+        throw new OpaqueException("Aggregate expression " + e.aggregateFunction.toString() + " is not supported in Opaque")
     }
   }
 
