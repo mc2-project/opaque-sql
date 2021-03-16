@@ -1283,7 +1283,7 @@ object Utils extends Logging {
           }
 
         case (_, Seq(childOffset)) =>
-          throw new OpaqueException("Expression not supported: " + expr.toString() + " in Opaque")
+          throw new OpaqueException("Expression " + expr.toString() + " is not supported in Opaque")
       }
     }
   }
