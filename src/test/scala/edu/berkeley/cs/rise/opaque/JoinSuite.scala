@@ -329,7 +329,7 @@ class SinglePartitionJoinSuite extends JoinSuite {
   override def numPartitions = 1
   override val spark = SparkSession
     .builder()
-    .master("local[*, 10]")
+    .master("local[*]")
     .appName("SinglePartitionJoinSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
