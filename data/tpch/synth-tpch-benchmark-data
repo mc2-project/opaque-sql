@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -eu
+
+cd "$(dirname $0)"
+./synth-tpch-test-data
+cd tpch-dbgen
+
+# Create ~0.1GB files
+./dbgen -vf -s 0.1
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_01
+chmod u+r *.tbl
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_01
+
+# Create ~1GB files
+./dbgen -vf -s 1.0
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_1
+chmod u+r *.tbl
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_1
