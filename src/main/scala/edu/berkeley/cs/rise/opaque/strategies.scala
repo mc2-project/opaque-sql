@@ -353,7 +353,12 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
     case EncryptedBlockRDD(output, rdd) =>
       EncryptedBlockRDDScanExec(output, rdd) :: Nil
 
-    case _ => Nil
+    case _ =>
+      if (isEncrypted(plan)) {
+        throw new OpaqueException(s"Logical node ${plan.nodeName}(${plan.argString(10)}) is not supported in Opaque")
+      }
+
+      Nil
   }
 
   private def tagForEquiJoin(

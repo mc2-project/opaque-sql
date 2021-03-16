@@ -224,10 +224,11 @@ case class EncryptedProjectExec(projectList: Seq[NamedExpression], child: SparkP
     extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  val projectListSer = Utils.serializeProjectList(projectList, child.output)
+
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
   override def executeBlocked(): RDD[Block] = {
-    val projectListSer = Utils.serializeProjectList(projectList, child.output)
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedProjectExec"
@@ -244,10 +245,11 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
     extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  val conditionSer = Utils.serializeFilterExpression(condition, child.output)
+
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
-    val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedFilterExec") {
       childRDD =>
         childRDD.map { block =>
@@ -265,6 +267,8 @@ case class EncryptedAggregateExec(
 ) extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggregateExpressions, child.output)
+
   override def producedAttributes: AttributeSet =
     AttributeSet(aggregateExpressions) -- AttributeSet(groupingExpressions)
 
@@ -279,8 +283,6 @@ case class EncryptedAggregateExec(
     })
 
   override def executeBlocked(): RDD[Block] = {
-
-    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggregateExpressions, child.output)
     val isPartial = aggregateExpressions
       .map(expr => expr.mode)
       .exists(mode => mode == Partial || mode == PartialMerge)
@@ -308,6 +310,15 @@ case class EncryptedSortMergeJoinExec(
 ) extends UnaryExecNode
     with OpaqueOperatorExec {
 
+  val joinExprSer = Utils.serializeJoinExpression(
+      joinType,
+      Some(leftKeys),
+      Some(rightKeys),
+      leftSchema,
+      rightSchema,
+      condition
+    )
+
   override def output: Seq[Attribute] = {
     joinType match {
       case Inner =>
@@ -326,15 +337,6 @@ case class EncryptedSortMergeJoinExec(
   }
 
   override def executeBlocked(): RDD[Block] = {
-    val joinExprSer = Utils.serializeJoinExpression(
-      joinType,
-      Some(leftKeys),
-      Some(rightKeys),
-      leftSchema,
-      rightSchema,
-      condition
-    )
-
     timeOperator(
       child.asInstanceOf[OpaqueOperatorExec].executeBlocked(),
       "EncryptedSortMergeJoinExec"
@@ -356,6 +358,9 @@ case class EncryptedBroadcastNestedLoopJoinExec(
 ) extends BinaryExecNode
     with OpaqueOperatorExec {
 
+  val joinExprSer =
+    Utils.serializeJoinExpression(joinType, None, None, left.output, right.output, condition)
+
   override def output: Seq[Attribute] = {
     joinType match {
       case _: InnerLike =>
@@ -374,9 +379,6 @@ case class EncryptedBroadcastNestedLoopJoinExec(
   }
 
   override def executeBlocked(): RDD[Block] = {
-    val joinExprSer =
-      Utils.serializeJoinExpression(joinType, None, None, left.output, right.output, condition)
-
     // We pick which side to broadcast/stream according to buildSide.
     // BuildRight means the right relation <=> the broadcast relation.
     // NOTE: outer_rows and inner_rows in C++ correspond to stream and broadcast side respectively.
