@@ -164,11 +164,15 @@ Next, run Apache Spark SQL queries with Opaque as follows:
 ## Benchmarking
 Opaque supports a command-line interface for benchmarking against plain-text Spark. The following steps show you how to build and submit benchmarking jobs to a Spark cluster:
 
-1. Create a fat jar that contains both source and test classes:
+1. Generate all benchmarking data:
+    ```sh
+    build/sbt data
+    ```
+2. Create a fat jar that contains both source and test classes:
     ```sh
     build/sbt test:assembly
     ```
-2. Submit the job to Spark:
+3. Submit the job to Spark:
     ```sh
     spark-submit --class edu.berkeley.cs.rise.opaque.benchmark.Benchmark \
       <Spark arguments> \

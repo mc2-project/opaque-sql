@@ -155,7 +155,6 @@ test in Test := {
 
 val sgxGdbTask =
   TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
-
 def sgxGdbCommand = Command.command("sgx-gdb") { state =>
   val extracted = Project extract state
   val newState = extracted.append(Seq(buildType := Debug), state)
@@ -163,7 +162,14 @@ def sgxGdbCommand = Command.command("sgx-gdb") { state =>
   state
 }
 
+val synthBenchmarkDataTask = TaskKey[Unit]("synthBenchmarkData", "Synthesizes benchmark data.")
+def data = Command.command("data") { state =>
+  Project.runTask(synthBenchmarkDataTask, state)
+  state
+}
+
 commands += sgxGdbCommand
+commands += data
 
 initialCommands in console :=
   """
@@ -385,7 +391,31 @@ synthTestDataTask := {
 
   if (!tpchDataFiles.forall(_.exists)) {
     import sys.process._
-    val ret = Seq("data/tpch/synth-tpch-data").!
+    val ret = Seq("data/tpch/synth-tpch-test-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H test data.")
+  }
+}
+
+synthBenchmarkDataTask := {
+  val tpchDir = baseDirectory.value / "data" / "tpch" / "sf_1"
+  tpchDir.mkdirs()
+  val tpchDataFiles =
+    for {
+      name <- Seq(
+        "customer.tbl",
+        "lineitem.tbl",
+        "nation.tbl",
+        "orders.tbl",
+        "partsupp.tbl",
+        "part.tbl",
+        "region.tbl",
+        "supplier.tbl"
+      )
+    } yield new File(tpchDir, name)
+
+  if (!tpchDataFiles.forall(_.exists)) {
+    import sys.process._
+    val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
+    if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
   }
 }
