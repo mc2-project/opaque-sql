@@ -23,15 +23,15 @@ concurrentRestrictions in Global := Seq(Tags.limit(Tags.Test, 1))
 fork in Test := true
 fork in run := true
 
-testOptions in Test += Tests.Argument("-oF")
-javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
-javaOptions in run ++= Seq(
-  "-Xmx2048m",
-  "-XX:ReservedCodeCacheSize=384m",
-  "-Dspark.master=local[1]"
-)
+/* Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
+ * spark-submit. From
+ * https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
+ */
+run in Compile := Defaults
+  .runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
+  .evaluated
 
-// Create fat jar with src and test classes using build/sbt test:assembly
+/* Create fat jar with src and test classes using build/sbt test:assembly */
 Project.inConfig(Test)(baseAssemblySettings)
 test in (Test, assembly) := {}
 
@@ -40,12 +40,33 @@ assemblyMergeStrategy in (Test, assembly) := {
   case x => MergeStrategy.first
 }
 
-// Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
-// spark-submit. From
-// https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
-run in Compile := Defaults
-  .runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
-  .evaluated
+/*
+ * local-cluster[*,*,*] in our tests requires a packaged .jar file to run correctly.
+ * See https://stackoverflow.com/questions/28186607/java-lang-classcastexception-using-lambda-expressions-in-spark-job-on-remote-ser
+ * The following code creates dependencies for test and testOnly to ensure that the required .jar is always created by
+ * build/sbt package before running any tests. Note that .class files are still only compiled ONCE for both package and tests,
+ * so the performance impact is very minimal.
+ */
+test in Test := {
+  (synthTestDataTask).value
+  (Keys.`package` in Compile).value
+  (Keys.`package` in Test).value
+  (test in Test).value
+}
+(Keys.`testOnly` in Test) := {
+  (synthTestDataTask).value
+  (Keys.`package` in Compile).value
+  (Keys.`package` in Test).value
+  (Keys.`testOnly` in Test).evaluated
+}
+
+testOptions in Test += Tests.Argument("-oF")
+javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
+javaOptions in run ++= Seq(
+  "-Xmx2048m",
+  "-XX:ReservedCodeCacheSize=384m",
+  "-Dspark.master=local[1]"
+)
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -133,26 +154,6 @@ watchSources ++=
 
 val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
-/*
- * local-cluster[*,*,*] in our tests requires a packaged .jar file to run correctly.
- * See https://stackoverflow.com/questions/28186607/java-lang-classcastexception-using-lambda-expressions-in-spark-job-on-remote-ser
- * The following code creates dependencies for test and testOnly to ensure that the required .jar is always created by
- * build/sbt package before running any tests. Note that .class files are still only compiled ONCE for both package and tests,
- * so the performance impact is very minimal.
- */
-test in Test := {
-  (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
-  (test in Test).value
-}
-(Keys.`testOnly` in Test) := {
-  (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
-  (Keys.`testOnly` in Test).evaluated
-}
-
 val sgxGdbTask =
   TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
 def sgxGdbCommand = Command.command("sgx-gdb") { state =>
@@ -205,6 +206,29 @@ initialCommands in console :=
   """.stripMargin
 
 cleanupCommands in console := "spark.stop()"
+
+nativePlatform := {
+  try {
+    val lines = Process("uname -sm").lines
+    if (lines.length == 0) {
+      sys.error("Error occured trying to run `uname`")
+    }
+    // uname -sm returns "<kernel> <hardware name>"
+    val parts = lines.head.split(" ")
+    if (parts.length != 2) {
+      sys.error("'uname -sm' returned unexpected string: " + lines.head)
+    } else {
+      val arch = parts(1).toLowerCase.replaceAll("\\s", "")
+      val kernel = parts(0).toLowerCase.replaceAll("\\s", "")
+      arch + "-" + kernel
+    }
+  } catch {
+    case ex: Exception =>
+      sLog.value.error("Error trying to determine platform.")
+      sLog.value.warn("Cannot determine platform! It will be set to 'unknown'.")
+      "unknown-unknown"
+  }
+}
 
 sgxGdbTask := {
   (compile in Test).value
@@ -285,29 +309,6 @@ buildFlatbuffersTask := {
   }
 
   (javaOutDir ** "*.java").get
-}
-
-nativePlatform := {
-  try {
-    val lines = Process("uname -sm").lines
-    if (lines.length == 0) {
-      sys.error("Error occured trying to run `uname`")
-    }
-    // uname -sm returns "<kernel> <hardware name>"
-    val parts = lines.head.split(" ")
-    if (parts.length != 2) {
-      sys.error("'uname -sm' returned unexpected string: " + lines.head)
-    } else {
-      val arch = parts(1).toLowerCase.replaceAll("\\s", "")
-      val kernel = parts(0).toLowerCase.replaceAll("\\s", "")
-      arch + "-" + kernel
-    }
-  } catch {
-    case ex: Exception =>
-      sLog.value.error("Error trying to determine platform.")
-      sLog.value.warn("Cannot determine platform! It will be set to 'unknown'.")
-      "unknown-unknown"
-  }
 }
 
 enclaveBuildTask := {
