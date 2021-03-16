@@ -143,11 +143,13 @@ val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 test in Test := {
   (synthTestDataTask).value
   (Keys.`package` in Compile).value
+  (Keys.`package` in Test).value
   (test in Test).value
 }
 (Keys.`testOnly` in Test) := {
   (synthTestDataTask).value
   (Keys.`package` in Compile).value
+  (Keys.`package` in Test).value
   (Keys.`testOnly` in Test).evaluated
 }
 

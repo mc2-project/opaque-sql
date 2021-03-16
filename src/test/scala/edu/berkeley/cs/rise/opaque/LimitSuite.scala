@@ -15,56 +15,55 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque.tpch
+package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.SparkSession
-import edu.berkeley.cs.rise.opaque.OpaqueTestsBase
 
-trait TPCHTests extends OpaqueTestsBase { self =>
+trait LimitSuite extends OpaqueSQLSuiteBase with SQLHelper {
 
-  def size = "sf_small"
-  def tpch = new TPCH(spark.sqlContext, size, "file://")
+  def numPartitions: Int
 
-  def runTests() = {
-    for (queryNum <- TPCH.supportedQueries) {
-      val testStr = s"TPC-H $queryNum"
-      if (TPCH.unorderedQueries.contains(queryNum)) {
-        testAgainstSpark(testStr) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions).collect.toSet
-        }
-      } else {
-        testAgainstSpark(testStr) { securityLevel =>
-          tpch.query(queryNum, securityLevel, numPartitions).collect
-        }
-      }
-    }
-  }
+  def queries = Seq(
+    " SELECT * FROM testdata LIMIT 2;",
+    "SELECT * FROM arraydata LIMIT 2;",
+    "SELECT * FROM mapdata LIMIT 2;",
+    "SELECT * FROM testdata LIMIT 2 + 1;",
+    "SELECT * FROM testdata LIMIT CAST(1 AS int);",
+    "SELECT * FROM testdata LIMIT CAST(1 AS INT);",
+    "SELECT * FROM testdata WHERE key < 3 LIMIT ALL;"
+  )
+  def failingQueries = Seq("SELECT * FROM (SELECT * FROM range(10) LIMIT 5) WHERE id > 3;")
+  def unsupportedQueries = Seq()
+
 }
 
-class TPCHSinglePartitionSuite extends TPCHTests {
-  override def numPartitions: Int = 1
+class SinglePartitionLimitSuite extends LimitSuite {
+  override def numPartitions = 1
   override val spark = SparkSession
     .builder()
-    .master("local[1, 10]")
-    .appName("TPCHSinglePartitionSuite")
+    .master("local[*]")
+    .appName("SinglePartitionLimitSuite")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .getOrCreate()
 
-  runTests();
+  runSQLQueries()
 }
 
-class TPCHMultiplePartitionSuite extends TPCHTests {
+class MultiplePartitionLimitSuite extends LimitSuite {
   val executorInstances = 3
 
   override def numPartitions = executorInstances
   override val spark = SparkSession
     .builder()
     .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionJoinSuite")
+    .appName("MultiplePartitionLimitSuite")
     .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
-    .config("spark.jars", "target/scala-2.12/opaque_2.12-0.1.jar")
+    .config(
+      "spark.jars",
+      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
+    )
     .getOrCreate()
 
-  runTests()
+  runSQLQueries()
 }

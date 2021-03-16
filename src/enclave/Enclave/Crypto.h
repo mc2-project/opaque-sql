@@ -28,7 +28,7 @@ void set_shared_key(uint8_t *msg4, uint32_t msg4_size);
  *
  * IV || ciphertext || MAC
  *
- * The IV is 12 bytes (96 bits). The key is 16 bytes (128 bits).  The MAC is 16
+ * The IV is 12 bytes (96 bits). The key is 32 bytes (128 bits).  The MAC is 16
  * bytes (128 bits).
  *
  * A random IV will be used.

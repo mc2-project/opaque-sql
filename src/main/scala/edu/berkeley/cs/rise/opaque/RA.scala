@@ -17,7 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
 
 import edu.berkeley.cs.rise.opaque.execution.SP
