@@ -85,6 +85,24 @@ Basic Dataset functions
                   def persist(newLevel: StorageLevel): Dataset.this.type
                   def persist(): Dataset.this.type
 
+Typed transformations
+***********************
+-
+  .. code-block:: scala
+
+                  def except(other: Dataset[T]): Dataset[T]
+                  def exceptAll(other: Dataset[T]): Dataset[T]
+-
+  .. code-block:: scala
+
+                  def checkpoint(eager: Boolean): Dataset[T]
+                  def checkpoint(): Dataset[T]
+-
+  .. code-block:: scala
+
+                  def persist(newLevel: StorageLevel): Dataset.this.type
+                  def persist(): Dataset.this.type
+
 
 User-Defined Functions (UDFs)
 #############################
