@@ -18,21 +18,13 @@
 package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.sql.SparkSession
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.FunSuite
 
-class QEDSuite extends FunSuite with BeforeAndAfterAll {
-  val spark = SparkSession
+class EncryptionSuite extends OpaqueSuiteBase {
+  override val spark = SparkSession
     .builder()
-    .master("local[1]")
-    .appName("QEDSuite")
+    .master("local[*]")
+    .appName("EncryptionSuite")
     .getOrCreate()
-
-  Utils.initSQLContext(spark.sqlContext)
-
-  override def afterAll(): Unit = {
-    spark.stop()
-  }
 
   test("java encryption/decryption") {
     val data = Array[Byte](0, 1, 2)
