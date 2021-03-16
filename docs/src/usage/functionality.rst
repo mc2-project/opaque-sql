@@ -123,7 +123,6 @@ Typed transformations
 *********************
 - `alias(alias: Symbol): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:Symbol):org.apache.spark.sql.Dataset[T]>`_
 - `alias(alias: String): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:String):org.apache.spark.sql.Dataset[T]>`_
-- `apply(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#apply(colName:String):org.apache.spark.sql.Column>`_
 - `as(alias: Symbol): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as(alias:Symbol):org.apache.spark.sql.Dataset[T]>`_
 - `as(alias: String): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as(alias:String):org.apache.spark.sql.Dataset[T]>`_
 - `coalesce(numPartitions: Int): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#coalesce(numPartitions:Int):org.apache.spark.sql.Dataset[T]>`_
@@ -171,8 +170,6 @@ Typed transformations
 - `select[U1, U2, U3](c1: TypedColumn[T, U1], c2: TypedColumn[T, U2], c3: TypedColumn[T, U3]): Dataset[(U1, U2, U3)] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select[U1,U2,U3](c1:org.apache.spark.sql.TypedColumn[T,U1],c2:org.apache.spark.sql.TypedColumn[T,U2],c3:org.apache.spark.sql.TypedColumn[T,U3]):org.apache.spark.sql.Dataset[(U1,U2,U3)]>`_
 - `select[U1, U2](c1: TypedColumn[T, U1], c2: TypedColumn[T, U2]): Dataset[(U1, U2)] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select[U1,U2](c1:org.apache.spark.sql.TypedColumn[T,U1],c2:org.apache.spark.sql.TypedColumn[T,U2]):org.apache.spark.sql.Dataset[(U1,U2)]>`_
 - `select[U1](c1: TypedColumn[T, U1]): Dataset[U1] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select[U1](c1:org.apache.spark.sql.TypedColumn[T,U1]):org.apache.spark.sql.Dataset[U1]>`_
-- `select(col: String, cols: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select(col:String,cols:String*):org.apache.spark.sql.DataFrame>`_
-- `select(cols: Column*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame>`_
 - `sort(sortExprs: Column*): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sort(sortExprs:org.apache.spark.sql.Column*):org.apache.spark.sql.Dataset[T]>`_
 - `sort(sortCol: String, sortCols: String*): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sort(sortCol:String,sortCols:String*):org.apache.spark.sql.Dataset[T]>`_
 - `sortWithinPartitions(sortExprs: Column*): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sortWithinPartitions(sortExprs:org.apache.spark.sql.Column*):org.apache.spark.sql.Dataset[T]>`_
@@ -185,19 +182,13 @@ Typed transformations
 - `where(conditionExpr: String): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#where(conditionExpr:String):org.apache.spark.sql.Dataset[T]>`_
 - `where(condition: Column): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#where(condition:org.apache.spark.sql.Column):org.apache.spark.sql.Dataset[T]>`_
 
-
-
-
-
-
-ALLL
-####
+Untyped transformations
+*********************
 - `agg(expr: Column, exprs: Column*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(expr:org.apache.spark.sql.Column,exprs:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame>`_
 - `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:java.util.Map[String,String]):org.apache.spark.sql.DataFrame>`_
 - `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:Map[String,String]):org.apache.spark.sql.DataFrame>`_
 - `agg(aggExpr: (String, String), aggExprs: (String, String)*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(aggExpr:(String,String),aggExprs:(String,String)*):org.apache.spark.sql.DataFrame>`_
-- `asInstanceOf[T0]: T0 <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#asInstanceOf[T0]:T0>`_
-- `clone(): Object <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#clone():Object>`_
+- `apply(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#apply(colName:String):org.apache.spark.sql.Column>`_
 - `col(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#col(colName:String):org.apache.spark.sql.Column>`_
 - `colRegex(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#colRegex(colName:String):org.apache.spark.sql.Column>`_
 - `crossJoin(right: Dataset[_]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#crossJoin(right:org.apache.spark.sql.Dataset[_]):org.apache.spark.sql.DataFrame>`_
@@ -206,15 +197,9 @@ ALLL
 - `drop(col: Column): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(col:org.apache.spark.sql.Column):org.apache.spark.sql.DataFrame>`_
 - `drop(colNames: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(colNames:String*):org.apache.spark.sql.DataFrame>`_
 - `drop(colName: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(colName:String):org.apache.spark.sql.DataFrame>`_
-- `encoder: Encoder[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#encoder:org.apache.spark.sql.Encoder[T]>`_
-- `eq(x: AnyRef): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#eq(x:AnyRef):Boolean>`_
-- `equals(x: Any): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#equals(x:Any):Boolean>`_
-- `finalize(): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#finalize():Unit>`_
-- `getClass(): Class[_] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#getClass():Class[_]>`_
 - `groupBy(col1: String, cols: String*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#groupBy(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `groupBy(cols: Column*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#groupBy(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `hashCode(): Int <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#hashCode():Int>`_
-- `isInstanceOf[T0]: Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#isInstanceOf[T0]:Boolean>`_
 - `join(right: Dataset[_], joinExprs: Column, joinType: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#join(right:org.apache.spark.sql.Dataset[_],joinExprs:org.apache.spark.sql.Column,joinType:String):org.apache.spark.sql.DataFrame>`_
 - `join(right: Dataset[_], joinExprs: Column): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#join(right:org.apache.spark.sql.Dataset[_],joinExprs:org.apache.spark.sql.Column):org.apache.spark.sql.DataFrame>`_
 - `join(right: Dataset[_], usingColumns: Seq[String], joinType: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#join(right:org.apache.spark.sql.Dataset[_],usingColumns:Seq[String],joinType:String):org.apache.spark.sql.DataFrame>`_
@@ -222,27 +207,28 @@ ALLL
 - `join(right: Dataset[_], usingColumn: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#join(right:org.apache.spark.sql.Dataset[_],usingColumn:String):org.apache.spark.sql.DataFrame>`_
 - `join(right: Dataset[_]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#join(right:org.apache.spark.sql.Dataset[_]):org.apache.spark.sql.DataFrame>`_
 - `na: DataFrameNaFunctions <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#na:org.apache.spark.sql.DataFrameNaFunctions>`_
-- `ne(x: AnyRef): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#ne(x:AnyRef):Boolean>`_
-- `notify(): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#notify():Unit>`_
-- `notifyAll(): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#notifyAll():Unit>`_
-- `queryExecution: execution.QueryExecution <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#queryExecution:org.apache.spark.sql.execution.QueryExecution>`_
 - `rollup(col1: String, cols: String*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#rollup(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `rollup(cols: Column*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#rollup(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.RelationalGroupedDataset>`_
-- `sameSemantics(other: Dataset[T]): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sameSemantics(other:org.apache.spark.sql.Dataset[T]):Boolean>`_
+- `select(col: String, cols: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select(col:String,cols:String*):org.apache.spark.sql.DataFrame>`_
+- `select(cols: Column*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#select(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame>`_
 - `selectExpr(exprs: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#selectExpr(exprs:String*):org.apache.spark.sql.DataFrame>`_
-- `selectUntyped(columns: TypedColumn[_, _]*): Dataset[_] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#selectUntyped(columns:org.apache.spark.sql.TypedColumn[_,_]*):org.apache.spark.sql.Dataset[_]>`_
-- `semanticHash(): Int <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#semanticHash():Int>`_
-- `sparkSession: SparkSession <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sparkSession:org.apache.spark.sql.SparkSession>`_
-- `sqlContext: SQLContext <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sqlContext:org.apache.spark.sql.SQLContext>`_
 - `stat: DataFrameStatFunctions <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#stat:org.apache.spark.sql.DataFrameStatFunctions>`_
-- `toJSON: Dataset[String] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toJSON:org.apache.spark.sql.Dataset[String]>`_
-- `toString(): String <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toString():String>`_
 - `withColumn(colName: String, col: Column): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#withColumn(colName:String,col:org.apache.spark.sql.Column):org.apache.spark.sql.DataFrame>`_
 - `withColumnRenamed(existingName: String, newName: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#withColumnRenamed(existingName:String,newName:String):org.apache.spark.sql.DataFrame>`_
 - `explode[A, B](inputColumn: String, outputColumn: String)(f: A => TraversableOnce[B])(implicitevidence: reflect.runtime.universe.TypeTag[B]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#explode[A,B](inputColumn:String,outputColumn:String)(f:A=%3ETraversableOnce[B])(implicitevidence$5:reflect.runtime.universe.TypeTag[B]):org.apache.spark.sql.DataFrame>`_
 - `explode[A <: Product](input: Column*)(f: Row => TraversableOnce[A])(implicitevidence: reflect.runtime.universe.TypeTag[A]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#explode[A%3C:Product](input:org.apache.spark.sql.Column*)(f:org.apache.spark.sql.Row=%3ETraversableOnce[A])(implicitevidence$4:reflect.runtime.universe.TypeTag[A]):org.apache.spark.sql.DataFrame>`_
 - `registerTempTable(tableName: String): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#registerTempTable(tableName:String):Unit>`_
 
+Ungrouped
+*********
+- `encoder: Encoder[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#encoder:org.apache.spark.sql.Encoder[T]>`_
+- `queryExecution: execution.QueryExecution <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#queryExecution:org.apache.spark.sql.execution.QueryExecution>`_
+- `sameSemantics(other: Dataset[T]): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sameSemantics(other:org.apache.spark.sql.Dataset[T]):Boolean>`_
+- `semanticHash(): Int <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#semanticHash():Int>`_
+- `sparkSession: SparkSession <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sparkSession:org.apache.spark.sql.SparkSession>`_
+- `sqlContext: SQLContext <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sqlContext:org.apache.spark.sql.SQLContext>`_
+- `toJSON: Dataset[String] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toJSON:org.apache.spark.sql.Dataset[String]>`_
+- `toString(): String <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toString():String>`_
 
 User-Defined Functions (UDFs)
 #############################
