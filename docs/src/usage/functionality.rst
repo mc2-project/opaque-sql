@@ -49,10 +49,11 @@ DataFrame interface
 
 Because Opaque only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark's, which can be found `here <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html>`_. Opaque is still a work in progress, so not all of these functionalities are currently implemented. 
 
-The list of working operations is:
+Working operations
+*******************
 
 Actions
-*******
+-------
 - `collect(): Array[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#collect():Array[T]>`_
 - `collectAsList(): List[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#collectAsList():java.util.List[T]>`_
 - `count(): Long <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#count():Long>`_
@@ -74,7 +75,7 @@ Actions
 - `toLocalIterator(): Iterator[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toLocalIterator():java.util.Iterator[T]>`_
 
 Basic Dataset functions
-***********************
+-----------------------
 - `cache(): Dataset.this.type <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cache():Dataset.this.type>`_
 - `columns: Array[String] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#columns:Array[String]>`_
 - `createGlobalTempView(viewName: String): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#createGlobalTempView(viewName:String):Unit>`_
@@ -108,12 +109,12 @@ Basic Dataset functions
 - `registerTempTable(tableName: String): Unit <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#registerTempTable(tableName:String):Unit>`_
 
 Streaming
-*********
+---------
 - `isStreaming: Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#isStreaming:Boolean>`_
 - `withWatermark(eventTime: String, delayThreshold: String): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#withWatermark(eventTime:String,delayThreshold:String):org.apache.spark.sql.Dataset[T]>`_
 
 Typed transformations
-*********************
+---------------------
 - `alias(alias: Symbol): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:Symbol):org.apache.spark.sql.Dataset[T]>`_
 - `alias(alias: String): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:String):org.apache.spark.sql.Dataset[T]>`_
 - `as(alias: Symbol): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as(alias:Symbol):org.apache.spark.sql.Dataset[T]>`_
@@ -167,7 +168,7 @@ Typed transformations
 - `where(condition: Column): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#where(condition:org.apache.spark.sql.Column):org.apache.spark.sql.Dataset[T]>`_
 
 Untyped transformations
-*********************
+-----------------------
 - `agg(expr: Column, exprs: Column*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(expr:org.apache.spark.sql.Column,exprs:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame>`_
 - `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:java.util.Map[String,String]):org.apache.spark.sql.DataFrame>`_
 - `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:Map[String,String]):org.apache.spark.sql.DataFrame>`_
@@ -175,8 +176,6 @@ Untyped transformations
 - `apply(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#apply(colName:String):org.apache.spark.sql.Column>`_
 - `col(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#col(colName:String):org.apache.spark.sql.Column>`_
 - `colRegex(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#colRegex(colName:String):org.apache.spark.sql.Column>`_
-- `cube(col1: String, cols: String*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset>`_
-- `cube(cols: Column*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `drop(col: Column): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(col:org.apache.spark.sql.Column):org.apache.spark.sql.DataFrame>`_
 - `drop(colNames: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(colNames:String*):org.apache.spark.sql.DataFrame>`_
 - `drop(colName: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#drop(colName:String):org.apache.spark.sql.DataFrame>`_
@@ -198,7 +197,7 @@ Untyped transformations
 - `withColumnRenamed(existingName: String, newName: String): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#withColumnRenamed(existingName:String,newName:String):org.apache.spark.sql.DataFrame>`_
 
 Ungrouped
-*********
+---------
 - `encoder: Encoder[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#encoder:org.apache.spark.sql.Encoder[T]>`_
 - `queryExecution: execution.QueryExecution <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#queryExecution:org.apache.spark.sql.execution.QueryExecution>`_
 - `sameSemantics(other: Dataset[T]): Boolean <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sameSemantics(other:org.apache.spark.sql.Dataset[T]):Boolean>`_
@@ -208,10 +207,11 @@ Ungrouped
 - `toJSON: Dataset[String] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toJSON:org.apache.spark.sql.Dataset[String]>`_
 - `toString(): String <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#toString():String>`_
 
-And the list of currently unsupported operations is:
+Unsupported operations
+**********************
 
 Actions
-*******
+-------
 - `describe(cols: String*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#describe(cols:String*):org.apache.spark.sql.DataFrame>`_
 - `reduce(func: ReduceFunction[T]): T <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#reduce(func:org.apache.spark.api.java.function.ReduceFunction[T]):T>`_
 - `reduce(func: (T, T) => T): T <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#reduce(func:(T,T)=%3ET):T>`_
@@ -219,7 +219,7 @@ Actions
 - `tail(n: Int): Array[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#tail(n:Int):Array[T]>`_
 
 Basic Dataset Functions
-***********************
+-----------------------
 - `as[U](implicitevidence: Encoder[U]): Dataset[U] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as[U](implicitevidence:org.apache.spark.sql.Encoder[U]):org.apache.spark.sql.Dataset[U]>`_
 - `checkpoint(eager: Boolean): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#checkpoint(eager:Boolean):org.apache.spark.sql.Dataset[T]>`_
 - `checkpoint(): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#checkpoint():org.apache.spark.sql.Dataset[T]>`_
@@ -227,7 +227,7 @@ Basic Dataset Functions
 - `persist(): Dataset.this.type <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#persist():Dataset.this.type>`_
 
 Typed transformations
-********************
+---------------------
 - `except(other: Dataset[T]): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#except(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]>`_
 - `exceptAll(other: Dataset[T]): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#exceptAll(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]>`_
 - `intersect(other: Dataset[T]): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#intersect(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]>`_
@@ -239,8 +239,10 @@ Typed transformations
 - `sample(fraction: Double, seed: Long): Dataset[T] <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sample(fraction:Double,seed:Long):org.apache.spark.sql.Dataset[T]>`_
 
 Untyped transformations
-***********************
+-----------------------
 - `crossJoin(right: Dataset[_]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#crossJoin(right:org.apache.spark.sql.Dataset[_]):org.apache.spark.sql.DataFrame>`_
+- `cube(col1: String, cols: String*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset>`_
+- `cube(cols: Column*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `rollup(col1: String, cols: String*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#rollup(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `rollup(cols: Column*): RelationalGroupedDataset <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#rollup(cols:org.apache.spark.sql.Column*):org.apache.spark.sql.RelationalGroupedDataset>`_
 - `explode[A, B](inputColumn: String, outputColumn: String)(f: A => TraversableOnce[B])(implicitevidence: reflect.runtime.universe.TypeTag[B]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#explode[A,B](inputColumn:String,outputColumn:String)(f:A=%3ETraversableOnce[B])(implicitevidence$5:reflect.runtime.universe.TypeTag[B]):org.apache.spark.sql.DataFrame>`_
