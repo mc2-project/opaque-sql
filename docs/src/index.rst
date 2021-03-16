@@ -31,4 +31,5 @@ Unlike the Spark cluster, the driver must be run within a trusted environment (e
    usage/usage.rst
    usage/functionality.rst
    benchmarking/benchmarking.rst
+   contributing/contributing.rst
    
