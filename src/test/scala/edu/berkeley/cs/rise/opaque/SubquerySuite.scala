@@ -62,7 +62,44 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       | where NOT EXISTS (select c2 from t2) and
       |       c2 IN (select c2 from t3)
       |
-      """.stripMargin
+      """.stripMargin,
+    """
+      |select a
+      |from   l
+      |where  (select count(*)
+      |        from   r
+      |        where (a = c and d = 2.0) or (a = c and d = 1.0)) > 0
+    """.stripMargin,
+    "select l.a from l where (select count(*) from r where l.a = r.c) < l.a",
+    """
+      |select l.b, (select (r.c + count(*)) is null
+      |from r
+      |where l.a = r.c group by r.c) from l
+    """.stripMargin,
+    """
+      | select c1 from onerow t1
+      | where exists (select 1 from onerow t2 where t1.c1=t2.c1)
+      | and   exists (select 1 from onerow LIMIT 1)
+    """.stripMargin,
+    """
+      | select c1 from onerow t1
+      | where exists (select 1
+      |               from   (select c1 from onerow t2 LIMIT 1) t2
+      |               where  t1.c1=t2.c1)
+    """.stripMargin,
+    """
+      | select *
+      | from   (select t2.c2+1 as c3
+      |         from   t1 left join t2 on t1.c1=t2.c2) t3
+      | where  c3 not in (select c2 from t2)
+    """.stripMargin,
+    """
+      | select c1
+      | from   t1
+      | where  c1 in (select t2.c1
+      |               from   t2
+      |               where  t1.c2 >= t2.c2)
+    """.stripMargin
   )
   override def failingQueries = Seq(
     "select (select key from subqueryData where key > 2 order by key limit 1) + 1",
@@ -85,7 +122,39 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       " or l.a in (select c from r where l.b < r.d)",
     "select * from l where a not in (select c from r)" +
       " or a not in (select c from r where c is not null)",
-    "select a from l group by 1 having exists (select 1 from r where d < min(b))"
+    "select a from l group by 1 having exists (select 1 from r where d < min(b))",
+    """
+      | select c1 from t1
+      | where (select max(c1) from t2 where c2 IN (select c2 from t3))
+      |       IN (select c2 from t2)
+      |
+    """.stripMargin,
+    "select * from l where b < (select max(d) from r where a = c)",
+    "select a, (select sum(b) from l l2 where l2.a = l1.a) sum_b from l l1",
+    "select a, (select sum(d) from r where a = c) sum_d from l l1 group by 1, 2",
+    "select l.a from l where (select count(*) from r where l.a = r.c) = 0",
+    "select l.a from l where (select sum(r.d) is null from r where l.a = r.c)",
+    "select a, (select count(*) from r where l.a = r.c) as cnt from l",
+    "select l.a as grp_a from l group by l.a " +
+      "having (select count(*) from r where grp_a = r.c) = 0 " +
+      "order by grp_a",
+    "select l.a as aval, sum((select count(*) from r where l.a = r.c)) as cnt " +
+      "from l group by l.a order by aval",
+    "select l.a from l where (select sum(r.d) from r where l.a = r.c) is null",
+    "select l.a from l where (select count(*) from r where l.a = r.c) > 0",
+    "select l.a from l where (select count(*) + sum(r.d) from r where l.a = r.c) = 0",
+    """select l.a from l
+      |where (
+      |    select cntPlusOne + 1 as cntPlusTwo from (
+      |        select cnt + 1 as cntPlusOne from (
+      |            select sum(r.c) s, count(*) cnt from r where l.a = r.c having cnt = 0
+      |        )
+      |    )
+      |) = 2
+    """.stripMargin,
+    "select l.a from l where " +
+      "(select case when count(*) = 1 then null else count(*) end as cnt " +
+      "from r where l.a = r.c) = 0"
   )
   override def unsupportedQueries = Seq(
     "select (select 1 as b) as b",
@@ -138,6 +207,55 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |             else 3 end)
       |       IN (select c2 from t1)
       |
+    """.stripMargin,
+    """
+        | select c1 from t1
+        | where (c1, (case when c2 IN (select c2 from t2) then 1
+        |                  when c2 IN (select c2 from t3) then 2
+        |                  else 3 end))
+        |       IN (select c1, c2 from t1)
+        |
+    """.stripMargin,
+    """
+      | select c1 from t3
+      | where ((case when c2 IN (select c2 from t2) then 1 else 2 end),
+      |        (case when c2 IN (select c2 from t3) then 2 else 3 end))
+      |     IN (select c1, c2 from t3)
+      |
+    """.stripMargin,
+    """
+      | select c1 from t1
+      | where ((case when EXISTS (select c2 from t2) then 1 else 2 end),
+      |        (case when c2 IN (select c2 from t3) then 2 else 3 end))
+      |     IN (select c1, c2 from t3)
+      |
+    """.stripMargin,
+    """
+      | select c1 from t1
+      | where (case when c2 IN (select c2 from t2) then 3
+      |             else 2 end)
+      |       NOT IN (select c2 from t3)
+      |
+      """.stripMargin,
+    """
+      | select c1 from t1
+      | where ((case when c2 IN (select c2 from t2) then 1 else 2 end),
+      |        (case when NOT EXISTS (select c2 from t3) then 2
+      |              when EXISTS (select c2 from t2) then 3
+      |              else 3 end))
+      |     NOT IN (select c1, c2 from t3)
+      |
+    """.stripMargin,
+    "select a, (select sum(b) from l l2 where l2.a <=> l1.a) sum_b from l l1",
+    """
+      | select t1.c1
+      | from   t1, t1 as t3
+      | where  t1.c1 = t3.c1
+      | and    (t1.c1 in (select t2.c1
+      |                   from   t2
+      |                   where  t1.c2 >= t2.c2
+      |                          or t3.c2 < t2.c2)
+      |         or t1.c2 >= 0)
     """.stripMargin
   )
 
@@ -181,7 +299,7 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
     sl.applyTo(Seq((1, 1), (2, 2)).toDF("c1", "c2")).createOrReplaceTempView("t1")
     sl.applyTo(Seq((1, 1), (2, 2)).toDF("c1", "c2")).createOrReplaceTempView("t2")
     sl.applyTo(Seq((1, 1), (2, 2), (1, 2)).toDF("c1", "c2")).createOrReplaceTempView("t3")
-
+    sl.applyTo(Seq(1).toDF("c1")).createOrReplaceTempView("onerow")
   }
 }
 
