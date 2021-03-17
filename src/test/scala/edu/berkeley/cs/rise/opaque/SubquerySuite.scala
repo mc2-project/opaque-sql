@@ -221,7 +221,40 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |         WHERE t2.c1 = 2
       |         ORDER BY t2.c1
       |        ))
-    """.stripMargin
+    """.stripMargin,
+    """
+      |SELECT id,num,source FROM (
+      |  SELECT id, num, 'a' as source FROM a
+      |  UNION ALL
+      |  SELECT id, num, 'b' as source FROM b
+      |) AS c WHERE c.id IN (SELECT id FROM b WHERE num = 2)
+    """.stripMargin,
+    """
+      |SELECT id,num,source FROM (
+      |  SELECT id, num, 'a' as source FROM a
+      |  UNION ALL
+      |  SELECT id, num, 'b' as source FROM b
+      |) AS c WHERE c.id NOT IN (SELECT id FROM b WHERE num = 2)
+    """.stripMargin,
+    """
+      |SELECT
+      |  l.a
+      |FROM l WHERE
+      |  (
+      |    SELECT cntPlusOne + 1 as cntPlusTwo FROM
+      |    (
+      |      SELECT cnt + 1 as cntPlusOne FROM
+      |      (
+      |        SELECT sum(r.c) s, count(*) cnt FROM r WHERE l.a = r.c HAVING cnt > 0
+      |      )
+      |    )
+      |  ) = 2
+    """.stripMargin,
+    "select * from l where a not in (select c from r where c > 10)",
+    "select * from l where a not in (select c from r where d < 6.0)",
+    "select * from l where b = 5.0 and a not in(select c from r where c is not null)",
+    "select * from l where a = 6 and a not in (select c from r where c is not null)",
+    "select * from l where b = 5.0 and a not in (select c from r where d = b + 10)"
   )
   override def failingQueries = Seq(
     "select (select key from subqueryData where key > 2 order by key limit 1) + 1",
@@ -290,7 +323,9 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |             FROM   t3
       |             WHERE  t3.c1 = 1
       |             ORDER BY min(t3.c2))
-    """.stripMargin
+    """.stripMargin,
+    "select * from l where a = 1 and a not in (select c from r where c is not null)",
+    "select * from l where a not in (select c from r where d = b + 10)"
   )
   override def unsupportedQueries = Seq(
     "select (select 1 as b) as b",
@@ -445,6 +480,42 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |             HAVING   count(*) >= 1
       |             ORDER BY max(t2.c1)
       |             LIMIT 1)
+    """.stripMargin,
+    """
+      |SELECT id,num,source FROM (
+      |  SELECT id, num, 'a' as source FROM a
+      |  UNION ALL
+      |  SELECT id, num, 'b' as source FROM b
+      |) AS c WHERE c.id IN (SELECT id FROM b WHERE num = 2) OR
+      |c.id IN (SELECT id FROM b WHERE num = 3)
+    """.stripMargin,
+    """
+      |SELECT l.a FROM l
+      |WHERE (
+      |  SELECT cntPlusOne + 1 AS cntPlusTwo FROM (
+      |    SELECT cnt + 1 AS cntPlusOne FROM (
+      |      SELECT sum(r.c) s, (count(*) + cast(rand() as int)) cnt FROM r
+      |        WHERE l.a = r.c HAVING cnt = 0
+      |      )
+      |  )
+      |) = 2
+    """.stripMargin,
+    """
+      |SELECT
+      |  l.a
+      |FROM l WHERE
+      |  (
+      |    SELECT cntPlusOne + 1 AS cntPlusTwo
+      |    FROM
+      |      (
+      |        SELECT cnt + 1 AS cntPlusOne
+      |        FROM
+      |          (
+      |            SELECT sum(r.c) s, count(*) cnt FROM r
+      |            WHERE l.a = r.c HAVING (cnt + cast(rand() as int)) > 0
+      |          )
+      |       )
+      |   ) = 2
     """.stripMargin
   )
 
@@ -490,6 +561,8 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
     sl.applyTo(Seq((1, 1, 1), (2, 2, 2), (1, 2, 3)).toDF("c1", "c2", "c3"))
       .createOrReplaceTempView("t3")
     sl.applyTo(Seq(1).toDF("c1")).createOrReplaceTempView("onerow")
+    sl.applyTo(Seq("a" -> 2, "b" -> 1).toDF("id", "num")).createOrReplaceTempView("a")
+    sl.applyTo(Seq("a" -> 2, "b" -> 1).toDF("id", "num")).createOrReplaceTempView("b")
   }
 }
 
