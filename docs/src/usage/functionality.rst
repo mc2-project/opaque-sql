@@ -1,3 +1,5 @@
+.. _functionalities:
+
 *************************
 Supported functionalities
 *************************
@@ -27,7 +29,7 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 - Scalar functions: ``case``, ``cast``, ``concat``, ``contains``, ``if``, ``in``, ``like``, ``substring``, ``upper``
 - Aggregate functions: ``average``, ``count``, ``first``, ``last``, ``max``, ``min``, ``sum``
 
-UDFs are not supported directly, but one can :ref:`extend Opaque with additional functions <udf>` by writing it in C++.
+UDFs are not supported directly, but one can :ref:`extend Opaque with additional functions <udfs>` by writing it in C++.
 
 
 Operators
@@ -168,7 +170,6 @@ Typed transformations
 Untyped transformations
 -----------------------
 - `agg(expr: Column, exprs: Column*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(expr:org.apache.spark.sql.Column,exprs:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame>`_
-- `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:java.util.Map[String,String]):org.apache.spark.sql.DataFrame>`_
 - `agg(exprs: Map[String, String]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:Map[String,String]):org.apache.spark.sql.DataFrame>`_
 - `agg(aggExpr: (String, String), aggExprs: (String, String)*): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(aggExpr:(String,String),aggExprs:(String,String)*):org.apache.spark.sql.DataFrame>`_
 - `apply(colName: String): Column <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#apply(colName:String):org.apache.spark.sql.Column>`_
@@ -247,6 +248,8 @@ Untyped transformations
 - `explode[A <: Product](input: Column*)(f: Row => TraversableOnce[A])(implicitevidence: reflect.runtime.universe.TypeTag[A]): DataFrame <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#explode[A%3C:Product](input:org.apache.spark.sql.Column*)(f:org.apache.spark.sql.Row=%3ETraversableOnce[A])(implicitevidence$4:reflect.runtime.universe.TypeTag[A]):org.apache.spark.sql.DataFrame>`_
 
 `*` Cross joins and full outer joins are not supported. Aggregations with more than one distinct aggregate expression are not supported.
+
+.. _udfs:
 
 User-Defined Functions (UDFs)
 #############################

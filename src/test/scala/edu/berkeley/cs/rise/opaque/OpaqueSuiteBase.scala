@@ -30,6 +30,6 @@ trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTest
   }
 
   override def afterAll(): Unit = {
-    spark.stop()
+    Utils.cleanup(spark)
   }
 }
