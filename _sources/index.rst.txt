@@ -11,7 +11,7 @@ It currently has the following limitations:
 
 Unlike the Spark cluster, the driver must be run within a trusted environment (e.g., on the client).
 
-- Not all Spark SQL operations are supported (see the :ref:`list of supported operations <functionalities>`). UDFs must be :ref:`implemented in C++ <udf>`
+- Not all Spark SQL operations are supported (see the :ref:`list of supported functionalities <functionalities>`). UDFs must be :ref:`implemented in C++ <udfs>`
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 

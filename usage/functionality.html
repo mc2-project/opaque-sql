@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmarking" href="../benchmarking/benchmarking.html" /><link rel="prev" title="Using Opaque SQL" href="usage.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.02.28.beta28"/>
-        <title>Supported functionalities - Opaque SQL 0.3 documentation</title>
+        <title>Supported functionalities - Opaque SQL documentation</title>
       <link rel="stylesheet" href="../_static/styles/furo.css?digest=be5985a4059b5c2cd56ed0804790452beca62674">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
@@ -91,7 +91,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">Opaque SQL 0.3 documentation</div></a>
+      <a href="../index.html"><div class="brand">Opaque SQL  documentation</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon" for="__toc">
@@ -105,7 +105,7 @@
       <div class="sidebar-sticky"><div class="sidebar-scroll"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">Opaque SQL 0.3 documentation</span>
+  <span class="sidebar-brand-text">Opaque SQL  documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -133,7 +133,7 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <div class="section" id="supported-functionalities">
-<h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
+<span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
 <p>This section lists Opaque’s supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL – Opaque simply replaces the execution to work with encrypted data.</p>
 <div class="section" id="sql-interface">
 <h2>SQL interface<a class="headerlink" href="#sql-interface" title="Permalink to this headline">¶</a></h2>
@@ -156,7 +156,7 @@
 <li><p>Scalar functions: <code class="docutils literal notranslate"><span class="pre">case</span></code>, <code class="docutils literal notranslate"><span class="pre">cast</span></code>, <code class="docutils literal notranslate"><span class="pre">concat</span></code>, <code class="docutils literal notranslate"><span class="pre">contains</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code>, <code class="docutils literal notranslate"><span class="pre">in</span></code>, <code class="docutils literal notranslate"><span class="pre">like</span></code>, <code class="docutils literal notranslate"><span class="pre">substring</span></code>, <code class="docutils literal notranslate"><span class="pre">upper</span></code></p></li>
 <li><p>Aggregate functions: <code class="docutils literal notranslate"><span class="pre">average</span></code>, <code class="docutils literal notranslate"><span class="pre">count</span></code>, <code class="docutils literal notranslate"><span class="pre">first</span></code>, <code class="docutils literal notranslate"><span class="pre">last</span></code>, <code class="docutils literal notranslate"><span class="pre">max</span></code>, <code class="docutils literal notranslate"><span class="pre">min</span></code>, <code class="docutils literal notranslate"><span class="pre">sum</span></code></p></li>
 </ul>
-<p>UDFs are not supported directly, but one can <span class="xref std std-ref">extend Opaque with additional functions</span> by writing it in C++.</p>
+<p>UDFs are not supported directly, but one can <a class="reference internal" href="#udfs"><span class="std std-ref">extend Opaque with additional functions</span></a> by writing it in C++.</p>
 </div>
 <div class="section" id="operators">
 <h3>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">¶</a></h3>
@@ -303,7 +303,6 @@
 <h4>Untyped transformations<a class="headerlink" href="#untyped-transformations" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(expr:org.apache.spark.sql.Column,exprs:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame">agg(expr: Column, exprs: Column*): DataFrame</a></p></li>
-<li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:java.util.Map[String,String]):org.apache.spark.sql.DataFrame">agg(exprs: Map[String, String]): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:Map[String,String]):org.apache.spark.sql.DataFrame">agg(exprs: Map[String, String]): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(aggExpr:(String,String),aggExprs:(String,String)*):org.apache.spark.sql.DataFrame">agg(aggExpr: (String, String), aggExprs: (String, String)*): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#apply(colName:String):org.apache.spark.sql.Column">apply(colName: String): Column</a></p></li>
@@ -346,8 +345,8 @@
 </div>
 <div class="section" id="unsupported-operations">
 <h3>Unsupported operations<a class="headerlink" href="#unsupported-operations" title="Permalink to this headline">¶</a></h3>
-<div class="section" id="id2">
-<h4>Actions<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="id1">
+<h4>Actions<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#describe(cols:String*):org.apache.spark.sql.DataFrame">describe(cols: String*): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#reduce(func:org.apache.spark.api.java.function.ReduceFunction[T]):T">reduce(func: ReduceFunction[T]): T</a></p></li>
@@ -356,8 +355,8 @@
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#tail(n:Int):Array[T]">tail(n: Int): Array[T]</a></p></li>
 </ul>
 </div>
-<div class="section" id="id3">
-<h4>Basic Dataset Functions<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="id2">
+<h4>Basic Dataset Functions<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as[U](implicitevidence:org.apache.spark.sql.Encoder[U]):org.apache.spark.sql.Dataset[U]">as[U](implicitevidence: Encoder[U]): Dataset[U]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#checkpoint(eager:Boolean):org.apache.spark.sql.Dataset[T]">checkpoint(eager: Boolean): Dataset[T]</a></p></li>
@@ -366,8 +365,8 @@
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#persist():Dataset.this.type">persist(): Dataset.this.type</a></p></li>
 </ul>
 </div>
-<div class="section" id="id4">
-<h4>Typed transformations<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="id3">
+<h4>Typed transformations<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#except(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]">except(other: Dataset[T]): Dataset[T]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#exceptAll(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]">exceptAll(other: Dataset[T]): Dataset[T]</a></p></li>
@@ -380,8 +379,8 @@
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#sample(fraction:Double,seed:Long):org.apache.spark.sql.Dataset[T]">sample(fraction: Double, seed: Long): Dataset[T]</a></p></li>
 </ul>
 </div>
-<div class="section" id="id5">
-<h4>Untyped transformations<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="id4">
+<h4>Untyped transformations<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#crossJoin(right:org.apache.spark.sql.Dataset[_]):org.apache.spark.sql.DataFrame">crossJoin(right: Dataset[_]): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset">cube(col1: String, cols: String*): RelationalGroupedDataset</a></p></li>
@@ -396,7 +395,7 @@
 </div>
 </div>
 <div class="section" id="user-defined-functions-udfs">
-<h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">¶</a></h2>
+<span id="udfs"></span><h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">¶</a></h2>
 <p>To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque’s serialized row representation.</p>
 <p>For example, suppose we wish to implement a UDF called <code class="docutils literal notranslate"><span class="pre">dot</span></code>, which computes the dot product of two double arrays (<code class="docutils literal notranslate"><span class="pre">Array[Double]</span></code>). We [define it in Scala](src/main/scala/edu/berkeley/cs/rise/opaque/expressions/DotProduct.scala) in terms of the Breeze linear algebra library’s implementation. We can then use it in a DataFrame query, such as <a class="reference external" href="src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/LogisticRegression.scala">logistic regression</a>.</p>
 <p>Now we can port this UDF to Opaque as follows:</p>
@@ -497,10 +496,10 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#unsupported-operations">Unsupported operations</a><ul>
-<li><a class="reference internal" href="#id2">Actions</a></li>
-<li><a class="reference internal" href="#id3">Basic Dataset Functions</a></li>
-<li><a class="reference internal" href="#id4">Typed transformations</a></li>
-<li><a class="reference internal" href="#id5">Untyped transformations</a></li>
+<li><a class="reference internal" href="#id1">Actions</a></li>
+<li><a class="reference internal" href="#id2">Basic Dataset Functions</a></li>
+<li><a class="reference internal" href="#id3">Typed transformations</a></li>
+<li><a class="reference internal" href="#id4">Untyped transformations</a></li>
 </ul>
 </li>
 </ul>
