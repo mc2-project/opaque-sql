@@ -136,6 +136,91 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |                            WHERE  c1 = 1
       |                            ORDER  BY c3)
       |              ORDER  BY c2)
+    """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |c1 IN (SELECT t2.c1 FROM t2, t3
+      |       WHERE t2.c1 = t3.c1
+      |       ORDER BY t2.c1)
+    """.stripMargin,
+    """
+      |SELECT c1
+      |FROM   t1
+      |WHERE  (c1, c2) IN (SELECT c1, max(c2)
+      |                    FROM   (SELECT c1, c2, count(*)
+      |                            FROM   t2
+      |                            GROUP BY c1, c2
+      |                            HAVING count(*) > 0
+      |                            ORDER BY c2)
+      |                    GROUP BY c1
+      |                    HAVING max(c2) > 0
+      |                    ORDER  BY c1)
+    """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |c1 IN (SELECT c1 FROM t2 ORDER BY c1 limit 1)
+      """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |c1 IN ((
+      |        SELECT c1 + 1 AS c1 FROM t2
+      |        ORDER BY c1
+      |       )
+      |       UNION
+      |       (
+      |         SELECT c1 + 2 AS c1 FROM t2
+      |         ORDER BY c1
+      |       ))
+    """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |EXISTS (SELECT t2.c1 FROM t2 WHERE t1.c1 = t2.c1 ORDER BY t2.c1)
+    """.stripMargin,
+    """
+      |SELECT c1
+      |FROM   t1
+      |WHERE  EXISTS (SELECT c1
+      |               FROM (SELECT *
+      |                     FROM   t2
+      |                     WHERE t2.c1 = t1.c1
+      |                     ORDER  BY t2.c2) t2
+      |               ORDER BY t2.c1)
+    """.stripMargin,
+    """
+      |SELECT c1
+      |FROM   t1
+      |WHERE  EXISTS (SELECT c1
+      |               FROM t2
+      |               WHERE EXISTS (SELECT c1
+      |                             FROM   t3
+      |                             WHERE  t3.c1 = t2.c1
+      |                             ORDER  BY c3)
+      |               AND t2.c1 = t1.c1
+      |               ORDER BY c2)
+    """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |EXISTS (SELECT t2.c1 FROM t2 WHERE t2.c1 = 1 ORDER BY t2.c1 limit 1)
+    """.stripMargin,
+    """
+      |SELECT c1 FROM t1
+      |WHERE
+      |EXISTS ((
+      |        SELECT c1 FROM t2
+      |        WHERE t2.c1 = 1
+      |        ORDER BY t2.c1
+      |        )
+      |        UNION
+      |        (
+      |         SELECT c1 FROM t2
+      |         WHERE t2.c1 = 2
+      |         ORDER BY t2.c1
+      |        ))
     """.stripMargin
   )
   override def failingQueries = Seq(
@@ -195,6 +280,16 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
     """
       |SELECT * FROM l, r WHERE l.a = r.c + 1 AND
       |(EXISTS (SELECT * FROM r) OR l.a = r.c)
+    """.stripMargin,
+    """
+      |SELECT * FROM t1
+      |WHERE  c1 = (SELECT max(t2.c1)
+      |             FROM   t2
+      |             ORDER BY max(t2.c1))
+      |OR     c2 = (SELECT min(t3.c2)
+      |             FROM   t3
+      |             WHERE  t3.c1 = 1
+      |             ORDER BY min(t3.c2))
     """.stripMargin
   )
   override def unsupportedQueries = Seq(
@@ -305,7 +400,52 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
       |               FROM t2 LATERAL VIEW explode(arr_c2) q AS c2
       |                   WHERE t1.c1 = t2.c1)
     """.stripMargin,
-    "select * from l, r where l.a = r.c AND (r.d in (select d from r) OR l.a >= 1)"
+    "select * from l, r where l.a = r.c AND (r.d in (select d from r) OR l.a >= 1)",
+    """
+      |SELECT *
+      |FROM   t1
+      |WHERE  c1 = (SELECT   max(t2.c1)
+      |             FROM     t2
+      |             GROUP BY t2.c1
+      |             HAVING   count(*) >= 1
+      |             ORDER BY max(t2.c1))
+    """.stripMargin,
+    """
+      |SELECT *
+      |FROM   t1
+      |WHERE  c1 = (SELECT   max(t2.c1)
+      |             FROM     t2
+      |             WHERE c1 = (SELECT max(t3.c1)
+      |                         FROM t3
+      |                         WHERE t3.c1 = 1
+      |                         GROUP BY t3.c1
+      |                         ORDER BY max(t3.c1)
+      |                        )
+      |              GROUP BY t2.c1
+      |              HAVING   count(*) >= 1
+      |              ORDER BY max(t2.c1))
+    """.stripMargin,
+    """
+      |SELECT (SELECT min(c1) from t1 group by c1 order by c1)
+      |FROM t1
+      |WHERE t1.c1 = 1
+    """.stripMargin,
+    """
+      |SELECT *
+      |FROM   t1
+      |WHERE  c1 = (SELECT   max(t2.c1)
+      |             FROM     t2
+      |             WHERE c1 = (SELECT max(t3.c1)
+      |                         FROM t3
+      |                         WHERE t3.c1 = 1
+      |                         GROUP BY t3.c1
+      |                         ORDER BY max(t3.c1)
+      |                         )
+      |             GROUP BY t2.c1
+      |             HAVING   count(*) >= 1
+      |             ORDER BY max(t2.c1)
+      |             LIMIT 1)
+    """.stripMargin
   )
 
   override def loadTestData(sqlStr: String, sl: SecurityLevel) = {
