@@ -27,8 +27,8 @@ import edu.berkeley.cs.rise.opaque.execution.SP
 
 object RA extends Logging {
 
-  var numExecutors : Int = 1
-  var loop : Boolean = true
+  var numExecutors: Int = 1
+  var loop: Boolean = true
 
   def initRA(sc: SparkContext): Unit = {
 
@@ -63,9 +63,9 @@ object RA extends Logging {
 
     // Runs on executors
     rdd.mapPartitions { (_) =>
-        val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
-        Iterator((eid, true))
-      }.count
+      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
+      Iterator((eid, true))
+    }.count
   }
 
   def waitForExecutors(sc: SparkContext): Unit = {
@@ -93,7 +93,7 @@ object RA extends Logging {
     // Proactively initialize enclaves
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
-    rdd.mapPartitions{ (_) =>
+    rdd.mapPartitions { (_) =>
       val eid = Utils.startEnclave(numEnclavesAcc)
       Iterator(eid)
     }.count
@@ -107,7 +107,7 @@ object RA extends Logging {
     Thread.sleep(100)
   }
 
-  def startThread(sc: SparkContext) : Unit = {
+  def startThread(sc: SparkContext): Unit = {
     val thread = new Thread {
       override def run: Unit = {
         while (loop) {
@@ -118,7 +118,7 @@ object RA extends Logging {
     thread.start
   }
 
-  def stopThread() : Unit = {
+  def stopThread(): Unit = {
     loop = false
     Thread.sleep(5000)
   }

@@ -284,7 +284,7 @@ object Utils extends Logging {
   var acc_registered: Boolean = false
   val numEnclaves: LongAccumulator = new LongAccumulator
   val numAttested: LongAccumulator = new LongAccumulator
-  var loop : Boolean = true
+  var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
@@ -321,7 +321,7 @@ object Utils extends Logging {
     }
   }
 
-  def startEnclave(numEnclavesAcc: LongAccumulator) : Long = {
+  def startEnclave(numEnclavesAcc: LongAccumulator): Long = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()

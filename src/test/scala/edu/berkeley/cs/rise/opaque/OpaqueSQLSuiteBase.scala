@@ -27,7 +27,7 @@ trait OpaqueSQLSuiteBase extends OpaqueSuiteBase {
   def unsupportedQueries: Seq[String]
 
   def runSQLQueries() = {
-    for (sqlStr <- queries) {
+    for (sqlStr <- unsupportedQueries) {
       test(sqlStr) {
         checkAnswer() { sl =>
           loadTestData(sqlStr, sl)
