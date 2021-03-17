@@ -7,9 +7,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-18.04
-
     steps:
     - uses: actions/checkout@v2
     - uses: ammaraskar/sphinx-action@master
@@ -25,9 +23,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add .
-        git commit -m "${GITHUB_ACTOR}'s changes in ${GITHUB_SHA} triggered this doc build" -a || true
-        # The above command will fail if no changes were present, so we ignore
-        # that.
+        git commit -m "${GITHUB_ACTOR}'s changes in ${GITHUB_SHA} triggered this build" -a || true
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:

@@ -6,7 +6,7 @@
 Welcome to Opaque SQL's documentation!
 ======================================
 
-AHHHHHHHHHHHHHHHHH SQL is a package for Apache Spark SQL that enables encryption for DataFrames using the OpenEnclave framework. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within hardware enclaves (such as Intel SGX).
+Opaque SQL is a package for Apache Spark SQL that enables encryption for DataFrames using the OpenEnclave framework. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within hardware enclaves (such as Intel SGX).
 
 This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is currently not included in this release.
 
