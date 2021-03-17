@@ -29,7 +29,7 @@ We currently support a subset of the Spark SQL functions, including both scalar 
 - Scalar functions: ``case``, ``cast``, ``concat``, ``contains``, ``if``, ``in``, ``like``, ``substring``, ``upper``
 - Aggregate functions: ``average``, ``count``, ``first``, ``last``, ``max``, ``min``, ``sum``
 
-UDFs are not supported directly, but one can :ref:`extend Opaque with additional functions <udf>` by writing it in C++.
+UDFs are not supported directly, but one can :ref:`extend Opaque with additional functions <udfs>` by writing it in C++.
 
 
 Operators

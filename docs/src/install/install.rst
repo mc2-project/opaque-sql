@@ -37,3 +37,10 @@ After downloading the Opaque codebase, build and test it as follows.
                 
                    cd ${OPAQUE_HOME}
                    build/sbt test
+
+5. Alternatively, to generate coverage reports:
+
+   .. code-block:: bash
+
+                  build/sbt clean coverage test
+                  build/sbt coverageReport
