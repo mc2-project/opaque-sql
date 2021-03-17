@@ -1,9 +1,9 @@
-name: Publish Docs
+name: Publish Documentation
 
 on:
   push:
     branches:    
-      - docs-gh-pages
+      - master
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
         docs-folder: "docs/"
     - name: Commit documentation changes
       run: |
-        git clone https://github.com/octaviansima/opaque.git --branch gh-pages --single-branch gh-pages
+        git clone https://github.com/mc2-project/opaque.git --branch gh-pages --single-branch gh-pages
         cp -r docs/build/html/* gh-pages/
         cd gh-pages
         touch .nojekyll
