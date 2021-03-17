@@ -37,4 +37,3 @@ jobs:
           find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
           find $HOME/.sbt                              -name "*.lock"               -delete || true
         shell: bash
-
