@@ -1,9 +1,9 @@
-==================
- Using Opaque SQL
-==================
+****************
+Using Opaque SQL
+****************
 
 Setup
-=====
+*****
 
 Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Opaque SQL needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
 
@@ -36,7 +36,7 @@ Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Op
                       edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
 
 Encrypting, saving, and loading a DataFrame
-===========================================
+*******************************************
 
 1. Create an unencrypted DataFrame on the driver.
    This should be done on the client, i.e., in a trusted setting.
@@ -65,7 +65,7 @@ Encrypting, saving, and loading a DataFrame
 
 
 Using the DataFrame interface
-=============================
+*****************************
 
 1. Users can load the :ref:`previously persisted encrypted DataFrame<save_df>`.
 
@@ -105,7 +105,7 @@ Using the DataFrame interface
 
 
 Using the SQL interface
-=======================
+***********************
 
 1. Users can also load the :ref:`previously persisted encrypted DataFrame <save_df>` using the SQL interface.
 

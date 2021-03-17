@@ -57,7 +57,8 @@ Alternatively, you can look at `Benchmark.scala <https://github.com/mc2-project/
 For more help on how to submit jobs to Spark, see `Submitting applications <https://spark.apache.org/docs/3.1.1/submitting-applications.html>`_. For a complete list of values possible in ``<Spark configuration parameters>``, see `Spark properties <https://spark.apache.org/docs/3.1.1/configuration.html>`_
 
 Our TPC-H results
-###########################
+#################
+
 We used a 3 node cluster with 4 cores and 16GB memory per node. 
 
 1. Our ``spark-defaults.conf``:

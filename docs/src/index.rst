@@ -1,10 +1,6 @@
-.. Opaque SQL documentation master file, created by
-   sphinx-quickstart on Wed Mar 10 00:41:28 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
+**************************************
 Welcome to Opaque SQL's documentation!
-======================================
+**************************************
 
 Opaque SQL is a package for Apache Spark SQL that enables encryption for DataFrames using the OpenEnclave framework. The aim is to enable analytics on sensitive data in an untrusted cloud. Once the contents of a DataFrame are encrypted, subsequent operations will run within hardware enclaves (such as Intel SGX).
 
