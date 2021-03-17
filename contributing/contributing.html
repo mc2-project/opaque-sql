@@ -1,10 +1,10 @@
 <!doctype html>
 <html class="no-js">
   <head><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Using Opaque SQL" href="../usage/usage.html" /><link rel="prev" title="Welcome to Opaque SQL’s documentation!" href="../index.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="Benchmarking" href="../benchmarking/benchmarking.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.02.28.beta28"/>
-        <title>Installation - Opaque SQL 0.3 documentation</title>
+        <title>Contributing - Opaque SQL 0.3 documentation</title>
       <link rel="stylesheet" href="../_static/styles/furo.css?digest=be5985a4059b5c2cd56ed0804790452beca62674">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
@@ -114,11 +114,11 @@
 </form><div class="sidebar-tree">
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install/install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/usage.html">Using Opaque SQL</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Contributing</a></li>
 </ul>
 
 </div></div>
@@ -132,36 +132,37 @@
         <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
-        <div class="section" id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>After downloading the Opaque codebase, build and test it as follows.</p>
+        <div class="section" id="contributing">
+<span id="id1"></span><h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
+<p>Opaque uses a pre-commit hook to ensure that all commits are formatted to the desired style. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):</p>
 <ol class="arabic">
-<li><p>Install dependencies and the [OpenEnclave SDK](<a class="reference external" href="https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md">https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md</a>). We currently support OE version 0.12.0 (so please install with <code class="docutils literal notranslate"><span class="pre">open-enclave=0.12.0</span></code>) and Ubuntu 18.04.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For Ubuntu 18.04:</span>
-sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
+<li><p>Fork the repository on Github, then clone your fork and set upstream:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/&lt;your username&gt;/opaque.git
+<span class="nb">cd</span> opaque
+git remote add upstream https://github.com/mc2-project/opaque.git
+</pre></div>
+</div>
+</li>
+<li><p>Install hook dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Coursier and scalafmt</span>
+curl -fLo cs https://git.io/coursier-cli-<span class="s2">"</span><span class="k">$(</span>uname <span class="p">|</span> tr LD ld<span class="k">)</span><span class="s2">"</span>
+chmod +x cs
+./cs install cs
+<span class="nb">echo</span> <span class="s2">""</span> &gt;&gt; ~/.bashrc
+<span class="nb">echo</span> <span class="s2">"export PATH=</span><span class="nv">$PATH</span><span class="s2">:~/.local/share/coursier/bin"</span> &gt;&gt; ~/.bashrc
+<span class="nb">source</span> ~/.bashrc
+rm cs
+cs install scalafmt
 
-<span class="c1"># Install a newer version of CMake (&gt;= 3.13)</span>
-wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
-sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix<span class="o">=</span>/usr/local
+<span class="c1"># npm and clang-format</span>
+sudo apt -y update
+sudo apt -y install npm
+sudo npm install -g clang-format
 </pre></div>
 </div>
 </li>
-<li><p>On the master, generate a keypair using OpenSSL for remote attestation.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl genrsa -out private_key.pem -3 <span class="m">3072</span>
-</pre></div>
-</div>
-</li>
-<li><p>Change into the Opaque root directory and edit Opaque’s environment variables in <code class="docutils literal notranslate"><span class="pre">opaqueenv</span></code> if desired. Export Opaque and OpenEnclave environment variables via</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> opaqueenv
-<span class="nb">source</span> /opt/openenclave/share/openenclave/openenclaverc
-</pre></div>
-</div>
-<p>By default, Opaque runs in hardware mode (environment variable <code class="docutils literal notranslate"><span class="pre">MODE=HARDWARE</span></code>).
-If you do not have a machine with a hardware enclave but still wish to test out Opaque’s functionality locally, then set <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">MODE=SIMULATE</span></code>.</p>
-</li>
-<li><p>Run the Opaque tests:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-build/sbt <span class="nb">test</span>
+<li><p>Install hook dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.hooks/install-pre-commit
 </pre></div>
 </div>
 </li>
@@ -172,23 +173,15 @@ build/sbt <span class="nb">test</span>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../usage/usage.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title">Using Opaque SQL</div>
-              </div>
-              <svg><use href="#svg-arrow-right"></use></svg>
-            </a>
-          <a class="prev-page" href="../index.html">
+          
+          <a class="prev-page" href="../benchmarking/benchmarking.html">
               <svg><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Home</div>
+                <div class="title">Benchmarking</div>
                 
               </div>
             </a>
@@ -202,7 +195,7 @@ build/sbt <span class="nb">test</span>
               <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
               <a href="https://github.com/pradyunsg/furo">Furo theme</a>.
             |
-            <a class="muted-link" href="../_sources/install/install.rst.txt"
+            <a class="muted-link" href="../_sources/contributing/contributing.rst.txt"
                rel="nofollow">
               Show Source
             </a>
