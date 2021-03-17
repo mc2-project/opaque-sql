@@ -130,6 +130,7 @@ object Benchmark {
     if (runAll) {
       this.runAll();
     }
-    spark.stop()
+
+    Utils.cleanup(spark)
   }
 }
