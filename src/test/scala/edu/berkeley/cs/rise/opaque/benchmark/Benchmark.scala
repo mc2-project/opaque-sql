@@ -131,7 +131,6 @@ object Benchmark {
       this.runAll();
     }
 
-    Utils.cleanup()
-    spark.stop()
+    Utils.cleanup(spark)
   }
 }

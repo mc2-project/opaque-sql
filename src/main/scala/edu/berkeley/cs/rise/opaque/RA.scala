@@ -62,13 +62,10 @@ object RA extends Logging {
     logInfo("Driver processed msg2s")
 
     // Runs on executors
-    val attestationResults = rdd
-      .mapPartitions { (_) =>
+    rdd.mapPartitions { (_) =>
         val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
         Iterator((eid, true))
-      }
-      .collect
-      .toMap
+      }.count
   }
 
   def waitForExecutors(sc: SparkContext): Unit = {

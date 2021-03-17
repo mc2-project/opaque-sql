@@ -36,6 +36,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
@@ -362,8 +363,9 @@ object Utils extends Logging {
     }
   }
 
-  def cleanup() {
+  def cleanup(spark: SparkSession) {
     RA.stopThread()
+    spark.stop()
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
