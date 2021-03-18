@@ -120,21 +120,12 @@ import org.apache.spark.sql.catalyst.expressions.PromotePrecision
 import org.apache.spark.sql.catalyst.expressions.CheckOverflow
 
 object Utils extends Logging {
-  private val perf: Boolean = System.getenv("SGX_PERF") == "1"
 
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
-    if (perf) {
-      logInfo(s"$desc: ${(System.nanoTime - start) / 1000000.0} ms")
-    }
+    logInfo(s"$desc took ${(System.nanoTime - start) / 1000000.0}ms to complete.")
     result
-  }
-
-  def logPerf(message: String): Unit = {
-    if (perf) {
-      logInfo(message)
-    }
   }
 
   /**
@@ -176,6 +167,14 @@ object Utils extends Logging {
     "sgx" -> (if (System.getenv("SGX_MODE") == "HW") "hw" else "sim"))
     logInfo(jsonSerialize(attrs))
     result
+  }
+
+  private var logOperators = false
+  def setOperatorLoggingLevel(logOperators: Boolean) = {
+    this.logOperators = logOperators
+  }
+  def getOperatorLoggingLevel() = {
+    this.logOperators
   }
 
   def findLibraryAsResource(libraryName: String): String = {
@@ -284,7 +283,7 @@ object Utils extends Logging {
   var acc_registered: Boolean = false
   val numEnclaves: LongAccumulator = new LongAccumulator
   val numAttested: LongAccumulator = new LongAccumulator
-  var loop : Boolean = true
+  var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
@@ -321,7 +320,7 @@ object Utils extends Logging {
     }
   }
 
-  def startEnclave(numEnclavesAcc: LongAccumulator) : Long = {
+  def startEnclave(numEnclavesAcc: LongAccumulator): Long = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
@@ -777,8 +776,6 @@ object Utils extends Logging {
     }
   }
 
-  val MaxBlockSize = 1000
-
   /**
    * Encrypts/decrypts a given scalar value
    */
@@ -836,12 +833,38 @@ object Utils extends Logging {
    * If `useEnclave` is true, it will attempt to use the local enclave. Otherwise, it will attempt
    * to use the local encryption key, which is intended to be available only on the driver, not the
    * workers.
+   *
+   * If `MaxBlockSize` is too large, there will be an AssertionError:
+   * FlatBuffers: cannot grow buffer beyond 2 gigabytes in tuix.EncryptedBlock.createEncRowsVector.
+   * The solution is to decrease `MaxBlockSize` by an order of magnitude and
+   * try again. Note that the length of encryptedBlockOffsets would actually increase in this
+   * case, thus increasing the size of the information that tuix.EncryptedBlocks.createBlocksVector
+   * needs to encode. However, createBlocksVector serializes offsets of blocks rather than the
+   * blocks themselves, so this change does not result in the same problem above
+   * (serialization of an array of 4 byte integers would have to exceed 2GB).
    */
+  private var MaxBlockSize = 1024
   def encryptInternalRowsFlatbuffers(
       rows: Seq[InternalRow],
       types: Seq[DataType],
       useEnclave: Boolean,
       isDummyRows: Boolean = false
+  ): Block = {
+
+    try { performEncryptInternalRowsFlatbuffers(rows, types, useEnclave, isDummyRows) }
+    catch {
+      case _: AssertionError =>
+        MaxBlockSize >>= 1
+        encryptInternalRowsFlatbuffers(rows, types, useEnclave, isDummyRows)
+      case as: Throwable =>
+        throw as
+    }
+  }
+  private def performEncryptInternalRowsFlatbuffers(
+      rows: Seq[InternalRow],
+      types: Seq[DataType],
+      useEnclave: Boolean,
+      isDummyRows: Boolean
   ): Block = {
     // For the encrypted blocks
     val builder2 = new FlatBufferBuilder
