@@ -49,15 +49,6 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
     case 2 => "C"
   }
 
-  def makeEncryptedDF[
-      A <: Product: scala.reflect.ClassTag: scala.reflect.runtime.universe.TypeTag
-  ](data: Seq[A], columnNames: String*): DataFrame =
-    Encrypted.applyTo(
-      spark
-        .createDataFrame(spark.sparkContext.makeRDD(data, numPartitions))
-        .toDF(columnNames: _*)
-    )
-
   test("java encryption/decryption") {
     val data = Array[Byte](0, 1, 2)
     val (enclave, eid) = Utils.initEnclave()
@@ -74,7 +65,7 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
       }.size
 
     val data = List((1, 3), (1, 4), (1, 5), (2, 4))
-    val df = makeEncryptedDF(data, "a", "b").cache()
+    val df = makeDF(data, Encrypted, "a", "b").cache()
 
     val agg = df.groupBy($"a").agg(sum("b"))
 
@@ -85,12 +76,17 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
     df.unpersist()
   }
 
-  test("save and load EncryptedSource with explicit schema") {
+  def saveTable() = {
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val df = makeEncryptedDF(data, "id", "word", "count")
+    val df = makeDF(data, Encrypted, "id", "word", "count")
     val path = Utils.createTempDir()
     path.delete()
     df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    (df, path)
+  }
+
+  test("save and load EncryptedSource with explicit schema") {
+    val (df, path) = saveTable()
     try {
       val df2 = spark.read
         .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
@@ -107,11 +103,7 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
   }
 
   test("save and load EncryptedSource without schema") {
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val df = makeEncryptedDF(data, "id", "word", "count")
-    val path = Utils.createTempDir()
-    path.delete()
-    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
+    val (df, path) = saveTable()
     try {
       val df2 = spark.read
         .format("edu.berkeley.cs.rise.opaque.EncryptedSource")
@@ -127,23 +119,16 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
   }
 
   test("load from SQL with explicit schema") {
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val df = makeEncryptedDF(data, "id", "word", "count")
-    val path = Utils.createTempDir()
-    path.delete()
-    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-
+    val (df, path) = saveTable()
     try {
       spark.sql(s"""
-        |CREATE TEMPORARY VIEW df2
+        |CREATE OR REPLACE TEMPORARY VIEW df2
         |(${df.schema.toDDL})
         |USING edu.berkeley.cs.rise.opaque.EncryptedSource
         |OPTIONS (
         |  path "${path}"
         |)""".stripMargin)
-      val df2 = spark.sql(s"""
-        |SELECT * FROM df2
-        |""".stripMargin)
+      val df2 = spark.sql("SELECT * FROM df2")
 
       assert(df.collect.toSet === df2.collect.toSet)
     } finally {
@@ -153,12 +138,7 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
   }
 
   test("load from SQL without schema") {
-    val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-    val df = makeEncryptedDF(data, "id", "word", "count")
-    val path = Utils.createTempDir()
-    path.delete()
-    df.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save(path.toString)
-
+    val (df, path) = saveTable()
     try {
       spark.sql(s"""
         |CREATE TEMPORARY VIEW df2
@@ -166,9 +146,7 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
         |OPTIONS (
         |  path "${path}"
         |)""".stripMargin)
-      val df2 = spark.sql(s"""
-        |SELECT * FROM df2
-        |""".stripMargin)
+      val df2 = spark.sql("SELECT * FROM df2")
 
       assert(df.collect.toSet === df2.collect.toSet)
     } finally {

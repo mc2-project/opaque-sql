@@ -51,27 +51,33 @@ trait CreateSuite extends OpaqueSuiteBase with SQLHelper {
       df.createOrReplaceTempView("Interval")
       df
     }
+
     checkAnswer() { sl =>
       createData(sl)
       spark.sql("SELECT time + INTERVAL 7 DAY FROM Interval")
     }
-
     checkAnswer() { sl =>
       createData(sl)
       spark.sql("SELECT time + INTERVAL 7 WEEK FROM Interval")
     }
-
     checkAnswer() { sl =>
       createData(sl)
       spark.sql("SELECT time + INTERVAL 6 MONTH FROM Interval")
     }
-
     checkAnswer() { sl =>
       val df = createData(sl)
       df.select(date_add($"time", 3))
     }
 
     safeDropTables("Interval")
+  }
+
+  test("create DataFrame with BinaryType + ByteType") {
+    checkAnswer() { securityLevel =>
+      val data: Seq[(Array[Byte], Byte)] =
+        Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
+      makeDF(data, securityLevel, "BinaryType", "ByteType")
+    }
   }
 }
 
