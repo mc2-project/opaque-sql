@@ -122,7 +122,7 @@ trait OpaqueFunSuite extends FunSuite {
       sparkAnswer: Seq[Row],
       opaqueAnswer: Seq[Row],
       isOrdered: Boolean,
-      verbose: Boolean = false
+      verbose: Boolean
   ): String = {
     val getRowType: Option[Row] => String = row =>
       row
