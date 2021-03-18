@@ -136,7 +136,17 @@
 <h1>Using Opaque SQL<a class="headerlink" href="#using-opaque-sql" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="setup">
 <h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
-<p>Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Opaque SQL needs Spark’s <code class="docutils literal notranslate"><span class="pre">'spark.executor.instances'</span></code> property to be set. This can be done in a custom config file, the default config file found at <code class="docutils literal notranslate"><span class="pre">/opt/spark/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal notranslate"><span class="pre">spark-submit</span></code> or <code class="docutils literal notranslate"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal notranslate"><span class="pre">--conf</span> <span class="pre">'spark.executor.instances=&lt;value&gt;</span></code>.</p>
+<p>Opaque SQL needs two Spark properties to be set:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">spark.executor.instances</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">spark.task.maxFailures</span></code></p></li>
+</ul>
+<p>Both of these are used for remote attestation: Opaque SQL needs to know how many executors are in the cluster, and to use Spark’s fault tolerance property to attest unattested executors.</p>
+<p>These properties can be be set in a custom configuration file, the default being located at <code class="docutils literal notranslate"><span class="pre">${SPARK_HOME}/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal notranslate"><span class="pre">spark-submit</span></code> or <code class="docutils literal notranslate"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal notranslate"><span class="pre">--conf</span> <span class="pre">&lt;key&gt;=&lt;value&gt;</span></code>.</p>
+</div>
+<div class="section" id="running-opaque-sql">
+<h2>Running Opaque SQL<a class="headerlink" href="#running-opaque-sql" title="Permalink to this headline">¶</a></h2>
+<p>Once setup is finished, you can run Spark SQL queries as follows.</p>
 <ol class="arabic">
 <li><p>Package Opaque into a JAR:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
@@ -301,6 +311,7 @@ The final result will be decrypted on the driver.</p>
             <ul>
 <li><a class="reference internal" href="#">Using Opaque SQL</a><ul>
 <li><a class="reference internal" href="#setup">Setup</a></li>
+<li><a class="reference internal" href="#running-opaque-sql">Running Opaque SQL</a></li>
 <li><a class="reference internal" href="#encrypting-saving-and-loading-a-dataframe">Encrypting, saving, and loading a DataFrame</a></li>
 <li><a class="reference internal" href="#using-the-dataframe-interface">Using the DataFrame interface</a></li>
 <li><a class="reference internal" href="#using-the-sql-interface">Using the SQL interface</a></li>
