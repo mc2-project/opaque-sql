@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 
 trait SortSuite extends OpaqueSuiteBase with SQLHelper {
@@ -100,29 +99,6 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
   }
 }
 
-class SinglePartitionSortSuite extends SortSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionSortSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-}
+class SinglePartitionSortSuite extends SortSuite with SinglePartitionSparkSession {}
 
-class MultiplePartitionSortSuite extends SortSuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionSortSuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-}
+class MultiplePartitionSortSuite extends SortSuite with MultiplePartitionSparkSession {}

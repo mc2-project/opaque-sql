@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 
 trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
@@ -325,33 +324,10 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
   }
 }
 
-class SinglePartitionJoinSuite extends JoinSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionJoinSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-
+class SinglePartitionJoinSuite extends JoinSuite with SinglePartitionSparkSession {
   runSQLQueries();
 }
 
-class MultiplePartitionJoinSuite extends JoinSuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionJoinSuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-
+class MultiplePartitionJoinSuite extends JoinSuite with MultiplePartitionSparkSession {
   runSQLQueries();
 }

@@ -17,11 +17,31 @@
 
 package edu.berkeley.cs.rise.opaque
 
-class EncryptionSuite extends OpaqueSuiteBase with SinglePartitionSparkSession {
-  test("java encryption/decryption") {
-    val data = Array[Byte](0, 1, 2)
-    val (enclave, eid) = Utils.initEnclave()
-    assert(data === Utils.decrypt(Utils.encrypt(data)))
-    assert(data === Utils.decrypt(enclave.Encrypt(eid, data)))
-  }
+import org.apache.spark.sql.SparkSession
+
+trait SinglePartitionSparkSession {
+  def numPartitions = 1
+  val spark = SparkSession
+    .builder()
+    .master("local[*]")
+    .appName("SinglePartitionSuiteSession")
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .getOrCreate()
+}
+
+trait MultiplePartitionSparkSession {
+  val executorInstances = 3
+
+  def numPartitions = executorInstances
+  val spark = SparkSession
+    .builder()
+    .master(s"local-cluster[$executorInstances,1,1024]")
+    .appName("MultiplePartitionSubquerySuite")
+    .config("spark.executor.instances", executorInstances)
+    .config("spark.sql.shuffle.partitions", numPartitions)
+    .config(
+      "spark.jars",
+      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
+    )
+    .getOrCreate()
 }
