@@ -46,6 +46,7 @@ trait OpaqueFunSuite extends FunSuite {
       override def toString: String = s"TolerantArrayEquality"
     }
   }
+
   // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
   implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
   implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
@@ -61,13 +62,6 @@ trait OpaqueFunSuite extends FunSuite {
     if (ignore) {
       return
     }
-    assert(
-      Seq(-0.1334388413990344, 0.9071859087658894).toArray === Seq(
-        -0.1334388413990344,
-        0.9071859087658896
-      ).toArray
-    )
-    println("after assert")
     val (insecure, encrypted) = (f(Insecure), f(Encrypted))
     (insecure, encrypted) match {
       case (insecure: DataFrame, encrypted: DataFrame) =>
@@ -87,7 +81,12 @@ trait OpaqueFunSuite extends FunSuite {
         assert(equal)
       case (insecure: Array[_], encrypted: Array[_]) =>
         for ((x, y) <- insecure.zip(encrypted)) {
-          assert(x.asInstanceOf[Seq[Double]].toArray === y.asInstanceOf[Seq[Double]].toArray)
+          (x, y) match {
+            case (x: Array[Double], y: Array[Double]) =>
+              assert(x === y)
+            case _ =>
+              assert(x === y)
+          }
         }
     }
   }
