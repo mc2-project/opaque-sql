@@ -7,7 +7,7 @@
 #include <fstream>
 
 #include "Attestation.h"
-//#include <enclave_pubkey.h>
+#include "enclave_pubkey.h"
 
 #include <openenclave/attestation/attester.h>
 #include <openenclave/attestation/custom_claims.h>
@@ -177,43 +177,42 @@ bool Attestation::attest_attestation_evidence(
 
     // Read in the public key as a string
 
-//    uint8_t m_enclave_signer_id[OE_SIGNER_ID_SIZE];
-//    size_t signer_size = sizeof(m_enclave_signer_id);
+    uint8_t m_enclave_signer_id[OE_SIGNER_ID_SIZE];
+    size_t signer_size = sizeof(m_enclave_signer_id);
+
+//    std::cout << "Attestation.cpp - before read environment variable" << std::endl;
+//    std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
+//    public_key_file.append("/public_key.pub");
+//    std::cout << "Attestation.cpp - after read environment variable" << std::endl;
 //
+//    std::cout << "Attestation.cpp - before create file stream" << std::endl;
+//    std::ifstream t(public_key_file.c_str());
+//    std::string public_key;
+//    std::cout << "Attestation.cpp - after create file stream" << std::endl;
+//
+//    std::cout << "Attestation.cpp - before read from file" << std::endl;
+//    t.seekg(0, std::ios::end);
+//    size_t public_key_size = t.tellg();
+//    public_key.reserve(public_key_size + 1);
+//    t.seekg(0, std::ios::beg);
+//    std::cout << "Attestation.cpp - after read from file" << std::endl;
+//
+//    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
+//    public_key.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+//    public_key.replace(public_key_size, 1, "\0");
+//    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
+//
+//    std::cout << "Attestation.cpp - public key: " + public_key << std::endl;
 
-    std::cout << "Attestation.cpp - before read environment variable" << std::endl;
-    std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
-    public_key_file.append("/public_key.pub");
-    std::cout << "Attestation.cpp - after read environment variable" << std::endl;
-
-    std::cout << "Attestation.cpp - before create file stream" << std::endl;
-    std::ifstream t(public_key_file.c_str());
-    std::string public_key;
-    std::cout << "Attestation.cpp - after create file stream" << std::endl;
-
-    std::cout << "Attestation.cpp - before read from file" << std::endl;
-    t.seekg(0, std::ios::end);
-    size_t public_key_size = t.tellg();
-    public_key.reserve(public_key_size + 1);
-    t.seekg(0, std::ios::beg);
-    std::cout << "Attestation.cpp - after read from file" << std::endl;
-
-    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
-    public_key.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-    public_key.replace(public_key_size, 1, "\0");
-    std::cout << "Attestation.cpp - not sure what this is" << std::endl;
-
-    std::cout << "Attestation.cpp - public key: " + public_key << std::endl;
-
-//    if (oe_sgx_get_signer_id_from_public_key(
-//            public_key.c_str(),
-//            public_key.size(),
-//            m_enclave_signer_id,
-//            &signer_size) != OE_OK)
-//    {
-//        throw std::runtime_error("oe_sgx_get_signer_id_from_public_key failed\n");
-//        return false;
-//    }
+    if (oe_sgx_get_signer_id_from_public_key(
+            OTHER_ENCLAVE_PUBLIC_KEY,
+            sizeof(OTHER_ENCLAVE_PUBLIC_KEY),
+            m_enclave_signer_id,
+            &signer_size) != OE_OK)
+    {
+        throw std::runtime_error("oe_sgx_get_signer_id_from_public_key failed\n");
+        return false;
+    }
 
     // While attesting, the evidence being attested must not be tampered
     // with. Ensure that it has been copied over to the enclave.

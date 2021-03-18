@@ -20,7 +20,8 @@ set(SOURCES
   Random.cpp
   util.cpp
   ../Common/mCrypto.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
+  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
+  ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
 
 add_custom_command(
   COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
@@ -35,14 +36,13 @@ add_custom_command(
 # Generate header with signer public key
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h
-#  COMMAND ${CMAKE_SOURCE_DIR}/gen_pubkey_header.sh enclave_pubkey.h $ENV{PUBLIC_KEY_PATH}
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/gen_pubkey_header.sh enclave_pubkey.h $ENV{PUBLIC_KEY_PATH}
+  COMMAND $ENV{OPAQUE_HOME}/gen_pubkey_header.sh enclave_pubkey.h $ENV{OPAQUE_HOME}/public_key.pub
 )
 
-# new key-gen attestation end
+#add_executable(enclave_trusted Attestation.cpp
+#                         ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
 
-add_executable(Enclave Attestation.cpp
-                         ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
+# new key-gen attestation end
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
