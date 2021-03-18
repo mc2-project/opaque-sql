@@ -17,8 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.SparkSession
-
 trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
   import spark.implicits._
 
@@ -566,33 +564,10 @@ trait SubquerySuite extends OpaqueSQLSuiteBase with SQLHelper {
   }
 }
 
-class SinglePartitionSubquerySuite extends SubquerySuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionSubquerySuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-
+class SinglePartitionSubquerySuite extends SubquerySuite with SinglePartitionSparkSession {
   runSQLQueries()
 }
 
-class MultiplePartitionSubquerySuite extends SubquerySuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionSubquerySuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-
+class MultiplePartitionSubquerySuite extends SubquerySuite with MultiplePartitionSparkSession {
   runSQLQueries()
 }
