@@ -17,9 +17,7 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types._
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
@@ -33,14 +31,7 @@ trait MiscSuite extends OpaqueSuiteBase {
   test("exp") {
     checkAnswer() { sl =>
       val data: Seq[(Double, Double)] = Seq((2.0, 3.0))
-      val schema = StructType(Seq(StructField("x", DoubleType), StructField("y", DoubleType)))
-
-      val df = sl.applyTo(
-        spark.createDataFrame(
-          spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-          schema
-        )
-      )
+      val df = makeDF(data, sl, "x", "y")
       df.select(exp($"y"))
     }
   }
@@ -48,16 +39,7 @@ trait MiscSuite extends OpaqueSuiteBase {
   test("vector multiply") {
     checkAnswer() { sl =>
       val data: Seq[(Array[Double], Double)] = Seq((Array[Double](1.0, 1.0, 1.0), 3.0))
-      val schema = StructType(
-        Seq(StructField("v", DataTypes.createArrayType(DoubleType)), StructField("c", DoubleType))
-      )
-
-      val df = sl.applyTo(
-        spark.createDataFrame(
-          spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-          schema
-        )
-      )
+      val df = makeDF(data, sl, "v", "c")
       df.select(vectormultiply($"v", $"c"))
     }
   }
@@ -66,19 +48,7 @@ trait MiscSuite extends OpaqueSuiteBase {
     checkAnswer() { sl =>
       val data: Seq[(Array[Double], Array[Double])] =
         Seq((Array[Double](1.0, 1.0, 1.0), Array[Double](1.0, 1.0, 1.0)))
-      val schema = StructType(
-        Seq(
-          StructField("v1", DataTypes.createArrayType(DoubleType)),
-          StructField("v2", DataTypes.createArrayType(DoubleType))
-        )
-      )
-
-      val df = sl.applyTo(
-        spark.createDataFrame(
-          spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-          schema
-        )
-      )
+      val df = makeDF(data, sl, "v1", "v2")
       df.select(dot($"v1", $"v2"))
     }
   }
@@ -87,16 +57,7 @@ trait MiscSuite extends OpaqueSuiteBase {
     checkAnswer() { sl =>
       val data: Seq[(Array[Double], Double)] =
         Seq((Array[Double](1.0, 2.0, 3.0), 4.0), (Array[Double](5.0, 7.0, 7.0), 8.0))
-      val schema = StructType(
-        Seq(StructField("v", DataTypes.createArrayType(DoubleType)), StructField("c", DoubleType))
-      )
-
-      val df = sl.applyTo(
-        spark.createDataFrame(
-          spark.sparkContext.makeRDD(data.map(Row.fromTuple), numPartitions),
-          schema
-        )
-      )
+      val df = makeDF(data, sl, "v", "c")
       val vectorsum = new VectorSum
       df.groupBy().agg(vectorsum($"v"))
     }

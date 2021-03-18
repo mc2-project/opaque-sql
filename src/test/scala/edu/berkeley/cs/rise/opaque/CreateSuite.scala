@@ -73,10 +73,18 @@ trait CreateSuite extends OpaqueSuiteBase with SQLHelper {
   }
 
   test("create DataFrame with BinaryType + ByteType") {
-    checkAnswer() { securityLevel =>
+    checkAnswer() { sl =>
       val data: Seq[(Array[Byte], Byte)] =
         Seq((Array[Byte](0.toByte, -128.toByte, 127.toByte), 42.toByte))
-      makeDF(data, securityLevel, "BinaryType", "ByteType")
+      makeDF(data, sl, "BinaryType", "ByteType")
+    }
+  }
+
+  test("create DataFrame with CalendarIntervalType + NullType") {
+    checkAnswer() { sl =>
+      val data: Seq[(CalendarInterval, Byte)] =
+        Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
+      makeDF(data, sl, "CalendarIntervalType", "NullType")
     }
   }
 }
