@@ -79,15 +79,12 @@ trait OpaqueFunSuite extends FunSuite {
           println(genError(insecureSeq, encryptedSeq, isOrdered, verbose))
         }
         assert(equal)
-      case (insecure: Array[_], encrypted: Array[_]) =>
+      case (insecure: Array[Array[Double]], encrypted: Array[Array[Double]]) =>
         for ((x, y) <- insecure.zip(encrypted)) {
-          (x, y) match {
-            case (x: Array[Double], y: Array[Double]) =>
-              assert(x === y)
-            case _ =>
-              assert(x === y)
-          }
+          assert(x === y)
         }
+      case _ =>
+        assert(insecure === encrypted)
     }
   }
 
