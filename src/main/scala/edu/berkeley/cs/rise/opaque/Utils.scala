@@ -643,7 +643,7 @@ object Utils extends Logging {
         )
       case _ =>
         throw new OpaqueException(
-          s"FlatbuffersCreateField failed to match on ${value} of type {value.getClass.getName()}, ${dataType}"
+          s"Opaque currently does not support serializing ${value} of type {value.getClass.getName()}, ${dataType}"
         )
     }
   }
@@ -910,7 +910,7 @@ object Utils extends Logging {
       case DecimalType() => tuix.ColType.FloatType
       case DoubleType => tuix.ColType.DoubleType
       case StringType => tuix.ColType.StringType
-      case _ => throw new OpaqueException("Type not supported: " + dataType.toString())
+      case _ => throw new OpaqueException("Type currently not supported: " + dataType.toString())
     }
   }
 
@@ -1283,7 +1283,7 @@ object Utils extends Logging {
           }
 
         case _ =>
-          throw new OpaqueException("Expression " + expr.toString() + " is not supported in Opaque")
+          throw new OpaqueException("Expression " + expr.toString() + " is currently not supported in Opaque")
       }
     }
   }

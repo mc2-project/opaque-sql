@@ -355,7 +355,7 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
 
     case _ =>
       if (isEncrypted(plan)) {
-        throw new OpaqueException(s"Logical operator ${plan.nodeName}(${plan.argString(10)}) is not supported in Opaque")
+        throw new OpaqueException(s"Logical operator ${plan.nodeName}(${plan.argString(10)}) is currently not supported in Opaque")
       }
 
       Nil
