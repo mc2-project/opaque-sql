@@ -19,26 +19,10 @@ package edu.berkeley.cs.rise.opaque
 
 import java.sql.Timestamp
 
-import scala.util.Random
-
-import org.apache.spark.SparkException
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.SQLImplicits
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
-
-import edu.berkeley.cs.rise.opaque.benchmark._
-import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
-import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
-import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
-import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
-import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
 /* Creates DataFrames with various types */
 trait CreateSuite extends OpaqueSuiteBase with SQLHelper {
@@ -85,6 +69,62 @@ trait CreateSuite extends OpaqueSuiteBase with SQLHelper {
       val data: Seq[(CalendarInterval, Byte)] =
         Seq((new CalendarInterval(12, 1, 12345), 0.toByte))
       makeDF(data, sl, "CalendarIntervalType", "NullType")
+    }
+  }
+
+  test("create DataFrame with ShortType + TimestampType") {
+    checkAnswer() { sl =>
+      val data: Seq[(Short, Timestamp)] =
+        Seq((13.toShort, Timestamp.valueOf("2017-12-02 03:04:00")))
+      makeDF(data, sl, "ShortType", "TimestampType")
+    }
+  }
+
+  test("create DataFrame with ArrayType") {
+    checkAnswer() { sl =>
+      val array: Array[Int] = Array(0, -128, 127, 1)
+      val data = Seq((array, "dog"), (array, "cat"), (array, "ant"))
+      makeDF(data, sl, "array", "string")
+    }
+  }
+
+  test("create DataFrame with MapType") {
+    checkAnswer() { sl =>
+      val map: Map[String, Int] = Map("x" -> 24, "y" -> 25, "z" -> 26)
+      val data = Seq((map, "dog"), (map, "cat"), (map, "ant"))
+      makeDF(data, sl, "map", "string")
+    }
+  }
+
+  test("create DataFrame with nulls for all types") {
+    checkAnswer() { sl =>
+      val schema = StructType(
+        Seq(
+          StructField("boolean", BooleanType),
+          StructField("integer", IntegerType),
+          StructField("long", LongType),
+          StructField("float", FloatType),
+          StructField("double", DoubleType),
+          StructField("date", DateType),
+          StructField("binary", BinaryType),
+          StructField("byte", ByteType),
+          StructField("calendar_interval", CalendarIntervalType),
+          StructField("null", NullType),
+          StructField("short", ShortType),
+          StructField("timestamp", TimestampType),
+          StructField("array_of_int", DataTypes.createArrayType(IntegerType)),
+          StructField("map_int_to_int", DataTypes.createMapType(IntegerType, IntegerType)),
+          StructField("string", StringType)
+        )
+      )
+
+      sl.applyTo(
+        spark.createDataFrame(
+          spark.sparkContext
+            .makeRDD(Seq(Row.fromSeq(Seq.fill(schema.length) { null })), numPartitions),
+          schema
+        )
+      )
     }
   }
 }

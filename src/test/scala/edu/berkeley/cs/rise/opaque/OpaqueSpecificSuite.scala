@@ -17,28 +17,15 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import java.sql.Timestamp
-
-import scala.util.Random
-
 import org.apache.spark.SparkException
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.SQLImplicits
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
 
-import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
-import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
-import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
-import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
-import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
 class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSession {
   import spark.implicits._
