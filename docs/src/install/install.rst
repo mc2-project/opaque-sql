@@ -4,7 +4,7 @@ Installation
 
 After downloading the Opaque codebase, build and test it as follows.
 
-1. Install dependencies and the [OpenEnclave SDK](https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md). We currently support OE version 0.12.0 (so please install with ``open-enclave=0.12.0``) and Ubuntu 18.04.
+1. Install dependencies and the `OpenEnclave SDK <https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md>`_. We currently support OE version 0.12.0 (so please install with ``open-enclave=0.12.0``) and Ubuntu 18.04.
 
    .. code-block:: bash
                
