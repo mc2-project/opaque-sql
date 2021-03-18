@@ -29,11 +29,15 @@ import org.apache.spark.sql.SparkSession
  * `$OPAQUE_HOME/build/sbt 'test:runMain edu.berkeley.cs.rise.opaque.benchmark.Benchmark <flags>'`.
  * Available flags:
  *   --num-partitions: specify the number of partitions the data should be split into.
- *       Default: 2 * number of executors if exists, 4 otherwise
+ *       Default: spark.default.parallelism
  *   --size: specify the size of the dataset that should be loaded into Spark.
- *       Default: sf_small
+ *       Default: sf_001
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
  *       Default: file://
+ *   --log-operators: boolean whether or not to log individual physical operators.
+ *       Default: false
+ *       Note: may reduce performance if set to true (forces caching of
+ *       intermediate values).
  *   --operations: select the different operations that should be benchmarked.
  *       Default: all
  *       Available operations: logistic-regression, tpc-h
@@ -50,7 +54,7 @@ object Benchmark {
     .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism
-  var size = "sf_small"
+  var size = "sf_001"
   var fileUrl = "file://"
 
   def dataDir: String = {
@@ -85,9 +89,13 @@ object Benchmark {
     --num-partitions: specify the number of partitions the data should be split into.
           Default: 2 * number of executors if exists, 4 otherwise
     --size: specify the size of the dataset that should be loaded into Spark.
-          Default: sf_small
+          Default: sf_001
     --filesystem-url: optional arguments to specify filesystem master node URL.
           Default: file://
+    --log-operators: boolean whether or not to log individual physical operators.
+          Default: false
+          Note: may reduce performance if set to true (forces caching of
+            intermediate values).
     --operations: select the different operations that should be benchmarked.
           Default: all
           Available operations: logistic-regression, tpc-h
@@ -97,13 +105,13 @@ object Benchmark {
       return
     }
 
-    var runAll = true
+    var benchmarks = Seq[() => Any]()
     args.sliding(2, 2).toList.collect {
       case Array("--num-partitions", numPartitions: String) => {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        if (size == "sf_small" || size == "sf_med") {
+        if (size == "sf_001" || size == "sf_01" || size == "sf_1") {
           this.size = size
         } else {
           println(s"Given size is not supported: $size")
@@ -112,23 +120,29 @@ object Benchmark {
       case Array("--filesystem-url", url: String) => {
         fileUrl = url
       }
+      case Array("--log-operators", bool: String) => {
+        Utils.setOperatorLoggingLevel(bool.toBoolean)
+      }
       case Array("--operations", operations: String) => {
-        runAll = false
         val operationsArr = operations.split(",").map(_.trim)
         for (operation <- operationsArr) {
           operation match {
             case "logistic-regression" => {
-              logisticRegression()
+              benchmarks = benchmarks :+ { () => logisticRegression() }
             }
             case "tpc-h" => {
-              TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
+              benchmarks = benchmarks :+ { () =>
+                TPCHBenchmark.run(spark.sqlContext, numPartitions, size, fileUrl)
+              }
             }
           }
         }
       }
     }
-    if (runAll) {
+    if (benchmarks.isEmpty) {
       this.runAll();
+    } else {
+      benchmarks.foreach(f => f())
     }
 
     Utils.cleanup(spark)
