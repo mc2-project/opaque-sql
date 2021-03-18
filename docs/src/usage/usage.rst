@@ -4,8 +4,19 @@ Using Opaque SQL
 
 Setup
 *****
+Opaque SQL needs two Spark properties to be set:
 
-Once you have installed Opaque SQL, you can run Spark SQL queries as follows. Opaque SQL needs Spark's ``'spark.executor.instances'`` property to be set. This can be done in a custom config file, the default config file found at ``/opt/spark/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf 'spark.executor.instances=<value>``.
+- ``spark.executor.instances``
+- ``spark.task.maxFailures``
+
+Both of these are used for remote attestation: Opaque SQL needs to know how many executors are in the cluster, and to use Spark's fault tolerance property to attest unattested executors.
+
+These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.
+
+Running Opaque SQL
+******************
+
+Once setup is finished, you can run Spark SQL queries as follows.
 
 1. Package Opaque into a JAR:
 
