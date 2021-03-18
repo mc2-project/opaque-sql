@@ -23,6 +23,7 @@ import org.scalatest.BeforeAndAfterAll
 
 trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTestData {
 
+  def numPartitions: Int
   override val spark: SparkSession
 
   override def beforeAll(): Unit = {
