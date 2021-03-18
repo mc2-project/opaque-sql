@@ -775,9 +775,13 @@ object Utils extends Logging {
    * workers.
    *
    * If `MaxBlockSize` is too large, there will be an AssertionError:
-   * FlatBuffers: cannot grow buffer beyond 2 gigabytes.
+   * FlatBuffers: cannot grow buffer beyond 2 gigabytes in tuix.EncryptedBlock.createEncRowsVector.
    * The solution is to decrease `MaxBlockSize` by an order of magnitude and
-   * try again.
+   * try again. Note that the length of encryptedBlockOffsets would actually increase in this
+   * case, thus increasing the size of the information that tuix.EncryptedBlocks.createBlocksVector
+   * needs to encode. However, createBlocksVector serializes offsets of blocks rather than the
+   * blocks themselves, so this change does not result in the same problem above
+   * (serialization of an array of 4 byte integers would have to exceed 2GB).
    */
   private var MaxBlockSize = 1024
   def encryptInternalRowsFlatbuffers(
