@@ -144,6 +144,7 @@ object Benchmark {
     } else {
       benchmarks.foreach(f => f())
     }
-    spark.stop()
+
+    Utils.cleanup(spark)
   }
 }

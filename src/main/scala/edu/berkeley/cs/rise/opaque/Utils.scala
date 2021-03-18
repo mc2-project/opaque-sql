@@ -36,6 +36,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
@@ -102,6 +103,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.unsafe.types.UTF8String
+import org.apache.spark.util.LongAccumulator
 
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
@@ -243,21 +245,6 @@ object Utils extends Logging {
     }
   }
 
-  def initEnclave(): (SGXEnclave, Long) = {
-    this.synchronized {
-      if (eid == 0L) {
-        val enclave = new SGXEnclave()
-        val path = findLibraryAsResource("enclave_trusted_signed")
-        eid = enclave.StartEnclave(path)
-        logInfo("Starting an enclave")
-        (enclave, eid)
-      } else {
-        val enclave = new SGXEnclave()
-        (enclave, eid)
-      }
-    }
-  }
-
   final val GCM_IV_LENGTH = 12
   final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
@@ -292,10 +279,11 @@ object Utils extends Logging {
 
   var eid = 0L
   var attested: Boolean = false
-  var attesting_getepid: Boolean = false
-  var attesting_getmsg1: Boolean = false
-  var attesting_getmsg3: Boolean = false
-  var attesting_final_ra: Boolean = false
+  // Initialize accumulator variables for tracking the state of attestation
+  var acc_registered: Boolean = false
+  val numEnclaves: LongAccumulator = new LongAccumulator
+  val numAttested: LongAccumulator = new LongAccumulator
+  var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
     sqlContext.experimental.extraOptimizations =
@@ -303,7 +291,80 @@ object Utils extends Logging {
         sqlContext.experimental.extraOptimizations)
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
-    RA.initRA(sqlContext.sparkContext)
+
+    val sc = sqlContext.sparkContext
+    // This is needed to prevent an error from re-registering accumulator variables if
+    // `initSQLContext` is called multiple times on the driver
+    if (!acc_registered) {
+      sc.register(numEnclaves)
+      sc.register(numAttested)
+      acc_registered = true
+    }
+
+    RA.waitForExecutors(sc)
+    RA.attestEnclaves(sc)
+    RA.startThread(sc)
+  }
+
+  def initEnclave(): (SGXEnclave, Long) = {
+    // This following exception relies on the Spark fault tolerance and its retry mechanism
+    // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure.
+    this.synchronized {
+      if (!attested) {
+        Thread.sleep(200)
+        throw new OpaqueException("Attestation not yet complete")
+      } else {
+        val enclave = new SGXEnclave()
+        (enclave, eid)
+      }
+    }
+  }
+
+  def startEnclave(numEnclavesAcc: LongAccumulator): Long = {
+    this.synchronized {
+      if (eid == 0L) {
+        val enclave = new SGXEnclave()
+        val path = findLibraryAsResource("enclave_trusted_signed")
+        eid = enclave.StartEnclave(path)
+        numEnclavesAcc.add(1)
+        logInfo("Starting an enclave")
+      }
+    }
+    eid
+  }
+
+  def generateReport(): (Long, Option[Array[Byte]]) = {
+    this.synchronized {
+      // Only generate report if the enclave has already been started, but not yet attested
+      if (eid != 0L && !attested) {
+        val enclave = new SGXEnclave()
+        val msg1 = enclave.GenerateReport(eid)
+        (eid, Option(msg1))
+      } else {
+        (eid, None)
+      }
+    }
+  }
+
+  def finishAttestation(
+      numAttested: LongAccumulator,
+      msg2s: Map[Long, Array[Byte]]
+  ): (Long, Boolean) = {
+    this.synchronized {
+      val enclave = new SGXEnclave()
+      if (msg2s.contains(eid) && !attested) {
+        val msg2 = msg2s(eid)
+        enclave.FinishAttestation(eid, msg2)
+        numAttested.add(1)
+        attested = true
+      }
+      (eid, attested)
+    }
+  }
+
+  def cleanup(spark: SparkSession) {
+    RA.stopThread()
+    spark.stop()
   }
 
   def concatByteArrays(arrays: Array[Array[Byte]]): Array[Byte] = {
@@ -721,7 +782,6 @@ object Utils extends Logging {
   def encryptScalar(value: Any, dataType: DataType): String = {
     // First serialize the scalar value
     var builder = new FlatBufferBuilder
-    var rowOffsets = ArrayBuilder.make[Int]
 
     val v = dataType match {
       case StringType => UTF8String.fromString(value.asInstanceOf[String])
@@ -1806,8 +1866,6 @@ object Utils extends Logging {
 
       case vs @ ScalaUDAF(Seq(child), _: VectorSum, _, _) =>
         val sum = vs.aggBufferAttributes(0)
-
-        val sumDataType = vs.dataType
 
         val (updateExprs, evaluateExprs) = e.mode match {
           case Partial => {
