@@ -79,17 +79,6 @@ trait OpaqueUDFSuite extends OpaqueSuiteBase {
       KMeans.train(spark, sl, numPartitions, 10, 2, 3, 0.01).sortBy(_(0))
     }
   }
-
-  test("encrypted literal") {
-    checkAnswer() { sl =>
-      val input = 10
-      val enc_str = Utils.encryptScalar(input, IntegerType)
-
-      val data = for (i <- 0 until 256) yield (i, abc(i), 1)
-      val words = makeDF(data, sl, "id", "word", "count")
-      words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
-    }
-  }
 }
 
 class SinglePartitionOpaqueUDFSuite extends OpaqueUDFSuite with SinglePartitionSparkSession {}

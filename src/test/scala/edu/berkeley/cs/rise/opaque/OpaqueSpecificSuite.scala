@@ -25,6 +25,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.CalendarInterval
 
+import edu.berkeley.cs.rise.opaque.expressions.Decrypt.decrypt
 import edu.berkeley.cs.rise.opaque.execution.EncryptedBlockRDDScanExec
 
 class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSession {
@@ -163,5 +164,16 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
       }
     }
     assert(e.getCause.isInstanceOf[OpaqueException])
+  }
+
+  test("encrypted literal") {
+    checkAnswer() { sl =>
+      val input = 10
+      val enc_str = Utils.encryptScalar(input, IntegerType)
+
+      val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+      val words = makeDF(data, sl, "id", "word", "count")
+      words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
+    }
   }
 }
