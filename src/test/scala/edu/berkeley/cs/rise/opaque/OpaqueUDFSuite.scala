@@ -25,7 +25,7 @@ import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 
 /* Contains non-query related Spark tests */
-trait MiscSuite extends OpaqueSuiteBase {
+trait OpaqueUDFSuite extends OpaqueSuiteBase {
   import spark.implicits._
 
   test("exp") {
@@ -79,8 +79,19 @@ trait MiscSuite extends OpaqueSuiteBase {
       KMeans.train(spark, sl, numPartitions, 10, 2, 3, 0.01).sortBy(_(0))
     }
   }
+
+  test("encrypted literal") {
+    checkAnswer() { sl =>
+      val input = 10
+      val enc_str = Utils.encryptScalar(input, IntegerType)
+
+      val data = for (i <- 0 until 256) yield (i, abc(i), 1)
+      val words = makeDF(data, sl, "id", "word", "count")
+      words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
+    }
+  }
 }
 
-class SinglePartitionMiscSuite extends MiscSuite with SinglePartitionSparkSession {}
+class SinglePartitionOpaqueUDFSuite extends OpaqueUDFSuite with SinglePartitionSparkSession {}
 
-class MultiplePartitionMiscSuite extends MiscSuite with MultiplePartitionSparkSession {}
+class MultiplePartitionOpaqueUDFSuite extends OpaqueUDFSuite with MultiplePartitionSparkSession {}
