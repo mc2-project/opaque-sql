@@ -31,15 +31,7 @@ import scala.collection.mutable
 
 trait OpaqueFunSuite extends FunSuite {
 
-  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
-  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
-  implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
-
-  // Modify the behavior of === for Float and Array[Float] to use a numeric tolerance
-  implicit val tolerantFloatEquality = TolerantNumerics.tolerantFloatEquality(1e-6.toFloat)
-  implicit val tolerantFloatArrayEquality = equalityToArrayEquality[Float]
-
-  def equalityToArrayEquality[A: Equality](): Equality[Array[A]] = {
+  private def equalityToArrayEquality[A: Equality](): Equality[Array[A]] = {
     new Equality[Array[A]] {
       def areEqual(a: Array[A], b: Any): Boolean = {
         b match {
@@ -54,6 +46,12 @@ trait OpaqueFunSuite extends FunSuite {
       override def toString: String = s"TolerantArrayEquality"
     }
   }
+
+  // Modify the behavior of === for Double and Array[Double] to use a numeric tolerance
+  implicit val tolerantDoubleEquality = TolerantNumerics.tolerantDoubleEquality(1e-6)
+  implicit val tolerantDoubleArrayEquality = equalityToArrayEquality[Double]
+  implicit val tolerantFloatEquality = TolerantNumerics.tolerantFloatEquality(1e-6.toFloat)
+  implicit val tolerantFloatArrayEquality = equalityToArrayEquality[Float]
 
   def checkAnswer[A: Equality](
       ignore: Boolean = false,
@@ -81,6 +79,10 @@ trait OpaqueFunSuite extends FunSuite {
           println(genError(insecureSeq, encryptedSeq, isOrdered, verbose))
         }
         assert(equal)
+      case (insecure: Array[Array[Double]], encrypted: Array[Array[Double]]) =>
+        for ((x, y) <- insecure.zip(encrypted)) {
+          assert(x === y)
+        }
       case _ =>
         assert(insecure === encrypted)
     }
@@ -122,7 +124,7 @@ trait OpaqueFunSuite extends FunSuite {
       sparkAnswer: Seq[Row],
       opaqueAnswer: Seq[Row],
       isOrdered: Boolean,
-      verbose: Boolean = false
+      verbose: Boolean
   ): String = {
     val getRowType: Option[Row] => String = row =>
       row

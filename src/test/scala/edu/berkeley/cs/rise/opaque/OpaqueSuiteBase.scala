@@ -17,12 +17,14 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SparkSession
 
 import org.scalatest.BeforeAndAfterAll
 
 trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTestData {
 
+  def numPartitions: Int
   override val spark: SparkSession
 
   override def beforeAll(): Unit = {
@@ -31,5 +33,17 @@ trait OpaqueSuiteBase extends OpaqueFunSuite with BeforeAndAfterAll with SQLTest
 
   override def afterAll(): Unit = {
     Utils.cleanup(spark)
+  }
+
+  def makeDF[A <: Product: scala.reflect.ClassTag: scala.reflect.runtime.universe.TypeTag](
+      data: Seq[A],
+      sl: SecurityLevel,
+      columnNames: String*
+  ): DataFrame = {
+    sl.applyTo(
+      spark
+        .createDataFrame(spark.sparkContext.makeRDD(data, numPartitions))
+        .toDF(columnNames: _*)
+    )
   }
 }

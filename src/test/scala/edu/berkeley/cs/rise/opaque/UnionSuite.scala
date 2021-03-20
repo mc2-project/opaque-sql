@@ -17,8 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.SparkSession
-
 trait UnionSuite extends OpaqueSQLSuiteBase with SQLHelper {
 
   val tableMap = Map(
@@ -78,33 +76,10 @@ trait UnionSuite extends OpaqueSQLSuiteBase with SQLHelper {
   }
 }
 
-class SinglePartitionUnionSuite extends UnionSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionUnionSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-
+class SinglePartitionUnionSuite extends UnionSuite with SinglePartitionSparkSession {
   runSQLQueries()
 }
 
-class MultiplePartitionUnionSuite extends UnionSuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionUnionSuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-
+class MultiplePartitionUnionSuite extends UnionSuite with MultiplePartitionSparkSession {
   runSQLQueries()
 }

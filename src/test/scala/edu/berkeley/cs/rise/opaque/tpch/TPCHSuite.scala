@@ -17,8 +17,9 @@
 
 package edu.berkeley.cs.rise.opaque.tpch
 
-import org.apache.spark.sql.SparkSession
 import edu.berkeley.cs.rise.opaque.OpaqueSuiteBase
+import edu.berkeley.cs.rise.opaque.MultiplePartitionSparkSession
+import edu.berkeley.cs.rise.opaque.SinglePartitionSparkSession
 
 trait TPCHSuite extends OpaqueSuiteBase { self =>
 
@@ -46,33 +47,10 @@ trait TPCHSuite extends OpaqueSuiteBase { self =>
   }
 }
 
-class SinglePartitionTPCHSuite extends TPCHSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionTPCHSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-
-  runTests();
+class SinglePartitionTPCHSuite extends TPCHSuite with SinglePartitionSparkSession {
+  runTests()
 }
 
-class MultiplePartitionTPCHSuite extends TPCHSuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionTPCHSuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-
+class MultiplePartitionTPCHSuite extends TPCHSuite with MultiplePartitionSparkSession {
   runTests()
 }

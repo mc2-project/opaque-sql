@@ -17,7 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.Row
@@ -464,29 +463,8 @@ trait AggregationSuite extends OpaqueSuiteBase with SQLHelper {
   }
 }
 
-class SinglePartitionAggregationSuite extends AggregationSuite {
-  override def numPartitions = 1
-  override val spark = SparkSession
-    .builder()
-    .master("local[*]")
-    .appName("SinglePartitionAggregationSuite")
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .getOrCreate()
-}
+class SinglePartitionAggregationSuite extends AggregationSuite with SinglePartitionSparkSession {}
 
-class MultiplePartitionAggregationSuite extends AggregationSuite {
-  val executorInstances = 3
-
-  override def numPartitions = executorInstances
-  override val spark = SparkSession
-    .builder()
-    .master(s"local-cluster[$executorInstances,1,1024]")
-    .appName("MultiplePartitionAggregationSuite")
-    .config("spark.executor.instances", executorInstances)
-    .config("spark.sql.shuffle.partitions", numPartitions)
-    .config(
-      "spark.jars",
-      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
-    )
-    .getOrCreate()
-}
+class MultiplePartitionAggregationSuite
+    extends AggregationSuite
+    with MultiplePartitionSparkSession {}
