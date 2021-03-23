@@ -55,7 +55,7 @@ Once setup is finished, you can run Spark SQL queries as follows.
 
    .. code-block:: python
 
-                  from opaque_wrappers import *
+                  from opaque_sql import *
                   init_sql_context()
                    
     
