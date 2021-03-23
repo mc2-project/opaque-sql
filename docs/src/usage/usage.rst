@@ -160,8 +160,8 @@ Using the DataFrame interface
    
    .. code-block:: python
 
-                  result = df_encrypted.filter(df["count"] > 3)
-                  result.explain(true)
+                  result = df_encrypted.filter(df_encrypted["count"] > 3)
+                  result.explain(True)
                    
 Call ``.collect`` or ``.show`` to retreive the results. The final result will be decrypted on the driver. 
 
