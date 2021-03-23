@@ -261,57 +261,7 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
       ocall_throw("shared key decryption failed");
     }
 
-    uint8_t key_share_plaintext[SGX_AESGCM_KEY_SIZE];
-    size_t key_share_plaintext_size = sizeof(key_share_plaintext);
-    ret = g_crypto.decrypt(shared_key_msg->key_share_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, key_share_plaintext, &key_share_plaintext_size);
-
-    if (!ret) {
-      ocall_throw("key share decryption failed");
-    }
-
-    // Add verifySignatureFromCertificate from XGBoost
-    // Get name from certificate
-    unsigned char nameptr[50];
-    size_t name_len;
-    int res;
-    mbedtls_x509_crt user_cert;
-    mbedtls_x509_crt_init(&user_cert);
-    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) shared_key_msg->user_cert, shared_key_msg->user_cert_len)) != 0) {
-        // char tmp[50];
-        // mbedtls_strerror(res, tmp, 50);
-        // std::cout << tmp << std::endl;
-        ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
-    }
-
-    mbedtls_x509_name subject_name = user_cert.subject;
-    mbedtls_asn1_buf name = subject_name.val;
-    strcpy((char*) nameptr, (const char*) name.p);
-    name_len = name.len;
-    std::string user_nam(nameptr, nameptr + name_len);
-
-    // TODO: Verify client's identity
-    // if (std::find(CLIENT_NAMES.begin(), CLIENT_NAMES.end(), user_nam) == CLIENT_NAMES.end()) {
-    //     LOG(FATAL) << "No such authorized client";
-    // }
-    // client_keys[user_nam] = user_symm_key;
-
-    // TODO: Store the client's public key
-    // std::vector<uint8_t> user_public_key(cert, cert + cert_len);
-    // client_public_keys.insert({user_nam, user_public_key});
-
-    // Set shared key for this client
-    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
-    xor_shared_key(key_share_plaintext, key_share_plaintext_size);
-
-    // This block for testing loading from files encrypted with different keys
-    // FIXME: remove this block
-    // uint8_t test_key_plaintext[SGX_AESGCM_KEY_SIZE];
-    // size_t test_key_plaintext_size = sizeof(test_key_plaintext);
-    // ret = g_crypto.decrypt(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, test_key_plaintext, &test_key_plaintext_size);
-    // add_client_key(test_key_plaintext, test_key_plaintext_size, (char*) "user2");
-
-    // FIXME: we'll need to free nameptr eventually
-    // free(nameptr);
+    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }

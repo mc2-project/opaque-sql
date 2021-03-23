@@ -19,10 +19,8 @@ package edu.berkeley.cs.rise.opaque
 
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
-import java.nio.file.{Files, Paths}
 
 import edu.berkeley.cs.rise.opaque.execution.SP
-import edu.berkeley.cs.rise.opaque.execution.SGXEnclave
 
 // Performs remote attestation for all executors
 // that have not been attested yet
@@ -40,18 +38,12 @@ object RA extends Logging {
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-
-    // FIXME: hardcoded path
-    val userCert = scala.io.Source.fromFile("/home/opaque/opaque/user1.crt").mkString
-
-    val testKey: Array[Byte] = "Opaque deve key2".getBytes("UTF-8")
-    
-    Utils.addClientKey(testKey)
+//    val testKey = "Opaque devel key".getBytes("UTF-8")
+    val testKey = Array.fill[Byte](32)(0)
 
     val sp = new SP()
 
-    sp.Init(Utils.clientKey, intelCert, userCert, testKey)
-
+    sp.Init(testKey, intelCert)
 
     val numAttested = Utils.numAttested
     // Runs on executors

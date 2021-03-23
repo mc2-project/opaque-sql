@@ -26,9 +26,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(JNIEnv
   jboolean if_copy = false;
 
   jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
-  jbyte *key_share_bytes = env->GetByteArrayElements(key_share, &if_copy);
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
-  const char* user_cert_str = env->GetStringUTFChars(user_cert, nullptr);
 
   try {
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
@@ -37,18 +35,12 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(JNIEnv
     // jbyte *test_key_bytes = env->GetByteArrayElements(test_key, &if_copy);
     // service_provider.set_test_key(reinterpret_cast<uint8_t *>(test_key_bytes));
 
-    // set user certificate
-    service_provider.set_user_cert(user_cert_str);
-
-    // set key share
-    service_provider.set_key_share(reinterpret_cast<uint8_t *>(key_share_bytes));
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }
 
   env->ReleaseByteArrayElements(shared_key, shared_key_bytes, 0);
   env->ReleaseStringUTFChars(intel_cert, intel_cert_str);
-  env->ReleaseStringUTFChars(user_cert, user_cert_str);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_ProcessEnclaveReport(
