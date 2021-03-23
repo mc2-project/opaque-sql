@@ -55,7 +55,6 @@ object LA extends Logging {
       enclave.GetListEncrypted(eid, publicKeys)
     }.first()
 
-
     // Send encrypted secret key to all enclaves
     val msg3s = msg1s.map{case (eid, _) => (eid, encryptedResults)}
 

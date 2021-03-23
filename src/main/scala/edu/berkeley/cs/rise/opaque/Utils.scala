@@ -306,7 +306,8 @@ object Utils extends Logging {
     RA.attestEnclaves(sc)
     RA.startThread(sc)
 
-    // TODO: Determine location for LA call
+    // Perform Local-Attestation so that enclaves determine shared key
+    LA.initLA(sc)
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
