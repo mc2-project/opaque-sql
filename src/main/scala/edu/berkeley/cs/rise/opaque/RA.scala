@@ -38,8 +38,7 @@ object RA extends Logging {
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-//    val testKey = "Opaque devel key".getBytes("UTF-8")
-    val testKey = Array.fill[Byte](32)(0)
+    val testKey = Array.fill[Byte](32)(1)
 
     val sp = new SP()
 
