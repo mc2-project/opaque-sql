@@ -4,9 +4,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmarking" href="../benchmarking/benchmarking.html" /><link rel="prev" title="Using Opaque SQL" href="usage.html" />
 
-    <meta name="generator" content="sphinx-3.5.2, furo 2021.03.19.beta29"/>
+    <meta name="generator" content="sphinx-3.5.3, furo 2021.03.20.beta30"/>
         <title>Supported functionalities - Opaque SQL documentation</title>
-      <link rel="stylesheet" href="../_static/styles/furo.css?digest=ca8f8ad188754d6c0133301b749e93f9e95aff28">
+      <link rel="stylesheet" href="../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
     
@@ -174,9 +174,9 @@
 </div>
 <div class="section" id="dataframe-interface">
 <h2>DataFrame interface<a class="headerlink" href="#dataframe-interface" title="Permalink to this headline">¶</a></h2>
-<p>Because Opaque only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark’s, which can be found <a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html">here</a>. Opaque is still a work in progress, so not all of these functionalities are currently implemented.</p>
-<div class="section" id="working-operations">
-<h3>Working operations<a class="headerlink" href="#working-operations" title="Permalink to this headline">¶</a></h3>
+<p>Because Opaque SQL only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark’s both for <a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html">Scala</a> and <a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/python/reference/api/pyspark.sql.DataFrame.html?highlight=dataframe#pyspark.sql.DataFrame">Python</a>. Opaque SQL is still a work in progress, so not all of these functionalities are currently implemented. See below for a complete list in Scala.</p>
+<div class="section" id="supported-operations">
+<h3>Supported operations<a class="headerlink" href="#supported-operations" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="actions">
 <h4>Actions<a class="headerlink" href="#actions" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
@@ -487,7 +487,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#dataframe-interface">DataFrame interface</a><ul>
-<li><a class="reference internal" href="#working-operations">Working operations</a><ul>
+<li><a class="reference internal" href="#supported-operations">Supported operations</a><ul>
 <li><a class="reference internal" href="#actions">Actions</a></li>
 <li><a class="reference internal" href="#basic-dataset-functions">Basic Dataset functions</a></li>
 <li><a class="reference internal" href="#streaming">Streaming</a></li>

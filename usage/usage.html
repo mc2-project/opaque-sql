@@ -4,9 +4,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Installation" href="../install/install.html" />
 
-    <meta name="generator" content="sphinx-3.5.2, furo 2021.03.19.beta29"/>
+    <meta name="generator" content="sphinx-3.5.3, furo 2021.03.20.beta30"/>
         <title>Using Opaque SQL - Opaque SQL documentation</title>
-      <link rel="stylesheet" href="../_static/styles/furo.css?digest=ca8f8ad188754d6c0133301b749e93f9e95aff28">
+      <link rel="stylesheet" href="../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
     
@@ -149,19 +149,39 @@
 <h2>Running Opaque SQL<a class="headerlink" href="#running-opaque-sql" title="Permalink to this headline">¶</a></h2>
 <p>Once setup is finished, you can run Spark SQL queries as follows.</p>
 <ol class="arabic">
-<li><p>Package Opaque into a JAR:</p>
+<li><p>Package Opaque into a JAR.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
 build/sbt package
 </pre></div>
 </div>
 </li>
-<li><p>Launch the Spark shell with Opaque:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="si">${</span><span class="nv">SPARK_HOME</span><span class="si">}</span>/bin/spark-shell --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
+<li><p>Launch the Spark shell with Opaque.</p>
+<p>Scala:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>spark-shell --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
 </pre></div>
 </div>
-<p>Alternatively, to run Opaque queries locally for development rather than on a cluster:</p>
+<p>Python:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pyspark --py-files <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar  <span class="se">\</span>
+  --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
+</pre></div>
+</div>
+<p>(the reason we need to specify <cite>–py-files</cite> is because the Opaque Python functions are placed in the .jar for easier packaging)</p>
+</li>
+<li><p>Inside the Spark shell, import Opaque’s DataFrame methods and install Opaque’s query planner rules.</p>
+<p>Scala:</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">edu.berkeley.cs.rise.opaque.implicits._</span>
+<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initSQLContext</span><span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opaque_sql</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">init_sql_context</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><p>You can also run queries in Scala locally.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-<span class="nv">JVM_OPTS</span><span class="o">=</span><span class="s2">"-Xmx4G"</span> build/sbt console
+<span class="nv">JVM_OPTS</span><span class="o">=</span><span class="s2">"-Xmx4G"</span><span class="p">;</span> build/sbt console
 </pre></div>
 </div>
 </li>
@@ -172,14 +192,25 @@ build/sbt package
 <ol class="arabic">
 <li><p>Create an unencrypted DataFrame on the driver.
 This should be done on the client, i.e., in a trusted setting.</p>
+<p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">data</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="s">"foo"</span><span class="o">,</span> <span class="mi">4</span><span class="o">),</span> <span class="o">(</span><span class="s">"bar"</span><span class="o">,</span> <span class="mi">1</span><span class="o">),</span> <span class="o">(</span><span class="s">"baz"</span><span class="o">,</span> <span class="mi">5</span><span class="o">))</span>
 <span class="k">val</span> <span class="n">df</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="o">(</span><span class="n">data</span><span class="o">).</span><span class="n">toDF</span><span class="o">(</span><span class="s">"word"</span><span class="o">,</span> <span class="s">"count"</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"foo"</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s2">"bar"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="s2">"baz"</span><span class="p">,</span> <span class="mi">5</span><span class="p">)]</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">sqlContext</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">toDF</span><span class="p">(</span><span class="s2">"word"</span><span class="p">,</span> <span class="s2">"count"</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
 <li><p>Create an encrypted DataFrame from the unencrypted version.
 This is as easy as calling <code class="docutils literal notranslate"><span class="pre">.encrypted</span></code>.</p>
+<p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">encrypted</span>
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df_encrypted</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">encrypted</span><span class="p">()</span>
 </pre></div>
 </div>
 </li>
@@ -187,8 +218,13 @@ This is as easy as calling <code class="docutils literal notranslate"><span clas
 <ol class="arabic" id="save-df" start="3">
 <li><p>Save the encrypted DataFrame to local disk.
 The encrypted data can also be uploaded to cloud storage for easy access.</p>
+<p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="o">).</span><span class="n">save</span><span class="o">(</span><span class="s">"dfEncrypted"</span><span class="o">)</span>
 <span class="c1">// The file dfEncrypted/part-00000 now contains encrypted data</span>
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df_encrypted</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"df_encrypted"</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
@@ -198,15 +234,21 @@ The encrypted data can also be uploaded to cloud storage for easy access.</p>
 <h2>Using the DataFrame interface<a class="headerlink" href="#using-the-dataframe-interface" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p>Users can load the <a class="reference internal" href="#save-df"><span class="std std-ref">previously persisted encrypted DataFrame</span></a>.</p>
+<p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
 <span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="o">)</span>
 <span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="nc">StructType</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">"word"</span><span class="o">,</span> <span class="nc">StringType</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">"count"</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))))</span>
 <span class="o">.</span><span class="n">load</span><span class="o">(</span><span class="s">"dfEncrypted"</span><span class="o">))</span>
 </pre></div>
 </div>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df_encrypted</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"df_encrypted"</span><span class="p">)</span>
+</pre></div>
+</div>
 </li>
 <li><p>Given an encrypted DataFrame <code class="docutils literal notranslate"><span class="pre">dfEncrypted</span></code>, construct a new query.
 Users can use <code class="docutils literal notranslate"><span class="pre">explain</span></code> to see the generated query plan.</p>
+<p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">"count"</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">))</span>
 <span class="n">result</span><span class="o">.</span><span class="n">explain</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
 <span class="c1">// [...]</span>
@@ -216,20 +258,14 @@ Users can use <code class="docutils literal notranslate"><span class="pre">expla
 <span class="c1">// [...]</span>
 </pre></div>
 </div>
-</li>
-<li><p>Call <code class="docutils literal notranslate"><span class="pre">.collect</span></code> or <code class="docutils literal notranslate"><span class="pre">.show</span></code> to retreive the results.
-The final result will be decrypted on the driver.</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">"count"</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">)).</span><span class="n">show</span>
-<span class="c1">// +----+-----+</span>
-<span class="c1">// |word|count|</span>
-<span class="c1">// +----+-----+</span>
-<span class="c1">// | foo|    4|</span>
-<span class="c1">// | baz|    5|</span>
-<span class="c1">// +----+-----+</span>
+<p>Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">df_encrypted</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">df_encrypted</span><span class="p">[</span><span class="s2">"count"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
 </ol>
+<p>Call <code class="docutils literal notranslate"><span class="pre">.collect</span></code> or <code class="docutils literal notranslate"><span class="pre">.show</span></code> to retreive the results. The final result will be decrypted on the driver.</p>
 </div>
 <div class="section" id="using-the-sql-interface">
 <h2>Using the SQL interface<a class="headerlink" href="#using-the-sql-interface" title="Permalink to this headline">¶</a></h2>
