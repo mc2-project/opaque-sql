@@ -15,14 +15,14 @@ int printf(const char *fmt, ...);
 /** Invoke OCALL to exit the program. */
 void exit(int exit_code);
 namespace std {
-    using ::exit;
+using ::exit;
 }
 
 /**
  * Allocate memory outside of the enclave and return the pointer in `ret`.
  *
- * This is a checked wrapper around `unsafe_ocall_malloc`. The resulting pointer is safe to write
- * to.
+ * This is a checked wrapper around `unsafe_ocall_malloc`. The resulting pointer
+ * is safe to write to.
  */
 void ocall_malloc(size_t size, uint8_t **ret);
 

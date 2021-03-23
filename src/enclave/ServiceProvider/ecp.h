@@ -32,35 +32,31 @@
 #ifndef _ECP_H
 #define _ECP_H
 
-#include <stdint.h>
-#include <stdlib.h>
 #include "common.h"
 #include "sp_crypto.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 typedef uint8_t sample_ec_key_128bit_t[16];
 
 #define SAMPLE_EC_MAC_SIZE 16
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum _sample_derive_key_type_t
-{
-    SAMPLE_DERIVE_KEY_SMK = 0,
-    SAMPLE_DERIVE_KEY_SK,
-    SAMPLE_DERIVE_KEY_MK,
-    SAMPLE_DERIVE_KEY_VK,
+typedef enum _sample_derive_key_type_t {
+  SAMPLE_DERIVE_KEY_SMK = 0,
+  SAMPLE_DERIVE_KEY_SK,
+  SAMPLE_DERIVE_KEY_MK,
+  SAMPLE_DERIVE_KEY_VK,
 } sample_derive_key_type_t;
 
-bool derive_key(const lc_ec256_dh_shared_t *p_shared_key,
-                uint8_t key_id,
+bool derive_key(const lc_ec256_dh_shared_t *p_shared_key, uint8_t key_id,
                 sample_ec_key_128bit_t *derived_key);
 
-
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
 #endif
-

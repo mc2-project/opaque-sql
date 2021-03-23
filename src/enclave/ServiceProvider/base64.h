@@ -32,4 +32,3 @@ char *base64_decode(const char *msg, size_t *sz);
 #endif
 
 #endif
-
