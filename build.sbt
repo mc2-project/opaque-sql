@@ -144,7 +144,7 @@ val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
 
 resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
 
-unmanagedResources in Compile ++= ((baseDirectory.value / "src" / "python") ** "*.py").get
+unmanagedResources in Compile ++= ((sourceDirectory.value / "python") ** "*.py").get
 
 // Watch the enclave C++ files
 watchSources ++=
