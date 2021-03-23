@@ -266,6 +266,9 @@ object Utils extends Logging {
     cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
     val cipherText = cipher.doFinal(data)
     iv ++ cipherText
+
+    
+
   }
 
   def decrypt(data: Array[Byte]): Array[Byte] = {
