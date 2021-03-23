@@ -144,6 +144,21 @@ sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
 <span class="c1"># Install a newer version of CMake (&gt;= 3.13)</span>
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix<span class="o">=</span>/usr/local
+
+<span class="c1"># Install Spark 3.1.1 (if not already done)</span>
+wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+tar xvf spark-3.1.1*
+sudo mkdir /opt/spark
+sudo mv spark-3.1.1*/* /opt/spark
+rm -rf spark-3.1.1*
+sudo chmod -R +wx /opt/spark/work <span class="c1"># may not be needed, depends on where Spark is installed</span>
+
+<span class="c1"># Set Spark environment variables in ~/.bashrc</span>
+<span class="nb">echo</span> <span class="s2">""</span> &gt;&gt; ~/.bashrc
+<span class="nb">echo</span> <span class="s2">"# Spark settings"</span> &gt;&gt; ~/.bashrc
+<span class="nb">echo</span> <span class="s2">"export SPARK_HOME=/opt/spark"</span> &gt;&gt; ~/.bashrc
+<span class="nb">echo</span> <span class="s2">"export PATH=</span><span class="nv">$PATH</span><span class="s2">:/opt/spark/bin:/opt/spark/sbin"</span> &gt;&gt; ~/.bashrc
+<span class="nb">source</span> ~/.bashrc
 </pre></div>
 </div>
 </li>

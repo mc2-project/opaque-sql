@@ -15,6 +15,21 @@ After downloading the Opaque codebase, build and test it as follows.
                    wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
                    sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
+                   # Install Spark 3.1.1 (if not already done)
+                   wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+                   tar xvf spark-3.1.1*
+                   sudo mkdir /opt/spark
+                   sudo mv spark-3.1.1*/* /opt/spark
+                   rm -rf spark-3.1.1*
+                   sudo chmod -R +wx /opt/spark/work # may not be needed, depends on where Spark is installed
+
+                   # Set Spark environment variables in ~/.bashrc
+                   echo "" >> ~/.bashrc
+                   echo "# Spark settings" >> ~/.bashrc
+                   echo "export SPARK_HOME=/opt/spark" >> ~/.bashrc
+                   echo "export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin" >> ~/.bashrc
+                   source ~/.bashrc
+
 2. On the master, generate a keypair using OpenSSL for remote attestation.
 
    .. code-block:: bash
