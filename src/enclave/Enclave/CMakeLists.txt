@@ -40,9 +40,6 @@ add_custom_command(
   COMMAND $ENV{OPAQUE_HOME}/gen_pubkey_header.sh enclave_pubkey.h $ENV{OPAQUE_HOME}/public_key.pub
 )
 
-#add_executable(enclave_trusted Attestation.cpp
-#                         ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
-
 # new key-gen attestation end
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")

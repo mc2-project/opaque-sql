@@ -41,8 +41,6 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphe
   assert(oe_is_outside_enclave(ciphertext, cipher_length) == 1);
   __builtin_ia32_lfence();
 
-  std::cout << "enter ecall_encrypt" << std::endl;
-
   try {
     // IV (12 bytes) + ciphertext + mac (16 bytes)
     assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
@@ -52,8 +50,6 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphe
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
-
-  std::cout << "exit ecall_encrypt" << std::endl;
 }
 
 void ecall_project(uint8_t *condition, size_t condition_length, uint8_t *input_rows,
@@ -252,10 +248,11 @@ static Crypto g_crypto;
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
   try {
+    (void) shared_key_msg_size;
     oe_shared_key_msg_t *shared_key_msg = (oe_shared_key_msg_t *)shared_key_msg_input;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size,
+    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE,
                                 shared_key_plaintext, &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
