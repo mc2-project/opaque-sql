@@ -115,25 +115,6 @@ void ServiceProvider::load_private_key(const std::string &filename) {
   EVP_PKEY_free(pkey);
 }
 
-void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
-  memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
-}
-
-// This function for testing purposes
-// void ServiceProvider::set_test_key(const uint8_t *shared_key) {
-//   memcpy(this->test_key, shared_key, LC_AESGCM_KEY_SIZE);
-// }
-
-void ServiceProvider::set_user_cert(const std::string user_cert) {
-  memcpy(this->user_cert, user_cert.c_str(), user_cert.length() + 1);
-  // this->user_cert = user_cert.c_str();
-  // std::cout << this->user_cert;
-}
-
-void ServiceProvider::set_key_share(const uint8_t *key_share) {
-  memcpy(this->key_share, key_share, LC_AESGCM_KEY_SIZE);
-}
-
 void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 

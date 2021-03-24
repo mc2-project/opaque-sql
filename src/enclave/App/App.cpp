@@ -280,14 +280,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
                                              report_msg_size));
 
   // Allocate memory
-//  std::cout << "App.cpp - GetListEncrypted - Before allocate memory" << std::endl;
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
-//  std::cout << "App.cpp - report_msg_size: " + report_msg_size << std::endl;
-//  std::cout << "App.cpp - GetListEncrypted - After allocate memory" << std::endl;
-
-//  std::cout << "App.cpp - GetListEncrypted - Before set memory" << std::endl;
   env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
-//  std::cout << "App.cpp - GetListEncrypted - After set memory" << std::endl;
 
   env->ReleaseByteArrayElements(shared_key_msg_input, (jbyte *) shared_key_msg_bytes, 0);
 
@@ -300,29 +294,18 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Fin
   JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
   (void)obj;
 
-//  std::cout << "enter App.cpp" << std::endl;
-//  std::cout << eid << std::endl;
-
   jboolean if_copy = false;
 
-//  std::cout << "App.cpp - before getArrayElements" << std::endl;
   jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
-//  std::cout << "App.cpp - after getArrayElements" << std::endl;
-
-//  std::cout << "App.cpp - before getArraySize" << std::endl;
   uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
-//  std::cout << "App.cpp - after getArraySize" << std::endl;
 
-//  std::cout << "App.cpp - before ecall" << std::endl;
   oe_check_and_time("Finish attestation",
                     ecall_finish_shared_key((oe_enclave_t*)eid,
                                              reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
                                              shared_key_msg_size));
-//  std::cout << "App.cpp - after ecall" << std::endl;
 
   env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 
-//  std::cout << "exit App.cpp" << std::endl;
 }
 
 /////////////////////////////// Shared Key Gen End ////////////////////////////////

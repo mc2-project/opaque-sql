@@ -84,11 +84,6 @@ typedef struct oe_report_msg_t {
 
 typedef struct oe_shared_key_msg_t {
   uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  uint8_t key_share_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  // // FIXME: remove test key ciphertext
-  // uint8_t test_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  size_t user_cert_len;
-  char user_cert[2000];
 } oe_shared_key_msg_t;
 
 #endif // COMMON_H

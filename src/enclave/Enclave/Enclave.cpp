@@ -351,8 +351,6 @@ static Attestation attestation(&g_crypto);
 void ecall_get_public_key(uint8_t **report_msg_data,
                            size_t* report_msg_data_size) {
 
-//  std::cout << "enter ecall_get_public_key" << std::endl;
-
   oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
   oe_uuid_t* format_id = &sgx_local_uuid;
 
@@ -384,11 +382,9 @@ void ecall_get_public_key(uint8_t **report_msg_data,
     ocall_throw("Unable to retrieve enclave evidence");
   }
 
-//  std::cout << "Before fresh attestation verification" << std::endl;
   if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size, pem_public_key, public_key_size)) {
     ocall_throw("Unable to verify FRESH attestation!");
   }
-//  std::cout << "After fresh attestation verification" << std::endl;
 
   // The report msg includes the public key, the size of the evidence, and the evidence itself
   *report_msg_data_size = public_key_size + sizeof(evidence_size) + evidence_size;
@@ -397,45 +393,14 @@ void ecall_get_public_key(uint8_t **report_msg_data,
   memcpy_s(*report_msg_data, public_key_size, pem_public_key, public_key_size);
   memcpy_s(*report_msg_data + public_key_size, sizeof(size_t), &evidence_size, sizeof(evidence_size)); 
 
-//  std::cout << "Enclave - get_public_key - obtain test size before" << std::endl;
-//  size_t test[1] = {};
-//  memcpy_s(test, sizeof(size_t), *report_msg_data + public_key_size, sizeof(evidence_size));
-//  std::cout << "Enclave - get_public_key - obtain test size after" << std::endl;
-
-//  std::cout << "Enclave - get_public_key - sizeof evidence_size " << evidence_size << std::endl;
-//  std::cout << "Enclave - get_public_key - sizeof evidence_size from report_msg: " << test[0] << std::endl;
-
   memcpy_s(*report_msg_data + public_key_size + sizeof(size_t), evidence_size, evidence, evidence_size);
 
-  // Print out evidence for debugging purposes
-//  std::cout << "Enclave - get_public_key - evidence" << std::endl;
-//  for (size_t i = 0; i < evidence_size; i++) {
-//    std::cout << evidence[i];
-//  }
-//  std::cout << std::endl;
-
-  // Print out public key for debugging purposes
-//  for (size_t i = 0; i < public_key_size; i++) {
-//    std::cout << pem_public_key[i];
-//  }
-//  std::cout << std::endl;
-
-//  std::cout << "Enclave - get_public_key - evidence from report_msg" << std::endl;
-//  uint8_t evidence_test[evidence_size] = {};
-//  memcpy_s(evidence_test, evidence_size, *report_msg_data + public_key_size + sizeof(size_t), evidence_size);
-//  for (size_t i = 0; i < evidence_size; i++) {
-//    std::cout << evidence_test[i];
-//  }
-//  std::cout << std::endl;
-
-//  std::cout << "exit ecall_get_public_key" << std::endl;
 }
 
 void ecall_get_list_encrypted(uint8_t * pk_list,
                               uint32_t pk_list_size, 
                               uint8_t * sk_list,
                               uint32_t sk_list_size) {
-//  std::cout << "enter ecall_get_list_encrypted" << std::endl;
 
   // Guard against encrypting or overwriting enclave memory
   assert(oe_is_outside_enclave(pk_list, pk_list_size) == 1);
@@ -468,13 +433,6 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
     uint8_t* format_settings = NULL;
     size_t format_settings_size = 0;
 
-//    if (!attestation.get_format_settings(
-//          format_id,
-//          &format_settings,
-//          &format_settings_size)) {
-//      ocall_throw("Unable to get enclave format settings");
-//    }
-
     while (pk_pointer < pk_list + pk_list_size) {
 
       if (!attestation.get_format_settings(
@@ -490,26 +448,11 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
       uint8_t evidence[evidence_size[0]] = {};
       memcpy_s(evidence, evidence_size[0], pk_pointer + OE_PUBLIC_KEY_SIZE + sizeof(size_t), evidence_size[0]);
 
-//      std::cout << "Enclave - get_list_encrypted - evidence_size test " << evidence_size[0] << std::endl;
-
-      // Print out evidence for debugging purposes
-//      for (size_t i = 0; i < evidence_size[0]; i++) {
-//        std::cout << evidence[i];
-//      }
-//      std::cout << std::endl;
-
-
       // Verify the provided public key is valid
       if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size[0], public_key, sizeof(public_key))) {
         std::cout << "get_list_encrypted - unable to verify attestation evidence" << std::endl;
         ocall_throw("Unable to verify attestation evidence");
       }
-
-      // Print out public key for debugging purposes
-//      for (size_t i = 0; i < OE_PUBLIC_KEY_SIZE; i++) {
-//        std::cout << public_key[i];
-//      }
-//      std::cout << std::endl;
 
       g_crypto.encrypt(public_key,
                        secret_key,
@@ -518,12 +461,6 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
                        &encrypted_sharedkey_size);
       memcpy_s(sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, OE_SHARED_KEY_CIPHERTEXT_SIZE);
 
-      // Print out cipher for debugging purposes
-//      for (size_t i = 0; i < OE_SHARED_KEY_CIPHERTEXT_SIZE; i++) {
-//        std::cout << (int) encrypted_sharedkey[i] + " ";
-//      }
-//      std::cout << std::endl;
-
       pk_pointer += OE_PUBLIC_KEY_SIZE + sizeof(size_t) + evidence_size[0];
       sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
     }
@@ -531,19 +468,10 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
     ocall_throw(e.what());
   }
 
-  // Print out sk_list for debugging purposes
-//  for (size_t i = 0; i < sk_list_size; i++) {
-//    std::cout << sk_list[i] + " ";
-//  }
-//  std::cout << std::endl;
-//
-//  std::cout << "exit ecall_get_list_encrypted" << std::endl;
 }
 
 void ecall_finish_shared_key(uint8_t *sk_list,
                               uint32_t sk_list_size) {
-
-//  std::cout << "enter ecall_finish_shared_key" << std::endl;
 
   uint8_t *sk_pointer = sk_list;
 
@@ -568,14 +496,6 @@ void ecall_finish_shared_key(uint8_t *sk_list,
 
   set_shared_key(secret_key, sk_size);
 
-  // Print out shared_key
-//  for (int i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-//    std::cout << secret_key[i];
-//  }
-
-//  std::cout << std::endl;
-
-//  std::cout << "exit ecall_finish_shared_key" << std::endl;
 }
 
 //////////////////////////////////// Generate Shared Key End //////////////////////////////////////
