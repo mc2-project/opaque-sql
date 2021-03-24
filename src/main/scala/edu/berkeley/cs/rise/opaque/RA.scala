@@ -104,6 +104,7 @@ object RA extends Logging {
         s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
       )
       initRA(sc)
+      LA.initLA(sc)
     }
     Thread.sleep(100)
   }

@@ -289,7 +289,6 @@ object Utils extends Logging {
     RA.attestEnclaves(sc)
     RA.startThread(sc)
 
-    // Perform Local-Attestation so that enclaves determine shared key
     LA.initLA(sc)
   }
 
