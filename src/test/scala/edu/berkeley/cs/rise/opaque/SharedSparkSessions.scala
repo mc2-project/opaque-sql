@@ -26,6 +26,7 @@ trait SinglePartitionSparkSession {
     .master("local[*]")
     .appName("SinglePartitionSuiteSession")
     .config("spark.sql.shuffle.partitions", numPartitions)
+    .config("opaque.testing.enableSharedKey", true)
     .getOrCreate()
 }
 
@@ -43,5 +44,6 @@ trait MultiplePartitionSparkSession {
       "spark.jars",
       "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
     )
+    .config("opaque.testing.enableSharedKey", true)
     .getOrCreate()
 }
