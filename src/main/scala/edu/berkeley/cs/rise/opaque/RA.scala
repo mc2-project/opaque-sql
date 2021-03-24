@@ -38,11 +38,10 @@ object RA extends Logging {
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-    val testKey = Array.fill[Byte](32)(0)
 
     val sp = new SP()
 
-    sp.Init(testKey, intelCert)
+    sp.Init(intelCert)
 
     val numAttested = Utils.numAttested
     // Runs on executors

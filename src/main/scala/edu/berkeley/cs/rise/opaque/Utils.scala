@@ -249,36 +249,16 @@ object Utils extends Logging {
   final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
 
-  /**
-   * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
-   * attestation succeeds. For development, we use a hardcoded key. You should change it.
-   */
-  val sharedKey: Array[Byte] = Array.fill[Byte](GCM_KEY_LENGTH)(0)
-  assert(sharedKey.size == GCM_KEY_LENGTH)
+  // We do not trust the driver. Encryption and decryption done in enclave only
 
   def encrypt(data: Array[Byte]): Array[Byte] = {
-    val random = SecureRandom.getInstance("SHA1PRNG")
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
-    val iv = new Array[Byte](GCM_IV_LENGTH)
-    random.nextBytes(iv)
-    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-    cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-    val cipherText = cipher.doFinal(data)
-    iv ++ cipherText
-
-    
-
+    val (enclave, eid) = initEnclave()
+    enclave.Encrypt(eid, data)    
   }
 
   def decrypt(data: Array[Byte]): Array[Byte] = {
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
-    val iv = data.take(GCM_IV_LENGTH)
-    val cipherText = data.drop(GCM_IV_LENGTH)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-    cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    val plaintext = cipher.doFinal(cipherText)
-    plaintext
+    val (enclave, eid) = initEnclave()
+    enclave.Decrypt(eid, data)    
   }
 
   var eid = 0L

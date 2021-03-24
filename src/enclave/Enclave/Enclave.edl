@@ -23,6 +23,10 @@ enclave {
       [user_check] uint8_t *plaintext, uint32_t length,
       [user_check] uint8_t *ciphertext, uint32_t cipher_length);
 
+    public void ecall_decrypt(
+      [user_check] uint8_t *ciphertext, uint32_t cipher_length,
+      [user_check] uint8_t *plaintext, uint32_t plaintext_length);
+
     public void ecall_sample(
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
