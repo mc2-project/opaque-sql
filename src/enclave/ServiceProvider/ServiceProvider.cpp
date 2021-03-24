@@ -235,9 +235,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
 
-  unsigned char encrypted_key_share[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  size_t encrypted_key_share_size = sizeof(encrypted_key_share);
-
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
 
   EVP_PKEY *pkey = buffer_to_public_key((char *)report_msg->public_key, -1);
@@ -320,29 +317,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
-  // Encrypt key share
-  ret = public_encrypt(pkey, this->key_share, LC_AESGCM_KEY_SIZE, encrypted_key_share, &encrypted_key_share_size);
-  if (ret == 0) {
-    throw std::runtime_error(std::string("public_encrypt: buffer too small"));
-  }
-  else if (ret < 0) {
-    throw std::runtime_error(std::string("public_encrypt failed"));
-  }
- 
-  // Encrypt test key for testing purposes
-  // FIXME: remove this block - it was for testing purposes
-  // unsigned char encrypted_test_key[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-  // size_t encrypted_test_key_size = sizeof(encrypted_test_key);
-  // ret = public_encrypt(pkey, this->test_key, LC_AESGCM_KEY_SIZE, encrypted_test_key, &encrypted_test_key_size);
-  // if (ret == 0) {
-  //   throw std::runtime_error(std::string("public_encrypt: buffer too small"));
-  // }
-  // else if (ret < 0) {
-  //   throw std::runtime_error(std::string("public_encrypt failed"));
-  // }
-  // memcpy_s(msg2->test_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_test_key, encrypted_test_key_size);
-  // FIXME: remove up to here
-
   // Prepare shared_key_msg
   memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE,
            encrypted_sharedkey, encrypted_sharedkey_size);
@@ -352,15 +326,4 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   EVP_PKEY_free(pkey);
 
   return shared_key_msg;
-}
-
-// Enclave functions for shared key generation
-EVP_PKEY* ServiceProvider::buffer_to_public_key_wrapper(char* public_key) {
-
-  return buffer_to_public_key(public_key, -1);
-}
-
-int ServiceProvider::public_encrypt_wrapper(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len) {
-
-  return public_encrypt(key, data, data_len, encrypted, encrypted_len);
 }

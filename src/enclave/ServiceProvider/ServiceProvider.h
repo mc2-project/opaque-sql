@@ -22,14 +22,6 @@ public:
    */
   void set_shared_key(const uint8_t *shared_key);
   
-  // FOR TESTING PURPOSES
-  // FIXME: remove this function
-  // void set_test_key(const uint8_t *shared_key);
-
-  void set_user_cert(std::string user_cert);
-
-  void set_key_share(const uint8_t *key_share);
-
   /**
    * After calling load_private_key, write the corresponding public key as a C++
    * header file. This file should be compiled into the enclave.
@@ -43,13 +35,6 @@ public:
   std::unique_ptr<oe_shared_key_msg_t> process_enclave_report(oe_report_msg_t *report_msg,
                                                               uint32_t *shared_key_msg_size);
 
-  /**
-   * Functions to help enclaves generate shared key (public key verification specifically)
-   */
-  EVP_PKEY* buffer_to_public_key_wrapper(char* public_key);
-
-  int public_encrypt_wrapper(EVP_PKEY* key, unsigned char * data, int data_len, unsigned char* encrypted, size_t* encrypted_len);
-
 private:
   void connect_to_ias_helper(const std::string &ias_report_signing_ca_file);
 
@@ -58,15 +43,6 @@ private:
 
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
 
-  // FOR TESTING PURPOSES
-  // FIXME: remove this test key
-  // uint8_t test_key[LC_AESGCM_KEY_SIZE];
-
-  // FIXME: make this not a set length
-  char user_cert[2000];
-
-  // Key share; xor'ed among all parties to produce one shared key for spark cluster
-  uint8_t key_share[LC_AESGCM_KEY_SIZE];
   std::string spid;
 
   std::unique_ptr<IAS_Connection> ias;
