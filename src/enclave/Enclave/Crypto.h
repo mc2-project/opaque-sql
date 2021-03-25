@@ -23,6 +23,9 @@ void set_shared_key(uint8_t *msg4, uint32_t msg4_size);
 
 void add_client_key(uint8_t *client_key_bytes, uint32_t client_key_size, char* username);
 
+// TODO: Debugging purposes. Remove this function later
+void initKeySchedule();
+
 /**
  * Encrypt the given plaintext using AES-GCM with a 128-bit key and write the
  * result to `ciphertext`. The encrypted data will be formatted as follows,

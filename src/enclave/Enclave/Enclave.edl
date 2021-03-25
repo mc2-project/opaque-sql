@@ -104,8 +104,8 @@ enclave {
       [user_check] uint8_t *sk_list, uint32_t cipher_length);
 
     public void ecall_finish_shared_key(
-      [in,size=msg4_size] uint8_t *msg4,
-      uint32_t msg4_size);
+      [in,size=msg4_size] uint8_t *msg4, uint32_t msg4_size, 
+      [user_check] uint8_t *secret_key, uint32_t secret_length);
   };
 
   untrusted {

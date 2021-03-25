@@ -278,7 +278,7 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
       ocall_throw("shared key decryption failed");
     }
 
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+//    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -471,12 +471,18 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
 }
 
 void ecall_finish_shared_key(uint8_t *sk_list,
-                              uint32_t sk_list_size) {
+                             uint32_t sk_list_size,
+                             uint8_t *sk,
+                             uint32_t sk_size) {
+
+  (void) sk;
+  (void) sk_size;
 
   uint8_t *sk_pointer = sk_list;
 
   uint8_t secret_key[SGX_AESGCM_KEY_SIZE] = {0};
-  size_t sk_size = sizeof(secret_key);
+  size_t sk_length = sizeof(secret_key);
+  assert(sk_length == sk_size);
 
   while (sk_pointer < sk_list + sk_list_size) {
     uint8_t encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
@@ -485,7 +491,7 @@ void ecall_finish_shared_key(uint8_t *sk_list,
     memcpy_s(encrypted_sharedkey, encrypted_sharedkey_size, sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE);
 
     try {
-      bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, secret_key, &sk_size);
+      bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, secret_key, &sk_length);
       if (ret) {break;} // Decryption was successful to obtain secret key
     } catch (const std::runtime_error &e) {
       ocall_throw(e.what());
@@ -494,8 +500,25 @@ void ecall_finish_shared_key(uint8_t *sk_list,
     sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
   }
 
-  set_shared_key(secret_key, sk_size);
+//  set_shared_key(secret_key, sk_size);
+  initKeySchedule();
 
+  // Print out shared_key in two's complement
+  for (int i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
+    uint8_t byte = secret_key[i];
+
+    // In 2c form
+    if ((byte >> (7)) & 1) {
+      uint8_t two_comp = ((byte ^ (1 << 7)) ^ 127) + 1;
+      std::cout << "-" << +two_comp << " ";
+    } else {
+      std::cout << +byte << " ";
+    }
+  }
+
+  std::cout << std::endl;
+
+  memcpy(sk, secret_key, SGX_AESGCM_KEY_SIZE);
 }
 
 //////////////////////////////////// Generate Shared Key End //////////////////////////////////////

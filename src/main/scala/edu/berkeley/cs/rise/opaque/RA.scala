@@ -103,8 +103,14 @@ object RA extends Logging {
       logInfo(
         s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
       )
+
+      println("Before RA")
       initRA(sc)
+      println("After RA")
+     
+      println("Before LA")
       LA.initLA(sc)
+      println("After LA")
     }
     Thread.sleep(100)
   }

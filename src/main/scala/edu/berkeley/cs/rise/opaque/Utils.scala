@@ -251,14 +251,52 @@ object Utils extends Logging {
 
   // We do not trust the driver. Encryption and decryption done in enclave only
 
+//  def encrypt(data: Array[Byte]): Array[Byte] = {
+//    val (enclave, eid) = initEnclave()
+//    enclave.Encrypt(eid, data)    
+//  }
+
+//  def decrypt(data: Array[Byte]): Array[Byte] = {
+//    val (enclave, eid) = initEnclave()
+//    enclave.Decrypt(eid, data)    
+
+  /**
+   * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
+   * attestation succeeds. For development, we use a hardcoded key. You should change it.
+   */
+  var sharedKey: Array[Byte] = Array.fill[Byte](GCM_KEY_LENGTH)(0)
+
+  def setSharedKey(key: Array[Byte]): Unit = {
+    sharedKey = key
+    assert(sharedKey.size == GCM_KEY_LENGTH)
+
+//    println(sharedKey.mkString(" "))
+//    println((sharedKey.map(_.toChar)).mkString)
+  }
+
   def encrypt(data: Array[Byte]): Array[Byte] = {
-    val (enclave, eid) = initEnclave()
-    enclave.Encrypt(eid, data)    
+//    println(sharedKey.mkString(" "))
+
+    val random = SecureRandom.getInstance("SHA1PRNG")
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
+    val iv = new Array[Byte](GCM_IV_LENGTH)
+    random.nextBytes(iv)
+    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+    cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
+    val cipherText = cipher.doFinal(data)
+    iv ++ cipherText
   }
 
   def decrypt(data: Array[Byte]): Array[Byte] = {
-    val (enclave, eid) = initEnclave()
-    enclave.Decrypt(eid, data)    
+//    println(sharedKey.mkString(" "))
+
+    val cipherKey = new SecretKeySpec(sharedKey, "AES")
+    val iv = data.take(GCM_IV_LENGTH)
+    val cipherText = data.drop(GCM_IV_LENGTH)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+    cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
+    cipher.doFinal(cipherText)
   }
 
   var eid = 0L
@@ -270,6 +308,9 @@ object Utils extends Logging {
   var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
+
+//    println("Enter initSQLContext")
+
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
@@ -289,7 +330,7 @@ object Utils extends Logging {
     RA.attestEnclaves(sc)
     RA.startThread(sc)
 
-    LA.initLA(sc)
+//    println("Exit initSQLContext")
   }
 
   def initEnclave(): (SGXEnclave, Long) = {

@@ -88,5 +88,5 @@ class SGXEnclave extends java.io.Serializable {
   // "Local attestation" to determine shared key, enclave side
   @native def GetPublicKey(eid: Long): Array[Byte]
   @native def GetListEncrypted(eid: Long, publicKeyList: Array[Byte]): Array[Byte]
-  @native def FinishSharedKey(eid: Long, encryptedKeyList: Array[Byte]): Unit
+  @native def FinishSharedKey(eid: Long, encryptedKeyList: Array[Byte]): Array[Byte]
 }
