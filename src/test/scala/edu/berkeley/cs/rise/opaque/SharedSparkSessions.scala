@@ -20,12 +20,19 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.SparkSession
 
 trait SinglePartitionSparkSession {
-  def numPartitions = 1
+  val executorInstances = 1
+
+  def numPartitions = executorInstances
   val spark = SparkSession
     .builder()
-    .master("local[*]")
+    .master(s"local-cluster[$executorInstances, 1, 3072]")
     .appName("SinglePartitionSuiteSession")
+    .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
+    .config(
+      "spark.jars",
+      "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
+    )
     .getOrCreate()
 }
 

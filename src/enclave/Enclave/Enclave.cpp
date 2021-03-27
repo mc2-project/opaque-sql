@@ -500,23 +500,7 @@ void ecall_finish_shared_key(uint8_t *sk_list,
     sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
   }
 
-//  set_shared_key(secret_key, sk_size);
-  initKeySchedule();
-
-  // Print out shared_key in two's complement
-  for (int i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-    uint8_t byte = secret_key[i];
-
-    // In 2c form
-    if ((byte >> (7)) & 1) {
-      uint8_t two_comp = ((byte ^ (1 << 7)) ^ 127) + 1;
-      std::cout << "-" << +two_comp << " ";
-    } else {
-      std::cout << +byte << " ";
-    }
-  }
-
-  std::cout << std::endl;
+  set_shared_key(secret_key, sk_size);
 
   memcpy(sk, secret_key, SGX_AESGCM_KEY_SIZE);
 }

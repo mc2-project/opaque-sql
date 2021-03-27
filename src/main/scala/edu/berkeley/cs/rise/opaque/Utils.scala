@@ -249,7 +249,8 @@ object Utils extends Logging {
   final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
 
-  // We do not trust the driver. Encryption and decryption done in enclave only
+  // We do not trust the driver. Encryption and decryption done in enclave only.
+  // Leaving here, because will eventually encrypt in enclaves
 
 //  def encrypt(data: Array[Byte]): Array[Byte] = {
 //    val (enclave, eid) = initEnclave()
@@ -269,14 +270,9 @@ object Utils extends Logging {
   def setSharedKey(key: Array[Byte]): Unit = {
     sharedKey = key
     assert(sharedKey.size == GCM_KEY_LENGTH)
-
-//    println(sharedKey.mkString(" "))
-//    println((sharedKey.map(_.toChar)).mkString)
   }
 
   def encrypt(data: Array[Byte]): Array[Byte] = {
-//    println(sharedKey.mkString(" "))
-
     val random = SecureRandom.getInstance("SHA1PRNG")
     val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = new Array[Byte](GCM_IV_LENGTH)
@@ -289,7 +285,6 @@ object Utils extends Logging {
   }
 
   def decrypt(data: Array[Byte]): Array[Byte] = {
-//    println(sharedKey.mkString(" "))
 
     val cipherKey = new SecretKeySpec(sharedKey, "AES")
     val iv = data.take(GCM_IV_LENGTH)
@@ -308,8 +303,6 @@ object Utils extends Logging {
   var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
-
-//    println("Enter initSQLContext")
 
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
@@ -330,13 +323,13 @@ object Utils extends Logging {
     RA.attestEnclaves(sc)
     RA.startThread(sc)
 
-//    println("Exit initSQLContext")
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
     // This following exception relies on the Spark fault tolerance and its retry mechanism
     // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure.
     this.synchronized {
+      println("Init Enclave: " + sharedKey.mkString(" "))
       if (!attested) {
         Thread.sleep(200)
         throw new OpaqueException("Attestation not yet complete")

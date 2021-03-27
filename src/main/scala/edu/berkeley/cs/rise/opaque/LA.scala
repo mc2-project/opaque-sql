@@ -67,6 +67,9 @@ object LA extends Logging {
       .mapPartitions { (_) =>
         val (enclave, eid) = Utils.initEnclave()
         val key = enclave.FinishSharedKey(eid, msg3s(eid))
+ 
+        // Giving Utils enclave shared key for now. Will remove later.
+        Utils.setSharedKey(key)
         Iterator((key, true))
       }
       .collect
@@ -77,6 +80,7 @@ object LA extends Logging {
         throw new OpaqueException("Failed to set shared key")
     }
 
-//    Utils.setSharedKey(setSharedKeyResults.head._1)
+    // Giving Utils enclave shared key for now. Will remove later.
+    Utils.setSharedKey(setSharedKeyResults.head._1)
   }
 }
