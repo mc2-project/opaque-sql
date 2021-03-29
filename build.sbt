@@ -6,30 +6,22 @@ organization := "edu.berkeley.cs.amplab"
 
 scalaVersion := "2.12.10"
 
-spName := "amplab/opaque"
-
-sparkVersion := "3.1.1"
-
-sparkComponents ++= Seq("core", "sql", "catalyst")
-
 libraryDependencies += "org.scalanlp" %% "breeze" % "1.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
-val flatbuffersVersion = "1.7.0"
+libraryDependencies ++= Seq(
+  "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+)
+
+enablePlugins(SparkPlugin)
+sparkVersion := "3.1.1"
+sparkComponents ++= Seq("core", "sql", "catalyst")
 
 concurrentRestrictions in Global := Seq(Tags.limit(Tags.Test, 1))
 
 fork in Test := true
-fork in run := true
-
-/* Include Spark dependency for `build/sbt run`, though it is marked as "provided" for use with
- * spark-submit. From
- * https://github.com/sbt/sbt-assembly/blob/4a211b329bf31d9d5f0fae67ea4252896d8a4a4d/README.md
- */
-run in Compile := Defaults
-  .runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
-  .evaluated
 
 /* Create fat jar with src and test classes using build/sbt test:assembly */
 Project.inConfig(Test)(baseAssemblySettings)
@@ -65,7 +57,7 @@ javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
 javaOptions in run ++= Seq(
   "-Xmx2048m",
   "-XX:ReservedCodeCacheSize=384m",
-  "-Dspark.master=local[1]"
+  "-Dspark.master=local[*]"
 )
 
 scalacOptions ++= Seq(
@@ -122,8 +114,6 @@ val enclaveBuildTask = TaskKey[File](
   "Builds the C++ enclave code, returning the directory containing the resulting shared libraries."
 )
 
-baseDirectory in enclaveBuildTask := (baseDirectory in ThisBuild).value
-
 compile in Compile := { (compile in Compile).dependsOn(enclaveBuildTask).value }
 
 val copyEnclaveLibrariesToResourcesTask = TaskKey[Seq[File]](
@@ -145,6 +135,9 @@ val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
 resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
 
 unmanagedResources in Compile ++= ((sourceDirectory.value / "python") ** "*.py").get
+
+Compile / PB.protoSources := Seq(sourceDirectory.value / "protobuf")
+Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
 
 // Watch the enclave C++ files
 watchSources ++=
@@ -209,6 +202,8 @@ initialCommands in console :=
 
 cleanupCommands in console := "spark.stop()"
 
+import scala.sys.process.Process
+
 nativePlatform := {
   try {
     val lines = Process("uname -sm").lines
@@ -247,6 +242,7 @@ sgxGdbTask := {
 }
 
 fetchFlatbuffersLibTask := {
+  val flatbuffersVersion = "1.7.0"
   val flatbuffersSource = target.value / "flatbuffers" / s"flatbuffers-$flatbuffersVersion"
   if (!flatbuffersSource.exists) {
     // Fetch flatbuffers from Github
@@ -258,7 +254,6 @@ fetchFlatbuffersLibTask := {
   val flatc = flatbuffersSource / "flatc"
   if (!flatc.exists) {
     // Build flatbuffers with cmake
-    import sys.process._
     streams.value.log.info(s"Building Flatbuffers")
     val nproc = java.lang.Runtime.getRuntime.availableProcessors
     if (
@@ -315,7 +310,6 @@ buildFlatbuffersTask := {
 
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
-  import sys.process._
   val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
   val enclaveBuildDir = target.value / "enclave"
   enclaveBuildDir.mkdirs()
@@ -343,7 +337,7 @@ enclaveBuildTask := {
 copyEnclaveLibrariesToResourcesTask := {
   val libraries = (enclaveBuildTask.value ** "*.so").get
   val mappings: Seq[(File, String)] =
-    libraries pair rebase(enclaveBuildTask.value, s"/native/${nativePlatform.value}")
+    libraries pair Path.rebase(enclaveBuildTask.value, s"/native/${nativePlatform.value}")
   val resources: Seq[File] = for ((file, path) <- mappings) yield {
     val resource = resourceManaged.value / path
     IO.copyFile(file, resource)
