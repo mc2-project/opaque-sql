@@ -36,6 +36,7 @@ import org.apache.spark.sql.catalyst.plans.logical.UnaryNode
  * An operator that computes on encrypted data.
  */
 trait OpaqueOperator extends LogicalPlan {
+
   /**
    * Every encrypted operator relies on its input having a specific set of columns, so we override
    * references to include all inputs to prevent Catalyst from dropping any input columns.
@@ -43,19 +44,21 @@ trait OpaqueOperator extends LogicalPlan {
   override lazy val references: AttributeSet = inputSet
 }
 
-case class Encrypt(child: LogicalPlan)
-  extends UnaryNode with OpaqueOperator {
+case class Encrypt(child: LogicalPlan) extends UnaryNode with OpaqueOperator {
 
   override def output: Seq[Attribute] = child.output
 }
 
-case class EncryptedLocalRelation(
-    output: Seq[Attribute],
-    plaintextData: Seq[InternalRow])
-  extends LeafNode with MultiInstanceRelation with OpaqueOperator {
+case class EncryptedLocalRelation(output: Seq[Attribute], plaintextData: Seq[InternalRow])
+    extends LeafNode
+    with MultiInstanceRelation
+    with OpaqueOperator {
 
   // A local relation must have resolved output.
-  require(output.forall(_.resolved), "Unresolved attributes found when constructing LocalRelation.")
+  require(
+    output.forall(_.resolved),
+    "Unresolved attributes found when constructing LocalRelation."
+  )
 
   /**
    * Returns an identical copy of this relation with new exprIds for all attributes.  Different
@@ -69,10 +72,9 @@ case class EncryptedLocalRelation(
   override protected def stringArgs = Iterator(output)
 }
 
-case class EncryptedBlockRDD(
-    output: Seq[Attribute],
-    rdd: RDD[Block])
-  extends OpaqueOperator with MultiInstanceRelation {
+case class EncryptedBlockRDD(output: Seq[Attribute], rdd: RDD[Block])
+    extends OpaqueOperator
+    with MultiInstanceRelation {
 
   override def children: Seq[LogicalPlan] = Nil
 
@@ -83,27 +85,31 @@ case class EncryptedBlockRDD(
 }
 
 case class EncryptedProject(projectList: Seq[NamedExpression], child: OpaqueOperator)
-  extends UnaryNode with OpaqueOperator {
+    extends UnaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 }
 
 case class EncryptedFilter(condition: Expression, child: OpaqueOperator)
-  extends UnaryNode with OpaqueOperator {
+    extends UnaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = child.output
 }
 
 case class EncryptedSort(order: Seq[SortOrder], child: OpaqueOperator)
-  extends UnaryNode with OpaqueOperator {
+    extends UnaryNode
+    with OpaqueOperator {
   override def output: Seq[Attribute] = child.output
 }
 
 case class EncryptedAggregate(
     groupingExpressions: Seq[Expression],
     aggExpressions: Seq[NamedExpression],
-    child: OpaqueOperator)
-  extends UnaryNode with OpaqueOperator {
+    child: OpaqueOperator
+) extends UnaryNode
+    with OpaqueOperator {
 
   override def producedAttributes: AttributeSet =
     AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
@@ -114,28 +120,30 @@ case class EncryptedJoin(
     left: OpaqueOperator,
     right: OpaqueOperator,
     joinType: JoinType,
-    condition: Option[Expression])
-  extends BinaryNode with OpaqueOperator {
+    condition: Option[Expression]
+) extends BinaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = left.output ++ right.output
 }
 
-case class EncryptedUnion(
-    left: OpaqueOperator,
-    right: OpaqueOperator)
-  extends BinaryNode with OpaqueOperator {
+case class EncryptedUnion(left: OpaqueOperator, right: OpaqueOperator)
+    extends BinaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = left.output
 }
 
 case class EncryptedLocalLimit(limit: Expression, child: OpaqueOperator)
-    extends UnaryNode with OpaqueOperator {
+    extends UnaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = child.output
 }
 
 case class EncryptedGlobalLimit(limit: Expression, child: OpaqueOperator)
-    extends UnaryNode with OpaqueOperator {
+    extends UnaryNode
+    with OpaqueOperator {
 
   override def output: Seq[Attribute] = child.output
 }

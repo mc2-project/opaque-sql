@@ -41,8 +41,9 @@ class EncryptedSource
     with CreatableRelationProvider {
 
   override def createRelation(
-    sqlContext: SQLContext,
-    parameters: Map[String, String]): BaseRelation = {
+      sqlContext: SQLContext,
+      parameters: Map[String, String]
+  ): BaseRelation = {
     val schemaPath = new Path(parameters("path"), "schema")
     val fs = schemaPath.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
     val is = new ObjectInputStream(fs.open(schemaPath))
@@ -52,20 +53,22 @@ class EncryptedSource
   }
 
   override def createRelation(
-    sqlContext: SQLContext,
-    parameters: Map[String, String],
-    schema: StructType): BaseRelation = {
+      sqlContext: SQLContext,
+      parameters: Map[String, String],
+      schema: StructType
+  ): BaseRelation = {
     val dataDir = new Path(parameters("path"), "data")
-    EncryptedScan(dataDir.toString, schema)(
-      sqlContext.sparkSession)
+    EncryptedScan(dataDir.toString, schema)(sqlContext.sparkSession)
   }
 
   override def createRelation(
-    sqlContext: SQLContext,
-    mode: SaveMode,
-    parameters: Map[String, String],
-    data: DataFrame): BaseRelation = {
-    val blocks: RDD[Block] = data.queryExecution.executedPlan.asInstanceOf[OpaqueOperatorExec]
+      sqlContext: SQLContext,
+      mode: SaveMode,
+      parameters: Map[String, String],
+      data: DataFrame
+  ): BaseRelation = {
+    val blocks: RDD[Block] = data.queryExecution.executedPlan
+      .asInstanceOf[OpaqueOperatorExec]
       .executeBlocked()
 
     val dataDir = new Path(parameters("path"), "data")
@@ -77,23 +80,21 @@ class EncryptedSource
     os.writeObject(data.schema)
     os.close()
 
-    EncryptedScan(dataDir.toString, data.schema)(
-      sqlContext.sparkSession)
+    EncryptedScan(dataDir.toString, data.schema)(sqlContext.sparkSession)
   }
 }
 
-case class EncryptedScan(
-    path: String,
-    override val schema: StructType)(
-    @transient val sparkSession: SparkSession)
-  extends BaseRelation {
+case class EncryptedScan(path: String, override val schema: StructType)(
+    @transient val sparkSession: SparkSession
+) extends BaseRelation {
 
   override def sqlContext: SQLContext = sparkSession.sqlContext
 
   override def needConversion: Boolean = false
 
   def buildBlockedScan(): RDD[Block] = sparkSession.sparkContext
-    .sequenceFile[Int, Array[Byte]](path).map {
-      case (_, bytes) => Block(bytes)
+    .sequenceFile[Int, Array[Byte]](path)
+    .map { case (_, bytes) =>
+      Block(bytes)
     }
 }

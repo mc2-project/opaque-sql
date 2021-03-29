@@ -15,14 +15,14 @@ int printf(const char *fmt, ...);
 /** Invoke OCALL to exit the program. */
 void exit(int exit_code);
 namespace std {
-    using ::exit;
+using ::exit;
 }
 
 /**
  * Allocate memory outside of the enclave and return the pointer in `ret`.
  *
- * This is a checked wrapper around `unsafe_ocall_malloc`. The resulting pointer is safe to write
- * to.
+ * This is a checked wrapper around `unsafe_ocall_malloc`. The resulting pointer
+ * is safe to write to.
  */
 void ocall_malloc(size_t size, uint8_t **ret);
 
@@ -40,5 +40,7 @@ int log_2(int value);
 int pow_2(int value);
 
 int secs_to_tm(long long t, struct tm *tm);
+
+std::string ciphertext_base64_decode(const std::string &encoded_string);
 
 #endif // UTIL_H

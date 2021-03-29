@@ -12,6 +12,8 @@ union ExprUnion {
     GreaterThanOrEqual,
     EqualTo,
     Contains,
+    Concat, 
+    In,
     Col,
     Literal,
     And,
@@ -34,11 +36,13 @@ union ExprUnion {
     VectorMultiply,
     DotProduct,
     Exp,
+    NormalizeNaNAndZero,
     ClosestPoint,
     CreateArray,
     Upper,
     DateAdd,
-    DateAddInterval
+    DateAddInterval,
+    Decrypt
 }
 
 table Expr {
@@ -125,6 +129,15 @@ table Contains {
     right:Expr;
 }
 
+table Concat {
+    children:[Expr];
+}
+
+// Array expressions
+table In {
+    children:[Expr]; 
+}
+
 table Substring {
     str:Expr;
     pos:Expr;
@@ -187,6 +200,10 @@ table CreateArray {
     children:[Expr];
 }
 
+table NormalizeNaNAndZero {
+    child:Expr;
+}
+
 // Opaque UDFs
 table VectorAdd {
     left:Expr;
@@ -210,4 +227,8 @@ table ClosestPoint {
 
 table Upper {
     child:Expr;
+}
+
+table Decrypt {
+    value:Expr;
 }

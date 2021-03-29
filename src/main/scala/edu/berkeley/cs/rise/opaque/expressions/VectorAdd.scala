@@ -17,7 +17,9 @@ object VectorAdd {
 }
 
 case class VectorAdd(left: Expression, right: Expression)
-    extends BinaryOperator with NullIntolerant with CodegenFallback {
+    extends BinaryOperator
+    with NullIntolerant
+    with CodegenFallback {
 
   override def dataType: DataType = left.dataType
 
@@ -30,6 +32,6 @@ case class VectorAdd(left: Expression, right: Expression)
   protected override def nullSafeEval(input1: Any, input2: Any): ArrayData = {
     val v1 = input1.asInstanceOf[ArrayData].toDoubleArray
     val v2 = input2.asInstanceOf[ArrayData].toDoubleArray
-    ArrayData.toArrayData ((new DenseVector(v1) + new DenseVector(v2)).toArray)
+    ArrayData.toArrayData((new DenseVector(v1) + new DenseVector(v2)).toArray)
   }
 }

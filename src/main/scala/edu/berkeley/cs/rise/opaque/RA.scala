@@ -17,40 +17,110 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
 
 import edu.berkeley.cs.rise.opaque.execution.SP
 
-// Helper to handle remote attestation
-// 
+// Performs remote attestation for all executors
+// that have not been attested yet
 
 object RA extends Logging {
+
+  var numExecutors: Int = 1
+  var loop: Boolean = true
+
   def initRA(sc: SparkContext): Unit = {
 
-    val rdd = sc.makeRDD(Seq.fill(sc.defaultParallelism) { () })
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+    }
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
     sp.Init(Utils.sharedKey, intelCert)
 
-    val msg1s = rdd.mapPartitionsWithIndex { (i, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      val msg1 = enclave.GenerateReport(eid)
-      Iterator((eid, msg1))
-    }.collect.toMap
+    val numAttested = Utils.numAttested
+    // Runs on executors
+    val msg1s = rdd
+      .mapPartitions { (_) =>
+        val (eid, msg1) = Utils.generateReport()
+        Iterator((eid, msg1))
+      }
+      .collect
+      .toMap
 
-    val msg2s = msg1s.map{case (eid, msg1) => (eid, sp.ProcessEnclaveReport(msg1))}
+    logInfo("Driver collected msg1s")
 
-    val attestationResults = rdd.mapPartitionsWithIndex { (_, _) =>
-      val (enclave, eid) = Utils.initEnclave()
-      enclave.FinishAttestation(eid, msg2s(eid))
-      Iterator((eid, true))
-    }.collect.toMap
-
-    for ((_, ret) <- attestationResults) {
-      if (!ret)
-        throw new OpaqueException("Attestation failed")
+    // Runs on driver
+    val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
+      (eid, sp.ProcessEnclaveReport(msg1))
     }
+
+    logInfo("Driver processed msg2s")
+
+    // Runs on executors
+    rdd.mapPartitions { (_) =>
+      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
+      Iterator((eid, true))
+    }.count
   }
+
+  def waitForExecutors(sc: SparkContext): Unit = {
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      while (
+        rdd
+          .mapPartitions { (_) =>
+            val id = SparkEnv.get.executorId
+            Iterator(id)
+          }
+          .collect
+          .toSet
+          .size < numExecutors
+      ) {}
+    }
+    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
+  }
+
+  // This function is executed in a loop that repeatedly tries to
+  // call initRA if new enclaves are added
+  // Periodically probe the workers using `startEnclave`
+  def attestEnclaves(sc: SparkContext): Unit = {
+    // Proactively initialize enclaves
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+    val numEnclavesAcc = Utils.numEnclaves
+    rdd.mapPartitions { (_) =>
+      val eid = Utils.startEnclave(numEnclavesAcc)
+      Iterator(eid)
+    }.count
+
+    if (Utils.numEnclaves.value != Utils.numAttested.value) {
+      logInfo(
+        s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
+      )
+      initRA(sc)
+    }
+    Thread.sleep(100)
+  }
+
+  def startThread(sc: SparkContext): Unit = {
+    val thread = new Thread {
+      override def run: Unit = {
+        while (loop) {
+          RA.attestEnclaves(sc)
+        }
+      }
+    }
+    thread.start
+  }
+
+  def stopThread(): Unit = {
+    loop = false
+    Thread.sleep(5000)
+  }
+
 }
