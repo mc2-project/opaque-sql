@@ -397,7 +397,6 @@ object Utils extends Logging {
 
   def getListEncrypted(evidences: Array[Byte]): Array[Byte] = {
     this.synchronized {
-      // Only generate evidence if the enclave has already been started AND attested
       if (eid != 0L && attested) {
         val enclave = new SGXEnclave()
         enclave.GetListEncrypted(eid, evidences)
@@ -415,7 +414,8 @@ object Utils extends Logging {
         val msg3 = msg3s(eid)
         enclave.FinishSharedKey(eid, msg3s(eid))
       } else {
-        Array[Byte]() 
+        // Return array of 0s
+        Array.fill[Byte](GCM_KEY_LENGTH)(0) 
       }
     }
   }
