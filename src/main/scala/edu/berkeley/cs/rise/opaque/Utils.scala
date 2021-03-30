@@ -382,6 +382,44 @@ object Utils extends Logging {
     }
   }
 
+  def getEvidence(): (Long, Option[Array[Byte]]) = {
+    this.synchronized {
+      // Only generate evidence if the enclave has already been started AND attested
+      if (eid != 0L && attested) {
+        val enclave = new SGXEnclave()
+        val msg1 = enclave.GetPublicKey(eid)
+        (eid, Option(msg1))
+      } else {
+        (eid, None)
+      }
+    }
+  }
+
+  def getListEncrypted(evidences: Array[Byte]): Array[Byte] = {
+    this.synchronized {
+      // Only generate evidence if the enclave has already been started AND attested
+      if (eid != 0L && attested) {
+        val enclave = new SGXEnclave()
+        enclave.GetListEncrypted(eid, evidences)
+      } else {
+        // Return empty array
+        Array[Byte]()
+      }
+    }
+  }
+
+  def finishSharedKey(msg3s: Map[Long, Array[Byte]]): Array[Byte] = {
+    this.synchronized {
+      val enclave = new SGXEnclave()
+      if (msg3s.contains(eid) && attested) {
+        val msg3 = msg3s(eid)
+        enclave.FinishSharedKey(eid, msg3s(eid))
+      } else {
+        Array[Byte]() 
+      }
+    }
+  }
+
   def cleanup(spark: SparkSession) {
     RA.stopThread()
     spark.stop()

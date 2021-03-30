@@ -34,13 +34,12 @@ object LA extends Logging {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
 
-    val rdd = sc.makeRDD(Seq.fill(numExecutors) { () })
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     // Obtain reports (evidence) with public keys
     val msg1s = rdd
       .mapPartitions{ (_) =>
-        val (enclave, eid) = Utils.initEnclave()
-        val msg1 = enclave.GetPublicKey(eid) 
+        val (eid, msg1) = Utils.getEvidence()
         Iterator((eid, msg1))
       }
       .collect
@@ -50,24 +49,22 @@ object LA extends Logging {
 
     // Combine all reports into one large array
     var pkArray = Array[Byte]()
-    for ((k,v) <- msg1s) {
+    for ((k, Some(v)) <- msg1s) {
       pkArray = concat(pkArray, v)
     }
     
     // Send list of public keys to enclaves
     val encryptedResults = rdd.context.parallelize(Array(pkArray), 1)
       .map { publicKeys =>
-        val (enclave, eid) = Utils.initEnclave()
-        enclave.GetListEncrypted(eid, publicKeys)
+        Utils.getListEncrypted(publicKeys)
       }.first()
 
     // Send encrypted secret key to all enclaves
     val msg3s = msg1s.map{case (eid, _) => (eid, encryptedResults)}
     val setSharedKeyResults = rdd
       .mapPartitions { (_) =>
-        val (enclave, eid) = Utils.initEnclave()
-        val key = enclave.FinishSharedKey(eid, msg3s(eid))
- 
+        val key = Utils.finishSharedKey(msg3s)
+  
         // Giving Utils enclave shared key for now. Will remove later.
         Utils.setSharedKey(key)
         Iterator((key, true))
