@@ -351,6 +351,7 @@ static Attestation attestation(&g_crypto);
 void ecall_get_public_key(uint8_t **report_msg_data,
                            size_t* report_msg_data_size) {
 
+#ifndef SIMULATE
   oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
   oe_uuid_t* format_id = &sgx_local_uuid;
 
@@ -363,6 +364,7 @@ void ecall_get_public_key(uint8_t **report_msg_data,
         &format_settings_size)) {
     ocall_throw("Unable to get enclave format settings");
   }
+#endif
 
   uint8_t pem_public_key[512];
   size_t public_key_size = sizeof(pem_public_key);
@@ -371,6 +373,7 @@ void ecall_get_public_key(uint8_t **report_msg_data,
 
   g_crypto.retrieve_public_key(pem_public_key);
 
+#ifndef SIMULATE
   if (attestation.generate_attestation_evidence(
             format_id,
             format_settings,
@@ -385,6 +388,7 @@ void ecall_get_public_key(uint8_t **report_msg_data,
   if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size, pem_public_key, public_key_size)) {
     ocall_throw("Unable to verify FRESH attestation!");
   }
+#endif
 
   // The report msg includes the public key, the size of the evidence, and the evidence itself
   *report_msg_data_size = public_key_size + sizeof(evidence_size) + evidence_size;
@@ -420,30 +424,36 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
     uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
     uint8_t *pk_pointer = pk_list;
 
-    size_t evidence_size[1] = {};
-
     unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
     size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
 
     uint8_t *sk_pointer = sk_list;
 
+    size_t evidence_size[1] = {};
+
+#ifndef SIMULATE
     oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
     oe_uuid_t* format_id = &sgx_local_uuid;
 
     uint8_t* format_settings = NULL;
     size_t format_settings_size = 0;
+#endif
 
     while (pk_pointer < pk_list + pk_list_size) {
 
+#ifndef SIMULATE
       if (!attestation.get_format_settings(
             format_id,
             &format_settings,
             &format_settings_size)) {
         ocall_throw("Unable to get enclave format settings");
       }
+#endif
 
       // Read public key, size of evidence, and evidence
       memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
+
+#ifndef SIMULATE
       memcpy_s(evidence_size, sizeof(evidence_size), pk_pointer + OE_PUBLIC_KEY_SIZE, sizeof(size_t));
       uint8_t evidence[evidence_size[0]] = {};
       memcpy_s(evidence, evidence_size[0], pk_pointer + OE_PUBLIC_KEY_SIZE + sizeof(size_t), evidence_size[0]);
@@ -453,6 +463,7 @@ void ecall_get_list_encrypted(uint8_t * pk_list,
         std::cout << "get_list_encrypted - unable to verify attestation evidence" << std::endl;
         ocall_throw("Unable to verify attestation evidence");
       }
+#endif
 
       g_crypto.encrypt(public_key,
                        secret_key,
