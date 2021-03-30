@@ -329,7 +329,6 @@ object Utils extends Logging {
     // This following exception relies on the Spark fault tolerance and its retry mechanism
     // in case of a task failure. Therefore, Spark MUST be configured to retry in case of a task failure.
     this.synchronized {
-      println("Init Enclave: " + sharedKey.mkString(" "))
       if (!attested) {
         Thread.sleep(200)
         throw new OpaqueException("Attestation not yet complete")

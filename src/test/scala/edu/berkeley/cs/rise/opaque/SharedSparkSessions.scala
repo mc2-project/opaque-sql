@@ -20,15 +20,17 @@ package edu.berkeley.cs.rise.opaque
 import org.apache.spark.sql.SparkSession
 
 trait SinglePartitionSparkSession {
-  val executorInstances = 1
+  val executorInstances = 3
 
-  def numPartitions = executorInstances
+  def numPartitions = 1
   val spark = SparkSession
     .builder()
-    .master(s"local-cluster[$executorInstances, 1, 3072]")
+    .master(s"local-cluster[$executorInstances, 1, 8192]")
     .appName("SinglePartitionSuiteSession")
     .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
+    .config("spark.driver.memory", "4g")
+    .config("spark.executor.memory", "2g")
     .config(
       "spark.jars",
       "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
