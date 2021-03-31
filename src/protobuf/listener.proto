@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package opaque.protos;
+
+service Listener {
+  rpc ReceiveQuery (QueryRequest) returns (QueryResult) {}
+}
+
+message QueryRequest {
+  string request = 1;
+}
+
+message QueryResult {
+  string result = 1;
+}

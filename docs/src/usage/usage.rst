@@ -68,6 +68,16 @@ Once setup is finished, you can run Spark SQL queries as follows.
                    JVM_OPTS="-Xmx4G"; build/sbt console
 
 
+Starting the gRPC Listener
+**************************
+
+1. To start the gRPC listener for the Opaque Client and TMS to connect to is easy.
+
+   .. code-block:: bash
+
+                   cd ${OPAQUE_HOME}
+                   build/sbt run
+
 Encrypting, saving, and loading a DataFrame
 *******************************************
 

@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
 
 enablePlugins(SparkPlugin)
 sparkVersion := "3.1.1"
-sparkComponents ++= Seq("core", "sql", "catalyst")
+sparkComponents ++= Seq("core", "sql", "catalyst", "repl")
 
 concurrentRestrictions in Global := Seq(Tags.limit(Tags.Test, 1))
 
