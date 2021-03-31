@@ -22,6 +22,7 @@ import opaque.protos.listener._
 import io.grpc.{Server, ServerBuilder}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.tools.nsc.interpreter.Results._
 
 /*
  * RPC listener responsible for receiving Scala code as strings and passing it to the REPL
@@ -44,8 +45,19 @@ class Listener(executionContext: ExecutionContext) {
   private class ListenerImpl extends ListenerGrpc.Listener {
     override def receiveQuery(req: QueryRequest) = {
       val query = req.request
-      val result = IntpHandler.run(query)
-      val reply = QueryResult(result.toString)
+      val (retStr, result) = IntpHandler.run(query)
+      val status = result match {
+        case Success =>
+          Status(0, "")
+        case Error =>
+          Status(1, "OpaqueSQLError: The line was erroneous in some way.")
+        case Incomplete =>
+          Status(
+            2,
+            "OpaqueSQLError: The input was incomplete. The caller should request more input."
+          )
+      }
+      val reply = QueryResult(retStr, Some(status))
       Future.successful(reply)
     }
   }

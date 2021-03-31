@@ -1,3 +1,5 @@
+/* This file should be kept in sync with Opaque-Clients's opaquesql.proto */
+
 syntax = "proto3";
 
 package opaque.protos;
@@ -12,4 +14,13 @@ message QueryRequest {
 
 message QueryResult {
   string result = 1;
+  Status status = 2;
+}
+
+message Status {
+  // Status
+  int32 status = 1;
+
+  // Exception message
+  string exception = 2;
 }

@@ -18,6 +18,7 @@
 package edu.berkeley.cs.rise.opaque.rpc
 
 import scala.tools.nsc.interpreter.IMain
+import scala.tools.nsc.interpreter.IR.Result
 import scala.tools.nsc.GenericRunnerSettings
 import scala.Console
 
@@ -83,10 +84,10 @@ object IntpHandler {
     run(initializationCommands)
   }
 
-  def run(input: String): String = this.synchronized {
+  def run(input: String): (String, Result) = this.synchronized {
     out.getBuffer().setLength(0)
-    intp.interpret(input)
-    out.getBuffer().toString
+    val res = intp.interpret(input)
+    (out.getBuffer().toString, res)
   }
-  def run(lines: Seq[String]): String = run(lines.map(_ + "\n").mkString)
+  def run(lines: Seq[String]): (String, Result) = run(lines.map(_ + "\n").mkString)
 }
