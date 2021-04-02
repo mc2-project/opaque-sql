@@ -489,6 +489,30 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
       .sortBy { case Row(category: String, _) => category }
   }
 
+  testAgainstSpark("aggregate count distinct and indistinct") { securityLevel =>
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int], i % 8)
+      else
+        (abc(i), i % 4, i % 8)
+    }.toSeq
+    val words = makeDF(data, securityLevel, "category", "id", "price")
+    words.groupBy("category").agg(countDistinct("id").as("num_unique_ids"),
+        count("price").as("num_prices")).collect.toSet
+  }
+
+  testAgainstSpark("aggregate count distinct") { securityLevel =>
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int])
+      else
+        (abc(i), i % 8)
+    }.toSeq
+    val words = makeDF(data, securityLevel, "category", "price")
+    words.groupBy("category").agg(countDistinct("price").as("num_unique_prices"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
   testAgainstSpark("aggregate first") { securityLevel =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "category", "price")
@@ -536,6 +560,30 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
       .sortBy { case Row(word: String, _) => word }
   }
 
+  testAgainstSpark("aggregate sum distinct and indistinct") { securityLevel =>
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int], i % 8)
+      else
+        (abc(i), i % 4, i % 8)
+    }.toSeq
+    val words = makeDF(data, securityLevel, "category", "id", "price")
+    words.groupBy("category").agg(sumDistinct("id").as("sum_unique_ids"),
+        sum("price").as("sum_prices")).collect.toSet
+  }
+
+  testAgainstSpark("aggregate sum distinct") { securityLevel =>
+    val data = (0 until 64).map{ i =>
+      if (i % 6 == 0)
+        (abc(i), null.asInstanceOf[Int])
+      else
+        (abc(i), i % 8)
+    }.toSeq
+    val words = makeDF(data, securityLevel, "category", "price")
+    words.groupBy("category").agg(sumDistinct("price").as("sum_unique_prices"))
+      .collect.sortBy { case Row(category: String, _) => category }
+  }
+
   testAgainstSpark("aggregate on multiple columns") { securityLevel =>
     val data = for (i <- 0 until 256) yield (abc(i), 1, 1.0f)
     val words = makeDF(data, securityLevel, "str", "x", "y")
@@ -565,6 +613,12 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     integrityCollect(words.agg(sum("count").as("totalCount")))
+  }
+
+  testAgainstSpark("global aggregate count distinct") { securityLevel =>
+    val data = for (i <- 0 until 256) yield (i, abc(i), i % 64)
+    val words = makeDF(data, securityLevel, "id", "word", "price")
+    words.agg(countDistinct("price").as("num_unique_prices")).collect
   }
 
   testAgainstSpark("global aggregate with 0 rows") { securityLevel =>

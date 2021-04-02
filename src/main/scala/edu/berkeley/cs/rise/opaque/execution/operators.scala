@@ -243,44 +243,35 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
 
 case class EncryptedAggregateExec(
   groupingExpressions: Seq[NamedExpression],
-  aggExpressions: Seq[AggregateExpression],
-  mode: AggregateMode,
+  aggregateExpressions: Seq[AggregateExpression],
   child: SparkPlan)
     extends UnaryExecNode with OpaqueOperatorExec {
 
   override def producedAttributes: AttributeSet =
-    AttributeSet(aggExpressions) -- AttributeSet(groupingExpressions)
+    AttributeSet(aggregateExpressions) -- AttributeSet(groupingExpressions)
 
-  override def output: Seq[Attribute] = mode match {
-    case Partial => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.copy(mode = Partial)).flatMap(_.aggregateFunction.inputAggBufferAttributes)
-    case Final => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
-    case Complete => groupingExpressions.map(_.toAttribute) ++ aggExpressions.map(_.resultAttribute)
-  }
+  override def output: Seq[Attribute] = groupingExpressions.map(_.toAttribute) ++
+    aggregateExpressions.flatMap(expr => {
+      expr.mode match {
+        case Partial | PartialMerge =>
+          expr.aggregateFunction.inputAggBufferAttributes
+        case _ =>
+          Seq(expr.resultAttribute)
+      }
+    })
 
   override def executeBlocked(): RDD[Block] = {
 
-    val (groupingExprs, aggExprs) = mode match {
-      case Partial => {
-        val partialAggExpressions = aggExpressions.map(_.copy(mode = Partial))
-        (groupingExpressions, partialAggExpressions)
-      }
-      case Final => {
-        val finalGroupingExpressions = groupingExpressions.map(_.toAttribute)
-        val finalAggExpressions = aggExpressions.map(_.copy(mode = Final))
-        (finalGroupingExpressions, finalAggExpressions)
-      }
-      case Complete => {
-        (groupingExpressions, aggExpressions.map(_.copy(mode = Complete)))
-      }
-    }
+    val aggExprSer = Utils.serializeAggOp(groupingExpressions, aggregateExpressions, child.output)
+    val isPartial = aggregateExpressions.map(expr => expr.mode)
+      .exists(mode => mode == Partial || mode == PartialMerge)
 
-     val aggExprSer = Utils.serializeAggOp(groupingExprs, aggExprs, child.output)
 
     timeOperator(child.asInstanceOf[OpaqueOperatorExec].executeBlocked(), "EncryptedPartialAggregateExec") {
       childRDD => 
         childRDD.map { block =>
         val (enclave, eid) = Utils.initEnclave()
-        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, (mode == Partial)))
+        Block(enclave.NonObliviousAggregate(eid, aggExprSer, block.bytes, isPartial))
       }
     }
   }
