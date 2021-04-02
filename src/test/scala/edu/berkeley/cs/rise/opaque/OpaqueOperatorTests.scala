@@ -258,7 +258,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     assert(numCached(agg) === 1)
 
     val expected = data.groupBy(_._1).mapValues(_.map(_._2).sum)
-    assert(agg.collect.toSet === expected.map(Row.fromTuple).toSet)
+    assert(integrityCollect(agg).toSet === expected.map(Row.fromTuple).toSet)
     df.unpersist()
   }
 
@@ -331,9 +331,18 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
     val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
-    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "y")
     val df = p.join(f, $"join_col_1" === $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
-    df.collect
+    integrityCollect(df)
+  }
+
+  testAgainstSpark("left semi join with condition") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "y")
+    val df = p.join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_semi").sort($"join_col_1", $"id1")
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left semi join") { securityLevel =>
@@ -342,7 +351,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left semi join negated") { securityLevel =>
@@ -351,16 +360,25 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" < $"join_col_2", "left_semi").sort($"join_col_1", $"id1")
-    df.collect
+    integrityCollect(df)
   }
 
-  testAgainstSpark("left anti join 1") { securityLevel =>
+  testAgainstSpark("left anti join") { securityLevel =>
     val p_data = for (i <- 1 to 128) yield (i, (i % 16).toString, i * 10)
     val f_data = for (i <- 1 to 256 if (i % 3) + 1 == 0 || (i % 3) + 5 == 0) yield (i, i.toString, i * 10)
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
+  }
+
+  testAgainstSpark("left anti join with condition") { securityLevel =>
+    val p_data = for (i <- 1 to 16) yield (i, (i % 8).toString, i * 10)
+    val f_data = for (i <- 1 to 32) yield (i, (i % 8).toString, i * 10)
+    val p = makeDF(p_data, securityLevel, "id1", "join_col_1", "x")
+    val f = makeDF(f_data, securityLevel, "id2", "join_col_2", "y")
+    val df = p.join(f, $"join_col_1" === $"join_col_2" && $"x" > $"y", "left_anti").sort($"join_col_1", $"id1")
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left anti join 1") { securityLevel =>
@@ -369,7 +387,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left anti join 1 negated") { securityLevel =>
@@ -378,7 +396,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" < $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("left anti join 2") { securityLevel =>
@@ -387,7 +405,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" === $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left anti join 2") { securityLevel =>
@@ -396,7 +414,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" >= $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("non-equi left anti join 2 negated") { securityLevel =>
@@ -405,7 +423,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "join_col_1", "x")
     val f = makeDF(f_data, securityLevel, "id", "join_col_2", "x")
     val df = p.join(f, $"join_col_1" < $"join_col_2", "left_anti").sort($"join_col_1", $"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("join on floats") { securityLevel =>
@@ -420,7 +438,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "pk", "x")
     val f = makeDF(f_data, securityLevel, "id", "fk", "x")
     val df = p.join(f, $"pk" === $"fk")
-    df.collect.toSet
+    integrityCollect(df).toSet
   }
 
   testAgainstSpark("join on doubles") { securityLevel =>
@@ -435,7 +453,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val p = makeDF(p_data, securityLevel, "id", "pk", "x")
     val f = makeDF(f_data, securityLevel, "id", "fk", "x")
     val df = p.join(f, $"pk" === $"fk")
-    df.collect.toSet
+    integrityCollect(df).toSet
   }
 
   def abc(i: Int): String = (i % 3) match {
@@ -980,7 +998,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
     val data = for (i <- 0 until 256) yield (i, abc(i), 1)
     val words = makeDF(data, securityLevel, "id", "word", "count")
     val df = words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
-    df.collect
+    integrityCollect(df)
   }
 
   testAgainstSpark("scalar subquery") { securityLevel =>
@@ -991,7 +1009,7 @@ trait OpaqueOperatorTests extends OpaqueTestsBase { self =>
 
     try {
       val df = spark.sql("""SELECT id, word, (SELECT MAX(count) FROM words) max_age FROM words ORDER BY id, word""")
-      df.collect
+      integrityCollect(df)
     } finally {
       spark.catalog.dropTempView("words")
     }
