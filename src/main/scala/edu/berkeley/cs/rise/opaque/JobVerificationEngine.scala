@@ -161,7 +161,8 @@ object JobVerificationEngine {
                                               "EncryptedFilter",
                                               "EncryptedAggregate",
                                               "EncryptedGlobalLimit",
-                                              "EncryptedLocalLimit")
+                                              "EncryptedLocalLimit",
+                                              "EncryptedBroadcastNestedLoopJoin")
 
   def addLogEntryChain(logEntryChain: tuix.LogEntryChain): Unit = {
     logEntryChains += logEntryChain 
@@ -340,6 +341,10 @@ object JobVerificationEngine {
       for (i <- 0 until numPartitions) {
         parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
       }
+    } else if (ecall == 14) {
+      for (i <- 0 until numPartitions) {
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+      }
     } else {
       throw new Exception("Job Verification Error creating expected DAG: "
         + "ecall not supported - " + ecall)
@@ -374,6 +379,9 @@ object JobVerificationEngine {
     } else if (operatorName == "EncryptedGlobalLimit") {
       // ("countRowsPerPartition", "computeNumRowsPerPartition", "limitReturnRows")
       expectedEcalls.append(10, 11, 13)
+    } else if (operatorName == "EncryptedBroadcastNestedLoopJoin") {
+      // ("broadcastNestedLoopJoin")
+      expectedEcalls.append(14)
     } else {
       throw new Exception("Executed unknown operator: " + operatorName) 
     }
