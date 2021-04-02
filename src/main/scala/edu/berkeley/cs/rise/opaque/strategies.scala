@@ -98,6 +98,7 @@ object OpaqueOperators extends Strategy {
         rightKeysProj,
         leftProjSchema.map(_.toAttribute),
         rightProjSchema.map(_.toAttribute),
+        condition, 
         sorted)
 
       val tagsDropped = joinType match {
@@ -105,12 +106,27 @@ object OpaqueOperators extends Strategy {
         case LeftSemi | LeftAnti => EncryptedProjectExec(left.output, joined)
       }
 
-      val filtered = condition match {
-        case Some(condition) => EncryptedFilterExec(condition, tagsDropped)
-        case None => tagsDropped
-      }
+      tagsDropped :: Nil
 
-      filtered :: Nil
+    // Used to match non-equi joins
+    case Join(left, right, joinType, condition, hint) if isEncrypted(left) && isEncrypted(right) =>
+      // How to pick broadcast side: if left join, broadcast right. If right join, broadcast left.
+      // This is the simplest and most performant method, but may be worth revisting if one side is
+      // significantly smaller than the other. Otherwise, pick the smallest side to broadcast.
+      // NOTE: the current implementation of BNLJ only works under the assumption that
+      // left join <==> broadcast right AND right join <==> broadcast left.
+      val desiredBuildSide = if (joinType.isInstanceOf[InnerLike] || joinType == FullOuter)
+          getSmallerSide(left, right) else
+          getBroadcastSideBNLJ(joinType)
+
+      val joined = EncryptedBroadcastNestedLoopJoinExec(
+        planLater(left),
+        planLater(right),
+        desiredBuildSide,
+        joinType,
+        condition)
+
+      joined :: Nil
 
     // Used to match non-equi joins
     case Join(left, right, joinType, condition, hint) if isEncrypted(left) && isEncrypted(right) =>

@@ -544,7 +544,8 @@ object JobVerificationEngine {
     if (!arePathsEqual) {
       // println(executedPathsToSink.toString)
       // println(expectedPathsToSink.toString)
-      println("===========DAGS NOT EQUAL===========")
+      // println("===========DAGS NOT EQUAL===========")
+      return false
     }
     return true 
   }
