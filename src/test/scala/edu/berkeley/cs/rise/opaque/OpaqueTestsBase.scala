@@ -68,7 +68,7 @@ trait OpaqueTestsBase extends FunSuite with BeforeAndAfterAll { self =>
     testFunc(name + " - encrypted") {
       // The === operator uses implicitly[Equality[A]], which compares Double and Array[Double]
       // using the numeric tolerance specified above
-      assert(f(Encrypted) === f(Insecure))
+      assert(f(Insecure) === f(Encrypted))
     }
   }
 

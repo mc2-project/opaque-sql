@@ -199,7 +199,8 @@ class EnclaveContext {
         {"countRowsPerPartition", 10},
         {"computeNumRowsPerPartition", 11},
         {"localLimit", 12},
-        {"limitReturnRows", 13}
+        {"limitReturnRows", 13},
+        {"broadcastNestedLoopJoin", 14}
       };
       return ecall_id[ecall];
     }

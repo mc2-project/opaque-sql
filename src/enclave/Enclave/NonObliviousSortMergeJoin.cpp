@@ -1,4 +1,4 @@
-#include "Join.h"
+#include "NonObliviousSortMergeJoin.h"
 
 #include "ExpressionEvaluation.h"
 #include "FlatbuffersReaders.h"
@@ -26,7 +26,7 @@ void non_oblivious_sort_merge_join(
       EnclaveContext::getInstance().set_append_mac(false);
       // If current row is from primary table
       if (last_primary_of_group.get()
-          && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+          && join_expr_eval.eval_condition(last_primary_of_group.get(), current)) {
         // Add this primary row to the current group
         primary_group.append(current);
         last_primary_of_group.set(current);
@@ -52,7 +52,7 @@ void non_oblivious_sort_merge_join(
       // Current row isn't from primary table
       // Output the joined rows resulting from this foreign row
       if (last_primary_of_group.get()
-          && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
+          && join_expr_eval.eval_condition(last_primary_of_group.get(), current)) {
         EnclaveContext::getInstance().set_append_mac(false);
         auto primary_group_buffer = primary_group.output_buffer(std::string(""));
         RowReader primary_group_reader(primary_group_buffer.view());
@@ -60,7 +60,7 @@ void non_oblivious_sort_merge_join(
           // For each foreign key row, join all primary key rows in same group with it
           const tuix::Row *primary = primary_group_reader.next();
 
-          if (!join_expr_eval.is_same_group(primary, current)) {
+          if (!join_expr_eval.eval_condition(primary, current)) {
             throw std::runtime_error(
               std::string("Invariant violation: rows of primary_group "
                           "are not of the same group: ")

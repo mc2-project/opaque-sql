@@ -555,6 +555,50 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousSortMergeJoin(
   return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_BroadcastNestedLoopJoin(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray join_expr, jbyteArray outer_rows, jbyteArray inner_rows) {
+  (void)obj;
+
+  jboolean if_copy;
+
+  uint32_t join_expr_length = (uint32_t) env->GetArrayLength(join_expr);
+  uint8_t *join_expr_ptr = (uint8_t *) env->GetByteArrayElements(join_expr, &if_copy);
+
+  uint32_t outer_rows_length = (uint32_t) env->GetArrayLength(outer_rows);
+  uint8_t *outer_rows_ptr = (uint8_t *) env->GetByteArrayElements(outer_rows, &if_copy);
+
+  uint32_t inner_rows_length = (uint32_t) env->GetArrayLength(inner_rows);
+  uint8_t *inner_rows_ptr = (uint8_t *) env->GetByteArrayElements(inner_rows, &if_copy);
+
+  uint8_t *output_rows = nullptr;
+  size_t output_rows_length = 0;
+
+  if (outer_rows_ptr == nullptr) {
+    ocall_throw("BroadcastNestedLoopJoin: JNI failed to get inner byte array.");
+  } else if (inner_rows_ptr == nullptr) {
+    ocall_throw("BroadcastNestedLoopJoin: JNI failed to get outer byte array.");
+  } else {
+    oe_check_and_time("Broadcast Nested Loop Join",
+                       ecall_broadcast_nested_loop_join(
+                         (oe_enclave_t*)eid,
+                         join_expr_ptr, join_expr_length,
+                         outer_rows_ptr, outer_rows_length,
+                         inner_rows_ptr, inner_rows_length,
+                         &output_rows, &output_rows_length));
+  }
+
+  jbyteArray ret = env->NewByteArray(output_rows_length);
+  env->SetByteArrayRegion(ret, 0, output_rows_length, (jbyte *) output_rows);
+  free(output_rows);
+
+  env->ReleaseByteArrayElements(join_expr, (jbyte *) join_expr_ptr, 0);
+  env->ReleaseByteArrayElements(outer_rows, (jbyte *) outer_rows_ptr, 0);
+  env->ReleaseByteArrayElements(inner_rows, (jbyte *) inner_rows_ptr, 0);
+
+  return ret;
+}
+
 JNIEXPORT jobject JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_NonObliviousAggregate(
   JNIEnv *env, jobject obj, jlong eid, jbyteArray agg_op, jbyteArray input_rows, jboolean isPartial) {

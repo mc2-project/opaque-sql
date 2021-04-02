@@ -7,7 +7,10 @@ set(SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
 add_custom_command(
-  COMMAND oeedger8r --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl --search-path ${CMAKE_SOURCE_DIR}/Enclave
+  COMMAND oeedger8r --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+          --search-path ${CMAKE_SOURCE_DIR}/Enclave
+          --search-path ${OE_INCLUDEDIR}
+          --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
@@ -22,6 +25,6 @@ if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(enclave_jni PUBLIC -DSIMULATE)
 endif()
 
-target_link_libraries(enclave_jni openenclave::oehost openenclave::oehostverify)
+target_link_libraries(enclave_jni openenclave::oehost)
 
 install(TARGETS enclave_jni DESTINATION lib)
