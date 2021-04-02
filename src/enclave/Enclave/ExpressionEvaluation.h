@@ -1864,6 +1864,23 @@ public:
         return false;
       }
     }
+
+    /* Check condition for non-equi joins */
+    if (!is_equi_join) {
+      std::vector<flatbuffers::Offset<tuix::Field>> concat_fields;
+      for (auto field : *row1->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      for (auto field : *row2->field_values()) {
+        concat_fields.push_back(flatbuffers_copy<tuix::Field>(field, builder));
+      }
+      flatbuffers::Offset<tuix::Row> concat = tuix::CreateRowDirect(builder, &concat_fields);
+      const tuix::Row *concat_ptr = flatbuffers::GetTemporaryPointer<tuix::Row>(builder, concat);
+
+      const tuix::Field *condition_result = condition_eval->eval(concat_ptr);
+
+      return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
+    }
     return true;
   }
 

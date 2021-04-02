@@ -66,11 +66,11 @@ void non_oblivious_sort_merge_join(
   FlatbuffersTemporaryRow last_primary_of_group;
   RowWriter primary_matched_rows, primary_unmatched_rows; // This is only used for left semi/anti join
 
+  EnclaveContext::getInstance().set_append_mac(false);
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+
     if (join_expr_eval.is_primary(current)) {
-      EnclaveContext::getInstance().set_append_mac(false);
-      // If current row is from primary table
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
         
@@ -101,7 +101,6 @@ void non_oblivious_sort_merge_join(
     } else {
       if (last_primary_of_group.get()
           && join_expr_eval.is_same_group(last_primary_of_group.get(), current)) {
-        EnclaveContext::getInstance().set_append_mac(false);
         if (join_type == tuix::JoinType_Inner) {       
           auto primary_group_buffer = primary_group.output_buffer(std::string(""));
           RowReader primary_group_reader(primary_group_buffer.view());
@@ -139,7 +138,7 @@ void non_oblivious_sort_merge_join(
       }
     }
   }
-  EnclaveContext::getInstance().set_append_mac(false);
+
   if (join_type == tuix::JoinType_LeftSemi) {
     write_output_rows(primary_matched_rows, w);
   } else if (join_type == tuix::JoinType_LeftAnti) {
