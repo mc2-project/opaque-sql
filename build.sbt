@@ -351,7 +351,9 @@ fetchIntelAttestationReportSigningCACertTask := {
   if (!cert.exists) {
     streams.value.log.info(s"Fetching Intel Attestation report signing CA certificate")
     val certUrl =
-      new java.net.URL(s"https://software.intel.com/sites/default/files/managed/7b/de/RK_PUB.zip")
+      new java.net.URL(
+        s"https://community.intel.com/legacyfs/online/drupal_files/managed/7b/de/RK_PUB.zip"
+      )
     IO.unzipURL(certUrl, cert.getParentFile)
   }
   Seq(cert)
