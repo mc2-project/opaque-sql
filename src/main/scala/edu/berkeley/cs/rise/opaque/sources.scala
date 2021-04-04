@@ -17,6 +17,9 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import java.io.BufferedReader
+import java.io.File
+import java.io.InputStreamReader
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
@@ -30,7 +33,7 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.sources.CreatableRelationProvider
 import org.apache.spark.sql.sources.RelationProvider
 import org.apache.spark.sql.sources.SchemaRelationProvider
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{DataType, StrucType}
 
 import edu.berkeley.cs.rise.opaque.execution.Block
 import edu.berkeley.cs.rise.opaque.execution.OpaqueOperatorExec
@@ -46,9 +49,9 @@ class EncryptedSource
   ): BaseRelation = {
     val schemaPath = new Path(parameters("path"), "schema")
     val fs = schemaPath.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-    val is = new ObjectInputStream(fs.open(schemaPath))
-    val schema = is.readObject().asInstanceOf[StructType]
-    is.close()
+    val is = new BufferedReader(new InputStreamReader(fs.open(schemaPath)))
+    val line = is.readLine()
+    val schema = DataType.fromJson(line).asInstanceOf[StructType]
     createRelation(sqlContext, parameters, schema)
   }
 
@@ -76,8 +79,8 @@ class EncryptedSource
 
     val schemaPath = new Path(parameters("path"), "schema")
     val fs = schemaPath.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-    val os = new ObjectOutputStream(fs.create(schemaPath))
-    os.writeObject(data.schema)
+    val os = fs.create(schemaPath)
+    os.writeBytes(data.schema.json)
     os.close()
 
     EncryptedScan(dataDir.toString, data.schema)(sqlContext.sparkSession)
