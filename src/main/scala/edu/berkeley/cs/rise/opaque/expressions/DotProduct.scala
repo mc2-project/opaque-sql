@@ -17,7 +17,9 @@ object DotProduct {
 }
 
 case class DotProduct(left: Expression, right: Expression)
-    extends BinaryOperator with NullIntolerant with CodegenFallback {
+    extends BinaryOperator
+    with NullIntolerant
+    with CodegenFallback {
 
   override def dataType: DataType = DoubleType
 

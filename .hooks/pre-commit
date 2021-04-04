@@ -1,0 +1,42 @@
+#!/bin/bash
+
+remote="$1"
+url="$2"
+
+echo "Running pre-commit hook for linting."
+
+# Run scalafmt and check format
+echo "* Checking changed Scala files for formatting..."
+(cd ${OPAQUE_HOME}/; scalafmt --diff-branch HEAD~1 >/dev/null)
+git diff --quiet
+scala_formatted=$?
+echo "* Done!"
+echo "* The following files needed formatting:"
+git diff --name-only
+if [ $scala_formatted -ne 0 ];
+then
+    echo "* Adding newly formatted Scala files to the most recent commit."
+    git add -u
+fi
+
+# Run git-clang-format and check format
+echo "* Checking changed C/C++ files for formatting..."
+(cd ${OPAQUE_HOME}/; git-clang-format HEAD~1 >/dev/null)
+git diff --quiet
+c_formatted=$?
+echo "* Done!"
+echo "* The following files needed formatting:"
+git diff --name-only
+if [ $c_formatted -ne 0 ];
+then
+    echo "* Adding newly formatted C/C++ files to the most recent commit."
+    git add -u
+fi
+
+if [ $c_formatted -ne 0 ] || [ $scala_formatted -ne 0 ];
+then
+    echo "* Ammending commit to include linting changes."
+fi
+
+echo "Pre-commit hook finished."
+

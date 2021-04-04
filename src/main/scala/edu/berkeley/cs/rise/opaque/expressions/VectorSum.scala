@@ -22,7 +22,7 @@ class VectorSum extends UserDefinedAggregateFunction {
   // function to determine if the current array size is large enough to old the record size.
   // if not, it will resize the array and return a new copy
   private def ensureArraySize(agg: Array[Double], size: Int): Array[Double] = {
-    if(size > agg.length) {
+    if (size > agg.length) {
       val newAgg = new Array[Double](size)
       Array.copy(agg, 0, newAgg, 0, agg.length)
       newAgg
@@ -46,7 +46,7 @@ class VectorSum extends UserDefinedAggregateFunction {
   }
 
   override def update(buffer: MutableAggregationBuffer, input: Row): Unit = {
-    if(!input.isNullAt(0)) {
+    if (!input.isNullAt(0)) {
       val arr = input.getAs[Seq[Double]](0)
       val agg: Array[Double] = ensureArraySize(buffer.getSeq[Double](0).toArray, arr.size)
       addArray(agg, arr.toArray)

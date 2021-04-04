@@ -8,16 +8,18 @@
 /**
  * Throw a Java exception with the specified message.
  *
- * Important: Note that this function will return to the caller. The exception is only thrown at the
- * end of the JNI method invocation.
+ * Important: Note that this function will return to the caller. The exception
+ * is only thrown at the end of the JNI method invocation.
  */
 void jni_throw(JNIEnv *env, const char *message) {
   jclass exception = env->FindClass("edu/berkeley/cs/rise/opaque/OpaqueException");
   env->ThrowNew(exception, message);
 }
 
-JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
-  JNIEnv *env, jobject obj, jbyteArray shared_key, jstring intel_cert) {
+JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(JNIEnv *env,
+                                                                          jobject obj,
+                                                                          jbyteArray shared_key,
+                                                                          jstring intel_cert) {
   (void)env;
   (void)obj;
 
@@ -37,7 +39,7 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_ProcessEnclaveReport(
-  JNIEnv *env, jobject obj, jbyteArray report_msg_input) {
+    JNIEnv *env, jobject obj, jbyteArray report_msg_input) {
   (void)obj;
 
   jboolean if_copy = false;
@@ -53,7 +55,8 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Proce
   }
 
   jbyteArray array_ret = env->NewByteArray(shared_key_msg_size);
-  env->SetByteArrayRegion(array_ret, 0, shared_key_msg_size, reinterpret_cast<jbyte *>(shared_key_msg.get()));
+  env->SetByteArrayRegion(array_ret, 0, shared_key_msg_size,
+                          reinterpret_cast<jbyte *>(shared_key_msg.get()));
 
   env->ReleaseByteArrayElements(report_msg_input, report_msg_bytes, 0);
 

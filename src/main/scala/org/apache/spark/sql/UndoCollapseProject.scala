@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.logical.Aggregate
 
 object UndoCollapseProject {
+
   /**
    * Undo the CollapseProject rule if it collapsed Project(_, Aggregate) into Aggregate, because
    * our aggregator doesn't support complex expressions.
@@ -33,8 +34,9 @@ object UndoCollapseProject {
    * This must be in the org.apache.spark.sql package because AggregateExpression is
    * package-private.
    */
-  def separateProjectAndAgg(plan: Aggregate)
-    : Option[(Seq[NamedExpression], Seq[NamedExpression])] = plan match {
+  def separateProjectAndAgg(
+      plan: Aggregate
+  ): Option[(Seq[NamedExpression], Seq[NamedExpression])] = plan match {
     case Aggregate(_, aggExprs, _) =>
       // Action is only required if an aggregation expression contains operations beyond just
       // aggregation or copying input attributes to the output.
