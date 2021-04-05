@@ -40,7 +40,12 @@ object RA extends Logging {
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
     val sp = new SP()
 
-    sp.Init(Utils.sharedKey, intelCert)
+    Utils.sharedKey match {
+      case Some(sharedKey) =>
+        sp.Init(sharedKey, intelCert)
+      case None =>
+        throw new OpaqueException("Cannot begin attestation without sharedKey.")
+    }
 
     val numAttested = Utils.numAttested
     // Runs on executors
