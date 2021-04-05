@@ -25,7 +25,7 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
   def numPartitions: Int
 
   test("sort") {
-    checkAnswer() { sl =>
+    checkAnswer(shouldLogOperators = true) { sl =>
       val pairs = sl.applyTo(Seq((1, 0), (2, 0), (0, 0), (3, 0)).toDF)
       pairs.sort()
     }

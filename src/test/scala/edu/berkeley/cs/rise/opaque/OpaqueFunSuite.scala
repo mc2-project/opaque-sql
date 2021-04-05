@@ -57,11 +57,13 @@ trait OpaqueFunSuite extends FunSuite {
       ignore: Boolean = false,
       isOrdered: Boolean = false,
       verbose: Boolean = false,
-      printPlan: Boolean = false
+      printPlan: Boolean = false,
+      shouldLogOperators: Boolean = false
   )(f: SecurityLevel => A): Unit = {
     if (ignore) {
       return
     }
+    Utils.setOperatorLoggingLevel(shouldLogOperators)
     val (insecure, encrypted) = (f(Insecure), f(Encrypted))
     (insecure, encrypted) match {
       case (insecure: DataFrame, encrypted: DataFrame) =>
