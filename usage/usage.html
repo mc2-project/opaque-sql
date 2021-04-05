@@ -137,17 +137,19 @@
 <h1>Using Opaque SQL<a class="headerlink" href="#using-opaque-sql" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="setup">
 <h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
-<p>Opaque SQL needs two Spark properties to be set:</p>
+<p>Opaque SQL needs three Spark properties to be set:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">spark.executor.instances</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">spark.task.maxFailures</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">spark.driver.defaultJavaOptions="-Dscala.color"</span></code> (if running the gRPC listener)</p></li>
 </ul>
-<p>Both of these are used for remote attestation: Opaque SQL needs to know how many executors are in the cluster, and to use Spark’s fault tolerance property to attest unattested executors.</p>
 <p>These properties can be be set in a custom configuration file, the default being located at <code class="docutils literal notranslate"><span class="pre">${SPARK_HOME}/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal notranslate"><span class="pre">spark-submit</span></code> or <code class="docutils literal notranslate"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal notranslate"><span class="pre">--conf</span> <span class="pre">&lt;key&gt;=&lt;value&gt;</span></code>.</p>
 </div>
 <div class="section" id="running-opaque-sql">
 <h2>Running Opaque SQL<a class="headerlink" href="#running-opaque-sql" title="Permalink to this headline">¶</a></h2>
-<p>Once setup is finished, you can run Spark SQL queries as follows.</p>
+<p>Once setup is finished, there are multiple ways to run Opaque depending on the intended functionality.</p>
+<div class="section" id="running-the-interactive-shell">
+<h3>Running the interactive shell<a class="headerlink" href="#running-the-interactive-shell" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
 <li><p>Package Opaque into a JAR.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
@@ -165,7 +167,7 @@ build/sbt package
   --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
 </pre></div>
 </div>
-<p>(the reason we need to specify <cite>–py-files</cite> is because the Opaque Python functions are placed in the .jar for easier packaging)</p>
+<p>(we need to specify <cite>–py-files</cite> is because the Opaque Python functions are placed in the .jar for easier packaging)</p>
 </li>
 <li><p>Inside the Spark shell, import Opaque’s DataFrame methods and install Opaque’s query planner rules.</p>
 <p>Scala:</p>
@@ -179,7 +181,7 @@ build/sbt package
 </pre></div>
 </div>
 </li>
-<li><p>You can also run queries in Scala locally.</p>
+<li><p>Alternatively, you can also run queries in Scala locally.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
 <span class="nv">JVM_OPTS</span><span class="o">=</span><span class="s2">"-Xmx4G"</span><span class="p">;</span> build/sbt console
 </pre></div>
@@ -188,15 +190,25 @@ build/sbt package
 </ol>
 </div>
 <div class="section" id="starting-the-grpc-listener">
-<h2>Starting the gRPC Listener<a class="headerlink" href="#starting-the-grpc-listener" title="Permalink to this headline">¶</a></h2>
+<h3>Starting the gRPC Listener<a class="headerlink" href="#starting-the-grpc-listener" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
-<li><p>To start the gRPC listener for the Opaque Client and TMS to connect to is easy.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-build/sbt run
+<li><p>To run locally for easy testing/functionality:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt run
+</pre></div>
+</div>
+</li>
+<li><p>To launch the listener on a standalone Spark cluster:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt test:assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
+
+spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
+   &lt;Spark configuration parameters&gt; <span class="se">\</span>
+   --deploy-mode client <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
 </pre></div>
 </div>
 </li>
 </ol>
+<p>Both of these methods then allow you to use the MC2-Client to submit queries to Opaque SQL remotely!</p>
+</div>
 </div>
 <div class="section" id="encrypting-saving-and-loading-a-dataframe">
 <h2>Encrypting, saving, and loading a DataFrame<a class="headerlink" href="#encrypting-saving-and-loading-a-dataframe" title="Permalink to this headline">¶</a></h2>
@@ -359,8 +371,11 @@ Users can use <code class="docutils literal notranslate"><span class="pre">expla
             <ul>
 <li><a class="reference internal" href="#">Using Opaque SQL</a><ul>
 <li><a class="reference internal" href="#setup">Setup</a></li>
-<li><a class="reference internal" href="#running-opaque-sql">Running Opaque SQL</a></li>
+<li><a class="reference internal" href="#running-opaque-sql">Running Opaque SQL</a><ul>
+<li><a class="reference internal" href="#running-the-interactive-shell">Running the interactive shell</a></li>
 <li><a class="reference internal" href="#starting-the-grpc-listener">Starting the gRPC Listener</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#encrypting-saving-and-loading-a-dataframe">Encrypting, saving, and loading a DataFrame</a></li>
 <li><a class="reference internal" href="#using-the-dataframe-interface">Using the DataFrame interface</a></li>
 <li><a class="reference internal" href="#using-the-sql-interface">Using the SQL interface</a></li>
