@@ -62,12 +62,15 @@ test in Test := {
 }
 
 testOptions in Test += Tests.Argument("-oF")
-javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
-javaOptions in run ++= Seq(
+
+lazy val commonJavaOptions = Seq(
   "-Xmx2048m",
   "-XX:ReservedCodeCacheSize=384m",
-  "-Dspark.master=local[*]"
+  "-Dspark.master=local[*]",
+  "-Dlog4j.configuration=log4j.properties"
 )
+javaOptions in Test ++= commonJavaOptions
+javaOptions in run ++= commonJavaOptions
 
 scalacOptions ++= Seq(
   "-deprecation",
