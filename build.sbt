@@ -190,6 +190,7 @@ initialCommands in console :=
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
     |  .appName("Opaque shell")
+    |  .config("opaque.testing.enableSharedKey", true)
     |  .getOrCreate())
     |val sc = spark.sparkContext
     |val sqlContext = spark.sqlContext
