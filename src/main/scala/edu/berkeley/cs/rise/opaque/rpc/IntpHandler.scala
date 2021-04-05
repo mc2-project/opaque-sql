@@ -92,10 +92,14 @@ object IntpHandler {
   }
 
   def run(input: String): (String, Result) = this.synchronized {
-    out.getBuffer.setLength(0)
-    val res = intp.interpret(input)
-    val output = out.getBuffer.toString
-    (output, res)
+    val captured = new ByteArrayOutputStream()
+    val (ret, res) = Console.withOut(captured) {
+      out.getBuffer.setLength(0)
+      val res = intp.interpret(input)
+      val ret = out.getBuffer.toString
+      (ret, res)
+    }
+    (ret + "\n\n stdout: \n\n" + captured.toString, res)
   }
   def run(lines: Seq[String]): (String, Result) = run(lines.map(_ + "\n").mkString)
 }
