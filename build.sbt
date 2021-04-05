@@ -42,7 +42,7 @@ assemblyMergeStrategy in (Test, assembly) := commonMergeStrategy
 /* Include the newer version of com.google.guava found in libraryDependencies
  * in the fat jar rather than 14.0 supplied by Spark (gRPC does not work otherwise)
  */
-lazy val commonShadeRules = Seq(ShadeRule.rename("com.google.**" -> "my_conf.@1").inAll)
+lazy val commonShadeRules = Seq(ShadeRule.rename("com.google.**" -> "updatedGuava.@1").inAll)
 assemblyShadeRules in assembly := commonShadeRules
 assemblyShadeRules in (Test, assembly) := commonShadeRules
 
