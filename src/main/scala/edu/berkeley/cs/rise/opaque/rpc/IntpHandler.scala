@@ -99,7 +99,7 @@ object IntpHandler {
       val ret = out.getBuffer.toString
       (ret, res)
     }
-    (ret + "\n\n stdout: \n\n" + captured.toString, res)
+    (captured.toString + "\n----------------------------\n" + ret, res)
   }
   def run(lines: Seq[String]): (String, Result) = run(lines.map(_ + "\n").mkString)
 }
