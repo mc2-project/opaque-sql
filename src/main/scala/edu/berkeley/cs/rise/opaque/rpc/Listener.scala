@@ -19,7 +19,8 @@ package edu.berkeley.cs.rise.opaque.rpc
 
 import opaque.protos.listener._
 
-import io.grpc.{Server, ServerBuilder}
+import io.grpc.Server
+import io.grpc.netty.NettyServerBuilder
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.tools.nsc.interpreter.Results._
@@ -45,25 +46,20 @@ class Listener(executionContext: ExecutionContext) {
   private class ListenerImpl extends ListenerGrpc.Listener {
     override def receiveQuery(req: QueryRequest) = {
       val query = req.request
-      val (retStr, result) = IntpHandler.run(query)
+      val (output, result) = IntpHandler.run(query)
       val status = result match {
         case Success =>
           Status(0, "")
-        case Error =>
-          Status(1, "OpaqueSQLError: The line was erroneous in some way.")
-        case Incomplete =>
-          Status(
-            2,
-            "OpaqueSQLError: The input was incomplete. The caller should request more input."
-          )
+        case _ =>
+          Status(1, f"OpaqueSQLError: ${output}")
       }
-      val reply = QueryResult(retStr, Some(status))
+      val reply = QueryResult(output, Some(status))
       Future.successful(reply)
     }
   }
 
   private def start(): Unit = {
-    server = ServerBuilder
+    server = NettyServerBuilder
       .forPort(port)
       .addService(ListenerGrpc.bindService(new ListenerImpl, executionContext))
       .build

@@ -12,7 +12,8 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+  "com.google.guava" % "guava" % "21.0"
 )
 
 enablePlugins(SparkPlugin)
@@ -31,6 +32,14 @@ assemblyMergeStrategy in (Test, assembly) := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
 }
+
+/* Include the newer version of com.google.guava found in libraryDependencies
+ * in the fat jar rather than 14.0 supplied by Spark (gRPC does not work otherwise)
+ * TODO: support running the listener with the jar produced by build/sbt assembly.
+ */
+assemblyShadeRules in (Test, assembly) := Seq(
+  ShadeRule.rename("com.google.**" -> "my_conf.@1").inAll
+)
 
 /*
  * local-cluster[*,*,*] in our tests requires a packaged .jar file to run correctly.

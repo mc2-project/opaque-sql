@@ -17,6 +17,8 @@
 
 package edu.berkeley.cs.rise.opaque.rpc
 
+import org.apache.spark.SparkConf
+
 import scala.tools.nsc.interpreter.IMain
 import scala.tools.nsc.interpreter.IR.Result
 import scala.tools.nsc.GenericRunnerSettings
@@ -29,15 +31,18 @@ object IntpHandler {
 
   private val out = new StringWriter()
 
+  /* We need to include the jars provided to Spark in the new IMain's classpath. */
+  val sparkJars = new SparkConf().get("spark.jars", "").replace(",", ":")
+
   val settings = new GenericRunnerSettings(msg => Console.err.println(msg))
-  settings.classpath.value = sys.props("java.class.path")
+  settings.classpath.value = sys.props("java.class.path").concat(":").concat(sparkJars)
 
   val intp = new IMain(settings, new PrintWriter(out))
   initializeIntp()
 
+  /* Initial commands for the interpreter to run. */
   def initializeIntp() = {
     intp.initializeSynchronous()
-    // Taken from SparkILoop.scala
     val initializationCommands = Seq(
       """
         @transient val spark = if (org.apache.spark.repl.Main.sparkSession != null) {
@@ -70,10 +75,12 @@ object IntpHandler {
       "import spark.implicits._",
       "import spark.sql",
       "import org.apache.spark.sql.functions._",
-      // Opaque-specific commands
-      "import edu.berkeley.cs.rise.opaque.implicits._",
-      "val sqlContext = spark.sqlContext",
+      /* Opaque SQL specific commands */
+      "@transient val sqlContext = spark.sqlContext",
+      // Use dummy key for attestation for now.
+      "spark.conf.set(\"opaque.testing.enableSharedKey\", \"true\")",
       """
+        import edu.berkeley.cs.rise.opaque.implicits._
         try { 
           edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext) 
         } catch {
@@ -85,9 +92,10 @@ object IntpHandler {
   }
 
   def run(input: String): (String, Result) = this.synchronized {
-    out.getBuffer().setLength(0)
+    out.getBuffer.setLength(0)
     val res = intp.interpret(input)
-    (out.getBuffer().toString, res)
+    val output = out.getBuffer.toString
+    (output, res)
   }
   def run(lines: Seq[String]): (String, Result) = run(lines.map(_ + "\n").mkString)
 }
