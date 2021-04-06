@@ -26,20 +26,25 @@ fork in Test := true
 
 /* Create fat jar with src and test classes using build/sbt test:assembly */
 Project.inConfig(Test)(baseAssemblySettings)
+
+test in assembly := {}
 test in (Test, assembly) := {}
 
-assemblyMergeStrategy in (Test, assembly) := {
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x => MergeStrategy.first
-}
+lazy val commonMergeStrategy: String => sbtassembly.MergeStrategy =
+  x =>
+    x match {
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case x => MergeStrategy.first
+    }
+assemblyMergeStrategy in assembly := commonMergeStrategy
+assemblyMergeStrategy in (Test, assembly) := commonMergeStrategy
 
 /* Include the newer version of com.google.guava found in libraryDependencies
  * in the fat jar rather than 14.0 supplied by Spark (gRPC does not work otherwise)
- * TODO: support running the listener with the jar produced by build/sbt assembly.
  */
-assemblyShadeRules in (Test, assembly) := Seq(
-  ShadeRule.rename("com.google.**" -> "my_conf.@1").inAll
-)
+lazy val commonShadeRules = Seq(ShadeRule.rename("com.google.**" -> "updatedGuava.@1").inAll)
+assemblyShadeRules in assembly := commonShadeRules
+assemblyShadeRules in (Test, assembly) := commonShadeRules
 
 /*
  * local-cluster[*,*,*] in our tests requires a packaged .jar file to run correctly.
@@ -62,12 +67,11 @@ test in Test := {
 }
 
 testOptions in Test += Tests.Argument("-oF")
-javaOptions in Test ++= Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m")
-javaOptions in run ++= Seq(
-  "-Xmx2048m",
-  "-XX:ReservedCodeCacheSize=384m",
-  "-Dspark.master=local[*]"
-)
+
+lazy val commonJavaOptions =
+  Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dlog4j.configuration=log4j.properties")
+javaOptions in Test ++= commonJavaOptions
+javaOptions in run ++= commonJavaOptions ++ Seq("-Dspark.master=local[*]")
 
 scalacOptions ++= Seq(
   "-deprecation",
