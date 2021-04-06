@@ -198,7 +198,7 @@ build/sbt package
 </div>
 </li>
 <li><p>To launch the listener on a standalone Spark cluster:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt test:assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
 
 spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
    &lt;Spark configuration parameters&gt; <span class="se">\</span>
