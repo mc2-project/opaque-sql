@@ -84,7 +84,7 @@ Starting the gRPC Listener
 
    .. code-block:: bash
 
-                  build/sbt test:assembly # create a fat jar with all necessary dependencies
+                  build/sbt assembly # create a fat jar with all necessary dependencies
 
                   spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
                      <Spark configuration parameters> \
