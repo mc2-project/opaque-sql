@@ -21,7 +21,8 @@ After downloading the Opaque codebase, build and test it as follows.
                    sudo mkdir /opt/spark
                    sudo mv spark-3.1.1*/* /opt/spark
                    rm -rf spark-3.1.1*
-                   sudo chmod -R +wx /opt/spark/work # may not be needed, depends on where Spark is installed
+                   sudo mkdir /opt/spark/work
+                   sudo chmod -R a+wx /opt/spark/work
 
                    # Set Spark environment variables in ~/.bashrc
                    echo "" >> ~/.bashrc
@@ -30,27 +31,26 @@ After downloading the Opaque codebase, build and test it as follows.
                    echo "export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin" >> ~/.bashrc
                    source ~/.bashrc
 
-2. On the master, generate a keypair using OpenSSL for remote attestation.
-
-   .. code-block:: bash
-               
-                   openssl genrsa -out private_key.pem -3 3072
-
-3. Change into the Opaque root directory and edit Opaque's environment variables in ``opaqueenv`` if desired. Export Opaque and OpenEnclave environment variables via
+2. Change into the Opaque root directory and edit Opaque's environment variables in ``opaqueenv`` if desired. Export Opaque and OpenEnclave environment variables via
 
    .. code-block:: bash
                    
                    source opaqueenv
                    source /opt/openenclave/share/openenclave/openenclaverc
-
    By default, Opaque runs in hardware mode (environment variable ``MODE=HARDWARE``).
    If you do not have a machine with a hardware enclave but still wish to test out Opaque's functionality locally, then set ``export MODE=SIMULATE``.
+
+3. On the master, generate a keypair in the Opaque root directory using OpenSSL for remote attestation.
+
+   .. code-block:: bash
+
+                   cd ${OPAQUE_HOME}
+                   openssl genrsa -out private_key.pem -3 3072
 
 4. Run the Opaque tests:
 
    .. code-block:: bash
                 
-                   cd ${OPAQUE_HOME}
                    build/sbt test
 
 5. Alternatively, to generate coverage reports:
