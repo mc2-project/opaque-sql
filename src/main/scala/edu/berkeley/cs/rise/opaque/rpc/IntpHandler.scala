@@ -92,7 +92,11 @@ object IntpHandler {
   }
 
   def run(input: String): (String, Result) = this.synchronized {
+    /* Need to redirect stdout to a new output stream captured. */
     val captured = new ByteArrayOutputStream()
+    /* ret: The actual output of running Scala code.
+     * res: Result object indicating whether or not the line was interpreter successfully.
+     */
     val (ret, res) = Console.withOut(captured) {
       out.getBuffer.setLength(0)
       val res = intp.interpret(input)
