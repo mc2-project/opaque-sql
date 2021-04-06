@@ -37,6 +37,7 @@ After downloading the Opaque codebase, build and test it as follows.
                    
                    source opaqueenv
                    source /opt/openenclave/share/openenclave/openenclaverc
+
    By default, Opaque runs in hardware mode (environment variable ``MODE=HARDWARE``).
    If you do not have a machine with a hardware enclave but still wish to test out Opaque's functionality locally, then set ``export MODE=SIMULATE``.
 
