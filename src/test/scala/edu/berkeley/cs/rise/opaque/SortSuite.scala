@@ -25,7 +25,7 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
   def numPartitions: Int
 
   test("sort") {
-    checkAnswer(shouldLogOperators = true) { sl =>
+    checkAnswer() { sl =>
       val pairs = sl.applyTo(Seq((1, 0), (2, 0), (0, 0), (3, 0)).toDF)
       pairs.sort()
     }
@@ -41,7 +41,7 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
 
   test("sort descending") {
     val unencrypted = generateRandomPairs()
-    checkAnswer() { sl =>
+    checkAnswer(shouldLogOperators = true) { sl =>
       val pairs = sl.applyTo(unencrypted)
       pairs.sort(desc(pairs.columns(0)))
     }
@@ -93,9 +93,9 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
     }
   }
 
-  def generateRandomPairs() = {
+  def generateRandomPairs(numPairs: Int = 1000) = {
     val rand = new scala.util.Random()
-    Seq.fill(1000) { (rand.nextInt(), rand.nextInt()) }.toDF
+    Seq.fill(numPairs) { (rand.nextInt(), rand.nextInt()) }.toDF
   }
 }
 

@@ -78,7 +78,7 @@ object EncryptedSortExec {
       childRDD
     } else {
       // Collect a sample of the input rows
-      val sampled = applyLoggingLevel(childRDD, "non-oblivious sort - Sample") { childRDD =>
+      val sampled = applyLoggingLevel(childRDD, "enclave.Sample") { childRDD =>
         Utils.concatEncryptedBlocks(childRDD.map { block =>
           val (enclave, eid) = Utils.initEnclave()
           val sampledBlock = enclave.Sample(eid, block.bytes)
@@ -87,16 +87,15 @@ object EncryptedSortExec {
       }
 
       // Find range boundaries parceled out to a single worker
-      val boundaries = applyLoggingLevel(childRDD, "non-oblivious sort - FindRangeBounds") {
-        childRDD =>
-          childRDD.context
-            .parallelize(Array(sampled.bytes), 1)
-            .map { sampledBytes =>
-              val (enclave, eid) = Utils.initEnclave()
-              enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
-            }
-            .collect
-            .head
+      val boundaries = applyLoggingLevel(childRDD, "enclave.FindRangeBounds") { childRDD =>
+        childRDD.context
+          .parallelize(Array(sampled.bytes), 1)
+          .map { sampledBytes =>
+            val (enclave, eid) = Utils.initEnclave()
+            enclave.FindRangeBounds(eid, orderSer, numPartitions, sampledBytes)
+          }
+          .collect
+          .head
       }
 
       // Broadcast the range boundaries and use them to partition the input
