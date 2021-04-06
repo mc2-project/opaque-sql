@@ -29,15 +29,14 @@ import java.io._
 /* Handler to simplify writing to an instance of OpaqueILoop. */
 object IntpHandler {
 
-  private val out = new StringWriter()
-
   /* We need to include the jars provided to Spark in the new IMain's classpath. */
   val sparkJars = new SparkConf().get("spark.jars", "").replace(",", ":")
 
   val settings = new GenericRunnerSettings(msg => Console.err.println(msg))
   settings.classpath.value = sys.props("java.class.path").concat(":").concat(sparkJars)
 
-  val intp = new IMain(settings, new PrintWriter(out))
+  /* Construct an interpreter that routes all output to stdout. */
+  val intp = IMain(settings)
   initializeIntp()
 
   /* Initial commands for the interpreter to run. */
@@ -94,16 +93,13 @@ object IntpHandler {
   def run(input: String): (String, Result) = this.synchronized {
     /* Need to redirect stdout to a new output stream captured. */
     val captured = new ByteArrayOutputStream()
-    /* ret: The actual output of running Scala code.
-     * res: Result object indicating whether or not the line was interpreter successfully.
+    /* res is a Result object indicating whether or not input
+     * was interpretted successfully.
      */
-    val (ret, res) = Console.withOut(captured) {
-      out.getBuffer.setLength(0)
-      val res = intp.interpret(input)
-      val ret = out.getBuffer.toString
-      (ret, res)
+    val res = Console.withOut(captured) {
+      intp.interpret(input)
     }
-    (captured.toString + "\n----------------------------\n" + ret, res)
+    (captured.toString, res)
   }
   def run(lines: Seq[String]): (String, Result) = run(lines.map(_ + "\n").mkString)
 }
