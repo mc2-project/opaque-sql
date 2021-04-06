@@ -28,6 +28,9 @@ sudo chmod -R +wx /opt/spark/work
 export SPARK_HOME=/opt/spark
 export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin
 
+# Set hostname to be localhost, since only running build/sbt test
+sudo hostname -s 127.0.0.1
+
 # Generate keypair for attestation
 openssl genrsa -out ./private_key.pem -3 3072
 
