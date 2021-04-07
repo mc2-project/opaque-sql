@@ -124,7 +124,7 @@ object Utils extends Logging {
   def time[A](desc: String)(f: => A): A = {
     val start = System.nanoTime
     val result = f
-    logWarning(s"$desc took ${(System.nanoTime - start) / 1000000.0}ms to complete.")
+    logInfo(s"$desc took ${(System.nanoTime - start) / 1000000.0}ms to complete.")
     result
   }
 

@@ -41,7 +41,7 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
 
   test("sort descending") {
     val unencrypted = generateRandomPairs()
-    checkAnswer(shouldLogOperators = true) { sl =>
+    checkAnswer() { sl =>
       val pairs = sl.applyTo(unencrypted)
       pairs.sort(desc(pairs.columns(0)))
     }
