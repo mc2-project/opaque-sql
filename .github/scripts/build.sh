@@ -1,4 +1,4 @@
-# Install OpenEnclave 0.9.0
+# Install OpenEnclave 0.12.0
 echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
 echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain-bionic-7.list
@@ -22,7 +22,8 @@ tar xvf spark-3.1.1*
 sudo mkdir /opt/spark
 sudo mv spark-3.1.1*/* /opt/spark
 rm -rf spark-3.1.1*
-sudo chmod -R +wx /opt/spark/work
+sudo mkdir /opt/spark/work
+sudo chmod -R a+wx /opt/spark/work
 
 # Set Spark environment variables
 export SPARK_HOME=/opt/spark
