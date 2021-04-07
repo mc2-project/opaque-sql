@@ -22,7 +22,8 @@ tar xvf spark-3.1.1*
 sudo mkdir /opt/spark
 sudo mv spark-3.1.1*/* /opt/spark
 rm -rf spark-3.1.1*
-sudo chmod -R +wx /opt/spark/work
+sudo mkdir /opt/spark/work
+sudo chmod -R a+wx /opt/spark/work
 
 # Set Spark environment variables
 export SPARK_HOME=/opt/spark
