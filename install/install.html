@@ -151,7 +151,8 @@ tar xvf spark-3.1.1*
 sudo mkdir /opt/spark
 sudo mv spark-3.1.1*/* /opt/spark
 rm -rf spark-3.1.1*
-sudo chmod -R +wx /opt/spark/work <span class="c1"># may not be needed, depends on where Spark is installed</span>
+sudo mkdir /opt/spark/work
+sudo chmod -R a+wx /opt/spark/work
 
 <span class="c1"># Set Spark environment variables in ~/.bashrc</span>
 <span class="nb">echo</span> <span class="s2">""</span> &gt;&gt; ~/.bashrc
@@ -159,11 +160,6 @@ sudo chmod -R +wx /opt/spark/work <span class="c1"># may not be needed, depends 
 <span class="nb">echo</span> <span class="s2">"export SPARK_HOME=/opt/spark"</span> &gt;&gt; ~/.bashrc
 <span class="nb">echo</span> <span class="s2">"export PATH=</span><span class="nv">$PATH</span><span class="s2">:/opt/spark/bin:/opt/spark/sbin"</span> &gt;&gt; ~/.bashrc
 <span class="nb">source</span> ~/.bashrc
-</pre></div>
-</div>
-</li>
-<li><p>On the master, generate a keypair using OpenSSL for remote attestation.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl genrsa -out private_key.pem -3 <span class="m">3072</span>
 </pre></div>
 </div>
 </li>
@@ -175,9 +171,14 @@ sudo chmod -R +wx /opt/spark/work <span class="c1"># may not be needed, depends 
 <p>By default, Opaque runs in hardware mode (environment variable <code class="docutils literal notranslate"><span class="pre">MODE=HARDWARE</span></code>).
 If you do not have a machine with a hardware enclave but still wish to test out Opaque’s functionality locally, then set <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">MODE=SIMULATE</span></code>.</p>
 </li>
-<li><p>Run the Opaque tests:</p>
+<li><p>On the master, generate a keypair in the Opaque root directory using OpenSSL for remote attestation.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-build/sbt <span class="nb">test</span>
+openssl genrsa -out private_key.pem -3 <span class="m">3072</span>
+</pre></div>
+</div>
+</li>
+<li><p>Run the Opaque tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt <span class="nb">test</span>
 </pre></div>
 </div>
 </li>
