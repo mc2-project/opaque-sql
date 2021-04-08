@@ -2,16 +2,6 @@
 Using Opaque SQL
 ****************
 
-Setup
-#####
-Opaque SQL needs three Spark properties to be set:
-
-- ``spark.executor.instances``
-- ``spark.task.maxFailures``
--  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if running the gRPC listener)
-
-These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.
-
 Running Opaque SQL
 ##################
 

@@ -2,6 +2,9 @@
 Installation
 ************
 
+Dependencies
+############
+
 After downloading the Opaque codebase, build and test it as follows.
 
 1. Install dependencies and the `OpenEnclave SDK <https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md>`_. We currently support OE version 0.12.0 (so please install with ``open-enclave=0.12.0``) and Ubuntu 18.04.
@@ -60,3 +63,15 @@ After downloading the Opaque codebase, build and test it as follows.
 
                   build/sbt clean coverage test
                   build/sbt coverageReport
+
+
+Additional configurations for running on a Spark cluster
+########################################################
+
+Opaque SQL needs three Spark properties to be set:
+
+- ``spark.executor.instances=3`` (usually is how many machines are in the cluster)
+- ``spark.task.maxFailures=10`` (attestation uses Spark's fault tolerance property)
+-  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if querying with MC\ :sup:`2`-Client)
+
+These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.
