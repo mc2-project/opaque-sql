@@ -291,7 +291,8 @@ object Utils extends Logging {
   val numAttested: LongAccumulator = new LongAccumulator
   var loop: Boolean = true
 
-  def initSQLContext(sqlContext: SQLContext): Unit = {
+  def initOpaqueSQL(spark: SparkSession): Unit = {
+    val sqlContext = spark.sqlContext
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
@@ -305,7 +306,7 @@ object Utils extends Logging {
 
     val sc = sqlContext.sparkContext
     // This is needed to prevent an error from re-registering accumulator variables if
-    // `initSQLContext` is called multiple times on the driver
+    // `initOpaqueSQL` is called multiple times on the driver
     if (!acc_registered) {
       sc.register(numEnclaves)
       sc.register(numAttested)

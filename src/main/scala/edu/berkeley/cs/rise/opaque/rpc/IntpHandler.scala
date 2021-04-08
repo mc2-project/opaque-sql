@@ -81,7 +81,7 @@ object IntpHandler {
       """
         import edu.berkeley.cs.rise.opaque.implicits._
         try { 
-          edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext) 
+          edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
         } catch {
           case _ : Throwable =>
         }

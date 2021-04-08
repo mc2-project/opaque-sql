@@ -82,7 +82,7 @@ object Benchmark {
   }
 
   def main(args: Array[String]): Unit = {
-    Utils.initSQLContext(spark.sqlContext)
+    Utils.initOpaqueSQL(spark)
 
     if (args.length >= 1 && args(0) == "--help") {
       println("""

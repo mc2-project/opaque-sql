@@ -52,14 +52,14 @@ Running the interactive shell
    .. code-block:: scala
 
                      import edu.berkeley.cs.rise.opaque.implicits._
-                     edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
+                     edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
 
    Python:
 
    .. code-block:: python
 
                   from opaque_sql import *
-                  init_sql_context()
+                  init_opaque_sql()
                    
     
 
