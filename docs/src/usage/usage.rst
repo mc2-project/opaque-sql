@@ -2,10 +2,10 @@
 Querying with Spark Driver
 **************************
 
-Running Opaque SQL
-##################
+Starting Opaque SQL
+###################
 
-Once setup is finished, there are multiple ways to run Opaque depending on the intended functionality.
+This page goes through running Opaque SQL with the Spark driver located on the client. An implication of this is that the driver is considered a *trusted* entity.
 
 Running the interactive shell
 *****************************
@@ -23,7 +23,7 @@ Running the interactive shell
    Scala:
 
    .. code-block:: bash
-                   
+
                    spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
 
    Python:
@@ -34,8 +34,14 @@ Running the interactive shell
                      --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
     
    (we need to specify `--py-files` because the Python functions are placed in the .jar for easier packaging)
+
+3. Alternatively, you can also run queries in Scala locally using ``sbt``.
+
+   .. code-block:: bash
+
+                   build/sbt console
     
-3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules.
+4. Inside the Spark shell, import Opaque SQL's ``DataFrame`` methods and its query planning rules.
 
    Scala:
 
@@ -53,19 +59,12 @@ Running the interactive shell
                    
     
 
-4. Alternatively, you can also run queries in Scala locally.
-
-   .. code-block:: bash
-
-                   cd ${OPAQUE_HOME}
-                   JVM_OPTS="-Xmx4G"; build/sbt console
 
 
 Encrypting, saving, and loading a DataFrame
 ###########################################
 
-1. Create an unencrypted DataFrame on the driver.
-   This should be done on the client, i.e., in a trusted setting.
+1. Create an unencrypted DataFrame.
 
    Scala:
 
@@ -81,8 +80,7 @@ Encrypting, saving, and loading a DataFrame
                   data = [("foo", 4), ("bar", 1), ("baz", 5)]
                   df = sqlContext.createDataFrame(data).toDF("word", "count")
 
-2. Create an encrypted DataFrame from the unencrypted version.
-   This is as easy as calling ``.encrypted``.
+2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted``.
 
    Scala:
    
@@ -134,8 +132,7 @@ Using the DataFrame interface
                    
                   df_encrypted = spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource").load("df_encrypted")
 
-2. Given an encrypted DataFrame ``dfEncrypted``, construct a new query.
-   Users can use ``explain`` to see the generated query plan.
+2. Given an encrypted DataFrame , construct a new query. Users can use ``explain`` to see the generated query plan.
 
    Scala:
 
@@ -156,7 +153,7 @@ Using the DataFrame interface
                   result = df_encrypted.filter(df_encrypted["count"] > 3)
                   result.explain(True)
                    
-Call ``.collect`` or ``.show`` to retreive the results. The final result will be decrypted on the driver. 
+Call ``.collect`` or ``.show`` to retreive and automatically decrypt the results.
 
 
 Using the SQL interface
