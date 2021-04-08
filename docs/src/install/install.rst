@@ -72,6 +72,6 @@ Opaque SQL needs three Spark properties to be set:
 
 - ``spark.executor.instances=3`` (usually is how many machines are in the cluster)
 - ``spark.task.maxFailures=10`` (attestation uses Spark's fault tolerance property)
--  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if querying with MC\ :sup:`2`-Client)
+-  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if querying with MC\ :sup:`2` Client)
 
 These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.

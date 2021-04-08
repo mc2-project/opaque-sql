@@ -299,6 +299,9 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
+    // TODO: replace this with loading in a key from a file specified in conf.
+    sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(1))
+
     val enableSharedKey = sqlContext.getConf("spark.opaque.testing.enableSharedKey", "false")
     if (enableSharedKey.toBoolean) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))

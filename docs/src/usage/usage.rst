@@ -1,6 +1,6 @@
-****************
-Using Opaque SQL
-****************
+**************************
+Querying with Spark Driver
+**************************
 
 Running Opaque SQL
 ##################
@@ -33,7 +33,7 @@ Running the interactive shell
                    pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar  \
                      --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
     
-   (we need to specify `--py-files` is because the Opaque Python functions are placed in the .jar for easier packaging)
+   (we need to specify `--py-files` because the Python functions are placed in the .jar for easier packaging)
     
 3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules.
 
@@ -60,27 +60,6 @@ Running the interactive shell
                    cd ${OPAQUE_HOME}
                    JVM_OPTS="-Xmx4G"; build/sbt console
 
-
-Starting the gRPC Listener
-**************************
-
-1. To run locally for easy testing/functionality:
-
-   .. code-block:: bash
-
-                   build/sbt run
-
-2. To launch the listener on a standalone Spark cluster:
-
-   .. code-block:: bash
-
-                  build/sbt assembly # create a fat jar with all necessary dependencies
-
-                  spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
-                     <Spark configuration parameters> \
-                     --deploy-mode client ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
-
-Both of these methods then allow you to use the MC2-Client to submit queries to Opaque SQL remotely!
 
 Encrypting, saving, and loading a DataFrame
 ###########################################
