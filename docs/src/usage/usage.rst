@@ -2,8 +2,13 @@
 Query submission via the Spark Driver
 ****************************************
 
-.. image:: https://mc2-project.github.io/opaque/opaque-diagram.tiff
-   :width: 600
+.. figure:: https://mc2-project.github.io/opaque/opaque-diagram.svg
+   :align: center
+   :figwidth: 100 %
+
+   Overview of Opaque SQL running in trusted driver mode
+
+
 
 Starting Opaque SQL
 ###################
