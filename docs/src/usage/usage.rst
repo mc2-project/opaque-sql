@@ -1,6 +1,6 @@
-****************************************
+*************************************
 Query submission via the Spark Driver
-****************************************
+*************************************
 
 .. figure:: https://mc2-project.github.io/opaque/opaque-diagram.svg
    :align: center
