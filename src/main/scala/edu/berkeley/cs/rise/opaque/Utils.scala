@@ -169,12 +169,12 @@ object Utils extends Logging {
     result
   }
 
-  private var logOperators = false
-  def setOperatorLoggingLevel(logOperators: Boolean) = {
-    this.logOperators = logOperators
+  private var shouldLogOperators = false
+  def setOperatorLoggingLevel(shouldLogOperators: Boolean) = {
+    this.shouldLogOperators = shouldLogOperators
   }
   def getOperatorLoggingLevel() = {
-    this.logOperators
+    this.shouldLogOperators
   }
 
   def findLibraryAsResource(libraryName: String): String = {

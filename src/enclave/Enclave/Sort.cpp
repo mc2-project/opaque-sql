@@ -14,12 +14,13 @@ public:
   uint32_t run_idx;
 };
 
+/* Merge k sorted lists algorithm, where k = # of runs in SortedRunsReader. */
 void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
                     SortedRunsWriter &w, FlatbuffersSortOrderEvaluator &sort_eval) {
 
-  // Maintain a priority queue with one row per run
+  // Maintain a priority queue (by default a max heap) with one row per run.
   auto compare = [&sort_eval](const MergeItem &a, const MergeItem &b) {
-    return sort_eval.less_than(b.v, a.v);
+    return !sort_eval.order_before(a.v, b.v);
   };
   std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)> queue(compare);
 
@@ -47,6 +48,7 @@ void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
   w.finish_run();
 }
 
+/* Decrypt the rows in EncryptedBlock and sort them, then write the results to w. */
 void sort_single_encrypted_block(SortedRunsWriter &w, const tuix::EncryptedBlock *block,
                                  FlatbuffersSortOrderEvaluator &sort_eval) {
 
@@ -54,9 +56,10 @@ void sort_single_encrypted_block(SortedRunsWriter &w, const tuix::EncryptedBlock
   r.reset(block);
   std::vector<const tuix::Row *> sort_ptrs(r.begin(), r.end());
 
-  std::sort(
-      sort_ptrs.begin(), sort_ptrs.end(),
-      [&sort_eval](const tuix::Row *a, const tuix::Row *b) { return sort_eval.less_than(a, b); });
+  std::sort(sort_ptrs.begin(), sort_ptrs.end(),
+            [&sort_eval](const tuix::Row *a, const tuix::Row *b) {
+              return sort_eval.order_before(a, b);
+            });
 
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
     w.append(*it);
@@ -64,6 +67,7 @@ void sort_single_encrypted_block(SortedRunsWriter &w, const tuix::EncryptedBlock
   w.finish_run();
 }
 
+/* Locally sort the rows found in input_rows. */
 void external_sort(uint8_t *sort_order, size_t sort_order_length, uint8_t *input_rows,
                    size_t input_rows_length, uint8_t **output_rows, size_t *output_rows_length) {
   FlatbuffersSortOrderEvaluator sort_eval(sort_order, sort_order_length);
@@ -201,7 +205,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length, uint32_t 
     const tuix::Row *row = r.next();
 
     // Advance boundary rows to maintain the invariant on b_upper
-    while (b_upper.get() != nullptr && !sort_eval.less_than(row, b_upper.get())) {
+    while (b_upper.get() != nullptr && !sort_eval.order_before(row, b_upper.get())) {
       b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition
