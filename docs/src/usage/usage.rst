@@ -1,6 +1,9 @@
-**************************
-Querying with Spark Driver
-**************************
+****************************************
+Query submission via the Spark Driver
+****************************************
+
+.. image:: https://mc2-project.github.io/opaque/opaque-diagram.tiff
+   :width: 600
 
 Starting Opaque SQL
 ###################
