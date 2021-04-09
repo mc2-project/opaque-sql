@@ -1512,7 +1512,7 @@ public:
   /* Evaluate whether or not row1 should come before row2 according to
    * the list of sort orders supplied to SortExpr.
    */
-  bool should_come_before(const tuix::Row *row1, const tuix::Row *row2) {
+  bool order_before(const tuix::Row *row1, const tuix::Row *row2) {
     builder.Clear();
     const tuix::Row *a = nullptr, *b = nullptr;
     for (uint32_t i = 0; i < sort_order_evaluators.size(); i++) {

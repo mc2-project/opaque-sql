@@ -20,7 +20,7 @@ void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
 
   // Maintain a priority queue (by default a max heap) with one row per run.
   auto compare = [&sort_eval](const MergeItem &a, const MergeItem &b) {
-    return !sort_eval.should_come_before(a.v, b.v);
+    return !sort_eval.order_before(a.v, b.v);
   };
   std::priority_queue<MergeItem, std::vector<MergeItem>, decltype(compare)> queue(compare);
 
@@ -58,7 +58,7 @@ void sort_single_encrypted_block(SortedRunsWriter &w, const tuix::EncryptedBlock
 
   std::sort(sort_ptrs.begin(), sort_ptrs.end(),
             [&sort_eval](const tuix::Row *a, const tuix::Row *b) {
-              return sort_eval.should_come_before(a, b);
+              return sort_eval.order_before(a, b);
             });
 
   for (auto it = sort_ptrs.begin(); it != sort_ptrs.end(); ++it) {
@@ -205,7 +205,7 @@ void partition_for_sort(uint8_t *sort_order, size_t sort_order_length, uint32_t 
     const tuix::Row *row = r.next();
 
     // Advance boundary rows to maintain the invariant on b_upper
-    while (b_upper.get() != nullptr && !sort_eval.should_come_before(row, b_upper.get())) {
+    while (b_upper.get() != nullptr && !sort_eval.order_before(row, b_upper.get())) {
       b_upper.set(b.has_next() ? b.next() : nullptr);
 
       // Write out the newly-finished partition
