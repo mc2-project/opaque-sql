@@ -93,9 +93,9 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
     }
   }
 
-  def generateRandomPairs() = {
+  def generateRandomPairs(numPairs: Int = 1000) = {
     val rand = new scala.util.Random()
-    Seq.fill(1000) { (rand.nextInt(), rand.nextInt()) }.toDF
+    Seq.fill(numPairs) { (rand.nextInt(), rand.nextInt()) }.toDF
   }
 }
 
