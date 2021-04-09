@@ -24,6 +24,8 @@ sudo mv spark-3.1.1*/* /opt/spark
 rm -rf spark-3.1.1*
 sudo mkdir /opt/spark/work
 sudo chmod -R a+wx /opt/spark/work
+touch /opt/spark/conf/spark-defaults.conf
+echo "spark.driver.bindAddress  127.0.0.1" >> /opt/spark/conf/spark-defaults.conf
 
 # Set Spark environment variables
 export SPARK_HOME=/opt/spark
