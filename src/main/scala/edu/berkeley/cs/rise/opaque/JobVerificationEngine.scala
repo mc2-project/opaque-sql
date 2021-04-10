@@ -152,12 +152,13 @@ object JobVerificationEngine {
     10 -> "countRowsPerPartition",
     11 -> "computeNumRowsPerPartition",
     12 -> "localLimit",
-    13 -> "limitReturnRows"
+    13 -> "limitReturnRows",
+    14 -> "broadcastNestedLoopJoin"
   ).withDefaultValue("unknown")
 
   val possibleSparkOperators = Seq[String]("EncryptedProject", 
-                                              "EncryptedSortMergeJoin", 
                                               "EncryptedSort", 
+                                              "EncryptedSortMergeJoin",   
                                               "EncryptedFilter",
                                               "EncryptedAggregate",
                                               "EncryptedGlobalLimit",
@@ -191,8 +192,9 @@ object JobVerificationEngine {
   // Recursively convert SparkPlan objects to OperatorNode object.
   def sparkNodesToOperatorNodes(plan: SparkPlan): OperatorNode = {
     var operatorName = ""
+    val firstLine = plan.toString.split("\n")(0)
     for (sparkOperator <- possibleSparkOperators) {
-      if (plan.toString.split("\n")(0) contains sparkOperator) {
+      if (firstLine contains sparkOperator) {
         operatorName = sparkOperator
       }
     }
@@ -233,8 +235,18 @@ object JobVerificationEngine {
       root.setParents(newParents)
     }
     for (parent <- root.parents) {
-      parent.addChild(root)
       fixOperatorTree(parent)
+    }
+  }
+
+  def setChildrenDag(operators: ArrayBuffer[OperatorNode]): Unit = {
+    for (operator <- operators) {
+      operator.setChildren(ArrayBuffer[OperatorNode]())
+    }
+    for (operator <- operators) {
+      for (parent <- operator.parents) {
+        parent.addChild(operator)
+      }
     }
   }
 
@@ -242,12 +254,16 @@ object JobVerificationEngine {
   def treeToList(root: OperatorNode): ArrayBuffer[OperatorNode] = {
     val retval = ArrayBuffer[OperatorNode]()
     val queue = new Queue[OperatorNode]()
+    val visited = Set[OperatorNode]()
     queue.enqueue(root)
     while (!queue.isEmpty) {
       val curr = queue.dequeue
-      retval.append(curr)
-      for (parent <- curr.parents) {
-        queue.enqueue(parent)
+      if (!visited.contains(curr)) {
+        visited.add(curr)
+        retval.append(curr)
+        for (parent <- curr.parents) {
+          queue.enqueue(parent)
+        }
       }
     }
     return retval
@@ -265,12 +281,17 @@ object JobVerificationEngine {
     for (operatorNode <- allOperatorNodes) {
       if (operatorNode.children.isEmpty) {
         operatorNode.addChild(sinkNode)
+        sinkNode.addParent(operatorNode)
       }
     }
     fixOperatorTree(sinkNode)
     // Enlist the fixed tree.
     val fixedOperatorNodes = treeToList(sinkNode)
     fixedOperatorNodes -= sinkNode
+    for (sinkParents <- sinkNode.parents) {
+      sinkParents.setChildren(ArrayBuffer[OperatorNode]())
+    }
+    setChildrenDag(fixedOperatorNodes)
     return fixedOperatorNodes
   }
 
@@ -281,6 +302,7 @@ object JobVerificationEngine {
     }
     val numPartitions = parentEcalls.length
     val ecall = parentEcalls(0).ecall
+    // println("Linking ecall " + ecall + " to ecall " + childEcalls(0).ecall)
     // project
     if (ecall == 1) {
       for (i <- 0 until numPartitions) {
@@ -355,6 +377,7 @@ object JobVerificationEngine {
   def generateJobNodes(numPartitions: Int, operatorName: String): ArrayBuffer[ArrayBuffer[JobNode]] = {
     val jobNodes = ArrayBuffer[ArrayBuffer[JobNode]]() 
     val expectedEcalls = ArrayBuffer[Int]()
+    // println("generating job nodes for " + operatorName + " with " + numPartitions + " partitions.")
     if (operatorName == "EncryptedSort" && numPartitions == 1) {
       // ("externalSort")
       expectedEcalls.append(6)
@@ -385,10 +408,12 @@ object JobVerificationEngine {
     } else {
       throw new Exception("Executed unknown operator: " + operatorName) 
     }
+    // println("Expected ecalls for " + operatorName + ": " + expectedEcalls)
     for (ecallIdx <- 0 until expectedEcalls.length) {
       val ecall = expectedEcalls(ecallIdx)
       val ecallJobNodes = ArrayBuffer[JobNode]()
       jobNodes.append(ecallJobNodes)
+      // println("Creating job nodes for ecall " + ecall)
       for (partitionIdx <- 0 until numPartitions) { 
         val jobNode = new JobNode()
         jobNode.setEcall(ecall)
@@ -408,8 +433,10 @@ object JobVerificationEngine {
     for (node <- operatorNodes) {
       node.jobNodes = generateJobNodes(logEntryChains.size, node.operatorName)
     }
+    // println("Job node generation finished.")
     // Link all ecalls.
     for (node <- operatorNodes) {
+      // println("Linking ecalls for operator " + node.operatorName + " with num ecalls = " + node.jobNodes.length)
       for (ecallIdx <- 0 until node.jobNodes.length) {
         if (ecallIdx == node.jobNodes.length - 1) {
           // last ecall of this operator, link to child operators if one exists.
@@ -448,9 +475,10 @@ object JobVerificationEngine {
   def verify(df: DataFrame): Boolean = {
     // Get expected DAG.
     val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
-
+    
     // Quit if graph is empty.
     if (expectedSourceNode.graphIsEmpty) {
+      println("Expected graph empty")
       return true
     }
 
@@ -544,8 +572,7 @@ object JobVerificationEngine {
     if (!arePathsEqual) {
       // println(executedPathsToSink.toString)
       // println(expectedPathsToSink.toString)
-      // println("===========DAGS NOT EQUAL===========")
-      return false
+      println("===========DAGS NOT EQUAL===========")
     }
     return true 
   }
