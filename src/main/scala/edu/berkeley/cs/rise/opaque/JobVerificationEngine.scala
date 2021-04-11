@@ -26,7 +26,8 @@ import scala.collection.mutable.Queue
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.SparkPlan
 
-// Wraps Crumb data specific to graph vertices and adds graph methods.
+// Wraps Crumb data specific to graph vertices and provides graph methods.
+// Represents a recursive ecall DAG node.
 class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayBuffer[Byte]](),
             val numInputMacs: Int = 0,
             val allOutputsMac: ArrayBuffer[Byte] = ArrayBuffer[Byte](),
@@ -58,6 +59,7 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
   }
 
   // Compute and return a list of paths from this node to a sink node.
+  // Used in naive DAG comparison.
   def pathsToSink(): ArrayBuffer[List[Seq[Int]]] = {
     val retval = ArrayBuffer[List[Seq[Int]]]()
     if (this.isSink) {
@@ -108,6 +110,7 @@ class JobNode(val inputMacs: ArrayBuffer[ArrayBuffer[Byte]] = ArrayBuffer[ArrayB
 }
 
 // Used in construction of expected DAG.
+// Represents a recursive Operator DAG node.
 class OperatorNode(val operatorName: String = "") {
   var children: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
   var parents: ArrayBuffer[OperatorNode] = ArrayBuffer[OperatorNode]()
@@ -173,6 +176,12 @@ object JobVerificationEngine {
     logEntryChains.clear
   }
 
+  /********************************
+  Graph construction helper methods
+  ********************************/
+
+  // Check if operator node is supported by Job Verification Engine.
+  // Should be in `possibleSparkOperators` list.  
   def isValidOperatorNode(node: OperatorNode): Boolean = {
     for (targetSubstring <- possibleSparkOperators) {
       if (node.operatorName contains targetSubstring) {
@@ -182,6 +191,8 @@ object JobVerificationEngine {
     return false
   }
 
+  // Compares paths returned from pathsToSink Job Node method.
+  // Used in naive DAG comparison.
   def pathsEqual(executedPaths: ArrayBuffer[List[Seq[Int]]],
                 expectedPaths: ArrayBuffer[List[Seq[Int]]]): Boolean = {
     // Executed paths might contain extraneous paths from
@@ -189,7 +200,7 @@ object JobVerificationEngine {
     return expectedPaths.toSet.subsetOf(executedPaths.toSet)
   }
 
-  // Recursively convert SparkPlan objects to OperatorNode object.
+  // operatorDAGFromPlan helper - recursively convert SparkPlan objects to OperatorNode object.
   def sparkNodesToOperatorNodes(plan: SparkPlan): OperatorNode = {
     var operatorName = ""
     val firstLine = plan.toString.split("\n")(0)
@@ -206,7 +217,7 @@ object JobVerificationEngine {
     return operatorNode
   }
 
-  // Returns true if every OperatorNode in this list is "valid".
+  // Returns true if every OperatorNode in this list is "valid", or supported by JobVerificationEngine.
   def allValidOperators(operators: ArrayBuffer[OperatorNode]): Boolean = {
     for (operator <- operators) {
       if (!isValidOperatorNode(operator)) {
@@ -216,7 +227,7 @@ object JobVerificationEngine {
     return true
   }
 
-  // Recursively prunes non valid nodes from an OperatorNode tree.
+  // operatorDAGFromPlan helper - recursively prunes non valid nodes from an OperatorNode tree, bottom up.
   def fixOperatorTree(root: OperatorNode): Unit = {
     if (root.isOrphan) {
       return
@@ -239,6 +250,7 @@ object JobVerificationEngine {
     }
   }
 
+  // Given operators with correctly set parents, correctly set the children pointers.
   def setChildrenDag(operators: ArrayBuffer[OperatorNode]): Unit = {
     for (operator <- operators) {
       operator.setChildren(ArrayBuffer[OperatorNode]())
@@ -339,7 +351,7 @@ object JobVerificationEngine {
     // nonObliviousAggregate
     } else if (ecall == 9) {
       for (i <- 0 until numPartitions) {
-        parentEcalls(i).addOutgoingNeighbor(childEcalls(i))
+        parentEcalls(i).addOutgoingNeighbor(childEcalls(0))
       }
     // nonObliviousSortMergeJoin
     } else if (ecall == 8) {
@@ -423,7 +435,7 @@ object JobVerificationEngine {
     return jobNodes
   }
 
-  // Converts a DAG of Spark operators to a DAG of ecalls and partitions.
+  // expectedDAGFromPlan helper - converts a DAG of Spark operators to a DAG of ecalls and partitions.
   def expectedDAGFromOperatorDAG(operatorNodes: ArrayBuffer[OperatorNode]): JobNode = {
     val source = new JobNode()
     val sink = new JobNode()
@@ -464,14 +476,20 @@ object JobVerificationEngine {
     return source
   }
 
-  // Generates an expected DAG of ecalls and partitions from a dataframe's SparkPlan object.
+  // verify helper - generates an expected DAG of ecalls and partitions from a dataframe's SparkPlan object.
   def expectedDAGFromPlan(executedPlan: SparkPlan): JobNode = {
-    val operatorDAGRoot = operatorDAGFromPlan(executedPlan)
-    expectedDAGFromOperatorDAG(operatorDAGRoot)
+    val operatorDAGList = operatorDAGFromPlan(executedPlan)
+    expectedDAGFromOperatorDAG(operatorDAGList)
   }
+
+
+  /***********************
+  Main verification method
+  ***********************/
 
   // Verify that the executed flow of information from ecall partition to ecall partition
   // matches what is expected for a given Spark dataframe.
+  // This function should be the one called from the rest of the client to do job verification.
   def verify(df: DataFrame): Boolean = {
     // Get expected DAG.
     val expectedSourceNode = expectedDAGFromPlan(df.queryExecution.executedPlan)
@@ -550,6 +568,7 @@ object JobVerificationEngine {
     executedSourceNode.setSource
     val executedSinkNode = new JobNode()
     executedSinkNode.setSink
+    // Iterate through all nodes, matching `all_outputs_mac` to `input_macs`.
     for (node <- nodeSet) {
       if (node.inputMacs == ArrayBuffer[ArrayBuffer[Byte]]()) {
         executedSourceNode.addOutgoingNeighbor(node)
@@ -570,8 +589,6 @@ object JobVerificationEngine {
     val expectedPathsToSink = expectedSourceNode.pathsToSink
     val arePathsEqual = pathsEqual(executedPathsToSink, expectedPathsToSink)
     if (!arePathsEqual) {
-      // println(executedPathsToSink.toString)
-      // println(expectedPathsToSink.toString)
       println("===========DAGS NOT EQUAL===========")
     }
     return true 
