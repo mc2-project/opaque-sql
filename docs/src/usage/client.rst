@@ -5,9 +5,9 @@ Query submission via the MC\ :sup:`2` Client
 Starting Opaque SQL
 ###################
 
-Here we outline how to use `the client <https://github.com/mc2-project/mc2>`_ to submit queries. In this security model, the Spark driver is considered *untrusted*, and should not have any way to decrypt results or any intermediate computation.
+Here we outline how to use `the client <https://github.com/mc2-project/mc2>`_ to submit queries. This is an alternative way to run Opaque SQL that integrates well with the rest of the MC\ :sup:`2` projects, such as `Secure XGBoost <https://github.com/mc2-project/secure-xgboost>`_.
 
-**Note** that this method of computation is still not entirely supported. It is possible to submit queries from MC\ :sup:`2` Client, but only with a shared key on the driver, so it must still be considered *trusted*.
+Note that the driver still must be located on *trusted* hardware for the complete security guarantees provided by the MC\ :sup:`2` platform.
 
 Starting the gRPC Listener
 **************************
@@ -33,7 +33,7 @@ Both of these methods start a listener on port 50051 that allows you to use the 
 Using the MC\ :sup:`2` Client
 #############################
 
-MC\ :sup:`2` Client is a Python package that allows you to communicate with other MC\ :sup:`2` compute services. 
+MC\ :sup:`2` Client is a Python package that provides an integrated channel for communicating with other MC\ :sup:`2` compute services.
 
 
 `Source Code <https://github.com/mc2-project/mc2>`_
