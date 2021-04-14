@@ -303,17 +303,15 @@ object Utils extends Logging {
     val enableSharedKey = sqlContext.getConf("spark.opaque.testing.enableSharedKey", "false")
     if (enableSharedKey.toBoolean) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
-    }
-
-    val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
-    sharedKeyPath match {
-      case Some(sharedKeyPath) =>
-        sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
-        assert(sharedKey.get.size == GCM_KEY_LENGTH)
-      case None =>
-        if (!enableSharedKey.toBoolean) {
+    } else {
+      val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
+      sharedKeyPath match {
+        case Some(sharedKeyPath) =>
+          sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
+          assert(sharedKey.get.size == GCM_KEY_LENGTH)
+        case None =>
           throw new OpaqueException("Need to set the SYMMETRIC_KEY_PATH environment variable.")
-        }
+      }
     }
 
     val sc = sqlContext.sparkContext
