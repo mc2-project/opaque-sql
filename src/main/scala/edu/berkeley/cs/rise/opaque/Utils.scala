@@ -21,6 +21,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.{Files, Paths}
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
@@ -299,12 +300,20 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
-    // TODO: replace this with loading in a key from a file specified in conf.
-    sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(1))
-
     val enableSharedKey = sqlContext.getConf("spark.opaque.testing.enableSharedKey", "false")
     if (enableSharedKey.toBoolean) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
+    }
+
+    val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
+    sharedKeyPath match {
+      case Some(sharedKeyPath) =>
+        sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
+        assert(sharedKey.get.size == GCM_KEY_LENGTH)
+      case None =>
+        if (!enableSharedKey.toBoolean) {
+          throw new OpaqueException("Need to set the SYMMETRIC_KEY_PATH environment variable.")
+        }
     }
 
     val sc = sqlContext.sparkContext
