@@ -29,8 +29,8 @@ sudo chmod -R a+wx /opt/spark/work
 export SPARK_HOME=/opt/spark
 export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin
 
-# Set hostname to be localhost for Spark, since only running build/sbt test.
-# Fixes issues with assigning IP for sparkDriver on Github Actions VM.
+# Set hostname to be localhost for Spark, since only running build/sbt test
+# Fixes issues with assigning IP for sparkDriver on Github Actions VM
 sudo hostname -b 127.0.0.1
 touch /opt/spark/conf/spark-defaults.conf
 echo "" >> /opt/spark/conf/spark-defaults.conf
