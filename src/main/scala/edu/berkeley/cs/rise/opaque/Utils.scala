@@ -270,7 +270,7 @@ object Utils extends Logging {
 
   def setSharedKey(key: Array[Byte]): Unit = {
     sharedKey = Option(key)
-    assert(sharedKey.size == GCM_KEY_LENGTH)
+    assert(key.size == GCM_KEY_LENGTH)
   }
 
   def encrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
