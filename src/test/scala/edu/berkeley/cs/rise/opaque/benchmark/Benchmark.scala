@@ -51,6 +51,7 @@ object Benchmark {
   val spark = SparkSession
     .builder()
     .appName("Benchmark")
+    .config("spark.opaque.testing.enableSharedKey", true)
     .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism

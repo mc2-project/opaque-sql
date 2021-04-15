@@ -33,6 +33,7 @@ trait SinglePartitionSparkSession {
       "spark.jars",
       "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
     )
+    .config("spark.opaque.testing.enableSharedKey", true)
     .getOrCreate()
 }
 
@@ -50,5 +51,6 @@ trait MultiplePartitionSparkSession {
       "spark.jars",
       "target/scala-2.12/opaque_2.12-0.1.jar,target/scala-2.12/opaque_2.12-0.1-tests.jar"
     )
+    .config("spark.opaque.testing.enableSharedKey", true)
     .getOrCreate()
 }

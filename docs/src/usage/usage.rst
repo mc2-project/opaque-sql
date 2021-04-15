@@ -3,20 +3,23 @@ Using Opaque SQL
 ****************
 
 Setup
-*****
-Opaque SQL needs two Spark properties to be set:
+#####
+Opaque SQL needs three Spark properties to be set:
 
 - ``spark.executor.instances``
 - ``spark.task.maxFailures``
-
-Both of these are used for remote attestation: Opaque SQL needs to know how many executors are in the cluster, and to use Spark's fault tolerance property to attest unattested executors.
+-  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if running the gRPC listener)
 
 These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.
 
 Running Opaque SQL
-******************
+##################
 
-Once setup is finished, you can run Spark SQL queries as follows.
+Once setup is finished, there are multiple ways to run Opaque depending on the intended functionality.
+
+Running the interactive shell
+*****************************
+
 
 1. Package Opaque into a JAR.
 
@@ -40,7 +43,7 @@ Once setup is finished, you can run Spark SQL queries as follows.
                    pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar  \
                      --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
     
-   (the reason we need to specify `--py-files` is because the Opaque Python functions are placed in the .jar for easier packaging)
+   (we need to specify `--py-files` is because the Opaque Python functions are placed in the .jar for easier packaging)
     
 3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules.
 
@@ -60,7 +63,7 @@ Once setup is finished, you can run Spark SQL queries as follows.
                    
     
 
-4. You can also run queries in Scala locally.
+4. Alternatively, you can also run queries in Scala locally.
 
    .. code-block:: bash
 
@@ -68,8 +71,29 @@ Once setup is finished, you can run Spark SQL queries as follows.
                    JVM_OPTS="-Xmx4G"; build/sbt console
 
 
+Starting the gRPC Listener
+**************************
+
+1. To run locally for easy testing/functionality:
+
+   .. code-block:: bash
+
+                   build/sbt run
+
+2. To launch the listener on a standalone Spark cluster:
+
+   .. code-block:: bash
+
+                  build/sbt assembly # create a fat jar with all necessary dependencies
+
+                  spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
+                     <Spark configuration parameters> \
+                     --deploy-mode client ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
+
+Both of these methods then allow you to use the MC2-Client to submit queries to Opaque SQL remotely!
+
 Encrypting, saving, and loading a DataFrame
-*******************************************
+###########################################
 
 1. Create an unencrypted DataFrame on the driver.
    This should be done on the client, i.e., in a trusted setting.
@@ -122,7 +146,7 @@ Encrypting, saving, and loading a DataFrame
                   df_encrypted.write.format("edu.berkeley.cs.rise.opaque.EncryptedSource").save("df_encrypted")
 
 Using the DataFrame interface
-*****************************
+#############################
 
 1. Users can load the :ref:`previously persisted encrypted DataFrame<save_df>`.
 
@@ -167,7 +191,7 @@ Call ``.collect`` or ``.show`` to retreive the results. The final result will be
 
 
 Using the SQL interface
-***********************
+#######################
 
 1. Users can also load the :ref:`previously persisted encrypted DataFrame <save_df>` using the SQL interface.
 

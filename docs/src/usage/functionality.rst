@@ -50,7 +50,7 @@ DataFrame interface
 Because Opaque SQL only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark's both for `Scala <https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html>`_ and `Python <https://spark.apache.org/docs/3.1.1/api/python/reference/api/pyspark.sql.DataFrame.html?highlight=dataframe#pyspark.sql.DataFrame>`_. Opaque SQL is still a work in progress, so not all of these functionalities are currently implemented. See below for a complete list in Scala.
 
 Supported operations
-*******************
+********************
 
 Actions
 -------

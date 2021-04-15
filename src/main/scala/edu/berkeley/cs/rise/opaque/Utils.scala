@@ -169,12 +169,12 @@ object Utils extends Logging {
     result
   }
 
-  private var logOperators = false
-  def setOperatorLoggingLevel(logOperators: Boolean) = {
-    this.logOperators = logOperators
+  private var shouldLogOperators = false
+  def setOperatorLoggingLevel(shouldLogOperators: Boolean) = {
+    this.shouldLogOperators = shouldLogOperators
   }
   def getOperatorLoggingLevel() = {
-    this.logOperators
+    this.shouldLogOperators
   }
 
   def findLibraryAsResource(libraryName: String): String = {
@@ -263,35 +263,41 @@ object Utils extends Logging {
 
   /**
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
-   * attestation succeeds. For development, we use a hardcoded key. You should change it.
+   * attestation succeeds. For testing/benchmarking, we use a hardcoded key. For all other
+   * cases, the driver SHOULD NOT be able to decrypt anything.
    */
-  var sharedKey: Array[Byte] = Array.fill[Byte](GCM_KEY_LENGTH)(0)
+  var sharedKey: Option[Array[Byte]] = Option(Array.fill[Byte](GCM_KEY_LENGTH)(0))
 
   def setSharedKey(key: Array[Byte]): Unit = {
-    sharedKey = key
+    sharedKey = Option(key)
     assert(sharedKey.size == GCM_KEY_LENGTH)
   }
 
-  def encrypt(data: Array[Byte]): Array[Byte] = {
-    val random = SecureRandom.getInstance("SHA1PRNG")
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
-    val iv = new Array[Byte](GCM_IV_LENGTH)
-    random.nextBytes(iv)
-    val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-    cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-    val cipherText = cipher.doFinal(data)
-    iv ++ cipherText
+  def encrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
+    case Some(sharedKey) =>
+      val random = SecureRandom.getInstance("SHA1PRNG")
+      val cipherKey = new SecretKeySpec(sharedKey, "AES")
+      val iv = new Array[Byte](GCM_IV_LENGTH)
+      random.nextBytes(iv)
+      val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+      cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
+      val cipherText = cipher.doFinal(data)
+      iv ++ cipherText
+    case None =>
+      throw new OpaqueException("Cannot encrypt without sharedKey.")
   }
 
-  def decrypt(data: Array[Byte]): Array[Byte] = {
-
-    val cipherKey = new SecretKeySpec(sharedKey, "AES")
-    val iv = data.take(GCM_IV_LENGTH)
-    val cipherText = data.drop(GCM_IV_LENGTH)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-    cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-    cipher.doFinal(cipherText)
+  def decrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
+    case Some(sharedKey) =>
+      val cipherKey = new SecretKeySpec(sharedKey, "AES")
+      val iv = data.take(GCM_IV_LENGTH)
+      val cipherText = data.drop(GCM_IV_LENGTH)
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
+      cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
+      cipher.doFinal(cipherText)
+    case None =>
+      throw new OpaqueException("Cannot decrypt without sharedKey.")
   }
 
   var eid = 0L
@@ -309,6 +315,11 @@ object Utils extends Logging {
         sqlContext.experimental.extraOptimizations)
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
+
+    val enableSharedKey = sqlContext.getConf("spark.opaque.testing.enableSharedKey", "false")
+    if (enableSharedKey.toBoolean) {
+      sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
+    }
 
     val sc = sqlContext.sparkContext
     // This is needed to prevent an error from re-registering accumulator variables if
@@ -1423,7 +1434,9 @@ object Utils extends Logging {
           }
 
         case _ =>
-          throw new OpaqueException("Expression " + expr.toString() + " is currently not supported in Opaque")
+          throw new OpaqueException(
+            "Expression " + expr.toString() + " is currently not supported in Opaque"
+          )
       }
     }
   }
@@ -1959,7 +1972,9 @@ object Utils extends Logging {
         )
 
       case _ =>
-        throw new OpaqueException("Aggregate expression " + e.aggregateFunction.toString() + " is not supported in Opaque")
+        throw new OpaqueException(
+          "Aggregate expression " + e.aggregateFunction.toString() + " is not supported in Opaque"
+        )
     }
   }
 
