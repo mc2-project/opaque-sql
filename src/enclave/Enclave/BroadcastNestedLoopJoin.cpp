@@ -24,6 +24,7 @@ void broadcast_nested_loop_join(uint8_t *join_expr, size_t join_expr_length, uin
     default_join(join_expr, join_expr_length, outer_rows, outer_rows_length, inner_rows,
                  inner_rows_length, output_rows, output_rows_length);
     break;
+  case tuix::JoinType_FullOuter:
   case tuix::JoinType_LeftOuter:
   case tuix::JoinType_RightOuter:
     outer_join(join_expr, join_expr_length, outer_rows, outer_rows_length, inner_rows,
@@ -45,7 +46,8 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
   RowReader outer_r(BufferRefView<tuix::EncryptedBlocks>(outer_rows, outer_rows_length));
   RowWriter w;
 
-  FlatbuffersTemporaryRow last_inner;
+  FlatbuffersTemporaryRow last_inner; // Don't need this line
+  // Outer = Streamed; Inner = Broadcasted
 
   while (outer_r.has_next()) {
     const tuix::Row *outer = outer_r.next();
@@ -62,6 +64,7 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
                                : join_expr_eval.eval_condition(outer, inner);
       if (!inner->is_dummy() && condition_met) {
         switch (join_type) {
+        case tuix::JoinType_FullOuter:
         case tuix::JoinType_LeftOuter:
           w.append(outer, inner);
           break;
@@ -76,6 +79,7 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
     }
 
     switch(join_type) {
+    case tuix::JoinType_FullOuter:
     case tuix::JoinType_LeftOuter:
       if (!o_i_match) {
         // Values of inner (right) do not matter: they are all set to null

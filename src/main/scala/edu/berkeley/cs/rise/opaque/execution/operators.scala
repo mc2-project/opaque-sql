@@ -384,6 +384,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
         left.output ++ right.output.map(_.withNullability(true))
       case RightOuter =>
         left.output.map(_.withNullability(true)) ++ right.output
+      case FullOuter =>
+        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
       case LeftExistence(_) =>
         left.output
       case _ =>
@@ -410,7 +412,7 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     broadcast = joinType match {
       // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
       // in case of an empty foreign table.
-      case LeftOuter | RightOuter =>
+      case LeftOuter | RightOuter | FullOuter =>
         EncryptedAddDummyRowExec(broadcast.output, broadcast)
       case _ =>
         broadcast
