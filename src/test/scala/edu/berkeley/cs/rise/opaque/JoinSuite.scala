@@ -183,18 +183,18 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
 
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, $"left.N" === $"right.N", "full")
+      left.join(right, left("N") === right("N"), "full")
     }
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, ($"left.N" === $"right.N") && ($"left.N" =!= 3), "full")
+      left.join(right, left("N") === right("N") && (left("N") =!= 3), "full")
     }
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, ($"left.N" === $"right.N") && ($"right.N" =!= 3), "full")
+      left.join(right, left("N") === right("N") && (right("N") =!= 3), "full")
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT l.a, count(*)
           |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
@@ -204,7 +204,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT r.N, count(*)
           |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
@@ -214,7 +214,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT l.N, count(*)
           |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)
@@ -224,7 +224,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT r.a, count(*)
           |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)
