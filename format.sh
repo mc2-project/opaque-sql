@@ -13,10 +13,11 @@ check_command_exist() {
 format_from_master() {
     echo "* Checking changed Scala files for formatting..."
     (cd ${OPAQUE_HOME}/; scalafmt --diff-branch PR-repo/master >/dev/null)
+    git diff --quiet -- '*.scala'
     scala_formatted=$?
     echo "* Done!"
     echo "* The following files needed formatting:"
-    git diff --name-only
+    git diff --name-only -- '*.scala'
     if [ $scala_formatted -ne 0 ];
     then
         echo "* Adding newly formatted Scala files to the most recent commit."
@@ -26,10 +27,11 @@ format_from_master() {
     # Run git-clang-format and check format
     echo "* Checking changed C/C++ files for formatting..."
     (cd ${OPAQUE_HOME}/; git-clang-format PR-repo/master >/dev/null)
+    git diff --quiet -- '*.h' '*.c' '*.cpp'
     c_formatted=$?
     echo "* Done!"
     echo "* The following files needed formatting:"
-    git diff --name-only
+    git diff --name-only -- '*.h' '*.c' '*.cpp'
     if [ $c_formatted -ne 0 ];
     then
         echo "* Adding newly formatted C/C++ files to the most recent commit."
@@ -38,7 +40,10 @@ format_from_master() {
 
     if [ $c_formatted -ne 0 ] || [ $scala_formatted -ne 0 ];
     then
-        echo "* Ammending commit to include linting changes."
+        echo "* Creating new commit with linted files."
+        files_changed=$(git diff --name-only '*.scala' '*.h' '*.c' '*.cpp')
+        git commit -m $"Lint\nFiles Changed:\n ${files_changed}"
+
     fi
 }
 
