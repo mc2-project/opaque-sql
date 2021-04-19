@@ -5,7 +5,7 @@
 
 check_command_exist() {
     if ! [ -x "$(command -v "$1")" ]; then
-        echo "Error: $1 not installed. Folllow the instructions at https://mc2-project.github.io/opaque/contributing/contributing.html to install."
+        echo "Error: $1 not installed. Follow the instructions at https://mc2-project.github.io/opaque/contributing/contributing.html to install."
         exit 1
     fi
 }
@@ -16,10 +16,10 @@ format_from_master() {
     git diff --quiet -- '*.scala'
     scala_formatted=$?
     echo "* Done!"
-    echo "* The following files needed formatting:"
-    git diff --name-only -- '*.scala'
     if [ $scala_formatted -ne 0 ];
     then
+        echo "* The following files needed formatting:"
+        git diff --name-only -- '*.scala'
         echo "* Adding newly formatted Scala files to the most recent commit."
         git add -u
     fi
@@ -30,10 +30,10 @@ format_from_master() {
     git diff --quiet -- '*.h' '*.c' '*.cpp'
     c_formatted=$?
     echo "* Done!"
-    echo "* The following files needed formatting:"
-    git diff --name-only -- '*.h' '*.c' '*.cpp'
     if [ $c_formatted -ne 0 ];
     then
+        echo "* The following files needed formatting:"
+        git diff --name-only -- '*.h' '*.c' '*.cpp'
         echo "* Adding newly formatted C/C++ files to the most recent commit."
         git add -u
     fi
@@ -42,7 +42,7 @@ format_from_master() {
     then
         echo "* Creating new commit with linted files."
         files_changed=$(git diff --name-only '*.scala' '*.h' '*.c' '*.cpp')
-        git commit -m $"Lint\nFiles Changed:\n ${files_changed}"
+        git commit -m "Lint" -m "Files Changed:" -m "${files_changed}"
 
     fi
 }
