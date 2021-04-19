@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
-  import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions._
