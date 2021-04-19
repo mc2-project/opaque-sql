@@ -42,7 +42,7 @@ format_from_master() {
     then
         echo "* Creating new commit with linted files."
         files_changed=$(git diff --name-only '*.scala' '*.h' '*.c' '*.cpp')
-        git commit -m "Lint" -m "Files Changed:" -m "${files_changed}"
+        git commit -m "Lint with format.sh"
 
     fi
 }

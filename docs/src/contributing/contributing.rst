@@ -42,5 +42,5 @@ Opaque SQL enforces linting rules for all pull requests. Before making changes a
    Alternatively, you can just run the following file right before submitting a PR to create a new commit with linting changes:
 
    .. code-block:: bash
-               
+
                 ./${OPAQUE_HOME}/format.sh
