@@ -135,7 +135,7 @@
         </label>
         <div class="section" id="contributing">
 <span id="id1"></span><h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
-<p>Opaque uses a pre-commit hook to ensure that all commits are formatted to the desired style. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):</p>
+<p>Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):</p>
 <ol class="arabic">
 <li><p>Fork the repository on Github, then clone your fork and set upstream:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/&lt;your username&gt;/opaque.git
@@ -144,7 +144,7 @@ git remote add upstream https://github.com/mc2-project/opaque.git
 </pre></div>
 </div>
 </li>
-<li><p>Install hook dependencies:</p>
+<li><p>Install dependencies:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Coursier and scalafmt</span>
 curl -fLo cs https://git.io/coursier-cli-<span class="s2">"</span><span class="k">$(</span>uname <span class="p">|</span> tr LD ld<span class="k">)</span><span class="s2">"</span>
 chmod +x cs
@@ -162,8 +162,12 @@ sudo npm install -g clang-format
 </pre></div>
 </div>
 </li>
-<li><p>Install hook dependencies:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.hooks/install-pre-commit
+<li><p>Install a Git pre-commit hook:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./<span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/hooks/install-pre-commit
+</pre></div>
+</div>
+<p>Alternatively, you can just run the following file right before submitting a PR to create a new commit with linting changes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./<span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/format.sh
 </pre></div>
 </div>
 </li>
