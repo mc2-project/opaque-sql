@@ -11,10 +11,10 @@ echo "* Checking changed Scala files for formatting..."
 git diff --quiet
 scala_formatted=$?
 echo "* Done!"
-echo "* The following files needed formatting:"
-git diff --name-only
 if [ $scala_formatted -ne 0 ];
 then
+    echo "* The following files needed formatting:"
+    git diff --name-only
     echo "* Adding newly formatted Scala files to the most recent commit."
     git add -u
 fi
@@ -25,10 +25,10 @@ echo "* Checking changed C/C++ files for formatting..."
 git diff --quiet
 c_formatted=$?
 echo "* Done!"
-echo "* The following files needed formatting:"
-git diff --name-only
 if [ $c_formatted -ne 0 ];
 then
+    echo "* The following files needed formatting:"
+    git diff --name-only
     echo "* Adding newly formatted C/C++ files to the most recent commit."
     git add -u
 fi
