@@ -4,7 +4,7 @@
 Contributing
 ************
 
-Opaque SQL enforces linting rules for all pull requests. Before making changes and opening a PR, please do the following (compatible for Ubuntu 18.04):
+Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):
 
 #. Fork the repository on Github, then clone your fork and set upstream:
 

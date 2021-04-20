@@ -47,7 +47,7 @@ format_from_master() {
     fi
 }
 
-echo "Formatting files..."
+echo "Linting files..."
 
 check_command_exist scalafmt
 check_command_exist git-clang-format
