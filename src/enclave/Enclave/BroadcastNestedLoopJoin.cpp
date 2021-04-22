@@ -4,7 +4,6 @@
 #include "FlatbuffersReaders.h"
 #include "FlatbuffersWriters.h"
 #include "common.h"
-#include <iostream>
 
 /** C++ implementation of a broadcast nested loop join.
  * Assumes outer_rows is streamed and inner_rows is broadcast.
@@ -25,7 +24,6 @@ void broadcast_nested_loop_join(uint8_t *join_expr, size_t join_expr_length, uin
     default_join(join_expr, join_expr_length, outer_rows, outer_rows_length, inner_rows,
                  inner_rows_length, output_rows, output_rows_length);
     break;
-  case tuix::JoinType_FullOuter:
   case tuix::JoinType_LeftOuter:
   case tuix::JoinType_RightOuter:
     outer_join(join_expr, join_expr_length, outer_rows, outer_rows_length, inner_rows,
@@ -41,23 +39,13 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
                 size_t outer_rows_length, uint8_t *inner_rows, size_t inner_rows_length,
                 uint8_t **output_rows, size_t *output_rows_length) {
 
-  std::cout << "Running outer join \n" ;
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
   const tuix::JoinType join_type = join_expr_eval.get_join_type();
-
-  // std::bitset<inner_rows_length> matched_inner_rows = 
-  //   get_matched_inner_rows_bitset(outer_rows, outer_rows_length, inner_rows, inner_rows_length);
-  
-  // RowWriter not_matched;
-  // for (int i = 0; i < inner_rows_length; i++) {
-  //   if (!matched_inner_rows[i]) not_matched.append(outer, inner, true, false);
-  // }
 
   RowReader outer_r(BufferRefView<tuix::EncryptedBlocks>(outer_rows, outer_rows_length));
   RowWriter w;
 
-  FlatbuffersTemporaryRow last_inner; // Don't need this line
-  // Outer = Streamed; Inner = Broadcasted
+  FlatbuffersTemporaryRow last_inner;
 
   while (outer_r.has_next()) {
     const tuix::Row *outer = outer_r.next();
@@ -74,7 +62,6 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
                                : join_expr_eval.eval_condition(outer, inner);
       if (!inner->is_dummy() && condition_met) {
         switch (join_type) {
-        case tuix::JoinType_FullOuter:
         case tuix::JoinType_LeftOuter:
           w.append(outer, inner);
           break;
@@ -89,7 +76,6 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
     }
 
     switch(join_type) {
-    case tuix::JoinType_FullOuter:
     case tuix::JoinType_LeftOuter:
       if (!o_i_match) {
         // Values of inner (right) do not matter: they are all set to null
@@ -108,34 +94,6 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
   }
   w.output_buffer(output_rows, output_rows_length);
 }
-
-// std::bitset* get_matched_inner_rows_bitset(uint8_t *outer_rows,
-//                 size_t outer_rows_length, uint8_t *inner_rows, size_t inner_rows_length) {
-//   RowReader outer_r(BufferRefView<tuix::EncryptedBlocks>(outer_rows, outer_rows_length));
-
-//   constexpr std::bitset<inner_rows_length> matched_inner_rows;
-
-//   while (outer_r.has_next()) {
-//     const tuix::Row *outer = outer_r.next();
-
-//     RowReader inner_r(BufferRefView<tuix::EncryptedBlocks>(inner_rows, inner_rows_length));
-
-//     // Use peek() to get the schema of the inner table
-//     const tuix::Row *inner = inner_r.peek();
-//     int i = 0;
-//     while (inner_r.has_next()) {
-//       inner = inner_r.next();
-
-//       bool condition_met = join_expr_eval.eval_condition(outer, inner);
-//       if (condition_met) matched_inner_rows.set(i);
-
-//       i++;
-//     }
-
-//   }
-
-//   return matched_inner_rows;
-// }
 
 void default_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows,
                   size_t outer_rows_length, uint8_t *inner_rows, size_t inner_rows_length,
