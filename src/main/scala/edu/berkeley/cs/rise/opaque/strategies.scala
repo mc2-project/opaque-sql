@@ -117,6 +117,12 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
             foreignProjSchema.map(_.toAttribute),
             EncryptedSortExec(sortOrder, false, partitioned)
           )
+        case FullOuter =>
+          EncryptedAddDummyRowExec(
+            foreignProjSchema.map(_.toAttribute),
+            EncryptedSortExec(sortOrder, false, partitioned),
+            primaryProjSchema.map(_.toAttribute)
+          )
         case _ =>
           EncryptedSortExec(sortOrder, false, partitioned)
       }
@@ -132,7 +138,7 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
       )
 
       val tagsDropped = joinType match {
-        case Inner | LeftOuter | RightOuter =>
+        case Inner | LeftOuter | RightOuter | FullOuter =>
           EncryptedProjectExec(dropTags(left.output, right.output), joined)
         case LeftExistence(_) => EncryptedProjectExec(left.output, joined)
       }
@@ -355,7 +361,9 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
 
     case _ =>
       if (isEncrypted(plan)) {
-        throw new OpaqueException(s"Logical operator ${plan.nodeName}(${plan.argString(10)}) is currently not supported in Opaque")
+        throw new OpaqueException(
+          s"Logical operator ${plan.nodeName}(${plan.argString(10)}) is currently not supported in Opaque"
+        )
       }
 
       Nil

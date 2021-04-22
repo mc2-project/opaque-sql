@@ -1690,7 +1690,8 @@ public:
   bool is_right_join() { return join_type == tuix::JoinType_RightOuter; }
 
   bool is_outer_join() {
-    return join_type == tuix::JoinType_LeftOuter || join_type == tuix::JoinType_RightOuter;
+    return join_type == tuix::JoinType_LeftOuter || join_type == tuix::JoinType_RightOuter || 
+            join_type == tuix::JoinType_FullOuter;
   }
 
 private:

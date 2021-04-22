@@ -27,8 +27,8 @@ void write_output_rows(RowWriter &input, RowWriter &output, tuix::JoinType join_
   while (input_reader.has_next()) {
     const tuix::Row *row = input_reader.next();
     if (foreign_row == nullptr) {
-      output.append(row);
-    } else if (join_type == tuix::JoinType_LeftOuter) {
+      output.append(row); 
+    } else if (join_type == tuix::JoinType_FullOuter || join_type == tuix::JoinType_LeftOuter) {
       output.append(row, foreign_row, false, true);
     } else if (join_type == tuix::JoinType_RightOuter) {
       output.append(foreign_row, row, true, false);
@@ -65,7 +65,6 @@ void write_output_rows(RowWriter &input, RowWriter &output, tuix::JoinType join_
 void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
                                    uint8_t *input_rows, size_t input_rows_length,
                                    uint8_t **output_rows, size_t *output_rows_length) {
-
   FlatbuffersJoinExprEvaluator join_expr_eval(join_expr, join_expr_length);
   tuix::JoinType join_type = join_expr_eval.get_join_type();
   RowReader r(BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
@@ -81,10 +80,27 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
   // so last_foreign_row.get() is guaranteed to not be null.
   FlatbuffersTemporaryRow last_foreign_row;
 
+  // A "dummy" row needed for FullOuter joins so that 
+  // any_primary_row.get() is guaranteed to not be null
+  FlatbuffersTemporaryRow any_primary_row;
+  
   while (r.has_next()) {
     const tuix::Row *current = r.next();
+    
     if (current->is_dummy()) {
-      last_foreign_row.set(current);
+      if (join_type == tuix::JoinType_FullOuter) {
+        if (any_primary_row.get() == nullptr) {
+          // Primary table dummy row must come first
+          any_primary_row.set(current);
+        } else if (last_foreign_row.get() == nullptr) {
+          // Foreign table dummy row must come second
+          last_foreign_row.set(current);
+        }
+      } else {
+        // Only foreign table dummy row exists
+        last_foreign_row.set(current);
+      }
+
       continue;
     }
 
@@ -137,6 +153,9 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
               } else {
                 w.append(primary, current);
               }
+            } else if (join_type == tuix::JoinType_FullOuter){
+              // Join condition not satisfied; need to add nulls ++ foreign row to output
+              w.append(any_primary_row.get(), current, true, false);
             }
           }
         }
@@ -159,6 +178,9 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
           primary_unmatched_rows.clear();
           write_output_rows(new_primary_unmatched_rows, primary_unmatched_rows, join_type);
         }
+      } else if (join_type == tuix::JoinType_FullOuter){
+          // No match found for foreign row; need to add nulls ++ foreign row to output
+        w.append(any_primary_row.get(), current, true, false);
       }
     }
   }
@@ -170,6 +192,7 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
   case tuix::JoinType_LeftAnti:
     write_output_rows(primary_unmatched_rows, w, join_type);
     break;
+  case tuix::JoinType_FullOuter:
   case tuix::JoinType_LeftOuter:
   case tuix::JoinType_RightOuter:
     write_output_rows(primary_unmatched_rows, w, join_type, last_foreign_row.get());

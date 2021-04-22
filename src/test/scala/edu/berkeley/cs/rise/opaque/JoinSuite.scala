@@ -172,7 +172,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     }
   }
 
-  ignore("full outer join") {
+  test("full outer join") {
     def createTables(sl: SecurityLevel) = {
       val left = upperCaseData(sl).where('N <= 4)
       left.createOrReplaceTempView("left")

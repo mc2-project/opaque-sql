@@ -107,24 +107,42 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
   }
 }
 
-case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
-    extends UnaryExecNode
+case class EncryptedAddDummyRowExec(
+    output: Seq[Attribute],
+    child: SparkPlan,
+    primaryOutput: Seq[Attribute] = Seq.empty[Attribute]
+) extends UnaryExecNode
     with OpaqueOperatorExec {
 
   override def name = "EncryptedAddDummyRowExec"
 
-  // Add a dummy row full of nulls to each partition of child
+  // Add a dummy row full of nulls using foreign table to each partition of child
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
     childRDD.mapPartitions { rowIter =>
-      val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
+      val foreignNullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
         Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
         output.map(_.dataType),
         useEnclave = true,
         isDummyRows = true
       )
-      Iterator(Utils.concatEncryptedBlocks(nullRowsBlock +: rowIter.toSeq))
+
+      var withDummy = foreignNullRowsBlock +: rowIter.toSeq
+
+      // Adding dummy row full of nulls using primary table schema to each partition of child
+      if (!primaryOutput.isEmpty) {
+        val primaryNullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
+          Seq(InternalRow.fromSeq(Seq.fill(primaryOutput.length)(null))),
+          primaryOutput.map(_.dataType),
+          useEnclave = true,
+          isDummyRows = true
+        )
+
+        withDummy = primaryNullRowsBlock +: withDummy
+      }
+
+      Iterator(Utils.concatEncryptedBlocks(withDummy))
     }
   }
 }
@@ -338,6 +356,8 @@ case class EncryptedSortMergeJoinExec(
         leftSchema.map(_.toAttribute)
       case RightOuter =>
         leftSchema.map(_.withNullability(true)) ++ rightSchema
+      case FullOuter =>
+        leftSchema.map(_.withNullability(true)) ++ rightSchema.map(_.withNullability(true))
       case _ =>
         throw new IllegalArgumentException(
           s"SortMergeJoin should not take $joinType as the JoinType"
