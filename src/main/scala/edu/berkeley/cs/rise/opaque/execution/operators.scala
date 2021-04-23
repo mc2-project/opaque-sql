@@ -108,7 +108,7 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
 }
 
 case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
-    extends UnaryExecNosde
+    extends UnaryExecNode
     with OpaqueOperatorExec {
 
   override def name = "EncryptedAddDummyRowExec"
