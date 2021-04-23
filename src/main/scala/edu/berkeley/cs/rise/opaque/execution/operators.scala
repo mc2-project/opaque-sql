@@ -107,42 +107,24 @@ case class EncryptExec(child: SparkPlan) extends UnaryExecNode with OpaqueOperat
   }
 }
 
-case class EncryptedAddDummyRowExec(
-    output: Seq[Attribute],
-    child: SparkPlan,
-    primaryOutput: Seq[Attribute] = Seq.empty[Attribute]
-) extends UnaryExecNode
+case class EncryptedAddDummyRowExec(output: Seq[Attribute], child: SparkPlan)
+    extends UnaryExecNosde
     with OpaqueOperatorExec {
 
   override def name = "EncryptedAddDummyRowExec"
 
-  // Add a dummy row full of nulls using foreign table to each partition of child
+  // Add a dummy row full of nulls to each partition of child
   override def executeBlocked(): RDD[Block] = {
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
 
     childRDD.mapPartitions { rowIter =>
-      val foreignNullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
+      val nullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
         Seq(InternalRow.fromSeq(Seq.fill(output.length)(null))),
         output.map(_.dataType),
         useEnclave = true,
         isDummyRows = true
       )
-
-      var withDummy = foreignNullRowsBlock +: rowIter.toSeq
-
-      // Adding dummy row full of nulls using primary table schema to each partition of child
-      if (!primaryOutput.isEmpty) {
-        val primaryNullRowsBlock = Utils.encryptInternalRowsFlatbuffers(
-          Seq(InternalRow.fromSeq(Seq.fill(primaryOutput.length)(null))),
-          primaryOutput.map(_.dataType),
-          useEnclave = true,
-          isDummyRows = true
-        )
-
-        withDummy = primaryNullRowsBlock +: withDummy
-      }
-
-      Iterator(Utils.concatEncryptedBlocks(withDummy))
+      Iterator(Utils.concatEncryptedBlocks(nullRowsBlock +: rowIter.toSeq))
     }
   }
 }

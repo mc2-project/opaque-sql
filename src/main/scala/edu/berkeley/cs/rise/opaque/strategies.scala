@@ -121,7 +121,10 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
           EncryptedAddDummyRowExec(
             foreignProjSchema.map(_.toAttribute),
             EncryptedSortExec(sortOrder, false, partitioned),
-            primaryProjSchema.map(_.toAttribute)
+          )
+          EncryptedAddDummyRowExec(
+            primaryProjSchema.map(_.toAttribute).map(_.toAttribute),
+            EncryptedSortExec(sortOrder, false, partitioned),
           )
         case _ =>
           EncryptedSortExec(sortOrder, false, partitioned)
