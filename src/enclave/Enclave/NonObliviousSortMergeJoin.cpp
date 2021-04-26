@@ -143,13 +143,13 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
           auto primary_group_buffer = primary_group.output_buffer();
           RowReader primary_group_reader(primary_group_buffer.view());
 
-          bool matchFound = false;
+          bool match_found = false;
           while (primary_group_reader.has_next()) {
             const tuix::Row *primary = primary_group_reader.next();
             test_rows_same_group(join_expr_eval, primary, current);
 
             if (join_expr_eval.eval_condition(primary, current)) {
-              matchFound = true;
+              match_found = true;
               if (join_expr_eval.is_right_join()) {
                 w.append(current, primary);
               } else {
@@ -158,10 +158,9 @@ void non_oblivious_sort_merge_join(uint8_t *join_expr, size_t join_expr_length,
             } 
           }
           // Join condition not satisfied for any primary group rows; add (nulls, foreign row) to output
-          if (join_type == tuix::JoinType_FullOuter && !matchFound){
+          if (join_type == tuix::JoinType_FullOuter && !match_found) {
             w.append(dummy_primary_row.get(), current, true, false);
           }
-
         }
         if (join_type != tuix::JoinType_Inner) {
           auto primary_unmatched_rows_buffer = primary_unmatched_rows.output_buffer();

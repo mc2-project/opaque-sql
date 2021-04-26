@@ -118,14 +118,14 @@ object OpaqueOperators extends Strategy with JoinSelectionHelper {
             EncryptedSortExec(sortOrder, false, partitioned)
           )
         case FullOuter => {
-          val withForeignDummy = 
+          val withForeignDummy =
             EncryptedAddDummyRowExec(
               foreignProjSchema.map(_.toAttribute),
-              EncryptedSortExec(sortOrder, false, partitioned),
+              EncryptedSortExec(sortOrder, false, partitioned)
             )
           EncryptedAddDummyRowExec(
             primaryProjSchema.map(_.toAttribute).map(_.toAttribute),
-            withForeignDummy,
+            withForeignDummy
           )
         }
         case _ =>
