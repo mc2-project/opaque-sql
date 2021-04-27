@@ -19,23 +19,24 @@ void jni_throw(JNIEnv *env, const char *message) {
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(JNIEnv *env,
                                                                           jobject obj,
                                                                           jbyteArray shared_key,
-                                                                          jstring intel_cert) {
+                                                                          jstring user_cert) {
   (void)env;
   (void)obj;
 
   jboolean if_copy = false;
   jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
 
-  const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
+  const char *user_cert_str = env->GetStringUTFChars(user_cert, nullptr);
 
   try {
     service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
+    service_provider.set_user_cert(user_cert_str);
   } catch (const std::runtime_error &e) {
     jni_throw(env, e.what());
   }
 
   env->ReleaseByteArrayElements(shared_key, shared_key_bytes, 0);
-  env->ReleaseStringUTFChars(intel_cert, intel_cert_str);
+  env->ReleaseStringUTFChars(user_cert, user_cert_str);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_ProcessEnclaveReport(
@@ -61,4 +62,39 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Proce
   env->ReleaseByteArrayElements(report_msg_input, report_msg_bytes, 0);
 
   return array_ret;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Decrypt(
+    JNIEnv *env, jobject obj, jstring ciphertext) {
+
+  (void)obj;
+
+//  jboolean if_copy = false;
+//  char *cipher_bytes = (char *) env->GetByteArrayElements(ciphertext, &if_copy);
+//  size_t clength = (size_t)env->GetArrayLength(ciphertext);
+
+  char *cipher_bytes = (char *) env->GetStringUTFChars(ciphertext, nullptr);
+  size_t clength = (size_t) strlen(cipher_bytes);
+
+  uint8_t *plaintext_copy = nullptr;
+  size_t plength = 0;
+
+  if (cipher_bytes == nullptr) {
+    jni_throw(env, "Encrypt: JNI failed to get input byte array.");
+  } else {
+    plength = clength - LC_AESGCM_IV_SIZE - LC_AESGCM_MAC_SIZE;
+    plaintext_copy = new uint8_t[plength];
+
+    service_provider.aes_gcm_decrypt(cipher_bytes, &clength, &plaintext_copy, &plength);
+  }
+
+  jbyteArray plaintext = env->NewByteArray((jsize) plength);
+  env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *)plaintext_copy);
+
+//  env->ReleaseByteArrayElements(ciphertext, (jbyte *)cipher_bytes, 0);
+  env->ReleaseStringUTFChars(ciphertext, cipher_bytes);
+
+  delete[] plaintext_copy;
+
+  return plaintext;
 }

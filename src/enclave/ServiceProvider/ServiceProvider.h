@@ -13,6 +13,11 @@ public:
       : spid(spid), is_production(is_production), linkable_signature(linkable_signature),
         ias_api_version(3), require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
+  //TODO: Make sure this actually frees user_cert
+  ~ServiceProvider() {
+    free(this->user_cert);
+  }
+
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);
 
@@ -22,11 +27,28 @@ public:
    */
   void set_shared_key(const uint8_t *shared_key);
 
+  void set_user_cert(std::string user_cert);
+
   /**
    * After calling load_private_key, write the corresponding public key as a C++
    * header file. This file should be compiled into the enclave.
    */
   void export_public_key_code(const std::string &filename);
+
+  void
+  init_wrapper(uint8_t * provided_cert, size_t cert_len);
+
+  void
+  process_enclave_report_python_wrapper(uint8_t * report, size_t * report_len, uint8_t ** ret_val, size_t * ret_len);
+
+  void
+  aes_gcm_decrypt(char * cipher, size_t * cipher_len, uint8_t ** plain, size_t * plain_len);
+
+  void
+  clean_up();
+
+  void
+  free_array(uint8_t ** array);
 
   /**
    * Process attestation report from an enclave, verify the report, and send the
@@ -42,7 +64,10 @@ private:
   lc_ec256_private_t sp_priv_key;
 
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
+
   std::string spid;
+
+  char *user_cert = NULL;
 
   std::unique_ptr<IAS_Connection> ias;
   bool is_production;

@@ -22,8 +22,11 @@ import ch.jodersky.jni.nativeLoader
 @nativeLoader("ra_jni")
 class SP extends java.io.Serializable {
   // Remote attestation, master side
-  @native def Init(sharedKey: Array[Byte], intelCert: String): Unit
+  @native def Init(sharedKey: Array[Byte], userCert: String): Unit
   @native def SPProcMsg0(msg0Input: Array[Byte]): Unit
   @native def ProcessEnclaveReport(msg1Input: Array[Byte]): Array[Byte]
   @native def SPProcMsg3(msg3Input: Array[Byte]): Array[Byte]
+
+  // Decryption, client side
+  @native def Decrypt(cipher: String): Array[Byte]
 }
