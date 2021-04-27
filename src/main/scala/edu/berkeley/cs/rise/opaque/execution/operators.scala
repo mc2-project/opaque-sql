@@ -19,6 +19,10 @@ package edu.berkeley.cs.rise.opaque.execution
 
 import scala.collection.mutable.ArrayBuffer
 
+import java.io.{File, IOException, FileNotFoundException}
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import edu.berkeley.cs.rise.opaque.Utils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
@@ -182,13 +186,94 @@ trait OpaqueOperatorExec extends SparkPlan {
     executeBlocked().collect
   }
 
+  /** 
+   * Write encrypted results to file and return an empty rdd
+   * 
+   * 1. Creates an empty directory for the dataframe (or if the directory already exists, removes all contents
+   * inside the directory)
+   * 2. For each block in the result:
+   * 2a. Create a file
+   * 2b. Write the byte contents of the block to the file
+   */
   override def executeCollect(): Array[InternalRow] = {
-    collectEncrypted().flatMap { block =>
-      Utils.decryptBlockFlatbuffers(block)
+
+    println("Enter collect")
+
+//    collectEncrypted().flatMap { block =>
+//      Utils.decryptBlockFlatbuffers(block)
+//    }
+
+    val blocks = collectEncrypted()
+    
+    try {
+
+      // 1
+      val dir = new File("tmp");
+      if (!dir.exists) {
+        dir.mkdir()
+      } else {
+        println("Directory exists")
+        for(file <- dir.listFiles()) { 
+          file.delete() 
+          println("File deleted")
+        }
+      }
+
+      // 2
+      var i = 0
+      for (block <- blocks) {
+        // 2a & b
+        val f = "tmp/tmp_" + i.toString
+        Files.write(Paths.get(f), block.bytes)  
+       
+        // Increment i for next block
+        i += 1
+      }
+
+    } catch {
+      case x: FileNotFoundException =>
+      {
+        throw new FileNotFoundException("Exception: File missing")              
+      }
+      
+      case x: IOException   => 
+      {        
+        throw new IOException("Input/output Exception")        
+      }
     }
+
+    sqlContext.sparkContext.emptyRDD.collect()
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {
+
+    println("Enter take")
+
+    // Prepare directory for storing encrypted blocks
+    try {
+      val dir = new File("tmp");
+      if (!dir.exists) { 
+        dir.mkdir()
+      } else {
+        println("Directory exists")
+        for(file <- dir.listFiles()) {
+          println("Delete file")
+          file.delete()
+        }
+      }
+    } catch {
+      case x: FileNotFoundException =>
+      {
+        throw new FileNotFoundException("Exception: File missing")
+      }
+
+      case x: IOException   =>
+      {
+        throw new IOException("Input/output Exception")
+      }
+    }
+
+    // Original code for parsing through blocks
     if (n == 0) {
       return new Array[InternalRow](0)
     }
@@ -219,11 +304,23 @@ trait OpaqueOperatorExec extends SparkPlan {
       val res =
         sc.runJob(childRDD, (it: Iterator[Block]) => if (it.hasNext) Some(it.next()) else None, p)
 
+      var i = 0
       res.foreach {
-        case Some(block) =>
-          buf ++= Utils.decryptBlockFlatbuffers(block)
+        case Some(block) => {
+//          buf ++= Utils.decryptBlockFlatbuffers(block)
+          val f = "tmp/tmp_" + i.toString
+          Files.write(Paths.get(f), block.bytes)
+
+          // Increment i for next block
+          i += 1
+
+//          val test_write = "Enter executeCollect() 1"
+//          Files.write(Paths.get("tmp/test"), test_write.getBytes())
+        }
         case None =>
       }
+
+      
 
       partsScanned += p.size
     }
@@ -233,6 +330,8 @@ trait OpaqueOperatorExec extends SparkPlan {
     } else {
       buf.toArray
     }
+
+    sqlContext.sparkContext.emptyRDD.collect()
   }
 }
 
@@ -265,6 +364,7 @@ case class EncryptedFilterExec(condition: Expression, child: SparkPlan)
   override def output: Seq[Attribute] = child.output
 
   override def executeBlocked(): RDD[Block] = {
+
     val conditionSer = Utils.serializeFilterExpression(condition, child.output)
     val childRDD = child.asInstanceOf[OpaqueOperatorExec].executeBlocked()
     applyLoggingLevel(childRDD) { childRDD =>
