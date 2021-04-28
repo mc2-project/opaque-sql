@@ -18,23 +18,12 @@ void jni_throw(JNIEnv *env, const char *message) {
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Init(JNIEnv *env,
                                                                           jobject obj,
-                                                                          jbyteArray shared_key,
                                                                           jstring intel_cert) {
   (void)env;
   (void)obj;
 
-  jboolean if_copy = false;
-  jbyte *shared_key_bytes = env->GetByteArrayElements(shared_key, &if_copy);
-
   const char *intel_cert_str = env->GetStringUTFChars(intel_cert, nullptr);
 
-  try {
-    service_provider.set_shared_key(reinterpret_cast<uint8_t *>(shared_key_bytes));
-  } catch (const std::runtime_error &e) {
-    jni_throw(env, e.what());
-  }
-
-  env->ReleaseByteArrayElements(shared_key, shared_key_bytes, 0);
   env->ReleaseStringUTFChars(intel_cert, intel_cert_str);
 }
 

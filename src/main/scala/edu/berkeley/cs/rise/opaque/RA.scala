@@ -38,14 +38,10 @@ object RA extends Logging {
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
     val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
+
     val sp = new SP()
 
-    Utils.sharedKey match {
-      case Some(sharedKey) =>
-        sp.Init(sharedKey, intelCert)
-      case None =>
-        throw new OpaqueException("Cannot begin attestation without sharedKey.")
-    }
+    sp.Init(intelCert)
 
     val numAttested = Utils.numAttested
     // Runs on executors
@@ -107,7 +103,9 @@ object RA extends Logging {
       logInfo(
         s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
       )
+
       initRA(sc)
+      LA.initLA(sc)
     }
     Thread.sleep(100)
   }

@@ -249,12 +249,29 @@ object Utils extends Logging {
   final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
 
+  // We do not trust the driver. Encryption and decryption done in enclave only.
+  // Leaving here, because will eventually encrypt in enclaves
+
+//  def encrypt(data: Array[Byte]): Array[Byte] = {
+//    val (enclave, eid) = initEnclave()
+//    enclave.Encrypt(eid, data)    
+//  }
+
+//  def decrypt(data: Array[Byte]): Array[Byte] = {
+//    val (enclave, eid) = initEnclave()
+//    enclave.Decrypt(eid, data)    
+
   /**
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
    * attestation succeeds. For testing/benchmarking, we use a hardcoded key. For all other
    * cases, the driver SHOULD NOT be able to decrypt anything.
    */
-  var sharedKey: Option[Array[Byte]] = None
+  var sharedKey: Option[Array[Byte]] = Option(Array.fill[Byte](GCM_KEY_LENGTH)(0))
+
+  def setSharedKey(key: Array[Byte]): Unit = {
+    sharedKey = Option(key)
+    assert(key.size == GCM_KEY_LENGTH)
+  }
 
   def encrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
     case Some(sharedKey) =>
@@ -292,6 +309,7 @@ object Utils extends Logging {
   var loop: Boolean = true
 
   def initSQLContext(sqlContext: SQLContext): Unit = {
+
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
@@ -315,6 +333,7 @@ object Utils extends Logging {
     RA.waitForExecutors(sc)
     RA.attestEnclaves(sc)
     RA.startThread(sc)
+
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
@@ -370,6 +389,44 @@ object Utils extends Logging {
         attested = true
       }
       (eid, attested)
+    }
+  }
+
+  def getEvidence(): (Long, Option[Array[Byte]]) = {
+    this.synchronized {
+      // Only generate evidence if the enclave has already been started AND attested
+      if (eid != 0L && attested) {
+        val enclave = new SGXEnclave()
+        val msg1 = enclave.GetPublicKey(eid)
+        (eid, Option(msg1))
+      } else {
+        (eid, None)
+      }
+    }
+  }
+
+  def getListEncrypted(evidences: Array[Byte]): Array[Byte] = {
+    this.synchronized {
+      if (eid != 0L && attested) {
+        val enclave = new SGXEnclave()
+        enclave.GetListEncrypted(eid, evidences)
+      } else {
+        // Return empty array
+        Array[Byte]()
+      }
+    }
+  }
+
+  def finishSharedKey(msg3s: Map[Long, Array[Byte]]): Array[Byte] = {
+    this.synchronized {
+      val enclave = new SGXEnclave()
+      if (msg3s.contains(eid) && attested) {
+        val msg3 = msg3s(eid)
+        enclave.FinishSharedKey(eid, msg3s(eid))
+      } else {
+        // Return array of 0s
+        Array.fill[Byte](GCM_KEY_LENGTH)(0) 
+      }
     }
   }
 

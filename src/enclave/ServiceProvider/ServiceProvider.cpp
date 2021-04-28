@@ -115,10 +115,6 @@ void ServiceProvider::load_private_key(const std::string &filename) {
   EVP_PKEY_free(pkey);
 }
 
-void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
-  memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
-}
-
 void ServiceProvider::export_public_key_code(const std::string &filename) {
   std::ofstream file(filename.c_str());
 
@@ -238,6 +234,7 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
 
   EVP_PKEY *pkey = buffer_to_public_key((char *)report_msg->public_key, -1);

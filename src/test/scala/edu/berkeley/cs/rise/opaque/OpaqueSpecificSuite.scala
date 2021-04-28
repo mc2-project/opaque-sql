@@ -37,13 +37,6 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
     case 2 => "C"
   }
 
-  test("java encryption/decryption") {
-    val data = Array[Byte](0, 1, 2)
-    val (enclave, eid) = Utils.initEnclave()
-    assert(data === Utils.decrypt(Utils.encrypt(data)))
-    assert(data === Utils.decrypt(enclave.Encrypt(eid, data)))
-  }
-
   test("cache") {
     def numCached(ds: Dataset[_]): Int =
       ds.queryExecution.executedPlan.collect {
@@ -166,6 +159,8 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
     assert(e.getCause.isInstanceOf[OpaqueException])
   }
 
+  // Honestly, a little confused about this one. Works in manual shell but not build/sbt
+  // Needed to add enclave share key to Utils on workers.
   test("encrypted literal") {
     checkAnswer() { sl =>
       val input = 10
@@ -175,5 +170,14 @@ class OpaqueSpecificSuite extends OpaqueSuiteBase with SinglePartitionSparkSessi
       val words = makeDF(data, sl, "id", "word", "count")
       words.filter($"id" < decrypt(lit(enc_str), IntegerType)).sort($"id")
     }
+  }
+
+  test("java encryption/decryption") {
+    val data = Array[Byte](0, 1, 2)
+    assert(data === Utils.decrypt(Utils.encrypt(data)))
+
+    // Invalid test: enclave secret key should only be on trusted enclaves.
+//    val (enclave, eid) = Utils.initEnclave()
+//    assert(data === Utils.decrypt(enclave.Encrypt(eid, data)))
   }
 }

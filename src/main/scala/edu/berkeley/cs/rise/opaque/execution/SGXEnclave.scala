@@ -84,4 +84,9 @@ class SGXEnclave extends java.io.Serializable {
   // Remote attestation, enclave side
   @native def GenerateReport(eid: Long): Array[Byte]
   @native def FinishAttestation(eid: Long, attResultInput: Array[Byte]): Unit
+
+  // "Local attestation" to determine shared key, enclave side
+  @native def GetPublicKey(eid: Long): Array[Byte]
+  @native def GetListEncrypted(eid: Long, publicKeyList: Array[Byte]): Array[Byte]
+  @native def FinishSharedKey(eid: Long, encryptedKeyList: Array[Byte]): Array[Byte]
 }

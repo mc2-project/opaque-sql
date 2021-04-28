@@ -4,6 +4,7 @@ project(OpaqueEnclaveTrusted)
 
 set(SOURCES
   Aggregate.cpp
+  Attestation.cpp
   Crypto.cpp
   Enclave.cpp
   Filter.cpp
@@ -20,7 +21,8 @@ set(SOURCES
   Random.cpp
   util.cpp
   ../Common/mCrypto.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
+  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c
+  ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h)
 
 add_custom_command(
   COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
@@ -30,11 +32,22 @@ add_custom_command(
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
+# new key-gen attestation begin
+
+# Generate header with signer public key
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_pubkey.h
+  COMMAND $ENV{OPAQUE_HOME}/gen_pubkey_header.sh enclave_pubkey.h $ENV{OPAQUE_HOME}/public_key.pub
+)
+
+# new key-gen attestation end
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
+
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
 set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
 
@@ -56,7 +69,7 @@ target_link_libraries(enclave_trusted
                       openenclave::oecore)
 
 add_custom_command(
-  COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 
+  COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH}
   DEPENDS enclave_trusted ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed)
 

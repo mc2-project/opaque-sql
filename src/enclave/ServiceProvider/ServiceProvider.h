@@ -21,7 +21,7 @@ public:
    * the enclaves if attestation succeeds.
    */
   void set_shared_key(const uint8_t *shared_key);
-
+  
   /**
    * After calling load_private_key, write the corresponding public key as a C++
    * header file. This file should be compiled into the enclave.
@@ -42,6 +42,7 @@ private:
   lc_ec256_private_t sp_priv_key;
 
   uint8_t shared_key[LC_AESGCM_KEY_SIZE];
+
   std::string spid;
 
   std::unique_ptr<IAS_Connection> ias;

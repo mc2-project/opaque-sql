@@ -186,6 +186,7 @@ trait OpaqueOperatorExec extends SparkPlan {
     collectEncrypted().flatMap { block =>
       Utils.decryptBlockFlatbuffers(block)
     }
+//    collectEncrypted()
   }
 
   override def executeTake(n: Int): Array[InternalRow] = {

@@ -23,6 +23,10 @@ enclave {
       [user_check] uint8_t *plaintext, uint32_t length,
       [user_check] uint8_t *ciphertext, uint32_t cipher_length);
 
+    public void ecall_decrypt(
+      [user_check] uint8_t *ciphertext, uint32_t cipher_length,
+      [user_check] uint8_t *plaintext, uint32_t plaintext_length);
+
     public void ecall_sample(
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
@@ -90,6 +94,18 @@ enclave {
     public void ecall_finish_attestation(
       [in,size=msg4_size] uint8_t *msg4,
       uint32_t msg4_size);
+
+    public void ecall_get_public_key(
+      [out] uint8_t** msg1,
+      [out] size_t* msg1_size);
+
+    public void ecall_get_list_encrypted(
+      [user_check] uint8_t *pk_list, uint32_t length,
+      [user_check] uint8_t *sk_list, uint32_t cipher_length);
+
+    public void ecall_finish_shared_key(
+      [in,size=msg4_size] uint8_t *msg4, uint32_t msg4_size, 
+      [user_check] uint8_t *secret_key, uint32_t secret_length);
   };
 
   untrusted {
