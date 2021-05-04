@@ -64,9 +64,10 @@ char *base64_decode(const char *msg, size_t *sz) {
 
   BIO_push(b64, bmem);
 
-  *sz = BIO_read(b64, buf, (int)len);
-  if (*sz == -1)
+  int res = BIO_read(b64, buf, (int)len);
+  if (res == -1)
     return NULL;
+  *sz = res;
 
   BIO_free_all(bmem);
 

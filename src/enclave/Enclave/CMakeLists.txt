@@ -22,19 +22,11 @@ set(SOURCES
   ../Common/mCrypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
 
-add_custom_command(
-  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
-          --search-path ${CMAKE_SOURCE_DIR}/Enclave
-          --search-path ${OE_INCLUDEDIR}
-          --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
-  DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -nostdinc++")
+# Enclave code cannot use system STD libraries (contains unsupported operations), need to use OE's implementations
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
+target_compile_options(enclave_trusted PUBLIC ${COMMON_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector -nostdinc++)
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
 set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
 
@@ -54,6 +46,14 @@ target_link_libraries(enclave_trusted
                       openenclave::oelibc
                       openenclave::oelibcxx
                       openenclave::oecore)
+
+add_custom_command(
+  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+          --search-path ${CMAKE_SOURCE_DIR}/Enclave
+          --search-path ${OE_INCLUDEDIR}
+          --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
+  DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
 add_custom_command(
   COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 

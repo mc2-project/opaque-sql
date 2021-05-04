@@ -17,10 +17,8 @@ link_directories(${OE_LIBDIR}/openenclave/enclave)
 include_directories(${OE_INCLUDEDIR})
 include_directories(${OE_INCLUDEDIR}/openenclave/3rdparty)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
-
 add_library(ra_jni SHARED ${SOURCES})
+target_compile_options(ra_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
 
 if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(ra_jni PUBLIC -DSIMULATE)

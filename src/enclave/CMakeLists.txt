@@ -6,6 +6,8 @@ enable_language(ASM)
 option(FLATBUFFERS_LIB_DIR "Location of Flatbuffers library headers.")
 option(FLATBUFFERS_GEN_CPP_DIR "Location of Flatbuffers generated C++ files.")
 
+set(CMAKE_CXX_STANDARD 11)
+
 set(OE_MIN_VERSION 0.12.0)
 find_package(OpenEnclave ${OE_MIN_VERSION} CONFIG REQUIRED)
 
@@ -14,26 +16,21 @@ set(OE_CRYPTO_LIB
     CACHE STRING "Crypto library used by enclaves.")
 
 include_directories(App)
-include_directories(${CMAKE_BINARY_DIR}/App)
 include_directories(Include)
 include_directories(Common)
 include_directories(Enclave)
-include_directories(${CMAKE_BINARY_DIR}/Enclave)
 include_directories(ServiceProvider)
 include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+  set(EXEC_SIZE "")
 else()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
+  set(EXEC_SIZE "")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -DDEBUG -UNDEBUG -UEDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG -DEDEBUG -UDEBUG")
-set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} -O2 -DNDEBUG -DEDEBUG -UDEBUG -DPERF")
+set(COMMON_FLAGS ${EXEC_SIZE} -Wall -Wextra -Werror)
 
 add_custom_target(run ALL
     DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)

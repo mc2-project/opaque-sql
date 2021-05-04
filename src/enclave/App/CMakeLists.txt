@@ -14,10 +14,8 @@ add_custom_command(
   DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-attributes")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
-
 add_library(enclave_jni SHARED ${SOURCES})
+target_compile_options(enclave_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
 
 target_include_directories(enclave_jni PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
