@@ -16,7 +16,7 @@
 #include <openenclave/host.h>
 #include <openenclave/host_verify.h>
 
-#include "ServiceProvider.h"
+#include "service_provider.h"
 
 // Your 16-byte Service Provider ID (SPID), assigned by Intel.
 const uint8_t spid[] = {0xA4, 0x62, 0x09, 0x2E, 0x1B, 0x59, 0x26, 0xDF,

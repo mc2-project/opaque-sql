@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 project(OpaqueKeyGen)
 
 set(SOURCES
-    ServiceProvider.cpp
-    ServiceProviderJNI.cpp
+    service_provider.cpp
+    service_provider_jni.cpp
     agent_wget.cpp
     base64.c
     crypto.cpp

@@ -1,9 +1,9 @@
-#include "SP.h"
+#include "sp.h"
 
 #include <cstdint>
 #include <cstdio>
 
-#include "ServiceProvider.h"
+#include "service_provider.h"
 
 /**
  * Throw a Java exception with the specified message.
