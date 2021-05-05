@@ -4,7 +4,7 @@
 // Sample code reference:
 // https://github.com/openenclave/openenclave/blob/master/samples/remote_attestation/common/crypto.cpp
 
-#include "mCrypto.h"
+#include "m_crypto.h"
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <openenclave/enclave.h>

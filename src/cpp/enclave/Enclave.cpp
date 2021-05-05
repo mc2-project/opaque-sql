@@ -14,7 +14,7 @@
 #include "util.h"
 
 #include "../common/common.h"
-#include "../common/mCrypto.h"
+#include "../common/m_crypto.h"
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>

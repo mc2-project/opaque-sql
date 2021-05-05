@@ -19,7 +19,7 @@ set(SOURCES
   sgxaes_asm.S
   Random.cpp
   util.cpp
-  ../common/mCrypto.cpp
+  ../common/m_crypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c)
 
 # Enclave code cannot use system STD libraries (contains unsupported operations), need to use OE's implementations
