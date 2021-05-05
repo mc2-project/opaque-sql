@@ -22,7 +22,7 @@
  * Intel's suppliers or licensors in any way.
  */
 
-#include "SGXEnclave.h"
+#include "App.h"
 
 // MAX_PATH, getpwuid
 #include <sys/types.h>
