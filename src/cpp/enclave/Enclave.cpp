@@ -13,8 +13,8 @@
 #include "Sort.h"
 #include "util.h"
 
-#include "../Common/common.h"
-#include "../Common/mCrypto.h"
+#include "../common/common.h"
+#include "../common/mCrypto.h"
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>

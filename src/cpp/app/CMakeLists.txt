@@ -15,11 +15,11 @@ target_include_directories(enclave_jni PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(enclave_jni openenclave::oehost)
 
 add_custom_command(
-  COMMAND oeedger8r --untrusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
-          --search-path ${CMAKE_SOURCE_DIR}/Enclave
+  COMMAND oeedger8r --untrusted ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
+          --search-path ${CMAKE_SOURCE_DIR}/enclave
           --search-path ${OE_INCLUDEDIR}
           --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
-  DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+  DEPENDS ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
 install(TARGETS enclave_jni DESTINATION lib)

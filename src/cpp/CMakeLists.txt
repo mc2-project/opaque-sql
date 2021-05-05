@@ -15,10 +15,10 @@ set(OE_CRYPTO_LIB
     mbed
     CACHE STRING "Crypto library used by enclaves.")
 
-include_directories(App)
-include_directories(Common)
-include_directories(Enclave)
-include_directories(ServiceProvider)
+include_directories(app)
+include_directories(common)
+include_directories(enclave)
+include_directories(service_provider)
 include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
@@ -36,6 +36,6 @@ add_custom_command(
 add_custom_target(run ALL
     DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)
 
-add_subdirectory(App)
-add_subdirectory(Enclave)
-add_subdirectory(ServiceProvider)
+add_subdirectory(app)
+add_subdirectory(enclave)
+add_subdirectory(service_provider)

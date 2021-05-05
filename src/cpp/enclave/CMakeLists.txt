@@ -19,7 +19,7 @@ set(SOURCES
   sgxaes_asm.S
   Random.cpp
   util.cpp
-  ../Common/mCrypto.cpp
+  ../common/mCrypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
 
 # Enclave code cannot use system STD libraries (contains unsupported operations), need to use OE's implementations
@@ -51,11 +51,11 @@ target_link_libraries(enclave_trusted
                       openenclave::oecore)
 
 add_custom_command(
-  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
-          --search-path ${CMAKE_SOURCE_DIR}/Enclave
+  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
+          --search-path ${CMAKE_SOURCE_DIR}/enclave
           --search-path ${OE_INCLUDEDIR}
           --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
-  DEPENDS ${CMAKE_SOURCE_DIR}/Enclave/Enclave.edl
+  DEPENDS ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
 
 add_custom_command(
