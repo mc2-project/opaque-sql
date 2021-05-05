@@ -154,7 +154,7 @@ Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((sourceDirectory.value / "enclave") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+  ((sourceDirectory.value / "cpp") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
@@ -324,8 +324,8 @@ buildFlatbuffersTask := {
 
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
-  val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
-  val enclaveBuildDir = target.value / "enclave"
+  val enclaveSourceDir = baseDirectory.value / "src" / "cpp"
+  val enclaveBuildDir = target.value / "cpp"
   enclaveBuildDir.mkdirs()
   val cmakeResult =
     Process(

@@ -75,7 +75,7 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
       }
     }
 
-    switch(join_type) {
+    switch (join_type) {
     case tuix::JoinType_LeftOuter:
       if (!o_i_match) {
         // Values of inner (right) do not matter: they are all set to null
