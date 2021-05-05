@@ -24,13 +24,7 @@ include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(EXEC_SIZE "")
-else()
-  set(EXEC_SIZE "")
-endif()
-
-set(COMMON_FLAGS ${EXEC_SIZE} -Wall -Wextra -Werror)
+set(COMMON_FLAGS -Wall -Wextra -Werror)
 
 add_custom_target(run ALL
     DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)
