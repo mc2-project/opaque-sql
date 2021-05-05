@@ -12,6 +12,11 @@ set(SOURCES
     iasrequest.cpp
     sp_crypto.cpp)
 
+link_directories(${OE_LIBDIR})
+link_directories(${OE_LIBDIR}/openenclave/enclave)
+include_directories(${OE_INCLUDEDIR})
+include_directories(${OE_INCLUDEDIR}/openenclave/3rdparty)
+
 add_library(ra_jni SHARED ${SOURCES})
 target_compile_options(ra_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
 
