@@ -22,7 +22,7 @@
  * Intel's suppliers or licensors in any way.
  */
 
-#include "App.h"
+#include "app.h"
 
 // MAX_PATH, getpwuid
 #include <sys/types.h>
@@ -43,9 +43,9 @@
 #include <sys/time.h> // struct timeval
 #include <time.h>     // gettimeofday
 
-#include "Errlist.h"
 #include "common.h"
 #include "enclave_u.h"
+#include "errlist.h"
 
 #ifndef TRUE
 #define TRUE 1

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(OpaqueEnclaveJNI)
 
 set(SOURCES
-  App.cpp
+  app.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_u.c)
 
 add_library(enclave_jni SHARED ${SOURCES})
