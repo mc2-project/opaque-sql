@@ -43,9 +43,9 @@
 #include <sys/time.h> // struct timeval
 #include <time.h>     // gettimeofday
 
-#include "Enclave_u.h"
 #include "Errlist.h"
 #include "common.h"
+#include "enclave_u.h"
 
 #ifndef TRUE
 #define TRUE 1
@@ -196,7 +196,7 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",
-                    oe_create_Enclave_enclave(library_path_str, OE_ENCLAVE_TYPE_AUTO, flags,
+                    oe_create_enclave_enclave(library_path_str, OE_ENCLAVE_TYPE_AUTO, flags,
                                               nullptr, 0, &enclave));
   env->ReleaseStringUTFChars(library_path, library_path_str);
   long int enclavePtr = (long int)enclave;

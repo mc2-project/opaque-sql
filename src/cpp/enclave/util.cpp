@@ -3,7 +3,7 @@
 #include <climits>
 #include <cstdio>
 
-#include "Enclave_t.h"
+#include "enclave_t.h"
 
 int printf(const char *fmt, ...) {
   char buf[BUFSIZ] = {'\0'};

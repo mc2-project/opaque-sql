@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-/* Enclave.edl - Top EDL file. */
+/* enclave.edl - Top EDL file. */
 
 enclave {
 

@@ -10,8 +10,8 @@
 #include "operators_generated.h"
 
 #include "Crypto.h"
-#include "Enclave_t.h"
 #include "common.h"
+#include "enclave_t.h"
 #include "util.h"
 
 #ifndef FLATBUFFERS_H

@@ -20,7 +20,7 @@ set(SOURCES
   Random.cpp
   util.cpp
   ../common/mCrypto.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c)
+  ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c)
 
 # Enclave code cannot use system STD libraries (contains unsupported operations), need to use OE's implementations
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
@@ -33,7 +33,7 @@ set_target_properties(enclave_trusted PROPERTIES
                       ${ENCLAVE_LINK_FLAGS}
                       POSITION_INDEPENDENT_CODE OFF)
 
-# Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file Enclave_t.h
+# Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h
 target_include_directories(enclave_trusted 
                            PRIVATE 
                            ${CMAKE_CURRENT_BINARY_DIR} 
@@ -51,12 +51,12 @@ target_link_libraries(enclave_trusted
                       openenclave::oecore)
 
 add_custom_command(
-  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
+  COMMAND oeedger8r --trusted ${CMAKE_SOURCE_DIR}/enclave/enclave.edl
           --search-path ${CMAKE_SOURCE_DIR}/enclave
           --search-path ${OE_INCLUDEDIR}
           --search-path ${OE_INCLUDEDIR}/openenclave/edl/sgx
-  DEPENDS ${CMAKE_SOURCE_DIR}/enclave/Enclave.edl
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/Enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/Enclave_args.h)
+  DEPENDS ${CMAKE_SOURCE_DIR}/enclave/enclave.edl
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.h ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c ${CMAKE_CURRENT_BINARY_DIR}/enclave_args.h)
 
 add_custom_command(
   COMMAND openenclave::oesign sign -e $<TARGET_FILE:enclave_trusted> -c ${CMAKE_CURRENT_SOURCE_DIR}/Enclave.conf -k $ENV{PRIVATE_KEY_PATH} 

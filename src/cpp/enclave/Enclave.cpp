@@ -1,4 +1,4 @@
-#include "Enclave_t.h"
+#include "enclave_t.h"
 
 #include <cassert>
 #include <cstdint>
@@ -22,7 +22,7 @@
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 
-// This file contains definitions of the ecalls declared in Enclave.edl. Errors
+// This file contains definitions of the ecalls declared in enclave.edl. Errors
 // originating within these ecalls are signaled by throwing a
 // std::runtime_error, which is caught at the top level of the ecall (i.e.,
 // within these definitions), and are then rethrown as Java exceptions using
