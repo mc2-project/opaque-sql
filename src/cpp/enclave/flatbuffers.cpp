@@ -1,6 +1,6 @@
 // -*- c-basic-offset: 2 -*-
 
-#include "Flatbuffers.h"
+#include "flatbuffers.h"
 
 std::string to_string(const tuix::Row *row) {
   std::string s;

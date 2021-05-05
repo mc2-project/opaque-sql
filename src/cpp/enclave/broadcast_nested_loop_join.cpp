@@ -1,9 +1,9 @@
-#include "BroadcastNestedLoopJoin.h"
+#include "broadcast_nested_loop_join.h"
 
-#include "ExpressionEvaluation.h"
-#include "FlatbuffersReaders.h"
-#include "FlatbuffersWriters.h"
 #include "common.h"
+#include "expression_evaluation.h"
+#include "flatbuffers_readers.h"
+#include "flatbuffers_writers.h"
 
 /** C++ implementation of a broadcast nested loop join.
  * Assumes outer_rows is streamed and inner_rows is broadcast.

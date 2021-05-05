@@ -3,21 +3,21 @@ cmake_minimum_required(VERSION 3.13)
 project(OpaqueEnclaveTrusted)
 
 set(SOURCES
-  Aggregate.cpp
-  Crypto.cpp
-  Enclave.cpp
-  Filter.cpp
-  Flatbuffers.cpp
-  FlatbuffersReaders.cpp
-  FlatbuffersWriters.cpp
-  NonObliviousSortMergeJoin.cpp
-  BroadcastNestedLoopJoin.cpp
-  Limit.cpp
-  Project.cpp
-  Sort.cpp
+  aggregate.cpp
+  ks_crypto.cpp
+  enclave.cpp
+  filter.cpp
+  flatbuffers.cpp
+  flatbuffers_readers.cpp
+  flatbuffers_writers.cpp
+  non_oblivious_sort_merge_join.cpp
+  broadcast_nested_loop_join.cpp
+  limit.cpp
+  project.cpp
+  sort.cpp
   sgxaes.cpp
   sgxaes_asm.S
-  Random.cpp
+  random.cpp
   util.cpp
   m_crypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c)

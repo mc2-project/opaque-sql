@@ -1,12 +1,12 @@
-#include "Sort.h"
-#include "Random.h"
+#include "sort.h"
+#include "random.h"
 
 #include <algorithm>
 #include <queue>
 
-#include "ExpressionEvaluation.h"
-#include "FlatbuffersReaders.h"
-#include "FlatbuffersWriters.h"
+#include "expression_evaluation.h"
+#include "flatbuffers_readers.h"
+#include "flatbuffers_writers.h"
 
 class MergeItem {
 public:

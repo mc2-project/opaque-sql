@@ -1,9 +1,9 @@
-#include "Aggregate.h"
+#include "aggregate.h"
 
-#include "ExpressionEvaluation.h"
-#include "FlatbuffersReaders.h"
-#include "FlatbuffersWriters.h"
 #include "common.h"
+#include "expression_evaluation.h"
+#include "flatbuffers_readers.h"
+#include "flatbuffers_writers.h"
 
 void non_oblivious_aggregate(uint8_t *agg_op, size_t agg_op_length, uint8_t *input_rows,
                              size_t input_rows_length, uint8_t **output_rows,

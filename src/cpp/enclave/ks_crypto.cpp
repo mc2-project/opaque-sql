@@ -1,8 +1,8 @@
 #include <stdexcept>
 
-#include "Crypto.h"
-#include "Random.h"
 #include "common.h"
+#include "ks_crypto.h"
+#include "random.h"
 #include "util.h"
 
 /**

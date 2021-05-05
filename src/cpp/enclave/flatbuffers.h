@@ -9,9 +9,9 @@
 #include "Rows_generated.h"
 #include "operators_generated.h"
 
-#include "Crypto.h"
 #include "common.h"
 #include "enclave_t.h"
+#include "ks_crypto.h"
 #include "util.h"
 
 #ifndef FLATBUFFERS_H

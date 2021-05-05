@@ -1,9 +1,9 @@
-#include "Filter.h"
+#include "filter.h"
 
-#include "ExpressionEvaluation.h"
-#include "FlatbuffersReaders.h"
-#include "FlatbuffersWriters.h"
 #include "common.h"
+#include "expression_evaluation.h"
+#include "flatbuffers_readers.h"
+#include "flatbuffers_writers.h"
 
 using namespace edu::berkeley::cs::rise::opaque;
 

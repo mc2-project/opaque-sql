@@ -1,9 +1,9 @@
-#include "Project.h"
+#include "project.h"
 
-#include "ExpressionEvaluation.h"
-#include "FlatbuffersReaders.h"
-#include "FlatbuffersWriters.h"
 #include "common.h"
+#include "expression_evaluation.h"
+#include "flatbuffers_readers.h"
+#include "flatbuffers_writers.h"
 
 void project(uint8_t *project_list, size_t project_list_length, uint8_t *input_rows,
              size_t input_rows_length, uint8_t **output_rows, size_t *output_rows_length) {

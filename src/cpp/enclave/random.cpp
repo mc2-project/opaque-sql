@@ -1,4 +1,4 @@
-#include "Random.h"
+#include "random.h"
 #include "common.h"
 #include "util.h"
 

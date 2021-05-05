@@ -3,14 +3,14 @@
 #include <cassert>
 #include <cstdint>
 
-#include "Aggregate.h"
-#include "BroadcastNestedLoopJoin.h"
-#include "Crypto.h"
-#include "Filter.h"
-#include "Limit.h"
-#include "NonObliviousSortMergeJoin.h"
-#include "Project.h"
-#include "Sort.h"
+#include "aggregate.h"
+#include "broadcast_nested_loop_join.h"
+#include "filter.h"
+#include "ks_crypto.h"
+#include "limit.h"
+#include "non_oblivious_sort_merge_join.h"
+#include "project.h"
+#include "sort.h"
 #include "util.h"
 
 #include "../common/common.h"
