@@ -4,7 +4,7 @@
 Contributing
 ************
 
-Opaque uses a pre-commit hook to ensure that all commits are formatted to the desired style. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):
+Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):
 
 #. Fork the repository on Github, then clone your fork and set upstream:
 
@@ -14,7 +14,7 @@ Opaque uses a pre-commit hook to ensure that all commits are formatted to the de
                 cd opaque
                 git remote add upstream https://github.com/mc2-project/opaque.git
 
-#. Install hook dependencies:
+#. Install dependencies:
 
    .. code-block:: bash
                
@@ -33,8 +33,14 @@ Opaque uses a pre-commit hook to ensure that all commits are formatted to the de
                 sudo apt -y install npm
                 sudo npm install -g clang-format
 
-#. Install hook dependencies:
+#. Install a Git pre-commit hook:
 
    .. code-block:: bash
                
-                .hooks/install-pre-commit
+                ./${OPAQUE_HOME}/hooks/install-pre-commit
+
+   Alternatively, you can just run the following file right before submitting a PR to create a new commit with linting changes:
+
+   .. code-block:: bash
+
+                ./${OPAQUE_HOME}/format.sh
