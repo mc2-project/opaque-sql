@@ -16,7 +16,6 @@ set(OE_CRYPTO_LIB
     CACHE STRING "Crypto library used by enclaves.")
 
 include_directories(App)
-include_directories(Include)
 include_directories(Common)
 include_directories(Enclave)
 include_directories(ServiceProvider)
@@ -26,12 +25,16 @@ include_directories(${OE_INCLUDEDIR})
 
 set(COMMON_FLAGS -Wall -Wextra -Werror)
 
-add_custom_target(run ALL
-    DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)
+if ("$ENV{MODE}" STREQUAL "SIMULATE")
+  add_compile_definitions(SIMULATE)
+endif()
 
 add_custom_command(
   COMMAND openssl rsa -in $ENV{PRIVATE_KEY_PATH} -pubout -out $ENV{OPAQUE_HOME}/public_key.pub
   OUTPUT $ENV{OPAQUE_HOME}/public_key.pub)
+
+add_custom_target(run ALL
+    DEPENDS $ENV{OPAQUE_HOME}/public_key.pub)
 
 add_subdirectory(App)
 add_subdirectory(Enclave)

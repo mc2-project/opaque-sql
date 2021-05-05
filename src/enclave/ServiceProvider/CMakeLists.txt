@@ -3,21 +3,17 @@ cmake_minimum_required(VERSION 3.13)
 project(OpaqueKeyGen)
 
 set(SOURCES
-  ServiceProvider.cpp
-  ServiceProviderJNI.cpp
-  agent_wget.cpp
-  base64.c
-  crypto.cpp
-  ecp.cpp
-  iasrequest.cpp
-  sp_crypto.cpp)
+    ServiceProvider.cpp
+    ServiceProviderJNI.cpp
+    agent_wget.cpp
+    base64.c
+    crypto.cpp
+    ecp.cpp
+    iasrequest.cpp
+    sp_crypto.cpp)
 
 add_library(ra_jni SHARED ${SOURCES})
 target_compile_options(ra_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
-
-if ("$ENV{MODE}" STREQUAL "SIMULATE")
-  target_compile_definitions(ra_jni PUBLIC -DSIMULATE)
-endif()
 
 find_library(CRYPTO_LIB crypto)
 find_library(SSL_LIB ssl)

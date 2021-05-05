@@ -6,15 +6,11 @@ set(SOURCES
   App.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Enclave_u.c)
 
-
 add_library(enclave_jni SHARED ${SOURCES})
 target_compile_options(enclave_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
 
+# Need for the generated file Enclave_t.h
 target_include_directories(enclave_jni PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-
-if ("$ENV{MODE}" STREQUAL "SIMULATE")
-  target_compile_definitions(enclave_jni PUBLIC -DSIMULATE)
-endif()
 
 target_link_libraries(enclave_jni openenclave::oehost)
 

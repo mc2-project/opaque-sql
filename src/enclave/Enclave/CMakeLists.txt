@@ -30,14 +30,13 @@ target_compile_options(enclave_trusted PUBLIC ${COMMON_FLAGS} -nostdinc -fvisibi
 set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
 set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
 
-if ("$ENV{MODE}" STREQUAL "SIMULATE")
-  target_compile_definitions(enclave_trusted PUBLIC -DSIMULATE)
-endif()
-
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 
-# Need for the generated file Enclave_t.h
-target_include_directories(enclave_trusted PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${OE_INCLUDEDIR}/openenclave/3rdparty)
+# Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file Enclave_t.h
+target_include_directories(enclave_trusted 
+                           PRIVATE 
+                           ${CMAKE_CURRENT_BINARY_DIR} 
+                           ${OE_INCLUDEDIR}/openenclave/3rdparty)
 
 link_directories(${OE_LIBDIR} ${OE_LIBDIR}/openenclave/enclave)
 target_link_libraries(enclave_trusted
@@ -65,6 +64,7 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/enclave_trusted.signed
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so
 )
+
 add_custom_target(enclave_trusted_signed_target ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libenclave_trusted_signed.so DESTINATION lib)
