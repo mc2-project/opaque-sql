@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.13)
 
 project(OpaqueEnclaveTrusted)
 
@@ -27,10 +27,11 @@ set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfile
 
 add_library(enclave_trusted SHARED ${SOURCES})
 target_compile_options(enclave_trusted PUBLIC ${COMMON_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector -nostdinc++)
-set_property(TARGET enclave_trusted PROPERTY POSITION_INDEPENDENT_CODE OFF)
-set_target_properties(enclave_trusted PROPERTIES LINK_FLAGS ${ENCLAVE_LINK_FLAGS})
-
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
+set_target_properties(enclave_trusted PROPERTIES
+                      LINK_FLAGS
+                      ${ENCLAVE_LINK_FLAGS}
+                      POSITION_INDEPENDENT_CODE OFF)
 
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file Enclave_t.h
 target_include_directories(enclave_trusted 
@@ -38,7 +39,10 @@ target_include_directories(enclave_trusted
                            ${CMAKE_CURRENT_BINARY_DIR} 
                            ${OE_INCLUDEDIR}/openenclave/3rdparty)
 
-link_directories(${OE_LIBDIR} ${OE_LIBDIR}/openenclave/enclave)
+target_link_directories(enclave_trusted PRIVATE
+                        ${OE_LIBDIR}
+                        ${OE_LIBDIR}/openenclave/enclave)
+
 target_link_libraries(enclave_trusted
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}
