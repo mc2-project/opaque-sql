@@ -1,9 +1,9 @@
 #include "non_oblivious_sort_merge_join.h"
 
 #include "common.h"
-#include "expression_evaluation.h"
-#include "flatbuffers_readers.h"
-#include "flatbuffers_writers.h"
+#include "flatbuffer_helpers/expression_evaluation.h"
+#include "flatbuffer_helpers/flatbuffers_readers.h"
+#include "flatbuffer_helpers/flatbuffers_writers.h"
 
 /**
  * C++ implementation of a non-oblivious sort merge join.

@@ -3,23 +3,23 @@ cmake_minimum_required(VERSION 3.13)
 project(OpaqueEnclaveTrusted)
 
 set(SOURCES
-  aggregate.cpp
-  ks_crypto.cpp
+  crypto/ks_crypto.cpp
+  crypto/m_crypto.cpp
+  crypto/random.cpp
+  crypto/sgxaes.cpp
+  crypto/sgxaes_asm.S
+  physical_operators/aggregate.cpp
+  physical_operators/broadcast_nested_loop_join.cpp
+  physical_operators/filter.cpp
+  physical_operators/limit.cpp
+  physical_operators/non_oblivious_sort_merge_join.cpp
+  physical_operators/project.cpp
+  physical_operators/sort.cpp
+  flatbuffer_helpers/flatbuffers.cpp
+  flatbuffer_helpers/flatbuffers_readers.cpp
+  flatbuffer_helpers/flatbuffers_writers.cpp
   enclave.cpp
-  filter.cpp
-  flatbuffers.cpp
-  flatbuffers_readers.cpp
-  flatbuffers_writers.cpp
-  non_oblivious_sort_merge_join.cpp
-  broadcast_nested_loop_join.cpp
-  limit.cpp
-  project.cpp
-  sort.cpp
-  sgxaes.cpp
-  sgxaes_asm.S
-  random.cpp
   util.cpp
-  m_crypto.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c)
 
 # Enclave code cannot use system STD libraries (contains unsupported operations), need to use OE's implementations

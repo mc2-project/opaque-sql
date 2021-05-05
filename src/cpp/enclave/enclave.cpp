@@ -3,18 +3,18 @@
 #include <cassert>
 #include <cstdint>
 
-#include "aggregate.h"
-#include "broadcast_nested_loop_join.h"
-#include "filter.h"
-#include "ks_crypto.h"
-#include "limit.h"
-#include "non_oblivious_sort_merge_join.h"
-#include "project.h"
-#include "sort.h"
+#include "crypto/ks_crypto.h"
+#include "crypto/m_crypto.h"
+#include "physical_operators/aggregate.h"
+#include "physical_operators/broadcast_nested_loop_join.h"
+#include "physical_operators/filter.h"
+#include "physical_operators/limit.h"
+#include "physical_operators/non_oblivious_sort_merge_join.h"
+#include "physical_operators/project.h"
+#include "physical_operators/sort.h"
 #include "util.h"
 
 #include "../common/common.h"
-#include "m_crypto.h"
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
