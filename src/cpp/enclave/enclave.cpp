@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 
+#include "common.h"
 #include "crypto/ks_crypto.h"
 #include "crypto/m_crypto.h"
 #include "physical_operators/aggregate.h"
@@ -14,7 +15,6 @@
 #include "physical_operators/sort.h"
 #include "util.h"
 
-#include "../common/common.h"
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>

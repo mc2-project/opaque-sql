@@ -8,6 +8,9 @@ set(SOURCES
   crypto/random.cpp
   crypto/sgxaes.cpp
   crypto/sgxaes_asm.S
+  flatbuffer_helpers/flatbuffers.cpp
+  flatbuffer_helpers/flatbuffers_readers.cpp
+  flatbuffer_helpers/flatbuffers_writers.cpp
   physical_operators/aggregate.cpp
   physical_operators/broadcast_nested_loop_join.cpp
   physical_operators/filter.cpp
@@ -15,9 +18,6 @@ set(SOURCES
   physical_operators/non_oblivious_sort_merge_join.cpp
   physical_operators/project.cpp
   physical_operators/sort.cpp
-  flatbuffer_helpers/flatbuffers.cpp
-  flatbuffer_helpers/flatbuffers_readers.cpp
-  flatbuffer_helpers/flatbuffers_writers.cpp
   enclave.cpp
   util.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_t.c)
@@ -26,7 +26,7 @@ set(SOURCES
 set(ENCLAVE_LINK_FLAGS "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0")
 
 add_library(enclave_trusted SHARED ${SOURCES})
-target_compile_options(enclave_trusted PUBLIC ${COMMON_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector -nostdinc++)
+target_compile_options(enclave_trusted PRIVATE ${COMMON_COMPILE_FLAGS} -nostdinc -fvisibility=hidden -fpie -fstack-protector -nostdinc++)
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 set_target_properties(enclave_trusted PROPERTIES
                       LINK_FLAGS

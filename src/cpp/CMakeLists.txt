@@ -23,7 +23,7 @@ include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
 
-set(COMMON_FLAGS -Wall -Wextra -Werror)
+set(COMMON_COMPILE_FLAGS -Wall -Wextra -Werror)
 
 if ("$ENV{MODE}" STREQUAL "SIMULATE")
   add_compile_definitions(SIMULATE)

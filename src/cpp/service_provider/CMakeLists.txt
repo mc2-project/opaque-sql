@@ -18,7 +18,7 @@ include_directories(${OE_INCLUDEDIR})
 include_directories(${OE_INCLUDEDIR}/openenclave/3rdparty)
 
 add_library(ra_jni SHARED ${SOURCES})
-target_compile_options(ra_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
+target_compile_options(ra_jni PRIVATE ${COMMON_COMPILE_FLAGS} -fPIC -Wno-attributes)
 
 find_library(CRYPTO_LIB crypto)
 find_library(SSL_LIB ssl)

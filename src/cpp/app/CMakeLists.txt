@@ -7,7 +7,7 @@ set(SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/enclave_u.c)
 
 add_library(enclave_jni SHARED ${SOURCES})
-target_compile_options(enclave_jni PUBLIC ${COMMON_FLAGS} -fPIC -Wno-attributes)
+target_compile_options(enclave_jni PRIVATE ${COMMON_COMPILE_FLAGS} -fPIC -Wno-attributes)
 
 # Need for the generated file Enclave_t.h
 target_include_directories(enclave_jni PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
