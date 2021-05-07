@@ -2,10 +2,10 @@
 <html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Installation" href="../install/install.html" />
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the MC2 Client" href="client.html" /><link rel="prev" title="Installation" href="../install/install.html" />
 
     <meta name="generator" content="sphinx-3.5.4, furo 2021.04.11.beta34"/>
-        <title>Using Opaque SQL - Opaque SQL documentation</title>
+        <title>Query submission via the Spark Driver - Opaque SQL documentation</title>
       <link rel="stylesheet" href="../_static/styles/furo.css?digest=59ab60ac09ea94ccfe6deddff6d715cce948a6fc">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
@@ -116,7 +116,8 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../install/install.html">Installation</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Using Opaque SQL</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Query submission via the Spark Driver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="client.html">Query submission via the MC<sup>2</sup> Client</a></li>
 <li class="toctree-l1"><a class="reference internal" href="functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
@@ -133,21 +134,14 @@
         <label class="toc-overlay-icon toc-content-icon" for="__toc">
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
-        <div class="section" id="using-opaque-sql">
-<h1>Using Opaque SQL<a class="headerlink" href="#using-opaque-sql" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="setup">
-<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
-<p>Opaque SQL needs three Spark properties to be set:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">spark.executor.instances</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">spark.task.maxFailures</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">spark.driver.defaultJavaOptions="-Dscala.color"</span></code> (if running the gRPC listener)</p></li>
-</ul>
-<p>These properties can be be set in a custom configuration file, the default being located at <code class="docutils literal notranslate"><span class="pre">${SPARK_HOME}/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal notranslate"><span class="pre">spark-submit</span></code> or <code class="docutils literal notranslate"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal notranslate"><span class="pre">--conf</span> <span class="pre">&lt;key&gt;=&lt;value&gt;</span></code>.</p>
+        <div class="section" id="query-submission-via-the-spark-driver">
+<h1>Query submission via the Spark Driver<a class="headerlink" href="#query-submission-via-the-spark-driver" title="Permalink to this headline">¶</a></h1>
+<div class="figure align-center" id="id1" style="width: 100%">
+<img alt="https://mc2-project.github.io/opaque/opaque-diagram.svg" src="https://mc2-project.github.io/opaque/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in trusted driver mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
-<div class="section" id="running-opaque-sql">
-<h2>Running Opaque SQL<a class="headerlink" href="#running-opaque-sql" title="Permalink to this headline">¶</a></h2>
-<p>Once setup is finished, there are multiple ways to run Opaque depending on the intended functionality.</p>
+<div class="section" id="starting-opaque-sql">
+<h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
+<p>This page goes through running Opaque SQL with the Spark driver located on the client. An implication of this is that the driver is considered a <em>trusted</em> entity.</p>
 <div class="section" id="running-the-interactive-shell">
 <h3>Running the interactive shell<a class="headerlink" href="#running-the-interactive-shell" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
@@ -167,54 +161,32 @@ build/sbt package
   --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
 </pre></div>
 </div>
-<p>(we need to specify <cite>–py-files</cite> is because the Opaque Python functions are placed in the .jar for easier packaging)</p>
+<p>(we need to specify <cite>–py-files</cite> because the Python functions are placed in the .jar for easier packaging)</p>
 </li>
-<li><p>Inside the Spark shell, import Opaque’s DataFrame methods and install Opaque’s query planner rules.</p>
+<li><p>Alternatively, you can also run queries in Scala locally using <code class="docutils literal notranslate"><span class="pre">sbt</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt console
+</pre></div>
+</div>
+</li>
+<li><p>Inside the Spark shell, import Opaque SQL’s <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> methods and its query planning rules.</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">edu.berkeley.cs.rise.opaque.implicits._</span>
-<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initSQLContext</span><span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initOpaqueSQL</span><span class="o">(</span><span class="n">spark</span><span class="o">)</span>
 </pre></div>
 </div>
 <p>Python:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opaque_sql</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="n">init_sql_context</span><span class="p">()</span>
-</pre></div>
-</div>
-</li>
-<li><p>Alternatively, you can also run queries in Scala locally.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-<span class="nv">JVM_OPTS</span><span class="o">=</span><span class="s2">"-Xmx4G"</span><span class="p">;</span> build/sbt console
+<span class="n">init_opaque_sql</span><span class="p">()</span>
 </pre></div>
 </div>
 </li>
 </ol>
-</div>
-<div class="section" id="starting-the-grpc-listener">
-<h3>Starting the gRPC Listener<a class="headerlink" href="#starting-the-grpc-listener" title="Permalink to this headline">¶</a></h3>
-<ol class="arabic">
-<li><p>To run locally for easy testing/functionality:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt run
-</pre></div>
-</div>
-</li>
-<li><p>To launch the listener on a standalone Spark cluster:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
-
-spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
-   &lt;Spark configuration parameters&gt; <span class="se">\</span>
-   --deploy-mode client <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
-</pre></div>
-</div>
-</li>
-</ol>
-<p>Both of these methods then allow you to use the MC2-Client to submit queries to Opaque SQL remotely!</p>
 </div>
 </div>
 <div class="section" id="encrypting-saving-and-loading-a-dataframe">
 <h2>Encrypting, saving, and loading a DataFrame<a class="headerlink" href="#encrypting-saving-and-loading-a-dataframe" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
-<li><p>Create an unencrypted DataFrame on the driver.
-This should be done on the client, i.e., in a trusted setting.</p>
+<li><p>Create an unencrypted DataFrame.</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">data</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="s">"foo"</span><span class="o">,</span> <span class="mi">4</span><span class="o">),</span> <span class="o">(</span><span class="s">"bar"</span><span class="o">,</span> <span class="mi">1</span><span class="o">),</span> <span class="o">(</span><span class="s">"baz"</span><span class="o">,</span> <span class="mi">5</span><span class="o">))</span>
 <span class="k">val</span> <span class="n">df</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="o">(</span><span class="n">data</span><span class="o">).</span><span class="n">toDF</span><span class="o">(</span><span class="s">"word"</span><span class="o">,</span> <span class="s">"count"</span><span class="o">)</span>
@@ -226,8 +198,7 @@ This should be done on the client, i.e., in a trusted setting.</p>
 </pre></div>
 </div>
 </li>
-<li><p>Create an encrypted DataFrame from the unencrypted version.
-This is as easy as calling <code class="docutils literal notranslate"><span class="pre">.encrypted</span></code>.</p>
+<li><p>Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling <code class="docutils literal notranslate"><span class="pre">.encrypted</span></code>.</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">encrypted</span>
 </pre></div>
@@ -269,8 +240,7 @@ The encrypted data can also be uploaded to cloud storage for easy access.</p>
 </pre></div>
 </div>
 </li>
-<li><p>Given an encrypted DataFrame <code class="docutils literal notranslate"><span class="pre">dfEncrypted</span></code>, construct a new query.
-Users can use <code class="docutils literal notranslate"><span class="pre">explain</span></code> to see the generated query plan.</p>
+<li><p>Given an encrypted DataFrame , construct a new query. Users can use <code class="docutils literal notranslate"><span class="pre">explain</span></code> to see the generated query plan.</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">"count"</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">))</span>
 <span class="n">result</span><span class="o">.</span><span class="n">explain</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
@@ -288,7 +258,7 @@ Users can use <code class="docutils literal notranslate"><span class="pre">expla
 </div>
 </li>
 </ol>
-<p>Call <code class="docutils literal notranslate"><span class="pre">.collect</span></code> or <code class="docutils literal notranslate"><span class="pre">.show</span></code> to retreive the results. The final result will be decrypted on the driver.</p>
+<p>Call <code class="docutils literal notranslate"><span class="pre">.collect</span></code> or <code class="docutils literal notranslate"><span class="pre">.show</span></code> to retreive and automatically decrypt the results.</p>
 </div>
 <div class="section" id="using-the-sql-interface">
 <h2>Using the SQL interface<a class="headerlink" href="#using-the-sql-interface" title="Permalink to this headline">¶</a></h2>
@@ -319,12 +289,12 @@ Users can use <code class="docutils literal notranslate"><span class="pre">expla
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="functionality.html">
+          <a class="next-page" href="client.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Supported functionalities</div>
+                <div class="title">Query submission via the MC<sup>2</sup> Client</div>
               </div>
               <svg><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -369,11 +339,9 @@ Users can use <code class="docutils literal notranslate"><span class="pre">expla
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Using Opaque SQL</a><ul>
-<li><a class="reference internal" href="#setup">Setup</a></li>
-<li><a class="reference internal" href="#running-opaque-sql">Running Opaque SQL</a><ul>
+<li><a class="reference internal" href="#">Query submission via the Spark Driver</a><ul>
+<li><a class="reference internal" href="#starting-opaque-sql">Starting Opaque SQL</a><ul>
 <li><a class="reference internal" href="#running-the-interactive-shell">Running the interactive shell</a></li>
-<li><a class="reference internal" href="#starting-the-grpc-listener">Starting the gRPC Listener</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#encrypting-saving-and-loading-a-dataframe">Encrypting, saving, and loading a DataFrame</a></li>

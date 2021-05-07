@@ -2,10 +2,10 @@
 <html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="Benchmarking" href="../benchmarking/benchmarking.html" />
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Query submission via the Spark Driver" href="usage.html" />
 
     <meta name="generator" content="sphinx-3.5.4, furo 2021.04.11.beta34"/>
-        <title>Contributing - Opaque SQL documentation</title>
+        <title>Query submission via the MC2 Client - Opaque SQL documentation</title>
       <link rel="stylesheet" href="../_static/styles/furo.css?digest=59ab60ac09ea94ccfe6deddff6d715cce948a6fc">
     <link rel="stylesheet" href="../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css">
@@ -95,7 +95,7 @@
       <a href="../index.html"><div class="brand">Opaque SQL  documentation</div></a>
     </div>
     <div class="header-right">
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
     </div>
@@ -116,11 +116,11 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../install/install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../usage/usage.html">Query submission via the Spark Driver</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../usage/client.html">Query submission via the MC<sup>2</sup> Client</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../usage/functionality.html">Supported functionalities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Query submission via the Spark Driver</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Query submission via the MC<sup>2</sup> Client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
 </ul>
 
 </div></div>
@@ -131,63 +131,65 @@
   <main class="main">
     <div class="content">
       <article role="main">
-        <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+        <label class="toc-overlay-icon toc-content-icon" for="__toc">
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
-        <div class="section" id="contributing">
-<span id="id1"></span><h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
-<p>Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):</p>
+        <div class="section" id="query-submission-via-the-mc2-client">
+<h1>Query submission via the MC<sup>2</sup> Client<a class="headerlink" href="#query-submission-via-the-mc2-client" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="starting-opaque-sql">
+<h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
+<p>Here we outline how to use <a class="reference external" href="https://github.com/mc2-project/mc2">the client</a> to submit queries. This is an alternative way to run Opaque SQL that integrates well with the rest of the MC<sup>2</sup> projects, such as <a class="reference external" href="https://github.com/mc2-project/secure-xgboost">Secure XGBoost</a>.</p>
+<p>Note that the driver still must be located on <em>trusted</em> hardware for the complete security guarantees provided by the MC<sup>2</sup> platform.</p>
+<div class="section" id="starting-the-grpc-listener">
+<h3>Starting the gRPC Listener<a class="headerlink" href="#starting-the-grpc-listener" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
-<li><p>Fork the repository on Github, then clone your fork and set upstream:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/&lt;your username&gt;/opaque.git
-<span class="nb">cd</span> opaque
-git remote add upstream https://github.com/mc2-project/opaque.git
+<li><p>To run the listener locally using <code class="docutils literal notranslate"><span class="pre">sbt</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt run
 </pre></div>
 </div>
 </li>
-<li><p>Install dependencies:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Coursier and scalafmt</span>
-curl -fLo cs https://git.io/coursier-cli-<span class="s2">"</span><span class="k">$(</span>uname <span class="p">|</span> tr LD ld<span class="k">)</span><span class="s2">"</span>
-chmod +x cs
-./cs install cs
-<span class="nb">echo</span> <span class="s2">""</span> &gt;&gt; ~/.bashrc
-<span class="nb">echo</span> <span class="s2">"export PATH=</span><span class="nv">$PATH</span><span class="s2">:~/.local/share/coursier/bin"</span> &gt;&gt; ~/.bashrc
-<span class="nb">source</span> ~/.bashrc
-rm cs
-cs install scalafmt
+<li><p>To launch the listener on a standalone Spark cluster:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
 
-<span class="c1"># npm and clang-format</span>
-sudo apt -y update
-sudo apt -y install npm
-sudo npm install -g clang-format
-</pre></div>
-</div>
-</li>
-<li><p>Install a Git pre-commit hook:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./<span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/hooks/install-pre-commit
-</pre></div>
-</div>
-<p>Alternatively, you can just run the following file right before submitting a PR to create a new commit with linting changes:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./<span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/format.sh
+spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
+   &lt;Spark configuration parameters&gt; <span class="se">\</span>
+   --deploy-mode client <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
 </pre></div>
 </div>
 </li>
 </ol>
+<p>Both of these methods start a listener on port 50051 that allows you to use the MC<sup>2</sup> Client to submit queries to Opaque SQL remotely.</p>
+</div>
+</div>
+<div class="section" id="using-the-mc2-client">
+<h2>Using the MC<sup>2</sup> Client<a class="headerlink" href="#using-the-mc2-client" title="Permalink to this headline">¶</a></h2>
+<p>MC<sup>2</sup> Client is a Python package that provides an integrated channel for communicating with other MC<sup>2</sup> compute services.</p>
+<p><a class="reference external" href="https://github.com/mc2-project/mc2">Source Code</a></p>
+<p><a class="reference external" href="https://mc2-project.github.io/mc2/index.html">Documentation</a></p>
+</div>
 </div>
 
       </article>
       <footer>
         
         <div class="related-pages">
-          
-          <a class="prev-page" href="../benchmarking/benchmarking.html">
+          <a class="next-page" href="functionality.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Supported functionalities</div>
+              </div>
+              <svg><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="usage.html">
               <svg><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Benchmarking</div>
+                <div class="title">Query submission via the Spark Driver</div>
                 
               </div>
             </a>
@@ -201,7 +203,7 @@ sudo npm install -g clang-format
               <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
               <a href="https://github.com/pradyunsg/furo">Furo theme</a>.
             |
-            <a class="muted-link" href="../_sources/contributing/contributing.rst.txt"
+            <a class="muted-link" href="../_sources/usage/client.rst.txt"
                rel="nofollow">
               Show Source
             </a>
@@ -209,8 +211,31 @@ sudo npm install -g clang-format
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            Contents
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Query submission via the MC<sup>2</sup> Client</a><ul>
+<li><a class="reference internal" href="#starting-opaque-sql">Starting Opaque SQL</a><ul>
+<li><a class="reference internal" href="#starting-the-grpc-listener">Starting the gRPC Listener</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-the-mc2-client">Using the MC<sup>2</sup> Client</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
