@@ -23,7 +23,12 @@ include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
 
-set(COMMON_COMPILE_FLAGS -Wall -Wextra -Werror)
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  set(ARCH_SIZE -m32)
+else()
+  set(ARCH_SIZE -m64)
+endif()
+set(COMMON_COMPILE_FLAGS ${ARCH_SIZE} -Wall -Wextra -Werror)
 
 if ("$ENV{MODE}" STREQUAL "SIMULATE")
   add_compile_definitions(SIMULATE)
