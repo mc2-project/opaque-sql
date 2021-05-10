@@ -21,6 +21,8 @@ Out of the existing `Spark SQL types <https://spark.apache.org/docs/latest/sql-r
 - ``TimestampTime``, ``DateType``
 - ``ArrayType``, ``MapType``
 
+*Warning:* Conversions from ``FloatType`` to ``StringType`` may produce incorrect results in the least significant portion of the floating point value.  See `this issue <https://github.com/mc2-project/opaque/issues/211>`_ for further details.
+
 Functions
 *********
 
