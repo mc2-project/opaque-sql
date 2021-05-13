@@ -59,7 +59,6 @@ void lc_check(lc_status_t ret) {
 // TODO: Create shared key by reading from file. Currently key is hard-coded
 void ServiceProvider::init_wrapper(uint8_t * provided_cert, size_t cert_len) {
   // Initialize key
-//  uint8_t * new_key = (uint8_t *) calloc(LC_AESGCM_KEY_SIZE, sizeof(uint8_t));
   const char *new_key = (const char *)"01234567890123456789012345678901";
 
   if (strlen(new_key) * sizeof(char) != LC_AESGCM_KEY_SIZE) {
@@ -68,8 +67,6 @@ void ServiceProvider::init_wrapper(uint8_t * provided_cert, size_t cert_len) {
   }
 
   memcpy(this->shared_key, new_key, LC_AESGCM_KEY_SIZE);
-
-//  free(new_key);
 
   // Initialize user certificate
   char * cert = (char *) malloc(cert_len * sizeof(char));
@@ -129,6 +126,7 @@ void ServiceProvider::aes_gcm_decrypt(char * cipher, size_t * cipher_len, uint8_
   *plain = plaintext_msg;
 }
 
+// Free the malloced user certificate
 void ServiceProvider::clean_up() {
   free(this->user_cert);
 }
@@ -328,8 +326,6 @@ std::unique_ptr<oe_shared_key_msg_t>
 ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
                                         uint32_t *shared_key_msg_size) {
 
-//  std::cout << "Enter process_enclave_report" << std::endl;
-
   if (this->user_cert == NULL) {
     throw std::runtime_error("SP not initialized with user cert");
   }
@@ -340,12 +336,10 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
 
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
 
-//  std::cout << "Before get public key" << std::endl;
   EVP_PKEY *pkey = buffer_to_public_key((char *)report_msg->public_key, -1);
   if (pkey == nullptr) {
     throw std::runtime_error("buffer_to_public_key failed.");
   }
-//  std::cout << "After get public key" << std::endl;
 
 #ifdef SIMULATE
   std::cerr << "Not running remote attestation because executing in simulation mode" << std::endl;
@@ -356,13 +350,11 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   oe_result_t result = OE_FAILURE;
   uint8_t sha256[32];
 
-//  std::cout << "Before oe verify" << std::endl;
   result = oe_verify_remote_report(report_msg->report, report_msg->report_size, NULL, 0,
                                    &parsed_report);
   if (result != OE_OK) {
     throw std::runtime_error(std::string("oe_verify_remote_report: ") + oe_result_str(result));
   }
-//  std::cout << "After oe verify" << std::endl;
 
   // mrsigner verification
   // 2) validate the enclave identity's signed_id is the hash of the public
@@ -371,7 +363,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
 
   // 2a) Read in the public key as a string
 
-//  std::cout << "Before read public key from outside" << std::endl;
   std::string public_key_file = std::string(std::getenv("OPAQUE_HOME"));
   public_key_file.append("/public_key.pub");
 
@@ -386,19 +377,13 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   public_key.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
   public_key.replace(public_key_size, 1, "\0");
 
-//  std::cout << "After read public key from outside" << std::endl;
-
-//  std::cout << "Before verify mrsigner" << std::endl;
   if (!verify_mrsigner((char *)public_key.c_str(), public_key.size(),
                        parsed_report.identity.signer_id,
                        sizeof(parsed_report.identity.signer_id))) {
     throw std::runtime_error(std::string("failed: mrsigner not equal!"));
   }
-//  std::cout << "After verify mrsigner" << std::endl;
-
   // TODO missing the hash verification step
 
-//  std::cout << "Before rest of verification" << std::endl;
   // check the enclave's product id and security version
   if (parsed_report.identity.product_id[0] != 1) {
     throw std::runtime_error(std::string("identity.product_id checking failed."));
@@ -418,7 +403,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   if (memcmp(parsed_report.report_data, sha256, sizeof(sha256)) != 0) {
     throw std::runtime_error(std::string("SHA256 mismatch."));
   }
-//  std::cout << "After rest of verification" << std::endl;
 
 #endif
 
@@ -432,7 +416,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
     throw std::runtime_error(std::string("public_encrypt failed"));
   }
 
-//  std::cout << "Before prepare shared_key_msg" << std::endl;
   // Prepare shared_key_msg
   memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE,
            encrypted_sharedkey, encrypted_sharedkey_size);
@@ -442,7 +425,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   shared_key_msg->user_cert_len = cert_len;
 
   *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
-//  std::cout << "After prepare shared_key_msg" << std::endl;
 
   // clean up
   EVP_PKEY_free(pkey);

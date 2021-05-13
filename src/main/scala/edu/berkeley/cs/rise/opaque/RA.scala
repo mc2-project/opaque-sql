@@ -17,8 +17,6 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import javax.xml.bind.DatatypeConverter
-
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
@@ -40,11 +38,23 @@ object RA extends Logging {
     }
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
-    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
+//    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
+
+    // TODO: Hard-coded string path
     val userCert = scala.io.Source.fromFile("/home/opaque/opaque/user1.crt").mkString
     val sp = new SP()
 
-    sp.Init(Utils.sharedKey, userCert)
+    // TODO: Upon merging local attestion code, the shared key will be removed from the code
+    // and the following two lines of code should be used instead of current SP init code
+//    val fillerKey: Array[Byte] = Array.fill[Byte](GCM_KEY_LENGTH)(0)
+//    sp.Init(fillerKey, userCert)
+
+    Utils.sharedKey match {
+       case Some(sharedKey) =>
+         sp.Init(sharedKey, intelCert)
+       case None =>
+         throw new OpaqueException("Cannot begin attestation without sharedKey.")
+     }
 
     val numAttested = Utils.numAttested
     // Runs on executors
@@ -108,7 +118,6 @@ object RA extends Logging {
       )
 
       initRA(sc)
-      LA.initLA(sc)
     }
     Thread.sleep(100)
   }

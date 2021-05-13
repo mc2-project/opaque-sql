@@ -13,10 +13,12 @@ public:
       : spid(spid), is_production(is_production), linkable_signature(linkable_signature),
         ias_api_version(3), require_attestation(std::getenv("OPAQUE_REQUIRE_ATTESTATION")) {}
 
-  //TODO: Make sure this actually frees user_cert
-  ~ServiceProvider() {
-    free(this->user_cert);
-  }
+  // TODO: Determine if want to use explicit call or deconstructor.
+  // Deconstructor might be called when user_cert not initialized yet
+  // Explicit call may give more control in comparison
+//  ~ServiceProvider() {
+//    free(this->user_cert);
+//  }
 
   /** Load an OpenSSL private key from the specified file. */
   void load_private_key(const std::string &filename);

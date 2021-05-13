@@ -173,17 +173,10 @@ EC_KEY *get_priv_key(lc_ec256_private_t *p_private);
  *buffer should be >= src_len. lc_aes_gcm_128bit_tag_t *p_out_mac - Pointer to
  *MAC generated from encryption process NOTE: Wrapper is responsible for
  *confirming decryption tag matches encryption tag */
-//LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_rijndael128GCM_encrypt(
-//    const lc_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, uint8_t *p_dst,
-//    const uint8_t *p_iv, uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len,
-//    lc_aes_gcm_128bit_tag_t *p_out_mac);
-
-LC_LIBCRYPTO_API int WARN_UNUSED lc_rijndael128GCM_encrypt(unsigned char *plaintext, int plaintext_len,
-                unsigned char *aad, int aad_len,
-                unsigned char *key,
-                unsigned char *iv, int iv_len,
-                unsigned char *ciphertext,
-                unsigned char *tag);
+LC_LIBCRYPTO_API lc_status_t WARN_UNUSED lc_rijndael128GCM_encrypt(
+    const lc_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, uint8_t *p_dst,
+    const uint8_t *p_iv, uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len,
+    lc_aes_gcm_128bit_tag_t *p_out_mac);
 
 lc_status_t WARN_UNUSED lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int ciphertext_len,
                                                   unsigned char *aad, int aad_len,

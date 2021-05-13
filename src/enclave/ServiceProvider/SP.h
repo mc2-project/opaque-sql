@@ -1,6 +1,5 @@
 #include <jni.h>
 #include <string>
-#include <iostream>
 
 #include "ServiceProvider.h"
 
@@ -38,15 +37,11 @@ sp_init_wrapper(ServiceProvider * sp, uint8_t * provided_cert, size_t cert_len) 
 
 void
 sp_process_enclave_report(ServiceProvider * sp, uint8_t * report, size_t * report_len, uint8_t ** ret_val, size_t * ret_len) { 
-
-//  std::cout << "Enter wrapper function" << std::endl;
   sp->process_enclave_report_python_wrapper(report, report_len, ret_val, ret_len);
-//  std::cout << "Exit wrapper function" << std::endl;
 }
 
 void
 sp_decrypt(ServiceProvider * sp, char * cipher, size_t * cipher_len, uint8_t ** plain, size_t * plain_len) {
-
   sp->aes_gcm_decrypt(cipher, cipher_len, plain, plain_len);
 }
 

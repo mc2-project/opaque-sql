@@ -69,10 +69,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Decry
 
   (void)obj;
 
-//  jboolean if_copy = false;
-//  char *cipher_bytes = (char *) env->GetByteArrayElements(ciphertext, &if_copy);
-//  size_t clength = (size_t)env->GetArrayLength(ciphertext);
-
   char *cipher_bytes = (char *) env->GetStringUTFChars(ciphertext, nullptr);
   size_t clength = (size_t) strlen(cipher_bytes);
 
@@ -91,7 +87,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SP_Decry
   jbyteArray plaintext = env->NewByteArray((jsize) plength);
   env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *)plaintext_copy);
 
-//  env->ReleaseByteArrayElements(ciphertext, (jbyte *)cipher_bytes, 0);
   env->ReleaseStringUTFChars(ciphertext, cipher_bytes);
 
   delete[] plaintext_copy;
