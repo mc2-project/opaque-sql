@@ -35,6 +35,9 @@ import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.catalyst.optimizer.{BuildLeft, BuildRight, BuildSide}
 import org.apache.spark.sql.execution.SparkPlan
 
+import edu.berkeley.cs.rise.opaque.tuix
+import java.nio.ByteBuffer
+
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
   override def producedAttributes: AttributeSet = outputSet
@@ -197,12 +200,6 @@ trait OpaqueOperatorExec extends SparkPlan {
    */
   override def executeCollect(): Array[InternalRow] = {
 
-    println("Enter collect")
-
-//    collectEncrypted().flatMap { block =>
-//      Utils.decryptBlockFlatbuffers(block)
-//    }
-
     val blocks = collectEncrypted()
     
     try {
@@ -212,10 +209,8 @@ trait OpaqueOperatorExec extends SparkPlan {
       if (!dir.exists) {
         dir.mkdir()
       } else {
-        println("Directory exists")
         for(file <- dir.listFiles()) { 
           file.delete() 
-          println("File deleted")
         }
       }
 
@@ -245,9 +240,13 @@ trait OpaqueOperatorExec extends SparkPlan {
     sqlContext.sparkContext.emptyRDD.collect()
   }
 
+  /* 
+   * executeTake can only take in the closest block increment
+   * This is because encrypted blocks must be saved to a file in block increments
+   * Any additional parsing must be done externally.
+   */
   override def executeTake(n: Int): Array[InternalRow] = {
 
-    println("Enter take")
 
     // Prepare directory for storing encrypted blocks
     try {
@@ -255,9 +254,7 @@ trait OpaqueOperatorExec extends SparkPlan {
       if (!dir.exists) { 
         dir.mkdir()
       } else {
-        println("Directory exists")
         for(file <- dir.listFiles()) {
-          println("Delete file")
           file.delete()
         }
       }
@@ -280,10 +277,11 @@ trait OpaqueOperatorExec extends SparkPlan {
 
     val childRDD = executeBlocked()
 
-    val buf = new ArrayBuffer[InternalRow]
+    var buf = 0
     val totalParts = childRDD.partitions.length
     var partsScanned = 0
-    while (buf.size < n && partsScanned < totalParts) {
+    var i = 0
+    while (buf < n && partsScanned < totalParts) {
       // The number of partitions to try in this iteration. It is ok for this number to be
       // greater than totalParts because we actually cap it at totalParts in runJob.
       var numPartsToTry = 1L
@@ -291,10 +289,10 @@ trait OpaqueOperatorExec extends SparkPlan {
         // If we didn't find any rows after the first iteration, just try all partitions next.
         // Otherwise, interpolate the number of partitions we need to try, but overestimate it
         // by 50%.
-        if (buf.size == 0) {
+        if (buf == 0) {
           numPartsToTry = totalParts - 1
         } else {
-          numPartsToTry = (1.5 * n * partsScanned / buf.size).toInt
+          numPartsToTry = (1.5 * n * partsScanned / buf).toInt
         }
       }
       numPartsToTry = math.max(0, numPartsToTry) // guard against negative num of partitions
@@ -304,31 +302,24 @@ trait OpaqueOperatorExec extends SparkPlan {
       val res =
         sc.runJob(childRDD, (it: Iterator[Block]) => if (it.hasNext) Some(it.next()) else None, p)
 
-      var i = 0
       res.foreach {
         case Some(block) => {
-//          buf ++= Utils.decryptBlockFlatbuffers(block)
+
+          val blockBuffer = ByteBuffer.wrap(block.bytes)
+          val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(blockBuffer)
+          buf = buf + encryptedBlocks.blocksLength
+
           val f = "tmp/tmp_" + i.toString
           Files.write(Paths.get(f), block.bytes)
 
           // Increment i for next block
           i += 1
 
-//          val test_write = "Enter executeCollect() 1"
-//          Files.write(Paths.get("tmp/test"), test_write.getBytes())
         }
         case None =>
       }
 
-      
-
       partsScanned += p.size
-    }
-
-    if (buf.size > n) {
-      buf.take(n).toArray
-    } else {
-      buf.toArray
     }
 
     sqlContext.sparkContext.emptyRDD.collect()
