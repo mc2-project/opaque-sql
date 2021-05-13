@@ -438,6 +438,8 @@ case class EncryptedSortMergeJoinExec(
         leftSchema.map(_.toAttribute)
       case RightOuter =>
         leftSchema.map(_.withNullability(true)) ++ rightSchema
+      case FullOuter =>
+        leftSchema.map(_.withNullability(true)) ++ rightSchema.map(_.withNullability(true))
       case _ =>
         throw new IllegalArgumentException(
           s"SortMergeJoin should not take $joinType as the JoinType"
@@ -484,6 +486,8 @@ case class EncryptedBroadcastNestedLoopJoinExec(
         left.output ++ right.output.map(_.withNullability(true))
       case RightOuter =>
         left.output.map(_.withNullability(true)) ++ right.output
+      case FullOuter =>
+        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
       case LeftExistence(_) =>
         left.output
       case _ =>
@@ -510,7 +514,7 @@ case class EncryptedBroadcastNestedLoopJoinExec(
     broadcast = joinType match {
       // If outer join, then we need to add a dummy row to ensure that foreign schema is available to C++ code
       // in case of an empty foreign table.
-      case LeftOuter | RightOuter =>
+      case LeftOuter | RightOuter | FullOuter =>
         EncryptedAddDummyRowExec(broadcast.output, broadcast)
       case _ =>
         broadcast

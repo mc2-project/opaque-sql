@@ -35,6 +35,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     "SELECT * FROM testData JOIN testData2 ON key = a where key = 2",
     "SELECT * FROM testData LEFT JOIN testData2 ON key = a",
     "SELECT * FROM testData RIGHT JOIN testData2 ON key = a where key = 2",
+    "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData left JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData right JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData ANTI JOIN testData2 ON key = a",
@@ -52,7 +53,6 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     "SELECT * FROM testData JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData RIGHT JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData JOIN testData2 WHERE key > a",
-    "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData FULL OUTER JOIN testData2",
     "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a",
     "SELECT * FROM testData full JOIN testData2 ON (key * a != key + a)"
@@ -172,7 +172,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     }
   }
 
-  ignore("full outer join") {
+  test("full outer join") {
     def createTables(sl: SecurityLevel) = {
       val left = upperCaseData(sl).where('N <= 4)
       left.createOrReplaceTempView("left")

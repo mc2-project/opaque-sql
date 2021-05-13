@@ -23,7 +23,7 @@ import java.io.IOException
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
@@ -256,17 +256,6 @@ object Utils extends Logging {
   final val GCM_TAG_LENGTH = 16
 
   // We do not trust the driver. Encryption and decryption done in enclave only.
-  // Leaving here, because will eventually encrypt in enclaves
-
-//  def encrypt(data: Array[Byte]): Array[Byte] = {
-//    val (enclave, eid) = initEnclave()
-//    enclave.Encrypt(eid, data)    
-//  }
-
-//  def decrypt(data: Array[Byte]): Array[Byte] = {
-//    val (enclave, eid) = initEnclave()
-//    enclave.Decrypt(eid, data)    
-
   /**
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
    * attestation succeeds. For testing/benchmarking, we use a hardcoded key. For all other
@@ -374,17 +363,31 @@ object Utils extends Logging {
   val numAttested: LongAccumulator = new LongAccumulator
   var loop: Boolean = true
 
-  def initSQLContext(sqlContext: SQLContext): Unit = {
-
+  def initOpaqueSQL(spark: SparkSession): Unit = {
+    val sqlContext = spark.sqlContext
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
+    val enableTestingKey = sqlContext.getConf("spark.opaque.testing.enableTestingKey", "false")
+    if (enableTestingKey.toBoolean) {
+      sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
+    } else {
+      val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
+      sharedKeyPath match {
+        case Some(sharedKeyPath) =>
+          sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
+          assert(sharedKey.get.size == GCM_KEY_LENGTH)
+        case None =>
+          throw new OpaqueException("Need to set the SYMMETRIC_KEY_PATH environment variable.")
+      }
+    }
+
     val sc = sqlContext.sparkContext
     // This is needed to prevent an error from re-registering accumulator variables if
-    // `initSQLContext` is called multiple times on the driver
+    // `initOpaqueSQL` is called multiple times on the driver
     if (!acc_registered) {
       sc.register(numEnclaves)
       sc.register(numAttested)
@@ -1129,7 +1132,6 @@ object Utils extends Logging {
    * under the client keys and then prints the results out.
    * 
    * 1. Read the encrypted file from './tmp' folder
-   * // TODO: Move steps 2-4 to inside enclave
    * 2. Parse the provided bytes as EncryptedBlocks
    * 3. Obtain the rows
    * 4. Decrypt the rows with enclave key. Re-encrypt them with client key
@@ -1146,7 +1148,7 @@ object Utils extends Logging {
 
   def postVerifyAndReturn(df: DataFrame, user: String): Seq[Array[Byte]] = {
 
-    // Placeholder for post-verification section
+    // Placeholder for post-verification section when merged
     if (false) {
       throw new Exception("Post verification failed")
     }
