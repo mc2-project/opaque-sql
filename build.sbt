@@ -177,6 +177,13 @@ def data = Command.command("data") { state =>
   state
 }
 
+val synthKeysTask =
+  TaskKey[Unit]("keys", "Uses OpenSSL to create private key and shared key.")
+def keys = Command.command("keys") { state =>
+  Project.runTask(synthKeysTask, state)
+  state
+}
+
 commands += sgxGdbCommand
 commands += data
 
@@ -203,7 +210,6 @@ initialCommands in console :=
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
     |  .appName("Opaque shell")
-    |  .config("spark.opaque.testing.enableSharedKey", true)
     |  .getOrCreate())
     |val sc = spark.sparkContext
     |val sqlContext = spark.sqlContext
@@ -211,7 +217,7 @@ initialCommands in console :=
     |import spark.implicits._
     |
     |import edu.berkeley.cs.rise.opaque.implicits._
-    |edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext)
+    |edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
   """.stripMargin
 
 cleanupCommands in console := "spark.stop()"
@@ -431,4 +437,14 @@ synthBenchmarkDataTask := {
     val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
   }
+}
+
+synthKeysTask := {
+  import scala.sys.process._
+  val keysDir = baseDirectory.value
+  var res =
+    Process(Seq("openssl", "genrsa", "-out", keysDir + "/private_key.pem", "-3", "3072")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL private key.")
+  res = Process(Seq("openssl", "rand", "-out", keysDir + "/symmetric_key.key", "32")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL symmetric key.")
 }
