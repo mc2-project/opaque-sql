@@ -184,6 +184,11 @@ lc_status_t WARN_UNUSED lc_rijndael128GCM_decrypt(unsigned char *ciphertext, int
                                                   unsigned char *iv, unsigned char *plaintext)
     __attribute__((warn_unused_result));
 
+int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
+            unsigned char *iv, unsigned char *ciphertext, unsigned char *tag);
+int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
+            unsigned char *iv, unsigned char *plaintext, unsigned char *tag);
+
 /* Message Authentication - Rijndael 128 CMAC
  * Parameters:
  *	Return: lc_status_t  - LC_SUCCESS on success, error code otherwise.

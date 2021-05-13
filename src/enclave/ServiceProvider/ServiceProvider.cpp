@@ -12,11 +12,15 @@
 #include "ias_ra.h"
 #include "iasrequest.h"
 #include "json.hpp"
+#include "sp_crypto.h"
 
 #include <openenclave/host.h>
 #include <openenclave/host_verify.h>
 
 #include "ServiceProvider.h"
+
+// For debugging
+#include <iomanip>
 
 // Your 16-byte Service Provider ID (SPID), assigned by Intel.
 const uint8_t spid[] = {0xA4, 0x62, 0x09, 0x2E, 0x1B, 0x59, 0x26, 0xDF,
@@ -50,6 +54,85 @@ void lc_check(lc_status_t ret) {
 
     throw std::runtime_error(std::string("Service provider crypto failure: ") + error);
   }
+}
+
+// TODO: Create shared key by reading from file. Currently key is hard-coded
+void ServiceProvider::init_wrapper(uint8_t * provided_cert, size_t cert_len) {
+  // Initialize key
+  const char *new_key = (const char *)"01234567890123456789012345678901";
+
+  if (strlen(new_key) * sizeof(char) != LC_AESGCM_KEY_SIZE) {
+    std::cout << "size of provided key: " << sizeof(new_key) << std::endl;
+    throw std::runtime_error("new key not right size");
+  }
+
+  memcpy(this->shared_key, new_key, LC_AESGCM_KEY_SIZE);
+
+  // Initialize user certificate
+  char * cert = (char *) malloc(cert_len * sizeof(char));
+  memcpy(cert, provided_cert, cert_len);
+  this->user_cert = cert;
+}
+
+void
+ServiceProvider::process_enclave_report_python_wrapper(uint8_t * report, size_t * report_len, uint8_t ** ret_val, size_t * ret_len) {
+
+  size_t report_size = *report_len;
+  uint8_t* report_bytes = new uint8_t[report_size];
+  memcpy(report_bytes, report, report_size);
+  oe_report_msg_t *report_msg = reinterpret_cast<oe_report_msg_t *>(report_bytes);
+
+  uint32_t shared_key_msg_size = 0;
+  std::unique_ptr<oe_shared_key_msg_t> shared_key_msg;
+  try {
+    shared_key_msg = this->process_enclave_report(report_msg, &shared_key_msg_size);
+  } catch (const std::runtime_error &e) {
+    throw std::runtime_error("Failed to process report.");
+  }
+  uint8_t * ret_msg = (uint8_t *) malloc(shared_key_msg_size);
+
+  memcpy(ret_msg, reinterpret_cast<uint8_t *>(shared_key_msg.get()), shared_key_msg_size);
+
+  *ret_len = shared_key_msg_size;
+  *ret_val = ret_msg;
+
+}
+
+void ServiceProvider::aes_gcm_decrypt(char * cipher, size_t * cipher_len, uint8_t ** plain, size_t * plain_len) {
+
+  (void) cipher_len;
+
+  size_t sz = 0;
+  char * cipher_decode = base64_decode(cipher, &sz);
+
+  // Obtain the plaintext len
+  size_t plaintext_length = sz - (LC_AESGCM_IV_SIZE + LC_AESGCM_MAC_SIZE);
+  unsigned char * plaintext_msg = (unsigned char *) malloc(plaintext_length);
+
+  unsigned char *iv_ptr = (unsigned char *)cipher_decode;
+  unsigned char *ciphertext_ptr = (unsigned char *)(cipher_decode + LC_AESGCM_IV_SIZE);
+  unsigned char *mac_ptr = (unsigned char *) (cipher_decode + LC_AESGCM_IV_SIZE + plaintext_length);
+
+  int ret = decrypt(ciphertext_ptr, sz - LC_AESGCM_IV_SIZE - LC_AESGCM_MAC_SIZE,
+                this->shared_key, iv_ptr,
+                plaintext_msg, mac_ptr);
+  if (ret == 0) {
+    throw std::runtime_error("Failed to decrypt");
+  }
+
+  free(cipher_decode);
+
+  *plain_len = plaintext_length;
+  *plain = plaintext_msg;
+}
+
+// Free the malloced user certificate
+void ServiceProvider::clean_up() {
+  free(this->user_cert);
+}
+
+void ServiceProvider::free_array(uint8_t ** array) {
+  free(*array);
 }
 
 void ServiceProvider::load_private_key(const std::string &filename) {
@@ -117,6 +200,14 @@ void ServiceProvider::load_private_key(const std::string &filename) {
 
 void ServiceProvider::set_shared_key(const uint8_t *shared_key) {
   memcpy(this->shared_key, shared_key, LC_AESGCM_KEY_SIZE);
+}
+
+void ServiceProvider::set_user_cert(const std::string user_cert) {
+  const char * cert = user_cert.c_str();
+  uint32_t cert_len = strlen(cert);
+
+  this->user_cert = (char *) malloc(cert_len * sizeof(char));
+  memcpy(this->user_cert, cert, cert_len);
 }
 
 void ServiceProvider::export_public_key_code(const std::string &filename) {
@@ -235,9 +326,14 @@ std::unique_ptr<oe_shared_key_msg_t>
 ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
                                         uint32_t *shared_key_msg_size) {
 
+  if (this->user_cert == NULL) {
+    throw std::runtime_error("SP not initialized with user cert");
+  }
+
   int ret;
   unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
   size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
   std::unique_ptr<oe_shared_key_msg_t> shared_key_msg(new oe_shared_key_msg_t);
 
   EVP_PKEY *pkey = buffer_to_public_key((char *)report_msg->public_key, -1);
@@ -286,7 +382,6 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
                        sizeof(parsed_report.identity.signer_id))) {
     throw std::runtime_error(std::string("failed: mrsigner not equal!"));
   }
-
   // TODO missing the hash verification step
 
   // check the enclave's product id and security version
@@ -314,6 +409,7 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   // Encrypt shared key
   ret = public_encrypt(pkey, this->shared_key, LC_AESGCM_KEY_SIZE, encrypted_sharedkey,
                        &encrypted_sharedkey_size);
+
   if (ret == 0) {
     throw std::runtime_error(std::string("public_encrypt: buffer too small"));
   } else if (ret < 0) {
@@ -323,6 +419,11 @@ ServiceProvider::process_enclave_report(oe_report_msg_t *report_msg,
   // Prepare shared_key_msg
   memcpy_s(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE,
            encrypted_sharedkey, encrypted_sharedkey_size);
+
+  size_t cert_len = strlen(this->user_cert) + 1;
+  memcpy_s(shared_key_msg->user_cert, cert_len, this->user_cert, cert_len);
+  shared_key_msg->user_cert_len = cert_len;
+
   *shared_key_msg_size = sizeof(oe_shared_key_msg_t);
 
   // clean up
