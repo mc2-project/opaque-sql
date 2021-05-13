@@ -1,9 +1,13 @@
 #include "Enclave_t.h"
+#include <iostream>
 
 #include <cassert>
 #include <cstdint>
 
+#include "Random.h"
+
 #include "Aggregate.h"
+#include "Attestation.h"
 #include "BroadcastNestedLoopJoin.h"
 #include "Crypto.h"
 #include "Filter.h"
@@ -21,6 +25,17 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
+
+// needed for certificate
+#include <mbedtls/platform.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/pk_internal.h>
+
+// needed for openenclave evidences
+#include <openenclave/attestation/sgx/evidence.h>
 
 // This file contains definitions of the ecalls declared in Enclave.edl. Errors
 // originating within these ecalls are signaled by throwing a
@@ -44,6 +59,48 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphe
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
+}
+
+void ecall_re_encrypt_user(uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *new_ciphertext,
+                   uint32_t new_cipher_length, const char * user_name) {
+  // Guard against encrypting or overwriting enclave memory
+  assert(oe_is_outside_enclave(ciphertext, ciphertext_length) == 1);
+  assert(oe_is_outside_enclave(new_ciphertext, new_cipher_length) == 1);
+  __builtin_ia32_lfence();
+
+  (void) new_cipher_length;
+
+  try {
+    // IV (12 bytes) + ciphertext + mac (16 bytes)
+    assert(ciphertext_length == new_cipher_length);
+
+    uint32_t plength = ciphertext_length - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+    uint8_t * plaintext = new uint8_t[plength];
+    decrypt(ciphertext, ciphertext_length, plaintext);
+    encrypt_user(plaintext, plength, new_ciphertext, user_name);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+}
+
+void ecall_decrypt(uint8_t *ciphertext, uint32_t cipher_length, uint8_t *plaintext,
+                   uint32_t plaintext_length) {
+
+  // Guard against decrypting or overwriting enclave memory
+  assert(oe_is_outside_enclave(plaintext, plaintext_length) == 1);
+  assert(oe_is_outside_enclave(ciphertext, cipher_length) == 1);
+  __builtin_ia32_lfence();
+
+  try {
+    // IV (12 bytes) + ciphertext + mac (16 bytes)
+    assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+    (void)cipher_length;
+    (void)plaintext_length;
+    decrypt(ciphertext, cipher_length, plaintext);
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+
 }
 
 void ecall_project(uint8_t *condition, size_t condition_length, uint8_t *input_rows,
@@ -241,17 +298,41 @@ void ecall_limit_return_rows(uint64_t partition_id, uint8_t *limits, size_t limi
 static Crypto g_crypto;
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
+  (void) shared_key_msg_size;
+
   try {
+    (void) shared_key_msg_size;
     oe_shared_key_msg_t *shared_key_msg = (oe_shared_key_msg_t *)shared_key_msg_input;
     uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size,
+    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, OE_SHARED_KEY_CIPHERTEXT_SIZE,
                                 shared_key_plaintext, &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
     }
 
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+    // Add verifySignatureFromCertificate from XGBoost
+    // Get name from certificate
+    unsigned char nameptr[50];
+    size_t name_len;
+    int res;
+    mbedtls_x509_crt user_cert;
+    mbedtls_x509_crt_init(&user_cert);
+    if ((res = mbedtls_x509_crt_parse(&user_cert, (const unsigned char*) shared_key_msg->user_cert, shared_key_msg->user_cert_len)) != 0) {
+        // char tmp[50];
+        // mbedtls_strerror(res, tmp, 50);
+        // std::cout << tmp << std::endl;
+        ocall_throw("Verification failed - could not read user certificate\n. mbedtls_x509_crt_parse returned");
+    }
+
+    mbedtls_x509_name subject_name = user_cert.subject;
+    mbedtls_asn1_buf name = subject_name.val;
+    strcpy((char*) nameptr, (const char*) name.p);
+    name_len = name.len;
+    std::string user_nam(nameptr, nameptr + name_len);
+
+    add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
+
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -316,3 +397,177 @@ void ecall_generate_report(uint8_t **report_msg_data, size_t *report_msg_data_si
   }
   oe_free_report(report);
 }
+
+//////////////////////////////////// Generate Shared Key Begin //////////////////////////////////////
+
+static Attestation attestation(&g_crypto);
+
+void ecall_get_public_key(uint8_t **report_msg_data,
+                           size_t* report_msg_data_size) {
+
+#ifndef SIMULATE
+  oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
+  oe_uuid_t* format_id = &sgx_local_uuid;
+
+  uint8_t* format_settings = NULL;
+  size_t format_settings_size = 0;
+
+  if (!attestation.get_format_settings(
+        format_id,
+        &format_settings,
+        &format_settings_size)) {
+    ocall_throw("Unable to get enclave format settings");
+  }
+#endif
+
+  uint8_t pem_public_key[512];
+  size_t public_key_size = sizeof(pem_public_key);
+  uint8_t* evidence = nullptr;
+  size_t evidence_size = 0;
+
+  g_crypto.retrieve_public_key(pem_public_key);
+
+#ifndef SIMULATE
+  if (attestation.generate_attestation_evidence(
+            format_id,
+            format_settings,
+            format_settings_size,
+            pem_public_key,
+            public_key_size,
+            &evidence,
+            &evidence_size) == false) {
+    ocall_throw("Unable to retrieve enclave evidence");
+  }
+
+  if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size, pem_public_key, public_key_size)) {
+    ocall_throw("Unable to verify FRESH attestation!");
+  }
+#endif
+
+  // The report msg includes the public key, the size of the evidence, and the evidence itself
+  *report_msg_data_size = public_key_size + sizeof(evidence_size) + evidence_size;
+  *report_msg_data = (uint8_t*)oe_host_malloc(*report_msg_data_size);
+
+  memcpy_s(*report_msg_data, public_key_size, pem_public_key, public_key_size);
+  memcpy_s(*report_msg_data + public_key_size, sizeof(size_t), &evidence_size, sizeof(evidence_size)); 
+
+  memcpy_s(*report_msg_data + public_key_size + sizeof(size_t), evidence_size, evidence, evidence_size);
+
+}
+
+void ecall_get_list_encrypted(uint8_t * pk_list,
+                              uint32_t pk_list_size, 
+                              uint8_t * sk_list,
+                              uint32_t sk_list_size) {
+
+  // Guard against encrypting or overwriting enclave memory
+  assert(oe_is_outside_enclave(pk_list, pk_list_size) == 1);
+  assert(oe_is_outside_enclave(sk_list, sk_list_size) == 1);
+  __builtin_ia32_lfence();
+
+  (void) sk_list_size;
+
+  try {
+    // Generate a random value used for key
+    // Size of shared key is 16 from ServiceProvider - LC_AESGCM_KEY_SIZE
+    // For now SGX_AESGCM_KEY_SIZE is also 16, so will just use that for now
+
+    unsigned char secret_key[SGX_AESGCM_KEY_SIZE] = {0};
+    mbedtls_read_rand(secret_key, SGX_AESGCM_KEY_SIZE);
+
+    uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
+    uint8_t *pk_pointer = pk_list;
+
+    unsigned char encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+    size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+    uint8_t *sk_pointer = sk_list;
+
+    size_t evidence_size[1] = {};
+
+#ifndef SIMULATE
+    oe_uuid_t sgx_local_uuid = {OE_FORMAT_UUID_SGX_LOCAL_ATTESTATION};
+    oe_uuid_t* format_id = &sgx_local_uuid;
+
+    uint8_t* format_settings = NULL;
+    size_t format_settings_size = 0;
+#endif
+
+    while (pk_pointer < pk_list + pk_list_size) {
+
+#ifndef SIMULATE
+      if (!attestation.get_format_settings(
+            format_id,
+            &format_settings,
+            &format_settings_size)) {
+        ocall_throw("Unable to get enclave format settings");
+      }
+#endif
+
+      // Read public key, size of evidence, and evidence
+      memcpy_s(public_key, OE_PUBLIC_KEY_SIZE, pk_pointer, OE_PUBLIC_KEY_SIZE);
+
+#ifndef SIMULATE
+      memcpy_s(evidence_size, sizeof(evidence_size), pk_pointer + OE_PUBLIC_KEY_SIZE, sizeof(size_t));
+      uint8_t evidence[evidence_size[0]] = {};
+      memcpy_s(evidence, evidence_size[0], pk_pointer + OE_PUBLIC_KEY_SIZE + sizeof(size_t), evidence_size[0]);
+
+      // Verify the provided public key is valid
+      if (!attestation.attest_attestation_evidence(format_id, evidence, evidence_size[0], public_key, sizeof(public_key))) {
+        std::cout << "get_list_encrypted - unable to verify attestation evidence" << std::endl;
+        ocall_throw("Unable to verify attestation evidence");
+      }
+#endif
+
+      g_crypto.encrypt(public_key,
+                       secret_key,
+                       SGX_AESGCM_KEY_SIZE,
+                       encrypted_sharedkey,
+                       &encrypted_sharedkey_size);
+      memcpy_s(sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE, encrypted_sharedkey, OE_SHARED_KEY_CIPHERTEXT_SIZE);
+
+      pk_pointer += OE_PUBLIC_KEY_SIZE + sizeof(size_t) + evidence_size[0];
+      sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
+    }
+  } catch (const std::runtime_error &e) {
+    ocall_throw(e.what());
+  }
+
+}
+
+void ecall_finish_shared_key(uint8_t *sk_list,
+                             uint32_t sk_list_size,
+                             uint8_t *sk,
+                             uint32_t sk_size) {
+
+  (void) sk;
+  (void) sk_size;
+
+  uint8_t *sk_pointer = sk_list;
+
+  uint8_t secret_key[SGX_AESGCM_KEY_SIZE] = {0};
+  size_t sk_length = sizeof(secret_key);
+  assert(sk_length == sk_size);
+
+  while (sk_pointer < sk_list + sk_list_size) {
+    uint8_t encrypted_sharedkey[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+    size_t encrypted_sharedkey_size = sizeof(encrypted_sharedkey);
+
+    memcpy_s(encrypted_sharedkey, encrypted_sharedkey_size, sk_pointer, OE_SHARED_KEY_CIPHERTEXT_SIZE);
+
+    try {
+      bool ret = g_crypto.decrypt(encrypted_sharedkey, encrypted_sharedkey_size, secret_key, &sk_length);
+      if (ret) {break;} // Decryption was successful to obtain secret key
+    } catch (const std::runtime_error &e) {
+      ocall_throw(e.what());
+    }
+
+    sk_pointer += OE_SHARED_KEY_CIPHERTEXT_SIZE;
+  }
+
+  set_shared_key(secret_key, sk_size);
+
+  memcpy(sk, secret_key, SGX_AESGCM_KEY_SIZE);
+}
+
+//////////////////////////////////// Generate Shared Key End //////////////////////////////////////

@@ -21,6 +21,9 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Encrypt(
     JNIEnv *, jobject, jlong, jbyteArray);
 
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ReEncryptUser(
+    JNIEnv *, jobject, jlong, jbyteArray, jstring);
+
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Decrypt(
     JNIEnv *, jobject, jlong, jbyteArray);
 
@@ -78,6 +81,15 @@ JNIEXPORT jbyteArray JNICALL
 Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(JNIEnv *, jobject, jlong);
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
+    JNIEnv *, jobject, jlong, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetPublicKey(
+    JNIEnv *, jobject, jlong);
+
+  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetListEncrypted(
+    JNIEnv *, jobject, jlong, jbyteArray);
+
+  JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishSharedKey(
     JNIEnv *, jobject, jlong, jbyteArray);
 
 #ifdef __cplusplus

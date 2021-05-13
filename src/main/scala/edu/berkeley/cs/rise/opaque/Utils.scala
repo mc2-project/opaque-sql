@@ -19,6 +19,8 @@ package edu.berkeley.cs.rise.opaque
 
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.IOException
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.{Files, Paths}
@@ -36,9 +38,11 @@ import com.google.flatbuffers.FlatBufferBuilder
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions.Add
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.expressions.And
@@ -145,6 +149,7 @@ object Utils extends Logging {
   }
 
   private def jsonSerialize(x: Any): String = (x: @unchecked) match {
+
     case x: Int => x.toString
     case x: Double => x.toString
     case x: Boolean => x.toString
@@ -250,42 +255,108 @@ object Utils extends Logging {
   final val GCM_KEY_LENGTH = 32
   final val GCM_TAG_LENGTH = 16
 
+  // We do not trust the driver. Encryption and decryption done in enclave only.
   /**
    * Symmetric key used to encrypt row data. This key is securely sent to the enclaves if
    * attestation succeeds. For testing/benchmarking, we use a hardcoded key. For all other
    * cases, the driver SHOULD NOT be able to decrypt anything.
    */
-  var sharedKey: Option[Array[Byte]] = None
+//  val sharedKey: Array[Byte] = Array.fill[Byte](GCM_KEY_LENGTH)(0)
+  val sharedKey: Array[Byte] = "01234567890123456789012345678901".getBytes
+  assert(sharedKey.size == GCM_KEY_LENGTH)
 
-  def encrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
-    case Some(sharedKey) =>
-      val random = SecureRandom.getInstance("SHA1PRNG")
-      val cipherKey = new SecretKeySpec(sharedKey, "AES")
-      val iv = new Array[Byte](GCM_IV_LENGTH)
-      random.nextBytes(iv)
-      val spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-      val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-      cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
-      val cipherText = cipher.doFinal(data)
-      iv ++ cipherText
-    case None =>
-      throw new OpaqueException("Cannot encrypt without sharedKey.")
+  def encrypt(data: Array[Byte]): Array[Byte] = {
+
+    var numExecutors: Int = 1
+    val sc = SparkSession.active.sparkContext
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+    }
+
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
+
+    // Only one enclave needs to encrypt
+    val encryptedResults = rdd.context.parallelize(Array(data), 1)
+      .map { data =>
+        // Only encrypt if enclave is attested and trusted
+        if (eid != 0L && attested) {
+          val enclave = new SGXEnclave()
+          enclave.Encrypt(eid, data)
+        } else {
+          throw new Exception("Enclaves not attested - will not encrypt")
+        }
+      }.first()
+
+    return encryptedResults
   }
 
-  def decrypt(data: Array[Byte]): Array[Byte] = sharedKey match {
-    case Some(sharedKey) =>
-      val cipherKey = new SecretKeySpec(sharedKey, "AES")
-      val iv = data.take(GCM_IV_LENGTH)
-      val cipherText = data.drop(GCM_IV_LENGTH)
-      val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
-      cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-      cipher.doFinal(cipherText)
-    case None =>
-      throw new OpaqueException("Cannot decrypt without sharedKey.")
+  // Encryption with user string provided for key
+  def reEncryptUser(data: Array[Byte], user: String): Array[Byte] = {
+
+    // Move encryption to the enclaves
+    var numExecutors: Int = 1
+    val sc = SparkSession.active.sparkContext
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+    }
+
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
+
+    // Only one enclave needs to encrypt
+    val encryptedResults = rdd.context.parallelize(Array(data), 1)
+      .map { data =>
+        // Only encrypt if enclave is attested and trusted
+        if (eid != 0L && attested) {
+          val enclave = new SGXEnclave()
+          enclave.ReEncryptUser(eid, data, user)
+        } else {
+          throw new Exception("Enclaves not attested - will not encrypt")
+        }
+      }.first()
+
+    return encryptedResults
+  }
+
+  def decrypt(data: Array[Byte]): Array[Byte] = {
+
+    var numExecutors: Int = 1
+    val sc = SparkSession.active.sparkContext
+    if (!sc.isLocal) {
+      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+    }
+
+    val rdd = sc.parallelize(Seq.fill(numExecutors) {()}, numExecutors)
+
+    // Only one enclave needs to encrypt
+    val encryptedResults = rdd.context.parallelize(Array(data), 1)
+      .map { data =>
+        // Only encrypt if enclave is attested and trusted
+        if (eid != 0L && attested) {
+          val enclave = new SGXEnclave()
+          enclave.Decrypt(eid, data)
+        } else {
+          throw new Exception("Enclaves not attested - will not encrypt")
+        }
+      }.first()
+
+    return encryptedResults
+  }
+
+  // This function should never be called from the driver
+  // We add this function to make the Decrypt UDF work
+  def decryptWorker(data: Array[Byte]): Array[Byte] = {
+      // Only decrypt if enclave is attested and trusted
+    if (eid != 0L && attested) {
+      val enclave = new SGXEnclave()
+      return enclave.Decrypt(eid, data)
+    } else {
+      throw new Exception("Enclaves not attested - will not decrypt")
+    }
   }
 
   var eid = 0L
   var attested: Boolean = false
+  var laAttested: Boolean = false
   // Initialize accumulator variables for tracking the state of attestation
   var acc_registered: Boolean = false
   val numEnclaves: LongAccumulator = new LongAccumulator
@@ -355,6 +426,17 @@ object Utils extends Logging {
     eid
   }
 
+  // Helper function for printing.
+  // @source https://alvinalexander.com/source-code/scala-how-to-convert-array-bytes-to-hex-string/
+  def convertBytesToHex(bytes: Option[Array[Byte]]): String = {
+    val sb = new StringBuilder
+    for (b <- bytes.get) {
+        sb.append(String.format("%02x", Byte.box(b)))
+    }
+    sb.toString
+  }
+
+  // TODO: Create new laAttested variable to track LA, so that it doesn't happen constantly
   def generateReport(): (Long, Option[Array[Byte]]) = {
     this.synchronized {
       // Only generate report if the enclave has already been started, but not yet attested
@@ -381,6 +463,46 @@ object Utils extends Logging {
         attested = true
       }
       (eid, attested)
+    }
+  }
+
+  def getEvidence(): (Long, Option[Array[Byte]]) = {
+    this.synchronized {
+      // Only generate evidence if the enclave has already been started AND attested
+      if (eid != 0L && attested && !laAttested) {
+        val enclave = new SGXEnclave()
+        val msg1 = enclave.GetPublicKey(eid)
+        (eid, Option(msg1))
+      } else {
+        (eid, None)
+      }
+    }
+  }
+
+  def getListEncrypted(evidences: Array[Byte]): Array[Byte] = {
+    this.synchronized {
+      if (eid != 0L && attested && !laAttested) {
+        val enclave = new SGXEnclave()
+        enclave.GetListEncrypted(eid, evidences)
+      } else {
+        // Return empty array
+        Array[Byte]()
+      }
+    }
+  }
+
+  def finishSharedKey(msg3s: Map[Long, Array[Byte]]): Unit = {
+    this.synchronized {
+      val enclave = new SGXEnclave()
+      if (msg3s.contains(eid) && attested && !laAttested) {
+        val msg3 = msg3s(eid)
+        enclave.FinishSharedKey(eid, msg3s(eid))
+        laAttested = true
+      } else {
+        // Return array of 0s. Also throw error
+        print("Failure to set shared key")
+//        Array.fill[Byte](GCM_KEY_LENGTH)(0) 
+      }
     }
   }
 
@@ -436,8 +558,12 @@ object Utils extends Logging {
 
   def force(ds: Dataset[_]): Unit = {
     val rdd: RDD[_] = ds.queryExecution.executedPlan match {
-      case p: OpaqueOperatorExec => p.executeBlocked()
-      case p => p.execute()
+      case p: OpaqueOperatorExec => {
+        p.executeBlocked()
+      }
+      case p => {
+        p.execute()
+      }
     }
     rdd.foreach(x => {})
   }
@@ -840,7 +966,7 @@ object Utils extends Logging {
 
   def decryptScalar(ciphertext: String): Any = {
     val ciphertext_bytes = Base64.getDecoder().decode(ciphertext);
-    val plaintext = decrypt(ciphertext_bytes)
+    val plaintext = decryptWorker(ciphertext_bytes)
     val rows = tuix.Rows.getRootAsRows(ByteBuffer.wrap(plaintext))
     val row = rows.rows(0)
     val field = row.fieldValues(0)
@@ -1000,6 +1126,84 @@ object Utils extends Logging {
     }).flatten
   }
 
+  /**
+   * Runs post-verification on dataframe. If integrity post-verification passes, 
+   * then the function reads the encrypted files in './tmp' folder, appropriately re-encrypts them 
+   * under the client keys and then prints the results out.
+   * 
+   * 1. Read the encrypted file from './tmp' folder
+   * 2. Parse the provided bytes as EncryptedBlocks
+   * 3. Obtain the rows
+   * 4. Decrypt the rows with enclave key. Re-encrypt them with client key
+   * 5. Print out results
+   */
+  def postVerifyAndPrint(df: DataFrame, user: String): Unit = {
+
+    val ciphers = postVerifyAndReturn(df, user)
+
+    for (cipher <- ciphers) {
+      println(Base64.getEncoder().encodeToString(cipher))
+    }
+  }
+
+  def postVerifyAndReturn(df: DataFrame, user: String): Seq[Array[Byte]] = {
+
+    // Placeholder for post-verification section when merged
+    if (false) {
+      throw new Exception("Post verification failed")
+    }
+
+    var reEncryptedCiphers = Seq[Array[Byte]]();
+    try {
+
+      // 1
+      val dir = new File("tmp");
+      if (!dir.exists) {
+        return reEncryptedCiphers
+      }
+
+      for (file <- dir.listFiles()) {
+
+        val bytes = Files.readAllBytes(file.toPath())
+        val buf = ByteBuffer.wrap(bytes)
+
+        // 2
+        val encryptedBlocks = tuix.EncryptedBlocks.getRootAsEncryptedBlocks(buf)
+        for (i <- 0 until encryptedBlocks.blocksLength) yield {
+          val encryptedBlock = encryptedBlocks.blocks(i)
+
+          // 3
+          val ciphertextBuf = encryptedBlock.encRowsAsByteBuffer
+          val ciphertext = new Array[Byte](ciphertextBuf.remaining)
+          ciphertextBuf.get(ciphertext)
+
+          // 4
+          val cipher = reEncryptUser(ciphertext, user)
+
+          reEncryptedCiphers = reEncryptedCiphers :+ cipher
+
+        }
+      }
+    } catch {
+      case x: FileNotFoundException =>
+      {
+        throw new FileNotFoundException("Exception: File missing")
+      }
+
+      case x: IOException   =>
+      {
+        throw new IOException("Input/output Exception")
+      }
+    }
+
+   reEncryptedCiphers
+  }
+
+  /**
+   * Given the dataframe name, reads the dataframe encrypted blocks and encrypts/decrypts them accordingly
+   */
+
+  // Helper function for printing.
   def treeFold[BaseType <: TreeNode[BaseType], B](
       tree: BaseType
   )(op: (Seq[B], BaseType) => B): B = {

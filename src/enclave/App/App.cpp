@@ -239,6 +239,88 @@ JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Fin
   env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
 }
 
+/////////////////////////////// Shared Key Gen Begin ////////////////////////////////
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetPublicKey(
+  JNIEnv *env, jobject obj, jlong eid) {
+  (void)obj;
+  (void)eid;
+
+  uint8_t* report_msg = NULL;
+  size_t report_msg_size = 0;
+
+  oe_check_and_time("Get enclave public key",
+                     ecall_get_public_key((oe_enclave_t*)eid,
+                                           &report_msg,
+                                           &report_msg_size));
+
+  // Allocate memory
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
+
+  return report_msg_bytes;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GetListEncrypted(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
+  (void)obj;
+
+  jboolean if_copy = false;
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
+
+  size_t report_msg_size = OE_SHARED_KEY_CIPHERTEXT_SIZE * (shared_key_msg_size / OE_PUBLIC_KEY_SIZE);
+  uint8_t* report_msg = new uint8_t[report_msg_size];
+
+  oe_check_and_time("Get List Encrypted",
+                    ecall_get_list_encrypted((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size,
+                                             report_msg,
+                                             report_msg_size));
+
+  // Allocate memory
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
+
+  env->ReleaseByteArrayElements(shared_key_msg_input, (jbyte *) shared_key_msg_bytes, 0);
+
+  delete[] report_msg;
+
+  return report_msg_bytes;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishSharedKey(
+  JNIEnv *env, jobject obj, jlong eid, jbyteArray shared_key_msg_input) {
+  (void)obj;
+
+  jboolean if_copy = false;
+
+  jbyte *shared_key_msg_bytes = env->GetByteArrayElements(shared_key_msg_input, &if_copy);
+  uint32_t shared_key_msg_size = static_cast<uint32_t>(env->GetArrayLength(shared_key_msg_input));
+
+  size_t report_msg_size = SGX_AESGCM_KEY_SIZE;
+  uint8_t* report_msg = new uint8_t[report_msg_size];
+
+  oe_check_and_time("Finish attestation",
+                    ecall_finish_shared_key((oe_enclave_t*)eid,
+                                             reinterpret_cast<uint8_t *>(shared_key_msg_bytes),
+                                             shared_key_msg_size,
+                                             report_msg,
+                                             report_msg_size));
+
+  // Allocate memory
+  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size, reinterpret_cast<jbyte *>(report_msg));
+
+  env->ReleaseByteArrayElements(shared_key_msg_input, shared_key_msg_bytes, 0);
+  delete[] report_msg;
+
+  return report_msg_bytes;
+}
+
+/////////////////////////////// Shared Key Gen End ////////////////////////////////
+
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_StopEnclave(
     JNIEnv *env, jobject obj, jlong eid) {
   (void)env;
@@ -344,6 +426,72 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
 
   return ciphertext;
 }
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_ReEncryptUser(
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray ciphertext, jstring username) {
+  (void)obj;
+
+  uint32_t clength = (uint32_t)env->GetArrayLength(ciphertext);
+
+  jboolean if_copy = false;
+  uint8_t *ciphertext_ptr = (uint8_t *)env->GetByteArrayElements(ciphertext, &if_copy);
+
+  uint8_t *new_ciphertext_copy = nullptr;
+  jsize new_clength = clength;
+
+  const char *username_str = env->GetStringUTFChars(username, nullptr);
+
+  if (ciphertext_ptr == nullptr) {
+    ocall_throw("Encrypt: JNI failed to get input byte array.");
+  } else {
+    new_ciphertext_copy = new uint8_t[new_clength];
+
+    oe_check("Encrypt", ecall_re_encrypt_user((oe_enclave_t *)eid, ciphertext_ptr, clength,
+                                      new_ciphertext_copy, (uint32_t)new_clength, username_str));
+  }
+
+  jbyteArray new_ciphertext = env->NewByteArray(new_clength);
+  env->SetByteArrayRegion(new_ciphertext, 0, new_clength, (jbyte *)new_ciphertext_copy);
+
+  env->ReleaseByteArrayElements(ciphertext, (jbyte *)ciphertext_ptr, 0);
+
+  delete[] new_ciphertext_copy;
+
+  return new_ciphertext;
+}
+
+
+JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Decrypt(
+    JNIEnv *env, jobject obj, jlong eid, jbyteArray ciphertext) {
+  (void)obj;
+
+  uint32_t clength = (uint32_t)env->GetArrayLength(ciphertext);
+  jboolean if_copy = false;
+  uint8_t *ciphertext_ptr = (uint8_t *)env->GetByteArrayElements(ciphertext, &if_copy);
+
+  uint8_t *plaintext_copy = nullptr;
+  jsize plength = 0;
+
+  if (ciphertext_ptr == nullptr) {
+    ocall_throw("Encrypt: JNI failed to get input byte array.");
+  } else {
+    plength = clength - SGX_AESGCM_IV_SIZE - SGX_AESGCM_MAC_SIZE;
+    plaintext_copy = new uint8_t[plength];
+
+    oe_check("Decrypt", ecall_decrypt((oe_enclave_t *)eid, ciphertext_ptr, clength,
+                                      plaintext_copy, (uint32_t)plength));
+  }
+
+  jbyteArray plaintext = env->NewByteArray(plength);
+  env->SetByteArrayRegion(plaintext, 0, plength, (jbyte *)plaintext_copy);
+
+  env->ReleaseByteArrayElements(ciphertext, (jbyte *)ciphertext_ptr, 0);
+
+  delete[] plaintext_copy;
+
+  return plaintext;
+}
+
 
 JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_Sample(
     JNIEnv *env, jobject obj, jlong eid, jbyteArray input_rows) {
