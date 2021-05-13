@@ -17,9 +17,6 @@
 #include "Sort.h"
 #include "util.h"
 
-// For debugging
-#include <iostream>
-
 #include "../Common/common.h"
 #include "../Common/mCrypto.h"
 #include <mbedtls/config.h>
@@ -334,10 +331,7 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
     name_len = name.len;
     std::string user_nam(nameptr, nameptr + name_len);
 
-//    std::cout << "User name: " << user_nam.c_str() << std::endl;
-
     add_client_key(shared_key_plaintext, shared_key_plaintext_size, (char*) user_nam.c_str());
-//    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
 
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());

@@ -12,7 +12,6 @@
 #include "util.h"
 #include <unordered_map>
 #include <vector>
-#include <iostream>
 
 // Set this number before creating the enclave
 uint8_t num_clients = 1;
@@ -72,13 +71,6 @@ void set_shared_key(uint8_t *shared_key_bytes, uint32_t shared_key_size) {
   }
   memcpy_s(shared_key, sizeof(shared_key), shared_key_bytes, shared_key_size);
   initKeySchedule();
-
-//  std::cout << "shared key" << std::endl;
-//  size_t i = 0;
-//  for (i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-//    std::cout << shared_key[i];
-//  }
-//  std::cout << std::endl;
 }
 
 void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext) {
@@ -87,13 +79,6 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext)
     throw std::runtime_error("Cannot encrypt without a shared key. Ensure all "
                              "enclaves have completed attestation.");
   }
-
-//  std::cout << "encryption key" << std::endl;
-//  size_t i = 0;
-//  for (i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-//    std::cout << shared_key[i];
-//  }
-//  std::cout << std::endl;
 
   uint8_t *iv_ptr = ciphertext;
   uint8_t *ciphertext_ptr = ciphertext + SGX_AESGCM_IV_SIZE;
@@ -109,13 +94,7 @@ void encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext)
 
 void encrypt_user(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext, const char * user_name) {
 
-//  std::cout << "Passed in user_name: " << user_name << std::endl;
-
   for (auto& keypair : client_key_schedules) {
-//    std::cout << "stored user_name: " << keypair.first.c_str() << std::endl;
-//    if (strcmp(keypair.first.c_str(), user_name) == 0) {
-//      std::cout << "passed in and stored are equal" << std::endl;
-//    }
 
     if (strcmp(keypair.first.c_str(), user_name) == 0) {
       uint8_t *iv_ptr = ciphertext;
@@ -140,13 +119,6 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
                              "enclaves have completed attestation.");
   }
 
-//  std::cout << "decryption key" << std::endl;
-//  size_t i = 0;
-//  for (i = 0; i < SGX_AESGCM_KEY_SIZE; i++) {
-//    std::cout << shared_key[i];
-//  }
-//  std::cout << std::endl;
-
   uint32_t plaintext_length = dec_size(ciphertext_length);
 
   uint8_t *iv_ptr = (uint8_t *)ciphertext;
@@ -169,22 +141,10 @@ void decrypt(const uint8_t *ciphertext, uint32_t ciphertext_length, uint8_t *pla
       AesGcm decipher(keypair.second.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
       decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
       if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
-          // std::cout << "We found the proper key, of user " << keypair.first << std::endl;
+          std::cout << "We found the proper key, of user " << keypair.first << std::endl;
           success = 0;
           break;
       }
-    }
-
-    // Try key of all zeros for heck of it
-    unsigned char zero_key[SGX_AESGCM_KEY_SIZE] = {0};
-    std::unique_ptr<KeySchedule> zero_ks;
-    zero_ks.reset(new KeySchedule(reinterpret_cast<unsigned char *>(zero_key), SGX_AESGCM_KEY_SIZE));
-
-    AesGcm decipher(zero_ks.get(), iv_ptr, SGX_AESGCM_IV_SIZE);
-    decipher.decrypt(ciphertext_ptr, plaintext_length, plaintext, plaintext_length);
-    if (memcmp(mac_ptr, decipher.tag().t, SGX_AESGCM_MAC_SIZE) == 0) {
-          // std::cout << "We found the proper key, of user " << keypair.first << std::endl;
-          success = 0;
     }
 
     if (success == -1) {
