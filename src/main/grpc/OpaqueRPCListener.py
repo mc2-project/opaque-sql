@@ -15,6 +15,17 @@ def clean_shell_output(output):
   parsed_output = output.split("\n",1)[1]
   return parsed_output.rstrip()
 
+'''
+Spark cluster needs to be started before running
+Spark configurations can be set at conf/spark-env.sh
+
+To match configurations with MultiPartition Test Suite use:
+
+SPARK_WORKER_INSTANCES=3
+SPARK_WORKER_CORES=1
+SPARK_WORKER_MEMORY=1G
+
+'''
 class OpaqueRPCListener(rpc_pb2_grpc.OpaqueRPCServicer):
 
   def __init__(self):
@@ -44,21 +55,19 @@ class OpaqueRPCListener(rpc_pb2_grpc.OpaqueRPCServicer):
       elif opt in ("-m", "--master"):
          master = arg
 
-    # TODO: Currently hardcoding memory capacities. Will need to change to be dynamic eventually
+    # MultiPartition Test Suite Spark Configurations
     spark_shell_bin = spark_home +  "/bin/spark-shell" + " --jars " + opaque_jar + " --master " + master\
-       + " --driver-memory 1G --executor-memory=2G --conf spark.executor.instances=2"
-
-#    spark_shell_bin = spark_home +  "/bin/spark-shell" + " --jars " + opaque_jar
+       + " --conf spark.executor.instances=3 --conf spark.sql.shuffle.partitions=3 --conf spark.executor.memory=4g"
 
     self.proc = replwrap.REPLWrapper(spark_shell_bin, "scala> ", prompt_change=None)
     print("Instantiate subprocess")
 
     self.proc.run_command("import edu.berkeley.cs.rise.opaque.implicits._")
-    self.proc.run_command("edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)")
+    self.proc.run_command("edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)", timeout=None)
     print("Imported Opaque libraries")
 
   def relayGenerateReport(self, request, context):
-    output = self.proc.run_command("edu.berkeley.cs.rise.opaque.RA.printReport()")
+    output = self.proc.run_command("edu.berkeley.cs.rise.opaque.RA.printReport()", timeout=None)
     clean_output = clean_shell_output(output)
     reply = rpc_pb2.RAReply(success = True, report = clean_output)
     return reply
@@ -73,7 +82,7 @@ class OpaqueRPCListener(rpc_pb2_grpc.OpaqueRPCServicer):
     if not request.query: 
       return rpc_pb2.QueryReply(success = True, data = "")
 
-    output = self.proc.run_command(request.query)
+    output = self.proc.run_command(request.query, timeout=None)
     clean_output = clean_shell_output(output)
 
     return rpc_pb2.QueryReply(success = True, data = clean_output)
@@ -90,7 +99,7 @@ class OpaqueRPCListener(rpc_pb2_grpc.OpaqueRPCServicer):
     finish_ra_cmd = "edu.berkeley.cs.rise.opaque.RA.grpcFinishAttestation(\"" + key_arg + \
         "\", " + "\"" + eid_arg + "\")"
 
-    output = self.proc.run_command(finish_ra_cmd)
+    output = self.proc.run_command(finish_ra_cmd, timeout=None)
 
     reply = rpc_pb2.KeyReply(success = True)
 
