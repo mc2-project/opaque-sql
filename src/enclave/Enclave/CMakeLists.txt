@@ -42,6 +42,11 @@ if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(enclave_trusted PUBLIC -DSIMULATE)
 endif()
 
+if ("$ENV{DEBUG}" STREQUAL "1")
+  target_compile_options(enclave_trusted PUBLIC -g -O0)
+  target_compile_definitions(enclave_trusted PUBLIC -DDEBUG)
+endif()
+
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 
 # Need for the generated file Enclave_t.h
