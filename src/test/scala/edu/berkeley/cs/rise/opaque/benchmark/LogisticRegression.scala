@@ -25,12 +25,15 @@ import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.SecurityLevel
+import edu.berkeley.cs.rise.opaque.SPHelper
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
+
+import org.apache.spark.sql.catalyst.util.GenericArrayData
 
 object LogisticRegression {
 
@@ -87,7 +90,10 @@ object LogisticRegression {
       val w = DenseVector.fill(D) { 2 * rand.nextDouble - 1 }
 
       for (i <- 1 to ITERATIONS) {
-        val gradient = points
+
+        // Only two securityLevels: Insecure and Encrypted
+        if (securityLevel.name == "spark sql") {
+          val gradient = points
           .select(
             vectormultiply(
               $"x",
@@ -100,10 +106,47 @@ object LogisticRegression {
           .first()
           .getSeq[Double](0)
           .toArray
-        w -= new DenseVector(gradient)
+
+          w -= new DenseVector(gradient)
+
+        } else {
+
+          points.select(
+            vectormultiply(
+              $"x",
+              (lit(1.0) / (lit(1.0) + exp(-$"y" * dot(lit(w.toArray), $"x"))) - lit(1.0)) * $"y"
+            )
+              .as("v")
+          ).collect()
+
+          val gradientRows = SPHelper.obtainRows(points)
+
+          // Convert gradientRows (Seq[Row[GenericArrayData]]) to (Seq[Row[Array[Double]])
+          val test = gradientRows.map(x => SPHelper.convertGenericArrayData(x, 0))
+
+          val schema = StructType(
+              Seq(StructField("v", DataTypes.createArrayType(DoubleType)))
+          )
+
+          val gradientDF = securityLevel.applyTo(
+                               spark.createDataFrame(
+                               spark.sparkContext.makeRDD(test, numPartitions),
+                               schema))
+
+          gradientDF.groupBy().agg(vectorsum($"v")).collect()
+
+          val gradientSumRows = SPHelper.obtainRows(gradientDF)
+
+          val test2 = SPHelper.convertGenericArrayData(gradientSumRows(0), 0)
+          val gradient = test2(0).asInstanceOf[Array[Double]]
+
+          w -= new DenseVector(gradient)
+
+        }
       }
 
       w.toArray
     }
   }
 }
+

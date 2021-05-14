@@ -26,6 +26,7 @@ import edu.berkeley.cs.rise.opaque.expressions.ClosestPoint.closestPoint
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
 import edu.berkeley.cs.rise.opaque.SecurityLevel
+import edu.berkeley.cs.rise.opaque.SPHelper
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
@@ -77,42 +78,130 @@ object KMeans {
       "system" -> securityLevel.name,
       "N" -> N
     ) {
+      if (securityLevel.name == "spark sql") {
 
-      // Sample k random points.
-      // TODO: Assumes points are already permuted randomly.
-      var centroids = points.take(K).map(_.getSeq[Double](0).toArray)
-      var tempDist = 1.0
+        // Sample k random points.
+        // TODO: Assumes points are already permuted randomly.
+        var centroids = points.take(K).map(_.getSeq[Double](0).toArray)
 
-      while (tempDist > convergeDist) {
-        val newCentroids = points
-          .select(
-            closestPoint($"p", lit(centroids)).as("oldCentroid"),
-            $"p".as("centroidPartialSum"),
-            lit(1).as("centroidPartialCount")
-          )
-          .groupBy($"oldCentroid")
-          .agg(
-            vectorsum($"centroidPartialSum").as("centroidSum"),
-            sum($"centroidPartialCount").as("centroidCount")
-          )
-          .select(
-            $"oldCentroid",
-            vectormultiply($"centroidSum", (lit(1.0) / $"centroidCount")).as("newCentroid")
-          )
-          .collect
+        var tempDist = 1.0
 
-        tempDist = 0.0
-        for (row <- newCentroids) {
-          tempDist += squaredDistance(
-            new DenseVector(row.getSeq[Double](0).toArray),
-            new DenseVector(row.getSeq[Double](1).toArray)
-          )
+        while (tempDist > convergeDist) {
+          val newCentroids = points
+            .select(
+              closestPoint($"p", lit(centroids)).as("oldCentroid"),
+              $"p".as("centroidPartialSum"),
+              lit(1).as("centroidPartialCount")
+            )
+            .groupBy($"oldCentroid")
+            .agg(
+              vectorsum($"centroidPartialSum").as("centroidSum"),
+              sum($"centroidPartialCount").as("centroidCount")
+            )
+            .select(
+              $"oldCentroid",
+              vectormultiply($"centroidSum", (lit(1.0) / $"centroidCount")).as("newCentroid")
+            )
+            .collect
+
+          tempDist = 0.0
+          for (row <- newCentroids) {
+            tempDist += squaredDistance(
+              new DenseVector(row.getSeq[Double](0).toArray),
+              new DenseVector(row.getSeq[Double](1).toArray)
+            )
+          }
+
+          centroids = newCentroids.map(_.getSeq[Double](1).toArray)
         }
 
-        centroids = newCentroids.map(_.getSeq[Double](1).toArray)
-      }
+        centroids
+      } else {
 
-      centroids
+        // First operation block. Instead of using take, use collect for simplicity
+        // points.take(K)
+        points.collect
+
+        var centroids = SPHelper.obtainRows(points).map(x => SPHelper.convertGenericArrayData(x, 0))
+                                                   .map(x => x(0).asInstanceOf[Array[Double]])
+                                                   .toArray.slice(0, 3)
+
+        var tempDist = 1.0
+
+        while (tempDist > convergeDist) {
+
+          // Second operation block
+          val df_2 = points
+            .select(
+              closestPoint($"p", lit(centroids)).as("oldCentroid"),
+              $"p".as("centroidPartialSum"),
+              lit(1).as("centroidPartialCount")
+            ).collect
+
+          // Of form Seq[Row[GenericArrayData, GenericArrayData, Int]]
+          val rows_2 = SPHelper.obtainRows(points)
+              .map(x => SPHelper.convertGenericArrayDataKMeans(x, 0))
+
+          // Third operation block
+          val schema = StructType(
+              Seq(StructField("oldCentroid", DataTypes.createArrayType(DoubleType)),
+                  StructField("centroidPartialSum", DataTypes.createArrayType(DoubleType)),
+                  StructField("centroidPartialCount", DataTypes.IntegerType))
+          )
+
+          val df_3 = securityLevel.applyTo(
+                               spark.createDataFrame(
+                               spark.sparkContext.makeRDD(rows_2, numPartitions),
+                               schema))
+
+          df_3.groupBy($"oldCentroid")
+            .agg(
+              vectorsum($"centroidPartialSum").as("centroidSum"),
+              sum($"centroidPartialCount").as("centroidCount")
+            ).collect
+
+          // Of form Seq[Row[GenericArrayData, GenericArrayData, Int]]
+          val rows_3 = SPHelper.obtainRows(df_3)
+              .map(x => SPHelper.convertGenericArrayDataKMeans(x, 0))
+          
+          // Fourth operation block
+          val schema_2 = StructType(
+              Seq(StructField("oldCentroid", DataTypes.createArrayType(DoubleType)),
+                  StructField("centroidSum", DataTypes.createArrayType(DoubleType)),
+                  StructField("centroidCount", DataTypes.LongType))
+          )
+
+          val df_4 = securityLevel.applyTo(
+                               spark.createDataFrame(
+                               spark.sparkContext.makeRDD(rows_3, numPartitions),
+                               schema_2))
+
+          df_4.select(
+              $"oldCentroid",
+              vectormultiply($"centroidSum", (lit(1.0) / $"centroidCount")).as("newCentroid"),
+              lit(1).as("filler")
+            )
+            .collect
+
+          val rows_4 = SPHelper.obtainRows(df_3)
+              .map(x => SPHelper.convertGenericArrayDataKMeans(x, 0))
+
+          // Final operation block
+
+          tempDist = 0.0
+            for (row <- rows_4) {
+              tempDist += squaredDistance(
+                new DenseVector(row(0).asInstanceOf[Array[Double]]),
+                new DenseVector(row(1).asInstanceOf[Array[Double]])
+              )
+          }
+
+          centroids = rows_4.map(x => x(1).asInstanceOf[Array[Double]]).toArray
+        }
+
+
+        centroids
+      }
     }
   }
 }
