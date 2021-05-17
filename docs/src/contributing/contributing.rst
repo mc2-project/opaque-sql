@@ -51,4 +51,12 @@ Opaque SQL enforces linting rules for all contributions. Before making changes a
 Debugging your changes
 ######################
 
-Opaque SQL supports debugging native C/C++ code with `oegdb <https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/Debugging.md>`_. To do so, specify the test class you want to debug in ``${OPAQUE_HOME}/project/resources/run-tests.gdb`` then run ``${OPAQUE_HOME}/build/sbt oe-gdb``.
+Opaque SQL supports debugging native C/C++ code with `oegdb <https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/Debugging.md>`_. There are three steps to do so:
+
+1. Specify the test suite you want to debug in ``${OPAQUE_HOME}/project/resources/run-tests.gdb``.
+
+2. Set a debug environment variable: ``export DEBUG=1``.
+
+3. Run ``${OPAQUE_HOME}/build/sbt oe-gdb``
+
+Note that setting ``DEBUG=1`` builds the enclave code in an insecure state: this **should not** be set for any production system.
