@@ -42,7 +42,7 @@ if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(enclave_trusted PUBLIC -DSIMULATE)
 endif()
 
-if ("$ENV{DEBUG}" STREQUAL "1")
+if ("$ENV{DEBUG}" EQUAL 1)
   target_compile_options(enclave_trusted PUBLIC -g -O0)
   target_compile_definitions(enclave_trusted PUBLIC -DDEBUG)
 endif()
