@@ -4,6 +4,9 @@
 Contributing
 ************
 
+Submitting a pull request
+#########################
+
 Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):
 
 #. Fork the repository on Github, then clone your fork and set upstream:
@@ -44,3 +47,8 @@ Opaque SQL enforces linting rules for all contributions. Before making changes a
    .. code-block:: bash
 
                 ./${OPAQUE_HOME}/format.sh
+
+Debugging your changes
+######################
+
+Opaque SQL supports debugging native C/C++ code with `oegdb <https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/Debugging.md>`_. To do so, specify the test class you want to debug in ``${OPAQUE_HOME}/project/resources/run-tests.gdb`` then run ``${OPAQUE_HOME}/build/sbt oe-gdb``.

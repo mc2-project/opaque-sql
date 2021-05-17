@@ -163,7 +163,10 @@ watchSources ++=
 val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
 val oeGdbTask =
-  TaskKey[Unit]("oe-gdb-task", "Runs SinglePartitionJoinSuite under the oe-gdb debugger.")
+  TaskKey[Unit](
+    "oe-gdb-task",
+    "Runs the test suite specified in ./project/resources under the oe-gdb debugger."
+  )
 def oeGdbCommand = Command.command("oe-gdb") { state =>
   val extracted = Project extract state
   val newState = extracted.append(Seq(buildType := Debug), state)
@@ -251,7 +254,7 @@ oeGdbTask := {
   (compile in Test).value
   Process(
     Seq(
-      "/opt/openenclave/bin/oegdb",
+      "oegdb",
       "java",
       "-x",
       ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath
