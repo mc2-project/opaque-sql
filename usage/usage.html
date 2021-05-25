@@ -137,7 +137,7 @@
         <div class="section" id="query-submission-via-the-spark-driver">
 <h1>Query submission via the Spark Driver<a class="headerlink" href="#query-submission-via-the-spark-driver" title="Permalink to this headline">¶</a></h1>
 <div class="figure align-center" id="id1" style="width: 100%">
-<img alt="https://mc2-project.github.io/opaque/opaque-diagram.svg" src="https://mc2-project.github.io/opaque/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in trusted driver mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<img alt="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg" src="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in trusted driver mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 <div class="section" id="starting-opaque-sql">
 <h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
@@ -145,20 +145,20 @@
 <div class="section" id="running-the-interactive-shell">
 <h3>Running the interactive shell<a class="headerlink" href="#running-the-interactive-shell" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
-<li><p>Package Opaque into a JAR.</p>
+<li><p>Package Opaque into a fat JAR. The reason we need a fat JAR is because the JAR produced by <code class="docutils literal notranslate"><span class="pre">build/sbt</span> <span class="pre">package</span></code> does not include gRPC dependencies needed for remote attestion.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>
-build/sbt package
+build/sbt test:assembly
 </pre></div>
 </div>
 </li>
 <li><p>Launch the Spark shell with Opaque.</p>
 <p>Scala:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>spark-shell --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>spark-shell --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
 </pre></div>
 </div>
 <p>Python:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pyspark --py-files <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar  <span class="se">\</span>
-  --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque_2.12-0.1.jar
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pyspark --py-files <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar  <span class="se">\</span>
+  --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
 </pre></div>
 </div>
 <p>(we need to specify <cite>–py-files</cite> because the Python functions are placed in the .jar for easier packaging)</p>
