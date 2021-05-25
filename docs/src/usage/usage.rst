@@ -2,7 +2,7 @@
 Query submission via the Spark Driver
 *************************************
 
-.. figure:: https://mc2-project.github.io/opaque/opaque-diagram.svg
+.. figure:: https://mc2-project.github.io/opaque-sql/opaque-diagram.svg
    :align: center
    :figwidth: 100 %
 
@@ -19,12 +19,12 @@ Running the interactive shell
 *****************************
 
 
-1. Package Opaque into a JAR.
+1. Package Opaque into a fat JAR. The reason we need a fat JAR is because the JAR produced by ``build/sbt package`` does not include gRPC dependencies needed for remote attestion.
 
    .. code-block:: bash
                    
                    cd ${OPAQUE_HOME}
-                   build/sbt package
+                   build/sbt test:assembly
 
 2. Launch the Spark shell with Opaque.
 
@@ -32,14 +32,14 @@ Running the interactive shell
 
    .. code-block:: bash
 
-                   spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
+                   spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
 
    Python:
 
    .. code-block:: bash
                    
-                   pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar  \
-                     --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
+                   pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar  \
+                     --jars ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
     
    (we need to specify `--py-files` because the Python functions are placed in the .jar for easier packaging)
 
