@@ -54,10 +54,9 @@ echo "" >> ~/.bashrc
 source ~/.bashrc
 
 # Source necessary environment variables
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-OPAQUE_DIR = "${SCRIPT_DIR}/.."
-
-cd $(echo ${OPAQUE_DIR} | tr -d '\r')
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
+OPAQUE_DIR="${SCRIPT_DIR%/*}"
+cd ${OPAQUE_DIR}
 source opaqueenv
 source /opt/openenclave/share/openenclave/openenclaverc
 
