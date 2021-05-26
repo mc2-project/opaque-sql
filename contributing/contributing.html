@@ -95,7 +95,7 @@
       <a href="../index.html"><div class="brand">Opaque SQL  documentation</div></a>
     </div>
     <div class="header-right">
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
     </div>
@@ -131,11 +131,13 @@
   <main class="main">
     <div class="content">
       <article role="main">
-        <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+        <label class="toc-overlay-icon toc-content-icon" for="__toc">
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <div class="section" id="contributing">
 <span id="id1"></span><h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submitting-a-pull-request">
+<h2>Submitting a pull request<a class="headerlink" href="#submitting-a-pull-request" title="Permalink to this headline">¶</a></h2>
 <p>Opaque SQL enforces linting rules for all contributions. Before making changes and opening a pull request, please do the following (compatible for Ubuntu 18.04):</p>
 <ol class="arabic">
 <li><p>Fork the repository on Github, then clone your fork and set upstream:</p>
@@ -174,6 +176,17 @@ sudo npm install -g clang-format
 </li>
 </ol>
 </div>
+<div class="section" id="debugging-your-changes">
+<h2>Debugging your changes<a class="headerlink" href="#debugging-your-changes" title="Permalink to this headline">¶</a></h2>
+<p>Opaque SQL supports debugging native C/C++ code with <a class="reference external" href="https://github.com/openenclave/openenclave/blob/master/docs/GettingStartedDocs/Debugging.md">oegdb</a>. There are three steps to do so:</p>
+<ol class="arabic simple">
+<li><p>Specify the test suite you want to debug in <code class="docutils literal notranslate"><span class="pre">${OPAQUE_HOME}/project/resources/run-tests.gdb</span></code>.</p></li>
+<li><p>Set a debug environment variable: <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">DEBUG=1</span></code>.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">${OPAQUE_HOME}/build/sbt</span> <span class="pre">oe-gdb</span></code></p></li>
+</ol>
+<p>Note that setting <code class="docutils literal notranslate"><span class="pre">DEBUG=1</span></code> builds the enclave code in an insecure state: this <strong>should not</strong> be set for any production system.</p>
+</div>
+</div>
 
       </article>
       <footer>
@@ -209,8 +222,28 @@ sudo npm install -g clang-format
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            Contents
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Contributing</a><ul>
+<li><a class="reference internal" href="#submitting-a-pull-request">Submitting a pull request</a></li>
+<li><a class="reference internal" href="#debugging-your-changes">Debugging your changes</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
