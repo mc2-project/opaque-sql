@@ -35,8 +35,11 @@ std::string string_format(const std::string &fmt, ...) {
 }
 
 void ocall_malloc(size_t size, uint8_t **ret) {
+// TODO: why do we need the ifndef here when running oegdb?
+#ifndef DEBUG
   // Guard against overwriting enclave memory
   assert(oe_is_outside_enclave(*ret, size) == 1);
+#endif
   __builtin_ia32_lfence();
   *ret = (uint8_t *)oe_host_malloc(size);
 }
