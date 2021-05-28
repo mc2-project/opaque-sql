@@ -76,12 +76,10 @@ object IntpHandler {
       "import org.apache.spark.sql.functions._",
       /* Opaque SQL specific commands */
       "@transient val sqlContext = spark.sqlContext",
-      // Use dummy key for attestation for now.
-      "spark.conf.set(\"spark.opaque.testing.enableSharedKey\", \"true\")",
       """
         import edu.berkeley.cs.rise.opaque.implicits._
         try { 
-          edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext) 
+          edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
         } catch {
           case _ : Throwable =>
         }

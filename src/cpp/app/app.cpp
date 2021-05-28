@@ -193,6 +193,9 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
 #ifdef SIMULATE
   flags |= OE_ENCLAVE_FLAG_SIMULATE;
 #endif
+#ifdef DEBUG
+  flags |= OE_ENCLAVE_FLAG_DEBUG;
+#endif
 
   const char *library_path_str = env->GetStringUTFChars(library_path, nullptr);
   oe_check_and_time("StartEnclave",

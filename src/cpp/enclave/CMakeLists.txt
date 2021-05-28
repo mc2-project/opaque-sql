@@ -24,7 +24,16 @@ set(SOURCES
 
 add_library(enclave_trusted SHARED ${SOURCES})
 
-add_compile_options(${COMMON_COMPILE_FLAGS} -nostdinc -nostdinc++ -fvisibility=hidden -fpie -fstack-protector -Wl,-nodefaultlibs -Wl,-nostartfiles -Wl,-nostdlib)
+if ("$ENV{MODE}" STREQUAL "SIMULATE")
+  target_compile_definitions(enclave_trusted PUBLIC -DSIMULATE)
+endif()
+
+if ("$ENV{DEBUG}" EQUAL 1)
+  target_compile_options(enclave_trusted PUBLIC -g -O0)
+  target_compile_definitions(enclave_trusted PUBLIC -DDEBUG)
+endif()
+
+add_compile_options(${COMMON_COMPILE_FLAGS} -fvisibility=hidden -fpie -fstack-protector -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0)
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 
