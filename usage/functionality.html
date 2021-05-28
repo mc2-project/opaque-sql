@@ -421,7 +421,7 @@
 </pre></div>
 </div>
 </li>
-<li><p>Finally, implement the UDF in C++. In <code class="docutils literal notranslate"><span class="pre">FlatbuffersExpressionEvaluator#eval_helper</span></code> (from <code class="docutils literal notranslate"><span class="pre">ExpressionEvaluation.h</span></code>), add a case for <code class="docutils literal notranslate"><span class="pre">tuix::ExprUnion_DotProduct</span></code>. Within that case, cast the expression to a <code class="docutils literal notranslate"><span class="pre">tuix::DotProduct</span></code>, recursively evaluate the left and right children, perform the dot product computation on them, and construct a <code class="docutils literal notranslate"><span class="pre">DoubleField</span></code> containing the result.</p></li>
+<li><p>Finally, implement the UDF in C++. In <code class="docutils literal notranslate"><span class="pre">FlatbuffersExpressionEvaluator#eval_helper</span></code> (from <code class="docutils literal notranslate"><span class="pre">expression_evaluation.h</span></code>), add a case for <code class="docutils literal notranslate"><span class="pre">tuix::ExprUnion_DotProduct</span></code>. Within that case, cast the expression to a <code class="docutils literal notranslate"><span class="pre">tuix::DotProduct</span></code>, recursively evaluate the left and right children, perform the dot product computation on them, and construct a <code class="docutils literal notranslate"><span class="pre">DoubleField</span></code> containing the result.</p></li>
 </ol>
 </div>
 </div>
