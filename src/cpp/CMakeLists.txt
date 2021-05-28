@@ -18,7 +18,6 @@ set(OE_CRYPTO_LIB
 include_directories(app)
 include_directories(common)
 include_directories(enclave)
-include_directories(service_provider)
 include_directories(${FLATBUFFERS_LIB_DIR})
 include_directories(${FLATBUFFERS_GEN_CPP_DIR})
 include_directories(${OE_INCLUDEDIR})
@@ -47,4 +46,3 @@ add_custom_target(run ALL
 
 add_subdirectory(app)
 add_subdirectory(enclave)
-add_subdirectory(service_provider)

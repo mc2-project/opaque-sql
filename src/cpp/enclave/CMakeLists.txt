@@ -3,9 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 project(OpaqueEnclaveTrusted)
 
 set(SOURCES
+  crypto/crypto_context.h
   crypto/ks_crypto.cpp
-  crypto/m_crypto.cpp
-  crypto/random.cpp
   crypto/sgxaes.cpp
   crypto/sgxaes_asm.S
   flatbuffer_helpers/flatbuffers.cpp

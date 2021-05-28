@@ -1,5 +1,4 @@
 #include "sort.h"
-#include "crypto/random.h"
 
 #include <algorithm>
 #include <queue>
@@ -136,8 +135,10 @@ void sample(uint8_t *input_rows, size_t input_rows_length, uint8_t **output_rows
   while (r.has_next()) {
     const tuix::Row *row = r.next();
 
+    Crypto *crypto = CryptoContext::getInstance().crypto;
+
     uint16_t rand;
-    mbedtls_read_rand(reinterpret_cast<unsigned char *>(&rand), 2);
+    crypto->RandGen(reinterpret_cast<unsigned char *>(&rand), 2);
     if (rand <= sampling_ratio) {
       w.append(row);
     }

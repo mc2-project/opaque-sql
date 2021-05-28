@@ -4,8 +4,8 @@
 #include <cstdint>
 
 #include "common.h"
+#include "crypto/crypto_context.h"
 #include "crypto/ks_crypto.h"
-#include "crypto/m_crypto.h"
 #include "physical_operators/aggregate.h"
 #include "physical_operators/broadcast_nested_loop_join.h"
 #include "physical_operators/filter.h"
@@ -28,6 +28,8 @@
 // within these definitions), and are then rethrown as Java exceptions using
 // ocall_throw.
 
+Crypto *g_crypto = CryptoContext::getInstance().crypto;
+
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext,
                    uint32_t cipher_length) {
   // Guard against encrypting or overwriting enclave memory
@@ -37,10 +39,10 @@ void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphe
 
   try {
     // IV (12 bytes) + ciphertext + mac (16 bytes)
-    assert(cipher_length >= plaintext_length + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE);
+    assert(cipher_length >= plaintext_length + CIPHER_IV_SIZE + CIPHER_TAG_SIZE);
     (void)cipher_length;
     (void)plaintext_length;
-    encrypt(plaintext, plaintext_length, ciphertext);
+    g_crypto->SymEnc(shared_key, plaintext, NULL, ciphertext, plaintext_length, 0);
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
@@ -238,15 +240,20 @@ void ecall_limit_return_rows(uint64_t partition_id, uint8_t *limits, size_t limi
   }
 }
 
-static Crypto g_crypto;
+#define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
+typedef struct oe_report_msg_t {
+  uint8_t public_key[CIPHER_PK_SIZE];
+  size_t report_size;
+  uint8_t report[];
+} oe_report_msg_t;
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
   try {
     oe_shared_key_msg_t *shared_key_msg = (oe_shared_key_msg_t *)shared_key_msg_input;
-    uint8_t shared_key_plaintext[SGX_AESGCM_KEY_SIZE];
+    uint8_t shared_key_plaintext[CIPHER_KEY_SIZE];
     size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto.decrypt(shared_key_msg->shared_key_ciphertext, shared_key_msg_size,
-                                shared_key_plaintext, &shared_key_plaintext_size);
+    bool ret = g_crypto->AsymDec(shared_key_msg->shared_key_ciphertext, shared_key_plaintext,
+                                 shared_key_msg_size, &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
     }
@@ -262,9 +269,9 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
 */
 void ecall_generate_report(uint8_t **report_msg_data, size_t *report_msg_data_size) {
 
-  uint8_t public_key[OE_PUBLIC_KEY_SIZE] = {};
+  uint8_t public_key[CIPHER_PK_SIZE] = {};
   size_t public_key_size = sizeof(public_key);
-  uint8_t sha256[OE_SHA256_HASH_SIZE];
+  uint8_t sha256[SHA_DIGEST_SIZE];
   uint8_t *report = NULL;
   size_t report_size = 0;
   oe_report_msg_t *report_msg = NULL;
@@ -276,9 +283,9 @@ void ecall_generate_report(uint8_t **report_msg_data, size_t *report_msg_data_si
   *report_msg_data = NULL;
   *report_msg_data_size = 0;
 
-  g_crypto.retrieve_public_key(public_key);
+  g_crypto->WritePublicKey(public_key);
 
-  if (g_crypto.sha256(public_key, public_key_size, sha256) != 0) {
+  if (g_crypto->Hash(public_key, sha256, public_key_size) != 0) {
     ocall_throw("sha256 failed");
   }
 

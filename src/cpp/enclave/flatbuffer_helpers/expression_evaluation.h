@@ -5,6 +5,7 @@
 #include <limits>
 #include <typeinfo>
 
+#include "crypto/crypto_context.h"
 #include "flatbuffers.h"
 
 int printf(const char *fmt, ...);
@@ -278,9 +279,10 @@ private:
         std::string ciphertext(str_vec.begin(), str_vec.end());
         std::string ciphertext_decoded = ciphertext_base64_decode(ciphertext);
 
-        uint8_t *plaintext = new uint8_t[dec_size(ciphertext_decoded.size())];
-        decrypt(reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()),
-                ciphertext_decoded.size(), plaintext);
+        Crypto *crypto = CryptoContext::getInstance().crypto;
+        uint8_t *plaintext = new uint8_t[crypto->SymDecSize(ciphertext_decoded.size())];
+        crypto->SymDec(shared_key, reinterpret_cast<const uint8_t *>(ciphertext_decoded.data()),
+                       NULL, plaintext, ciphertext_decoded.size(), 0);
 
         BufferRefView<tuix::Rows> buf(plaintext, ciphertext_decoded.size());
         buf.verify();

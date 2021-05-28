@@ -1,12 +1,17 @@
 #include "flatbuffers_readers.h"
+#include "crypto/crypto_context.h"
+#include "crypto/ks_crypto.h"
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
+  Crypto *crypto = CryptoContext::getInstance().crypto;
+
   uint32_t num_rows = encrypted_block->num_rows();
 
-  const size_t rows_len = dec_size(encrypted_block->enc_rows()->size());
+  const size_t rows_len = crypto->SymDecSize(encrypted_block->enc_rows()->size());
   rows_buf.reset(new uint8_t[rows_len]);
-  decrypt(encrypted_block->enc_rows()->data(), encrypted_block->enc_rows()->size(),
-          rows_buf.get());
+
+  crypto->SymDec(shared_key, encrypted_block->enc_rows()->data(), NULL, rows_buf.get(),
+                 encrypted_block->enc_rows()->size(), 0);
   BufferRefView<tuix::Rows> buf(rows_buf.get(), rows_len);
   buf.verify();
 

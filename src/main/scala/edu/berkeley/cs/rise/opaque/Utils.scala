@@ -267,7 +267,15 @@ object Utils extends Logging {
       val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
       cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
       val cipherText = cipher.doFinal(data)
-      iv ++ cipherText
+      /* Cipher in Scala produces cipher text of the form
+       * IV || ENCRYPTED DATA || TAG
+       * But the opaque_utils library in C++ expects
+       * IV || TAG || ENCRYPTED DATA
+       * So we need to swap the ENCRYPTED_DATA and TAG
+       */
+      val (encrypted_data, tag) = cipherText.splitAt(cipherText.size - GCM_TAG_LENGTH)
+      val swappedCipherText = tag ++ encrypted_data
+      iv ++ swappedCipherText
     case None =>
       throw new OpaqueException("Cannot encrypt without sharedKey.")
   }
@@ -277,9 +285,17 @@ object Utils extends Logging {
       val cipherKey = new SecretKeySpec(sharedKey, "AES")
       val iv = data.take(GCM_IV_LENGTH)
       val cipherText = data.drop(GCM_IV_LENGTH)
+      /* The opaque_utils library in C++ produces cipher text of the form
+       * IV || TAG || ENCRYPTED DATA
+       * But Cipher in Scala expects
+       * IV || ENCRYPTED DATA || TAG
+       * So we need to swap the ENCRYPTED_DATA and TAG
+       */
+      val (tag, encrypted_data) = cipherText.splitAt(GCM_TAG_LENGTH)
+      val swappedCipherText = encrypted_data ++ tag
       val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
       cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-      cipher.doFinal(cipherText)
+      cipher.doFinal(swappedCipherText)
     case None =>
       throw new OpaqueException("Cannot decrypt without sharedKey.")
   }

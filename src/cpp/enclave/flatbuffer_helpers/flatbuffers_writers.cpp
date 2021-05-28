@@ -1,4 +1,6 @@
 #include "flatbuffers_writers.h"
+#include "crypto/crypto_context.h"
+#include "crypto/ks_crypto.h"
 
 void RowWriter::clear() {
   builder.Clear();
@@ -73,13 +75,15 @@ void RowWriter::maybe_finish_block() {
 
 void RowWriter::finish_block() {
   builder.Finish(tuix::CreateRowsDirect(builder, &rows_vector));
-  size_t enc_rows_len = enc_size(builder.GetSize());
+  Crypto *crypto = CryptoContext::getInstance().crypto;
+  size_t enc_rows_len = crypto->SymEncSize(builder.GetSize());
 
   uint8_t *enc_rows_ptr = nullptr;
   ocall_malloc(enc_rows_len, &enc_rows_ptr);
 
   std::unique_ptr<uint8_t, decltype(&ocall_free)> enc_rows(enc_rows_ptr, &ocall_free);
-  encrypt(builder.GetBufferPointer(), builder.GetSize(), enc_rows.get());
+  crypto->SymEnc(shared_key, builder.GetBufferPointer(), NULL, enc_rows.get(), builder.GetSize(),
+                 0);
 
   enc_block_vector.push_back(
       tuix::CreateEncryptedBlock(enc_block_builder, rows_vector.size(),
