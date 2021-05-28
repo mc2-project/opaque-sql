@@ -331,7 +331,10 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (plaintext_ptr == nullptr) {
     ocall_throw("Encrypt: JNI failed to get input byte array.");
   } else {
-    clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+    /* These values have to match those in opaque_util's crypo.h */
+    uint8_t CIPHER_IV_SIZE = 12;
+    uint8_t CIPHER_TAG_SIZE = 16;
+    clength = plength + CIPHER_IV_SIZE + CIPHER_TAG_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
     oe_check("Encrypt", ecall_encrypt((oe_enclave_t *)eid, plaintext_ptr, plength,

@@ -33,9 +33,21 @@ if ("$ENV{DEBUG}" EQUAL 1)
   target_compile_definitions(enclave_trusted PUBLIC -DDEBUG)
 endif()
 
-add_compile_options(${COMMON_COMPILE_FLAGS} -fvisibility=hidden -fpie -fstack-protector -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0)
+add_compile_options(${COMMON_COMPILE_FLAGS} -fvisibility=hidden -fpie -fstack-protector -Wno-unused-parameter -Wno-unused-variable -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0)
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+
+########## Fetch and make opaque-utils library available ##########
+include(FetchContent)
+FetchContent_Declare(
+  opaque_utils_e
+  GIT_REPOSITORY git@github.com:opaque-systems/opaque-utils.git
+)
+set(FETCHCONTENT_QUIET OFF)
+set(HOST OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(opaque_utils_e)
+add_compile_definitions(SPDLOG_NO_THREAD_ID)
+##################################################################
 
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h
 target_include_directories(enclave_trusted 
@@ -48,6 +60,7 @@ target_link_directories(enclave_trusted PRIVATE
                         ${OE_LIBDIR}/openenclave/enclave)
 
 target_link_libraries(enclave_trusted
+                      opaque_utils_e
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}
                       openenclave::oelibc
