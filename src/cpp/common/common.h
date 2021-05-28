@@ -66,9 +66,4 @@ inline void PRINT_BYTE_ARRAY(void *file, void *mem, uint32_t len) {
   printf("\n}\n");
 }
 
-#define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
-typedef struct oe_shared_key_msg_t {
-  uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-} oe_shared_key_msg_t;
-
 #endif // COMMON_H

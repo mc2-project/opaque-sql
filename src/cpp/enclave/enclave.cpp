@@ -241,11 +241,16 @@ void ecall_limit_return_rows(uint64_t partition_id, uint8_t *limits, size_t limi
 }
 
 #define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
+typedef struct oe_shared_key_msg_t {
+  uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
+} oe_shared_key_msg_t;
+
 typedef struct oe_report_msg_t {
   uint8_t public_key[CIPHER_PK_SIZE];
   size_t report_size;
   uint8_t report[];
 } oe_report_msg_t;
+
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
   try {

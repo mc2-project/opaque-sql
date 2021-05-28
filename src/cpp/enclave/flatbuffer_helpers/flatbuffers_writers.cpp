@@ -1,6 +1,5 @@
 #include "flatbuffers_writers.h"
 #include "crypto/crypto_context.h"
-#include "crypto/ks_crypto.h"
 
 void RowWriter::clear() {
   builder.Clear();

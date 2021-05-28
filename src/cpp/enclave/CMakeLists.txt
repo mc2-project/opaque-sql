@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.15)
 project(OpaqueEnclaveTrusted)
 
 set(SOURCES
-  crypto/crypto_context.h
   crypto/ks_crypto.cpp
   crypto/sgxaes.cpp
   crypto/sgxaes_asm.S
@@ -45,7 +44,7 @@ FetchContent_Declare(
 set(FETCHCONTENT_QUIET OFF)
 set(HOST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(opaque_utils_e)
-add_compile_definitions(SPDLOG_NO_THREAD_ID)
+add_compile_definitions(SPDLOG_NO_THREAD_ID FMT_USE_INT128=0)
 ##################################################################
 
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h

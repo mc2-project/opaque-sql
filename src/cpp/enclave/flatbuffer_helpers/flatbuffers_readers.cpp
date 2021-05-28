@@ -1,6 +1,5 @@
 #include "flatbuffers_readers.h"
 #include "crypto/crypto_context.h"
-#include "crypto/ks_crypto.h"
 
 void EncryptedBlockToRowReader::reset(const tuix::EncryptedBlock *encrypted_block) {
   Crypto *crypto = CryptoContext::getInstance().crypto;
