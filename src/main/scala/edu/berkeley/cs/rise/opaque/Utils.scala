@@ -308,7 +308,7 @@ object Utils extends Logging {
   val numAttested: LongAccumulator = new LongAccumulator
   var loop: Boolean = true
 
-  def initOpaqueSQL(spark: SparkSession): Unit = {
+  def initOpaqueSQL(spark: SparkSession, testing: Boolean = false): Unit = {
     val sqlContext = spark.sqlContext
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
@@ -340,8 +340,8 @@ object Utils extends Logging {
     }
 
     RA.waitForExecutors(sc)
-    RA.attestEnclaves(sc)
-    RA.startThread(sc)
+    RA.attestEnclaves(sc, testing = testing)
+    RA.startThread(sc, testing = testing)
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
@@ -358,7 +358,7 @@ object Utils extends Logging {
     }
   }
 
-  def startEnclave(numEnclavesAcc: LongAccumulator): Long = {
+  def startEnclave(numEnclavesAcc: LongAccumulator, testing: Boolean = false): Long = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
@@ -366,6 +366,14 @@ object Utils extends Logging {
         eid = enclave.StartEnclave(path)
         numEnclavesAcc.add(1)
         logInfo("Starting an enclave")
+
+        // If we're testing, set `attested` to true
+        // so that we don't error out when calling `initEnclave()`
+        //
+        // During testing, we don't care about attestation
+        if (testing) {
+          attested = true
+        }
       }
     }
     eid

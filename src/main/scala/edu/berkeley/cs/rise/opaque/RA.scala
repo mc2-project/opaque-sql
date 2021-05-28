@@ -94,29 +94,33 @@ object RA extends Logging {
   // This function is executed in a loop that repeatedly tries to
   // call initRA if new enclaves are added
   // Periodically probe the workers using `startEnclave`
-  def attestEnclaves(sc: SparkContext): Unit = {
+  //
+  // Important: `testing` should only be set to true during testing
+  def attestEnclaves(sc: SparkContext, testing: Boolean = false): Unit = {
     // Proactively initialize enclaves
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
     rdd.mapPartitions { (_) =>
-      val eid = Utils.startEnclave(numEnclavesAcc)
+      val eid = Utils.startEnclave(numEnclavesAcc, testing)
       Iterator(eid)
     }.count
 
-    if (Utils.numEnclaves.value != Utils.numAttested.value) {
-      logInfo(
-        s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
-      )
-      initRA(sc)
+    if (!testing) {
+      if (Utils.numEnclaves.value != Utils.numAttested.value) {
+        logInfo(
+          s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
+        )
+        initRA(sc)
+      }
+      Thread.sleep(100)
     }
-    Thread.sleep(100)
   }
 
-  def startThread(sc: SparkContext): Unit = {
+  def startThread(sc: SparkContext, testing: Boolean = false): Unit = {
     val thread = new Thread {
       override def run: Unit = {
         while (loop) {
-          RA.attestEnclaves(sc)
+          RA.attestEnclaves(sc, testing)
         }
       }
     }
