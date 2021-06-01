@@ -23,7 +23,7 @@ trait SinglePartitionSparkSession {
   def numPartitions = 1
   val spark = SparkSession
     .builder()
-    .master("local[*]")
+    .master("local[1]")
     .appName("SinglePartitionSuiteSession")
     .config("spark.sql.shuffle.partitions", numPartitions)
     .config("spark.opaque.testing.enableTestingKey", true)
