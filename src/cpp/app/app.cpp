@@ -44,6 +44,7 @@
 #include <time.h>     // gettimeofday
 
 #include "common.h"
+#include "crypto.h"
 #include "enclave_u.h"
 #include "errlist.h"
 
@@ -331,9 +332,6 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (plaintext_ptr == nullptr) {
     ocall_throw("Encrypt: JNI failed to get input byte array.");
   } else {
-    /* These values have to match those in opaque_util's crypo.h */
-    uint8_t CIPHER_IV_SIZE = 12;
-    uint8_t CIPHER_TAG_SIZE = 16;
     clength = plength + CIPHER_IV_SIZE + CIPHER_TAG_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
