@@ -379,12 +379,12 @@ object Utils extends Logging {
     eid
   }
 
-  def generateReport(): (Long, Option[Array[Byte]]) = {
+  def generateEvidence(): (Long, Option[Array[Byte]]) = {
     this.synchronized {
       // Only generate report if the enclave has already been started, but not yet attested
       if (eid != 0L && !attested) {
         val enclave = new SGXEnclave()
-        val msg1 = enclave.GenerateReport(eid)
+        val msg1 = enclave.GenerateEvidence(eid)
         (eid, Option(msg1))
       } else {
         (eid, None)

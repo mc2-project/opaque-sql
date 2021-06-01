@@ -75,7 +75,7 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_LimitReturnRows(JNIEnv *, 
                                                                       jbyteArray);
 
 JNIEXPORT jbyteArray JNICALL
-Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(JNIEnv *, jobject, jlong);
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateEvidence(JNIEnv *, jobject, jlong);
 
 JNIEXPORT void JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_FinishAttestation(
     JNIEnv *, jobject, jlong, jbyteArray);

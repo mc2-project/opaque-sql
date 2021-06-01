@@ -18,9 +18,9 @@ using ::exit;
 #define COMMON_H
 
 #ifdef DEBUG
-#define debug(...) printf(__VA_ARGS__)
+#define opaque_debug(...) printf(__VA_ARGS__)
 #else
-#define debug(...)                                                                               \
+#define opaque_debug(...)                                                                        \
   do {                                                                                           \
   } while (0)
 #endif

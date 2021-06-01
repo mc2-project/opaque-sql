@@ -208,8 +208,9 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   return enclavePtr;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
-    JNIEnv *env, jobject obj, jlong eid) {
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateEvidence(JNIEnv *env, jobject obj,
+                                                                       jlong eid) {
   (void)obj;
   (void)eid;
 
@@ -217,7 +218,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   size_t report_msg_size = 0;
 
   oe_check_and_time("Generate enclave report",
-                    ecall_generate_report((oe_enclave_t *)eid, &report_msg, &report_msg_size));
+                    ecall_generate_evidence((oe_enclave_t *)eid, &report_msg, &report_msg_size));
 
   // Allocate memory
   jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);

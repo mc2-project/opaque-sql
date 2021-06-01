@@ -15,6 +15,10 @@
 #include "physical_operators/sort.h"
 #include "util.h"
 
+#include "attestation.h"
+#include "spdlog/spdlog.h"
+#include <openenclave/attestation/sgx/evidence.h>
+
 #include <mbedtls/config.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
@@ -245,11 +249,12 @@ typedef struct oe_shared_key_msg_t {
   uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
 } oe_shared_key_msg_t;
 
-typedef struct oe_report_msg_t {
+typedef struct oe_evidence_msg_t {
   uint8_t public_key[CIPHER_PK_SIZE];
-  size_t report_size;
-  uint8_t report[];
-} oe_report_msg_t;
+  uint8_t nonce[CIPHER_IV_SIZE];
+  size_t evidence_size;
+  uint8_t evidence[];
+} oe_evidence_msg_t;
 
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
@@ -269,62 +274,58 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
   }
 }
 
-/*
-   Enclave generates report, which is then sent back to the service provider
-*/
-void ecall_generate_report(uint8_t **report_msg_data, size_t *report_msg_data_size) {
+void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_data_size) {
+  spdlog::info("Ecall: generate_evidence()");
+  // Determine the proper format settings for verification
+  // TODO: eventually, the TMS should pass to the Opaque SQL enclaves the proper format
+  // For now, we assume that the format settings for the TMS enclave and Opaque SQL enclaves are
+  // the same
 
-  uint8_t public_key[CIPHER_PK_SIZE] = {};
-  size_t public_key_size = sizeof(public_key);
-  uint8_t sha256[SHA_DIGEST_SIZE];
-  uint8_t *report = NULL;
-  size_t report_size = 0;
-  oe_report_msg_t *report_msg = NULL;
+  // TODO(octavian): make less ugly with finalized attestation code
+  std::shared_ptr<Crypto> s_crypto(g_crypto);
+  Attestation *attestation = new Attestation(s_crypto);
 
-  if (report_msg_data == NULL || report_msg_data_size == NULL) {
-    ocall_throw("Invalid parameter");
-  }
+  static oe_uuid_t sgx_remote_uuid = {OE_FORMAT_UUID_SGX_ECDSA};
+  oe_uuid_t format_id = sgx_remote_uuid;
+  uint8_t *format_settings;
+  size_t format_settings_size;
 
-  *report_msg_data = NULL;
-  *report_msg_data_size = 0;
+  attestation->GetFormatSettings(&format_id, &format_settings, &format_settings_size);
 
+  // Get public key
+  uint8_t public_key[CIPHER_PK_SIZE];
   g_crypto->WritePublicKey(public_key);
 
-  if (g_crypto->Hash(public_key, sha256, public_key_size) != 0) {
-    ocall_throw("sha256 failed");
-  }
+  // Generate nonce
+  // TODO: nonce currently unused
+  uint8_t nonce[CIPHER_IV_SIZE] = {0};
+
+  // Buffer to hold generated evidence
+  uint8_t *evidence = NULL;
+  size_t evidence_size = 0;
 
 #ifndef SIMULATE
-  // Get OE report
-  oe_result_t result = oe_get_report(OE_REPORT_FLAGS_REMOTE_ATTESTATION,
-                                     sha256, // Store sha256 in report_data field
-                                     sizeof(sha256), NULL, 0, &report, &report_size);
-
-  if (result != OE_OK) {
-    ocall_throw("oe_get_report failed");
-  }
-
+  // Generate evidence
+  attestation->GenerateEvidence(&format_id, format_settings, &evidence, public_key, nonce,
+                                format_settings_size, &evidence_size, CIPHER_PK_SIZE);
 #endif
 
-#ifndef SIMULATE
-  if (report == NULL) {
-    ocall_throw("OE report is NULL");
-  }
-#endif
-
-  *report_msg_data_size = sizeof(oe_report_msg_t) + report_size;
-  *report_msg_data = (uint8_t *)oe_host_malloc(*report_msg_data_size);
-  if (*report_msg_data == NULL) {
+  // Allocate memory on host for attestation evidence and public key contained in struct
+  // `oe_evidence_msg_t`
+  oe_evidence_msg_t *evidence_msg = NULL;
+  *evidence_msg_data_size = sizeof(oe_evidence_msg_t) + evidence_size;
+  *evidence_msg_data = (uint8_t *)oe_host_malloc(*evidence_msg_data_size);
+  if (*evidence_msg_data == NULL) {
     ocall_throw("Out of memory");
   }
-  report_msg = (oe_report_msg_t *)(*report_msg_data);
+  evidence_msg = (oe_evidence_msg_t *)(*evidence_msg_data);
 
-  // Fill oe_report_msg_t
-  memcpy_s(report_msg->public_key, sizeof(((oe_report_msg_t *)0)->public_key), public_key,
-           public_key_size);
-  report_msg->report_size = report_size;
-  if (report_size > 0) {
-    memcpy_s(report_msg->report, report_size, report, report_size);
+  // Fill oe_evidence_msg_t with public key and generated evidence
+  memcpy_s(evidence_msg->public_key, sizeof(evidence_msg->public_key), public_key,
+           CIPHER_PK_SIZE);
+  memcpy_s(evidence_msg->nonce, sizeof(evidence_msg->nonce), nonce, CIPHER_IV_SIZE);
+  evidence_msg->evidence_size = evidence_size;
+  if (evidence_size > 0) {
+    memcpy_s(evidence_msg->evidence, evidence_size, evidence, evidence_size);
   }
-  oe_free_report(report);
 }

@@ -45,6 +45,8 @@ set(FETCHCONTENT_QUIET OFF)
 set(HOST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(opaque_utils_e)
 add_compile_definitions(SPDLOG_NO_THREAD_ID FMT_USE_INT128=0)
+
+include_directories(${spdlog_SOURCE_DIR}/include)
 ##################################################################
 
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h

@@ -51,7 +51,7 @@ object RA extends Logging {
     // Runs on executors
     val msg1s = rdd
       .mapPartitions { (_) =>
-        val (eid, msg1) = Utils.generateReport()
+        val (eid, msg1) = Utils.generateEvidence()
         Iterator((eid, msg1))
       }
       .collect

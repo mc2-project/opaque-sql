@@ -83,7 +83,7 @@ enclave {
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public void ecall_generate_report(
+    public void ecall_generate_evidence(
       [out] uint8_t** msg1,
       [out] size_t* msg1_size);
 
