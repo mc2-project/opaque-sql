@@ -7,7 +7,7 @@
 Welcome to the landing page of Opaque SQL! Opaque SQL is a package for Apache Spark SQL that enables processing over encrypted DataFrames using the OpenEnclave framework. 
 
 ### Quick start
-To quickly get started with Opaque SQL, you can download our Docker image (also includes othe open source projects in the MC<sup>2</sup> project).
+To quickly get started with Opaque SQL, you can download our Docker image (also includes other open source projects in the MC<sup>2</sup> project).
 
 ```sh
 docker pull mc2project/mc2
@@ -17,6 +17,7 @@ docker run -it -p 22:22 -p 50051-50055:50051-50055 -w /root mc2project/mc2
 Change into the Opaque directory and export the Opaque and OpenEnclave environment variables.
 
 ```sh
+cd opaque
 source opaqueenv
 source /opt/openenclave/share/openenclave/openenclaverc
 export MODE=SIMULATE
