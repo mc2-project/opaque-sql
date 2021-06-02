@@ -63,7 +63,7 @@ class Listener(executionContext: ExecutionContext, port: Int) {
       .addService(ListenerGrpc.bindService(new ListenerImpl, executionContext))
       .build
       .start
-    println(s"gRPC: Server started, listening on port ${port}")
+    println(s"gRPC: Query Server started, listening on port ${port}")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
       this.stop()

@@ -22,11 +22,20 @@ import opaque.protos.client._
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
 
+import io.grpc.netty.NettyServerBuilder
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.tools.nsc.interpreter.Results._
+
 // Performs remote attestation for all executors
 // that have not been attested yet
 
 object RA extends Logging {
 
+  private class ClientToEnclaveImpl(msg1s: Map[Long, Option[Array[Byte]]])
+      extends ClientToEnclaveGrpc.ClientToEnclave {}
+
+  val numAttested = Utils.numAttested
   var numExecutors: Int = 1
   var loop: Boolean = true
 
@@ -37,8 +46,7 @@ object RA extends Logging {
     }
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
-    val numAttested = Utils.numAttested
-    // Runs on executors
+    // Collect evidence from the executors
     val msg1s = rdd
       .mapPartitions { (_) =>
         // msg1 is a serialized `oe_evidence_msg_t`
@@ -50,20 +58,22 @@ object RA extends Logging {
 
     logInfo("Driver collected msg1s")
 
-    val host = "127.0.0.1"
+    // Start gRPC server to listen for attestation inquiries
     val port = 50051
-    // Runs on driver
-    val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
-      (eid, sp.ProcessEnclaveReport(msg1))
+    val server = NettyServerBuilder
+      .forPort(port)
+      .addService(
+        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(msg1s), ExecutionContext.global)
+      )
+      .build
+      .start
+
+    logInfo(s"gRPC: Attestation Server started, listening on port ${port}.")
+    sys.addShutdownHook {
+      System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
+      server.shutdown()
+      System.err.println("gRPC: Server shut down.")
     }
-
-    logInfo("Driver processed msg2s")
-
-    // Runs on executors
-    rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
-      Iterator((eid, true))
-    }.count
   }
 
   def waitForExecutors(sc: SparkContext): Unit = {
