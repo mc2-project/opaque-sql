@@ -281,10 +281,7 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   // For now, we assume that the format settings for the TMS enclave and Opaque SQL enclaves are
   // the same
 
-  // TODO(octavian): make less ugly with finalized attestation code
-  std::shared_ptr<Crypto> s_crypto(g_crypto);
-  Attestation *attestation = new Attestation(s_crypto);
-
+  std::unique_ptr<Attestation> attestation(new Attestation(g_crypto));
   static oe_uuid_t sgx_remote_uuid = {OE_FORMAT_UUID_SGX_ECDSA};
   oe_uuid_t format_id = sgx_remote_uuid;
   uint8_t *format_settings;

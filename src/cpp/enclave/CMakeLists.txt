@@ -38,12 +38,12 @@ set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 ########## Fetch and make opaque-utils library available ##########
 include(FetchContent)
 FetchContent_Declare(
-  opaque_utils_e
-  GIT_REPOSITORY git@github.com:opaque-systems/opaque-utils.git
+  mc2_utils_e
+  GIT_REPOSITORY git@github.com:mc2-project/mc2-utils.git
 )
 set(FETCHCONTENT_QUIET OFF)
 set(HOST OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(opaque_utils_e)
+FetchContent_MakeAvailable(mc2_utils_e)
 add_compile_definitions(SPDLOG_NO_THREAD_ID FMT_USE_INT128=0)
 
 include_directories(${spdlog_SOURCE_DIR}/include)
@@ -60,7 +60,7 @@ target_link_directories(enclave_trusted PRIVATE
                         ${OE_LIBDIR}/openenclave/enclave)
 
 target_link_libraries(enclave_trusted
-                      opaque_utils_e
+                      mc2_utils_e
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}
                       openenclave::oelibc
