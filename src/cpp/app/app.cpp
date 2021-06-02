@@ -214,16 +214,17 @@ Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateEvidence(JNIEnv *e
   (void)obj;
   (void)eid;
 
-  uint8_t *report_msg = NULL;
-  size_t report_msg_size = 0;
+  uint8_t *evidence_msg = NULL;
+  size_t evidence_msg_size = 0;
 
-  oe_check_and_time("Generate enclave report",
-                    ecall_generate_evidence((oe_enclave_t *)eid, &report_msg, &report_msg_size));
+  oe_check_and_time(
+      "Generate enclave evidence",
+      ecall_generate_evidence((oe_enclave_t *)eid, &evidence_msg, &evidence_msg_size));
 
   // Allocate memory
-  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
-  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size,
-                          reinterpret_cast<jbyte *>(report_msg));
+  jbyteArray report_msg_bytes = env->NewByteArray(evidence_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, evidence_msg_size,
+                          reinterpret_cast<jbyte *>(evidence_msg));
 
   return report_msg_bytes;
 }
