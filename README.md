@@ -59,7 +59,7 @@ result.explain(true)
 Congrats, you've run your first encrypted query using Opaque SQL! 
 
 ### Documentation
-For more details on building, using, and contributing, please see our [documentation](https://mc2-project.github.io/opaque/). 
+For more details on building, using, and contributing, please see our [documentation](https://mc2-project.github.io/opaque-sql/).
 
 ### Paper
 The open source is based on our NSDI 2017 [paper](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf).
