@@ -21,6 +21,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.{Files, Paths}
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
@@ -291,21 +292,31 @@ object Utils extends Logging {
   val numAttested: LongAccumulator = new LongAccumulator
   var loop: Boolean = true
 
-  def initSQLContext(sqlContext: SQLContext): Unit = {
+  def initOpaqueSQL(spark: SparkSession): Unit = {
+    val sqlContext = spark.sqlContext
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
         sqlContext.experimental.extraOptimizations)
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
-    val enableSharedKey = sqlContext.getConf("spark.opaque.testing.enableSharedKey", "false")
-    if (enableSharedKey.toBoolean) {
+    val enableTestingKey = sqlContext.getConf("spark.opaque.testing.enableTestingKey", "false")
+    if (enableTestingKey.toBoolean) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
+    } else {
+      val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
+      sharedKeyPath match {
+        case Some(sharedKeyPath) =>
+          sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
+          assert(sharedKey.get.size == GCM_KEY_LENGTH)
+        case None =>
+          throw new OpaqueException("Need to set the SYMMETRIC_KEY_PATH environment variable.")
+      }
     }
 
     val sc = sqlContext.sparkContext
     // This is needed to prevent an error from re-registering accumulator variables if
-    // `initSQLContext` is called multiple times on the driver
+    // `initOpaqueSQL` is called multiple times on the driver
     if (!acc_registered) {
       sc.register(numEnclaves)
       sc.register(numAttested)

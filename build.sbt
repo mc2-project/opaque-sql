@@ -154,7 +154,7 @@ Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((sourceDirectory.value / "enclave") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+  ((sourceDirectory.value / "cpp") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
@@ -162,12 +162,15 @@ watchSources ++=
 
 val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
-val sgxGdbTask =
-  TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
-def sgxGdbCommand = Command.command("sgx-gdb") { state =>
+val oeGdbTask =
+  TaskKey[Unit](
+    "oe-gdb-task",
+    "Runs the test suite specified in ./project/resources under the oe-gdb debugger."
+  )
+def oeGdbCommand = Command.command("oe-gdb") { state =>
   val extracted = Project extract state
   val newState = extracted.append(Seq(buildType := Debug), state)
-  Project.extract(newState).runTask(sgxGdbTask, newState)
+  Project.extract(newState).runTask(oeGdbTask, newState)
   state
 }
 
@@ -177,7 +180,14 @@ def data = Command.command("data") { state =>
   state
 }
 
-commands += sgxGdbCommand
+val synthKeysTask =
+  TaskKey[Unit]("keys", "Uses OpenSSL to create private key and shared key.")
+def keys = Command.command("keys") { state =>
+  Project.runTask(synthKeysTask, state)
+  state
+}
+
+commands += oeGdbCommand
 commands += data
 
 initialCommands in console :=
@@ -203,7 +213,6 @@ initialCommands in console :=
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
     |  .appName("Opaque shell")
-    |  .config("spark.opaque.testing.enableSharedKey", true)
     |  .getOrCreate())
     |val sc = spark.sparkContext
     |val sqlContext = spark.sqlContext
@@ -211,7 +220,7 @@ initialCommands in console :=
     |import spark.implicits._
     |
     |import edu.berkeley.cs.rise.opaque.implicits._
-    |edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext)
+    |edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
   """.stripMargin
 
 cleanupCommands in console := "spark.stop()"
@@ -241,11 +250,11 @@ nativePlatform := {
   }
 }
 
-sgxGdbTask := {
+oeGdbTask := {
   (compile in Test).value
   Process(
     Seq(
-      "sgx-gdb",
+      "oegdb",
       "java",
       "-x",
       ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath
@@ -324,8 +333,8 @@ buildFlatbuffersTask := {
 
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
-  val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
-  val enclaveBuildDir = target.value / "enclave"
+  val enclaveSourceDir = baseDirectory.value / "src" / "cpp"
+  val enclaveBuildDir = target.value / "cpp"
   enclaveBuildDir.mkdirs()
   val cmakeResult =
     Process(
@@ -431,4 +440,14 @@ synthBenchmarkDataTask := {
     val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
   }
+}
+
+synthKeysTask := {
+  import scala.sys.process._
+  val keysDir = baseDirectory.value
+  var res =
+    Process(Seq("openssl", "genrsa", "-out", keysDir + "/private_key.pem", "-3", "3072")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL private key.")
+  res = Process(Seq("openssl", "rand", "-out", keysDir + "/symmetric_key.key", "32")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL symmetric key.")
 }

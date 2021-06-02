@@ -35,6 +35,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     "SELECT * FROM testData JOIN testData2 ON key = a where key = 2",
     "SELECT * FROM testData LEFT JOIN testData2 ON key = a",
     "SELECT * FROM testData RIGHT JOIN testData2 ON key = a where key = 2",
+    "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData left JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData right JOIN testData2 ON (key * a != key + a)",
     "SELECT * FROM testData ANTI JOIN testData2 ON key = a",
@@ -52,7 +53,6 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     "SELECT * FROM testData JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData RIGHT JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData JOIN testData2 WHERE key > a",
-    "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key = 2",
     "SELECT * FROM testData FULL OUTER JOIN testData2",
     "SELECT * FROM testData FULL OUTER JOIN testData2 WHERE key > a",
     "SELECT * FROM testData full JOIN testData2 ON (key * a != key + a)"
@@ -172,7 +172,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
     }
   }
 
-  ignore("full outer join") {
+  test("full outer join") {
     def createTables(sl: SecurityLevel) = {
       val left = upperCaseData(sl).where('N <= 4)
       left.createOrReplaceTempView("left")
@@ -183,18 +183,18 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
 
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, $"left.N" === $"right.N", "full")
+      left.join(right, left("N") === right("N"), "full")
     }
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, ($"left.N" === $"right.N") && ($"left.N" =!= 3), "full")
+      left.join(right, left("N") === right("N") && (left("N") =!= 3), "full")
     }
     checkAnswer() { sl =>
       val (left, right) = createTables(sl)
-      left.join(right, ($"left.N" === $"right.N") && ($"right.N" =!= 3), "full")
+      left.join(right, left("N") === right("N") && (right("N") =!= 3), "full")
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT l.a, count(*)
           |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
@@ -204,7 +204,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT r.N, count(*)
           |FROM allNulls l FULL OUTER JOIN upperCaseData r ON (l.a = r.N)
@@ -214,7 +214,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT l.N, count(*)
           |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)
@@ -224,7 +224,7 @@ trait JoinSuite extends OpaqueSQLSuiteBase with SQLHelper {
       spark.sqlContext.sparkSession.sql(sqlStr)
     }
     checkAnswer() { sl =>
-      val (left, right) = createTables(sl)
+      createTables(sl)
       val sqlStr = """
           |SELECT r.a, count(*)
           |FROM upperCaseData l FULL OUTER JOIN allNulls r ON (l.N = r.a)

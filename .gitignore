@@ -80,9 +80,12 @@ sql/hive-thriftserver/test_warehouses
 .RData
 
 # for C++
+hs_err_pid*.log
+
+# Keys
 /private_key.pem
 /public_key.pub
-hs_err_pid*.log
+/symmetric_key.key
 
 # Opaque generated data
 /data/pagerank
