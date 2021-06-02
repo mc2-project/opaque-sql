@@ -55,14 +55,12 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
  */
 test in Test := {
   (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
+  (Test / assembly).value
   (test in Test).value
 }
 (Keys.`testOnly` in Test) := {
   (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
+  (Test / assembly).value
   (Keys.`testOnly` in Test).evaluated
 }
 
