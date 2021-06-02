@@ -32,7 +32,7 @@ import scala.tools.nsc.interpreter.Results._
 object Listener {
 
   def main(args: Array[String]): Unit = {
-    val server = new Listener(ExecutionContext.global, 50051)
+    val server = new Listener(ExecutionContext.global, 50052)
     server.start()
     server.blockUntilShutdown()
   }

@@ -73,13 +73,13 @@ object RA extends Logging {
       val encryptedSharedKey = encryptedData.encryptedData.toByteArray
       val eidsToKey = eids.map(eid => (eid, encryptedSharedKey)).toMap
 
-      // Send the asymmetrically encrypted shared key to the enclaves
+      // Send the asymmetrically encrypted shared key to any unattested enclave
       rdd.mapPartitions { (_) =>
         val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
         Iterator((eid, true))
       }
 
-      // No error occured, return attestation passed
+      // No error occured, return attestation passed to the client
       val status = AttestationStatus(1)
       Future.successful(status)
     }

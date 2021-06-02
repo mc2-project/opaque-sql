@@ -277,8 +277,8 @@ void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key
 void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_data_size) {
   spdlog::info("Ecall: generate_evidence()");
   // Determine the proper format settings for verification
-  // TODO: eventually, the TMS should pass to the Opaque SQL enclaves the proper format
-  // For now, we assume that the format settings for the TMS enclave and Opaque SQL enclaves are
+  // TODO: eventually, the client should pass to the Opaque SQL enclaves the proper format
+  // For now, we assume that the format settings for the client and Opaque SQL enclaves are
   // the same
 
   std::unique_ptr<Attestation> attestation(new Attestation(g_crypto));
