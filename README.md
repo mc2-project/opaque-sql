@@ -7,7 +7,7 @@
 Welcome to the landing page of Opaque SQL! Opaque SQL is a package for Apache Spark SQL that provides strong security guarantees using Intel SGX hardware enclaves. See below for links to learn more.
 
 ### Documentation
-For building, using, and contributing see [documentation](https://mc2-project.github.io/opaque/). 
+For building, using, and contributing see [documentation](https://mc2-project.github.io/opaque-sql/).
 
 ### Paper
 For our NSDI 2017 submission, see [paper](https://people.eecs.berkeley.edu/~wzheng/opaque.pdf).
