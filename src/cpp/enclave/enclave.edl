@@ -84,12 +84,12 @@ enclave {
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
     public void ecall_generate_evidence(
-      [out] uint8_t** msg1,
-      [out] size_t* msg1_size);
+      [out] uint8_t** evidence_msg_data,
+      [out] size_t* evidence_msg_data_size);
 
     public void ecall_finish_attestation(
-      [in,size=msg4_size] uint8_t *msg4,
-      uint32_t msg4_size);
+      [in,size=shared_key_msg_size] uint8_t *shared_key_msg_input,
+      uint32_t shared_key_msg_size);
   };
 
   untrusted {

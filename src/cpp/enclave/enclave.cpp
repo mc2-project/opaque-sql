@@ -244,10 +244,8 @@ void ecall_limit_return_rows(uint64_t partition_id, uint8_t *limits, size_t limi
   }
 }
 
-#define OE_SHARED_KEY_CIPHERTEXT_SIZE 256
-typedef struct oe_shared_key_msg_t {
-  uint8_t shared_key_ciphertext[OE_SHARED_KEY_CIPHERTEXT_SIZE];
-} oe_shared_key_msg_t;
+// This value (32 bytes) is shared across all compute services and the client
+#define OE_SHARED_KEY_SIZE 256
 
 typedef struct oe_evidence_msg_t {
   uint8_t enc_public_key[CIPHER_PK_SIZE];
@@ -259,13 +257,17 @@ typedef struct oe_evidence_msg_t {
 
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
   try {
-    oe_shared_key_msg_t *shared_key_msg = (oe_shared_key_msg_t *)shared_key_msg_input;
-    uint8_t shared_key_plaintext[CIPHER_KEY_SIZE];
-    size_t shared_key_plaintext_size = sizeof(shared_key_plaintext);
-    bool ret = g_crypto->AsymDec(shared_key_msg->shared_key_ciphertext, shared_key_plaintext,
-                                 shared_key_msg_size, &shared_key_plaintext_size);
+    uint8_t shared_key_plaintext[OE_SHARED_KEY_SIZE];
+    size_t shared_key_plaintext_size = 0;
+    bool ret = g_crypto->AsymDec(shared_key_msg_input, shared_key_plaintext, shared_key_msg_size,
+                                 &shared_key_plaintext_size);
     if (!ret) {
       ocall_throw("shared key decryption failed");
+    } else if (OE_SHARED_KEY_SIZE != shared_key_plaintext_size) {
+      ocall_throw((std::string("Length of the decrypted shared key is ") +
+                   std::to_string(shared_key_plaintext_size) +
+                   std::string(", not equal to the intended size of 32 bytes."))
+                      .c_str());
     }
 
     set_shared_key(shared_key_plaintext, shared_key_plaintext_size);

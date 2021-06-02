@@ -88,14 +88,13 @@ object RA extends Logging {
   val numAttested: LongAccumulator = Utils.numAttested
   var numExecutors: Int = 1
   var loop: Boolean = true
-  var rdd: Option[RDD[Unit]] = None
 
   def initRA(sc: SparkContext): Unit = {
 
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
-    rdd = Some(sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors))
+    val rdd = Some(sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors))
 
     // Start gRPC server to listen for attestation inquiries
     val port = 50051

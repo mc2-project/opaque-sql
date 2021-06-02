@@ -384,8 +384,8 @@ object Utils extends Logging {
       // Only generate report if the enclave has already been started, but not yet attested
       if (eid != 0L && !attested) {
         val enclave = new SGXEnclave()
-        val msg1 = enclave.GenerateEvidence(eid)
-        (eid, Option(msg1))
+        val evidence = enclave.GenerateEvidence(eid)
+        (eid, Option(evidence))
       } else {
         (eid, None)
       }
@@ -394,13 +394,13 @@ object Utils extends Logging {
 
   def finishAttestation(
       numAttested: LongAccumulator,
-      msg2s: Map[Long, Array[Byte]]
+      eidToKey: Map[Long, Array[Byte]]
   ): (Long, Boolean) = {
     this.synchronized {
       val enclave = new SGXEnclave()
-      if (msg2s.contains(eid) && !attested) {
-        val msg2 = msg2s(eid)
-        enclave.FinishAttestation(eid, msg2)
+      if (eidToKey.contains(eid) && !attested) {
+        val encryptedSharedKey = eidToKey(eid)
+        enclave.FinishAttestation(eid, encryptedSharedKey)
         numAttested.add(1)
         attested = true
       }
