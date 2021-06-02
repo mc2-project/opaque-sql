@@ -21,20 +21,23 @@ import opaque.protos.client._
 
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.RDD
+import org.apache.spark.util.LongAccumulator
 
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.tools.nsc.interpreter.Results._
 
 // Performs remote attestation for all executors
 // that have not been attested yet
 
 object RA extends Logging {
 
-  private class ClientToEnclaveImpl(sc: SparkContext)
-      extends ClientToEnclaveGrpc.ClientToEnclave {
+  private class ClientToEnclaveImpl(rdd: RDD[Unit]) extends ClientToEnclaveGrpc.ClientToEnclave {
+
+    val eids: Seq[Long] = Seq()
+
     override def getRemoteEvidence(attestationStatus: AttestationStatus) = {
       val status = attestationStatus.status
       if (status != 0) {
@@ -44,7 +47,6 @@ object RA extends Logging {
       }
 
       // Collect evidence from the executors
-      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
       val evidences = rdd
         .mapPartitions { (_) =>
           // evidence is a serialized `oe_evidence_msg_t`
@@ -58,6 +60,7 @@ object RA extends Logging {
       val protoEvidences = Evidences(evidences.map { case (eid, evidence) =>
         evidence match {
           case Some(evidence) => {
+            eids :+ eid
             Evidence(ByteString.copyFrom(evidence))
           }
           case None =>
@@ -66,24 +69,40 @@ object RA extends Logging {
       }.toSeq)
       Future.successful(protoEvidences)
     }
-    override def getFinalAttestationResult(encryptedData: EncryptedData) = {}
+    override def getFinalAttestationResult(encryptedData: EncryptedData) = {
+      val encryptedSharedKey = encryptedData.encryptedData.toByteArray
+      val eidsToKey = eids.map(eid => (eid, encryptedSharedKey)).toMap
+
+      // Send the asymmetrically encrypted shared key to the enclaves
+      rdd.mapPartitions { (_) =>
+        val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
+        Iterator((eid, true))
+      }
+
+      // No error occured, return attestation passed
+      val status = AttestationStatus(1)
+      Future.successful(status)
+    }
   }
 
-  val numAttested = Utils.numAttested
+  val numAttested: LongAccumulator = Utils.numAttested
   var numExecutors: Int = 1
   var loop: Boolean = true
+  var rdd: Option[RDD[Unit]] = None
 
   def initRA(sc: SparkContext): Unit = {
 
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
+    rdd = Some(sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors))
+
     // Start gRPC server to listen for attestation inquiries
     val port = 50051
     val server = NettyServerBuilder
       .forPort(port)
       .addService(
-        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(sc), ExecutionContext.global)
+        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd.get), ExecutionContext.global)
       )
       .build
       .start
