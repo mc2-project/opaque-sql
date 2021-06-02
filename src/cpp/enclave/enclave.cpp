@@ -250,7 +250,7 @@ typedef struct oe_shared_key_msg_t {
 } oe_shared_key_msg_t;
 
 typedef struct oe_evidence_msg_t {
-  uint8_t public_key[CIPHER_PK_SIZE];
+  uint8_t enc_public_key[CIPHER_PK_SIZE];
   uint8_t nonce[CIPHER_IV_SIZE];
   size_t evidence_size;
   uint8_t evidence[];
@@ -318,7 +318,7 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   evidence_msg = (oe_evidence_msg_t *)(*evidence_msg_data);
 
   // Fill oe_evidence_msg_t with public key and generated evidence
-  memcpy_s(evidence_msg->public_key, sizeof(evidence_msg->public_key), public_key,
+  memcpy_s(evidence_msg->enc_public_key, sizeof(evidence_msg->enc_public_key), public_key,
            CIPHER_PK_SIZE);
   memcpy_s(evidence_msg->nonce, sizeof(evidence_msg->nonce), nonce, CIPHER_IV_SIZE);
   evidence_msg->evidence_size = evidence_size;
