@@ -22,6 +22,7 @@ import opaque.protos.client._
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
 
+import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,8 +33,41 @@ import scala.tools.nsc.interpreter.Results._
 
 object RA extends Logging {
 
-  private class ClientToEnclaveImpl(msg1s: Map[Long, Option[Array[Byte]]])
-      extends ClientToEnclaveGrpc.ClientToEnclave {}
+  private class ClientToEnclaveImpl(sc: SparkContext)
+      extends ClientToEnclaveGrpc.ClientToEnclave {
+    override def getRemoteEvidence(attestationStatus: AttestationStatus) = {
+      val status = attestationStatus.status
+      if (status != 0) {
+        throw new OpaqueException(
+          "Should not generate new attestation evidence if client is already attested."
+        )
+      }
+
+      // Collect evidence from the executors
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      val msg1s = rdd
+        .mapPartitions { (_) =>
+          // msg1 is a serialized `oe_evidence_msg_t`
+          val (eid, msg1) = Utils.generateEvidence()
+          Iterator((eid, msg1))
+        }
+        .collect
+        .toMap
+      logInfo("Driver collected msg1s")
+
+      val evidences = Evidences(msg1s.map { case (eid, msg1) =>
+        msg1 match {
+          case Some(msg1) => {
+            Evidence(ByteString.copyFrom(msg1))
+          }
+          case None =>
+            throw new OpaqueException("At least one enclave failed attestion.")
+        }
+      }.toSeq)
+      Future.successful(evidences)
+    }
+    override def getFinalAttestationResult(encryptedData: EncryptedData) = {}
+  }
 
   val numAttested = Utils.numAttested
   var numExecutors: Int = 1
@@ -44,30 +78,15 @@ object RA extends Logging {
     if (!sc.isLocal) {
       numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
     }
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-
-    // Collect evidence from the executors
-    val msg1s = rdd
-      .mapPartitions { (_) =>
-        // msg1 is a serialized `oe_evidence_msg_t`
-        val (eid, msg1) = Utils.generateEvidence()
-        Iterator((eid, msg1))
-      }
-      .collect
-      .toMap
-
-    logInfo("Driver collected msg1s")
-
     // Start gRPC server to listen for attestation inquiries
     val port = 50051
     val server = NettyServerBuilder
       .forPort(port)
       .addService(
-        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(msg1s), ExecutionContext.global)
+        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(sc), ExecutionContext.global)
       )
       .build
       .start
-
     logInfo(s"gRPC: Attestation Server started, listening on port ${port}.")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")

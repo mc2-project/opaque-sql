@@ -4,12 +4,18 @@ package opaque.protos;
 
 // The Client <-> Enclave service
 service ClientToEnclave {
-  // Client sends AttestationStatus to the Enclave, receives Evidence
-  rpc GetRemoteEvidence(AttestationStatus) returns (Evidence) {}
+  // Client sends AttestationStatus to the Enclave, receives
+  // an evidence report for each enclave
+  rpc GetRemoteEvidence(AttestationStatus) returns (Evidences) {}
 
   // After processing Evidence, Client sends encrypted shared key
   // as Encrypted Data and receives AttestationStatus
   rpc GetFinalAttestationResult(EncryptedData) returns (AttestationStatus) {}
+}
+
+message Evidences {
+  // A collection of Evidence messages
+  repeated Evidence evidences = 1;
 }
 
 message Evidence {
