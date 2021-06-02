@@ -45,26 +45,26 @@ object RA extends Logging {
 
       // Collect evidence from the executors
       val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-      val msg1s = rdd
+      val evidences = rdd
         .mapPartitions { (_) =>
-          // msg1 is a serialized `oe_evidence_msg_t`
-          val (eid, msg1) = Utils.generateEvidence()
-          Iterator((eid, msg1))
+          // evidence is a serialized `oe_evidence_msg_t`
+          val (eid, evidence) = Utils.generateEvidence()
+          Iterator((eid, evidence))
         }
         .collect
         .toMap
-      logInfo("Driver collected msg1s")
+      logInfo("Driver collected evidence reports from enclaves.")
 
-      val evidences = Evidences(msg1s.map { case (eid, msg1) =>
-        msg1 match {
-          case Some(msg1) => {
-            Evidence(ByteString.copyFrom(msg1))
+      val protoEvidences = Evidences(evidences.map { case (eid, evidence) =>
+        evidence match {
+          case Some(evidence) => {
+            Evidence(ByteString.copyFrom(evidence))
           }
           case None =>
             throw new OpaqueException("At least one enclave failed attestion.")
         }
       }.toSeq)
-      Future.successful(evidences)
+      Future.successful(protoEvidences)
     }
     override def getFinalAttestationResult(encryptedData: EncryptedData) = {}
   }
