@@ -53,17 +53,12 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
  * build/sbt package before running any tests. Note that .class files are still only compiled ONCE for both package and tests,
  * so the performance impact is very minimal.
  */
-test in Test := {
-  (synthTestDataTask).value
-  (test in Test).value
+(test in Test) := {
+  ((test in Test)).dependsOn(assembly in Test).dependsOn(synthTestDataTask).value
 }
 (Keys.`testOnly` in Test) := {
-  (synthTestDataTask).value
-  (Keys.`testOnly` in Test).evaluated
+  ((Keys.`testOnly` in Test)).dependsOn(assembly in Test).dependsOn(synthTestDataTask).evaluated
 }
-
-(test in Test) := { ((test in Test)).dependsOn(assembly in Test).value }
-(Keys.`testOnly` in Test) := { ((Keys.`testOnly` in Test)).dependsOn(assembly in Test).evaluated }
 
 testOptions in Test += Tests.Argument("-oF")
 
