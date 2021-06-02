@@ -55,14 +55,15 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
  */
 test in Test := {
   (synthTestDataTask).value
-  (Test / assembly).value
   (test in Test).value
 }
 (Keys.`testOnly` in Test) := {
   (synthTestDataTask).value
-  (Test / assembly).value
   (Keys.`testOnly` in Test).evaluated
 }
+
+(test in Test) := { ((test in Test)).dependsOn(assembly in Test).value }
+(Keys.`testOnly` in Test) := { ((Keys.`testOnly` in Test)).dependsOn(assembly in Test).evaluated }
 
 testOptions in Test += Tests.Argument("-oF")
 
