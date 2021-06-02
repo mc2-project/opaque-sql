@@ -206,7 +206,7 @@ initialCommands in console :=
     |import spark.implicits._
     |
     |import edu.berkeley.cs.rise.opaque.implicits._
-    |edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
+    |edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark, testing = true)
   """.stripMargin
 
 cleanupCommands in console := "spark.stop()"

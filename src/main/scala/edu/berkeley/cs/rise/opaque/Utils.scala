@@ -316,8 +316,7 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
-    val enableTestingKey = sqlContext.getConf("spark.opaque.testing.enableTestingKey", "false")
-    if (enableTestingKey.toBoolean) {
+    if (testing) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
     } else {
       val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")

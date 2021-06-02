@@ -26,7 +26,6 @@ trait SinglePartitionSparkSession {
     .master("local[1]")
     .appName("SinglePartitionSuiteSession")
     .config("spark.sql.shuffle.partitions", numPartitions)
-    .config("spark.opaque.testing.enableTestingKey", true)
     .getOrCreate()
 }
 
@@ -41,6 +40,5 @@ trait MultiplePartitionSparkSession {
     .config("spark.executor.instances", executorInstances)
     .config("spark.sql.shuffle.partitions", numPartitions)
     .config("spark.jars", "target/scala-2.12/opaque-assembly-0.1.jar")
-    .config("spark.opaque.testing.enableTestingKey", true)
     .getOrCreate()
 }

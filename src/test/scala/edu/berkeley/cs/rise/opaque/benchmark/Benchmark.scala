@@ -51,7 +51,6 @@ object Benchmark {
   val spark = SparkSession
     .builder()
     .appName("Benchmark")
-    .config("spark.opaque.testing.enableTestingKey", true)
     .getOrCreate()
 
   var numPartitions = spark.sparkContext.defaultParallelism
@@ -82,7 +81,7 @@ object Benchmark {
   }
 
   def main(args: Array[String]): Unit = {
-    Utils.initOpaqueSQL(spark)
+    Utils.initOpaqueSQL(spark, testing = true)
 
     if (args.length >= 1 && args(0) == "--help") {
       println("""

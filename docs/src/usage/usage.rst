@@ -13,7 +13,9 @@ Query submission via the Spark Driver
 Starting Opaque SQL
 ###################
 
-This page goes through running Opaque SQL with the Spark driver located on the client. An implication of this is that the driver is considered a *trusted* entity.
+This page goes through running Opaque SQL with the Spark driver located on the client. 
+
+**Security Notice:** this mode *should not* be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
 
 Running the interactive shell
 *****************************
@@ -56,14 +58,14 @@ Running the interactive shell
    .. code-block:: scala
 
                      import edu.berkeley.cs.rise.opaque.implicits._
-                     edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
+                     edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark, testing = true)
 
    Python:
 
    .. code-block:: python
 
                   from opaque_sql import *
-                  init_opaque_sql()
+                  init_opaque_sql(testing=True)
                    
     
 
@@ -88,7 +90,7 @@ Encrypting, saving, and loading a DataFrame
                   data = [("foo", 4), ("bar", 1), ("baz", 5)]
                   df = sqlContext.createDataFrame(data).toDF("word", "count")
 
-2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted``.
+2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted`` (*note*: this call is only supported in trusted driver mode). 
 
    Scala:
    
