@@ -17,10 +17,10 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import opaque.protos.client._
+
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
-
-import edu.berkeley.cs.rise.opaque.execution.SP
 
 // Performs remote attestation for all executors
 // that have not been attested yet
@@ -37,20 +37,11 @@ object RA extends Logging {
     }
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
 
-    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-    val sp = new SP()
-
-    Utils.sharedKey match {
-      case Some(sharedKey) =>
-        sp.Init(sharedKey, intelCert)
-      case None =>
-        throw new OpaqueException("Cannot begin attestation without sharedKey.")
-    }
-
     val numAttested = Utils.numAttested
     // Runs on executors
     val msg1s = rdd
       .mapPartitions { (_) =>
+        // msg1 is a serialized `oe_evidence_msg_t`
         val (eid, msg1) = Utils.generateEvidence()
         Iterator((eid, msg1))
       }
@@ -59,6 +50,8 @@ object RA extends Logging {
 
     logInfo("Driver collected msg1s")
 
+    val host = "127.0.0.1"
+    val port = 50051
     // Runs on driver
     val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
       (eid, sp.ProcessEnclaveReport(msg1))

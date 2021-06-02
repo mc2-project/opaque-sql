@@ -139,14 +139,6 @@ resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
 // Add the managed resource directory to the resource classpath so we can find libraries at runtime
 managedResourceDirectories in Compile += resourceManaged.value
 
-val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
-  "fetchIntelAttestationReportSigningCACert",
-  "Fetches and decompresses the Intel IAS SGX Report Signing CA file, required for "
-    + "remote attestation."
-)
-
-resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
-
 unmanagedResources in Compile ++= ((sourceDirectory.value / "python") ** "*.py").get
 
 Compile / PB.protoSources := Seq(sourceDirectory.value / "protobuf")
@@ -367,19 +359,6 @@ copyEnclaveLibrariesToResourcesTask := {
     resource
   }
   resources
-}
-
-fetchIntelAttestationReportSigningCACertTask := {
-  val cert = resourceManaged.value / "AttestationReportSigningCACert.pem"
-  if (!cert.exists) {
-    streams.value.log.info(s"Fetching Intel Attestation report signing CA certificate")
-    val certUrl =
-      new java.net.URL(
-        s"https://community.intel.com/legacyfs/online/drupal_files/managed/7b/de/RK_PUB.zip"
-      )
-    IO.unzipURL(certUrl, cert.getParentFile)
-  }
-  Seq(cert)
 }
 
 synthTestDataTask := {

@@ -32,15 +32,14 @@ import scala.tools.nsc.interpreter.Results._
 object Listener {
 
   def main(args: Array[String]): Unit = {
-    val server = new Listener(ExecutionContext.global)
+    val server = new Listener(ExecutionContext.global, 50051)
     server.start()
     server.blockUntilShutdown()
   }
 }
 
-class Listener(executionContext: ExecutionContext) {
+class Listener(executionContext: ExecutionContext, port: Int) {
 
-  private val port = 50051
   private[this] var server: Server = null
 
   private class ListenerImpl extends ListenerGrpc.Listener {

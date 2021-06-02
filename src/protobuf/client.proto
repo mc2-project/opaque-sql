@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package client;
+package opaque.protos;
 
 // The Client <-> Enclave service
 service ClientToEnclave {
