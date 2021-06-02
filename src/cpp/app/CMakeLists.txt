@@ -6,7 +6,7 @@ project(OpaqueEnclaveJNI)
 include(FetchContent)
 FetchContent_Declare(
     mc2_utils_h
-    GIT_REPOSITORY git@github.com:mc2-project/mc2-utils.git
+    GIT_REPOSITORY https://github.com/mc2-project/mc2-utils.git
 )
 set(FETCHCONTENT_QUIET OFF)
 set(HOST ON CACHE BOOL "" FORCE)

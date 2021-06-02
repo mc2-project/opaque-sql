@@ -39,7 +39,7 @@ set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 include(FetchContent)
 FetchContent_Declare(
   mc2_utils_e
-  GIT_REPOSITORY git@github.com:mc2-project/mc2-utils.git
+  GIT_REPOSITORY https://github.com/mc2-project/mc2-utils.git
 )
 set(FETCHCONTENT_QUIET OFF)
 set(HOST OFF CACHE BOOL "" FORCE)
