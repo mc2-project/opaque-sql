@@ -44,7 +44,7 @@ After downloading the Opaque codebase, build and test it as follows.
    By default, Opaque runs in hardware mode (environment variable ``MODE=HARDWARE``).
    If you do not have a machine with a hardware enclave but still wish to test out Opaque's functionality locally, then set ``export MODE=SIMULATE``.
 
-3. By default, Opaque SQL uses a pre-generated RSA private key and symmetric key. These keys _should be not be used in a production environment_. To generate new keys using OpenSSL, you can use the following ``sbt`` task:
+3. By default, Opaque SQL uses a pre-generated RSA private key and symmetric key. These keys *should be not be used in a production environment*. To generate new keys using OpenSSL, you can use the following ``sbt`` task:
 
    .. code-block:: bash
 
