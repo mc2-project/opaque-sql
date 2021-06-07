@@ -70,7 +70,7 @@ object RA extends Logging {
       Future.successful(protoEvidences)
     }
     override def getFinalAttestationResult(encryptedKeys: EncryptedKeys) = {
-      val keys = encryptedKeys.keys.map(key => key.encryptedKey.toByteArray)
+      val keys = encryptedKeys.keys.map(key => key.toByteArray)
       val eidsToKey = eids.zip(keys).toMap
 
       // Send the asymmetrically encrypted shared key to any unattested enclave

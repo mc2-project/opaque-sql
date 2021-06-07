@@ -32,11 +32,6 @@ message AttestationStatus {
 }
 
 message EncryptedKeys {
-  // A collection of EncryptedKey messages
-  repeated EncryptedKey keys = 1;
-}
-
-message EncryptedKey {
-  // Encrypted `SignedKey` flatbuffers object
-  bytes encrypted_key = 1;
+  // A collection of encrypted `SignedKey` flatbuffer objects
+  repeated bytes keys = 1;
 }
