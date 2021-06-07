@@ -2,6 +2,5 @@ export OPAQUE_HOME=$(pwd)
 export OPAQUE_DATA_DIR=${OPAQUE_HOME}/data/
 export SPARK_SCALA_VERSION=2.12
 export PRIVATE_KEY_PATH=${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem
-export SYMMETRIC_KEY_PATH=${OPAQUE_HOME}/src/test/keys/mc2_test_shared_key.key
 export MODE=HARDWARE
 export OE_SDK_PATH=/opt/openenclave/
