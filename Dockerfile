@@ -67,7 +67,3 @@ RUN cd /mc2/opaque-sql && source /opt/openenclave/share/openenclave/openenclaver
 
 # Set the working directory to the Opaque SQL directory
 WORKDIR /mc2/opaque-sql
-
-# Expose ports
-EXPOSE 22
-EXPOSE 50051-50055
