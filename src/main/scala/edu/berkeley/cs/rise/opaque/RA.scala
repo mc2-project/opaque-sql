@@ -61,7 +61,7 @@ object RA extends Logging {
         evidence match {
           case Some(evidence) => {
             eids :+ eid
-            Evidence(ByteString.copyFrom(evidence))
+            ByteString.copyFrom(evidence)
           }
           case None =>
             throw new OpaqueException("At least one enclave failed attestion.")

@@ -14,14 +14,9 @@ service ClientToEnclave {
 }
 
 message Evidences {
-  // A collection of Evidence messages
-  repeated Evidence evidences = 1;
-}
-
-message Evidence {
-  // `oe_evidence_msg_t`
-  // evidence includes attestation evidence, enclave public key, and nonce
-  bytes evidence_msg = 1;
+  // A collection of `oe_evidence_msg_t` objects.
+  // includes attestation evidence, enclave public key, and nonce
+  repeated bytes evidences = 1;
 }
 
 message AttestationStatus {
