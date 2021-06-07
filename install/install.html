@@ -174,10 +174,11 @@ sudo chmod -R a+wx /opt/spark/work
 <p>By default, Opaque runs in hardware mode (environment variable <code class="docutils literal notranslate"><span class="pre">MODE=HARDWARE</span></code>).
 If you do not have a machine with a hardware enclave but still wish to test out Opaque’s functionality locally, then set <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">MODE=SIMULATE</span></code>.</p>
 </li>
-<li><p>There is an <code class="docutils literal notranslate"><span class="pre">sbt</span></code> task you can use to generate private and symmetric keys using OpenSSL for Opaque SQL.</p>
+<li><p>To generate new keys using OpenSSL, you can use the following <code class="docutils literal notranslate"><span class="pre">sbt</span></code> task:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt keys
 </pre></div>
 </div>
+<p><em>Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing. This key should be not be used in a production environment.</em></p>
 <p>Alternatively, you can use your own keys, though this is generally not recommended.</p>
 <p>To generate and set the private key used for remote attestation:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl genrsa -out /path/to/private/key/private_key.pem -3 <span class="m">3072</span>
