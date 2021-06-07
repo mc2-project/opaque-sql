@@ -159,8 +159,10 @@ object RA extends Logging {
   def startThread(sc: SparkContext, testing: Boolean = false): Unit = {
     val thread = new Thread {
       override def run: Unit = {
-        while (loop) {
-          RA.attestEnclaves(sc, testing)
+        while (false) { // loop
+          //TODO: Can't call attestEnclaves in a loop because that will just try to spawn
+          // infinite listeners. Need to define a new function to initiate another connection
+          // with the client for fault tolerant attestation.
         }
       }
     }

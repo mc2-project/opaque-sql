@@ -37,9 +37,10 @@ object IntpHandler {
 
   /* Construct an interpreter that routes all output to stdout. */
   val intp = IMain(settings)
-  initializeIntp()
 
-  /* Initial commands for the interpreter to run. */
+  /* Initial commands for the interpreter to execute.
+   * This has to be called before any call to IntpHandler.run
+   */
   def initializeIntp() = {
     intp.initializeSynchronous()
     val initializationCommands = Seq(
