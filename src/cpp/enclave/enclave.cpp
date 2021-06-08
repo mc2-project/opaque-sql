@@ -253,7 +253,8 @@ typedef struct oe_evidence_msg_t {
 } oe_evidence_msg_t;
 
 
-void ecall_finish_attestation(uint8_t *enc_signed_shared_key, uint32_t enc_signed_shared_key_size) {
+void ecall_finish_attestation(uint8_t *enc_signed_shared_key,
+                              uint32_t enc_signed_shared_key_size) {
   spdlog::info("Ecall: finish_attestation()");
   try {
     // Asymmetrically decrypt the SignedKey
@@ -265,8 +266,7 @@ void ecall_finish_attestation(uint8_t *enc_signed_shared_key, uint32_t enc_signe
                                 enc_signed_shared_key_size, &serialized_signed_shared_key_size);
 
     if (err) {
-      spdlog::error("Opaque SQL: Shared key decryption failed");
-      ocall_throw("shared key decryption failed");
+      ocall_throw("Shared key decryption failed");
     }
 
     // Deserialize to retrieve the shared key and the signature over the shared key
@@ -317,7 +317,7 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   size_t evidence_size = 0;
 
 #ifndef SIMULATE
-  // Generate evidence
+  spdlog::info("Generating evidence for attestation");
   attestation->GenerateEvidence(&format_id, format_settings, &evidence, public_key, nonce,
                                 format_settings_size, &evidence_size, CIPHER_PK_SIZE);
 #endif
