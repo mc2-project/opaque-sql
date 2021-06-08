@@ -36,10 +36,11 @@ object RA extends Logging {
 
   private class ClientToEnclaveImpl(rdd: RDD[Unit]) extends ClientToEnclaveGrpc.ClientToEnclave {
 
-    val eids: Seq[Long] = Seq()
+    var eids: Seq[Long] = Seq()
 
     override def getRemoteEvidence(attestationStatus: AttestationStatus) = {
       val status = attestationStatus.status
+      logWarning("getRemoteEvidence called")
       if (status != 0) {
         throw new OpaqueException(
           "Should not generate new attestation evidence if client is already attested."
@@ -47,37 +48,50 @@ object RA extends Logging {
       }
 
       // Collect evidence from the executors
+      logWarning(rdd.getNumPartitions.toString)
       val evidences = rdd
         .mapPartitions { (_) =>
           // evidence is a serialized `oe_evidence_msg_t`
+          logWarning("got evidence")
           val (eid, evidence) = Utils.generateEvidence()
           Iterator((eid, evidence))
         }
         .collect
         .toMap
+
       logInfo("Driver collected evidence reports from enclaves.")
 
       val protoEvidences = Evidences(evidences.map { case (eid, evidence) =>
         evidence match {
           case Some(evidence) => {
-            eids :+ eid
+            eids = eids :+ eid
             ByteString.copyFrom(evidence)
           }
           case None =>
             throw new OpaqueException("At least one enclave failed attestion.")
         }
       }.toSeq)
+      logWarning(eids.toString)
       Future.successful(protoEvidences)
     }
     override def getFinalAttestationResult(encryptedKeys: EncryptedKeys) = {
+      logWarning("getFinalAttestationResult called")
       val keys = encryptedKeys.keys.map(key => key.toByteArray)
       val eidsToKey = eids.zip(keys).toMap
+      logWarning(eidsToKey.toString)
+      logWarning("eidstoKey called")
 
       // Send the asymmetrically encrypted shared key to any unattested enclave
+      logWarning(rdd.getNumPartitions.toString)
       rdd.mapPartitions { (_) =>
+        logWarning("map partitions")
         val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
+        logWarning("IN MAP PARTITIONS")
         Iterator((eid, true))
       }
+      .collect
+
+      logWarning("done with attestation")
 
       // No error occured, return attestation passed to the client
       val status = AttestationStatus(1)
