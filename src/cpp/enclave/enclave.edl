@@ -88,7 +88,7 @@ enclave {
       [out] size_t* evidence_msg_data_size);
 
     public void ecall_finish_attestation(
-      [in,size=shared_key_msg_size] uint8_t *enc_signed_shared_key,
+      [in,size=enc_signed_shared_key_size] uint8_t *enc_signed_shared_key,
       uint32_t enc_signed_shared_key_size);
   };
 
