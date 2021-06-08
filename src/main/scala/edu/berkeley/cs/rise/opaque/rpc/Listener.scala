@@ -32,15 +32,15 @@ import scala.tools.nsc.interpreter.Results._
 object Listener {
 
   def main(args: Array[String]): Unit = {
-    val server = new Listener(ExecutionContext.global)
+    IntpHandler.initializeIntp()
+    val server = new Listener(ExecutionContext.global, 50052)
     server.start()
     server.blockUntilShutdown()
   }
 }
 
-class Listener(executionContext: ExecutionContext) {
+class Listener(executionContext: ExecutionContext, port: Int) {
 
-  private val port = 50051
   private[this] var server: Server = null
 
   private class ListenerImpl extends ListenerGrpc.Listener {
@@ -64,7 +64,7 @@ class Listener(executionContext: ExecutionContext) {
       .addService(ListenerGrpc.bindService(new ListenerImpl, executionContext))
       .build
       .start
-    println(s"gRPC: Server started, listening on port ${port}")
+    println(s"gRPC: Query Server started, listening on port ${port}")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
       this.stop()

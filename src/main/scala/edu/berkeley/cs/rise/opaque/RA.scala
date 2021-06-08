@@ -17,106 +17,126 @@
 
 package edu.berkeley.cs.rise.opaque
 
-import org.apache.spark.{SparkContext, SparkEnv}
-import org.apache.spark.internal.Logging
+import opaque.protos.client._
 
-import edu.berkeley.cs.rise.opaque.execution.SP
+import org.apache.spark.SparkContext
+import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.RDD
+import org.apache.spark.util.LongAccumulator
+
+import com.google.protobuf.ByteString
+import io.grpc.netty.NettyServerBuilder
+
+import scala.concurrent.{ExecutionContext, Future}
 
 // Performs remote attestation for all executors
-// that have not been attested yet
+// that have not been attested yet.
+
+// NOTE: no part of this file should be used in tests.
+// This is because the multi-partition tests that run with
+// local-cluster[*,*,*] DO NOT include the fat jar that contains
+// the gRPC dependency, and Spark will not be able to find those files.
 
 object RA extends Logging {
 
-  var numExecutors: Int = 1
-  var loop: Boolean = true
+  private class ClientToEnclaveImpl(rdd: RDD[Unit]) extends ClientToEnclaveGrpc.ClientToEnclave {
 
-  def initRA(sc: SparkContext): Unit = {
+    var eids: Seq[Long] = Seq()
 
-    if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-    }
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-
-    val intelCert = Utils.findResource("AttestationReportSigningCACert.pem")
-    val sp = new SP()
-
-    Utils.sharedKey match {
-      case Some(sharedKey) =>
-        sp.Init(sharedKey, intelCert)
-      case None =>
-        throw new OpaqueException("Cannot begin attestation without sharedKey.")
-    }
-
-    val numAttested = Utils.numAttested
-    // Runs on executors
-    val msg1s = rdd
-      .mapPartitions { (_) =>
-        val (eid, msg1) = Utils.generateReport()
-        Iterator((eid, msg1))
+    override def getRemoteEvidence(attestationStatus: AttestationStatus) = {
+      val status = attestationStatus.status
+      if (status != 0) {
+        throw new OpaqueException(
+          "Should not generate new attestation evidence if client is already attested."
+        )
       }
-      .collect
-      .toMap
 
-    logInfo("Driver collected msg1s")
+      // Collect evidence from the executors
+      val evidences = rdd
+        .mapPartitions { (_) =>
+          // evidence is a serialized `oe_evidence_msg_t`
+          val (eid, evidence) = Utils.generateEvidence()
+          Iterator((eid, evidence))
+        }
+        .collect
+        .toMap
 
-    // Runs on driver
-    val msg2s = msg1s.collect { case (eid, Some(msg1: Array[Byte])) =>
-      (eid, sp.ProcessEnclaveReport(msg1))
+      logInfo("Driver collected evidence reports from enclaves.")
+
+      val protoEvidences = Evidences(evidences.map { case (eid, evidence) =>
+        evidence match {
+          case Some(evidence) => {
+            eids = eids :+ eid
+            ByteString.copyFrom(evidence)
+          }
+          case None =>
+            throw new OpaqueException("At least one enclave failed attestion.")
+        }
+      }.toSeq)
+      Future.successful(protoEvidences)
     }
+    override def getFinalAttestationResult(encryptedKeys: EncryptedKeys) = {
+      val keys = encryptedKeys.keys.map(key => key.toByteArray)
+      val eidsToKey = eids.zip(keys).toMap
 
-    logInfo("Driver processed msg2s")
+      // Send the asymmetrically encrypted shared key to any unattested enclave
+      rdd.mapPartitions { (_) =>
+        val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
+        Iterator((eid, true))
+      }.collect
 
-    // Runs on executors
-    rdd.mapPartitions { (_) =>
-      val (enclave, eid) = Utils.finishAttestation(numAttested, msg2s)
-      Iterator((eid, true))
-    }.count
+      // No error occured, return attestation passed to the client
+      val status = AttestationStatus(1)
+      Future.successful(status)
+    }
   }
 
-  def waitForExecutors(sc: SparkContext): Unit = {
-    if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-      while (
-        rdd
-          .mapPartitions { (_) =>
-            val id = SparkEnv.get.executorId
-            Iterator(id)
-          }
-          .collect
-          .toSet
-          .size < numExecutors
-      ) {}
+  val numAttested: LongAccumulator = Utils.numAttested
+  var loop: Boolean = true
+
+  def initRAListener(sc: SparkContext, rdd: RDD[Unit]): Unit = {
+
+    // Start gRPC server to listen for attestation inquiries
+    val port = 50051
+    val server = NettyServerBuilder
+      .forPort(port)
+      .addService(
+        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd), ExecutionContext.global)
+      )
+      .build
+      .start
+    logInfo(s"gRPC: Attestation Server started, listening on port ${port}.")
+    sys.addShutdownHook {
+      System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
+      server.shutdown()
+      System.err.println("gRPC: Server shut down.")
     }
-    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
   }
 
   // This function is executed in a loop that repeatedly tries to
   // call initRA if new enclaves are added
   // Periodically probe the workers using `startEnclave`
-  def attestEnclaves(sc: SparkContext): Unit = {
+  //
+  // Important: `testing` should only be set to true during testing
+  def attestEnclaves(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     // Proactively initialize enclaves
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
     rdd.mapPartitions { (_) =>
       val eid = Utils.startEnclave(numEnclavesAcc)
       Iterator(eid)
     }.count
-
     if (Utils.numEnclaves.value != Utils.numAttested.value) {
-      logInfo(
-        s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
-      )
-      initRA(sc)
+      // TODO: Need to create an RPC call to the client to reattest if any executor
+      // fails for whatever reason.
     }
     Thread.sleep(100)
   }
 
-  def startThread(sc: SparkContext): Unit = {
+  def startThread(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     val thread = new Thread {
       override def run: Unit = {
-        while (loop) {
-          RA.attestEnclaves(sc)
+        while (false) { // loop
+          attestEnclaves(sc, rdd)
         }
       }
     }

@@ -283,6 +283,6 @@ Now we can port this UDF to Opaque as follows:
                          builder, leftOffset, rightOffset))
 
 
-3. Finally, implement the UDF in C++. In ``FlatbuffersExpressionEvaluator#eval_helper`` (from ``ExpressionEvaluation.h``), add a case for ``tuix::ExprUnion_DotProduct``. Within that case, cast the expression to a ``tuix::DotProduct``, recursively evaluate the left and right children, perform the dot product computation on them, and construct a ``DoubleField`` containing the result.
+3. Finally, implement the UDF in C++. In ``FlatbuffersExpressionEvaluator#eval_helper`` (from ``expression_evaluation.h``), add a case for ``tuix::ExprUnion_DotProduct``. Within that case, cast the expression to a ``tuix::DotProduct``, recursively evaluate the left and right children, perform the dot product computation on them, and construct a ``DoubleField`` containing the result.
 
    

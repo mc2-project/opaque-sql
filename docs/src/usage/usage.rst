@@ -1,102 +1,83 @@
-****************
-Using Opaque SQL
-****************
+*************************************
+Query submission via the Spark Driver
+*************************************
 
-Setup
-#####
-Opaque SQL needs three Spark properties to be set:
+.. figure:: https://mc2-project.github.io/opaque-sql/opaque-diagram.svg
+   :align: center
+   :figwidth: 100 %
 
-- ``spark.executor.instances``
-- ``spark.task.maxFailures``
--  ``spark.driver.defaultJavaOptions="-Dscala.color"`` (if running the gRPC listener)
+   Overview of Opaque SQL running in trusted driver mode
 
-These properties can be be set in a custom configuration file, the default being located at ``${SPARK_HOME}/conf/spark-defaults.conf``, or as a ``spark-submit`` or ``spark-shell`` argument: ``--conf <key>=<value>``.
 
-Running Opaque SQL
-##################
 
-Once setup is finished, there are multiple ways to run Opaque depending on the intended functionality.
+Starting Opaque SQL
+###################
+
+This page goes through running Opaque SQL with the Spark driver located on the client. 
+
+.. warning::
+      This mode *should not* be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
+
+      This is Opaque SQL in **insecure** mode, and is normally only used for testing functionalities.
 
 Running the interactive shell
 *****************************
 
 
-1. Package Opaque into a JAR.
+1. Package Opaque into a fat JAR. The reason we need a fat JAR is because the JAR produced by ``build/sbt package`` does not include gRPC dependencies needed for remote attestion.
 
    .. code-block:: bash
                    
                    cd ${OPAQUE_HOME}
-                   build/sbt package
+                   build/sbt test:assembly
 
 2. Launch the Spark shell with Opaque.
 
    Scala:
 
    .. code-block:: bash
-                   
-                   spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
+
+                   spark-shell --jars ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
 
    Python:
 
    .. code-block:: bash
                    
-                   pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar  \
-                     --jars ${OPAQUE_HOME}/target/scala-2.12/opaque_2.12-0.1.jar
+                   pyspark --py-files ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar  \
+                     --jars ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
     
-   (we need to specify `--py-files` is because the Opaque Python functions are placed in the .jar for easier packaging)
+   (we need to specify `--py-files` because the Python functions are placed in the .jar for easier packaging)
+
+3. Alternatively, you can also run queries in Scala locally using ``sbt``.
+
+   .. code-block:: bash
+
+                   build/sbt console
     
-3. Inside the Spark shell, import Opaque's DataFrame methods and install Opaque's query planner rules.
+4. Inside the Spark shell, import Opaque SQL's ``DataFrame`` methods and its query planning rules.
 
    Scala:
 
    .. code-block:: scala
 
                      import edu.berkeley.cs.rise.opaque.implicits._
-                     edu.berkeley.cs.rise.opaque.Utils.initSQLContext(spark.sqlContext)
+                     edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark, testing = true)
 
    Python:
 
    .. code-block:: python
 
                   from opaque_sql import *
-                  init_sql_context()
+                  init_opaque_sql(testing=True)
                    
     
 
-4. Alternatively, you can also run queries in Scala locally.
 
-   .. code-block:: bash
-
-                   cd ${OPAQUE_HOME}
-                   JVM_OPTS="-Xmx4G"; build/sbt console
-
-
-Starting the gRPC Listener
-**************************
-
-1. To run locally for easy testing/functionality:
-
-   .. code-block:: bash
-
-                   build/sbt run
-
-2. To launch the listener on a standalone Spark cluster:
-
-   .. code-block:: bash
-
-                  build/sbt assembly # create a fat jar with all necessary dependencies
-
-                  spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
-                     <Spark configuration parameters> \
-                     --deploy-mode client ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
-
-Both of these methods then allow you to use the MC2-Client to submit queries to Opaque SQL remotely!
 
 Encrypting, saving, and loading a DataFrame
 ###########################################
 
-1. Create an unencrypted DataFrame on the driver.
-   This should be done on the client, i.e., in a trusted setting.
+1. Create an unencrypted DataFrame.
 
    Scala:
 
@@ -112,8 +93,7 @@ Encrypting, saving, and loading a DataFrame
                   data = [("foo", 4), ("bar", 1), ("baz", 5)]
                   df = sqlContext.createDataFrame(data).toDF("word", "count")
 
-2. Create an encrypted DataFrame from the unencrypted version.
-   This is as easy as calling ``.encrypted``.
+2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted`` (*note*: this call is only supported in insecure mode).
 
    Scala:
    
@@ -165,8 +145,7 @@ Using the DataFrame interface
                    
                   df_encrypted = spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource").load("df_encrypted")
 
-2. Given an encrypted DataFrame ``dfEncrypted``, construct a new query.
-   Users can use ``explain`` to see the generated query plan.
+2. Given an encrypted DataFrame , construct a new query. Users can use ``explain`` to see the generated query plan.
 
    Scala:
 
@@ -187,7 +166,7 @@ Using the DataFrame interface
                   result = df_encrypted.filter(df_encrypted["count"] > 3)
                   result.explain(True)
                    
-Call ``.collect`` or ``.show`` to retreive the results. The final result will be decrypted on the driver. 
+Call ``.collect`` or ``.show`` to retreive and automatically decrypt the results.
 
 
 Using the SQL interface

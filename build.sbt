@@ -53,17 +53,19 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
  * build/sbt package before running any tests. Note that .class files are still only compiled ONCE for both package and tests,
  * so the performance impact is very minimal.
  */
-test in Test := {
-  (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
-  (test in Test).value
+(test in Test) := {
+  ((test in Test))
+    .dependsOn(Keys.`package` in Compile)
+    .dependsOn(Keys.`package` in Test)
+    .dependsOn(synthTestDataTask)
+    .value
 }
 (Keys.`testOnly` in Test) := {
-  (synthTestDataTask).value
-  (Keys.`package` in Compile).value
-  (Keys.`package` in Test).value
-  (Keys.`testOnly` in Test).evaluated
+  ((Keys.`testOnly` in Test))
+    .dependsOn(Keys.`package` in Compile)
+    .dependsOn(Keys.`package` in Test)
+    .dependsOn(synthTestDataTask)
+    .evaluated
 }
 
 testOptions in Test += Tests.Argument("-oF")
@@ -139,14 +141,6 @@ resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
 // Add the managed resource directory to the resource classpath so we can find libraries at runtime
 managedResourceDirectories in Compile += resourceManaged.value
 
-val fetchIntelAttestationReportSigningCACertTask = TaskKey[Seq[File]](
-  "fetchIntelAttestationReportSigningCACert",
-  "Fetches and decompresses the Intel IAS SGX Report Signing CA file, required for "
-    + "remote attestation."
-)
-
-resourceGenerators in Compile += fetchIntelAttestationReportSigningCACertTask.taskValue
-
 unmanagedResources in Compile ++= ((sourceDirectory.value / "python") ** "*.py").get
 
 Compile / PB.protoSources := Seq(sourceDirectory.value / "protobuf")
@@ -154,7 +148,7 @@ Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "
 
 // Watch the enclave C++ files
 watchSources ++=
-  ((sourceDirectory.value / "enclave") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
+  ((sourceDirectory.value / "cpp") ** (("*.cpp" || "*.c" || "*.h" || "*.tcc" || "*.edl" || "CMakeLists.txt") -- ".*")).get
 
 // Watch the Flatbuffer schemas
 watchSources ++=
@@ -162,12 +156,15 @@ watchSources ++=
 
 val synthTestDataTask = TaskKey[Unit]("synthTestData", "Synthesizes test data.")
 
-val sgxGdbTask =
-  TaskKey[Unit]("sgx-gdb-task", "Runs OpaqueSinglePartitionSuite under the sgx-gdb debugger.")
-def sgxGdbCommand = Command.command("sgx-gdb") { state =>
+val oeGdbTask =
+  TaskKey[Unit](
+    "oe-gdb-task",
+    "Runs the test suite specified in ./project/resources under the oe-gdb debugger."
+  )
+def oeGdbCommand = Command.command("oe-gdb") { state =>
   val extracted = Project extract state
   val newState = extracted.append(Seq(buildType := Debug), state)
-  Project.extract(newState).runTask(sgxGdbTask, newState)
+  Project.extract(newState).runTask(oeGdbTask, newState)
   state
 }
 
@@ -177,7 +174,14 @@ def data = Command.command("data") { state =>
   state
 }
 
-commands += sgxGdbCommand
+val synthKeysTask =
+  TaskKey[Unit]("keys", "Uses OpenSSL to create private key and shared key.")
+def keys = Command.command("keys") { state =>
+  Project.runTask(synthKeysTask, state)
+  state
+}
+
+commands += oeGdbCommand
 commands += data
 
 initialCommands in console :=
@@ -203,7 +207,6 @@ initialCommands in console :=
     |val spark = (org.apache.spark.sql.SparkSession.builder()
     |  .master("local")
     |  .appName("Opaque shell")
-    |  .config("spark.opaque.testing.enableSharedKey", true)
     |  .getOrCreate())
     |val sc = spark.sparkContext
     |val sqlContext = spark.sqlContext
@@ -211,7 +214,7 @@ initialCommands in console :=
     |import spark.implicits._
     |
     |import edu.berkeley.cs.rise.opaque.implicits._
-    |edu.berkeley.cs.rise.opaque.Utils.initSQLContext(sqlContext)
+    |edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark, testing = true)
   """.stripMargin
 
 cleanupCommands in console := "spark.stop()"
@@ -241,11 +244,11 @@ nativePlatform := {
   }
 }
 
-sgxGdbTask := {
+oeGdbTask := {
   (compile in Test).value
   Process(
     Seq(
-      "sgx-gdb",
+      "oegdb",
       "java",
       "-x",
       ((baseDirectory in ThisBuild).value / "project" / "resources" / "run-tests.gdb").getPath
@@ -324,8 +327,8 @@ buildFlatbuffersTask := {
 
 enclaveBuildTask := {
   buildFlatbuffersTask.value // Enclave build depends on the generated C++ headers
-  val enclaveSourceDir = baseDirectory.value / "src" / "enclave"
-  val enclaveBuildDir = target.value / "enclave"
+  val enclaveSourceDir = baseDirectory.value / "src" / "cpp"
+  val enclaveBuildDir = target.value / "cpp"
   enclaveBuildDir.mkdirs()
   val cmakeResult =
     Process(
@@ -358,19 +361,6 @@ copyEnclaveLibrariesToResourcesTask := {
     resource
   }
   resources
-}
-
-fetchIntelAttestationReportSigningCACertTask := {
-  val cert = resourceManaged.value / "AttestationReportSigningCACert.pem"
-  if (!cert.exists) {
-    streams.value.log.info(s"Fetching Intel Attestation report signing CA certificate")
-    val certUrl =
-      new java.net.URL(
-        s"https://community.intel.com/legacyfs/online/drupal_files/managed/7b/de/RK_PUB.zip"
-      )
-    IO.unzipURL(certUrl, cert.getParentFile)
-  }
-  Seq(cert)
 }
 
 synthTestDataTask := {
@@ -431,4 +421,14 @@ synthBenchmarkDataTask := {
     val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
   }
+}
+
+synthKeysTask := {
+  import scala.sys.process._
+  val keysDir = baseDirectory.value
+  var res =
+    Process(Seq("openssl", "genrsa", "-out", keysDir + "/private_key.pem", "-3", "3072")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL private key.")
+  res = Process(Seq("openssl", "rand", "-out", keysDir + "/symmetric_key.key", "32")).!
+  if (res != 0) sys.error("Failed to generate OpenSSQL symmetric key.")
 }
