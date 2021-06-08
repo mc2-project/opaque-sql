@@ -16,7 +16,7 @@ Unlike the Spark cluster, the driver must be run within a trusted environment (e
 - Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
 
 [1] Wenting Zheng, Ankur Dave, Jethro Beekman, Raluca Ada Popa, Joseph Gonzalez, and Ion Stoica.
-`Opaque: An Oblivious and Encrypted Distributed Analytics Platform <https://people.eecs.berkeley.edu/~wzheng/opaque.pdf>`_. NSDI 2017, March 2017.
+`Opaque: An Oblivious and Encrypted Distributed Analytics Platform <https://www.usenix.org/system/files/conference/nsdi17/nsdi17-zheng.pdf>`_. NSDI 2017, March 2017.
 
 
 .. toctree::

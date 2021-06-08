@@ -93,6 +93,27 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
     }
   }
 
+  test("sorting after union before aggregate") {
+    checkAnswer() { sl =>
+      val one = sl.applyTo(
+        Seq[(Integer, Boolean, Boolean)]((1, true, false), (2, false, true), (10, true, false))
+          .toDF("id", "value", "value2")
+      )
+      one.createOrReplaceTempView("one")
+
+      val two = sl.applyTo(
+        Seq[(Integer, Boolean, Boolean)]((20, true, true), (30, false, false), (50, false, true))
+          .toDF("id", "value", "value2")
+      )
+      two.createOrReplaceTempView("two")
+
+      spark.sql("""
+      |SELECT value AND value2 FROM one
+      |UNION
+      |SELECT value AND value2 FROM two""".stripMargin)
+    }
+  }
+
   def generateRandomPairs(numPairs: Int = 1000) = {
     val rand = new scala.util.Random()
     Seq.fill(numPairs) { (rand.nextInt(), rand.nextInt()) }.toDF

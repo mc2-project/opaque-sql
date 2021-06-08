@@ -109,6 +109,12 @@ eval_binary_comparison(flatbuffers::FlatBufferBuilder &builder, const tuix::Fiel
   bool result = false;
   if (!result_is_null) {
     switch (left->value_type()) {
+    case tuix::FieldUnion_BooleanField: {
+      result =
+          Operation<bool>()(static_cast<const tuix::BooleanField *>(left->value())->value(),
+                            static_cast<const tuix::BooleanField *>(right->value())->value());
+      break;
+    }
     case tuix::FieldUnion_IntegerField: {
       result =
           Operation<int32_t>()(static_cast<const tuix::IntegerField *>(left->value())->value(),

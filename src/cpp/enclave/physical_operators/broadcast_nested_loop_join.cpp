@@ -52,9 +52,7 @@ void outer_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_rows
     bool o_i_match = false;
     RowReader inner_r(BufferRefView<tuix::EncryptedBlocks>(inner_rows, inner_rows_length));
 
-    // Use peek() to get the schema of the inner table
-    const tuix::Row *inner = inner_r.peek();
-
+    const tuix::Row *inner;
     while (inner_r.has_next()) {
       inner = inner_r.next();
       bool condition_met = join_expr_eval.is_right_join()
