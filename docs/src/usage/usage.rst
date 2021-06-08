@@ -15,7 +15,10 @@ Starting Opaque SQL
 
 This page goes through running Opaque SQL with the Spark driver located on the client. 
 
-**Security Notice:** this mode *should not* be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
+.. warning::
+      This mode *should not* be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
+
+      This is Opaque SQL in **insecure** mode, and is normally only used for testing functionalities.
 
 Running the interactive shell
 *****************************
@@ -90,7 +93,7 @@ Encrypting, saving, and loading a DataFrame
                   data = [("foo", 4), ("bar", 1), ("baz", 5)]
                   df = sqlContext.createDataFrame(data).toDF("word", "count")
 
-2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted`` (*note*: this call is only supported in trusted driver mode). 
+2. Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling ``.encrypted`` (*note*: this call is only supported in insecure mode).
 
    Scala:
    
