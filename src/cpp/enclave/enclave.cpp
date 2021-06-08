@@ -281,6 +281,8 @@ void ecall_finish_attestation(uint8_t *enc_signed_shared_key, uint32_t enc_signe
     deserializeSignedKey(serialized_signed_shared_key.get(), &shared_key, &shared_key_size,
                          &shared_key_sig, &shared_key_sig_size);
 
+    // TODO: check shared key signature
+
     // Once we've decrypted the shared key, set it
     set_shared_key(shared_key, shared_key_size);
 
