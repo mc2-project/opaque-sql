@@ -70,7 +70,8 @@ object RA extends Logging {
             ByteString.copyFrom(evidence)
           }
           case None =>
-            throw new OpaqueException("At least one enclave failed attestion.")
+            logInfo(s"Enclave with eid ${eid} already attested.")
+            ByteString.EMPTY
         }
       }.toSeq)
       Future.successful(protoEvidences)

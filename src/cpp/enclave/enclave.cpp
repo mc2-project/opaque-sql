@@ -297,8 +297,7 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   // the same
 
   std::unique_ptr<Attestation> attestation(new Attestation(g_crypto));
-  static oe_uuid_t sgx_remote_uuid = {OE_FORMAT_UUID_SGX_ECDSA};
-  oe_uuid_t format_id = sgx_remote_uuid;
+  oe_uuid_t format_id = {OE_FORMAT_UUID_SGX_ECDSA};
   uint8_t *format_settings;
   size_t format_settings_size;
 
