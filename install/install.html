@@ -136,17 +136,27 @@
         </label>
         <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="dependencies">
-<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
-<p>After downloading the Opaque codebase, build and test it as follows.</p>
+<div class="section" id="using-the-install-script">
+<h2>Using the install script<a class="headerlink" href="#using-the-install-script" title="Permalink to this headline">¶</a></h2>
+<p>Opaque SQL has an install script (<code class="docutils literal notranslate"><span class="pre">opaque-sql/scripts/install.sh</span></code>) to take care of installing/downloading everything for Opaque SQL to work immediately. To use this, first clone/fork the repository, then run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> opaque-sql
+<span class="nb">source</span> ./scripts/install.sh
+</pre></div>
+</div>
+<p>Note that the <code class="docutils literal notranslate"><span class="pre">source</span></code> is necessary to properly set environment variables Opaque SQL needs. If alternatively you don’t want to use the install script, see the section on <a class="reference internal" href="#deps-manual"><span class="std std-ref">installing dependencies manually</span></a> below. For testing, skip to <a class="reference internal" href="#running-tests"><span class="std std-ref">running tests</span></a>.</p>
+</div>
+<div class="section" id="installing-dependencies-manually">
+<span id="deps-manual"></span><h2>Installing dependencies manually<a class="headerlink" href="#installing-dependencies-manually" title="Permalink to this headline">¶</a></h2>
+<p>After downloading the Opaque codebase, install necessary dependencies as follows.</p>
 <ol class="arabic">
 <li><p>Install dependencies and the <a class="reference external" href="https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md">OpenEnclave SDK</a>. We currently support OE version 0.12.0 (so please install with <code class="docutils literal notranslate"><span class="pre">open-enclave=0.12.0</span></code>) and Ubuntu 18.04.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For Ubuntu 18.04:</span>
-sudo apt install wget build-essential openjdk-8-jdk python libssl-dev
+sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev
 
-<span class="c1"># Install a newer version of CMake (&gt;= 3.13)</span>
+<span class="c1"># Install a newer version of CMake (3.15)</span>
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix<span class="o">=</span>/usr/local
+rm cmake-3.15.6-Linux-x86_64.sh
 
 <span class="c1"># Install Spark 3.1.1 (if not already done)</span>
 wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
@@ -156,17 +166,10 @@ sudo mv spark-3.1.1*/* /opt/spark
 rm -rf spark-3.1.1*
 sudo mkdir /opt/spark/work
 sudo chmod -R a+wx /opt/spark/work
-
-<span class="c1"># Set Spark environment variables in ~/.bashrc</span>
-<span class="nb">echo</span> <span class="s2">""</span> &gt;&gt; ~/.bashrc
-<span class="nb">echo</span> <span class="s2">"# Spark settings"</span> &gt;&gt; ~/.bashrc
-<span class="nb">echo</span> <span class="s2">"export SPARK_HOME=/opt/spark"</span> &gt;&gt; ~/.bashrc
-<span class="nb">echo</span> <span class="s2">"export PATH=</span><span class="nv">$PATH</span><span class="s2">:/opt/spark/bin:/opt/spark/sbin"</span> &gt;&gt; ~/.bashrc
-<span class="nb">source</span> ~/.bashrc
 </pre></div>
 </div>
 </li>
-<li><p>Change into the Opaque root directory and edit Opaque’s environment variables in <code class="docutils literal notranslate"><span class="pre">opaqueenv</span></code> if desired. Export Opaque and OpenEnclave environment variables via</p>
+<li><p>Change into the Opaque root directory and edit Opaque’s environment variables in <code class="docutils literal notranslate"><span class="pre">opaqueenv</span></code> (including Spark configurations) if desired. Export Opaque SQL and Open Enclave environment variables via</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> opaqueenv
 <span class="nb">source</span> /opt/openenclave/share/openenclave/openenclaverc
 </pre></div>
@@ -191,12 +194,17 @@ If you do not have a machine with a hardware enclave but still wish to test out 
 </pre></div>
 </div>
 </li>
-<li><p>Run the Opaque tests:</p>
+</ol>
+</div>
+<div class="section" id="running-tests">
+<span id="id1"></span><h2>Running tests<a class="headerlink" href="#running-tests" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p>To run the Opaque tests:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt <span class="nb">test</span>
 </pre></div>
 </div>
 </li>
-<li><p>Alternatively, to generate coverage reports:</p>
+<li><p>Alternatively, to run tests <em>and</em> generate coverage reports:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt clean coverage <span class="nb">test</span>
 build/sbt coverageReport
 </pre></div>
@@ -271,7 +279,9 @@ build/sbt coverageReport
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Installation</a><ul>
-<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#using-the-install-script">Using the install script</a></li>
+<li><a class="reference internal" href="#installing-dependencies-manually">Installing dependencies manually</a></li>
+<li><a class="reference internal" href="#running-tests">Running tests</a></li>
 <li><a class="reference internal" href="#additional-configurations-for-running-on-a-spark-cluster">Additional configurations for running on a Spark cluster</a></li>
 </ul>
 </li>
