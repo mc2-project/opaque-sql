@@ -46,7 +46,7 @@ Opaque SQL enforces linting rules for all contributions. Before making changes a
 
    .. code-block:: bash
 
-                ./${OPAQUE_HOME}/format.sh
+                ./${OPAQUE_HOME}/scripts/format.sh
 
 Debugging your changes
 ######################

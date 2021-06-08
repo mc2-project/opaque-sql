@@ -1,6 +1,11 @@
 export OPAQUE_HOME=$(pwd)
 export OPAQUE_DATA_DIR=${OPAQUE_HOME}/data/
-export SPARK_SCALA_VERSION=2.12
+export SYMMETRIC_KEY_PATH=${OPAQUE_HOME}/symmetric_key.key
 export PRIVATE_KEY_PATH=${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem
 export MODE=HARDWARE
 export OE_SDK_PATH=/opt/openenclave/
+
+# Spark settings
+export SPARK_SCALA_VERSION=2.12
+export SPARK_HOME=/opt/spark
+export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin
