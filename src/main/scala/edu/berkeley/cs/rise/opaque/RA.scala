@@ -64,14 +64,8 @@ object RA extends Logging {
       logInfo("Driver collected evidence reports from enclaves.")
 
       val protoEvidences = Evidences(evidences.map { case (eid, evidence) =>
-        evidence match {
-          case Some(evidence) => {
-            eids = eids :+ eid
-            ByteString.copyFrom(evidence)
-          }
-          case None =>
-            throw new OpaqueException("Enclave has not been started.")
-        }
+        eids = eids :+ eid
+        ByteString.copyFrom(evidence)
       }.toSeq)
       Future.successful(protoEvidences)
     }

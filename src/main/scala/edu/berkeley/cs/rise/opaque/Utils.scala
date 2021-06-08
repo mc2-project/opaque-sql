@@ -414,17 +414,21 @@ object Utils extends Logging {
     eid
   }
 
-  def generateEvidence(): (Long, Option[Array[Byte]]) = {
+  private var evidence: Option[Array[Byte]] = None
+  def generateEvidence(): (Long, Array[Byte]) = {
     this.synchronized {
-      // Only generate evidence if the enclave has already been started
-      // We include redundant evidence generation (generation if already attested)
-      // For now until a more efficient schema is developed with the client
+      // Only generate evidence if the enclave has already been started and unattested
+      // If already attested, use cached evidence
       if (eid != 0L) {
         val enclave = new SGXEnclave()
-        val evidence = enclave.GenerateEvidence(eid)
-        (eid, Option(evidence))
+        evidence match {
+          case Some(evidence) =>
+          case None =>
+            evidence = Some(enclave.GenerateEvidence(eid))
+        }
+        (eid, evidence.get)
       } else {
-        (eid, None)
+        throw new OpaqueException("Enclave has not been started.")
       }
     }
   }
