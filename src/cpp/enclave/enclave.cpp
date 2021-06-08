@@ -256,9 +256,6 @@ typedef struct oe_evidence_msg_t {
 void ecall_finish_attestation(uint8_t *enc_signed_shared_key, uint32_t enc_signed_shared_key_size) {
   spdlog::info("Ecall: finish_attestation()");
   try {
-    // const uint8_t *enc_signed_shared_key;
-    // size_t enc_signed_shared_key_size;
-
     // Asymmetrically decrypt the SignedKey
     size_t serialized_signed_shared_key_size = g_crypto->AsymDecSize(enc_signed_shared_key_size);
     std::unique_ptr<uint8_t[]> serialized_signed_shared_key(

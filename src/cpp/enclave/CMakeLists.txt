@@ -35,7 +35,7 @@ add_compile_options(${COMMON_COMPILE_FLAGS} -fvisibility=hidden -fpie -fstack-pr
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
 set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 
-########## Fetch and make opaque-utils library available ##########
+########## Fetch and make mc2-utils library available ##########
 include(FetchContent)
 FetchContent_Declare(
   mc2_utils_e

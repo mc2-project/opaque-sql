@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(OpaqueEnclaveJNI)
 
-# ---- Fetch opaque-utils ----
+# ---- Fetch mc2-utils ----
 include(FetchContent)
 FetchContent_Declare(
     mc2_utils_h
