@@ -42,16 +42,7 @@ After downloading the Opaque codebase, install necessary dependencies as follows
                    sudo mkdir /opt/spark/work
                    sudo chmod -R a+wx /opt/spark/work
 
-                   # Set Spark environment variables in ~/.bashrc
-                   # (note this depends on where Spark is downloaded)
-                   echo "" >> ~/.bashrc
-                   echo "# Spark settings" >> ~/.bashrc
-                   echo "export SPARK_HOME=/opt/spark" >> ~/.bashrc
-                   echo "export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin" >> ~/.bashrc
-                   echo "" >> ~/.bashrc
-                   source ~/.bashrc
-
-2. Change into the Opaque root directory and edit Opaque's environment variables in ``opaqueenv`` if desired. Export Opaque and OpenEnclave environment variables via
+2. Change into the Opaque root directory and edit Opaque's environment variables in ``opaqueenv`` (including Spark configurations) if desired. Export Opaque SQL and Open Enclave environment variables via
 
    .. code-block:: bash
                    
