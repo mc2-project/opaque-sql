@@ -340,21 +340,18 @@ object Utils extends Logging {
       acc_registered = true
     }
 
-    val numExecutors = waitForExecutors(sc)
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+    val rdd = waitForExecutors(sc)
     if (!testing) {
       // Spawn RA listener.
-      RA.initRAListener(sc, numExecutors)
+      RA.initRAListener(sc, rdd)
       // Spawn for-loop that checks if any enclave is unattested.
       // If at least one is, create another connection to the client
       // to attest.
-      RA.startThread(sc, numExecutors)
+      RA.startThread(sc, rdd)
     } else {
       rdd.mapPartitions { (_) =>
         startEnclave(numEnclaves, testing)
-        // evidence is a serialized `oe_evidence_msg_t`
-        val (eid, evidence) = Utils.generateEvidence()
-        Iterator((eid, evidence))
+        Iterator(0)
       }.collect
     }
   }
@@ -374,10 +371,11 @@ object Utils extends Logging {
           .size < numExecutors
       ) {}
       logInfo(s"All executors have started, number of executors is ${numExecutors}")
-      numExecutors
+      rdd
     } else {
       logInfo("Spark running in local mode")
-      1
+      sc.parallelize(Seq.fill(1) { () }, 1)
+
     }
   }
 

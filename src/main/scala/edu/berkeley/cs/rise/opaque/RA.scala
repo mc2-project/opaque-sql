@@ -94,16 +94,14 @@ object RA extends Logging {
   val numAttested: LongAccumulator = Utils.numAttested
   var loop: Boolean = true
 
-  def initRAListener(sc: SparkContext, numExecutors: Int): Unit = {
-
-    val rdd = Some(sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors))
+  def initRAListener(sc: SparkContext, rdd: RDD[Unit]): Unit = {
 
     // Start gRPC server to listen for attestation inquiries
     val port = 50051
     val server = NettyServerBuilder
       .forPort(port)
       .addService(
-        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd.get), ExecutionContext.global)
+        ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd), ExecutionContext.global)
       )
       .build
       .start
@@ -120,9 +118,8 @@ object RA extends Logging {
   // Periodically probe the workers using `startEnclave`
   //
   // Important: `testing` should only be set to true during testing
-  def attestEnclaves(sc: SparkContext, numExecutors: Int): Unit = {
+  def attestEnclaves(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     // Proactively initialize enclaves
-    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
     rdd.mapPartitions { (_) =>
       val eid = Utils.startEnclave(numEnclavesAcc)
@@ -135,11 +132,11 @@ object RA extends Logging {
     Thread.sleep(100)
   }
 
-  def startThread(sc: SparkContext, numExecutors: Int): Unit = {
+  def startThread(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     val thread = new Thread {
       override def run: Unit = {
         while (false) { // loop
-          attestEnclaves(sc, numExecutors)
+          attestEnclaves(sc, rdd)
         }
       }
     }
