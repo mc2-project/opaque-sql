@@ -54,10 +54,18 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
  * so the performance impact is very minimal.
  */
 (test in Test) := {
-  ((test in Test)).dependsOn(assembly in Test).dependsOn(synthTestDataTask).value
+  ((test in Test))
+    .dependsOn(Keys.`package` in Compile)
+    .dependsOn(Keys.`package` in Test)
+    .dependsOn(synthTestDataTask)
+    .value
 }
 (Keys.`testOnly` in Test) := {
-  ((Keys.`testOnly` in Test)).dependsOn(assembly in Test).dependsOn(synthTestDataTask).evaluated
+  ((Keys.`testOnly` in Test))
+    .dependsOn(Keys.`package` in Compile)
+    .dependsOn(Keys.`package` in Test)
+    .dependsOn(synthTestDataTask)
+    .evaluated
 }
 
 testOptions in Test += Tests.Argument("-oF")

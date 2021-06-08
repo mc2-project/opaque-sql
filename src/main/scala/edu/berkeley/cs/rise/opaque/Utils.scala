@@ -33,6 +33,8 @@ import javax.crypto.spec.SecretKeySpec
 import scala.collection.mutable.ArrayBuilder
 
 import com.google.flatbuffers.FlatBufferBuilder
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
@@ -338,9 +340,45 @@ object Utils extends Logging {
       acc_registered = true
     }
 
-    RA.waitForExecutors(sc)
-    RA.attestEnclaves(sc, testing = testing)
-    RA.startThread(sc, testing = testing)
+    val numExecutors = waitForExecutors(sc)
+    val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+    if (!testing) {
+      // Spawn RA listener.
+      RA.initRAListener(sc, numExecutors)
+      // Spawn for-loop that checks if any enclave is unattested.
+      // If at least one is, create another connection to the client
+      // to attest.
+      RA.startThread(sc, numExecutors)
+    } else {
+      rdd.mapPartitions { (_) =>
+        startEnclave(numEnclaves, testing)
+        // evidence is a serialized `oe_evidence_msg_t`
+        val (eid, evidence) = Utils.generateEvidence()
+        Iterator((eid, evidence))
+      }.collect
+    }
+  }
+
+  def waitForExecutors(sc: SparkContext) = {
+    if (!sc.isLocal) {
+      val numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      while (
+        rdd
+          .mapPartitions { (_) =>
+            val id = SparkEnv.get.executorId
+            Iterator(id)
+          }
+          .collect
+          .toSet
+          .size < numExecutors
+      ) {}
+      logInfo(s"All executors have started, number of executors is ${numExecutors}")
+      numExecutors
+    } else {
+      logInfo("Spark running in local mode")
+      1
+    }
   }
 
   def initEnclave(): (SGXEnclave, Long) = {

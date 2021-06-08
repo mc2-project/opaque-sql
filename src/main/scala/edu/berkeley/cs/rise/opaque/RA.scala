@@ -19,7 +19,7 @@ package edu.berkeley.cs.rise.opaque
 
 import opaque.protos.client._
 
-import org.apache.spark.{SparkContext, SparkEnv}
+import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.LongAccumulator
@@ -30,7 +30,12 @@ import io.grpc.netty.NettyServerBuilder
 import scala.concurrent.{ExecutionContext, Future}
 
 // Performs remote attestation for all executors
-// that have not been attested yet
+// that have not been attested yet.
+
+// NOTE: no part of this file should be used in tests.
+// This is because the multi-partition tests that run with
+// local-cluster[*,*,*] DO NOT include the fat jar that contains
+// the gRPC dependency, and Spark will not be able to find those files.
 
 object RA extends Logging {
 
@@ -78,8 +83,7 @@ object RA extends Logging {
       rdd.mapPartitions { (_) =>
         val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
         Iterator((eid, true))
-      }
-      .collect
+      }.collect
 
       // No error occured, return attestation passed to the client
       val status = AttestationStatus(1)
@@ -88,14 +92,10 @@ object RA extends Logging {
   }
 
   val numAttested: LongAccumulator = Utils.numAttested
-  var numExecutors: Int = 1
   var loop: Boolean = true
 
-  def initRA(sc: SparkContext): Unit = {
+  def initRAListener(sc: SparkContext, numExecutors: Int): Unit = {
 
-    if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-    }
     val rdd = Some(sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors))
 
     // Start gRPC server to listen for attestation inquiries
@@ -115,56 +115,31 @@ object RA extends Logging {
     }
   }
 
-  def waitForExecutors(sc: SparkContext): Unit = {
-    if (!sc.isLocal) {
-      numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
-      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
-      while (
-        rdd
-          .mapPartitions { (_) =>
-            val id = SparkEnv.get.executorId
-            Iterator(id)
-          }
-          .collect
-          .toSet
-          .size < numExecutors
-      ) {}
-    }
-    logInfo(s"All executors have started, numExecutors is ${numExecutors}")
-  }
-
   // This function is executed in a loop that repeatedly tries to
   // call initRA if new enclaves are added
   // Periodically probe the workers using `startEnclave`
   //
   // Important: `testing` should only be set to true during testing
-  def attestEnclaves(sc: SparkContext, testing: Boolean = false): Unit = {
+  def attestEnclaves(sc: SparkContext, numExecutors: Int): Unit = {
     // Proactively initialize enclaves
     val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
     val numEnclavesAcc = Utils.numEnclaves
     rdd.mapPartitions { (_) =>
-      val eid = Utils.startEnclave(numEnclavesAcc, testing)
+      val eid = Utils.startEnclave(numEnclavesAcc)
       Iterator(eid)
     }.count
-
-    if (!testing) {
-      if (Utils.numEnclaves.value != Utils.numAttested.value) {
-        logInfo(
-          s"RA.run: ${Utils.numEnclaves.value} unattested, ${Utils.numAttested.value} attested"
-        )
-        initRA(sc)
-      }
-      Thread.sleep(100)
+    if (Utils.numEnclaves.value != Utils.numAttested.value) {
+      // TODO: Need to create an RPC call to the client to reattest if any executor
+      // fails for whatever reason.
     }
+    Thread.sleep(100)
   }
 
-  def startThread(sc: SparkContext, testing: Boolean = false): Unit = {
+  def startThread(sc: SparkContext, numExecutors: Int): Unit = {
     val thread = new Thread {
       override def run: Unit = {
         while (false) { // loop
-          //TODO: Can't call attestEnclaves in a loop because that will just try to spawn
-          // infinite listeners. Need to define a new function to initiate another connection
-          // with the client for fault tolerant attestation.
+          attestEnclaves(sc, numExecutors)
         }
       }
     }
