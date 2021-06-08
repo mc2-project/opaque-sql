@@ -38,7 +38,6 @@ import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
@@ -349,7 +348,7 @@ object Utils extends Logging {
       // to attest.
       RA.startThread(sc, rdd)
     }
-    // Start the enclave and assign eid
+    // Start the executor enclave and assign eid
     rdd.mapPartitions { (_) =>
       startEnclave(numEnclaves, testing)
       Iterator(0)
@@ -405,7 +404,7 @@ object Utils extends Logging {
         // If we're testing, set `attested` to true
         // so that we don't error out when calling `initEnclave()`
         //
-        // During testing, we don't care about attestation
+        // During testing, we don't perform attestation
         if (testing) {
           attested = true
         }

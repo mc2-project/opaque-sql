@@ -22,7 +22,6 @@ import opaque.protos.client._
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.util.LongAccumulator
 
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
@@ -75,7 +74,7 @@ object RA extends Logging {
 
       // Send the asymmetrically encrypted shared key to any unattested enclave
       rdd.mapPartitions { (_) =>
-        val (enclave, eid) = Utils.finishAttestation(numAttested, eidsToKey)
+        val (enclave, eid) = Utils.finishAttestation(Utils.numAttested, eidsToKey)
         Iterator((eid, true))
       }.collect
 
@@ -85,7 +84,6 @@ object RA extends Logging {
     }
   }
 
-  val numAttested: LongAccumulator = Utils.numAttested
   var loop: Boolean = true
 
   def initRAListener(sc: SparkContext, rdd: RDD[Unit]): Unit = {
