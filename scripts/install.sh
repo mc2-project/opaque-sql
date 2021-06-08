@@ -46,20 +46,9 @@ rm -rf spark-3.1.1*
 sudo mkdir /opt/spark/work
 sudo chmod -R a+wx /opt/spark/work
 
-# Set Spark environment variables in ~/.bashrc
-echo "" >> ~/.bashrc
-echo "# Spark settings" >> ~/.bashrc
-echo "export SPARK_HOME=/opt/spark" >> ~/.bashrc
-echo "export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin" >> ~/.bashrc
-echo "" >> ~/.bashrc
-source ~/.bashrc
-
 # Source necessary environment variables
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 OPAQUE_DIR="${SCRIPT_DIR%/*}"
 cd ${OPAQUE_DIR}
 source opaqueenv
 source /opt/openenclave/share/openenclave/openenclaverc
-
-# Generate keys to use
-build/sbt keys
