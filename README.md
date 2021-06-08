@@ -7,23 +7,17 @@
 Welcome to the landing page of Opaque SQL! Opaque SQL is a package for Apache Spark SQL that enables processing over encrypted DataFrames using the OpenEnclave framework. 
 
 ### Quick start
-To quickly get started with Opaque SQL, you can download our Docker image (also includes other open source projects in the MC<sup>2</sup> project).
+To quickly get started with Opaque SQL, you can build a Docker container from the provided [Dockerfile](Dockerfile). To do so, you must have [Docker](https://docs.docker.com/get-docker/) installed. We recommend giving Docker at least 2 CPUs, 6 GB of memory, and 2 GB of swap space (instructions for [Mac](https://docs.docker.com/docker-for-mac/#resources), [Windows](https://docs.docker.com/docker-for-windows/#resources)). The entire Docker build process should take about 5 minutes.
 
 ```sh
-docker pull mc2project/mc2
-docker run -it -p 22:22 -p 50051-50055:50051-50055 -w /root mc2project/mc2
+# In the project root directory, build a Docker image `opaquesql_img` from the Dockerfile
+docker build -t opaquesql_img .
+
+# Run a container with Opaque SQL pre-installed
+docker run -it opaquesql_img /bin/bash
 ```
 
-Change into the Opaque directory and export the Opaque and OpenEnclave environment variables.
-
-```sh
-cd opaque
-source opaqueenv
-source /opt/openenclave/share/openenclave/openenclaverc
-export MODE=SIMULATE
-```
-
-You are now ready to run your first Opaque SQL query! First, start a Scala shell:
+This will start a container with Opaque SQL pre-installed and built in simulation mode. You are now ready to run your first Opaque SQL query! First, start a Scala shell:
 
 ```sh
 build/sbt console
