@@ -93,7 +93,7 @@ trait SortSuite extends OpaqueSuiteBase with SQLHelper {
     }
   }
 
-  ignore("sorting after union before aggregate") {
+  test("sorting after union before aggregate") {
     checkAnswer() { sl =>
       val one = sl.applyTo(
         Seq[(Integer, Boolean, Boolean)]((1, true, false), (2, false, true), (10, true, false))
