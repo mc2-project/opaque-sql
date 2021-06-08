@@ -11,6 +11,8 @@ FetchContent_Declare(
 set(FETCHCONTENT_QUIET OFF)
 set(HOST ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(mc2_utils_h)
+
+include_directories(${spdlog_SOURCE_DIR}/include)
 # --------
 
 set(SOURCES

@@ -5,6 +5,8 @@
 
 #include "define.h"
 
+#include "spdlog/spdlog.h"
+
 // Declarations for C/C++ standard library functions that are not present in the
 // trusted standard libraries, but are reimplemented in Enclave/util.cpp. This
 // allows us to use these functions uniformly across trusted and untrusted code.
@@ -18,11 +20,7 @@ using ::exit;
 #define COMMON_H
 
 #ifdef DEBUG
-#define opaque_debug(...) printf(__VA_ARGS__)
-#else
-#define opaque_debug(...)                                                                        \
-  do {                                                                                           \
-  } while (0)
+spdlog::set_level(spdlog::level::debug);
 #endif
 
 #ifdef PERF
