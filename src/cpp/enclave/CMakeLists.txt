@@ -57,10 +57,6 @@ FetchContent_Declare(
 )
 set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(mc2_serialization)
-
-message(ERROR ${CMAKE_CURRENT_BINARY_DIR})
-#TODO(octavian): remove this once the serialization library allows direct includes
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../_deps/mc2_serialization-src/src)
 ########################################################################
 
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h
