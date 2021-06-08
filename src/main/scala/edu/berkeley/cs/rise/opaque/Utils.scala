@@ -395,9 +395,12 @@ object Utils extends Logging {
       numAttested: LongAccumulator,
       eidToKey: Map[Long, Array[Byte]]
   ): (Long, Boolean) = {
+    logWarning("In finishAttestation")
     this.synchronized {
+      logWarning("In finishAttestation")
       val enclave = new SGXEnclave()
       if (eidToKey.contains(eid) && !attested) {
+        logWarning("in if statement")
         val encryptedSharedKey = eidToKey(eid)
         enclave.FinishAttestation(eid, encryptedSharedKey)
         numAttested.add(1)
