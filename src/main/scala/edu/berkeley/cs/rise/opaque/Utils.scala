@@ -348,12 +348,12 @@ object Utils extends Logging {
       // If at least one is, create another connection to the client
       // to attest.
       RA.startThread(sc, rdd)
-    } else {
-      rdd.mapPartitions { (_) =>
-        startEnclave(numEnclaves, testing)
-        Iterator(0)
-      }.collect
     }
+    // Start the enclave and assign eid
+    rdd.mapPartitions { (_) =>
+      startEnclave(numEnclaves, testing)
+      Iterator(0)
+    }.collect
   }
 
   def waitForExecutors(sc: SparkContext) = {
