@@ -49,6 +49,20 @@ add_compile_definitions(SPDLOG_NO_THREAD_ID FMT_USE_INT128=0)
 include_directories(${spdlog_SOURCE_DIR}/include)
 ##################################################################
 
+########## Fetch and make mc2_serialization library available ##########
+include(FetchContent)
+FetchContent_Declare(
+  mc2_serialization
+  GIT_REPOSITORY https://github.com/mc2-project/mc2-serialization.git
+)
+set(FETCHCONTENT_QUIET OFF)
+FetchContent_MakeAvailable(mc2_serialization)
+
+message(ERROR ${CMAKE_CURRENT_BINARY_DIR})
+#TODO(octavian): remove this once the serialization library allows direct includes
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../_deps/mc2_serialization-src/src)
+########################################################################
+
 # Need ${CMAKE_CURRENT_BINARY_DIR} for the generated file enclave_t.h
 target_include_directories(enclave_trusted 
                            PRIVATE 
@@ -60,6 +74,7 @@ target_link_directories(enclave_trusted PRIVATE
                         ${OE_LIBDIR}/openenclave/enclave)
 
 target_link_libraries(enclave_trusted
+                      mc2_serialization
                       mc2_utils_e
                       openenclave::oeenclave
                       openenclave::oecrypto${OE_CRYPTO_LIB}

@@ -16,6 +16,7 @@
 #include "util.h"
 
 #include "attestation.h"
+#include "serialization.h"
 #include "spdlog/spdlog.h"
 #include <openenclave/attestation/sgx/evidence.h>
 
@@ -255,20 +256,34 @@ typedef struct oe_evidence_msg_t {
 void ecall_finish_attestation(uint8_t *shared_key_msg_input, uint32_t shared_key_msg_size) {
   spdlog::info("Ecall: finish_attestation()");
   try {
-    uint8_t shared_key_plaintext[CIPHER_KEY_SIZE];
-    size_t shared_key_plaintext_size = 0;
-    bool ret = g_crypto->AsymDec(shared_key_msg_input, shared_key_plaintext, shared_key_msg_size,
-                                 &shared_key_plaintext_size);
-    if (!ret) {
+    const uint8_t *enc_signed_shared_key;
+    size_t enc_signed_shared_key_size;
+
+    // Asymmetrically decrypt the SignedKey
+    size_t serialized_signed_shared_key_size = g_crypto->AsymDecSize(enc_signed_shared_key_size);
+    std::unique_ptr<uint8_t[]> serialized_signed_shared_key(
+        new uint8_t[serialized_signed_shared_key_size]);
+
+    int err = g_crypto->AsymDec(enc_signed_shared_key, serialized_signed_shared_key.get(),
+                                enc_signed_shared_key_size, &serialized_signed_shared_key_size);
+
+    if (err) {
+      spdlog::error("Opaque SQL: Shared key decryption failed");
       ocall_throw("shared key decryption failed");
-    } else if (shared_key_plaintext_size != CIPHER_KEY_SIZE) {
-      ocall_throw((std::string("Length of the decrypted shared key is ") +
-                   std::to_string(shared_key_plaintext_size) +
-                   std::string(", not equal to the intended size of 32 bytes."))
-                      .c_str());
     }
 
-    set_shared_key(shared_key_plaintext, shared_key_plaintext_size);
+    // Deserialize to retrieve the shared key and the signature over the shared key
+    const uint8_t *shared_key;
+    size_t shared_key_size;
+    const uint8_t *shared_key_sig;
+    size_t shared_key_sig_size;
+
+    deserializeSignedKey(serialized_signed_shared_key.get(), &shared_key, &shared_key_size,
+                         &shared_key_sig, &shared_key_sig_size);
+
+    // Once we've decrypted the shared key, set it
+    set_shared_key(shared_key, shared_key_size);
+
   } catch (const std::runtime_error &e) {
     ocall_throw(e.what());
   }
