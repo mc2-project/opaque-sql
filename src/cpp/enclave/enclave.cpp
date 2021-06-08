@@ -282,6 +282,7 @@ void ecall_finish_attestation(uint8_t *enc_signed_shared_key, uint32_t enc_signe
                          &shared_key_sig, &shared_key_sig_size);
 
     // TODO: check shared key signature
+    // To do so, we'll need to somehow obtain the client public key
 
     // Once we've decrypted the shared key, set it
     set_shared_key(shared_key, shared_key_size);
