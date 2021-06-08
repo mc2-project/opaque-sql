@@ -44,37 +44,13 @@ After downloading the Opaque codebase, build and test it as follows.
    By default, Opaque runs in hardware mode (environment variable ``MODE=HARDWARE``).
    If you do not have a machine with a hardware enclave but still wish to test out Opaque's functionality locally, then set ``export MODE=SIMULATE``.
 
-3. To generate new keys using OpenSSL, you can use the following ``sbt`` task:
-
-   .. code-block:: bash
-
-                  build/sbt keys
-
-   *Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing. This key should be not be used in a production environment.* 
-
-   Alternatively, you can use your own keys, though this is generally not recommended. 
-
-   To generate and set the private key used for remote attestation:
-
-   .. code-block:: bash
-
-                  openssl genrsa -out /path/to/private/key/private_key.pem -3 3072
-                  export PRIVATE_KEY_PATH=/path/to/private/key/private_key.pem
-
-   To generate and set the symmetric key used for encrypting/decrypting between the driver and the enclave:
-
-   .. code-block:: bash
-
-                  openssl rand -out /path/to/symmetric/key/shared_key.key 32
-                  export SYMMETRIC_KEY_PATH=/path/to/symmetric/key/symmetric_key.key
-
-4. Run the Opaque tests:
+3. Run the Opaque tests:
 
    .. code-block:: bash
                 
                    build/sbt test
 
-5. Alternatively, to generate coverage reports:
+4. Alternatively, to generate coverage reports:
 
    .. code-block:: bash
 
