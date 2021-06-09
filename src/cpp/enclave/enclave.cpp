@@ -17,7 +17,6 @@
 
 #include "attestation.h"
 #include "serialization.h"
-#include "spdlog/spdlog.h"
 #include <openenclave/attestation/sgx/evidence.h>
 
 #include <mbedtls/config.h>

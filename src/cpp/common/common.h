@@ -5,6 +5,9 @@
 
 #include "define.h"
 
+#ifdef DEBUG
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
+#endif
 #include "spdlog/spdlog.h"
 
 // Declarations for C/C++ standard library functions that are not present in the
@@ -18,10 +21,6 @@ using ::exit;
 
 #ifndef COMMON_H
 #define COMMON_H
-
-#ifdef DEBUG
-spdlog::set_level(spdlog::level::debug);
-#endif
 
 #ifdef PERF
 #define perf(...) printf(__VA_ARGS__)

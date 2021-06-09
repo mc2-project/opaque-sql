@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <queue>
 
+#include "common.h"
+
 #include "flatbuffer_helpers/expression_evaluation.h"
 #include "flatbuffer_helpers/flatbuffers_readers.h"
 #include "flatbuffer_helpers/flatbuffers_writers.h"
-
-#include "spdlog/spdlog.h"
 
 class MergeItem {
 public:
@@ -27,7 +27,7 @@ void external_merge(SortedRunsReader &r, uint32_t run_start, uint32_t num_runs,
 
   // Initialize the priority queue with the first row from each run
   for (uint32_t i = run_start; i < run_start + num_runs; i++) {
-    spdlog::debug("external_merge: Read first row from run %d\n", i);
+    SPDLOG_DEBUG("external_merge: Read first row from run %d\n", i);
     MergeItem item;
     item.v = r.next_from_run(i);
     item.run_idx = i;
@@ -81,7 +81,7 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length, uint8_t *input
         BufferRefView<tuix::EncryptedBlocks>(input_rows, input_rows_length));
     uint32_t i = 0;
     for (auto it = r.begin(); it != r.end(); ++it, ++i) {
-      spdlog::debug("Sorting buffer %d with %d rows\n", i, it->num_rows());
+      SPDLOG_DEBUG("Sorting buffer %d with %d rows\n", i, it->num_rows());
       sort_single_encrypted_block(w, *it, sort_eval);
     }
 
@@ -99,15 +99,14 @@ void external_sort(uint8_t *sort_order, size_t sort_order_length, uint8_t *input
   auto runs_buf = w.output_buffer();
   SortedRunsReader r(runs_buf.view());
   while (r.num_runs() > 1) {
-    spdlog::debug("external_sort: Merging %d runs, up to %d at a time\n", r.num_runs(),
-                  MAX_NUM_STREAMS);
+    SPDLOG_DEBUG("external_sort: Merging %d runs, up to %d at a time\n", r.num_runs(),
+                 MAX_NUM_STREAMS);
 
     w.clear();
     for (uint32_t run_start = 0; run_start < r.num_runs(); run_start += MAX_NUM_STREAMS) {
       uint32_t num_runs =
           std::min(MAX_NUM_STREAMS, static_cast<uint32_t>(r.num_runs()) - run_start);
-      spdlog::debug("external_sort: Merging buffers %d-%d\n", run_start,
-                    run_start + num_runs - 1);
+      SPDLOG_DEBUG("external_sort: Merging buffers %d-%d\n", run_start, run_start + num_runs - 1);
 
       external_merge(r, run_start, num_runs, w, sort_eval);
     }
