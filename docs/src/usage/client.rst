@@ -2,6 +2,13 @@
 Query submission via the MC\ :sup:`2` Client
 ********************************************
 
+.. figure:: https://mc2-project.github.io/opaque-sql/opaque_diagram.png
+   :align: center
+   :figwidth: 80 %
+
+   Overview of Opaque SQL running with the MC\ :sup:`2` Client
+
+
 Starting Opaque SQL
 ###################
 
