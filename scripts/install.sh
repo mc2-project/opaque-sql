@@ -52,4 +52,3 @@ OPAQUE_DIR="${SCRIPT_DIR%/*}"
 cd ${OPAQUE_DIR}
 source opaqueenv
 source /opt/openenclave/share/openenclave/openenclaverc
-

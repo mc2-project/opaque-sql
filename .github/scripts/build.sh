@@ -26,6 +26,7 @@ sudo mkdir /opt/spark/work
 sudo chmod -R a+wx /opt/spark/work
 
 # Set Spark environment variables
+export SPARK_SCALA_VERSION=2.12
 export SPARK_HOME=/opt/spark
 export PATH=$PATH:/opt/spark/bin:/opt/spark/sbin
 
