@@ -82,11 +82,13 @@ object IntpHandler {
         try { 
           edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
         } catch {
-          case _ : Throwable =>
+          case t : Throwable =>
+            throw t
         }
         """
     )
-    run(initializationCommands)
+    val cap, _ = run(initializationCommands)
+    println(cap)
   }
 
   def run(input: String): (String, Result) = this.synchronized {
