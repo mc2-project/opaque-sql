@@ -43,9 +43,18 @@ Opaque SQL uses two listeners: the first for remote attestation on port 50051, a
 Using the MC\ :sup:`2` Client
 #############################
 
-MC\ :sup:`2` Client is a Python package that provides an integrated channel for communicating with other MC\ :sup:`2` compute services.
+The MC\ :sup:`2` Client is a Python package that provides an integrated channel for communicating with other MC\ :sup:`2` compute services, including Opaque SQL. By following the `install instructions <https://mc2-project.github.io/mc2/install.html>`_ and specifying a user configuration, the client makes it possible to run Opaque SQL remotely and receive results locally.
 
+1. For an explanation of the user configuration and to see an example, see the `configuration documentation <https://mc2-project.github.io/mc2/config/config.html>`_.
 
-`Source Code <https://github.com/mc2-project/mc2>`_
+2. For concrete instructions on how to run Opaque SQL with the client, see the `usage with Opaque SQL documentation <https://mc2-project.github.io/mc2/opaquesql_usage.html>`_.
 
-`Documentation <https://mc2-project.github.io/mc2/index.html>`_
+3. (Optional) The MC\ :sup:`2` Client also contains tools to aid in setting up a production environment, like an `Azure configuration <https://mc2-project.github.io/mc2/config/azure.html>`_ for starting a cluster through a `simple API <https://mc2-project.github.io/mc2/python/usage.html#azure-resource-management>`_.
+
+Alternatively, the MC\2 :sup:`2` Client contains a quickstart for running everything seamlessly in a Docker container with all dependencies installed. For a comprehensive walkthrough, see the `quickstart documentation <https://mc2-project.github.io/mc2/quickstart.html>`_.
+
+For further reading:
+
+`Client Source Code <https://github.com/mc2-project/mc2>`_
+
+`Client Documentation <https://mc2-project.github.io/mc2/index.html>`_
