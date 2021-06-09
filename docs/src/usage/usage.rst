@@ -6,7 +6,7 @@ Query submission via the Spark Driver
    :align: center
    :figwidth: 100 %
 
-   Overview of Opaque SQL running in trusted driver mode
+   Overview of Opaque SQL running in insecure mode
 
 
 
@@ -16,7 +16,7 @@ Starting Opaque SQL
 This page goes through running Opaque SQL with the Spark driver located on the client. 
 
 .. warning::
-      This mode *should not* be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
+      This mode **should not** be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.
 
       This is Opaque SQL in **insecure** mode, and is normally only used for testing functionalities.
 

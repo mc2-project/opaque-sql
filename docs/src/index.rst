@@ -9,8 +9,6 @@ This project is based on our NSDI 2017 paper [1]. The oblivious execution mode i
 This is an alpha preview of Opaque SQL, and the software is still in active development.
 It currently has the following limitations:
 
-Unlike the Spark cluster, the driver must be run within a trusted environment (e.g., on the client).
-
 - Not all Spark SQL operations are supported (see the :ref:`list of supported functionalities <functionalities>`). UDFs must be :ref:`implemented in C++ <udfs>`
 
 - Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.
@@ -24,8 +22,8 @@ Unlike the Spark cluster, the driver must be run within a trusted environment (e
    :caption: Table of contents
 
    install/install.rst
-   usage/usage.rst
    usage/client.rst
+   usage/usage.rst
    usage/functionality.rst
    benchmarking/benchmarking.rst
    contributing/contributing.rst
