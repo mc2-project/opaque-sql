@@ -88,7 +88,13 @@ object IntpHandler {
         """
     )
     val cap, _ = run(initializationCommands)
+    println(
+      "############################# Commands from Spark startup #############################"
+    )
     println(cap)
+    println(
+      "#######################################################################################"
+    )
   }
 
   def run(input: String): (String, Result) = this.synchronized {
