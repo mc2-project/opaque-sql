@@ -78,14 +78,9 @@ object IntpHandler {
       /* Opaque SQL specific commands */
       "@transient val sqlContext = spark.sqlContext",
       """
-        import edu.berkeley.cs.rise.opaque.implicits._
-        try { 
-          edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
-        } catch {
-          case t : Throwable =>
-            throw t
-        }
-        """
+      import edu.berkeley.cs.rise.opaque.implicits._
+      edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
+      """
     )
     val cap, _ = run(initializationCommands)
     println(

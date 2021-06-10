@@ -51,7 +51,7 @@ The MC\ :sup:`2` Client is a Python package that provides an integrated channel 
 
 3. (Optional) The MC\ :sup:`2` Client also contains tools to aid in setting up a production environment, like an `Azure configuration <https://mc2-project.github.io/mc2/config/azure.html>`_ for starting a cluster through a `simple API <https://mc2-project.github.io/mc2/python/usage.html#azure-resource-management>`_.
 
-Alternatively, the MC\2 :sup:`2` Client contains a quickstart for running everything seamlessly in a Docker container with all dependencies installed. For a comprehensive walkthrough, see the `quickstart documentation <https://mc2-project.github.io/mc2/quickstart.html>`_.
+Alternatively, we offer a quickstart for running everything seamlessly in a Docker container with all dependencies installed. For a comprehensive walkthrough, see the `quickstart documentation <https://mc2-project.github.io/mc2/quickstart.html>`_.
 
 For further reading:
 
