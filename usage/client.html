@@ -2,7 +2,7 @@
 <html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Query submission via the Spark Driver" href="usage.html" />
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the Spark Driver" href="usage.html" /><link rel="prev" title="Installation" href="../install/install.html" />
 
     <meta name="generator" content="sphinx-3.5.4, furo 2021.04.11.beta34"/>
         <title>Query submission via the MC2 Client - Opaque SQL documentation</title>
@@ -116,8 +116,8 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../install/install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Query submission via the MC<sup>2</sup> Client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
@@ -136,14 +136,23 @@
         </label>
         <div class="section" id="query-submission-via-the-mc2-client">
 <h1>Query submission via the MC<sup>2</sup> Client<a class="headerlink" href="#query-submission-via-the-mc2-client" title="Permalink to this headline">¶</a></h1>
+<div class="figure align-center" id="id1" style="width: 80%">
+<img alt="https://mc2-project.github.io/opaque-sql/opaque_diagram.png" src="https://mc2-project.github.io/opaque-sql/opaque_diagram.png"/>
+<p class="caption"><span class="caption-text">Overview of Opaque SQL running with the MC<sup>2</sup> Client</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
 <div class="section" id="starting-opaque-sql">
 <h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
-<p>Here we outline how to use <a class="reference external" href="https://github.com/mc2-project/mc2">the client</a> to submit queries. This is an alternative way to run Opaque SQL that integrates well with the rest of the MC<sup>2</sup> projects, such as <a class="reference external" href="https://github.com/mc2-project/secure-xgboost">Secure XGBoost</a>.</p>
-<p>Note that the driver still must be located on <em>trusted</em> hardware for the complete security guarantees provided by the MC<sup>2</sup> platform.</p>
-<div class="section" id="starting-the-grpc-listener">
-<h3>Starting the gRPC Listener<a class="headerlink" href="#starting-the-grpc-listener" title="Permalink to this headline">¶</a></h3>
+<p>Here we outline how to use <a class="reference external" href="https://github.com/mc2-project/mc2">the client</a> to submit queries. This is the primary method of running Opaque SQL and integrates with the rest of the MC<sup>2</sup> projects, such as <a class="reference external" href="https://github.com/mc2-project/secure-xgboost">Secure XGBoost</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing located at <code class="docutils literal notranslate"><span class="pre">${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem</span></code>. This key <strong>should not</strong> be used in a production environment. This can be reconfigured by changing the environment variable <code class="docutils literal notranslate"><span class="pre">PRIVATE_KEY_PATH</span></code> to another key file and having the MC<sup>2</sup> Client use its public peer to verify the signature.</p>
+</div>
+<p>Running in this mode enables the driver to be located on <em>untrusted</em> hardware while still providing the complete security guarantees of the MC<sup>2</sup> platform.</p>
+<div class="section" id="starting-the-grpc-listeners">
+<h3>Starting the gRPC Listeners<a class="headerlink" href="#starting-the-grpc-listeners" title="Permalink to this headline">¶</a></h3>
+<p>Opaque SQL uses two listeners: the first for remote attestation on port 50051, and the second for query requests on port 50052. The MC<sup>2</sup> Client uses these by default to connect to the Opaque SQL driver.</p>
 <ol class="arabic">
-<li><p>To run the listener locally using <code class="docutils literal notranslate"><span class="pre">sbt</span></code>:</p>
+<li><p>To run both listeners locally using <code class="docutils literal notranslate"><span class="pre">sbt</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt run
 </pre></div>
 </div>
@@ -158,14 +167,20 @@ spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">
 </div>
 </li>
 </ol>
-<p>Both of these methods start a listener on port 50051 that allows you to use the MC<sup>2</sup> Client to submit queries to Opaque SQL remotely.</p>
 </div>
 </div>
 <div class="section" id="using-the-mc2-client">
 <h2>Using the MC<sup>2</sup> Client<a class="headerlink" href="#using-the-mc2-client" title="Permalink to this headline">¶</a></h2>
-<p>MC<sup>2</sup> Client is a Python package that provides an integrated channel for communicating with other MC<sup>2</sup> compute services.</p>
-<p><a class="reference external" href="https://github.com/mc2-project/mc2">Source Code</a></p>
-<p><a class="reference external" href="https://mc2-project.github.io/mc2/index.html">Documentation</a></p>
+<p>The MC<sup>2</sup> Client is a Python package that provides an integrated channel for communicating with other MC<sup>2</sup> compute services, including Opaque SQL. By following the <a class="reference external" href="https://mc2-project.github.io/mc2/install.html">install instructions</a> and specifying a user configuration, the client makes it possible to run Opaque SQL remotely and receive results locally.</p>
+<ol class="arabic simple">
+<li><p>For an explanation of the user configuration and to see an example, see the <a class="reference external" href="https://mc2-project.github.io/mc2/config/config.html">configuration documentation</a>.</p></li>
+<li><p>For concrete instructions on how to run Opaque SQL with the client, see the <a class="reference external" href="https://mc2-project.github.io/mc2/opaquesql_usage.html">usage with Opaque SQL documentation</a>.</p></li>
+<li><p>(Optional) The MC<sup>2</sup> Client also contains tools to aid in setting up a production environment, like an <a class="reference external" href="https://mc2-project.github.io/mc2/config/azure.html">Azure configuration</a> for starting a cluster through a <a class="reference external" href="https://mc2-project.github.io/mc2/python/usage.html#azure-resource-management">simple API</a>.</p></li>
+</ol>
+<p>Alternatively, we offer a quickstart for running everything seamlessly in a Docker container with all dependencies installed. For a comprehensive walkthrough, see the <a class="reference external" href="https://mc2-project.github.io/mc2/quickstart.html">quickstart documentation</a>.</p>
+<p>For further reading:</p>
+<p><a class="reference external" href="https://github.com/mc2-project/mc2">Client Source Code</a></p>
+<p><a class="reference external" href="https://mc2-project.github.io/mc2/index.html">Client Documentation</a></p>
 </div>
 </div>
 
@@ -173,23 +188,23 @@ spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="functionality.html">
+          <a class="next-page" href="usage.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Supported functionalities</div>
+                <div class="title">Query submission via the Spark Driver</div>
               </div>
               <svg><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="usage.html">
+          <a class="prev-page" href="../install/install.html">
               <svg><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Query submission via the Spark Driver</div>
+                <div class="title">Installation</div>
                 
               </div>
             </a>
@@ -225,7 +240,7 @@ spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">
             <ul>
 <li><a class="reference internal" href="#">Query submission via the MC<sup>2</sup> Client</a><ul>
 <li><a class="reference internal" href="#starting-opaque-sql">Starting Opaque SQL</a><ul>
-<li><a class="reference internal" href="#starting-the-grpc-listener">Starting the gRPC Listener</a></li>
+<li><a class="reference internal" href="#starting-the-grpc-listeners">Starting the gRPC Listeners</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#using-the-mc2-client">Using the MC<sup>2</sup> Client</a></li>

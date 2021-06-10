@@ -116,8 +116,8 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install/install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/client.html">Query submission via the MC<sup>2</sup> Client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="benchmarking/benchmarking.html">Benchmarking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing/contributing.html">Contributing</a></li>
@@ -140,7 +140,6 @@
 <p>This project is based on our NSDI 2017 paper [1]. The oblivious execution mode is currently not included in this release.</p>
 <p>This is an alpha preview of Opaque SQL, and the software is still in active development.
 It currently has the following limitations:</p>
-<p>Unlike the Spark cluster, the driver must be run within a trusted environment (e.g., on the client).</p>
 <ul class="simple">
 <li><p>Not all Spark SQL operations are supported (see the <a class="reference internal" href="usage/functionality.html#functionalities"><span class="std std-ref">list of supported functionalities</span></a>). UDFs must be <a class="reference internal" href="usage/functionality.html#udfs"><span class="std std-ref">implemented in C++</span></a></p></li>
 <li><p>Computation integrity verification (section 4.2 of the NSDI paper) is currently work in progress.</p></li>
@@ -157,16 +156,16 @@ It currently has the following limitations:</p>
 <li class="toctree-l2"><a class="reference internal" href="install/install.html#additional-configurations-for-running-on-a-spark-cluster">Additional configurations for running on a Spark cluster</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage/client.html">Query submission via the MC<sup>2</sup> Client</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/client.html#starting-opaque-sql">Starting Opaque SQL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/client.html#using-the-mc2-client">Using the MC<sup>2</sup> Client</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage/usage.html">Query submission via the Spark Driver</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/usage.html#starting-opaque-sql">Starting Opaque SQL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/usage.html#encrypting-saving-and-loading-a-dataframe">Encrypting, saving, and loading a DataFrame</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/usage.html#using-the-dataframe-interface">Using the DataFrame interface</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/usage.html#using-the-sql-interface">Using the SQL interface</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="usage/client.html">Query submission via the MC<sup>2</sup> Client</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage/client.html#starting-opaque-sql">Starting Opaque SQL</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage/client.html#using-the-mc2-client">Using the MC<sup>2</sup> Client</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage/functionality.html">Supported functionalities</a><ul>

@@ -2,7 +2,7 @@
 <html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the MC2 Client" href="client.html" /><link rel="prev" title="Installation" href="../install/install.html" />
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Query submission via the MC2 Client" href="client.html" />
 
     <meta name="generator" content="sphinx-3.5.4, furo 2021.04.11.beta34"/>
         <title>Query submission via the Spark Driver - Opaque SQL documentation</title>
@@ -116,8 +116,8 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../install/install.html">Installation</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="client.html">Query submission via the MC<sup>2</sup> Client</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
@@ -137,11 +137,16 @@
         <div class="section" id="query-submission-via-the-spark-driver">
 <h1>Query submission via the Spark Driver<a class="headerlink" href="#query-submission-via-the-spark-driver" title="Permalink to this headline">¶</a></h1>
 <div class="figure align-center" id="id1" style="width: 100%">
-<img alt="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg" src="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in trusted driver mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<img alt="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg" src="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in insecure mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 <div class="section" id="starting-opaque-sql">
 <h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
-<p>This page goes through running Opaque SQL with the Spark driver located on the client. An implication of this is that the driver is considered a <em>trusted</em> entity.</p>
+<p>This page goes through running Opaque SQL with the Spark driver located on the client.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This mode <strong>should not</strong> be used in any context where the full security of hardware enclaves is required. Remote attestation is disabled, and the Spark Driver has access to the key the worker enclaves use to encrypt/decrypt data. This is still offered to play around with the project and explore its API.</p>
+<p>This is Opaque SQL in <strong>insecure</strong> mode, and is normally only used for testing functionalities.</p>
+</div>
 <div class="section" id="running-the-interactive-shell">
 <h3>Running the interactive shell<a class="headerlink" href="#running-the-interactive-shell" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
@@ -171,12 +176,12 @@ build/sbt test:assembly
 <li><p>Inside the Spark shell, import Opaque SQL’s <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> methods and its query planning rules.</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">edu.berkeley.cs.rise.opaque.implicits._</span>
-<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initOpaqueSQL</span><span class="o">(</span><span class="n">spark</span><span class="o">)</span>
+<span class="n">edu</span><span class="o">.</span><span class="n">berkeley</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">rise</span><span class="o">.</span><span class="n">opaque</span><span class="o">.</span><span class="nc">Utils</span><span class="o">.</span><span class="n">initOpaqueSQL</span><span class="o">(</span><span class="n">spark</span><span class="o">,</span> <span class="n">testing</span> <span class="k">=</span> <span class="kc">true</span><span class="o">)</span>
 </pre></div>
 </div>
 <p>Python:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opaque_sql</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="n">init_opaque_sql</span><span class="p">()</span>
+<span class="n">init_opaque_sql</span><span class="p">(</span><span class="n">testing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
@@ -198,7 +203,7 @@ build/sbt test:assembly
 </pre></div>
 </div>
 </li>
-<li><p>Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling <code class="docutils literal notranslate"><span class="pre">.encrypted</span></code>.</p>
+<li><p>Create an encrypted DataFrame from the unencrypted version. Opaque SQL makes this as easy as calling <code class="docutils literal notranslate"><span class="pre">.encrypted</span></code> (<em>note</em>: this call is only supported in insecure mode).</p>
 <p>Scala:</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">encrypted</span>
 </pre></div>
@@ -289,23 +294,23 @@ The encrypted data can also be uploaded to cloud storage for easy access.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="client.html">
+          <a class="next-page" href="functionality.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Query submission via the MC<sup>2</sup> Client</div>
+                <div class="title">Supported functionalities</div>
               </div>
               <svg><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../install/install.html">
+          <a class="prev-page" href="client.html">
               <svg><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Installation</div>
+                <div class="title">Query submission via the MC<sup>2</sup> Client</div>
                 
               </div>
             </a>

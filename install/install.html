@@ -2,7 +2,7 @@
 <html class="no-js">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the Spark Driver" href="../usage/usage.html" /><link rel="prev" title="Welcome to Opaque SQL’s documentation!" href="../index.html" />
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the MC2 Client" href="../usage/client.html" /><link rel="prev" title="Welcome to Opaque SQL’s documentation!" href="../index.html" />
 
     <meta name="generator" content="sphinx-3.5.4, furo 2021.04.11.beta34"/>
         <title>Installation - Opaque SQL documentation</title>
@@ -116,8 +116,8 @@
   <p class="caption"><span class="caption-text">Table of contents</span></p>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../usage/usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/client.html">Query submission via the MC<sup>2</sup> Client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/usage.html">Query submission via the Spark Driver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/functionality.html">Supported functionalities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../benchmarking/benchmarking.html">Benchmarking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing/contributing.html">Contributing</a></li>
@@ -151,7 +151,7 @@
 <ol class="arabic">
 <li><p>Install dependencies and the <a class="reference external" href="https://github.com/openenclave/openenclave/blob/v0.12.0/docs/GettingStartedDocs/install_oe_sdk-Ubuntu_18.04.md">OpenEnclave SDK</a>. We currently support OE version 0.12.0 (so please install with <code class="docutils literal notranslate"><span class="pre">open-enclave=0.12.0</span></code>) and Ubuntu 18.04.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For Ubuntu 18.04:</span>
-sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev
+sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev
 
 <span class="c1"># Install a newer version of CMake (3.15)</span>
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
@@ -177,23 +177,6 @@ sudo chmod -R a+wx /opt/spark/work
 <p>By default, Opaque runs in hardware mode (environment variable <code class="docutils literal notranslate"><span class="pre">MODE=HARDWARE</span></code>).
 If you do not have a machine with a hardware enclave but still wish to test out Opaque’s functionality locally, then set <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">MODE=SIMULATE</span></code>.</p>
 </li>
-<li><p>To generate new keys using OpenSSL, you can use the following <code class="docutils literal notranslate"><span class="pre">sbt</span></code> task:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt keys
-</pre></div>
-</div>
-<p><em>Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing. This key should be not be used in a production environment.</em></p>
-<p>Alternatively, you can use your own keys, though this is generally not recommended.</p>
-<p>To generate and set the private key used for remote attestation:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl genrsa -out /path/to/private/key/private_key.pem -3 <span class="m">3072</span>
-<span class="nb">export</span> <span class="nv">PRIVATE_KEY_PATH</span><span class="o">=</span>/path/to/private/key/private_key.pem
-</pre></div>
-</div>
-<p>To generate and set the symmetric key used for encrypting/decrypting between the driver and the enclave:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl rand -out /path/to/symmetric/key/shared_key.key <span class="m">32</span>
-<span class="nb">export</span> <span class="nv">SYMMETRIC_KEY_PATH</span><span class="o">=</span>/path/to/symmetric/key/symmetric_key.key
-</pre></div>
-</div>
-</li>
 </ol>
 </div>
 <div class="section" id="running-tests">
@@ -217,7 +200,7 @@ build/sbt coverageReport
 <p>Opaque SQL needs three Spark properties to be set:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">spark.executor.instances=n</span></code> (n is usually the number of machines in the cluster)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">spark.task.maxFailures=10</span></code> (attestation uses Spark’s fault tolerance property)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">spark.task.maxFailures=10</span></code> (attestation uses Sparks fault tolerance property)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">spark.driver.defaultJavaOptions="-Dscala.color"</span></code> (if querying with MC<sup>2</sup> Client)</p></li>
 </ul>
 <p>These properties can be be set in a custom configuration file, the default being located at <code class="docutils literal notranslate"><span class="pre">${SPARK_HOME}/conf/spark-defaults.conf</span></code>, or as a <code class="docutils literal notranslate"><span class="pre">spark-submit</span></code> or <code class="docutils literal notranslate"><span class="pre">spark-shell</span></code> argument: <code class="docutils literal notranslate"><span class="pre">--conf</span> <span class="pre">&lt;key&gt;=&lt;value&gt;</span></code>. For more details on running a Spark cluster, see the <a class="reference external" href="https://spark.apache.org/docs/latest/cluster-overview.html">Spark documentation</a></p>
@@ -228,12 +211,12 @@ build/sbt coverageReport
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../usage/usage.html">
+          <a class="next-page" href="../usage/client.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Query submission via the Spark Driver</div>
+                <div class="title">Query submission via the MC<sup>2</sup> Client</div>
               </div>
               <svg><use href="#svg-arrow-right"></use></svg>
             </a>
