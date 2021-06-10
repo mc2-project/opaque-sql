@@ -1,9 +1,9 @@
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import DataFrame, SparkSession, SQLContext
 
-def init_opaque_sql():
+def init_opaque_sql(testing=False):
     sc = SparkContext.getOrCreate()
-    sc._jvm.edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(SparkSession(sc)._jsparkSession)
+    sc._jvm.edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(SparkSession(sc)._jsparkSession, testing)
 
 def encrypted(df):
     sc = SparkContext.getOrCreate()

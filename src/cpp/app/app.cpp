@@ -52,6 +52,7 @@
 #include <time.h>     // gettimeofday
 
 #include "common.h"
+#include "crypto.h"
 #include "enclave_u.h"
 #include "errlist.h"
 
@@ -215,21 +216,23 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   return enclavePtr;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateReport(
-    JNIEnv *env, jobject obj, jlong eid) {
+JNIEXPORT jbyteArray JNICALL
+Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_GenerateEvidence(JNIEnv *env, jobject obj,
+                                                                       jlong eid) {
   (void)obj;
   (void)eid;
 
-  uint8_t *report_msg = NULL;
-  size_t report_msg_size = 0;
+  uint8_t *evidence_msg = NULL;
+  size_t evidence_msg_size = 0;
 
-  oe_check_and_time("Generate enclave report",
-                    ecall_generate_report((oe_enclave_t *)eid, &report_msg, &report_msg_size));
+  oe_check_and_time(
+      "Generate enclave evidence",
+      ecall_generate_evidence((oe_enclave_t *)eid, &evidence_msg, &evidence_msg_size));
 
   // Allocate memory
-  jbyteArray report_msg_bytes = env->NewByteArray(report_msg_size);
-  env->SetByteArrayRegion(report_msg_bytes, 0, report_msg_size,
-                          reinterpret_cast<jbyte *>(report_msg));
+  jbyteArray report_msg_bytes = env->NewByteArray(evidence_msg_size);
+  env->SetByteArrayRegion(report_msg_bytes, 0, evidence_msg_size,
+                          reinterpret_cast<jbyte *>(evidence_msg));
 
   return report_msg_bytes;
 }
@@ -339,7 +342,7 @@ JNIEXPORT jbyteArray JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEncla
   if (plaintext_ptr == nullptr) {
     ocall_throw("Encrypt: JNI failed to get input byte array.");
   } else {
-    clength = plength + SGX_AESGCM_IV_SIZE + SGX_AESGCM_MAC_SIZE;
+    clength = plength + CIPHER_IV_SIZE + CIPHER_TAG_SIZE;
     ciphertext_copy = new uint8_t[clength];
 
     oe_check("Encrypt", ecall_encrypt((oe_enclave_t *)eid, plaintext_ptr, plength,

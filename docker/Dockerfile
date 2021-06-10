@@ -1,7 +1,7 @@
 FROM ubuntu:xenial
 
 RUN apt-get update && \
-    apt-get install -y git wget build-essential openjdk-8-jdk-headless python cmake libssl-dev && \
+    apt-get install -y git wget build-essential openjdk-8-jdk-headless python cmake libssl-dev libmbedtls-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN wget -O sgx_installer.bin https://download.01.org/intel-sgx/linux-2.3.1/ubuntu16.04/sgx_linux_x64_sdk_2.3.101.46683.bin && \

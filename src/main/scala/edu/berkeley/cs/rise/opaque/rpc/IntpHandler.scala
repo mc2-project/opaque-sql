@@ -37,9 +37,10 @@ object IntpHandler {
 
   /* Construct an interpreter that routes all output to stdout. */
   val intp = IMain(settings)
-  initializeIntp()
 
-  /* Initial commands for the interpreter to run. */
+  /* Initial commands for the interpreter to execute.
+   * This has to be called before any call to IntpHandler.run
+   */
   def initializeIntp() = {
     intp.initializeSynchronous()
     val initializationCommands = Seq(
@@ -77,15 +78,18 @@ object IntpHandler {
       /* Opaque SQL specific commands */
       "@transient val sqlContext = spark.sqlContext",
       """
-        import edu.berkeley.cs.rise.opaque.implicits._
-        try { 
-          edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
-        } catch {
-          case _ : Throwable =>
-        }
-        """
+      import edu.berkeley.cs.rise.opaque.implicits._
+      edu.berkeley.cs.rise.opaque.Utils.initOpaqueSQL(spark)
+      """
     )
-    run(initializationCommands)
+    val cap, _ = run(initializationCommands)
+    println(
+      "############################# Commands from Spark startup #############################"
+    )
+    println(cap)
+    println(
+      "#######################################################################################"
+    )
   }
 
   def run(input: String): (String, Result) = this.synchronized {

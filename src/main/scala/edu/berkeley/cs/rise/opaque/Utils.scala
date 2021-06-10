@@ -33,10 +33,11 @@ import javax.crypto.spec.SecretKeySpec
 import scala.collection.mutable.ArrayBuilder
 
 import com.google.flatbuffers.FlatBufferBuilder
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Add
@@ -267,7 +268,15 @@ object Utils extends Logging {
       val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
       cipher.init(Cipher.ENCRYPT_MODE, cipherKey, spec)
       val cipherText = cipher.doFinal(data)
-      iv ++ cipherText
+      /* Cipher in Scala produces cipher text of the form
+       * IV || ENCRYPTED DATA || TAG
+       * But the opaque_utils library in C++ expects
+       * IV || TAG || ENCRYPTED DATA
+       * So we need to swap the ENCRYPTED_DATA and TAG
+       */
+      val (encrypted_data, tag) = cipherText.splitAt(cipherText.size - GCM_TAG_LENGTH)
+      val swappedCipherText = tag ++ encrypted_data
+      iv ++ swappedCipherText
     case None =>
       throw new OpaqueException("Cannot encrypt without sharedKey.")
   }
@@ -277,9 +286,17 @@ object Utils extends Logging {
       val cipherKey = new SecretKeySpec(sharedKey, "AES")
       val iv = data.take(GCM_IV_LENGTH)
       val cipherText = data.drop(GCM_IV_LENGTH)
+      /* The opaque_utils library in C++ produces cipher text of the form
+       * IV || TAG || ENCRYPTED DATA
+       * But Cipher in Scala expects
+       * IV || ENCRYPTED DATA || TAG
+       * So we need to swap the ENCRYPTED_DATA and TAG
+       */
+      val (tag, encrypted_data) = cipherText.splitAt(GCM_TAG_LENGTH)
+      val swappedCipherText = encrypted_data ++ tag
       val cipher = Cipher.getInstance("AES/GCM/NoPadding", "SunJCE")
       cipher.init(Cipher.DECRYPT_MODE, cipherKey, new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv))
-      cipher.doFinal(cipherText)
+      cipher.doFinal(swappedCipherText)
     case None =>
       throw new OpaqueException("Cannot decrypt without sharedKey.")
   }
@@ -292,7 +309,7 @@ object Utils extends Logging {
   val numAttested: LongAccumulator = new LongAccumulator
   var loop: Boolean = true
 
-  def initOpaqueSQL(spark: SparkSession): Unit = {
+  def initOpaqueSQL(spark: SparkSession, testing: Boolean = false): Unit = {
     val sqlContext = spark.sqlContext
     sqlContext.experimental.extraOptimizations =
       (Seq(EncryptLocalRelation, ConvertToOpaqueOperators) ++
@@ -300,18 +317,8 @@ object Utils extends Logging {
     sqlContext.experimental.extraStrategies = (Seq(OpaqueOperators) ++
       sqlContext.experimental.extraStrategies)
 
-    val enableTestingKey = sqlContext.getConf("spark.opaque.testing.enableTestingKey", "false")
-    if (enableTestingKey.toBoolean) {
+    if (testing) {
       sharedKey = Some(Array.fill[Byte](GCM_KEY_LENGTH)(0))
-    } else {
-      val sharedKeyPath = sys.env.get("SYMMETRIC_KEY_PATH")
-      sharedKeyPath match {
-        case Some(sharedKeyPath) =>
-          sharedKey = Option(Files.readAllBytes(Paths.get(sharedKeyPath)))
-          assert(sharedKey.get.size == GCM_KEY_LENGTH)
-        case None =>
-          throw new OpaqueException("Need to set the SYMMETRIC_KEY_PATH environment variable.")
-      }
     }
 
     val sc = sqlContext.sparkContext
@@ -323,9 +330,43 @@ object Utils extends Logging {
       acc_registered = true
     }
 
-    RA.waitForExecutors(sc)
-    RA.attestEnclaves(sc)
-    RA.startThread(sc)
+    val rdd = waitForExecutors(sc)
+    if (!testing) {
+      // Spawn RA listener.
+      RA.initRAListener(sc, rdd)
+      // Spawn for-loop that checks if any enclave is unattested.
+      // If at least one is, create another connection to the client
+      // to attest.
+      RA.startThread(sc, rdd)
+    }
+    // Start the executor enclave and assign eid
+    rdd.mapPartitions { (_) =>
+      startEnclave(numEnclaves, testing)
+      Iterator(0)
+    }.collect
+  }
+
+  def waitForExecutors(sc: SparkContext) = {
+    if (!sc.isLocal) {
+      val numExecutors = sc.getConf.getInt("spark.executor.instances", -1)
+      val rdd = sc.parallelize(Seq.fill(numExecutors) { () }, numExecutors)
+      while (
+        rdd
+          .mapPartitions { (_) =>
+            val id = SparkEnv.get.executorId
+            Iterator(id)
+          }
+          .collect
+          .toSet
+          .size < numExecutors
+      ) {}
+      logInfo(s"All executors have started, number of executors is ${numExecutors}")
+      rdd
+    } else {
+      logInfo("Spark running in local mode")
+      sc.parallelize(Seq.fill(1) { () }, 1)
+
+    }
   }
 
   def initEnclave(): (SGXEnclave, Long) = {
@@ -342,7 +383,7 @@ object Utils extends Logging {
     }
   }
 
-  def startEnclave(numEnclavesAcc: LongAccumulator): Long = {
+  def startEnclave(numEnclavesAcc: LongAccumulator, testing: Boolean = false): Long = {
     this.synchronized {
       if (eid == 0L) {
         val enclave = new SGXEnclave()
@@ -350,33 +391,47 @@ object Utils extends Logging {
         eid = enclave.StartEnclave(path)
         numEnclavesAcc.add(1)
         logInfo("Starting an enclave")
+
+        // If we're testing, set `attested` to true
+        // so that we don't error out when calling `initEnclave()`
+        //
+        // During testing, we don't perform attestation
+        if (testing) {
+          attested = true
+        }
       }
     }
     eid
   }
 
-  def generateReport(): (Long, Option[Array[Byte]]) = {
+  private var evidence: Option[Array[Byte]] = None
+  def generateEvidence(): (Long, Array[Byte]) = {
     this.synchronized {
-      // Only generate report if the enclave has already been started, but not yet attested
-      if (eid != 0L && !attested) {
+      // Only generate evidence if the enclave has already been started and unattested
+      // If already attested, use cached evidence
+      if (eid != 0L) {
         val enclave = new SGXEnclave()
-        val msg1 = enclave.GenerateReport(eid)
-        (eid, Option(msg1))
+        evidence match {
+          case Some(evidence) =>
+          case None =>
+            evidence = Some(enclave.GenerateEvidence(eid))
+        }
+        (eid, evidence.get)
       } else {
-        (eid, None)
+        throw new OpaqueException("Enclave has not been started.")
       }
     }
   }
 
   def finishAttestation(
       numAttested: LongAccumulator,
-      msg2s: Map[Long, Array[Byte]]
+      eidToKey: Map[Long, Array[Byte]]
   ): (Long, Boolean) = {
     this.synchronized {
       val enclave = new SGXEnclave()
-      if (msg2s.contains(eid) && !attested) {
-        val msg2 = msg2s(eid)
-        enclave.FinishAttestation(eid, msg2)
+      if (eidToKey.contains(eid) && !attested) {
+        val encryptedSharedKey = eidToKey(eid)
+        enclave.FinishAttestation(eid, encryptedSharedKey)
         numAttested.add(1)
         attested = true
       }

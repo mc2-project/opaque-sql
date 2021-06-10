@@ -83,13 +83,13 @@ enclave {
       [user_check] uint8_t *input_rows, size_t input_rows_length,
       [out] uint8_t **output_rows, [out] size_t *output_rows_length);
 
-    public void ecall_generate_report(
-      [out] uint8_t** msg1,
-      [out] size_t* msg1_size);
+    public void ecall_generate_evidence(
+      [out] uint8_t** evidence_msg_data,
+      [out] size_t* evidence_msg_data_size);
 
     public void ecall_finish_attestation(
-      [in,size=msg4_size] uint8_t *msg4,
-      uint32_t msg4_size);
+      [in,size=enc_signed_shared_key_size] uint8_t *enc_signed_shared_key,
+      uint32_t enc_signed_shared_key_size);
   };
 
   untrusted {
