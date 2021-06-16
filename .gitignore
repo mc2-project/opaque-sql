@@ -27,9 +27,9 @@ conf/*.properties
 conf/*.conf
 conf/*.xml
 conf/slaves
-docs/_site
-docs/api
-docs/build
+opaque-sql-docs/_site
+opaque-sql-docs/api
+opaque-sql-docs/build
 target/
 reports/
 .project
@@ -96,7 +96,7 @@ hs_err_pid*.log
 
 # For CMake
 Makefile
-!docs/Makefile
+!opaque-sql-docs/Makefile
 CMakeCache.txt
 cmake_install.cmake
 CMakeFiles/
