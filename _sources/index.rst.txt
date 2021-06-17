@@ -23,6 +23,7 @@ It currently has the following limitations:
 
    install/install.rst
    usage/client.rst
+   usage/untrusted.rst
    usage/usage.rst
    usage/functionality.rst
    benchmarking/benchmarking.rst

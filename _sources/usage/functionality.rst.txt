@@ -4,7 +4,7 @@
 Supported functionalities
 *************************
 
-This section lists Opaque's supported functionalities, which is a subset of that of Spark SQL. Note that the syntax for these functionalities is the same as Spark SQL -- Opaque simply replaces the execution to work with encrypted data.
+This section lists Opaque's supported functionalities, which is a subset of that of Spark SQL. The syntax for these functionalities is the same as Spark SQL -- Opaque simply replaces the execution to work with encrypted data.
 
 SQL interface
 #############
