@@ -38,7 +38,7 @@ rm cmake-3.15.6-Linux-x86_64.sh
 # Some systems may already have Spark installed: note that
 # the environment variables in the following block will
 # need to be set accordingly if so.
-wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+wget -nv https://archive.apache.org/dist/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
 tar xvf spark-3.1.1*
 sudo mkdir /opt/spark
 sudo mv spark-3.1.1*/* /opt/spark
