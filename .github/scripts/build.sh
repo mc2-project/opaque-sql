@@ -17,7 +17,7 @@ wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Lin
 sudo bash cmake-3.15.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 # Install Spark 3.1.1
-wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+wget -nv https://archive.apache.org/dist/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
 tar xvf spark-3.1.1*
 sudo mkdir /opt/spark
 sudo mv spark-3.1.1*/* /opt/spark
