@@ -34,7 +34,7 @@ After downloading the Opaque codebase, install necessary dependencies as follows
                    rm cmake-3.15.6-Linux-x86_64.sh
 
                    # Install Spark 3.1.1 (if not already done)
-                   wget https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
+                   wget https://archive.apache.org/dist/spark/spark-3.1.1/spark-3.1.1-bin-hadoop2.7.tgz
                    tar xvf spark-3.1.1*
                    sudo mkdir /opt/spark
                    sudo mv spark-3.1.1*/* /opt/spark
