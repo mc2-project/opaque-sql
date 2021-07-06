@@ -424,24 +424,24 @@ synthBenchmarkDataTask := {
 zipPythonFilesTask := {
   val pythonDir = sourceDirectory.value / "python"
 
-  // First move the non-generated Python files
-  Process(Seq("cp", "-a", s"${pythonDir}", s"${target.value}")).!
-
-  // Then generate the Python protobuf files
+  // First generate the Python protobuf files
   val protoSourceDir = sourceDirectory.value / "protobuf"
-  val pythonBuildDir = target.value / "python"
-  val pythonProtoBuildDir = pythonBuildDir / "proto"
-  pythonProtoBuildDir.mkdirs()
+  val pythonProtoDir = pythonDir / "proto"
+  pythonProtoDir.mkdirs()
   Process(
     Seq(
       "protoc",
       s"-I=${protoSourceDir}",
-      s"--python_out=${pythonProtoBuildDir}",
+      s"--python_out=${pythonProtoDir}",
       s"${protoSourceDir}/client.proto",
       s"${protoSourceDir}/listener.proto"
     )
   ).!
 
+  // Then move all Python files
+  Process(Seq("cp", "-a", s"${pythonDir}", s"${target.value}")).!
+
   // Finally zip everything together
+  val pythonBuildDir = target.value / "python"
   IO.zip(Path.allSubpaths(pythonBuildDir), target.value / "python.zip")
 }
