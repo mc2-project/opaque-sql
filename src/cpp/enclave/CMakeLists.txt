@@ -25,15 +25,20 @@ add_library(enclave_trusted SHARED ${SOURCES})
 if ("$ENV{MODE}" STREQUAL "SIMULATE")
   target_compile_definitions(enclave_trusted PUBLIC -DSIMULATE)
 endif()
-
 if ("$ENV{DEBUG}" EQUAL 1)
-  target_compile_options(enclave_trusted PUBLIC -g -O0)
-  target_compile_definitions(enclave_trusted PUBLIC -DDEBUG)
+  target_compile_definitions(enclave_trusted PRIVATE DEBUG)
+  target_compile_options(enclave_trusted PRIVATE -g -O0)
+else()
+  target_compile_options(enclave_trusted PRIVATE -O3)
 endif()
 
 add_compile_options(${COMMON_COMPILE_FLAGS} -fvisibility=hidden -fpie -fstack-protector -Wno-unused-parameter -Wno-unused-variable -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-pie -Wl,--export-dynamic -Wl,--defsym,__ImageBase=0)
+
 target_compile_definitions(enclave_trusted PUBLIC OE_API_VERSION=2)
-set_target_properties(enclave_trusted PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+
+set_target_properties(enclave_trusted 
+                      PROPERTIES 
+                      POSITION_INDEPENDENT_CODE OFF)
 
 ########## Fetch and make mc2-utils library available ##########
 include(FetchContent)
