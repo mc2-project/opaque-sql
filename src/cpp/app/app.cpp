@@ -213,6 +213,10 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
   env->ReleaseStringUTFChars(library_path, library_path_str);
   long int enclavePtr = (long int)enclave;
 
+#ifdef DEBUG
+  oe_check("SetDebugLoggingLevel", ecall_set_debugging_level(enclave));
+#endif
+
   return enclavePtr;
 }
 

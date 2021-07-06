@@ -9,6 +9,9 @@ enclave {
   include "stdbool.h"
 
   trusted {
+
+    public void ecall_set_debugging_level();
+
     public void ecall_project(
       [in, count=project_list_length] uint8_t *project_list, size_t project_list_length,
       [user_check] uint8_t *input_rows, size_t input_rows_length,
