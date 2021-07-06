@@ -141,8 +141,6 @@ resourceGenerators in Compile += copyEnclaveLibrariesToResourcesTask.taskValue
 // Add the managed resource directory to the resource classpath so we can find libraries at runtime
 managedResourceDirectories in Compile += resourceManaged.value
 
-unmanagedResources in Compile ++= ((sourceDirectory.value / "python") ** "*.py").get
-
 Compile / PB.protoSources := Seq(sourceDirectory.value / "protobuf")
 Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
 
@@ -173,6 +171,13 @@ def data = Command.command("data") { state =>
   Project.runTask(synthBenchmarkDataTask, state)
   state
 }
+
+val zipPythonFilesTask = TaskKey[Unit](
+  "zipPythonFilesTask",
+  "Creates a zip of all the Python files (including generated protobuf files) and the listener in the target directory."
+)
+
+compile in Compile := { (compile in Compile).dependsOn(zipPythonFilesTask).value }
 
 commands += oeGdbCommand
 commands += data
@@ -414,4 +419,29 @@ synthBenchmarkDataTask := {
     val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
     if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
   }
+}
+
+zipPythonFilesTask := {
+  val pythonDir = sourceDirectory.value / "python"
+
+  // First move the non-generated Python files
+  Process(Seq("cp", "-a", s"${pythonDir}", s"${target.value}")).!
+
+  // Then generate the Python protobuf files
+  val protoSourceDir = sourceDirectory.value / "protobuf"
+  val pythonBuildDir = target.value / "python"
+  val pythonProtoBuildDir = pythonBuildDir / "proto"
+  pythonProtoBuildDir.mkdirs()
+  Process(
+    Seq(
+      "protoc",
+      s"-I=${protoSourceDir}",
+      s"--python_out=${pythonProtoBuildDir}",
+      s"${protoSourceDir}/client.proto",
+      s"${protoSourceDir}/listener.proto"
+    )
+  ).!
+
+  // Finally zip everything together
+  IO.zip(Path.allSubpaths(pythonBuildDir), target.value / "python.zip")
 }

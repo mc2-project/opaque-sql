@@ -10,7 +10,7 @@ sudo apt-get update
 sudo apt-get -y install clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-common-dev libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave=0.12.0
 
 # Install Opaque Dependencies
-sudo apt-get -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev
+sudo apt-get -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev protobuf-compiler
 
 # Install a newer version of CMake (3.15)
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh
