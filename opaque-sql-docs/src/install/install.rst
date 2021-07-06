@@ -26,7 +26,8 @@ After downloading the Opaque codebase, install necessary dependencies as follows
    .. code-block:: bash
                
                    # For Ubuntu 18.04:
-                   sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev protobuf-compiler
+                   sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev
+                   pip3 install grpcio grpcio-tools # Needed for pyspark listener # Needed for Pyspark listener
 
                    # Install a newer version of CMake (3.15)
                    wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh

@@ -430,9 +430,12 @@ zipPythonFilesTask := {
   pythonProtoDir.mkdirs()
   Process(
     Seq(
-      "protoc",
+      "python3",
+      "-m",
+      "grpc_tools.protoc",
       s"-I=${protoSourceDir}",
       s"--python_out=${pythonProtoDir}",
+      s"--grpc_python_out=${pythonProtoDir}",
       s"${protoSourceDir}/client.proto",
       s"${protoSourceDir}/listener.proto"
     )
