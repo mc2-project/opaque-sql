@@ -10,4 +10,4 @@ def intp_init():
     if not jars:
         raise Exception("Need to add an assembly jar to spark-submit")
 
-    init_opaque_sql(testing=True)
+    init_opaque_sql()

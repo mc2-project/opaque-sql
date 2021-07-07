@@ -11,11 +11,12 @@ class IntpHandler:
         self.intp.runcode("from intp_init import intp_init")
         self.intp.runcode("intp_init()")
 
-    def run(self, code):
+    def run(self, source):
         out = io.StringIO()
         err = io.StringIO()
         with redirect_stdout(out) and redirect_stderr(err):
-            self.intp.runcode(code)
+            compiled = code.compile(source)
+            self.intp.runcode(compiled)
         s = out.getvalue()
         r = err.getvalue()
         s, r
