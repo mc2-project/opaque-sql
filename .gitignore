@@ -67,7 +67,10 @@ python/lib/pyspark.zip
 lint-r-report.log
 /.tags
 .metals/
-./src/python/protobuf
+
+# For generated Python protobuf files
+/src/python/protobuf/
+!/src/python/protobuf/__init__.py
 
 # For Hive
 metastore_db/

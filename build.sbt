@@ -427,7 +427,6 @@ zipPythonFilesTask := {
   // First generate the Python protobuf files
   val protoSourceDir = sourceDirectory.value / "protobuf"
   val pythonProtoDir = pythonDir / "protobuf"
-  pythonProtoDir.mkdirs()
   Process(
     Seq(
       "python3",
