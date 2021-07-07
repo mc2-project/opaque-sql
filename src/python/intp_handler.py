@@ -1,5 +1,7 @@
 import code
+import io
 from code import InteractiveInterpreter
+from contextlib import redirect_stdout, redirect_stderr
 
 from pyspark import SparkConf, SparkContext
 
@@ -10,4 +12,11 @@ class IntpHandler:
         self.intp.runcode("intp_init()")
 
     def run(self, code):
-        self.intp.runcode(code)
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out) and redirect_stderr(err):
+            self.intp.runcode(code)
+        s = out.getvalue()
+        r = err.getvalue()
+        s, r
+
