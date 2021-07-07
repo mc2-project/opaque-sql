@@ -71,6 +71,7 @@ lint-r-report.log
 # For generated Python protobuf files
 /src/python/protobuf/
 !/src/python/protobuf/__init__.py
+!/src/python/protobuf/README.md
 
 # For Hive
 metastore_db/
