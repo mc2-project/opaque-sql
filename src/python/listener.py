@@ -20,8 +20,6 @@ class Listener(listener_pb2_grpc.ListenerServicer):
         return listener_pb2.QueryResult(output, status)
 
 if __name__ == "__main__":
-    # Create handler object that the main program will interact with
-
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     listener_pb2_grpc.add_ListenerServicer_to_server(Listener(), server)
     server.add_insecure_port('[::]:50052')

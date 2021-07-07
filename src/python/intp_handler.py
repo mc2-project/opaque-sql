@@ -17,7 +17,5 @@ class IntpHandler:
         with redirect_stdout(out) and redirect_stderr(err):
             compiled = code.compile(source)
             self.intp.runcode(compiled)
-        s = out.getvalue()
-        r = err.getvalue()
-        s, r
+        out.getvalue(), err.getvalue()
 

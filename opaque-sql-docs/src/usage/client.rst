@@ -9,10 +9,7 @@ Query submission via the MC\ :sup:`2` Client
    Overview of Opaque SQL running with the MC\ :sup:`2` Client
 
 
-Starting Opaque SQL
-###################
-
-Here we outline how to use `the client <https://github.com/mc2-project/mc2>`_ to submit queries. This is the primary method of running Opaque SQL and integrates with the rest of the MC\ :sup:`2` projects, such as `Secure XGBoost <https://github.com/mc2-project/secure-xgboost>`_.
+In this section, we outline how to use `the client <https://github.com/mc2-project/mc2>`_ for submitting queries to Opaque SQL. This is the primary method of running Opaque SQL and integrates with the rest of the MC\ :sup:`2` projects, such as `Secure XGBoost <https://github.com/mc2-project/secure-xgboost>`_.
 
 .. warning::
       Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing located at ``${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem``. This key **should not** be used in a production environment. This can be reconfigured by changing the environment variable ``PRIVATE_KEY_PATH`` to another key file and having the MC\ :sup:`2` Client use its public peer to verify the signature.
@@ -20,9 +17,14 @@ Here we outline how to use `the client <https://github.com/mc2-project/mc2>`_ to
 Running in this mode enables the driver to be located on *untrusted* hardware while still providing the complete security guarantees of the MC\ :sup:`2` platform.
 
 Starting the gRPC Listeners
-***************************
+###########################
 
 Opaque SQL uses two listeners: the first for remote attestation on port 50051, and the second for query requests on port 50052. The MC\ :sup:`2` Client uses these by default to connect to the Opaque SQL driver.
+
+Opaque SQL supports running both regular (Scala) Spark as well as Pyspark.
+
+Scala Instructions
+******************
 
 1. To run both listeners locally using ``sbt``:
 
@@ -30,15 +32,31 @@ Opaque SQL uses two listeners: the first for remote attestation on port 50051, a
 
                    build/sbt run
 
-2. To launch the listener on a standalone Spark cluster:
+2. To launch the listeners on a standalone Spark cluster:
 
    .. code-block:: bash
 
                   build/sbt assembly # create a fat jar with all necessary dependencies
 
                   spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
-                     <Spark configuration parameters> \
-                     --deploy-mode client ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
+                    <Spark configuration parameters>  \
+                      --deploy-mode client ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar
+
+Python Instructions
+*******************
+
+To launch the listeners on a standalone Spark cluster:
+
+.. code-block:: bash
+
+    build/sbt assembly # create a fat jar with all necessary dependencies
+
+    spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  \
+      <Spark configuration parameters>  \
+        --deploy-mode client  \
+        --jars ${OPAQUE_HOME}/target/scala-2.12/opaque-assembly-0.1.jar  \
+        --py-files ${OPAQUE_HOME}/target/python.zip  \
+        ${OPAQUE_HOME}/target/python/listener.py  \
 
 Using the MC\ :sup:`2` Client
 #############################
