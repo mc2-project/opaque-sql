@@ -90,6 +90,8 @@ object RA extends Logging {
 
     // Start gRPC server to listen for attestation inquiries
     val port = 50051
+    // Need to use netty
+    // See https://scalapb.github.io/docs/grpc/#grpc-netty-issues
     val server = NettyServerBuilder
       .forPort(port)
       .addService(

@@ -30,13 +30,33 @@ Project.inConfig(Test)(baseAssemblySettings)
 test in assembly := {}
 test in (Test, assembly) := {}
 
+// From https://stackoverflow.com/questions/14791955/assembly-merge-strategy-issues-using-sbt-assembly
+// Note that this creates a larger fat jar than the old strategy of deleting everything in META-INF,
+// but the GRPC client code requires a file defined in that folder
 lazy val commonMergeStrategy: String => sbtassembly.MergeStrategy =
   x =>
     x match {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-      case x => MergeStrategy.first
+      case x if Assembly.isConfigFile(x) =>
+        MergeStrategy.concat
+      case PathList(ps @ _*) if Assembly.isReadme(ps.last) || Assembly.isLicenseFile(ps.last) =>
+        MergeStrategy.rename
+      case PathList("META-INF", xs @ _*) =>
+        (xs map { _.toLowerCase }) match {
+          case ("manifest.mf" :: Nil) | ("index.list" :: Nil) | ("dependencies" :: Nil) =>
+            MergeStrategy.discard
+          case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") =>
+            MergeStrategy.discard
+          case "plexus" :: xs =>
+            MergeStrategy.discard
+          case "services" :: xs =>
+            MergeStrategy.filterDistinctLines
+          case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
+            MergeStrategy.filterDistinctLines
+          case _ => MergeStrategy.first
+        }
+      case _ => MergeStrategy.first
     }
-assemblyMergeStrategy in assembly := commonMergeStrategy
+assembly / assemblyMergeStrategy := commonMergeStrategy
 assemblyMergeStrategy in (Test, assembly) := commonMergeStrategy
 
 /* Include the newer version of com.google.guava found in libraryDependencies
