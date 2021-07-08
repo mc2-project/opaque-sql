@@ -59,6 +59,8 @@ class Listener(executionContext: ExecutionContext, port: Int) {
   }
 
   private def start(): Unit = {
+    // Need to use netty
+    // See https://scalapb.github.io/docs/grpc/#grpc-netty-issues
     server = NettyServerBuilder
       .forPort(port)
       .addService(ListenerGrpc.bindService(new ListenerImpl, executionContext))
