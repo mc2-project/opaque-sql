@@ -182,9 +182,7 @@ val oeGdbTask =
     "Runs the test suite specified in ./project/resources under the oe-gdb debugger."
   )
 def oeGdbCommand = Command.command("oe-gdb") { state =>
-  val extracted = Project extract state
-  val newState = extracted.append(Seq(buildType := Debug), state)
-  Project.extract(newState).runTask(oeGdbTask, newState)
+  Project.extract(state).runTask(oeGdbTask, state)
   state
 }
 
