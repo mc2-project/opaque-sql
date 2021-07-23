@@ -137,7 +137,7 @@ object RA extends Logging {
         val captured = new ByteArrayOutputStream()
         Console.withOut(captured) {
           while (loop) {
-            RA.attestEnclaves(rdd, testing)
+            RA.attestEnclaves(rdd)
           }
         }
       }
