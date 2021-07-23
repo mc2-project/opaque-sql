@@ -120,6 +120,7 @@ import edu.berkeley.cs.rise.opaque.logical.ConvertToOpaqueOperators
 import edu.berkeley.cs.rise.opaque.logical.EncryptLocalRelation
 import org.apache.spark.sql.catalyst.expressions.PromotePrecision
 import org.apache.spark.sql.catalyst.expressions.CheckOverflow
+import edu.berkeley.cs.rise.opaque.rpc.RA
 
 object Utils extends Logging {
 
