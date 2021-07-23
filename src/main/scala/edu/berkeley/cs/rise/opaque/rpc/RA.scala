@@ -22,8 +22,8 @@ import opaque.protos.client._
 import edu.berkeley.cs.rise.opaque.Utils
 import edu.berkeley.cs.rise.opaque.OpaqueException
 
-import org.apache.spark.SparkContext
-import org.apache.spark.internal.Logging
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
 import org.apache.spark.rdd.RDD
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
@@ -134,11 +134,10 @@ object RA extends Logging {
   def startThread(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     val thread = new Thread {
       override def run: Unit = {
-        val captured = new ByteArrayOutputStream()
-        Console.withOut(captured) {
-          while (loop) {
-            RA.attestEnclaves(rdd)
-          }
+        Logger.getLogger("org").setLevel(Level.OFF)
+        Logger.getLogger("akka").setLevel(Level.OFF)
+        while (loop) {
+          RA.attestEnclaves(sc, rdd)
         }
       }
     }
