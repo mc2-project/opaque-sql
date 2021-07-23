@@ -25,6 +25,9 @@ import edu.berkeley.cs.rise.opaque.OpaqueException
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
+import org.apache.spark.internal.Logging
+
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
 
