@@ -15,18 +15,26 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque
+package edu.berkeley.cs.rise.opaque.rpc
 
 import opaque.protos.client._
 
+import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.OpaqueException
+
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
-import org.apache.spark.rdd.RDD
 
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
 
+import java.io.ByteArrayOutputStream
+
 import scala.concurrent.{ExecutionContext, Future}
+import scala.Console
 
 // Performs remote attestation for all executors
 // that have not been attested yet.
@@ -129,8 +137,10 @@ object RA extends Logging {
   def startThread(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     val thread = new Thread {
       override def run: Unit = {
-        while (false) { // loop
-          attestEnclaves(sc, rdd)
+        Logger.getLogger("org").setLevel(Level.OFF)
+        Logger.getLogger("akka").setLevel(Level.OFF)
+        while (loop) {
+          RA.attestEnclaves(sc, rdd)
         }
       }
     }
