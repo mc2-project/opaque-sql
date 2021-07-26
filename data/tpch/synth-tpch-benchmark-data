@@ -17,3 +17,15 @@ cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_01
 mkdir -p $OPAQUE_DATA_DIR/tpch/sf_1
 chmod u+r *.tbl
 cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_1
+
+# Create ~5GB files
+./dbgen -vf -s 5.0
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_5
+chmod u+r *.tbl
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_5
+
+# Create ~10GB files
+./dbgen -vf -s 10.0
+mkdir -p $OPAQUE_DATA_DIR/tpch/sf_10
+chmod u+r *.tbl
+cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_10
