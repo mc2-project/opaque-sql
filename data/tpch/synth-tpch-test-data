@@ -10,7 +10,10 @@ cd tpch-dbgen
 make -j$(nproc)
 
 # Create ~0.01GB files
-./dbgen -vf -s 0.01
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_001
-chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_001
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_001" ] 
+then
+  ./dbgen -vf -s 0.01
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_001
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_001
+fi

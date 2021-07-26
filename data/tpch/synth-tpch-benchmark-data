@@ -7,25 +7,46 @@ cd "$(dirname $0)"
 cd tpch-dbgen
 
 # Create ~0.1GB files
-./dbgen -vf -s 0.1
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_01
-chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_01
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_01" ]
+then
+  ./dbgen -vf -s 0.1
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_01
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_01
+fi
 
 # Create ~1GB files
-./dbgen -vf -s 1.0
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_1
-chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_1
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_1" ]
+then
+  ./dbgen -vf -s 1.0
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_1
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_1
+fi
+
+# Create ~3GB files
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_3" ]
+then
+  ./dbgen -vf -s 3.0
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_3
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_3
+fi
 
 # Create ~5GB files
-./dbgen -vf -s 5.0
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_5
-chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_5
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_5" ]
+then
+  ./dbgen -vf -s 5.0
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_5
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_5
+fi
 
 # Create ~10GB files
-./dbgen -vf -s 10.0
-mkdir -p $OPAQUE_DATA_DIR/tpch/sf_10
-chmod u+r *.tbl
-cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_10
+if [ ! -d "$OPAQUE_DATA_DIR/tpch/sf_10" ]
+then
+  ./dbgen -vf -s 10.0
+  mkdir -p $OPAQUE_DATA_DIR/tpch/sf_10
+  chmod u+r *.tbl
+  cp *.tbl $OPAQUE_DATA_DIR/tpch/sf_10
+fi
