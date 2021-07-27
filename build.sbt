@@ -411,25 +411,30 @@ synthTestDataTask := {
 }
 
 synthBenchmarkDataTask := {
-  val tpchDir = baseDirectory.value / "data" / "tpch" / "sf_1"
+  val tpchDir = baseDirectory.value / "data" / "tpch"
   tpchDir.mkdirs()
-  val tpchDataFiles =
+  val tpchDataDirs =
     for {
-      name <- Seq(
-        "customer.tbl",
-        "lineitem.tbl",
-        "nation.tbl",
-        "orders.tbl",
-        "partsupp.tbl",
-        "part.tbl",
-        "region.tbl",
-        "supplier.tbl"
-      )
-    } yield new File(tpchDir, name)
-
-  if (!tpchDataFiles.forall(_.exists)) {
-    import sys.process._
-    val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
-    if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
+      folder <- Seq("sf_01", "sf_1", "sf_3", "sf_5", "sf_10")
+    } yield new File(tpchDir, folder)
+  for (dataDir <- tpchDataDirs) {
+    val tpchDataFiles =
+      for {
+        name <- Seq(
+          "customer.tbl",
+          "lineitem.tbl",
+          "nation.tbl",
+          "orders.tbl",
+          "partsupp.tbl",
+          "part.tbl",
+          "region.tbl",
+          "supplier.tbl"
+        )
+      } yield new File(tpchDir, name)
+    if (!tpchDataFiles.forall(_.exists)) {
+      import sys.process._
+      val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
+      if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
+    }
   }
 }
