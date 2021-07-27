@@ -34,6 +34,11 @@
 
 Crypto *g_crypto = CryptoContext::getInstance().crypto;
 
+void ecall_set_debugging_level() {
+  spdlog::set_pattern("[%l] [%T] | %s:%# in %!(): %v");
+  spdlog::set_level(spdlog::level::debug);
+}
+
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext,
                    uint32_t cipher_length) {
   // Guard against encrypting or overwriting enclave memory
