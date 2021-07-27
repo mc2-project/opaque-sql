@@ -32,6 +32,7 @@ import org.apache.spark.sql.SparkSession
  *       Default: spark.default.parallelism
  *   --size: specify the size of the dataset that should be loaded into Spark.
  *       Default: sf_001
+ *       Available options: sf_01, sf_1, sf_3, sf_5, sf_10
  *   --filesystem-url: optional arguments to specify filesystem master node URL.
  *       Default: file://
  *   --log-operators: boolean whether or not to log individual physical operators.
@@ -87,9 +88,10 @@ object Benchmark {
       println("""
     Available flags:
     --num-partitions: specify the number of partitions the data should be split into.
-          Default: 2 * number of executors if exists, 4 otherwise
+          Default: spark.default.parallelism
     --size: specify the size of the dataset that should be loaded into Spark.
           Default: sf_001
+          Available options: sf_01, sf_1, sf_3, sf_5, sf_10
     --filesystem-url: optional arguments to specify filesystem master node URL.
           Default: file://
     --log-operators: boolean whether or not to log individual physical operators.
@@ -111,7 +113,9 @@ object Benchmark {
         this.numPartitions = numPartitions.toInt
       }
       case Array("--size", size: String) => {
-        if (size == "sf_001" || size == "sf_01" || size == "sf_1") {
+        if (
+          size == "sf_001" || size == "sf_01" || size == "sf_1" || size == "sf_3" || size == "sf_5" || size == "sf_10"
+        ) {
           this.size = size
         } else {
           println(s"Given size is not supported: $size")
