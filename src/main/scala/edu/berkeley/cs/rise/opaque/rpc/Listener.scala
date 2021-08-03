@@ -33,13 +33,13 @@ object Listener {
 
   def main(args: Array[String]): Unit = {
     IntpHandler.initializeIntp()
-    val server = new Listener(ExecutionContext.global, 50052)
+    val server = new Listener(ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }
 }
 
-class Listener(executionContext: ExecutionContext, port: Int) {
+class Listener(executionContext: ExecutionContext) {
 
   private[this] var server: Server = null
 
@@ -62,11 +62,11 @@ class Listener(executionContext: ExecutionContext, port: Int) {
     // Need to use netty
     // See https://scalapb.github.io/docs/grpc/#grpc-netty-issues
     server = NettyServerBuilder
-      .forPort(port)
+      .forPort(Globals.clientPort)
       .addService(ListenerGrpc.bindService(new ListenerImpl, executionContext))
       .build
       .start
-    println(s"gRPC: Query Server started, listening on port ${port}")
+    println(s"gRPC: Query Server started, listening on port ${Globals.clientPort}")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
       this.stop()

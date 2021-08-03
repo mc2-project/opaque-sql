@@ -97,17 +97,16 @@ object RA extends Logging {
   def initRAListener(sc: SparkContext, rdd: RDD[Unit]): Unit = {
 
     // Start gRPC server to listen for attestation inquiries
-    val port = 50051
     // Need to use netty
     // See https://scalapb.github.io/docs/grpc/#grpc-netty-issues
     val server = NettyServerBuilder
-      .forPort(port)
+      .forPort(Globals.attestationPort)
       .addService(
         ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd), ExecutionContext.global)
       )
       .build
       .start
-    logInfo(s"gRPC: Attestation Server started, listening on port ${port}.")
+    logInfo(s"gRPC: Attestation Server started, listening on port ${Globals.attestationPort}.")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
       server.shutdown()
