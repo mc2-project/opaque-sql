@@ -45,7 +45,6 @@ include(FetchContent)
 FetchContent_Declare(
   mc2_utils_e
   GIT_REPOSITORY https://github.com/mc2-project/mc2-utils.git
-  GIT_TAG 774e49dae0b5a2ccaac2da25f584a5cd030495e2
 )
 set(FETCHCONTENT_QUIET OFF)
 set(HOST OFF CACHE BOOL "" FORCE)
