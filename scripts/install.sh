@@ -22,7 +22,7 @@ chmod +x sgx_linux_x64_driver_1.36.2.bin
 sudo ./sgx_linux_x64_driver_1.36.2.bin
 rm -rf sgx_linux_x64_driver_1.36.2.bin
 
-sudo apt -y install clang-7 libssl-dev gdb libsgx-enclave-common libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave=0.12.0
+sudo apt -y install clang-8 libssl-dev gdb libsgx-enclave-common libsgx-quote-ex libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave=0.17.1
 
 # Install SBT dependencies
 sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev

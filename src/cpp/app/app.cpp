@@ -46,7 +46,6 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <openenclave/host.h>
 #include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h>     // gettimeofday
