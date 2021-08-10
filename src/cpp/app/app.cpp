@@ -46,7 +46,6 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <openenclave/host.h>
 #include <string>
 #include <sys/time.h> // struct timeval
 #include <time.h>     // gettimeofday
@@ -212,6 +211,10 @@ JNIEXPORT jlong JNICALL Java_edu_berkeley_cs_rise_opaque_execution_SGXEnclave_St
                                               nullptr, 0, &enclave));
   env->ReleaseStringUTFChars(library_path, library_path_str);
   long int enclavePtr = (long int)enclave;
+
+#ifdef DEBUG
+  oe_check("SetDebugLoggingLevel", ecall_set_debugging_level(enclave));
+#endif
 
   return enclavePtr;
 }

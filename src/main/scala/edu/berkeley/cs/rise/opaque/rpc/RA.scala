@@ -15,18 +15,26 @@
  * limitations under the License.
  */
 
-package edu.berkeley.cs.rise.opaque
+package edu.berkeley.cs.rise.opaque.rpc
 
 import opaque.protos.client._
 
+import edu.berkeley.cs.rise.opaque.Utils
+import edu.berkeley.cs.rise.opaque.OpaqueException
+
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
-import org.apache.spark.rdd.RDD
 
 import com.google.protobuf.ByteString
 import io.grpc.netty.NettyServerBuilder
 
+import java.io.ByteArrayOutputStream
+
 import scala.concurrent.{ExecutionContext, Future}
+import scala.Console
 
 // Performs remote attestation for all executors
 // that have not been attested yet.
@@ -89,15 +97,16 @@ object RA extends Logging {
   def initRAListener(sc: SparkContext, rdd: RDD[Unit]): Unit = {
 
     // Start gRPC server to listen for attestation inquiries
-    val port = 50051
+    // Need to use netty
+    // See https://scalapb.github.io/docs/grpc/#grpc-netty-issues
     val server = NettyServerBuilder
-      .forPort(port)
+      .forPort(Globals.attestationPort)
       .addService(
         ClientToEnclaveGrpc.bindService(new ClientToEnclaveImpl(rdd), ExecutionContext.global)
       )
       .build
       .start
-    logInfo(s"gRPC: Attestation Server started, listening on port ${port}.")
+    logInfo(s"gRPC: Attestation Server started, listening on port ${Globals.attestationPort}.")
     sys.addShutdownHook {
       System.err.println("gRPC: Shutting down gRPC server since JVM is shutting down.")
       server.shutdown()
@@ -127,8 +136,10 @@ object RA extends Logging {
   def startThread(sc: SparkContext, rdd: RDD[Unit]): Unit = {
     val thread = new Thread {
       override def run: Unit = {
-        while (false) { // loop
-          attestEnclaves(sc, rdd)
+        Logger.getLogger("org").setLevel(Level.OFF)
+        Logger.getLogger("akka").setLevel(Level.OFF)
+        while (loop) {
+          RA.attestEnclaves(sc, rdd)
         }
       }
     }

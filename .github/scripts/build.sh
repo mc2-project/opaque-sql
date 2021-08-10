@@ -7,7 +7,7 @@ echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic m
 wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
 
 sudo apt-get update
-sudo apt-get -y install clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-common-dev libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave=0.12.0
+sudo apt-get -y install clang-8 libssl-dev gdb libsgx-enclave-common libsgx-quote-ex libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave=0.17.1
 
 # Install Opaque Dependencies
 sudo apt-get -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev

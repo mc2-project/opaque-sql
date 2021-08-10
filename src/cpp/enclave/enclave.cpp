@@ -17,6 +17,8 @@
 
 #include "attestation.h"
 #include "serialization.h"
+
+#include <openenclave/attestation/attester.h>
 #include <openenclave/attestation/sgx/evidence.h>
 
 #include <mbedtls/config.h>
@@ -33,6 +35,11 @@
 // ocall_throw.
 
 Crypto *g_crypto = CryptoContext::getInstance().crypto;
+
+void ecall_set_debugging_level() {
+  spdlog::set_pattern("[%l] [%T] | %s:%# in %!(): %v");
+  spdlog::set_level(spdlog::level::debug);
+}
 
 void ecall_encrypt(uint8_t *plaintext, uint32_t plaintext_length, uint8_t *ciphertext,
                    uint32_t cipher_length) {
@@ -311,7 +318,7 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   uint8_t nonce[CIPHER_IV_SIZE] = {0};
 
   // Buffer to hold generated evidence
-  uint8_t *evidence = NULL;
+  uint8_t *evidence = nullptr;
   size_t evidence_size = 0;
 
 #ifndef SIMULATE
@@ -322,10 +329,13 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
 
   // Allocate memory on host for attestation evidence and public key contained in struct
   // `oe_evidence_msg_t`
-  oe_evidence_msg_t *evidence_msg = NULL;
+  oe_evidence_msg_t *evidence_msg = nullptr;
   *evidence_msg_data_size = sizeof(oe_evidence_msg_t) + evidence_size;
   *evidence_msg_data = (uint8_t *)oe_host_malloc(*evidence_msg_data_size);
-  if (*evidence_msg_data == NULL) {
+  if (*evidence_msg_data == nullptr) {
+#ifndef SIMULATE
+    oe_free_evidence(evidence);
+#endif
     ocall_throw("Out of memory");
   }
   evidence_msg = (oe_evidence_msg_t *)(*evidence_msg_data);
@@ -338,4 +348,9 @@ void ecall_generate_evidence(uint8_t **evidence_msg_data, size_t *evidence_msg_d
   if (evidence_size > 0) {
     memcpy_s(evidence_msg->evidence, evidence_size, evidence, evidence_size);
   }
+
+#ifndef SIMULATE
+  // Free enclave memory allocated for evidence
+  oe_free_evidence(evidence);
+#endif
 }

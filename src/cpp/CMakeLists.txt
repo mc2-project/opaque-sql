@@ -8,11 +8,11 @@ option(FLATBUFFERS_GEN_CPP_DIR "Location of Flatbuffers generated C++ files.")
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(OE_MIN_VERSION 0.12.0)
+set(OE_MIN_VERSION 0.17.1)
 find_package(OpenEnclave ${OE_MIN_VERSION} CONFIG REQUIRED)
 
 set(OE_CRYPTO_LIB
-    mbed
+    mbedtls
     CACHE STRING "Crypto library used by enclaves.")
 
 include_directories(app)

@@ -30,13 +30,33 @@ Project.inConfig(Test)(baseAssemblySettings)
 test in assembly := {}
 test in (Test, assembly) := {}
 
+// From https://stackoverflow.com/questions/14791955/assembly-merge-strategy-issues-using-sbt-assembly
+// Note that this creates a larger fat jar than the old strategy of deleting everything in META-INF,
+// but the GRPC client code requires a file defined in that folder
 lazy val commonMergeStrategy: String => sbtassembly.MergeStrategy =
   x =>
     x match {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-      case x => MergeStrategy.first
+      case x if Assembly.isConfigFile(x) =>
+        MergeStrategy.concat
+      case PathList(ps @ _*) if Assembly.isReadme(ps.last) || Assembly.isLicenseFile(ps.last) =>
+        MergeStrategy.rename
+      case PathList("META-INF", xs @ _*) =>
+        (xs map { _.toLowerCase }) match {
+          case ("manifest.mf" :: Nil) | ("index.list" :: Nil) | ("dependencies" :: Nil) =>
+            MergeStrategy.discard
+          case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") =>
+            MergeStrategy.discard
+          case "plexus" :: xs =>
+            MergeStrategy.discard
+          case "services" :: xs =>
+            MergeStrategy.filterDistinctLines
+          case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
+            MergeStrategy.filterDistinctLines
+          case _ => MergeStrategy.first
+        }
+      case _ => MergeStrategy.first
     }
-assemblyMergeStrategy in assembly := commonMergeStrategy
+assembly / assemblyMergeStrategy := commonMergeStrategy
 assemblyMergeStrategy in (Test, assembly) := commonMergeStrategy
 
 /* Include the newer version of com.google.guava found in libraryDependencies
@@ -71,9 +91,9 @@ assemblyShadeRules in (Test, assembly) := commonShadeRules
 testOptions in Test += Tests.Argument("-oF")
 
 lazy val commonJavaOptions =
-  Seq("-Xmx2048m", "-XX:ReservedCodeCacheSize=384m", "-Dlog4j.configuration=log4j.properties")
-javaOptions in Test ++= commonJavaOptions
-javaOptions in run ++= commonJavaOptions ++ Seq("-Dspark.master=local[*]")
+  Seq("-Xmx4096m", "-XX:ReservedCodeCacheSize=384m")
+Test / javaOptions := commonJavaOptions
+run / javaOptions := commonJavaOptions ++ Seq("-Dspark.master=local[1]")
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -160,9 +180,7 @@ val oeGdbTask =
     "Runs the test suite specified in ./project/resources under the oe-gdb debugger."
   )
 def oeGdbCommand = Command.command("oe-gdb") { state =>
-  val extracted = Project extract state
-  val newState = extracted.append(Seq(buildType := Debug), state)
-  Project.extract(newState).runTask(oeGdbTask, newState)
+  Project.extract(state).runTask(oeGdbTask, state)
   state
 }
 
@@ -398,26 +416,31 @@ synthTestDataTask := {
 }
 
 synthBenchmarkDataTask := {
-  val tpchDir = baseDirectory.value / "data" / "tpch" / "sf_1"
+  val tpchDir = baseDirectory.value / "data" / "tpch"
   tpchDir.mkdirs()
-  val tpchDataFiles =
+  val tpchDataDirs =
     for {
-      name <- Seq(
-        "customer.tbl",
-        "lineitem.tbl",
-        "nation.tbl",
-        "orders.tbl",
-        "partsupp.tbl",
-        "part.tbl",
-        "region.tbl",
-        "supplier.tbl"
-      )
-    } yield new File(tpchDir, name)
-
-  if (!tpchDataFiles.forall(_.exists)) {
-    import sys.process._
-    val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
-    if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
+      folder <- Seq("sf_01", "sf_1", "sf_3", "sf_5", "sf_10")
+    } yield new File(tpchDir, folder)
+  for (dataDir <- tpchDataDirs) {
+    val tpchDataFiles =
+      for {
+        name <- Seq(
+          "customer.tbl",
+          "lineitem.tbl",
+          "nation.tbl",
+          "orders.tbl",
+          "partsupp.tbl",
+          "part.tbl",
+          "region.tbl",
+          "supplier.tbl"
+        )
+      } yield new File(tpchDir, name)
+    if (!tpchDataFiles.forall(_.exists)) {
+      import sys.process._
+      val ret = Seq("data/tpch/synth-tpch-benchmark-data").!
+      if (ret != 0) sys.error("Failed to synthesize TPC-H benchmark data.")
+    }
   }
 }
 
