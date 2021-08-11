@@ -3,8 +3,6 @@ import io
 from code import InteractiveInterpreter
 from contextlib import redirect_stdout, redirect_stderr
 
-from pyspark import SparkConf, SparkContext
-
 from opaque_sql import *
 
 class IntpHandler:

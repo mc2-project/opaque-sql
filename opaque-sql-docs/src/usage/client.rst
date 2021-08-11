@@ -21,7 +21,7 @@ Starting the gRPC Listeners
 
 Opaque SQL uses two listeners: the first for remote attestation on port 50051, and the second for query requests on port 50052. The MC\ :sup:`2` Client uses these by default to connect to the Opaque SQL driver.
 
-Opaque SQL supports running both regular (Scala) Spark as well as Pyspark.
+Opaque SQL supports running both regular (Scala) Spark as well as PySpark.
 
 Scala Instructions
 ******************

@@ -1,5 +1,3 @@
-from pyspark import SparkConf, SparkContext
-
 import grpc
 from concurrent import futures
 from protobuf import listener_pb2, listener_pb2_grpc
