@@ -4,10 +4,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Query submission via the Spark Driver" href="untrusted.html" /><link rel="prev" title="Installation" href="../install/install.html" />
 
-    <meta name="generator" content="sphinx-4.1.2, furo 2021.07.31.beta41"/>
+    <meta name="generator" content="sphinx-4.1.2, furo 2021.08.11.beta42"/>
         <title>Query submission via the MC2 Client - Opaque SQL documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=daa650a7760fac3eee23aa959745d2c866b74cb3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=197f00461d56902ea7ca048ec6e6ba026f62c97b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=93475b62d1c3bc01323a0eefdc14a62d77b12690" />
     
     
@@ -193,33 +193,48 @@
 <img alt="https://mc2-project.github.io/opaque-sql/opaque_diagram.png" src="https://mc2-project.github.io/opaque-sql/opaque_diagram.png"/>
 <p class="caption"><span class="caption-text">Overview of Opaque SQL running with the MC<sup>2</sup> Client</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
-<div class="section" id="starting-opaque-sql">
-<h2>Starting Opaque SQL<a class="headerlink" href="#starting-opaque-sql" title="Permalink to this headline">¶</a></h2>
-<p>Here we outline how to use <a class="reference external" href="https://github.com/mc2-project/mc2">the client</a> to submit queries. This is the primary method of running Opaque SQL and integrates with the rest of the MC<sup>2</sup> projects, such as <a class="reference external" href="https://github.com/mc2-project/secure-xgboost">Secure XGBoost</a>.</p>
+<p>In this section, we outline how to use <a class="reference external" href="https://github.com/mc2-project/mc2">the client</a> for submitting queries to Opaque SQL. This is the primary method of running Opaque SQL and integrates with the rest of the MC<sup>2</sup> projects, such as <a class="reference external" href="https://github.com/mc2-project/secure-xgboost">Secure XGBoost</a>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Note that, by default, Opaque SQL uses a pre-generated RSA private key for enclave signing located at <code class="docutils literal notranslate"><span class="pre">${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem</span></code>. This key <strong>should not</strong> be used in a production environment. This can be reconfigured by changing the environment variable <code class="docutils literal notranslate"><span class="pre">PRIVATE_KEY_PATH</span></code> to another key file and having the MC<sup>2</sup> Client use its public peer to verify the signature.</p>
 </div>
 <p>Running in this mode enables the driver to be located on <em>untrusted</em> hardware while still providing the complete security guarantees of the MC<sup>2</sup> platform.</p>
 <div class="section" id="starting-the-grpc-listeners">
-<h3>Starting the gRPC Listeners<a class="headerlink" href="#starting-the-grpc-listeners" title="Permalink to this headline">¶</a></h3>
+<h2>Starting the gRPC Listeners<a class="headerlink" href="#starting-the-grpc-listeners" title="Permalink to this headline">¶</a></h2>
 <p>Opaque SQL uses two listeners: the first for remote attestation on port 50051, and the second for query requests on port 50052. The MC<sup>2</sup> Client uses these by default to connect to the Opaque SQL driver.</p>
+<p>Opaque SQL supports running both regular (Scala) Spark as well as PySpark.</p>
+<div class="section" id="scala-instructions">
+<h3>Scala Instructions<a class="headerlink" href="#scala-instructions" title="Permalink to this headline">¶</a></h3>
 <ol class="arabic">
 <li><p>To run both listeners locally using <code class="docutils literal notranslate"><span class="pre">sbt</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt run
 </pre></div>
 </div>
 </li>
-<li><p>To launch the listener on a standalone Spark cluster:</p>
+<li><p>To launch the listeners on a standalone Spark cluster:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
 
 spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
-   &lt;Spark configuration parameters&gt; <span class="se">\</span>
-   --deploy-mode client <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
+  &lt;Spark configuration parameters&gt;  <span class="se">\</span>
+    --deploy-mode client <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar
 </pre></div>
 </div>
 </li>
 </ol>
+</div>
+<div class="section" id="python-instructions">
+<h3>Python Instructions<a class="headerlink" href="#python-instructions" title="Permalink to this headline">¶</a></h3>
+<p>To launch the listeners on a standalone Spark cluster:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/sbt assembly <span class="c1"># create a fat jar with all necessary dependencies</span>
+
+spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">\</span>
+  &lt;Spark configuration parameters&gt;  <span class="se">\</span>
+    --deploy-mode client  <span class="se">\</span>
+    --jars <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/scala-2.12/opaque-assembly-0.1.jar  <span class="se">\</span>
+    --py-files <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/python.zip  <span class="se">\</span>
+    <span class="si">${</span><span class="nv">OPAQUE_HOME</span><span class="si">}</span>/target/python/listener.py  <span class="se">\</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="using-the-mc2-client">
@@ -292,8 +307,9 @@ spark-submit --class edu.berkeley.cs.rise.opaque.rpc.Listener  <span class="se">
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Query submission via the MC<sup>2</sup> Client</a><ul>
-<li><a class="reference internal" href="#starting-opaque-sql">Starting Opaque SQL</a><ul>
-<li><a class="reference internal" href="#starting-the-grpc-listeners">Starting the gRPC Listeners</a></li>
+<li><a class="reference internal" href="#starting-the-grpc-listeners">Starting the gRPC Listeners</a><ul>
+<li><a class="reference internal" href="#scala-instructions">Scala Instructions</a></li>
+<li><a class="reference internal" href="#python-instructions">Python Instructions</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#using-the-mc2-client">Using the MC<sup>2</sup> Client</a></li>

@@ -78,7 +78,7 @@ Encrypting a DataFrame with the Driver
 ######################################
 
 .. note::
-  The methods shown in this section are *only* supported in insecure mode.
+  The Opaque SQL methods shown in this section are *only* supported in insecure mode, since the driver needs the key for encryption/decryption.
 
 1. Create an unencrypted DataFrame.
 
