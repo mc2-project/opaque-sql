@@ -4,9 +4,6 @@ Usage
 
 This section goes over how to manipulate an encrypted DataFrame in either client or insecure mode. 
 
-.. note::
-  Currently, Python is only supported while running in **insecure** mode.
-
 .. _save_df:
 
 Saving a DataFrame

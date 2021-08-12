@@ -26,6 +26,7 @@ sudo apt -y install clang-8 libssl-dev gdb libsgx-enclave-common libsgx-quote-ex
 
 # Install SBT dependencies
 sudo apt -y install wget build-essential openjdk-8-jdk python libssl-dev libmbedtls-dev
+pip3 install grpcio grpcio-tools # Needed for Pyspark listener
 
 # Install a newer version of CMake (3.15)
 wget https://github.com/Kitware/CMake/releases/download/v3.15.6/cmake-3.15.6-Linux-x86_64.sh

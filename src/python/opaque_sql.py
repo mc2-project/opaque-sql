@@ -1,4 +1,4 @@
-from pyspark import SparkConf, SparkContext
+from pyspark import SparkContext
 from pyspark.sql import DataFrame, SparkSession, SQLContext
 
 def init_opaque_sql(testing=False):
