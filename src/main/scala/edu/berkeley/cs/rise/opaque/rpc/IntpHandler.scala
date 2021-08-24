@@ -47,9 +47,6 @@ object IntpHandler {
   def initializeIntp() = {
     intp.initializeSynchronous()
 
-    println(
-      "############################# Commands from Spark startup #############################"
-    )
     val spark = SparkSession.builder.getOrCreate
     intp.bind("spark", spark)
     val sc = spark.sparkContext
@@ -89,6 +86,9 @@ object IntpHandler {
       """
     )
     val (cap, _) = run(initializationCommands)
+    println(
+      "############################# Commands from Spark startup #############################"
+    )
     println(cap)
     println(
       "#######################################################################################"
