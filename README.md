@@ -10,7 +10,7 @@
 Welcome to the landing page of Opaque SQL! Opaque SQL is a package for Apache Spark SQL that enables processing over encrypted DataFrames using the OpenEnclave framework. 
 
 ### Quick start
-To quickly get started running Opaque SQL, please refer to this [usage section](https://mc2-project.github.io/client-docs/opaquesql_usage.html). Note that Opaque SQL requires the [MC<sup>2</sup> client](https://github.com/mc2-project/mc2) in order to securely run an encrypted query.
+Note that Opaque SQL requires the [MC<sup>2</sup> Client](https://github.com/mc2-project/mc2) in order to securely run an encrypted query. For a quickstart on that end-to-end workflow, please see [the README](https://github.com/mc2-project/mc2#quickstart) in the MC<sup>2</sup> Client repo.
 
 ### Usage
 Similar to Apache Spark SQL, Opaque SQL offer an *encrypted DataFrame abstraction*. Users familiar with the Spark API can easily run queries on encrypted DataFrames using the same API. The main difference is that we support saving and loading of DataFrames, but not actions like `.collect` or `.show`. An example script is the following:
