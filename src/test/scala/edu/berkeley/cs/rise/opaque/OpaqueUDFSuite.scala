@@ -17,12 +17,22 @@
 
 package edu.berkeley.cs.rise.opaque
 
+import java.util.Random
+
 import org.apache.spark.sql.functions._
+
+import edu.berkeley.cs.rise.opaque.execution.udfs.LogisticRegression
 
 import edu.berkeley.cs.rise.opaque.benchmark._
 import edu.berkeley.cs.rise.opaque.expressions.DotProduct.dot
 import edu.berkeley.cs.rise.opaque.expressions.VectorMultiply.vectormultiply
 import edu.berkeley.cs.rise.opaque.expressions.VectorSum
+
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
 /* Contains non-query related Spark tests */
 trait OpaqueUDFSuite extends OpaqueSuiteBase {
@@ -71,9 +81,63 @@ trait OpaqueUDFSuite extends OpaqueSuiteBase {
 
   test("logistic regression") {
     checkAnswer() { sl =>
-      LogisticRegression.train(spark, sl, 1000, numPartitions)
+      def generateData(
+          spark: SparkSession,
+          sl: SecurityLevel,
+          N: Int,
+          D: Int,
+          R: Double
+      ): DataFrame = {
+        val rand = new Random(42)
+        def generatePoint(i: Int): (Array[Double], Double) = {
+          val y = if (i % 2 == 0) 0 else 1
+          val x = Array.fill(D) { rand.nextGaussian + y * R }
+          (x, y)
+        }
+
+        val data = Array.tabulate(N)(generatePoint)
+        val schema = StructType(
+          Seq(
+            StructField("x", DataTypes.createArrayType(DoubleType)),
+            StructField("y", DoubleType)
+          )
+        )
+
+        sl.applyTo(
+          spark.createDataFrame(spark.sparkContext.makeRDD(data.map(Row.fromTuple)), schema)
+        )
+      }
+      checkAnswer() { sl =>
+        val N = 1000
+        val D = 5
+        val R = 0.7
+        val A = 0.1
+        val ITERATIONS = 1
+
+        val trainingData =
+          Utils.ensureCached(generateData(spark, sl, N, D, R))
+        val w = LogisticRegression.train(spark, D, A, ITERATIONS, trainingData)
+
+        val evalData = generateData(spark, sl, N, D, R).drop("y")
+        LogisticRegression.predict(spark, w, evalData)
+      }
     }
   }
+
+  test("prepare") {
+    checkAnswer(ignore = true) { sl =>
+      val df =
+        makeDF({ for (i <- 1 to 100) yield (i, -i, 0.25, i % 2) }, sl, "a", "b", "c", "d")
+      LogisticRegression.prepare(Seq("a", "b", "c"), Some("d"), df)
+    }
+
+    checkAnswer() { sl =>
+      val df =
+        makeDF({ for (i <- 1 to 100) yield (i, -i, 0.25, i % 2) }, sl, "a", "b", "c", "d")
+      LogisticRegression.prepare(Seq("a", "b"), None, df)
+    }
+  }
+
   test("k-means") {
     checkAnswer() { sl =>
       KMeans.train(spark, sl, numPartitions, 10, 2, 3, 0.01).sortBy(_(0))

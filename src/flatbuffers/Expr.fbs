@@ -6,6 +6,7 @@ include "Rows.fbs";
 namespace edu.berkeley.cs.rise.opaque.tuix;
 
 union ExprUnion {
+    Rand,
     LessThan,
     LessThanOrEqual,
     GreaterThan,
@@ -28,6 +29,7 @@ union ExprUnion {
     Divide,
     Add,
     Subtract,
+    Sqrt,
     If,
     CaseWhen,
     Cast,
@@ -51,6 +53,10 @@ table Expr {
 
 table Col {
     col_num:uint;
+}
+
+table Rand {
+    child:Expr;
 }
 
 table Literal {
@@ -81,6 +87,10 @@ table Multiply {
 table Divide {
     left:Expr;
     right:Expr;
+}
+
+table Sqrt {
+    child:Expr;
 }
 
 // Predicates

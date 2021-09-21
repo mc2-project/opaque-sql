@@ -19,6 +19,7 @@ void broadcast_nested_loop_join(uint8_t *join_expr, size_t join_expr_length, uin
   const tuix::JoinType join_type = join_expr_eval.get_join_type();
 
   switch (join_type) {
+  case tuix::JoinType_Inner:
   case tuix::JoinType_LeftSemi:
   case tuix::JoinType_LeftAnti:
     default_join(join_expr, join_expr_length, outer_rows, outer_rows_length, inner_rows,
@@ -31,7 +32,7 @@ void broadcast_nested_loop_join(uint8_t *join_expr, size_t join_expr_length, uin
     break;
   default:
     throw std::runtime_error(std::string("Join type not supported: ") +
-                             std::string(to_string(join_type)));
+                             std::string(EnumNameJoinType(join_type)));
   }
 }
 
@@ -112,9 +113,22 @@ void default_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_ro
     while (inner_r.has_next()) {
       inner = inner_r.next();
       o_i_match |= join_expr_eval.eval_condition(outer, inner);
+      switch (join_type) {
+      case tuix::JoinType_Inner:
+        w.append(outer, inner);
+        break;
+      case tuix::JoinType_LeftAnti:
+      case tuix::JoinType_LeftSemi:
+        break;
+      default:
+        throw std::runtime_error(std::string("Join type not supported: ") +
+                                 std::string(EnumNameJoinType(join_type)));
+      }
     }
 
     switch (join_type) {
+    case tuix::JoinType_Inner:
+      break;
     case tuix::JoinType_LeftAnti:
       if (!o_i_match) {
         w.append(outer);
@@ -127,7 +141,7 @@ void default_join(uint8_t *join_expr, size_t join_expr_length, uint8_t *outer_ro
       break;
     default:
       throw std::runtime_error(std::string("Join type not supported: ") +
-                               std::string(to_string(join_type)));
+                               std::string(EnumNameJoinType(join_type)));
     }
   }
   w.output_buffer(output_rows, output_rows_length);

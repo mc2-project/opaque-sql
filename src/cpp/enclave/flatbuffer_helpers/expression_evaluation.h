@@ -240,6 +240,12 @@ private:
       return flatbuffers_copy<tuix::Field>(row->field_values()->Get(col_num), builder);
     }
 
+    case tuix::ExprUnion_Rand: {
+      return tuix::CreateField(
+          builder, tuix::FieldUnion_DoubleField,
+          tuix::CreateDoubleField(builder, ((double)rand() / (RAND_MAX))).Union(), false);
+    }
+
     case tuix::ExprUnion_Literal: {
       auto *literal = static_cast<const tuix::Literal *>(expr->expr());
       const tuix::Field *value = literal->value();
@@ -443,6 +449,38 @@ private:
       return eval_binary_arithmetic_op<tuix::Divide, std::divides>(
           builder, flatbuffers::GetTemporaryPointer(builder, left_offset),
           flatbuffers::GetTemporaryPointer(builder, right_offset));
+    }
+
+    case tuix::ExprUnion_Sqrt: {
+      auto sqrt = static_cast<const tuix::Sqrt *>(expr->expr());
+      auto child = flatbuffers::GetTemporaryPointer(builder, eval_helper(row, sqrt->child()));
+
+      switch (child->value_type()) {
+      case tuix::FieldUnion_IntegerField: {
+        auto child_value = static_cast<const tuix::IntegerField *>(child->value())->value();
+        double result = std::sqrt(child_value);
+        double is_null = child->is_null();
+        return tuix::CreateField(builder, tuix::FieldUnion_DoubleField,
+                                 tuix::CreateDoubleField(builder, result).Union(), is_null);
+      }
+      case tuix::FieldUnion_FloatField: {
+        auto child_value = static_cast<const tuix::FloatField *>(child->value())->value();
+        double result = std::sqrt(child_value);
+        double is_null = child->is_null();
+        return tuix::CreateField(builder, tuix::FieldUnion_DoubleField,
+                                 tuix::CreateDoubleField(builder, result).Union(), is_null);
+      }
+      case tuix::FieldUnion_DoubleField: {
+        auto child_value = static_cast<const tuix::DoubleField *>(child->value())->value();
+        double result = std::sqrt(child_value);
+        double is_null = child->is_null();
+        return tuix::CreateField(builder, tuix::FieldUnion_DoubleField,
+                                 tuix::CreateDoubleField(builder, result).Union(), is_null);
+      }
+      default:
+        throw std::runtime_error(std::string("Sqrt can't operate on ") +
+                                 std::string(tuix::EnumNameFieldUnion(child->value_type())));
+      }
     }
 
     // Predicates
@@ -1686,10 +1724,7 @@ public:
       return static_cast<const tuix::BooleanField *>(condition_result->value())->value();
     }
 
-    // The `condition_eval` can only be empty when it's an equi-join.
-    // Since `condition_eval` is an extra predicate used to filter out *matched*
-    // rows in an equi-join, an empty condition means the matched row should not
-    // be filtered out; hence the default return value of true
+    // Empty condition is used for cross-joins
     return true;
   }
 
