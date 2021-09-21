@@ -21,7 +21,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.file.{Files, Paths}
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
@@ -53,6 +52,7 @@ import org.apache.spark.sql.catalyst.expressions.DateAdd
 import org.apache.spark.sql.catalyst.expressions.DateAddInterval
 import org.apache.spark.sql.catalyst.expressions.Descending
 import org.apache.spark.sql.catalyst.expressions.Divide
+import org.apache.spark.sql.catalyst.expressions.Sqrt
 import org.apache.spark.sql.catalyst.expressions.EndsWith
 import org.apache.spark.sql.catalyst.expressions.EqualTo
 import org.apache.spark.sql.catalyst.expressions.Exp
@@ -81,6 +81,7 @@ import org.apache.spark.sql.catalyst.expressions.Subtract
 import org.apache.spark.sql.catalyst.expressions.UnaryMinus
 import org.apache.spark.sql.catalyst.expressions.Upper
 import org.apache.spark.sql.catalyst.expressions.Year
+import org.apache.spark.sql.catalyst.expressions.Rand
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.Cross
 import org.apache.spark.sql.catalyst.plans.ExistenceJoin
@@ -1105,6 +1106,13 @@ object Utils extends Logging {
             tuix.Decrypt.createDecrypt(builder, childOffset)
           )
 
+        case (Rand(child, _), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Rand,
+            tuix.Rand.createRand(builder, childOffset)
+          )
+
         case (Alias(child, _), Seq(childOffset)) =>
           // TODO: Use an expression for aliases so we can refer to them elsewhere in the expression
           // tree. For now we just ignore them when evaluating expressions.
@@ -1143,6 +1151,13 @@ object Utils extends Logging {
             builder,
             tuix.ExprUnion.Divide,
             tuix.Divide.createDivide(builder, leftOffset, rightOffset)
+          )
+
+        case (Sqrt(child), Seq(childOffset)) =>
+          tuix.Expr.createExpr(
+            builder,
+            tuix.ExprUnion.Sqrt,
+            tuix.Sqrt.createSqrt(builder, childOffset)
           )
 
         case (UnaryMinus(child, _), Seq(childOffset)) =>

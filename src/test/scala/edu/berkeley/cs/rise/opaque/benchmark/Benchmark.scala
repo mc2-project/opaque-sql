@@ -17,10 +17,19 @@
 
 package edu.berkeley.cs.rise.opaque.benchmark
 
+import java.util.Random
+
+import edu.berkeley.cs.rise.opaque.execution.udfs.LogisticRegression
+
 import edu.berkeley.cs.rise.opaque.Utils
-import edu.berkeley.cs.rise.opaque.{Encrypted, Insecure}
+import edu.berkeley.cs.rise.opaque.{SecurityLevel, Encrypted, Insecure}
 
 import org.apache.spark.sql.SparkSession
+
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
 
 /**
  * Convenient runner for benchmarks.
@@ -66,13 +75,75 @@ object Benchmark {
   }
 
   def logisticRegression() = {
-    // Warmup
-    LogisticRegression.train(spark, Encrypted, 1000, 1)
-    LogisticRegression.train(spark, Encrypted, 1000, 1)
+    def generateData(
+        spark: SparkSession,
+        sl: SecurityLevel,
+        N: Int,
+        D: Int,
+        R: Double
+    ): DataFrame = {
+      val rand = new Random(42)
+      def generatePoint(i: Int): (Array[Double], Double) = {
+        val y = if (i % 2 == 0) -1 else 1
+        val x = Array.fill(D) { rand.nextGaussian + y * R }
+        (x, y)
+      }
 
-    // Run
-    LogisticRegression.train(spark, Insecure, 100000, 1)
-    LogisticRegression.train(spark, Encrypted, 100000, 1)
+      val data = Array.tabulate(N)(generatePoint)
+      val schema = StructType(
+        Seq(StructField("x", DataTypes.createArrayType(DoubleType)), StructField("y", DoubleType))
+      )
+
+      sl.applyTo(
+        spark.createDataFrame(spark.sparkContext.makeRDD(data.map(Row.fromTuple)), schema)
+      )
+    }
+
+    // Hyperparameters and dimensions
+    val N = 100000
+    val D = 5
+    val R = 0.7
+    val A = 0.1
+    val ITERATIONS = 8
+
+    // Insecure
+    var trainingData =
+      Utils.ensureCached(generateData(spark, Insecure, N, D, R))
+    var w = Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "logistic regression - training",
+      "system" -> Insecure.name,
+      "N" -> N
+    ) { LogisticRegression.train(spark, D, A, ITERATIONS, trainingData) }
+
+    var evalData = generateData(spark, Insecure, N, D, R).drop("y")
+    Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "logistic regression - evaluation",
+      "system" -> Insecure.name,
+      "N" -> N
+    ) {
+      LogisticRegression.predict(spark, w, evalData)
+    }
+
+    // Encrypted
+    trainingData = Utils.ensureCached(generateData(spark, Encrypted, N, D, R))
+    w = Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "logistic regression - training",
+      "system" -> Encrypted.name,
+      "N" -> N
+    ) { LogisticRegression.train(spark, D, A, ITERATIONS, trainingData) }
+
+    evalData = generateData(spark, Encrypted, N, D, R).drop("y")
+    Utils.timeBenchmark(
+      "distributed" -> (numPartitions > 1),
+      "query" -> "logistic regression - evaluation",
+      "system" -> Encrypted.name,
+      "N" -> N
+    ) {
+      LogisticRegression.predict(spark, w, evalData)
+    }
   }
 
   def runAll() = {
