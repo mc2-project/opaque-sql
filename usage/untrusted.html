@@ -4,10 +4,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Usage" href="usage.html" /><link rel="prev" title="Query submission via the MC2 Client" href="client.html" />
 
-    <meta name="generator" content="sphinx-4.1.2, furo 2021.08.17.beta43"/>
+    <meta name="generator" content="sphinx-4.2.0, furo 2021.09.08"/>
         <title>Query submission via the Spark Driver - Opaque SQL documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=910ac4ccc9d7c023151c34010d7b500fb9777a51" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=c7c65a82b42f6b978e58466c1e9ef2509836d916" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=16fb25fabf47304eee183a5e9af80b1ba98259b1" />
     
     
@@ -34,9 +34,11 @@
   
     }
   }
-</style>
-    <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../_static/pygments_dark.css"></head>
+</style></head>
   <body>
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
     
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <symbol id="svg-toc" viewBox="0 0 24 24">
@@ -172,7 +174,7 @@
   </aside>
   <div class="main">
     <div class="content">
-      <article role="main">
+      <div class="article-container">
         <div class="content-icon-container">
           <div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle">
@@ -187,7 +189,8 @@
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
-        <div class="section" id="query-submission-via-the-spark-driver">
+        <article role="main">
+          <div class="section" id="query-submission-via-the-spark-driver">
 <h1>Query submission via the Spark Driver<a class="headerlink" href="#query-submission-via-the-spark-driver" title="Permalink to this headline">¶</a></h1>
 <div class="figure align-center" id="id1" style="width: 100%">
 <img alt="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg" src="https://mc2-project.github.io/opaque-sql/opaque-diagram.svg"/><p class="caption"><span class="caption-text">Overview of Opaque SQL running in insecure mode</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
@@ -301,7 +304,8 @@ build/sbt test:assembly
 </div>
 </div>
 
-      </article>
+        </article>
+      </div>
       <footer>
         
         <div class="related-pages">
@@ -328,13 +332,11 @@ build/sbt test:assembly
         </div>
 
         <div class="related-information">
-              Copyright &#169; 2021, Octavian Sima, Wenting Zheng
-            |
+              Copyright &#169; 2021, Octavian Sima, Wenting Zheng |
             Built with <a href="https://www.sphinx-doc.org/">Sphinx</a>
               and
               <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
-              <a href="https://github.com/pradyunsg/furo">Furo theme</a>.
-            |
+              <a href="https://github.com/pradyunsg/furo">Furo theme</a>. |
             <a class="muted-link" href="../_sources/usage/untrusted.rst.txt"
                rel="nofollow">
               Show Source
