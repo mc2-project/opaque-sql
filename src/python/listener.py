@@ -11,11 +11,11 @@ class Listener(listener_pb2_grpc.ListenerServicer):
     
     def ReceiveQuery(self, request, context):
         source = request.request
-        output, result = self.intp_handler.run(source)
-        status = listener_pb2.Status(0, "")
-        if result: # code threw an exception
-            status = listener_pb2.Status(1, result)
-        return listener_pb2.QueryResult(output, status)
+        out, err = self.intp_handler.run(source)
+        status = opaquesql_pb2.Status(status=0, exception="")
+        if err: # If non-empty, user code threw an exception
+            status = opaquesql_pb2.Status(status=1, exception="Opaque SQL returned an error: " + err)
+        return opaquesql_pb2.QueryResult(result=out, status=status)
 
 if __name__ == "__main__":
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
