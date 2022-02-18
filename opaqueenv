@@ -1,4 +1,4 @@
-export OPAQUE_HOME=$(pwd)
+export OPAQUE_HOME="$( cd $(dirname "${BASH_SOURCE[0]}") && pwd )"
 export OPAQUE_DATA_DIR=${OPAQUE_HOME}/data/
 export PRIVATE_KEY_PATH=${OPAQUE_HOME}/src/test/keys/mc2_test_key.pem
 export MODE=HARDWARE
