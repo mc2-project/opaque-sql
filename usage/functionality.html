@@ -4,11 +4,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmarking" href="../benchmarking/benchmarking.html" /><link rel="prev" title="Usage" href="usage.html" />
 
-    <meta name="generator" content="sphinx-4.2.0, furo 2021.09.22"/>
+    <meta name="generator" content="sphinx-4.4.0, furo 2022.02.14.1"/>
         <title>Supported functionalities - Opaque SQL documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=150e365fa939648e89c22f6d7d13c72a1657915a" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=16fb25fabf47304eee183a5e9af80b1ba98259b1" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=a8f031f701c6af50c9919b48f173a5785af06fac" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=25ceb02ed1c46dc30f2321ff83e92799f69dfdb9" />
     
     
 
@@ -43,17 +43,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <symbol id="svg-toc" viewBox="0 0 24 24">
     <title>Contents</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path stroke="none" d="M0 0h24v24H0z" />
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="10" y1="12" x2="20" y2="12" />
-      <line x1="6" y1="18" x2="20" y2="18" />
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
     </svg>
   </symbol>
   <symbol id="svg-menu" viewBox="0 0 24 24">
     <title>Menu</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
       <line x1="3" y1="12" x2="21" y2="12"></line>
       <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -62,14 +58,14 @@
   </symbol>
   <symbol id="svg-arrow-right" viewBox="0 0 24 24">
     <title>Expand</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
       <polyline points="9 18 15 12 9 6"></polyline>
     </svg>
   </symbol>
   <symbol id="svg-sun" viewBox="0 0 24 24">
     <title>Light mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
       <circle cx="12" cy="12" r="5"></circle>
       <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -84,7 +80,7 @@
   </symbol>
   <symbol id="svg-moon" viewBox="0 0 24 24">
     <title>Dark mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
@@ -92,7 +88,7 @@
   </symbol>
   <symbol id="svg-sun-half" viewBox="0 0 24 24">
     <title>Auto light/dark mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
       <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
       <circle cx="12" cy="12" r="9" />
@@ -175,8 +171,7 @@
   <div class="main">
     <div class="content">
       <div class="article-container">
-        <div class="content-icon-container">
-          <div class="theme-toggle-container theme-toggle-content">
+        <div class="content-icon-container"><div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle">
               <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
               <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
@@ -191,12 +186,12 @@
         </div>
         <article role="main">
           <div class="section" id="supported-functionalities">
-<span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">¶</a></h1>
+<span id="functionalities"></span><h1>Supported functionalities<a class="headerlink" href="#supported-functionalities" title="Permalink to this headline">#</a></h1>
 <p>This section lists Opaque’s supported functionalities, which is a subset of that of Spark SQL. The syntax for these functionalities is the same as Spark SQL – Opaque simply replaces the execution to work with encrypted data.</p>
 <div class="section" id="sql-interface">
-<h2>SQL interface<a class="headerlink" href="#sql-interface" title="Permalink to this headline">¶</a></h2>
+<h2>SQL interface<a class="headerlink" href="#sql-interface" title="Permalink to this headline">#</a></h2>
 <div class="section" id="data-types">
-<h3>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h3>
+<h3>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">#</a></h3>
 <p>Out of the existing <a class="reference external" href="https://spark.apache.org/docs/latest/sql-ref-datatypes.html">Spark SQL types</a>, Opaque supports</p>
 <ul class="simple">
 <li><p>All numeric types. <code class="docutils literal notranslate"><span class="pre">DecimalType</span></code> is supported via conversion into <code class="docutils literal notranslate"><span class="pre">FloatType</span></code></p></li>
@@ -208,7 +203,7 @@
 </ul>
 </div>
 <div class="section" id="functions">
-<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">#</a></h3>
 <p>We currently support a subset of the Spark SQL functions, including both scalar and aggregate-like functions.</p>
 <ul class="simple">
 <li><p>Scalar functions: <code class="docutils literal notranslate"><span class="pre">case</span></code>, <code class="docutils literal notranslate"><span class="pre">cast</span></code>, <code class="docutils literal notranslate"><span class="pre">concat</span></code>, <code class="docutils literal notranslate"><span class="pre">contains</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code>, <code class="docutils literal notranslate"><span class="pre">in</span></code>, <code class="docutils literal notranslate"><span class="pre">like</span></code>, <code class="docutils literal notranslate"><span class="pre">substring</span></code>, <code class="docutils literal notranslate"><span class="pre">upper</span></code></p></li>
@@ -217,7 +212,7 @@
 <p>UDFs are not supported directly, but one can <a class="reference internal" href="#udfs"><span class="std std-ref">extend Opaque with additional functions</span></a> by writing it in C++.</p>
 </div>
 <div class="section" id="operators">
-<h3>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">¶</a></h3>
+<h3>Operators<a class="headerlink" href="#operators" title="Permalink to this headline">#</a></h3>
 <p>Opaque supports the core SQL operators:</p>
 <ul class="simple">
 <li><p>Projection (e.g., <code class="docutils literal notranslate"><span class="pre">SELECT</span></code> statements)</p></li>
@@ -230,12 +225,12 @@
 </div>
 </div>
 <div class="section" id="dataframe-interface">
-<h2>DataFrame interface<a class="headerlink" href="#dataframe-interface" title="Permalink to this headline">¶</a></h2>
+<h2>DataFrame interface<a class="headerlink" href="#dataframe-interface" title="Permalink to this headline">#</a></h2>
 <p>Because Opaque SQL only replaces physical operators to work with encrypted data, the DataFrame interface is exactly the same as Spark’s both for <a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html">Scala</a> and <a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/python/reference/api/pyspark.sql.DataFrame.html?highlight=dataframe#pyspark.sql.DataFrame">Python</a>. Opaque SQL is still a work in progress, so not all of these functionalities are currently implemented. See below for a complete list in Scala.</p>
 <div class="section" id="supported-operations">
-<h3>Supported operations<a class="headerlink" href="#supported-operations" title="Permalink to this headline">¶</a></h3>
+<h3>Supported operations<a class="headerlink" href="#supported-operations" title="Permalink to this headline">#</a></h3>
 <div class="section" id="actions">
-<h4>Actions<a class="headerlink" href="#actions" title="Permalink to this headline">¶</a></h4>
+<h4>Actions<a class="headerlink" href="#actions" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#collect():Array[T]">collect(): Array[T]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#collectAsList():java.util.List[T]">collectAsList(): List[T]</a></p></li>
@@ -259,7 +254,7 @@
 </ul>
 </div>
 <div class="section" id="basic-dataset-functions">
-<h4>Basic Dataset functions<a class="headerlink" href="#basic-dataset-functions" title="Permalink to this headline">¶</a></h4>
+<h4>Basic Dataset functions<a class="headerlink" href="#basic-dataset-functions" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cache():Dataset.this.type">cache(): Dataset.this.type</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#columns:Array[String]">columns: Array[String]</a></p></li>
@@ -295,14 +290,14 @@
 </ul>
 </div>
 <div class="section" id="streaming">
-<h4>Streaming<a class="headerlink" href="#streaming" title="Permalink to this headline">¶</a></h4>
+<h4>Streaming<a class="headerlink" href="#streaming" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#isStreaming:Boolean">isStreaming: Boolean</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#withWatermark(eventTime:String,delayThreshold:String):org.apache.spark.sql.Dataset[T]">withWatermark(eventTime: String, delayThreshold: String): Dataset[T]</a></p></li>
 </ul>
 </div>
 <div class="section" id="typed-transformations">
-<h4>Typed transformations<a class="headerlink" href="#typed-transformations" title="Permalink to this headline">¶</a></h4>
+<h4>Typed transformations<a class="headerlink" href="#typed-transformations" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:Symbol):org.apache.spark.sql.Dataset[T]">alias(alias: Symbol): Dataset[T]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#alias(alias:String):org.apache.spark.sql.Dataset[T]">alias(alias: String): Dataset[T]</a></p></li>
@@ -358,7 +353,7 @@
 </ul>
 </div>
 <div class="section" id="untyped-transformations">
-<h4>Untyped transformations<a class="headerlink" href="#untyped-transformations" title="Permalink to this headline">¶</a></h4>
+<h4>Untyped transformations<a class="headerlink" href="#untyped-transformations" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(expr:org.apache.spark.sql.Column,exprs:org.apache.spark.sql.Column*):org.apache.spark.sql.DataFrame">agg(expr: Column, exprs: Column*): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#agg(exprs:Map[String,String]):org.apache.spark.sql.DataFrame">agg(exprs: Map[String, String]): DataFrame</a></p></li>
@@ -388,7 +383,7 @@
 </ul>
 </div>
 <div class="section" id="ungrouped">
-<h4>Ungrouped<a class="headerlink" href="#ungrouped" title="Permalink to this headline">¶</a></h4>
+<h4>Ungrouped<a class="headerlink" href="#ungrouped" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#encoder:org.apache.spark.sql.Encoder[T]">encoder: Encoder[T]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#queryExecution:org.apache.spark.sql.execution.QueryExecution">queryExecution: execution.QueryExecution</a></p></li>
@@ -402,9 +397,9 @@
 </div>
 </div>
 <div class="section" id="unsupported-operations">
-<h3>Unsupported operations<a class="headerlink" href="#unsupported-operations" title="Permalink to this headline">¶</a></h3>
+<h3>Unsupported operations<a class="headerlink" href="#unsupported-operations" title="Permalink to this headline">#</a></h3>
 <div class="section" id="id1">
-<h4>Actions<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<h4>Actions<a class="headerlink" href="#id1" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#describe(cols:String*):org.apache.spark.sql.DataFrame">describe(cols: String*): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#reduce(func:org.apache.spark.api.java.function.ReduceFunction[T]):T">reduce(func: ReduceFunction[T]): T</a></p></li>
@@ -414,7 +409,7 @@
 </ul>
 </div>
 <div class="section" id="id2">
-<h4>Basic Dataset Functions<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<h4>Basic Dataset Functions<a class="headerlink" href="#id2" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#as[U](implicitevidence:org.apache.spark.sql.Encoder[U]):org.apache.spark.sql.Dataset[U]">as[U](implicitevidence: Encoder[U]): Dataset[U]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#checkpoint(eager:Boolean):org.apache.spark.sql.Dataset[T]">checkpoint(eager: Boolean): Dataset[T]</a></p></li>
@@ -424,7 +419,7 @@
 </ul>
 </div>
 <div class="section" id="id3">
-<h4>Typed transformations<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<h4>Typed transformations<a class="headerlink" href="#id3" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#except(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]">except(other: Dataset[T]): Dataset[T]</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#exceptAll(other:org.apache.spark.sql.Dataset[T]):org.apache.spark.sql.Dataset[T]">exceptAll(other: Dataset[T]): Dataset[T]</a></p></li>
@@ -438,7 +433,7 @@
 </ul>
 </div>
 <div class="section" id="id4">
-<h4>Untyped transformations<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
+<h4>Untyped transformations<a class="headerlink" href="#id4" title="Permalink to this headline">#</a></h4>
 <ul class="simple">
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#crossJoin(right:org.apache.spark.sql.Dataset[_]):org.apache.spark.sql.DataFrame">crossJoin(right: Dataset[_]): DataFrame</a></p></li>
 <li><p><a class="reference external" href="https://spark.apache.org/docs/3.1.1/api/scala/org/apache/spark/sql/Dataset.html#cube(col1:String,cols:String*):org.apache.spark.sql.RelationalGroupedDataset">cube(col1: String, cols: String*): RelationalGroupedDataset</a></p></li>
@@ -453,27 +448,27 @@
 </div>
 </div>
 <div class="section" id="user-defined-functions-udfs">
-<span id="udfs"></span><h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">¶</a></h2>
+<span id="udfs"></span><h2>User-Defined Functions (UDFs)<a class="headerlink" href="#user-defined-functions-udfs" title="Permalink to this headline">#</a></h2>
 <p>To run a Spark SQL UDF within Opaque enclaves, first name it explicitly and define it in Scala, then reimplement it in C++ against Opaque’s serialized row representation.</p>
 <p>For example, suppose we wish to implement a UDF called <code class="docutils literal notranslate"><span class="pre">dot</span></code>, which computes the dot product of two double arrays (<code class="docutils literal notranslate"><span class="pre">Array[Double]</span></code>). We [define it in Scala](src/main/scala/edu/berkeley/cs/rise/opaque/expressions/DotProduct.scala) in terms of the Breeze linear algebra library’s implementation. We can then use it in a DataFrame query, such as <a class="reference external" href="src/main/scala/edu/berkeley/cs/rise/opaque/benchmark/LogisticRegression.scala">logistic regression</a>.</p>
 <p>Now we can port this UDF to Opaque as follows:</p>
 <ol class="arabic">
 <li><p>Define a corresponding expression using Opaque’s expression serialization format by adding the following to [Expr.fbs](src/flatbuffers/Expr.fbs), which indicates that a DotProduct expression takes two inputs (the two double arrays):</p>
-<div class="highlight-protobuf notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="n">DotProduct</span> <span class="p">{</span>
-  <span class="n">left</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
-  <span class="n">right</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
+<div class="highlight-protobuf notranslate"><div class="highlight"><pre><span></span><span class="n">table</span><span class="w"> </span><span class="n">DotProduct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">left</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">right</span><span class="o">:</span><span class="n">Expr</span><span class="p">;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>In the same file, add <code class="docutils literal notranslate"><span class="pre">DotProduct</span></code> to the list of expressions in <code class="docutils literal notranslate"><span class="pre">ExprUnion</span></code>.</p>
 </li>
 <li><p>Implement the serialization logic from the Scala <code class="docutils literal notranslate"><span class="pre">DotProduct</span></code> UDF to the Opaque expression that we just defined. In <code class="docutils literal notranslate"><span class="pre">Utils.flatbuffersSerializeExpression</span></code> (from <code class="docutils literal notranslate"><span class="pre">Utils.scala</span></code>), add a case for <code class="docutils literal notranslate"><span class="pre">DotProduct</span></code> as follows:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">case</span> <span class="o">(</span><span class="nc">DotProduct</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">),</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">leftOffset</span><span class="o">,</span> <span class="n">rightOffset</span><span class="o">))</span> <span class="k">=&gt;</span>
-  <span class="n">tuix</span><span class="o">.</span><span class="nc">Expr</span><span class="o">.</span><span class="n">createExpr</span><span class="o">(</span>
-    <span class="n">builder</span><span class="o">,</span>
-    <span class="n">tuix</span><span class="o">.</span><span class="nc">ExprUnion</span><span class="o">.</span><span class="nc">DotProduct</span><span class="o">,</span>
-    <span class="n">tuix</span><span class="o">.</span><span class="nc">DotProduct</span><span class="o">.</span><span class="n">createDotProduct</span><span class="o">(</span>
-      <span class="n">builder</span><span class="o">,</span> <span class="n">leftOffset</span><span class="o">,</span> <span class="n">rightOffset</span><span class="o">))</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">case</span> <span class="p">(</span><span class="nc">DotProduct</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">),</span> <span class="nc">Seq</span><span class="p">(</span><span class="n">leftOffset</span><span class="p">,</span> <span class="n">rightOffset</span><span class="p">))</span> <span class="o">=&gt;</span>
+  <span class="n">tuix</span><span class="p">.</span><span class="nc">Expr</span><span class="p">.</span><span class="n">createExpr</span><span class="p">(</span>
+    <span class="n">builder</span><span class="p">,</span>
+    <span class="n">tuix</span><span class="p">.</span><span class="nc">ExprUnion</span><span class="p">.</span><span class="nc">DotProduct</span><span class="p">,</span>
+    <span class="n">tuix</span><span class="p">.</span><span class="nc">DotProduct</span><span class="p">.</span><span class="n">createDotProduct</span><span class="p">(</span>
+      <span class="n">builder</span><span class="p">,</span> <span class="n">leftOffset</span><span class="p">,</span> <span class="n">rightOffset</span><span class="p">))</span>
 </pre></div>
 </div>
 </li>
@@ -508,17 +503,21 @@
               </div>
             </a>
         </div>
-
-        <div class="related-information">
-              Copyright &#169; 2021, Octavian Sima, Wenting Zheng |
-            Built with <a href="https://www.sphinx-doc.org/">Sphinx</a>
-              and
-              <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
-              <a href="https://github.com/pradyunsg/furo">Furo theme</a>. |
-            <a class="muted-link" href="../_sources/usage/functionality.rst.txt"
-               rel="nofollow">
-              Show Source
-            </a>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, Octavian Sima, Wenting Zheng
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              
+            </div>
+          </div>
         </div>
         
       </footer>
@@ -577,6 +576,6 @@
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script src="../_static/scripts/main.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
     </body>
 </html>

@@ -4,11 +4,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Supported functionalities" href="functionality.html" /><link rel="prev" title="Query submission via the Spark Driver" href="untrusted.html" />
 
-    <meta name="generator" content="sphinx-4.2.0, furo 2021.09.22"/>
+    <meta name="generator" content="sphinx-4.4.0, furo 2022.02.14.1"/>
         <title>Usage - Opaque SQL documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=150e365fa939648e89c22f6d7d13c72a1657915a" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=16fb25fabf47304eee183a5e9af80b1ba98259b1" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=a8f031f701c6af50c9919b48f173a5785af06fac" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=25ceb02ed1c46dc30f2321ff83e92799f69dfdb9" />
     
     
 
@@ -43,17 +43,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <symbol id="svg-toc" viewBox="0 0 24 24">
     <title>Contents</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path stroke="none" d="M0 0h24v24H0z" />
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="10" y1="12" x2="20" y2="12" />
-      <line x1="6" y1="18" x2="20" y2="18" />
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
     </svg>
   </symbol>
   <symbol id="svg-menu" viewBox="0 0 24 24">
     <title>Menu</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
       <line x1="3" y1="12" x2="21" y2="12"></line>
       <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -62,14 +58,14 @@
   </symbol>
   <symbol id="svg-arrow-right" viewBox="0 0 24 24">
     <title>Expand</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
       <polyline points="9 18 15 12 9 6"></polyline>
     </svg>
   </symbol>
   <symbol id="svg-sun" viewBox="0 0 24 24">
     <title>Light mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
       <circle cx="12" cy="12" r="5"></circle>
       <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -84,7 +80,7 @@
   </symbol>
   <symbol id="svg-moon" viewBox="0 0 24 24">
     <title>Dark mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
@@ -92,7 +88,7 @@
   </symbol>
   <symbol id="svg-sun-half" viewBox="0 0 24 24">
     <title>Auto light/dark mode</title>
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
       <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
       <circle cx="12" cy="12" r="9" />
@@ -175,8 +171,7 @@
   <div class="main">
     <div class="content">
       <div class="article-container">
-        <div class="content-icon-container">
-          <div class="theme-toggle-container theme-toggle-content">
+        <div class="content-icon-container"><div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle">
               <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
               <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
@@ -191,13 +186,13 @@
         </div>
         <article role="main">
           <div class="section" id="usage">
-<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">#</a></h1>
 <p>This section goes over how to manipulate an encrypted DataFrame in either client or insecure mode.</p>
 <div class="section" id="saving-a-dataframe">
-<span id="save-df"></span><h2>Saving a DataFrame<a class="headerlink" href="#saving-a-dataframe" title="Permalink to this headline">¶</a></h2>
+<span id="save-df"></span><h2>Saving a DataFrame<a class="headerlink" href="#saving-a-dataframe" title="Permalink to this headline">#</a></h2>
 <p>Save the encrypted DataFrame to local disk. The encrypted data can then be uploaded to cloud storage of your choice for easy access.</p>
 <p>Scala:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="o">).</span><span class="n">save</span><span class="o">(</span><span class="s">"dfEncrypted"</span><span class="o">)</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">dfEncrypted</span><span class="p">.</span><span class="n">write</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="p">).</span><span class="n">save</span><span class="p">(</span><span class="s">"dfEncrypted"</span><span class="p">)</span>
 <span class="c1">// The file dfEncrypted/part-00000 now contains encrypted data</span>
 </pre></div>
 </div>
@@ -207,14 +202,14 @@
 </div>
 </div>
 <div class="section" id="using-the-dataframe-interface">
-<h2>Using the DataFrame interface<a class="headerlink" href="#using-the-dataframe-interface" title="Permalink to this headline">¶</a></h2>
+<h2>Using the DataFrame interface<a class="headerlink" href="#using-the-dataframe-interface" title="Permalink to this headline">#</a></h2>
 <ol class="arabic">
 <li><p>Users can load the <a class="reference internal" href="#save-df"><span class="std std-ref">previously persisted encrypted DataFrame</span></a>.</p>
 <p>Scala:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
-<span class="k">val</span> <span class="n">dfEncrypted</span> <span class="k">=</span> <span class="o">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="o">)</span>
-<span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="nc">StructType</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">"word"</span><span class="o">,</span> <span class="nc">StringType</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">"count"</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))))</span>
-<span class="o">.</span><span class="n">load</span><span class="o">(</span><span class="s">"dfEncrypted"</span><span class="o">))</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="nn">org</span><span class="p">.</span><span class="nn">apache</span><span class="p">.</span><span class="nn">spark</span><span class="p">.</span><span class="nn">sql</span><span class="p">.</span><span class="nn">types</span><span class="p">.</span><span class="n">_</span>
+<span class="kd">val</span> <span class="n">dfEncrypted</span> <span class="o">=</span> <span class="p">(</span><span class="n">spark</span><span class="p">.</span><span class="n">read</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="s">"edu.berkeley.cs.rise.opaque.EncryptedSource"</span><span class="p">)</span>
+<span class="p">.</span><span class="n">schema</span><span class="p">(</span><span class="nc">StructType</span><span class="p">(</span><span class="nc">Seq</span><span class="p">(</span><span class="nc">StructField</span><span class="p">(</span><span class="s">"word"</span><span class="p">,</span> <span class="nc">StringType</span><span class="p">),</span> <span class="nc">StructField</span><span class="p">(</span><span class="s">"count"</span><span class="p">,</span> <span class="nc">IntegerType</span><span class="p">))))</span>
+<span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="s">"dfEncrypted"</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Python:</p>
@@ -224,8 +219,8 @@
 </li>
 <li><p>Given an encrypted DataFrame, construct a new query. Users can use <code class="docutils literal notranslate"><span class="pre">explain</span></code> to see the generated query plan.</p>
 <p>Scala:</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">dfEncrypted</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">"count"</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="o">(</span><span class="mi">3</span><span class="o">))</span>
-<span class="n">result</span><span class="o">.</span><span class="n">explain</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span> <span class="n">result</span> <span class="o">=</span> <span class="n">dfEncrypted</span><span class="p">.</span><span class="n">filter</span><span class="p">(</span><span class="n">$</span><span class="s">"count"</span> <span class="o">&gt;</span> <span class="n">lit</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">result</span><span class="p">.</span><span class="n">explain</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
 <span class="c1">// [...]</span>
 <span class="c1">// == Optimized Logical Plan ==</span>
 <span class="c1">// EncryptedFilter (count#6 &gt; 3)</span>
@@ -242,23 +237,23 @@
 </ol>
 </div>
 <div class="section" id="using-the-sql-interface">
-<h2>Using the SQL interface<a class="headerlink" href="#using-the-sql-interface" title="Permalink to this headline">¶</a></h2>
+<h2>Using the SQL interface<a class="headerlink" href="#using-the-sql-interface" title="Permalink to this headline">#</a></h2>
 <ol class="arabic">
 <li><p>Users can also load the <a class="reference internal" href="#save-df"><span class="std std-ref">previously persisted encrypted DataFrame</span></a> using the SQL interface.</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">s"""</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="n">spark</span><span class="p">.</span><span class="n">sql</span><span class="p">(</span><span class="s">s"""</span>
 <span class="s">  |CREATE TEMPORARY VIEW dfEncrypted</span>
 <span class="s">  |USING edu.berkeley.cs.rise.opaque.EncryptedSource</span>
 <span class="s">  |OPTIONS (</span>
 <span class="s">  |  path "dfEncrypted"</span>
-<span class="s">  |)"""</span><span class="o">.</span><span class="n">stripMargin</span><span class="o">)</span>
+<span class="s">  |)"""</span><span class="p">.</span><span class="n">stripMargin</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
 <li><p>The SQL API can be used to run the same query on the loaded data.</p>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">s"""</span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span> <span class="n">result</span> <span class="o">=</span> <span class="n">spark</span><span class="p">.</span><span class="n">sql</span><span class="p">(</span><span class="s">s"""</span>
 <span class="s">  |SELECT * FROM dfEncrypted</span>
-<span class="s">  |WHERE count &gt; 3"""</span><span class="o">.</span><span class="n">stripMargin</span><span class="o">)</span>
-<span class="n">result</span><span class="o">.</span><span class="n">show</span>
+<span class="s">  |WHERE count &gt; 3"""</span><span class="p">.</span><span class="n">stripMargin</span><span class="p">)</span>
+<span class="n">result</span><span class="p">.</span><span class="n">show</span>
 </pre></div>
 </div>
 </li>
@@ -292,17 +287,21 @@
               </div>
             </a>
         </div>
-
-        <div class="related-information">
-              Copyright &#169; 2021, Octavian Sima, Wenting Zheng |
-            Built with <a href="https://www.sphinx-doc.org/">Sphinx</a>
-              and
-              <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
-              <a href="https://github.com/pradyunsg/furo">Furo theme</a>. |
-            <a class="muted-link" href="../_sources/usage/usage.rst.txt"
-               rel="nofollow">
-              Show Source
-            </a>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, Octavian Sima, Wenting Zheng
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              
+            </div>
+          </div>
         </div>
         
       </footer>
@@ -338,6 +337,6 @@
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script src="../_static/scripts/main.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
     </body>
 </html>
