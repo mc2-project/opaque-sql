@@ -21,7 +21,7 @@ import edu.berkeley.cs.rise.opaque.implicits._
 import org.apache.spark.sql.types._
 
 // Load an encrypted DataFrame (saved using the MC2 client)
-val df_en = spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource").load("/tmp/opaquesql.csv.enc")
+val df_enc = spark.read.format("edu.berkeley.cs.rise.opaque.EncryptedSource").load("/tmp/opaquesql.csv.enc")
 // Run a filter query on the encrypted DataFrame
 val result = df_enc.filter($"Age" < lit(30))
 // This will save the encrypted result to the result directory on the cloud
